@@ -11,6 +11,7 @@ import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
 import { Category } from "@/lib/api/categories";
 import { useRootCategories } from "@/lib/hooks/useCategories";
+import { CategorySelect } from "./CategorySelect";
 
 interface ProductFormProps {
   product?: Product;
@@ -218,17 +219,11 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 <label className="block text-sm font-medium mb-1">
                   Nhóm hàng
                 </label>
-                <select
-                  {...register("categoryId")}
-                  className="w-full border rounded px-3 py-2">
-                  <option value="">Chọn nhóm hàng</option>
-                  {flatCategories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {"　".repeat(cat.level)}
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
+                <CategorySelect
+                  categories={categories || []}
+                  value={watch("categoryId")}
+                  onChange={(categoryId) => setValue("categoryId", categoryId)}
+                />
               </div>
 
               <div>
