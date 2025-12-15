@@ -1,0 +1,120 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+
+export function DashboardHeader() {
+  const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
+
+  const productSubmenu = [
+    {
+      title: "Hàng hóa",
+      items: [
+        { label: "Danh sách hàng hóa", href: "/san-pham/danh-sach" },
+        { label: "Thiết lập giá", href: "/san-pham/thiet-lap-gia" },
+      ],
+    },
+    {
+      title: "Kho hàng",
+      items: [
+        { label: "Chuyển hàng", href: "/san-pham/chuyen-hang" },
+        { label: "Xuất hủy", href: "/san-pham/xuat-huy" },
+      ],
+    },
+    {
+      title: "Nhập hàng",
+      items: [
+        { label: "Đặt hàng nhập", href: "/san-pham/dat-hang-nhap" },
+        { label: "Nhập hàng", href: "/san-pham/nhap-hang" },
+        { label: "Trả hàng nhập", href: "/san-pham/tra-hang-nhap" },
+      ],
+    },
+    {
+      title: "Khác",
+      items: [
+        { label: "Nhà cung cấp", href: "/san-pham/nha-cung-cap" },
+        { label: "Kiểm kho", href: "/san-pham/kiem-kho" },
+      ],
+    },
+  ];
+
+  return (
+    <header className="bg-blue-600 text-white">
+      <div className="flex items-center h-14">
+        <div className="px-4 flex items-center gap-8">
+          <Link href="/" className="font-bold text-lg">
+            Hisweetie
+          </Link>
+
+          <nav className="flex items-center gap-1">
+            <Link
+              href="/"
+              className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
+              Tổng quan
+            </Link>
+
+            <div
+              className="relative"
+              onMouseEnter={() => setHoveredMenu("products")}
+              onMouseLeave={() => setHoveredMenu(null)}>
+              <button className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
+                Hàng hóa
+              </button>
+
+              {hoveredMenu === "products" && (
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-lg rounded-b-lg min-w-max z-50">
+                  <div className="flex gap-6 p-6">
+                    {productSubmenu.map((section) => (
+                      <div key={section.title} className="min-w-[150px]">
+                        <h3 className="font-semibold text-sm px-3 mb-3 text-gray-600">
+                          {section.title}
+                        </h3>
+                        <ul className="space-y-2">
+                          {section.items.map((item) => (
+                            <li key={item.href}>
+                              <Link
+                                href={item.href}
+                                className="block px-3 py-2 hover:bg-gray-100 rounded text-sm transition-colors">
+                                {item.label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Link
+              href="/don-hang"
+              className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
+              Đơn hàng
+            </Link>
+
+            <Link
+              href="/khach-hang"
+              className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
+              Khách hàng
+            </Link>
+
+            <Link
+              href="/so-quy"
+              className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
+              Sổ quỹ
+            </Link>
+          </nav>
+        </div>
+
+        <div className="ml-auto px-4">
+          <Link
+            href="/ban-hang"
+            className="px-4 py-2 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
+            🛒 Bán hàng
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
