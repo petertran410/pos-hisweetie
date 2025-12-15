@@ -1,8 +1,5 @@
 "use client";
 
-import layout from "@/app/layout";
-import page from "@/app/page";
-import app from "next/app";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -31,7 +28,6 @@ export default function ProductLayout({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Dropdown Menu */}
       <div className="border-b bg-white">
         <div className="relative">
           <button
@@ -56,7 +52,6 @@ export default function ProductLayout({
             </svg>
           </button>
 
-          {/* Dropdown Items */}
           {isMenuOpen && (
             <div className="absolute top-full left-0 w-64 bg-white border rounded-md shadow-lg z-50">
               {menuItems.map((item) => (
@@ -77,7 +72,6 @@ export default function ProductLayout({
         </div>
       </div>
 
-      {/* Page Content */}
       <div className="flex-1 overflow-hidden">{children}</div>
     </div>
   );
