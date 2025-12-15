@@ -7,6 +7,8 @@ import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/useProducts";
 import { useCategories } from "@/lib/hooks/useCategories";
 import { useTrademarks } from "@/lib/hooks/useTrademarks";
 import { UnitAttributeModal } from "./UnitAttributeModal";
+import { useAuthStore } from "@/lib/store/auth";
+import { toast } from "sonner";
 
 interface ProductFormProps {
   product?: Product;
@@ -76,14 +78,25 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     formData.append("file", file);
 
     try {
+      const token = useAuthStore.getState().token;
+
       const res = await fetch("http://localhost:3060/api/upload/image", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
       const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.message || "Upload failed");
+      }
+
       setImages((prev) => [...prev, result.url]);
     } catch (error) {
       console.error("Upload failed:", error);
+      toast.error("Upload ảnh thất bại");
     }
   };
 
