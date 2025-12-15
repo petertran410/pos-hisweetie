@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { ProductDetail } from "./ProductDetail";
 import { ProductForm } from "./ProductForm";
 import type { Product } from "@/lib/api/products";
 
-export function ProductTable() {
+interface ProductTableProps {
+  selectedCategoryIds: number[];
+}
+
+export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [search, setSearch] = useState("");
@@ -14,7 +18,19 @@ export function ProductTable() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
-  const { data, isLoading, error } = useProducts({ page, limit, search });
+  const categoryIds =
+    selectedCategoryIds.length > 0 ? selectedCategoryIds.join(",") : undefined;
+
+  const { data, isLoading, error } = useProducts({
+    page,
+    limit,
+    search,
+    categoryIds,
+  });
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedCategoryIds, search]);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === data?.data.length) {

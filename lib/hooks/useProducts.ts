@@ -6,7 +6,7 @@ export const useProducts = (params?: {
   page?: number;
   limit?: number;
   search?: string;
-  categoryId?: number;
+  categoryIds?: string;
   isActive?: boolean;
 }) => {
   return useQuery({

@@ -10,17 +10,24 @@ import { CategoryModal } from "./CategoryModal";
 import { CategorySelectorModal } from "./CategorySelectorModal";
 import type { Category } from "@/lib/api/categories";
 
-export function ProductSidebar() {
+interface ProductSidebarProps {
+  selectedCategoryIds: number[];
+  onSelectedCategoryIdsChange: (ids: number[]) => void;
+}
+
+export function ProductSidebar({
+  selectedCategoryIds,
+  onSelectedCategoryIdsChange,
+}: ProductSidebarProps) {
   const { data: categories } = useRootCategories();
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
 
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [showCategorySelector, setShowCategorySelector] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | undefined>(
-    undefined
-  );
+  const [editingCategory, setEditingCategory] = useState<
+    Category | undefined
+  >();
 
   const handleCreateCategory = () => {
     setEditingCategory(undefined);
@@ -198,7 +205,7 @@ export function ProductSidebar() {
         <CategorySelectorModal
           categories={categories}
           selectedIds={selectedCategoryIds}
-          onApply={setSelectedCategoryIds}
+          onApply={onSelectedCategoryIdsChange}
           onClose={() => setShowCategorySelector(false)}
         />
       )}

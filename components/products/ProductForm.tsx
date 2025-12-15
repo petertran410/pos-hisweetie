@@ -126,16 +126,6 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   placeholder="Nhập mã hàng"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Mã vạch
-                </label>
-                <input
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="Nhập mã vạch"
-                  disabled
-                />
-              </div>
             </div>
 
             <div>
