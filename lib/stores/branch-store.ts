@@ -1,6 +1,7 @@
 // lib/stores/branch-store.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { Branch } from "@/lib/api/branches";
 
 interface BranchState {
   currentBranch: Branch | null;
