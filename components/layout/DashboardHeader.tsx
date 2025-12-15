@@ -2,9 +2,21 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/lib/store/auth";
+import { toast } from "sonner";
 
 export function DashboardHeader() {
+  const router = useRouter();
   const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const { user, clearAuth } = useAuthStore();
+
+  const handleLogout = () => {
+    clearAuth();
+    toast.success("Đã đăng xuất");
+    router.push("/login");
+  };
 
   const productSubmenu = [
     {
@@ -107,12 +119,49 @@ export function DashboardHeader() {
           </nav>
         </div>
 
-        <div className="ml-auto px-4">
+        <div className="ml-auto px-4 flex items-center gap-4">
           <Link
             href="/ban-hang"
             className="px-4 py-2 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
             🛒 Bán hàng
           </Link>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-2 px-3 py-2 hover:bg-blue-700 rounded transition-colors">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="text-sm font-medium">
+                    {user?.name?.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <span className="text-sm">{user?.name}</span>
+            </button>
+
+            {showUserMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+                <div className="px-4 py-2 border-b">
+                  <p className="text-sm font-medium text-gray-900">
+                    {user?.name}
+                  </p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                  Đăng xuất
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
