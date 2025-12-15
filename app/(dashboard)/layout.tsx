@@ -1,4 +1,5 @@
 import { DashboardHeader } from "../../components/layout/DashboardHeader";
+import { ProtectedRoute } from "../../components/auth/ProtectedRoute";
 
 export default function DashboardLayout({
   children,
@@ -6,9 +7,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-screen flex flex-col">
-      <DashboardHeader />
-      <main className="flex-1 overflow-hidden">{children}</main>
-    </div>
+    <ProtectedRoute>
+      <div className="h-screen flex flex-col">
+        <DashboardHeader />
+        <main className="flex-1 overflow-hidden">{children}</main>
+      </div>
+    </ProtectedRoute>
   );
 }

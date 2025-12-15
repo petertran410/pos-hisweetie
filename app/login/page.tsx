@@ -35,10 +35,7 @@ export default function LoginPage() {
       const response = await authApi.login(data);
       setAuth(response.user, response.accessToken);
       toast.success("Đăng nhập thành công!");
-
-      setTimeout(() => {
-        router.replace("/");
-      }, 100);
+      router.replace("/");
     } catch (error: any) {
       toast.error(error.message || "Đăng nhập thất bại");
     } finally {
