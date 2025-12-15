@@ -1,0 +1,63 @@
+import { apiClient } from "@/lib/config/api";
+
+export interface Product {
+  id: number;
+  code: string;
+  name: string;
+  fullName?: string;
+  description?: string;
+  categoryId?: number;
+  tradeMarkId?: number;
+  variantId?: number;
+  purchasePrice: number;
+  retailPrice: number;
+  stockQuantity: number;
+  minStockAlert: number;
+  weight?: number;
+  weightUnit?: string;
+  unit?: string;
+  conversionValue?: number;
+  masterProductId?: number;
+  attributesText?: string;
+  isActive: boolean;
+  isDirectSale: boolean;
+  category?: { id: number; name: string };
+  tradeMark?: { id: number; name: string };
+  variant?: { id: number; name: string };
+  images?: { id: number; image: string }[];
+}
+
+export interface ProductsResponse {
+  data: Product[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export const productsApi = {
+  getProducts: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    categoryId?: number;
+    isActive?: boolean;
+  }): Promise<ProductsResponse> => {
+    return apiClient.get("/products", params);
+  },
+
+  getProduct: (id: number): Promise<Product> => {
+    return apiClient.get(`/products/${id}`);
+  },
+
+  createProduct: (data: any): Promise<Product> => {
+    return apiClient.post("/products", data);
+  },
+
+  updateProduct: (id: number, data: any): Promise<Product> => {
+    return apiClient.put(`/products/${id}`, data);
+  },
+
+  deleteProduct: (id: number): Promise<void> => {
+    return apiClient.delete(`/products/${id}`);
+  },
+};
