@@ -9,6 +9,8 @@ import { useTrademarks } from "@/lib/hooks/useTrademarks";
 import { UnitAttributeModal } from "./UnitAttributeModal";
 import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
+import { Category } from "@/lib/api/categories";
+import { useRootCategories } from "@/lib/hooks/useCategories";
 
 interface ProductFormProps {
   product?: Product;
@@ -44,7 +46,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: categories } = useCategories();
+  const { data: categories } = useRootCategories();
   const { data: trademarks } = useTrademarks();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
@@ -89,6 +91,21 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     return result.url;
   };
 
+  const flattenCategories = (
+    cats: Category[],
+    level: number = 0
+  ): { id: number; name: string; level: number }[] => {
+    return cats.reduce((acc, cat) => {
+      acc.push({ id: cat.id, name: cat.name, level });
+      if (cat.children && cat.children.length > 0) {
+        acc.push(...flattenCategories(cat.children, level + 1));
+      }
+      return acc;
+    }, [] as { id: number; name: string; level: number }[]);
+  };
+
+  const flatCategories = categories ? flattenCategories(categories) : [];
+
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
@@ -105,6 +122,8 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
 
       const formData = {
         ...data,
+        categoryId: data.categoryId || undefined,
+        tradeMarkId: data.tradeMarkId || undefined,
         attributesText: attributes.map((a) => `${a.name}:${a.value}`).join("|"),
         imageUrls: uploadedUrls,
       };
@@ -203,13 +222,15 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   {...register("categoryId")}
                   className="w-full border rounded px-3 py-2">
                   <option value="">Chọn nhóm hàng</option>
-                  {categories?.map((cat) => (
+                  {flatCategories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
+                      {"　".repeat(cat.level)}
                       {cat.name}
                     </option>
                   ))}
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Thương hiệu
