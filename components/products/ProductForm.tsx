@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import type { Product } from "@/lib/api/products";
 import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/useProducts";
 import { useCategories } from "@/lib/hooks/useCategories";
 import { useTrademarks } from "@/lib/hooks/useTrademarks";
-import { useAuthStore } from "@/lib/store/auth";
 import { UnitAttributeModal } from "./UnitAttributeModal";
 
 interface ProductFormProps {
@@ -20,24 +19,21 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   const [images, setImages] = useState<string[]>(
     product?.images?.map((img) => img.image) || []
   );
-  const [attributes, setAttributes] = useState;
-  {
-    name: string;
-    value: string;
-  }
-  [] >
-    (product?.attributesText
+  const [attributes, setAttributes] = useState<
+    { name: string; value: string }[]
+  >(
+    product?.attributesText
       ? product.attributesText.split("|").map((attr) => {
           const [name, value] = attr.split(":");
           return { name: name || "", value: value || "" };
         })
-      : []);
+      : []
+  );
 
   const { data: categories } = useCategories();
   const { data: trademarks } = useTrademarks();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
-  const { token } = useAuthStore();
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
@@ -82,16 +78,8 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     try {
       const res = await fetch("http://localhost:3060/api/upload/image", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
       });
-
-      if (!res.ok) {
-        throw new Error("Upload failed");
-      }
-
       const result = await res.json();
       setImages((prev) => [...prev, result.url]);
     } catch (error) {
@@ -102,6 +90,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
       <div className="bg-white w-full max-w-4xl h-[90vh] flex flex-col rounded-lg">
+        {/* Header */}
         <div className="border-b p-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">
             {product ? "Sửa hàng hóa" : "Thêm hàng hóa"}
@@ -113,16 +102,19 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           </button>
         </div>
 
+        {/* Tabs */}
         <div className="border-b px-4">
           <button className="py-3 border-b-2 border-blue-600 text-blue-600">
             Thông tin
           </button>
         </div>
 
+        {/* Form */}
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
+            {/* Thông tin cơ bản */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -180,6 +172,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               </div>
             </div>
 
+            {/* Giá vốn, giá bán */}
             <div>
               <h3 className="font-semibold mb-3">Giá vốn, giá bán</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -208,6 +201,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               </div>
             </div>
 
+            {/* Tồn kho */}
             <div>
               <h3 className="font-semibold mb-3">Tồn kho</h3>
               <div className="grid grid-cols-3 gap-4">
@@ -246,6 +240,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               </div>
             </div>
 
+            {/* Vị trí, Trọng lượng */}
             <div>
               <h3 className="font-semibold mb-3">Vị trí, Trọng lượng</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -271,6 +266,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               </div>
             </div>
 
+            {/* Quản lý theo đơn vị tính và thuộc tính */}
             <div>
               <h3 className="font-semibold mb-3">
                 Quản lý theo đơn vị tính và thuộc tính
@@ -283,6 +279,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               </button>
             </div>
 
+            {/* Hình ảnh */}
             <div>
               <h3 className="font-semibold mb-3">Hình ảnh</h3>
               <div className="flex gap-4">
@@ -315,6 +312,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               </div>
             </div>
 
+            {/* Mô tả */}
             <div>
               <label className="block text-sm font-medium mb-1">Mô tả</label>
               <textarea
@@ -324,6 +322,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               />
             </div>
 
+            {/* Bán trực tiếp */}
             <div>
               <label className="flex items-center gap-2">
                 <input {...register("isDirectSale")} type="checkbox" />
@@ -332,6 +331,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
             </div>
           </div>
 
+          {/* Footer */}
           <div className="border-t p-4 flex justify-end gap-2">
             <button
               type="button"
@@ -348,6 +348,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
         </form>
       </div>
 
+      {/* Unit & Attribute Modal */}
       {showUnitModal && (
         <UnitAttributeModal
           unit={watch("unit")}
