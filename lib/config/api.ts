@@ -3,16 +3,17 @@ import { useAuthStore } from "@/lib/store/auth";
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3060/api";
 
-const getAuthHeaders = () => {
+const getAuthHeaders = (): HeadersInit => {
   const token = useAuthStore.getState().token;
-  return token
-    ? {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      }
-    : {
-        "Content-Type": "application/json",
-      };
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  return headers;
 };
 
 export const apiClient = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { authApi } from "@/lib/api/auth";
@@ -14,7 +14,7 @@ interface LoginForm {
 
 export default function LoginPage() {
   const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { setAuth, isAuthenticated } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -23,13 +23,22 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginForm>();
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/");
+    }
+  }, [isAuthenticated, router]);
+
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     try {
       const response = await authApi.login(data);
       setAuth(response.user, response.accessToken);
       toast.success("Đăng nhập thành công!");
-      router.push("/");
+
+      setTimeout(() => {
+        router.replace("/");
+      }, 100);
     } catch (error: any) {
       toast.error(error.message || "Đăng nhập thất bại");
     } finally {
