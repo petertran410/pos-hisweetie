@@ -1,29 +1,92 @@
 "use client";
 
 import { useState } from "react";
-import { useCategories } from "@/lib/hooks/useCategories";
+import {
+  useRootCategories,
+  useCreateCategory,
+  useUpdateCategory,
+} from "@/lib/hooks/useCategories";
+import { CategoryTree } from "./CategoryTree";
+import { CategoryModal } from "./CategoryModal";
+import type { Category } from "@/lib/api/categories";
 
 export function ProductSidebar() {
-  const { data: categories } = useCategories();
-  const [selectedCategory, setSelectedCategory] = useState<number>();
+  const { data: categories } = useRootCategories();
+  const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<
+    Category | undefined
+  >();
+
+  const toggleCategorySelect = (id: number) => {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleEditCategory = (category: Category) => {
+    setEditingCategory(category);
+    setShowCategoryModal(true);
+  };
+
+  const handleCreateCategory = () => {
+    setEditingCategory(undefined);
+    setShowCategoryModal(true);
+  };
+
+  const handleSubmitCategory = (data: any) => {
+    if (editingCategory) {
+      updateCategory.mutate(
+        { id: editingCategory.id, data },
+        {
+          onSuccess: () => {
+            setShowCategoryModal(false);
+            setEditingCategory(undefined);
+          },
+        }
+      );
+    } else {
+      createCategory.mutate(data, {
+        onSuccess: () => {
+          setShowCategoryModal(false);
+        },
+      });
+    }
+  };
+
+  const flattenCategories = (cats: Category[]): Category[] => {
+    return cats.reduce((acc, cat) => {
+      acc.push(cat);
+      if (cat.children) {
+        acc.push(...flattenCategories(cat.children));
+      }
+      return acc;
+    }, [] as Category[]);
+  };
 
   return (
     <div className="h-full overflow-y-auto p-4 space-y-6">
       <div>
-        <h3 className="font-semibold mb-2">Nhóm hàng</h3>
-        <select
-          className="w-full border rounded px-3 py-2"
-          value={selectedCategory || ""}
-          onChange={(e) =>
-            setSelectedCategory(Number(e.target.value) || undefined)
-          }>
-          <option value="">Chọn nhóm hàng</option>
-          {categories?.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold">Nhóm hàng</h3>
+          <button
+            onClick={handleCreateCategory}
+            className="text-blue-600 hover:text-blue-700 text-sm">
+            + Tạo mới
+          </button>
+        </div>
+
+        {categories && (
+          <CategoryTree
+            categories={categories}
+            selectedIds={selectedCategoryIds}
+            onToggleSelect={toggleCategorySelect}
+            onEdit={handleEditCategory}
+          />
+        )}
       </div>
 
       <div>
@@ -36,7 +99,6 @@ export function ProductSidebar() {
         </select>
       </div>
 
-      {/* Kho hàng */}
       <div>
         <h3 className="font-semibold mb-2">Kho hàng</h3>
         <select className="w-full border rounded px-3 py-2">
@@ -44,7 +106,6 @@ export function ProductSidebar() {
         </select>
       </div>
 
-      {/* Dự kiến hết hàng */}
       <div>
         <h3 className="font-semibold mb-2">Dự kiến hết hàng</h3>
         <div className="space-y-2">
@@ -59,7 +120,6 @@ export function ProductSidebar() {
         </div>
       </div>
 
-      {/* Thời gian tạo */}
       <div>
         <h3 className="font-semibold mb-2">Thời gian tạo</h3>
         <div className="space-y-2">
@@ -74,7 +134,6 @@ export function ProductSidebar() {
         </div>
       </div>
 
-      {/* Thuộc tính */}
       <div>
         <h3 className="font-semibold mb-2">Thuộc tính</h3>
         <input
@@ -84,7 +143,6 @@ export function ProductSidebar() {
         />
       </div>
 
-      {/* Nhà cung cấp */}
       <div>
         <h3 className="font-semibold mb-2">Nhà cung cấp</h3>
         <select className="w-full border rounded px-3 py-2">
@@ -92,7 +150,6 @@ export function ProductSidebar() {
         </select>
       </div>
 
-      {/* Thương hiệu */}
       <div>
         <h3 className="font-semibold mb-2">Thương hiệu</h3>
         <select className="w-full border rounded px-3 py-2">
@@ -100,7 +157,6 @@ export function ProductSidebar() {
         </select>
       </div>
 
-      {/* Loại hàng */}
       <div>
         <h3 className="font-semibold mb-2">Loại hàng</h3>
         <select className="w-full border rounded px-3 py-2">
@@ -108,7 +164,6 @@ export function ProductSidebar() {
         </select>
       </div>
 
-      {/* Bán trực tiếp */}
       <div>
         <h3 className="font-semibold mb-2">Bán trực tiếp</h3>
         <div className="space-y-2">
@@ -126,6 +181,18 @@ export function ProductSidebar() {
           </label>
         </div>
       </div>
+
+      {showCategoryModal && (
+        <CategoryModal
+          category={editingCategory}
+          categories={categories ? flattenCategories(categories) : []}
+          onClose={() => {
+            setShowCategoryModal(false);
+            setEditingCategory(undefined);
+          }}
+          onSubmit={handleSubmitCategory}
+        />
+      )}
     </div>
   );
 }

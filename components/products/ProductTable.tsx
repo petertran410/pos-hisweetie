@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { ProductDetail } from "./ProductDetail";
+import { ProductForm } from "./ProductForm";
 import type { Product } from "@/lib/api/products";
 
 export function ProductTable() {
@@ -10,21 +11,10 @@ export function ProductTable() {
   const [limit, setLimit] = useState(15);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [visibleColumns, setVisibleColumns] = useState({
-    code: true,
-    name: true,
-    category: true,
-    type: true,
-    price: true,
-    stock: true,
-  });
 
-  const { data, isLoading } = useProducts({ page, limit, search });
-
-  const toggleColumnVisibility = (column: keyof typeof visibleColumns) => {
-    setVisibleColumns((prev) => ({ ...prev, [column]: !prev[column] }));
-  };
+  const { data, isLoading, error } = useProducts({ page, limit, search });
 
   const toggleSelectAll = () => {
     if (selectedIds.length === data?.data.length) {
@@ -40,12 +30,21 @@ export function ProductTable() {
     );
   };
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-red-500">Lỗi tải dữ liệu sản phẩm</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
-      {/* Toolbar */}
       <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded">
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
             + Tạo mới
           </button>
           <input
@@ -57,80 +56,75 @@ export function ProductTable() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-2 border rounded">Import file</button>
-          <div className="relative">
-            <button className="px-3 py-2 border rounded">Cột hiển thị</button>
-            {/* Column visibility dropdown */}
-          </div>
+          <button className="px-3 py-2 border rounded hover:bg-gray-50">
+            Import file
+          </button>
+          <button className="px-3 py-2 border rounded hover:bg-gray-50">
+            Cột hiển thị
+          </button>
         </div>
       </div>
 
-      {/* Table */}
       <div className="flex-1 overflow-y-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 sticky top-0">
-            <tr>
-              <th className="p-3 text-left">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.length === data?.data.length}
-                  onChange={toggleSelectAll}
-                />
-              </th>
-              {visibleColumns.code && (
-                <th className="p-3 text-left">Mã hàng</th>
-              )}
-              {visibleColumns.name && (
-                <th className="p-3 text-left">Tên hàng</th>
-              )}
-              {visibleColumns.category && (
-                <th className="p-3 text-left">Nhóm hàng</th>
-              )}
-              {visibleColumns.type && (
-                <th className="p-3 text-left">Loại hàng</th>
-              )}
-              {visibleColumns.price && (
-                <th className="p-3 text-left">Giá bán</th>
-              )}
-              {visibleColumns.stock && (
-                <th className="p-3 text-left">Tồn kho</th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {data?.data.map((product) => (
-              <tr
-                key={product.id}
-                className="border-b hover:bg-gray-50 cursor-pointer"
-                onClick={() => setSelectedProduct(product)}>
-                <td className="p-3" onClick={(e) => e.stopPropagation()}>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-500">Đang tải...</p>
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-50 sticky top-0">
+              <tr>
+                <th className="p-3 text-left">
                   <input
                     type="checkbox"
-                    checked={selectedIds.includes(product.id)}
-                    onChange={() => toggleSelect(product.id)}
+                    checked={selectedIds.length === data?.data.length}
+                    onChange={toggleSelectAll}
                   />
-                </td>
-                {visibleColumns.code && <td className="p-3">{product.code}</td>}
-                {visibleColumns.name && <td className="p-3">{product.name}</td>}
-                {visibleColumns.category && (
-                  <td className="p-3">{product.category?.name || "-"}</td>
-                )}
-                {visibleColumns.type && <td className="p-3">Hàng hóa</td>}
-                {visibleColumns.price && (
-                  <td className="p-3">
-                    {Number(product.retailPrice).toLocaleString()}
-                  </td>
-                )}
-                {visibleColumns.stock && (
-                  <td className="p-3">{product.stockQuantity}</td>
-                )}
+                </th>
+                <th className="p-3 text-left">Mã hàng</th>
+                <th className="p-3 text-left">Tên hàng</th>
+                <th className="p-3 text-left">Nhóm hàng</th>
+                <th className="p-3 text-left">Loại hàng</th>
+                <th className="p-3 text-left">Giá bán</th>
+                <th className="p-3 text-left">Tồn kho</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data?.data && data.data.length > 0 ? (
+                data.data.map((product) => (
+                  <tr
+                    key={product.id}
+                    className="border-b hover:bg-gray-50 cursor-pointer"
+                    onClick={() => setSelectedProduct(product)}>
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(product.id)}
+                        onChange={() => toggleSelect(product.id)}
+                      />
+                    </td>
+                    <td className="p-3">{product.code}</td>
+                    <td className="p-3">{product.name}</td>
+                    <td className="p-3">{product.category?.name || "-"}</td>
+                    <td className="p-3">Hàng hóa</td>
+                    <td className="p-3">
+                      {Number(product.retailPrice).toLocaleString()}
+                    </td>
+                    <td className="p-3">{product.stockQuantity}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-gray-500">
+                    Không có sản phẩm nào
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {/* Pagination */}
       <div className="border-t p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span>Hiển thị</span>
@@ -165,11 +159,17 @@ export function ProductTable() {
         </div>
       </div>
 
-      {/* Product Detail Drawer */}
       {selectedProduct && (
         <ProductDetail
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
+        />
+      )}
+
+      {showCreateForm && (
+        <ProductForm
+          onClose={() => setShowCreateForm(false)}
+          onSuccess={() => setShowCreateForm(false)}
         />
       )}
     </div>

@@ -16,4 +16,22 @@ export const categoriesApi = {
   getRootCategories: (): Promise<Category[]> => {
     return apiClient.get("/categories/roots");
   },
+
+  createCategory: (data: {
+    name: string;
+    parentId?: number;
+  }): Promise<Category> => {
+    return apiClient.post("/categories", data);
+  },
+
+  updateCategory: (
+    id: number,
+    data: { name?: string; parentId?: number }
+  ): Promise<Category> => {
+    return apiClient.put(`/categories/${id}`, data);
+  },
+
+  deleteCategory: (id: number): Promise<void> => {
+    return apiClient.delete(`/categories/${id}`);
+  },
 };
