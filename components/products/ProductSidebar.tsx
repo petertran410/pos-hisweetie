@@ -9,7 +9,6 @@ export function ProductSidebar() {
 
   return (
     <div className="h-full overflow-y-auto p-4 space-y-6">
-      {/* Nhóm hàng */}
       <div>
         <h3 className="font-semibold mb-2">Nhóm hàng</h3>
         <select
@@ -27,7 +26,6 @@ export function ProductSidebar() {
         </select>
       </div>
 
-      {/* Tồn kho */}
       <div>
         <h3 className="font-semibold mb-2">Tồn kho</h3>
         <select className="w-full border rounded px-3 py-2">
@@ -102,39 +100,12 @@ export function ProductSidebar() {
         </select>
       </div>
 
-      {/* Vị trí */}
-      <div>
-        <h3 className="font-semibold mb-2">Vị trí</h3>
-        <select className="w-full border rounded px-3 py-2">
-          <option value="">Chọn vị trí</option>
-        </select>
-      </div>
-
       {/* Loại hàng */}
       <div>
         <h3 className="font-semibold mb-2">Loại hàng</h3>
         <select className="w-full border rounded px-3 py-2">
           <option value="">Chọn loại hàng</option>
         </select>
-      </div>
-
-      {/* Tích điểm */}
-      <div>
-        <h3 className="font-semibold mb-2">Tích điểm</h3>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2">
-            <input type="radio" name="reward" value="all" defaultChecked />
-            <span>Tất cả</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="radio" name="reward" value="yes" />
-            <span>Có</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="radio" name="reward" value="no" />
-            <span>Không</span>
-          </label>
-        </div>
       </div>
 
       {/* Bán trực tiếp */}
@@ -152,17 +123,6 @@ export function ProductSidebar() {
           <label className="flex items-center gap-2">
             <input type="radio" name="direct-sale" value="no" />
             <span>Không</span>
-          </label>
-        </div>
-      </div>
-
-      {/* Liên kết kiểm bán */}
-      <div>
-        <h3 className="font-semibold mb-2">Liên kết kiểm bán</h3>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" />
-            <span>Bán trực tiếp</span>
           </label>
         </div>
       </div>
