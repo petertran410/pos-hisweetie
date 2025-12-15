@@ -6,8 +6,8 @@ import {
   useCreateCategory,
   useUpdateCategory,
 } from "@/lib/hooks/useCategories";
-import { CategoryTree } from "./CategoryTree";
 import { CategoryModal } from "./CategoryModal";
+import { CategorySelectorModal } from "./CategorySelectorModal";
 import type { Category } from "@/lib/api/categories";
 
 export function ProductSidebar() {
@@ -16,21 +16,11 @@ export function ProductSidebar() {
   const updateCategory = useUpdateCategory();
 
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [showCategorySelector, setShowCategorySelector] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<
-    Category | undefined
-  >();
-
-  const toggleCategorySelect = (id: number) => {
-    setSelectedCategoryIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const handleEditCategory = (category: Category) => {
-    setEditingCategory(category);
-    setShowCategoryModal(true);
-  };
+  const [editingCategory, setEditingCategory] = useState<Category | undefined>(
+    undefined
+  );
 
   const handleCreateCategory = () => {
     setEditingCategory(undefined);
@@ -67,6 +57,17 @@ export function ProductSidebar() {
     }, [] as Category[]);
   };
 
+  const getSelectedCategoryNames = () => {
+    if (!categories || selectedCategoryIds.length === 0) return "";
+    const allCategories = flattenCategories(categories);
+    const selectedNames = selectedCategoryIds
+      .map((id) => allCategories.find((cat) => cat.id === id)?.name)
+      .filter(Boolean);
+    if (selectedNames.length === 0) return "";
+    if (selectedNames.length === 1) return selectedNames[0];
+    return `${selectedNames.length} nhóm đã chọn`;
+  };
+
   return (
     <div className="h-full overflow-y-auto p-4 space-y-6">
       <div>
@@ -75,18 +76,29 @@ export function ProductSidebar() {
           <button
             onClick={handleCreateCategory}
             className="text-blue-600 hover:text-blue-700 text-sm">
-            + Tạo mới
+            Tạo mới
           </button>
         </div>
 
-        {categories && (
-          <CategoryTree
-            categories={categories}
-            selectedIds={selectedCategoryIds}
-            onToggleSelect={toggleCategorySelect}
-            onEdit={handleEditCategory}
-          />
-        )}
+        <button
+          onClick={() => setShowCategorySelector(true)}
+          className="w-full border rounded px-3 py-2 text-left flex items-center justify-between hover:bg-gray-50">
+          <span className="text-sm text-gray-600">
+            {getSelectedCategoryNames() || "Chọn nhóm hàng"}
+          </span>
+          <svg
+            className="w-4 h-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </button>
       </div>
 
       <div>
@@ -181,6 +193,15 @@ export function ProductSidebar() {
           </label>
         </div>
       </div>
+
+      {showCategorySelector && categories && (
+        <CategorySelectorModal
+          categories={categories}
+          selectedIds={selectedCategoryIds}
+          onApply={setSelectedCategoryIds}
+          onClose={() => setShowCategorySelector(false)}
+        />
+      )}
 
       {showCategoryModal && (
         <CategoryModal
