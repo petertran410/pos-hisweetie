@@ -44,7 +44,8 @@ export const useUpdateProduct = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) =>
       productsApi.updateProduct(id, data),
-    onSuccess: () => {
+    onSuccess: (updatedProduct) => {
+      queryClient.setQueryData(["product", updatedProduct.id], updatedProduct);
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["product"] });
       toast.success("Cập nhật sản phẩm thành công");

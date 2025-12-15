@@ -27,12 +27,7 @@ interface ImageItem {
 
 export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   const [showUnitModal, setShowUnitModal] = useState(false);
-  const [images, setImages] = useState<ImageItem[]>(
-    product?.images?.map((img) => ({
-      url: img.image,
-      preview: img.image,
-    })) || []
-  );
+  const [images, setImages] = useState<ImageItem[]>([]);
 
   const [attributes, setAttributes] = useState<
     { name: string; value: string }[]
@@ -105,8 +100,6 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     }, [] as { id: number; name: string; level: number }[]);
   };
 
-  const flatCategories = categories ? flattenCategories(categories) : [];
-
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
@@ -165,6 +158,19 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
+
+  useEffect(() => {
+    if (product?.images) {
+      setImages(
+        product.images.map((img) => ({
+          url: img.image,
+          preview: img.image,
+        }))
+      );
+    } else {
+      setImages([]);
+    }
+  }, [product?.id]);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
