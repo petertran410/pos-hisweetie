@@ -5,7 +5,7 @@ import { ProductTable } from "@/components/products/ProductTable";
 
 export default function ProductListPage() {
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
+    <div className="flex h-full">
       {/* Sidebar - Fixed width, scroll content */}
       <aside className="w-64 border-r shrink-0 overflow-hidden">
         <div className="h-full overflow-y-auto">
