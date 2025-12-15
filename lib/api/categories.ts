@@ -6,6 +6,9 @@ export interface Category {
   parentId?: number;
   hasChild: boolean;
   children?: Category[];
+  _count?: {
+    products: number;
+  };
 }
 
 export const categoriesApi = {
