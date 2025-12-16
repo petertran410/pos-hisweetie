@@ -146,17 +146,19 @@ export function CategorySelect({
           type="button"
           onClick={() => handleSelect(cat.id)}
           className={`
-            w-full text-left px-3 py-2 hover:bg-blue-50 text-sm transition-colors
-            flex items-center gap-2
-            ${isSelected ? "bg-blue-100 text-blue-700 font-medium" : ""}
-            ${cat.level === 0 ? "font-semibold text-gray-900" : "text-gray-700"}
-          `}
+          w-full text-left px-3 py-2 hover:bg-blue-50 text-sm transition-colors
+          flex items-center gap-2
+          ${isSelected ? "bg-blue-100 text-blue-700 font-medium" : ""}
+          ${cat.level === 0 ? "font-semibold text-gray-900" : "text-gray-700"}
+        `}
           style={{ paddingLeft: `${cat.level * 20 + 12}px` }}>
           {cat.hasChildren && (
-            <button
-              type="button"
-              onClick={(e) => toggleExpand(cat.id, e)}
-              className="flex-shrink-0 w-4 h-4 flex items-center justify-center hover:bg-gray-200 rounded transition-colors">
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpand(cat.id, e);
+              }}
+              className="flex-shrink-0 w-4 h-4 flex items-center justify-center hover:bg-gray-200 rounded transition-colors cursor-pointer">
               <svg
                 className={`w-3 h-3 transition-transform ${
                   isExpanded ? "rotate-90" : ""
@@ -171,7 +173,7 @@ export function CategorySelect({
                   d="M9 5l7 7-7 7"
                 />
               </svg>
-            </button>
+            </span>
           )}
           {!cat.hasChildren && cat.level > 0 && (
             <span className="w-4 flex-shrink-0" />
