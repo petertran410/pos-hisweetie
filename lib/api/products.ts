@@ -31,6 +31,15 @@ export interface Product {
   tradeMark?: { id: number; name: string };
   variant?: { id: number; name: string };
   images?: { id: number; image: string }[];
+  comboComponents?: ProductComponent[];
+}
+
+export interface ProductComponent {
+  id: number;
+  comboProductId: number;
+  componentProductId: number;
+  quantity: number;
+  componentProduct: Product;
 }
 
 export interface ProductsResponse {

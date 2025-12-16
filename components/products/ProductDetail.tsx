@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Product } from "@/lib/api/products";
 import { useDeleteProduct } from "@/lib/hooks/useProducts";
 import { ProductForm } from "./ProductForm";
+import { ComboProductForm } from "./ComboProductForm";
 
 interface ProductDetailProps {
   product: Product;
@@ -25,7 +26,51 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
     });
   };
 
+  const getProductTypeLabel = (type: number) => {
+    switch (type) {
+      case 1:
+        return "Combo - đóng gói";
+      case 2:
+        return "Hàng hóa";
+      case 3:
+        return "Dịch vụ";
+      default:
+        return "Hàng hóa";
+    }
+  };
+
+  const calculateTotalPurchasePrice = () => {
+    if (!product.comboComponents) return 0;
+    return product.comboComponents.reduce((sum, comp) => {
+      const price = Number(comp.componentProduct?.purchasePrice || 0);
+      const quantity = Number(comp.quantity);
+      return sum + price * quantity;
+    }, 0);
+  };
+
+  const calculateTotalRetailPrice = () => {
+    if (!product.comboComponents) return 0;
+    return product.comboComponents.reduce((sum, comp) => {
+      const price = Number(comp.componentProduct?.retailPrice || 0);
+      const quantity = Number(comp.quantity);
+      return sum + price * quantity;
+    }, 0);
+  };
+
   if (isEditing) {
+    if (product.type === 1) {
+      return (
+        <ComboProductForm
+          product={product}
+          onClose={() => setIsEditing(false)}
+          onSuccess={() => {
+            setIsEditing(false);
+            onClose();
+          }}
+        />
+      );
+    }
+
     return (
       <ProductForm
         product={product}
@@ -84,15 +129,17 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
               onClick={() => setActiveTab("description")}>
               Mô tả
             </button>
-            <button
-              className={`py-3 border-b-2 ${
-                activeTab === "inventory"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-600"
-              }`}
-              onClick={() => setActiveTab("inventory")}>
-              Tồn kho
-            </button>
+            {product.type !== 1 && (
+              <button
+                className={`py-3 border-b-2 ${
+                  activeTab === "inventory"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-600"
+                }`}
+                onClick={() => setActiveTab("inventory")}>
+                Tồn kho
+              </button>
+            )}
             <button
               className={`py-3 border-b-2 ${
                 activeTab === "links"
@@ -119,6 +166,12 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                   <p className="font-medium">{product.name}</p>
                 </div>
                 <div>
+                  <label className="text-sm text-gray-600">Loại hàng</label>
+                  <p className="font-medium">
+                    {getProductTypeLabel(product.type)}
+                  </p>
+                </div>
+                <div>
                   <label className="text-sm text-gray-600">Nhóm hàng</label>
                   <p className="font-medium">{product.category?.name || "-"}</p>
                 </div>
@@ -128,34 +181,57 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                     {product.tradeMark?.name || "-"}
                   </p>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600">Giá vốn</label>
-                  <p className="font-medium">
-                    {Number(product.purchasePrice).toLocaleString()} đ
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">Giá bán</label>
-                  <p className="font-medium">
-                    {Number(product.retailPrice).toLocaleString()} đ
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">Tồn kho</label>
-                  <p className="font-medium">{product.stockQuantity}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">
-                    Định mức tồn ít nhất
-                  </label>
-                  <p className="font-medium">{product.minStockAlert}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600">
-                    Định mức tồn nhiều nhất
-                  </label>
-                  <p className="font-medium">{product.maxStockAlert}</p>
-                </div>
+
+                {product.type === 1 ? (
+                  <>
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        Tổng giá vốn
+                      </label>
+                      <p className="font-medium">
+                        {calculateTotalPurchasePrice().toLocaleString()} đ
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Giá bán</label>
+                      <p className="font-medium">
+                        {Number(product.retailPrice).toLocaleString()} đ
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-sm text-gray-600">Giá vốn</label>
+                      <p className="font-medium">
+                        {Number(product.purchasePrice).toLocaleString()} đ
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Giá bán</label>
+                      <p className="font-medium">
+                        {Number(product.retailPrice).toLocaleString()} đ
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Tồn kho</label>
+                      <p className="font-medium">{product.stockQuantity}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        Định mức tồn ít nhất
+                      </label>
+                      <p className="font-medium">{product.minStockAlert}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        Định mức tồn nhiều nhất
+                      </label>
+                      <p className="font-medium">{product.maxStockAlert}</p>
+                    </div>
+                  </>
+                )}
+
                 {product.weight && (
                   <div>
                     <label className="text-sm text-gray-600">Trọng lượng</label>
@@ -177,6 +253,103 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                   </p>
                 </div>
               </div>
+
+              {product.type === 1 && product.comboComponents && (
+                <div className="border-t pt-6">
+                  <h3 className="font-semibold mb-4">Hàng thành phần</h3>
+                  <div className="border rounded overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-sm font-medium">
+                            STT
+                          </th>
+                          <th className="px-4 py-2 text-left text-sm font-medium">
+                            Mã hàng
+                          </th>
+                          <th className="px-4 py-2 text-left text-sm font-medium">
+                            Tên hàng thành phần
+                          </th>
+                          <th className="px-4 py-2 text-center text-sm font-medium">
+                            Số lượng
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Giá vốn
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Tổng giá vốn
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Giá bán
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Tổng giá bán
+                          </th>
+                        </tr>
+                        <tr className="bg-gray-100 font-semibold">
+                          <td colSpan={5}></td>
+                          <td className="px-4 py-2 text-right">
+                            {calculateTotalPurchasePrice().toLocaleString()}
+                          </td>
+                          <td></td>
+                          <td className="px-4 py-2 text-right">
+                            {calculateTotalRetailPrice().toLocaleString()}
+                          </td>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {product.comboComponents.map((comp, index) => {
+                          const purchasePrice = Number(
+                            comp.componentProduct?.purchasePrice || 0
+                          );
+                          const retailPrice = Number(
+                            comp.componentProduct?.retailPrice || 0
+                          );
+                          const quantity = Number(comp.quantity);
+                          const totalPurchase = purchasePrice * quantity;
+                          const totalRetail = retailPrice * quantity;
+
+                          return (
+                            <tr key={comp.id} className="border-t">
+                              <td className="px-4 py-2">{index + 1}</td>
+                              <td className="px-4 py-2 text-sm">
+                                {comp.componentProduct?.code}
+                              </td>
+                              <td className="px-4 py-2">
+                                {comp.componentProduct?.name}
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                {quantity}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {purchasePrice.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {totalPurchase.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {retailPrice.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {totalRetail.toLocaleString()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {product.comboComponents.length === 0 && (
+                          <tr>
+                            <td
+                              colSpan={8}
+                              className="px-4 py-8 text-center text-gray-500">
+                              Chưa có hàng thành phần
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 {product.attributesText && (
@@ -228,7 +401,7 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
             </div>
           )}
 
-          {activeTab === "inventory" && (
+          {activeTab === "inventory" && product.type !== 1 && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="border rounded p-4">

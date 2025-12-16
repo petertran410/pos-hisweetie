@@ -1,0 +1,604 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import type { Product } from "@/lib/api/products";
+import {
+  useCreateProduct,
+  useUpdateProduct,
+  useProducts,
+} from "@/lib/hooks/useProducts";
+import { useTrademarks } from "@/lib/hooks/useTrademarks";
+import { useRootCategories } from "@/lib/hooks/useCategories";
+import { CategorySelect } from "./CategorySelect";
+import { useAuthStore } from "@/lib/store/auth";
+
+interface ComboComponent {
+  id?: number;
+  componentProductId: number;
+  componentProduct?: Product;
+  quantity: number;
+}
+
+interface ImageItem {
+  url?: string;
+  file?: File;
+  preview: string;
+}
+
+interface ComboProductFormProps {
+  product?: Product;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export function ComboProductForm({
+  product,
+  onClose,
+  onSuccess,
+}: ComboProductFormProps) {
+  const [images, setImages] = useState<ImageItem[]>([]);
+  const [components, setComponents] = useState<ComboComponent[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: categories } = useRootCategories();
+  const { data: trademarks } = useTrademarks();
+  const { data: searchResults } = useProducts({
+    search: searchQuery,
+    limit: 10,
+  });
+
+  const createProduct = useCreateProduct();
+  const updateProduct = useUpdateProduct();
+
+  const { register, handleSubmit, watch, setValue } = useForm({
+    defaultValues: {
+      code: product?.code || "",
+      name: product?.name || "",
+      description: product?.description || "",
+      orderTemplate: product?.orderTemplate || "",
+      categoryId: product?.categoryId || undefined,
+      tradeMarkId: product?.tradeMarkId || undefined,
+      retailPrice: product?.retailPrice || 0,
+      minStockAlert: product?.minStockAlert || 0,
+      maxStockAlert: product?.maxStockAlert || 0,
+      weight: product?.weight || undefined,
+      weightUnit: product?.weightUnit || "kg",
+      unit: product?.unit || "",
+      isDirectSale: product?.isDirectSale || false,
+      isActive: product?.isActive ?? true,
+    },
+  });
+
+  useEffect(() => {
+    if (product?.comboComponents) {
+      setComponents(
+        product.comboComponents.map((comp) => ({
+          id: comp.id,
+          componentProductId: comp.componentProductId,
+          componentProduct: comp.componentProduct,
+          quantity: Number(comp.quantity),
+        }))
+      );
+    }
+  }, [product?.id]);
+
+  useEffect(() => {
+    if (product?.images) {
+      setImages(
+        product.images.map((img) => ({
+          url: img.image,
+          preview: img.image,
+        }))
+      );
+    }
+  }, [product?.id]);
+
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const token = useAuthStore.getState().token;
+    const res = await fetch("http://localhost:3060/api/upload/image", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      throw new Error("Upload failed");
+    }
+
+    const result = await res.json();
+    return result.url;
+  };
+
+  const addComponent = (selectedProduct: Product) => {
+    const exists = components.find(
+      (c) => c.componentProductId === selectedProduct.id
+    );
+    if (!exists) {
+      setComponents([
+        ...components,
+        {
+          componentProductId: selectedProduct.id,
+          componentProduct: selectedProduct,
+          quantity: 1,
+        },
+      ]);
+    }
+    setSearchQuery("");
+    setShowSearchResults(false);
+  };
+
+  const updateComponentQuantity = (index: number, quantity: number) => {
+    const updated = [...components];
+    updated[index].quantity = Math.max(1, quantity);
+    setComponents(updated);
+  };
+
+  const removeComponent = (index: number) => {
+    setComponents(components.filter((_, i) => i !== index));
+  };
+
+  const calculateTotalPurchasePrice = () => {
+    return components.reduce((sum, comp) => {
+      const price = Number(comp.componentProduct?.purchasePrice || 0);
+      return sum + price * comp.quantity;
+    }, 0);
+  };
+
+  const calculateTotalRetailPrice = () => {
+    return components.reduce((sum, comp) => {
+      const price = Number(comp.componentProduct?.retailPrice || 0);
+      return sum + price * comp.quantity;
+    }, 0);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImages((prev) => [
+        ...prev,
+        {
+          file,
+          preview: reader.result as string,
+        },
+      ]);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const onSubmit = async (data: any) => {
+    setIsSubmitting(true);
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (const img of images) {
+        if (img.file) {
+          const url = await uploadFile(img.file);
+          uploadedUrls.push(url);
+        } else if (img.url) {
+          uploadedUrls.push(img.url);
+        }
+      }
+
+      const formData = {
+        code: data.code,
+        name: data.name,
+        type: 1,
+        description: data.description || undefined,
+        orderTemplate: data.orderTemplate || undefined,
+        categoryId: data.categoryId ? Number(data.categoryId) : undefined,
+        tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
+        purchasePrice: 0,
+        retailPrice: Number(data.retailPrice) || 0,
+        stockQuantity: 0,
+        minStockAlert: Number(data.minStockAlert) || 0,
+        maxStockAlert: Number(data.maxStockAlert) || 0,
+        weight: data.weight ? Number(data.weight) : undefined,
+        weightUnit: data.weightUnit || undefined,
+        unit: data.unit || undefined,
+        imageUrls: uploadedUrls,
+        isDirectSale: Boolean(data.isDirectSale),
+        isActive: Boolean(data.isActive),
+        components: components.map((comp) => ({
+          componentProductId: comp.componentProductId,
+          quantity: comp.quantity,
+        })),
+      };
+
+      if (product) {
+        await updateProduct.mutateAsync(
+          { id: product.id, data: formData },
+          { onSuccess }
+        );
+      } else {
+        await createProduct.mutateAsync(formData, { onSuccess });
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+      <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col rounded-lg">
+        <div className="border-b p-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold">
+            {product ? "Sửa Combo - đóng gói" : "Tạo Combo - đóng gói"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600">
+            ✕
+          </button>
+        </div>
+
+        <div className="border-b px-4">
+          <button className="py-3 border-b-2 border-blue-600 text-blue-600">
+            Thông tin
+          </button>
+        </div>
+
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Mã hàng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  {...register("code", { required: true })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Nhập mã hàng"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Tên hàng <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("name", { required: true })}
+                className="w-full border rounded px-3 py-2"
+                placeholder="Nhập tên hàng"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Nhóm hàng
+                </label>
+                <CategorySelect
+                  categories={categories || []}
+                  value={watch("categoryId")}
+                  onChange={(categoryId) => setValue("categoryId", categoryId)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Thương hiệu
+                </label>
+                <select
+                  {...register("tradeMarkId")}
+                  className="w-full border rounded px-3 py-2">
+                  <option value="">Chọn thương hiệu</option>
+                  {trademarks?.map((tm) => (
+                    <option key={tm.id} value={tm.id}>
+                      {tm.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="border-t pt-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">Hàng thành phần</h3>
+              </div>
+
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  placeholder="Thêm hàng thành phần"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearchResults(true);
+                  }}
+                  onFocus={() => setShowSearchResults(true)}
+                  onBlur={() =>
+                    setTimeout(() => setShowSearchResults(false), 200)
+                  }
+                  className="w-full border rounded px-3 py-2"
+                />
+
+                {showSearchResults && searchQuery && searchResults?.data && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto z-10">
+                    {searchResults.data
+                      .filter((p) => p.type !== 1)
+                      .map((product) => (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onClick={() => addComponent(product)}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-3">
+                          <span className="text-sm text-gray-500">
+                            {product.code}
+                          </span>
+                          <span className="flex-1">{product.name}</span>
+                          <span className="text-sm text-gray-500">
+                            {Number(product.retailPrice).toLocaleString()} đ
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border rounded overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-sm font-medium">
+                        STT
+                      </th>
+                      <th className="px-4 py-2 text-left text-sm font-medium">
+                        Mã hàng
+                      </th>
+                      <th className="px-4 py-2 text-left text-sm font-medium">
+                        Tên hàng thành phần
+                      </th>
+                      <th className="px-4 py-2 text-center text-sm font-medium">
+                        Số lượng
+                      </th>
+                      <th className="px-4 py-2 text-right text-sm font-medium">
+                        Giá vốn
+                      </th>
+                      <th className="px-4 py-2 text-right text-sm font-medium">
+                        Tổng giá vốn
+                      </th>
+                      <th className="px-4 py-2 text-right text-sm font-medium">
+                        Giá bán
+                      </th>
+                      <th className="px-4 py-2 text-right text-sm font-medium">
+                        Tổng giá bán
+                      </th>
+                      <th className="px-4 py-2"></th>
+                    </tr>
+                    {components.length > 0 && (
+                      <tr className="bg-gray-100 font-semibold">
+                        <td colSpan={5}></td>
+                        <td className="px-4 py-2 text-right">
+                          {calculateTotalPurchasePrice().toLocaleString()}
+                        </td>
+                        <td></td>
+                        <td className="px-4 py-2 text-right">
+                          {calculateTotalRetailPrice().toLocaleString()}
+                        </td>
+                        <td></td>
+                      </tr>
+                    )}
+                  </thead>
+                  <tbody>
+                    {components.map((comp, index) => {
+                      const purchasePrice = Number(
+                        comp.componentProduct?.purchasePrice || 0
+                      );
+                      const retailPrice = Number(
+                        comp.componentProduct?.retailPrice || 0
+                      );
+                      const totalPurchase = purchasePrice * comp.quantity;
+                      const totalRetail = retailPrice * comp.quantity;
+
+                      return (
+                        <tr key={index} className="border-t">
+                          <td className="px-4 py-2">{index + 1}</td>
+                          <td className="px-4 py-2 text-sm">
+                            {comp.componentProduct?.code}
+                          </td>
+                          <td className="px-4 py-2">
+                            {comp.componentProduct?.name}
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="number"
+                              min="1"
+                              value={comp.quantity}
+                              onChange={(e) =>
+                                updateComponentQuantity(
+                                  index,
+                                  Number(e.target.value)
+                                )
+                              }
+                              className="w-20 border rounded px-2 py-1 text-center"
+                            />
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            {purchasePrice.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            {totalPurchase.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            {retailPrice.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            {totalRetail.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2">
+                            <button
+                              type="button"
+                              onClick={() => removeComponent(index)}
+                              className="text-red-600 hover:text-red-800">
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {components.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={9}
+                          className="px-4 py-8 text-center text-gray-500">
+                          Chưa có hàng thành phần. Tìm kiếm và thêm sản phẩm ở
+                          trên.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-3">Giá bán</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Giá bán
+                  </label>
+                  <input
+                    {...register("retailPrice", { valueAsNumber: true })}
+                    type="number"
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-3">Vị trí, Trọng lượng</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Trọng lượng
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      {...register("weight", { valueAsNumber: true })}
+                      type="number"
+                      className="flex-1 border rounded px-3 py-2"
+                      placeholder="550"
+                    />
+                    <select
+                      {...register("weightUnit")}
+                      className="border rounded px-3 py-2">
+                      <option value="g">g</option>
+                      <option value="kg">kg</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-3">Hình ảnh</h3>
+              <div className="flex gap-4">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative w-24 h-24">
+                    <img
+                      src={img.preview}
+                      alt=""
+                      className="w-full h-full object-cover rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6">
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <label className="w-24 h-24 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                  <span className="text-3xl text-gray-400">+</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Mô tả</label>
+              <textarea
+                {...register("description")}
+                className="w-full border rounded px-3 py-2 h-24"
+                placeholder="Nhập mô tả sản phẩm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Ghi chú đơn hàng
+              </label>
+              <textarea
+                {...register("orderTemplate")}
+                className="w-full border rounded px-3 py-2 h-24"
+                placeholder="Nhập ghi chú đơn hàng"
+              />
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2">
+                <input {...register("isDirectSale")} type="checkbox" />
+                <span className="text-sm font-medium">Bán trực tiếp</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="border-t p-4 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border rounded hover:bg-gray-50"
+              disabled={isSubmitting}>
+              Bỏ qua
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+              {isSubmitting ? "Đang lưu..." : product ? "Lưu" : "Tạo mới"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

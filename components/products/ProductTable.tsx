@@ -5,6 +5,7 @@ import { useProducts } from "@/lib/hooks/useProducts";
 import { ProductDetail } from "./ProductDetail";
 import { ProductForm } from "./ProductForm";
 import type { Product } from "@/lib/api/products";
+import { ComboProductForm } from "./ComboProductForm";
 
 interface ProductTableProps {
   selectedCategoryIds: number[];
@@ -319,9 +320,8 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
                 </button>
                 <button
                   onClick={() => handleCreateProduct(1)}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400 cursor-not-allowed"
-                  disabled>
-                  Combo - đóng gói (Sắp ra mắt)
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                  Combo - đóng gói
                 </button>
               </div>
             )}
@@ -481,7 +481,20 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
         />
       )}
 
-      {showCreateForm && productType && (
+      {showCreateForm && productType === 1 && (
+        <ComboProductForm
+          onClose={() => {
+            setShowCreateForm(false);
+            setProductType(null);
+          }}
+          onSuccess={() => {
+            setShowCreateForm(false);
+            setProductType(null);
+          }}
+        />
+      )}
+
+      {showCreateForm && productType && productType !== 1 && (
         <ProductForm
           productType={productType}
           onClose={() => {
