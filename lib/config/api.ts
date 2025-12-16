@@ -57,6 +57,17 @@ export const apiClient = {
           window.location.href = "/login";
         }
       }
+
+      const errorText = await res.text();
+      console.error("API Error Response:", errorText);
+
+      try {
+        const errorJson = JSON.parse(errorText);
+        console.error("API Error Details:", errorJson);
+      } catch (e) {
+        console.error("Raw Error:", errorText);
+      }
+
       throw new Error("API Error");
     }
     return res.json();

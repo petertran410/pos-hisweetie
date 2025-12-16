@@ -117,11 +117,31 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       }
 
       const formData = {
-        ...data,
-        categoryId: data.categoryId || undefined,
-        tradeMarkId: data.tradeMarkId || undefined,
-        attributesText: attributes.map((a) => `${a.name}:${a.value}`).join("|"),
+        code: data.code,
+        name: data.name,
+        description: data.description || undefined,
+        orderTemplate: data.orderTemplate || undefined,
+        categoryId: data.categoryId ? Number(data.categoryId) : undefined,
+        tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
+        variantId: data.variantId ? Number(data.variantId) : undefined,
+        purchasePrice: Number(data.purchasePrice) || 0,
+        retailPrice: Number(data.retailPrice) || 0,
+        stockQuantity: Number(data.stockQuantity) || 0,
+        minStockAlert: Number(data.minStockAlert) || 0,
+        maxStockAlert: Number(data.maxStockAlert) || 0,
+        weight: data.weight ? Number(data.weight) : undefined,
+        weightUnit: data.weightUnit || undefined,
+        unit: data.unit || undefined,
+        conversionValue: data.conversionValue
+          ? Number(data.conversionValue)
+          : undefined,
+        attributesText:
+          attributes.length > 0
+            ? attributes.map((a) => `${a.name}:${a.value}`).join("|")
+            : undefined,
         imageUrls: uploadedUrls,
+        isDirectSale: Boolean(data.isDirectSale),
+        isActive: Boolean(data.isActive),
       };
 
       if (product) {
@@ -134,7 +154,6 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       }
     } catch (error) {
       console.error("Submit error:", error);
-      toast.error("Lỗi khi lưu sản phẩm");
     } finally {
       setIsSubmitting(false);
     }
