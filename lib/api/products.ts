@@ -6,6 +6,7 @@ export interface Product {
   name: string;
   fullName?: string;
   description?: string;
+  orderTemplate?: string;
   categoryId?: number;
   tradeMarkId?: number;
   variantId?: number;
@@ -13,6 +14,7 @@ export interface Product {
   retailPrice: number;
   stockQuantity: number;
   minStockAlert: number;
+  maxStockAlert: number;
   weight?: number;
   weightUnit?: string;
   unit?: string;
@@ -21,6 +23,9 @@ export interface Product {
   attributesText?: string;
   isActive: boolean;
   isDirectSale: boolean;
+  isRewardPoint?: boolean;
+  createdAt: string;
+  updatedAt: string;
   category?: { id: number; name: string };
   tradeMark?: { id: number; name: string };
   variant?: { id: number; name: string };

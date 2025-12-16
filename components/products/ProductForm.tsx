@@ -52,12 +52,14 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       code: product?.code || "",
       name: product?.name || "",
       description: product?.description || "",
+      orderTemplate: product?.orderTemplate || "",
       categoryId: product?.categoryId || undefined,
       tradeMarkId: product?.tradeMarkId || undefined,
       purchasePrice: product?.purchasePrice || 0,
       retailPrice: product?.retailPrice || 0,
       stockQuantity: product?.stockQuantity || 0,
       minStockAlert: product?.minStockAlert || 0,
+      maxStockAlert: product?.minStockAlert || 0,
       weight: product?.weight || undefined,
       weightUnit: product?.weightUnit || "kg",
       unit: product?.unit || "",
@@ -307,6 +309,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                     Định mức tồn tối đa
                   </label>
                   <input
+                    {...register("maxStockAlert", { valueAsNumber: true })}
                     type="number"
                     className="w-full border rounded px-3 py-2"
                     placeholder="999,999,999"
@@ -388,6 +391,17 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 {...register("description")}
                 className="w-full border rounded px-3 py-2 h-24"
                 placeholder="Nhập mô tả sản phẩm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Ghi chú đơn hàng
+              </label>
+              <textarea
+                {...register("orderTemplate")}
+                className="w-full border rounded px-3 py-2 h-24"
+                placeholder="Nhập ghi chú đơn hàng"
               />
             </div>
 

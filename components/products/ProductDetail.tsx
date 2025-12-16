@@ -145,8 +145,16 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                   <p className="font-medium">{product.stockQuantity}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">Định mức tồn</label>
+                  <label className="text-sm text-gray-600">
+                    Định mức tồn ít nhất
+                  </label>
                   <p className="font-medium">{product.minStockAlert}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">
+                    Định mức tồn nhiều nhất
+                  </label>
+                  <p className="font-medium">{product.maxStockAlert}</p>
                 </div>
                 {product.weight && (
                   <div>
@@ -170,29 +178,53 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                 </div>
               </div>
 
-              {product.attributesText && (
-                <div>
-                  <label className="text-sm text-gray-600">Thuộc tính</label>
-                  <div className="mt-2 space-y-1">
-                    {product.attributesText.split("|").map((attr, idx) => {
-                      const [name, value] = attr.split(":");
-                      return (
-                        <p key={idx} className="text-sm">
-                          <span className="font-medium">{name}:</span> {value}
-                        </p>
-                      );
-                    })}
+              <div className="grid grid-cols-2 gap-4">
+                {product.attributesText && (
+                  <div>
+                    <label className="text-sm text-gray-600">Thuộc tính</label>
+                    <div className="mt-2 space-y-1">
+                      {product.attributesText.split("|").map((attr, idx) => {
+                        const [name, value] = attr.split(":");
+                        return (
+                          <p key={idx} className="text-sm">
+                            <span className="font-medium">{name}:</span> {value}
+                          </p>
+                        );
+                      })}
+                    </div>
                   </div>
+                )}
+                <div>
+                  {product.images?.[0] ? (
+                    <img
+                      src={product.images[0].image}
+                      alt={product.name}
+                      className="w-30 max-h-[15rem] rounded"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs">
+                      N/A
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           )}
 
           {activeTab === "description" && (
             <div>
-              <p className="text-gray-700 whitespace-pre-wrap">
-                {product.description || "Chưa có mô tả"}
-              </p>
+              <div className="mb-3 p-6 bg-gray-50 w-full border rounded-lg">
+                <p className="mb-3">Mô tả:</p>
+                <p className="whitespace-pre-wrap text-center">
+                  {product.description || "Chưa có mô tả"}
+                </p>
+              </div>
+              <div className="p-6 bg-gray-50 w-full border rounded-lg">
+                <p className="mb-3">Ghi chú đơn hàng:</p>
+                <p className="whitespace-pre-wrap text-center">
+                  {product.orderTemplate || "Chưa có ghi chú đơn hàng"}
+                </p>
+              </div>
             </div>
           )}
 
@@ -204,11 +236,19 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                   <p className="text-2xl font-bold">{product.stockQuantity}</p>
                 </div>
                 <div className="border rounded p-4">
-                  <p className="text-sm text-gray-600">Định mức tồn</p>
+                  <p className="text-sm text-gray-600">
+                    Định mức tồn thấp nhất
+                  </p>
                   <p className="text-2xl font-bold">{product.minStockAlert}</p>
                 </div>
                 <div className="border rounded p-4">
-                  <p className="text-sm text-gray-600">Đang giao dịch</p>
+                  <p className="text-sm text-gray-600">
+                    Định mức tồn nhiều nhất
+                  </p>
+                  <p className="text-2xl font-bold">{product.maxStockAlert}</p>
+                </div>
+                <div className="border rounded p-4">
+                  <p className="text-sm text-gray-600">Khách đặt</p>
                   <p className="text-2xl font-bold">0</p>
                 </div>
               </div>
