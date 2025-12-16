@@ -7,6 +7,7 @@ export interface Product {
   fullName?: string;
   description?: string;
   orderTemplate?: string;
+  type: number;
   categoryId?: number;
   tradeMarkId?: number;
   variantId?: number;

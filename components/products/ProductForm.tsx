@@ -4,17 +4,16 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import type { Product } from "@/lib/api/products";
 import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/useProducts";
-import { useCategories } from "@/lib/hooks/useCategories";
 import { useTrademarks } from "@/lib/hooks/useTrademarks";
 import { UnitAttributeModal } from "./UnitAttributeModal";
 import { useAuthStore } from "@/lib/store/auth";
-import { toast } from "sonner";
 import { Category } from "@/lib/api/categories";
 import { useRootCategories } from "@/lib/hooks/useCategories";
 import { CategorySelect } from "./CategorySelect";
 
 interface ProductFormProps {
   product?: Product;
+  productType?: number;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -25,7 +24,12 @@ interface ImageItem {
   preview: string;
 }
 
-export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
+export function ProductForm({
+  product,
+  productType,
+  onClose,
+  onSuccess,
+}: ProductFormProps) {
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [images, setImages] = useState<ImageItem[]>([]);
 
@@ -102,6 +106,19 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     }, [] as { id: number; name: string; level: number }[]);
   };
 
+  const getProductTypeLabel = (type: number) => {
+    switch (type) {
+      case 1:
+        return "Combo - đóng gói";
+      case 2:
+        return "Hàng hóa";
+      case 3:
+        return "Dịch vụ";
+      default:
+        return "Hàng hóa";
+    }
+  };
+
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
@@ -119,6 +136,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       const formData = {
         code: data.code,
         name: data.name,
+        type: product ? product.type : productType || 2,
         description: data.description || undefined,
         orderTemplate: data.orderTemplate || undefined,
         categoryId: data.categoryId ? Number(data.categoryId) : undefined,
@@ -198,7 +216,9 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       <div className="bg-white w-full max-w-4xl h-[90vh] flex flex-col rounded-lg">
         <div className="border-b p-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            {product ? "Sửa hàng hóa" : "Thêm hàng hóa"}
+            {product
+              ? `Sửa ${getProductTypeLabel(product.type)}`
+              : `Thêm ${getProductTypeLabel(productType || 2)}`}
           </h2>
           <button
             onClick={onClose}

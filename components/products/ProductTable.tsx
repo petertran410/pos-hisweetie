@@ -39,6 +39,19 @@ interface ColumnConfig {
   render: (product: Product) => React.ReactNode;
 }
 
+const getProductTypeLabel = (type: number) => {
+  switch (type) {
+    case 1:
+      return "Combo - đóng gói";
+    case 2:
+      return "Hàng hóa";
+    case 3:
+      return "Dịch vụ";
+    default:
+      return "Hàng hóa";
+  }
+};
+
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "image",
@@ -79,8 +92,9 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "type",
     label: "Loại hàng",
     visible: true,
-    render: () => "Hàng hóa",
+    render: (product) => getProductTypeLabel(product.type),
   },
+
   {
     key: "channelLink",
     label: "Liên kết kênh bán",
@@ -185,6 +199,15 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateDropdown, setShowCreateDropdown] = useState(false);
+  const [productType, setProductType] = useState<number | null>(null);
+
+  const handleCreateProduct = (type: number) => {
+    setProductType(type);
+    setShowCreateForm(true);
+    setShowCreateDropdown(false);
+  };
+
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
@@ -261,11 +284,48 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
     <div className="flex flex-col h-full">
       <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            + Tạo mới
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowCreateDropdown(!showCreateDropdown)}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
+              + Tạo mới
+              <svg
+                className={`w-4 h-4 transition-transform ${
+                  showCreateDropdown ? "rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {showCreateDropdown && (
+              <div className="absolute top-full left-0 mt-1 bg-white border rounded shadow-lg z-50 w-48">
+                <button
+                  onClick={() => handleCreateProduct(2)}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                  Hàng hóa
+                </button>
+                <button
+                  onClick={() => handleCreateProduct(3)}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                  Dịch vụ
+                </button>
+                <button
+                  onClick={() => handleCreateProduct(1)}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-400 cursor-not-allowed"
+                  disabled>
+                  Combo - đóng gói (Sắp ra mắt)
+                </button>
+              </div>
+            )}
+          </div>
           <input
             type="text"
             placeholder="Theo mã, tên hàng"
@@ -421,10 +481,17 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
         />
       )}
 
-      {showCreateForm && (
+      {showCreateForm && productType && (
         <ProductForm
-          onClose={() => setShowCreateForm(false)}
-          onSuccess={() => setShowCreateForm(false)}
+          productType={productType}
+          onClose={() => {
+            setShowCreateForm(false);
+            setProductType(null);
+          }}
+          onSuccess={() => {
+            setShowCreateForm(false);
+            setProductType(null);
+          }}
         />
       )}
     </div>
