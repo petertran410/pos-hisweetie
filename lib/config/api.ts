@@ -59,7 +59,6 @@ export const apiClient = {
       }
 
       const errorText = await res.text();
-      console.error("API Error Response:", errorText);
 
       try {
         const errorJson = JSON.parse(errorText);
