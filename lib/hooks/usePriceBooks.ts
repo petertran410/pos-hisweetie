@@ -118,17 +118,57 @@ export function useAddProductsToPriceBook() {
       priceBookId: number;
       products: { productId: number; price: number }[];
     }) => priceBooksApi.addProductsToPriceBook(priceBookId, products),
+
+    onMutate: async ({ priceBookId, products }) => {
+      await queryClient.cancelQueries({ queryKey: ["products-with-prices"] });
+
+      const previousData = queryClient.getQueriesData({
+        queryKey: ["products-with-prices"],
+      });
+
+      queryClient.setQueriesData<any>(
+        { queryKey: ["products-with-prices"] },
+        (old: any) => {
+          if (!old || !Array.isArray(old)) return old;
+
+          return old.map((product: any) => {
+            const newPrice = products.find((p) => p.productId === product.id);
+            if (newPrice) {
+              return {
+                ...product,
+                prices: {
+                  ...product.prices,
+                  [priceBookId]: newPrice.price,
+                },
+              };
+            }
+            return product;
+          });
+        }
+      );
+
+      return { previousData };
+    },
+
+    onError: (err, variables, context) => {
+      if (context?.previousData) {
+        context.previousData.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
+      }
+      toast.error("Thêm sản phẩm thất bại");
+    },
+
     onSuccess: () => {
+      toast.success("Thêm sản phẩm thành công");
+    },
+
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: ["products-with-prices"],
-        refetchType: "active",
       });
       queryClient.invalidateQueries({ queryKey: ["price-book-products"] });
       queryClient.invalidateQueries({ queryKey: ["price-book"] });
-      toast.success("Thêm sản phẩm thành công");
-    },
-    onError: () => {
-      toast.error("Thêm sản phẩm thất bại");
     },
   });
 }

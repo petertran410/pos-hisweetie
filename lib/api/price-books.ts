@@ -184,10 +184,14 @@ export const priceBooksApi = {
     search?: string;
     categoryId?: number;
   }): Promise<ProductWithPrices[]> => {
-    return apiClient.get("/price-books/products-with-prices", {
-      priceBookIds: params.priceBookIds.join(","),
-      search: params.search,
-      categoryId: params.categoryId,
-    });
+    return apiClient
+      .get("/price-books/products-with-prices", {
+        priceBookIds: params.priceBookIds.join(","),
+        search: params.search,
+        categoryId: params.categoryId,
+      })
+      .then((response) => {
+        return response;
+      });
   },
 };
