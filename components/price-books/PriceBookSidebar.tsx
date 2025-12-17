@@ -5,15 +5,15 @@ import type { PriceBook } from "@/lib/api/price-books";
 
 interface PriceBookSidebarProps {
   priceBooks?: PriceBook[];
-  selected: PriceBook | null;
-  onSelect: (priceBook: PriceBook) => void;
+  selectedIds: number[];
+  onSelectedIdsChange: (ids: number[]) => void;
   onCreateNew: () => void;
 }
 
 export function PriceBookSidebar({
   priceBooks,
-  selected,
-  onSelect,
+  selectedIds,
+  onSelectedIdsChange,
   onCreateNew,
 }: PriceBookSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,6 +23,23 @@ export function PriceBookSidebar({
     pb.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const togglePriceBook = (id: number) => {
+    if (selectedIds.includes(id)) {
+      onSelectedIdsChange(selectedIds.filter((i) => i !== id));
+    } else {
+      onSelectedIdsChange([...selectedIds, id]);
+    }
+  };
+
+  const getDisplayText = () => {
+    if (selectedIds.length === 0) return "Chọn bảng giá";
+    if (selectedIds.length === 1) {
+      const selected = priceBooks?.find((pb) => pb.id === selectedIds[0]);
+      return selected?.name || "Chọn bảng giá";
+    }
+    return `Đã chọn ${selectedIds.length} bảng giá`;
+  };
+
   return (
     <div className="w-80 border-r bg-gray-50 p-4 space-y-4">
       <div>
@@ -31,9 +48,7 @@ export function PriceBookSidebar({
           <div
             onClick={() => setShowDropdown(!showDropdown)}
             className="w-full border rounded px-3 py-2 bg-white cursor-pointer flex items-center justify-between">
-            <span className="text-sm">
-              {selected ? selected.name : "Chọn bảng giá"}
-            </span>
+            <span className="text-sm">{getDisplayText()}</span>
             <svg
               className="w-4 h-4"
               fill="none"
@@ -61,7 +76,7 @@ export function PriceBookSidebar({
                 />
               </div>
 
-              <div className="p-2">
+              <div className="p-2 border-b">
                 <button
                   onClick={() => {
                     onCreateNew();
@@ -74,31 +89,19 @@ export function PriceBookSidebar({
 
               <div className="max-h-60 overflow-y-auto">
                 {filteredPriceBooks?.map((pb) => (
-                  <button
+                  <label
                     key={pb.id}
-                    onClick={() => {
-                      onSelect(pb);
-                      setShowDropdown(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                      selected?.id === pb.id ? "bg-blue-50 text-blue-600" : ""
+                    className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 ${
+                      selectedIds.includes(pb.id) ? "bg-blue-50" : ""
                     }`}>
-                    <div className="flex items-center justify-between">
-                      <span>{pb.name}</span>
-                      {selected?.id === pb.id && (
-                        <svg
-                          className="w-4 h-4"
-                          fill="currentColor"
-                          viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                  </button>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(pb.id)}
+                      onChange={() => togglePriceBook(pb.id)}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-sm flex-1">{pb.name}</span>
+                  </label>
                 ))}
               </div>
             </div>

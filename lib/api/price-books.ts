@@ -88,6 +88,17 @@ export interface ProductPriceInfo {
   originalPrice: number;
 }
 
+export interface ProductWithPrices {
+  id: number;
+  code: string;
+  name: string;
+  purchasePrice: number;
+  retailPrice: number;
+  stockQuantity: number;
+  unit?: string;
+  prices: Record<number, number>;
+}
+
 export const priceBooksApi = {
   getPriceBooks: (params?: {
     page?: number;
@@ -165,6 +176,18 @@ export const priceBooksApi = {
   ): Promise<PriceBook> => {
     return apiClient.put(`/price-books/${priceBookId}/products/${productId}`, {
       price,
+    });
+  },
+
+  getProductsWithPrices: (params: {
+    priceBookIds: number[];
+    search?: string;
+    categoryId?: number;
+  }): Promise<ProductWithPrices[]> => {
+    return apiClient.get("/price-books/products-with-prices", {
+      priceBookIds: params.priceBookIds.join(","),
+      search: params.search,
+      categoryId: params.categoryId,
     });
   },
 };

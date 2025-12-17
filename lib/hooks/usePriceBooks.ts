@@ -174,3 +174,15 @@ export function useUpdateProductPrice() {
     },
   });
 }
+
+export function useProductsWithPrices(params: {
+  priceBookIds: number[];
+  search?: string;
+  categoryId?: number;
+}) {
+  return useQuery({
+    queryKey: ["products-with-prices", params],
+    queryFn: () => priceBooksApi.getProductsWithPrices(params),
+    enabled: params.priceBookIds.length > 0,
+  });
+}

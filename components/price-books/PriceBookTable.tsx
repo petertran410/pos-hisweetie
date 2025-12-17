@@ -1,73 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import {
-  usePriceBookProducts,
-  useUpdateProductPrice,
-  useRemoveProductsFromPriceBook,
-} from "@/lib/hooks/usePriceBooks";
-import type { PriceBookDetail } from "@/lib/api/price-books";
+import { useState, useMemo } from "react";
+import { useProductsWithPrices } from "@/lib/hooks/usePriceBooks";
+import type { PriceBook } from "@/lib/api/price-books";
 
 interface PriceBookTableProps {
-  priceBookId: number | null;
+  selectedPriceBooks: PriceBook[];
   onAddProducts?: () => void;
 }
 
 export function PriceBookTable({
-  priceBookId,
+  selectedPriceBooks,
   onAddProducts,
 }: PriceBookTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
-  const [editingPrice, setEditingPrice] = useState<{
-    id: number;
-    price: number;
-  } | null>(null);
+  const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
 
-  const { data: products } = usePriceBookProducts(priceBookId, searchQuery);
-  const updatePrice = useUpdateProductPrice();
-  const removeProducts = useRemoveProductsFromPriceBook();
+  const priceBookIds = useMemo(
+    () => selectedPriceBooks.map((pb) => pb.id),
+    [selectedPriceBooks]
+  );
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedProducts(products?.map((p) => p.productId) || []);
+  const { data: products, isLoading } = useProductsWithPrices({
+    priceBookIds,
+    search: searchQuery,
+  });
+
+  const toggleSelectAll = () => {
+    if (selectedProductIds.length === products?.length) {
+      setSelectedProductIds([]);
     } else {
-      setSelectedProducts([]);
+      setSelectedProductIds(products?.map((p) => p.id) || []);
     }
   };
 
-  const handleSelectProduct = (productId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedProducts([...selectedProducts, productId]);
+  const toggleSelect = (id: number) => {
+    if (selectedProductIds.includes(id)) {
+      setSelectedProductIds(selectedProductIds.filter((i) => i !== id));
     } else {
-      setSelectedProducts(selectedProducts.filter((id) => id !== productId));
+      setSelectedProductIds([...selectedProductIds, id]);
     }
   };
 
-  const handleUpdatePrice = async (productId: number, price: number) => {
-    if (!priceBookId) return;
-
-    await updatePrice.mutateAsync({
-      priceBookId,
-      productId,
-      price,
-    });
-    setEditingPrice(null);
-  };
-
-  const handleRemoveSelected = async () => {
-    if (!priceBookId || selectedProducts.length === 0) return;
-
-    if (confirm(`Xóa ${selectedProducts.length} sản phẩm khỏi bảng giá?`)) {
-      await removeProducts.mutateAsync({
-        priceBookId,
-        productIds: selectedProducts,
-      });
-      setSelectedProducts([]);
-    }
-  };
-
-  if (!priceBookId) {
+  if (selectedPriceBooks.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-500">
         Chọn bảng giá để xem sản phẩm
@@ -77,6 +52,7 @@ export function PriceBookTable({
 
   return (
     <div className="flex-1 flex flex-col">
+      {/* Toolbar */}
       <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <input
@@ -86,12 +62,6 @@ export function PriceBookTable({
             onChange={(e) => setSearchQuery(e.target.value)}
             className="border rounded px-3 py-2 w-80"
           />
-          <button className="px-4 py-2 border rounded hover:bg-gray-50">
-            Mã hàng
-          </button>
-          <button className="px-4 py-2 border rounded hover:bg-gray-50">
-            Tên hàng
-          </button>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -105,134 +75,126 @@ export function PriceBookTable({
           <button className="px-4 py-2 border rounded hover:bg-gray-50">
             Xuất file
           </button>
-          <button className="p-2 border rounded hover:bg-gray-50">⚙️</button>
-          <button className="p-2 border rounded hover:bg-gray-50">❓</button>
         </div>
       </div>
 
-      {selectedProducts.length > 0 && (
+      {/* Selection Bar */}
+      {selectedProductIds.length > 0 && (
         <div className="border-b p-4 bg-blue-50 flex items-center justify-between">
           <span className="text-sm">
-            Đã chọn {selectedProducts.length} sản phẩm
+            Đã chọn {selectedProductIds.length} sản phẩm
           </span>
-          <button
-            onClick={handleRemoveSelected}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
+          <button className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
             Xóa khỏi bảng giá
           </button>
         </div>
       )}
 
+      {/* Table with Horizontal Scroll */}
       <div className="flex-1 overflow-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b sticky top-0">
-            <tr>
-              <th className="p-3 text-left">
-                <input
-                  type="checkbox"
-                  checked={
-                    products &&
-                    products.length > 0 &&
-                    selectedProducts.length === products.length
-                  }
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                />
-              </th>
-              <th className="p-3 text-left text-sm font-medium">Mã hàng</th>
-              <th className="p-3 text-left text-sm font-medium">Tên hàng</th>
-              <th className="p-3 text-right text-sm font-medium">Giá vốn</th>
-              <th className="p-3 text-right text-sm font-medium">
-                Giá nhập cuối
-              </th>
-              <th className="p-3 text-right text-sm font-medium">
-                Bảng giá chung
-              </th>
-              <th className="p-3 text-right text-sm font-medium">Giá vốn</th>
-              <th className="p-3 text-right text-sm font-medium">
-                Giá nhập cuối
-              </th>
-              <th className="p-3 text-right text-sm font-medium">
-                Bảng giá chung
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {products?.map((detail) => (
-              <tr key={detail.id} className="border-b hover:bg-gray-50">
-                <td className="p-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedProducts.includes(detail.productId)}
-                    onChange={(e) =>
-                      handleSelectProduct(detail.productId, e.target.checked)
-                    }
-                  />
-                </td>
-                <td className="p-3 text-sm">{detail.product?.code}</td>
-                <td className="p-3 text-sm">{detail.product?.name}</td>
-                <td className="p-3 text-sm text-right">
-                  {editingPrice?.id === detail.id ? (
-                    <input
-                      type="number"
-                      value={editingPrice.price}
-                      onChange={(e) =>
-                        setEditingPrice({
-                          id: detail.id,
-                          price: Number(e.target.value),
-                        })
-                      }
-                      onBlur={() =>
-                        handleUpdatePrice(detail.productId, editingPrice.price)
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleUpdatePrice(
-                            detail.productId,
-                            editingPrice.price
-                          );
-                        }
-                      }}
-                      className="border rounded px-2 py-1 w-32 text-right"
-                      autoFocus
-                    />
-                  ) : (
-                    <button
-                      onClick={() =>
-                        setEditingPrice({
-                          id: detail.id,
-                          price: Number(detail.price),
-                        })
-                      }
-                      className="hover:text-blue-600">
-                      {Number(detail.price).toLocaleString()}
-                    </button>
-                  )}
-                </td>
-                <td className="p-3 text-sm text-right">
-                  {Number(detail.price).toLocaleString()}
-                </td>
-                <td className="p-3 text-sm text-right">
-                  {Number(detail.product?.retailPrice || 0).toLocaleString()}
-                </td>
-                <td className="p-3 text-sm text-right">
-                  {Number(detail.price).toLocaleString()}
-                </td>
-                <td className="p-3 text-sm text-right">
-                  {Number(detail.price).toLocaleString()}
-                </td>
-                <td className="p-3 text-sm text-right">
-                  {Number(detail.product?.retailPrice || 0).toLocaleString()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {!products || products.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            Chưa có sản phẩm trong bảng giá này
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-500">Đang tải...</p>
           </div>
-        ) : null}
+        ) : (
+          <div className="overflow-x-auto">
+            <table
+              className="w-full border-collapse"
+              style={{ minWidth: "max-content" }}>
+              <thead className="bg-gray-50 sticky top-0 z-20">
+                <tr>
+                  {/* Sticky columns */}
+                  <th className="p-3 text-left sticky left-0 bg-gray-50 z-30 border-r">
+                    <input
+                      type="checkbox"
+                      checked={
+                        products &&
+                        products.length > 0 &&
+                        selectedProductIds.length === products.length
+                      }
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
+                  <th className="p-3 text-left text-sm font-medium whitespace-nowrap sticky left-[48px] bg-gray-50 z-30 border-r">
+                    Mã hàng
+                  </th>
+                  <th className="p-3 text-left text-sm font-medium whitespace-nowrap sticky left-[168px] bg-gray-50 z-30 border-r">
+                    Tên hàng
+                  </th>
+                  <th className="p-3 text-right text-sm font-medium whitespace-nowrap sticky left-[368px] bg-gray-50 z-30 border-r">
+                    Giá vốn
+                  </th>
+
+                  {/* Dynamic price book columns */}
+                  <th className="p-3 text-right text-sm font-medium whitespace-nowrap bg-blue-50">
+                    Bảng giá chung
+                  </th>
+                  {selectedPriceBooks.map((pb) => (
+                    <th
+                      key={pb.id}
+                      className="p-3 text-right text-sm font-medium whitespace-nowrap">
+                      {pb.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {products && products.length > 0 ? (
+                  products.map((product) => (
+                    <tr key={product.id} className="border-b hover:bg-gray-50">
+                      {/* Sticky columns */}
+                      <td className="p-3 sticky left-0 bg-white z-10 border-r">
+                        <input
+                          type="checkbox"
+                          checked={selectedProductIds.includes(product.id)}
+                          onChange={() => toggleSelect(product.id)}
+                        />
+                      </td>
+                      <td className="p-3 text-sm sticky left-[48px] bg-white z-10 border-r">
+                        {product.code}
+                      </td>
+                      <td className="p-3 text-sm sticky left-[168px] bg-white z-10 border-r">
+                        {product.name}
+                      </td>
+                      <td className="p-3 text-sm text-right sticky left-[368px] bg-white z-10 border-r">
+                        {product.purchasePrice.toLocaleString()}
+                      </td>
+
+                      {/* Dynamic price columns */}
+                      <td className="p-3 text-sm text-right bg-blue-50">
+                        {product.retailPrice.toLocaleString()}
+                      </td>
+                      {selectedPriceBooks.map((pb) => {
+                        const price = product.prices[pb.id];
+                        return (
+                          <td key={pb.id} className="p-3 text-sm text-right">
+                            {price !== undefined ? (
+                              <button className="hover:text-blue-600 w-full text-right">
+                                {price.toLocaleString()}
+                              </button>
+                            ) : (
+                              <button className="hover:text-blue-600 text-blue-600">
+                                +
+                              </button>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={5 + selectedPriceBooks.length}
+                      className="p-8 text-center text-gray-500">
+                      Chưa có sản phẩm
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
