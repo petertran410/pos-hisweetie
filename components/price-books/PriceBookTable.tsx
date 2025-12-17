@@ -268,7 +268,7 @@ export function PriceBookTable({
               style={{ minWidth: "max-content" }}>
               <thead className="bg-gray-50 sticky top-0 z-20">
                 <tr>
-                  <th className="p-3 text-left sticky left-0 bg-gray-50 z-30 border-r">
+                  <th className="p-3 text-left sticky left-0 bg-gray-50 z-30 ">
                     <input
                       type="checkbox"
                       checked={
@@ -279,13 +279,13 @@ export function PriceBookTable({
                       onChange={toggleSelectAll}
                     />
                   </th>
-                  <th className="p-3 text-left text-sm font-medium whitespace-nowrap sticky left-[48px] bg-gray-50 z-30 border-r">
+                  <th className="p-3 text-left text-sm font-medium whitespace-nowrap sticky left-[48px] bg-gray-50 z-30 ">
                     Mã hàng
                   </th>
-                  <th className="p-3 text-left text-sm font-medium whitespace-nowrap sticky left-[168px] bg-gray-50 z-30 border-r min-w-[200px]">
+                  <th className="p-3 text-left text-sm font-medium whitespace-nowrap sticky left-[168px] bg-gray-50 z-30  min-w-[200px]">
                     Tên hàng
                   </th>
-                  <th className="p-3 text-right text-sm font-medium whitespace-nowrap sticky left-[368px] bg-gray-50 z-30 border-r">
+                  <th className="p-3 text-right text-sm font-medium whitespace-nowrap sticky left-[368px] bg-gray-50 z-30 ">
                     Giá vốn
                   </th>
 
@@ -307,7 +307,7 @@ export function PriceBookTable({
                 {products && products.length > 0 ? (
                   products.map((product) => (
                     <tr key={product.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 sticky left-0 bg-white z-10 border-r">
+                      <td className="p-3 sticky left-0 bg-white z-10 ">
                         <input
                           type="checkbox"
                           checked={selectedProductIds.includes(product.id)}
@@ -315,15 +315,15 @@ export function PriceBookTable({
                         />
                       </td>
 
-                      <td className="p-3 text-sm sticky left-[48px] bg-white z-10 border-r">
+                      <td className="p-3 text-sm sticky left-[48px] bg-white z-10 ">
                         {product.code}
                       </td>
 
-                      <td className="p-3 text-sm sticky left-[168px] bg-white z-10 border-r min-w-[200px]">
+                      <td className="p-3 text-sm sticky left-[168px] bg-white z-10  min-w-[200px]">
                         {product.name}
                       </td>
 
-                      <td className="p-3 text-sm text-right sticky left-[368px] bg-white z-10 border-r">
+                      <td className="p-3 text-sm text-right sticky left-[368px] bg-white z-10 ">
                         {product.purchasePrice.toLocaleString()}
                       </td>
 
