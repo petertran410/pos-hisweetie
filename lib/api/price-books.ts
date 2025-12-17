@@ -182,13 +182,13 @@ export const priceBooksApi = {
   getProductsWithPrices: (params: {
     priceBookIds: number[];
     search?: string;
-    categoryId?: number;
+    categoryIds?: string;
   }): Promise<ProductWithPrices[]> => {
     return apiClient
       .get("/price-books/products-with-prices", {
         priceBookIds: params.priceBookIds.join(","),
         search: params.search,
-        categoryId: params.categoryId,
+        categoryIds: params.categoryIds,
       })
       .then((response) => {
         return response;

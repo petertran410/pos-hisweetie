@@ -77,7 +77,7 @@ export function PriceBookTable({
     useProductsWithPrices({
       priceBookIds,
       search: searchQuery,
-      categoryId: categoryIds ? parseInt(categoryIds.split(",")[0]) : undefined,
+      categoryIds: categoryIds,
     });
 
   const products = useMemo<TableProduct[] | undefined>(() => {

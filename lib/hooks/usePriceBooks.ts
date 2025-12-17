@@ -223,13 +223,11 @@ export function useUpdateProductPrice() {
 export function useProductsWithPrices(params: {
   priceBookIds: number[];
   search?: string;
-  categoryId?: number;
+  categoryIds?: string;
 }) {
   return useQuery({
     queryKey: ["products-with-prices", params],
     queryFn: () => priceBooksApi.getProductsWithPrices(params),
     enabled: params.priceBookIds.length > 0,
-    staleTime: 0,
-    gcTime: 0,
   });
 }
