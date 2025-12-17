@@ -59,7 +59,6 @@ export const apiClient = {
       }
 
       const errorText = await res.text();
-
       try {
         const errorJson = JSON.parse(errorText);
         console.error("API Error Details:", errorJson);
@@ -69,7 +68,18 @@ export const apiClient = {
 
       throw new Error("API Error");
     }
-    return res.json();
+
+    const text = await res.text();
+    if (!text || text.trim() === "") {
+      return null;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("Failed to parse JSON:", text);
+      return null;
+    }
   },
 
   put: async (endpoint: string, data?: any) => {
