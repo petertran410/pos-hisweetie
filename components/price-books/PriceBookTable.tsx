@@ -12,9 +12,8 @@ import {
 } from "@/lib/hooks/useProducts";
 import type { PriceBook } from "@/lib/api/price-books";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "react-hot-toast";
 
-// Define unified interface for products in this table
 interface TableProduct {
   id: number;
   code: string;
@@ -47,10 +46,66 @@ export function PriceBookTable({
     value: string;
   } | null>(null);
 
-  const updateRetailPrice = useUpdateProductRetailPrice();
-  const addProductsToPriceBook = useAddProductsToPriceBook();
   const queryClient = useQueryClient();
 
+  // Initialize hooks
+  const updateRetailPrice = useUpdateProductRetailPrice();
+  const updateProductPrice = useUpdateProductPrice();
+  const addProductsToPriceBook = useAddProductsToPriceBook();
+
+  // Separate real price books from virtual "Bảng giá chung"
+  const hasDefaultPriceBook = selectedPriceBooks.some((pb) => pb.id === 0);
+  const realPriceBooks = selectedPriceBooks.filter(
+    (pb) => pb.id !== 0 && "isActive" in pb
+  ) as PriceBook[];
+
+  const priceBookIds = useMemo(
+    () => realPriceBooks.map((pb) => pb.id),
+    [realPriceBooks]
+  );
+
+  const categoryIds =
+    selectedCategoryIds.length > 0 ? selectedCategoryIds.join(",") : undefined;
+
+  // Use different hooks based on selection
+  const isDefaultOnly = hasDefaultPriceBook && realPriceBooks.length === 0;
+
+  // Fetch all products when only "Bảng giá chung" is selected
+  const { data: allProductsData, isLoading: isLoadingAll } = useProducts({
+    search: searchQuery,
+    categoryIds,
+    limit: 1000,
+  });
+
+  // Fetch products with multiple price books
+  const { data: productsWithPrices, isLoading: isLoadingPrices } =
+    useProductsWithPrices({
+      priceBookIds,
+      search: searchQuery,
+      categoryId: categoryIds ? parseInt(categoryIds.split(",")[0]) : undefined,
+    });
+
+  // Transform data based on selection
+  const products = useMemo<TableProduct[] | undefined>(() => {
+    if (isDefaultOnly) {
+      return allProductsData?.data?.map((p) => ({
+        id: p.id,
+        code: p.code,
+        name: p.name,
+        purchasePrice: Number(p.purchasePrice),
+        retailPrice: Number(p.retailPrice),
+        stockQuantity: p.stockQuantity,
+        unit: p.unit,
+        prices: {},
+      }));
+    } else {
+      return productsWithPrices as TableProduct[] | undefined;
+    }
+  }, [isDefaultOnly, allProductsData, productsWithPrices]);
+
+  const isLoading = isDefaultOnly ? isLoadingAll : isLoadingPrices;
+
+  // Handlers
   const handleStartEdit = (
     productId: number,
     priceBookId: number,
@@ -75,12 +130,14 @@ export function PriceBookTable({
 
     try {
       if (priceBookId === 0) {
+        // Bảng giá chung - cập nhật retailPrice
         await updateRetailPrice.mutateAsync({
           id: productId,
           retailPrice: newPrice,
         });
       } else {
-        await useUpdateProductPrice.mutateAsync({
+        // Các bảng giá khác - cập nhật price_book_details
+        await updateProductPrice.mutateAsync({
           priceBookId,
           productId,
           price: newPrice,
@@ -112,53 +169,6 @@ export function PriceBookTable({
     setEditingCell(null);
   };
 
-  const hasDefaultPriceBook = selectedPriceBooks.some((pb) => pb.id === 0);
-  const realPriceBooks = selectedPriceBooks.filter(
-    (pb) => pb.id !== 0 && "isActive" in pb
-  ) as PriceBook[];
-
-  const priceBookIds = useMemo(
-    () => realPriceBooks.map((pb) => pb.id),
-    [realPriceBooks]
-  );
-
-  const categoryIds =
-    selectedCategoryIds.length > 0 ? selectedCategoryIds.join(",") : undefined;
-
-  const isDefaultOnly = hasDefaultPriceBook && realPriceBooks.length === 0;
-
-  const { data: allProductsData, isLoading: isLoadingAll } = useProducts({
-    search: searchQuery,
-    categoryIds,
-    limit: 1000,
-  });
-
-  const { data: productsWithPrices, isLoading: isLoadingPrices } =
-    useProductsWithPrices({
-      priceBookIds,
-      search: searchQuery,
-      categoryId: categoryIds ? parseInt(categoryIds.split(",")[0]) : undefined,
-    });
-
-  const products = useMemo<TableProduct[] | undefined>(() => {
-    if (isDefaultOnly) {
-      return allProductsData?.data?.map((p) => ({
-        id: p.id,
-        code: p.code,
-        name: p.name,
-        purchasePrice: Number(p.purchasePrice),
-        retailPrice: Number(p.retailPrice),
-        stockQuantity: p.stockQuantity,
-        unit: p.unit,
-        prices: {} as Record<number, number>, // Type assertion to Record
-      }));
-    } else {
-      return productsWithPrices as TableProduct[] | undefined;
-    }
-  }, [isDefaultOnly, allProductsData, productsWithPrices]);
-
-  const isLoading = isDefaultOnly ? isLoadingAll : isLoadingPrices;
-
   const toggleSelectAll = () => {
     if (selectedProductIds.length === products?.length) {
       setSelectedProductIds([]);
@@ -167,7 +177,7 @@ export function PriceBookTable({
     }
   };
 
-  const toggleSelect = (id: number) => {
+  const toggleSelectProduct = (id: number) => {
     if (selectedProductIds.includes(id)) {
       setSelectedProductIds(selectedProductIds.filter((i) => i !== id));
     } else {
@@ -254,7 +264,6 @@ export function PriceBookTable({
                     Giá vốn
                   </th>
 
-                  {/* Dynamic price book columns */}
                   {hasDefaultPriceBook && (
                     <th className="p-3 text-right text-sm font-medium whitespace-nowrap bg-gray-50">
                       Bảng giá chung
@@ -273,7 +282,6 @@ export function PriceBookTable({
                 {products && products.length > 0 ? (
                   products.map((product) => (
                     <tr key={product.id} className="border-b hover:bg-gray-50">
-                      {/* Checkbox */}
                       <td className="p-3 sticky left-0 bg-white z-10 border-r">
                         <input
                           type="checkbox"
@@ -282,17 +290,14 @@ export function PriceBookTable({
                         />
                       </td>
 
-                      {/* Mã hàng */}
                       <td className="p-3 text-sm sticky left-[48px] bg-white z-10 border-r">
                         {product.code}
                       </td>
 
-                      {/* Tên hàng */}
                       <td className="p-3 text-sm sticky left-[168px] bg-white z-10 border-r min-w-[200px]">
                         {product.name}
                       </td>
 
-                      {/* Giá vốn */}
                       <td className="p-3 text-sm text-right sticky left-[368px] bg-white z-10 border-r">
                         {product.purchasePrice.toLocaleString()}
                       </td>
