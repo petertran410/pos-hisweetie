@@ -119,7 +119,10 @@ export function useAddProductsToPriceBook() {
       products: { productId: number; price: number }[];
     }) => priceBooksApi.addProductsToPriceBook(priceBookId, products),
     onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ["products-with-prices"] });
+      queryClient.invalidateQueries({
+        queryKey: ["products-with-prices"],
+        refetchType: "active",
+      });
       queryClient.invalidateQueries({ queryKey: ["price-book-products"] });
       queryClient.invalidateQueries({ queryKey: ["price-book"] });
       toast.success("Thêm sản phẩm thành công");

@@ -178,7 +178,6 @@ export function PriceBookTable({
         priceBookId,
         products: [{ productId, price: defaultPrice }],
       });
-      queryClient.invalidateQueries({ queryKey: ["products-with-prices"] });
     } catch (error) {
       console.error("Error adding product to price book:", error);
       toast.error("Không thể thêm sản phẩm vào bảng giá");
