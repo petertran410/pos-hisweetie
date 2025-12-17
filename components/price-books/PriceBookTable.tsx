@@ -65,17 +65,14 @@ export function PriceBookTable({
   const categoryIds =
     selectedCategoryIds.length > 0 ? selectedCategoryIds.join(",") : undefined;
 
-  // Use different hooks based on selection
   const isDefaultOnly = hasDefaultPriceBook && realPriceBooks.length === 0;
 
-  // Fetch all products when only "Bảng giá chung" is selected
   const { data: allProductsData, isLoading: isLoadingAll } = useProducts({
     search: searchQuery,
     categoryIds,
     limit: 1000,
   });
 
-  // Fetch products with multiple price books
   const { data: productsWithPrices, isLoading: isLoadingPrices } =
     useProductsWithPrices({
       priceBookIds,
@@ -83,7 +80,6 @@ export function PriceBookTable({
       categoryId: categoryIds ? parseInt(categoryIds.split(",")[0]) : undefined,
     });
 
-  // Transform data based on selection
   const products = useMemo<TableProduct[] | undefined>(() => {
     if (isDefaultOnly) {
       return allProductsData?.data?.map((p) => ({
@@ -103,7 +99,6 @@ export function PriceBookTable({
 
   const isLoading = isDefaultOnly ? isLoadingAll : isLoadingPrices;
 
-  // Handlers
   const handleStartEdit = (
     productId: number,
     priceBookId: number,

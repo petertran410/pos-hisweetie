@@ -119,6 +119,7 @@ export function useAddProductsToPriceBook() {
       products: { productId: number; price: number }[];
     }) => priceBooksApi.addProductsToPriceBook(priceBookId, products),
     onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ["products-with-prices"] });
       queryClient.invalidateQueries({ queryKey: ["price-book-products"] });
       queryClient.invalidateQueries({ queryKey: ["price-book"] });
       toast.success("Thêm sản phẩm thành công");
@@ -167,6 +168,7 @@ export function useUpdateProductPrice() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["price-book-products"] });
       queryClient.invalidateQueries({ queryKey: ["price-book"] });
+      queryClient.invalidateQueries({ queryKey: ["products-with-prices"] });
       toast.success("Cập nhật giá thành công");
     },
     onError: () => {
@@ -184,5 +186,7 @@ export function useProductsWithPrices(params: {
     queryKey: ["products-with-prices", params],
     queryFn: () => priceBooksApi.getProductsWithPrices(params),
     enabled: params.priceBookIds.length > 0,
+    staleTime: 0,
+    gcTime: 0,
   });
 }
