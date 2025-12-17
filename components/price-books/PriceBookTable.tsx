@@ -188,7 +188,7 @@ export function PriceBookTable({
 
                   {/* Dynamic price book columns */}
                   {hasDefaultPriceBook && (
-                    <th className="p-3 text-right text-sm font-medium whitespace-nowrap bg-blue-50">
+                    <th className="p-3 text-right text-sm font-medium whitespace-nowrap bg-gray-50">
                       Bảng giá chung
                     </th>
                   )}
@@ -225,7 +225,7 @@ export function PriceBookTable({
 
                       {/* Dynamic price columns */}
                       {hasDefaultPriceBook && (
-                        <td className="p-3 text-sm text-right bg-blue-50">
+                        <td className="p-3 text-sm text-right">
                           {product.retailPrice.toLocaleString()}
                         </td>
                       )}
