@@ -91,11 +91,17 @@ export const apiClient = {
     return res.json();
   },
 
-  delete: async (endpoint: string, p0: { productIds: number[] }) => {
-    const res = await fetch(`${API_URL}${endpoint}`, {
+  delete: async (endpoint: string, data?: any) => {
+    const options: RequestInit = {
       method: "DELETE",
       headers: getAuthHeaders(),
-    });
+    };
+
+    if (data) {
+      options.body = JSON.stringify(data);
+    }
+
+    const res = await fetch(`${API_URL}${endpoint}`, options);
 
     if (!res.ok) {
       if (res.status === 401) {

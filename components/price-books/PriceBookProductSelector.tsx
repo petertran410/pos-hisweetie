@@ -15,11 +15,14 @@ export function PriceBookProductSelector({
   onClose,
 }: PriceBookProductSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState
+  const [selectedProducts, setSelectedProducts] = useState<
     Map<number, { product: Product; price: number }>
   >(new Map());
 
-  const { data: productsData } = useProducts({ search: searchQuery, limit: 50 });
+  const { data: productsData } = useProducts({
+    search: searchQuery,
+    limit: 50,
+  });
   const addProducts = useAddProductsToPriceBook();
 
   const handleToggleProduct = (product: Product) => {
@@ -61,8 +64,7 @@ export function PriceBookProductSelector({
           <h2 className="text-xl font-semibold">Thêm sản phẩm vào bảng giá</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
+            className="text-gray-400 hover:text-gray-600">
             ✕
           </button>
         </div>
@@ -102,8 +104,7 @@ export function PriceBookProductSelector({
                     key={product.id}
                     className={`border-b hover:bg-gray-50 ${
                       isSelected ? "bg-blue-50" : ""
-                    }`}
-                  >
+                    }`}>
                     <td className="p-3">
                       <input
                         type="checkbox"
@@ -122,7 +123,10 @@ export function PriceBookProductSelector({
                           type="number"
                           value={selectedItem?.price || 0}
                           onChange={(e) =>
-                            handleUpdatePrice(product.id, Number(e.target.value))
+                            handleUpdatePrice(
+                              product.id,
+                              Number(e.target.value)
+                            )
                           }
                           className="border rounded px-2 py-1 w-32 text-right"
                         />
@@ -150,15 +154,13 @@ export function PriceBookProductSelector({
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 border rounded hover:bg-gray-50"
-            >
+              className="px-4 py-2 border rounded hover:bg-gray-50">
               Hủy
             </button>
             <button
               onClick={handleSubmit}
               disabled={selectedProducts.size === 0 || addProducts.isPending}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            >
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
               {addProducts.isPending
                 ? "Đang thêm..."
                 : `Thêm ${selectedProducts.size} sản phẩm`}
