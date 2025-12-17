@@ -48,15 +48,13 @@ export function PriceBookTable({
 
   const queryClient = useQueryClient();
 
-  // Initialize hooks
   const updateRetailPrice = useUpdateProductRetailPrice();
   const updateProductPrice = useUpdateProductPrice();
   const addProductsToPriceBook = useAddProductsToPriceBook();
 
-  // Separate real price books from virtual "Bảng giá chung"
   const hasDefaultPriceBook = selectedPriceBooks.some((pb) => pb.id === 0);
   const realPriceBooks = selectedPriceBooks.filter(
-    (pb) => pb.id !== 0 && "isActive" in pb
+    (pb) => pb.id !== 0
   ) as PriceBook[];
 
   const priceBookIds = useMemo(
@@ -128,15 +126,25 @@ export function PriceBookTable({
       return;
     }
 
+    if (!priceBookId || isNaN(priceBookId)) {
+      toast.error("ID bảng giá không hợp lệ");
+      setEditingCell(null);
+      return;
+    }
+
+    if (!productId || isNaN(productId)) {
+      toast.error("ID sản phẩm không hợp lệ");
+      setEditingCell(null);
+      return;
+    }
+
     try {
       if (priceBookId === 0) {
-        // Bảng giá chung - cập nhật retailPrice
         await updateRetailPrice.mutateAsync({
           id: productId,
           retailPrice: newPrice,
         });
       } else {
-        // Các bảng giá khác - cập nhật price_book_details
         await updateProductPrice.mutateAsync({
           priceBookId,
           productId,
@@ -146,6 +154,7 @@ export function PriceBookTable({
       setEditingCell(null);
     } catch (error) {
       console.error("Error saving price:", error);
+      toast.error("Không thể cập nhật giá");
     }
   };
 
@@ -154,6 +163,21 @@ export function PriceBookTable({
     priceBookId: number,
     defaultPrice: number
   ) => {
+    if (!priceBookId || isNaN(priceBookId) || priceBookId <= 0) {
+      toast.error("ID bảng giá không hợp lệ");
+      return;
+    }
+
+    if (!productId || isNaN(productId) || productId <= 0) {
+      toast.error("ID sản phẩm không hợp lệ");
+      return;
+    }
+
+    if (isNaN(defaultPrice) || defaultPrice < 0) {
+      toast.error("Giá không hợp lệ");
+      return;
+    }
+
     try {
       await addProductsToPriceBook.mutateAsync({
         priceBookId,
@@ -162,6 +186,7 @@ export function PriceBookTable({
       queryClient.invalidateQueries({ queryKey: ["products-with-prices"] });
     } catch (error) {
       console.error("Error adding product to price book:", error);
+      toast.error("Không thể thêm sản phẩm vào bảng giá");
     }
   };
 
