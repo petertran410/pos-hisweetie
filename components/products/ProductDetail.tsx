@@ -15,6 +15,9 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
   const [activeTab, setActiveTab] = useState("info");
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1); // Thêm state pagination
+  const itemsPerPage = 10; // 10 items per page
+
   const deleteProduct = useDeleteProduct();
 
   const handleDelete = () => {
@@ -40,22 +43,33 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
   };
 
   const calculateTotalPurchasePrice = () => {
-    if (!product.comboComponents) return 0;
+    if (!product.comboComponents || product.comboComponents.length === 0) {
+      return 0;
+    }
     return product.comboComponents.reduce((sum, comp) => {
       const price = Number(comp.componentProduct?.purchasePrice || 0);
-      const quantity = Number(comp.quantity);
+      const quantity = Number(comp.quantity || 0);
       return sum + price * quantity;
     }, 0);
   };
 
   const calculateTotalRetailPrice = () => {
-    if (!product.comboComponents) return 0;
+    if (!product.comboComponents || product.comboComponents.length === 0) {
+      return 0;
+    }
     return product.comboComponents.reduce((sum, comp) => {
       const price = Number(comp.componentProduct?.retailPrice || 0);
-      const quantity = Number(comp.quantity);
+      const quantity = Number(comp.quantity || 0);
       return sum + price * quantity;
     }, 0);
   };
+
+  // Pagination for combo components
+  const components = product.comboComponents || [];
+  const totalPages = Math.ceil(components.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentComponents = components.slice(startIndex, endIndex);
 
   if (isEditing) {
     if (product.type === 1) {
@@ -256,7 +270,14 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
 
               {product.type === 1 && product.comboComponents && (
                 <div className="border-t pt-6">
-                  <h3 className="font-semibold mb-4">Hàng thành phần</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold">Hàng thành phần</h3>
+                    {components.length > 0 && (
+                      <span className="text-sm text-gray-600">
+                        Tổng: {components.length} sản phẩm
+                      </span>
+                    )}
+                  </div>
                   <div className="border rounded overflow-hidden">
                     <table className="w-full">
                       <thead className="bg-gray-50">
@@ -298,7 +319,8 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {product.comboComponents.map((comp, index) => {
+                        {currentComponents.map((comp, index) => {
+                          const actualIndex = startIndex + index;
                           const purchasePrice = Number(
                             comp.componentProduct?.purchasePrice || 0
                           );
@@ -311,7 +333,7 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
 
                           return (
                             <tr key={comp.id} className="border-t">
-                              <td className="px-4 py-2">{index + 1}</td>
+                              <td className="px-4 py-2">{actualIndex + 1}</td>
                               <td className="px-4 py-2 text-sm">
                                 {comp.componentProduct?.code}
                               </td>
@@ -336,7 +358,7 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                             </tr>
                           );
                         })}
-                        {product.comboComponents.length === 0 && (
+                        {components.length === 0 && (
                           <tr>
                             <td
                               colSpan={8}
@@ -347,6 +369,42 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                         )}
                       </tbody>
                     </table>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="border-t p-3 flex items-center justify-between bg-gray-50">
+                        <div className="text-sm text-gray-600">
+                          Hiển thị {startIndex + 1} -{" "}
+                          {Math.min(endIndex, components.length)} trong tổng{" "}
+                          {components.length} sản phẩm
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCurrentPage(Math.max(1, currentPage - 1))
+                            }
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            ‹
+                          </button>
+                          <span className="text-sm">
+                            Trang {currentPage} / {totalPages}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCurrentPage(
+                                Math.min(totalPages, currentPage + 1)
+                              )
+                            }
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            ›
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

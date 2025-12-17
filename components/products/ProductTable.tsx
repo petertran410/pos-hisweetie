@@ -53,6 +53,18 @@ const getProductTypeLabel = (type: number) => {
   }
 };
 
+const calculateComboPurchasePrice = (product: Product): number => {
+  if (product.type !== 1 || !product.comboComponents) {
+    return Number(product.purchasePrice);
+  }
+
+  return product.comboComponents.reduce((sum, comp) => {
+    const price = Number(comp.componentProduct?.purchasePrice || 0);
+    const quantity = Number(comp.quantity || 0);
+    return sum + price * quantity;
+  }, 0);
+};
+
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "image",
@@ -112,7 +124,13 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "purchasePrice",
     label: "Giá vốn",
     visible: false,
-    render: (product) => Number(product.purchasePrice).toLocaleString() + " đ",
+    render: (product) => {
+      const price =
+        product.type === 1
+          ? calculateComboPurchasePrice(product)
+          : Number(product.purchasePrice);
+      return price.toLocaleString() + " đ";
+    },
   },
   {
     key: "tradeMark",

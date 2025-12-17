@@ -42,6 +42,8 @@ export function ComboProductForm({
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1); // Thêm state cho pagination
+  const itemsPerPage = 10; // Số item mỗi trang
 
   const { data: categories } = useRootCategories();
   const { data: trademarks } = useTrademarks();
@@ -74,27 +76,25 @@ export function ComboProductForm({
 
   useEffect(() => {
     if (product?.comboComponents) {
-      setComponents(
-        product.comboComponents.map((comp) => ({
-          id: comp.id,
-          componentProductId: comp.componentProductId,
-          componentProduct: comp.componentProduct,
-          quantity: Number(comp.quantity),
-        }))
-      );
+      const loadedComponents = product.comboComponents.map((comp) => ({
+        id: comp.id,
+        componentProductId: comp.componentProductId,
+        componentProduct: comp.componentProduct,
+        quantity: Number(comp.quantity),
+      }));
+      setComponents(loadedComponents);
     }
-  }, [product?.id]);
+  }, [product]);
 
   useEffect(() => {
     if (product?.images) {
-      setImages(
-        product.images.map((img) => ({
-          url: img.image,
-          preview: img.image,
-        }))
-      );
+      const loadedImages = product.images.map((img) => ({
+        url: img.image,
+        preview: img.image,
+      }));
+      setImages(loadedImages);
     }
-  }, [product?.id]);
+  }, [product]);
 
   const uploadFile = async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -130,6 +130,9 @@ export function ComboProductForm({
           quantity: 1,
         },
       ]);
+      // Reset về trang cuối khi thêm sản phẩm mới
+      const newTotalPages = Math.ceil((components.length + 1) / itemsPerPage);
+      setCurrentPage(newTotalPages);
     }
     setSearchQuery("");
     setShowSearchResults(false);
@@ -142,7 +145,14 @@ export function ComboProductForm({
   };
 
   const removeComponent = (index: number) => {
-    setComponents(components.filter((_, i) => i !== index));
+    const newComponents = components.filter((_, i) => i !== index);
+    setComponents(newComponents);
+
+    // Adjust current page if needed
+    const newTotalPages = Math.ceil(newComponents.length / itemsPerPage);
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(newTotalPages);
+    }
   };
 
   const calculateTotalPurchasePrice = () => {
@@ -158,6 +168,12 @@ export function ComboProductForm({
       return sum + price * comp.quantity;
     }, 0);
   };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(components.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentComponents = components.slice(startIndex, endIndex);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -314,6 +330,11 @@ export function ComboProductForm({
             <div className="border-t pt-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold">Hàng thành phần</h3>
+                {components.length > 0 && (
+                  <span className="text-sm text-gray-600">
+                    Tổng: {components.length} sản phẩm
+                  </span>
+                )}
               </div>
 
               <div className="relative mb-4">
@@ -400,7 +421,8 @@ export function ComboProductForm({
                     )}
                   </thead>
                   <tbody>
-                    {components.map((comp, index) => {
+                    {currentComponents.map((comp, index) => {
+                      const actualIndex = startIndex + index;
                       const purchasePrice = Number(
                         comp.componentProduct?.purchasePrice || 0
                       );
@@ -411,8 +433,8 @@ export function ComboProductForm({
                       const totalRetail = retailPrice * comp.quantity;
 
                       return (
-                        <tr key={index} className="border-t">
-                          <td className="px-4 py-2">{index + 1}</td>
+                        <tr key={actualIndex} className="border-t">
+                          <td className="px-4 py-2">{actualIndex + 1}</td>
                           <td className="px-4 py-2 text-sm">
                             {comp.componentProduct?.code}
                           </td>
@@ -426,7 +448,7 @@ export function ComboProductForm({
                               value={comp.quantity}
                               onChange={(e) =>
                                 updateComponentQuantity(
-                                  index,
+                                  actualIndex,
                                   Number(e.target.value)
                                 )
                               }
@@ -448,7 +470,7 @@ export function ComboProductForm({
                           <td className="px-4 py-2">
                             <button
                               type="button"
-                              onClick={() => removeComponent(index)}
+                              onClick={() => removeComponent(actualIndex)}
                               className="text-red-600 hover:text-red-800">
                               <svg
                                 className="w-5 h-5"
@@ -479,6 +501,40 @@ export function ComboProductForm({
                     )}
                   </tbody>
                 </table>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="border-t p-3 flex items-center justify-between bg-gray-50">
+                    <div className="text-sm text-gray-600">
+                      Hiển thị {startIndex + 1} -{" "}
+                      {Math.min(endIndex, components.length)} trong tổng{" "}
+                      {components.length} sản phẩm
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentPage(Math.max(1, currentPage - 1))
+                        }
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                        ‹
+                      </button>
+                      <span className="text-sm">
+                        Trang {currentPage} / {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentPage(Math.min(totalPages, currentPage + 1))
+                        }
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                        ›
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
