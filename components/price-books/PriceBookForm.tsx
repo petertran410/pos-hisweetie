@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { PriceBook } from "@/lib/api/price-books";
 import {
   useCreatePriceBook,
   useUpdatePriceBook,
 } from "@/lib/hooks/usePriceBooks";
-import { useBranches } from "@/lib/hooks/useBranches";
-import { useCustomerGroups } from "@/lib/hooks/useCustomers";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useBranches } from "@/lib/hooks/useBranches"; // SỬA
+import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups"; // SỬA
+import { useUsers } from "@/lib/hooks/useUsers"; // SỬA
 
 interface PriceBookFormProps {
   priceBook?: PriceBook | null;
@@ -25,14 +25,14 @@ export function PriceBookForm({
   const [activeTab, setActiveTab] = useState<"info" | "scope">("info");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: branchesData } = useBranches();
-  const { data: customerGroupsData } = useCustomerGroups();
-  const { data: usersData } = useUsers();
+  const { data: branchesData } = useBranches(); // Trả về Branch[]
+  const { data: customerGroupsData } = useCustomerGroups(); // Trả về CustomerGroup[]
+  const { data: usersData } = useUsers(); // Trả về User[]
 
   const createPriceBook = useCreatePriceBook();
   const updatePriceBook = useUpdatePriceBook();
 
-  const { register, handleSubmit, watch, setValue, reset } = useForm({
+  const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
       name: priceBook?.name || "",
       startDate: priceBook?.startDate
@@ -275,9 +275,9 @@ export function PriceBookForm({
                   </label>
                 </div>
 
-                {branchScope === "specific" && (
+                {branchScope === "specific" && branchesData && (
                   <div className="mt-3 space-y-2 ml-6">
-                    {branchesData?.data?.map((branch: any) => (
+                    {branchesData.map((branch) => (
                       <label
                         key={branch.id}
                         className="flex items-center gap-2">
@@ -316,9 +316,9 @@ export function PriceBookForm({
                   </label>
                 </div>
 
-                {customerGroupScope === "specific" && (
+                {customerGroupScope === "specific" && customerGroupsData && (
                   <div className="mt-3 space-y-2 ml-6">
-                    {customerGroupsData?.data?.map((group: any) => (
+                    {customerGroupsData.map((group) => (
                       <label key={group.id} className="flex items-center gap-2">
                         <input
                           type="checkbox"
@@ -355,9 +355,9 @@ export function PriceBookForm({
                   </label>
                 </div>
 
-                {userScope === "specific" && (
+                {userScope === "specific" && usersData && (
                   <div className="mt-3 space-y-2 ml-6 max-h-60 overflow-y-auto">
-                    {usersData?.data?.map((user: any) => (
+                    {usersData.map((user) => (
                       <label key={user.id} className="flex items-center gap-2">
                         <input
                           type="checkbox"

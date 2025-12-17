@@ -91,7 +91,7 @@ export const apiClient = {
     return res.json();
   },
 
-  delete: async (endpoint: string) => {
+  delete: async (endpoint: string, p0: { productIds: number[] }) => {
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: "DELETE",
       headers: getAuthHeaders(),
