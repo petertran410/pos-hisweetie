@@ -70,3 +70,20 @@ export const useDeleteProduct = () => {
     },
   });
 };
+
+export function useUpdateProductRetailPrice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, retailPrice }: { id: number; retailPrice: number }) =>
+      productsApi.updateRetailPrice(id, retailPrice),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products-with-prices"] });
+      toast.success("Cập nhật giá bán thành công");
+    },
+    onError: () => {
+      toast.error("Cập nhật giá bán thất bại");
+    },
+  });
+}

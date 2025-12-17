@@ -1,9 +1,18 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useProductsWithPrices } from "@/lib/hooks/usePriceBooks";
-import { useProducts } from "@/lib/hooks/useProducts";
+import {
+  useAddProductsToPriceBook,
+  useProductsWithPrices,
+  useUpdateProductPrice,
+} from "@/lib/hooks/usePriceBooks";
+import {
+  useProducts,
+  useUpdateProductRetailPrice,
+} from "@/lib/hooks/useProducts";
 import type { PriceBook } from "@/lib/api/price-books";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 // Define unified interface for products in this table
 interface TableProduct {
@@ -14,7 +23,7 @@ interface TableProduct {
   retailPrice: number;
   stockQuantity: number;
   unit?: string;
-  prices: Record<number, number>; // Always Record, even if empty
+  prices: Record<number, number>;
 }
 
 interface PriceBookTableProps {
@@ -32,8 +41,77 @@ export function PriceBookTable({
 }: PriceBookTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
+  const [editingCell, setEditingCell] = useState<{
+    productId: number;
+    priceBookId: number;
+    value: string;
+  } | null>(null);
 
-  // Separate real price books from virtual "Bảng giá chung"
+  const updateRetailPrice = useUpdateProductRetailPrice();
+  const addProductsToPriceBook = useAddProductsToPriceBook();
+  const queryClient = useQueryClient();
+
+  const handleStartEdit = (
+    productId: number,
+    priceBookId: number,
+    currentValue: number
+  ) => {
+    setEditingCell({
+      productId,
+      priceBookId,
+      value: String(currentValue),
+    });
+  };
+
+  const handleSavePrice = async (productId: number, priceBookId: number) => {
+    if (!editingCell) return;
+
+    const newPrice = Number(editingCell.value);
+    if (isNaN(newPrice) || newPrice < 0) {
+      toast.error("Giá không hợp lệ");
+      setEditingCell(null);
+      return;
+    }
+
+    try {
+      if (priceBookId === 0) {
+        await updateRetailPrice.mutateAsync({
+          id: productId,
+          retailPrice: newPrice,
+        });
+      } else {
+        await useUpdateProductPrice.mutateAsync({
+          priceBookId,
+          productId,
+          price: newPrice,
+        });
+      }
+      setEditingCell(null);
+    } catch (error) {
+      console.error("Error saving price:", error);
+    }
+  };
+
+  const handleAddProductToPriceBook = async (
+    productId: number,
+    priceBookId: number,
+    defaultPrice: number
+  ) => {
+    try {
+      await addProductsToPriceBook.mutateAsync({
+        priceBookId,
+        products: [{ productId, price: defaultPrice }],
+      });
+      queryClient.invalidateQueries({ queryKey: ["products-with-prices"] });
+    } catch (error) {
+      console.error("Error adding product to price book:", error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCell(null);
+  };
+
   const hasDefaultPriceBook = selectedPriceBooks.some((pb) => pb.id === 0);
   const realPriceBooks = selectedPriceBooks.filter(
     (pb) => pb.id !== 0 && "isActive" in pb
@@ -47,17 +125,14 @@ export function PriceBookTable({
   const categoryIds =
     selectedCategoryIds.length > 0 ? selectedCategoryIds.join(",") : undefined;
 
-  // Use different hooks based on selection
   const isDefaultOnly = hasDefaultPriceBook && realPriceBooks.length === 0;
 
-  // Fetch all products when only "Bảng giá chung" is selected
   const { data: allProductsData, isLoading: isLoadingAll } = useProducts({
     search: searchQuery,
     categoryIds,
     limit: 1000,
   });
 
-  // Fetch products with multiple price books
   const { data: productsWithPrices, isLoading: isLoadingPrices } =
     useProductsWithPrices({
       priceBookIds,
@@ -65,10 +140,8 @@ export function PriceBookTable({
       categoryId: categoryIds ? parseInt(categoryIds.split(",")[0]) : undefined,
     });
 
-  // Transform data based on selection
   const products = useMemo<TableProduct[] | undefined>(() => {
     if (isDefaultOnly) {
-      // Only "Bảng giá chung" selected - use all products
       return allProductsData?.data?.map((p) => ({
         id: p.id,
         code: p.code,
@@ -80,7 +153,6 @@ export function PriceBookTable({
         prices: {} as Record<number, number>, // Type assertion to Record
       }));
     } else {
-      // Has real price books selected
       return productsWithPrices as TableProduct[] | undefined;
     }
   }, [isDefaultOnly, allProductsData, productsWithPrices]);
@@ -113,7 +185,6 @@ export function PriceBookTable({
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* Toolbar */}
       <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <input
@@ -139,7 +210,6 @@ export function PriceBookTable({
         </div>
       </div>
 
-      {/* Selection Bar */}
       {selectedProductIds.length > 0 && (
         <div className="border-b p-4 bg-blue-50 flex items-center justify-between">
           <span className="text-sm">
@@ -151,7 +221,6 @@ export function PriceBookTable({
         </div>
       )}
 
-      {/* Table with Horizontal Scroll */}
       <div className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
@@ -164,7 +233,6 @@ export function PriceBookTable({
               style={{ minWidth: "max-content" }}>
               <thead className="bg-gray-50 sticky top-0 z-20">
                 <tr>
-                  {/* Sticky columns */}
                   <th className="p-3 text-left sticky left-0 bg-gray-50 z-30 border-r">
                     <input
                       type="checkbox"
@@ -205,40 +273,119 @@ export function PriceBookTable({
                 {products && products.length > 0 ? (
                   products.map((product) => (
                     <tr key={product.id} className="border-b hover:bg-gray-50">
-                      {/* Sticky columns */}
+                      {/* Checkbox */}
                       <td className="p-3 sticky left-0 bg-white z-10 border-r">
                         <input
                           type="checkbox"
                           checked={selectedProductIds.includes(product.id)}
-                          onChange={() => toggleSelect(product.id)}
+                          onChange={() => toggleSelectProduct(product.id)}
                         />
                       </td>
+
+                      {/* Mã hàng */}
                       <td className="p-3 text-sm sticky left-[48px] bg-white z-10 border-r">
                         {product.code}
                       </td>
+
+                      {/* Tên hàng */}
                       <td className="p-3 text-sm sticky left-[168px] bg-white z-10 border-r min-w-[200px]">
                         {product.name}
                       </td>
+
+                      {/* Giá vốn */}
                       <td className="p-3 text-sm text-right sticky left-[368px] bg-white z-10 border-r">
                         {product.purchasePrice.toLocaleString()}
                       </td>
 
-                      {/* Dynamic price columns */}
+                      {/* Bảng giá chung - EDITABLE */}
                       {hasDefaultPriceBook && (
                         <td className="p-3 text-sm text-right">
-                          {product.retailPrice.toLocaleString()}
+                          {editingCell?.productId === product.id &&
+                          editingCell?.priceBookId === 0 ? (
+                            <input
+                              type="number"
+                              value={editingCell.value}
+                              onChange={(e) =>
+                                setEditingCell({
+                                  ...editingCell,
+                                  value: e.target.value,
+                                })
+                              }
+                              onBlur={() => handleSavePrice(product.id, 0)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter")
+                                  handleSavePrice(product.id, 0);
+                                if (e.key === "Escape") handleCancelEdit();
+                              }}
+                              className="w-full border rounded px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              autoFocus
+                            />
+                          ) : (
+                            <div
+                              onClick={() =>
+                                handleStartEdit(
+                                  product.id,
+                                  0,
+                                  product.retailPrice
+                                )
+                              }
+                              className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded">
+                              {product.retailPrice.toLocaleString()}
+                            </div>
+                          )}
                         </td>
                       )}
+
+                      {/* Các bảng giá khác */}
                       {realPriceBooks.map((pb) => {
+                        const priceExists = product.prices[pb.id] !== undefined;
                         const price = product.prices[pb.id];
+
                         return (
                           <td key={pb.id} className="p-3 text-sm text-right">
-                            {price !== undefined ? (
-                              <button className="hover:text-blue-600 w-full text-right">
-                                {price.toLocaleString()}
-                              </button>
+                            {priceExists ? (
+                              editingCell?.productId === product.id &&
+                              editingCell?.priceBookId === pb.id ? (
+                                <input
+                                  type="number"
+                                  value={editingCell.value}
+                                  onChange={(e) =>
+                                    setEditingCell({
+                                      ...editingCell,
+                                      value: e.target.value,
+                                    })
+                                  }
+                                  onBlur={() =>
+                                    handleSavePrice(product.id, pb.id)
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter")
+                                      handleSavePrice(product.id, pb.id);
+                                    if (e.key === "Escape") handleCancelEdit();
+                                  }}
+                                  className="w-full border rounded px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  autoFocus
+                                />
+                              ) : (
+                                <div
+                                  onClick={() =>
+                                    handleStartEdit(product.id, pb.id, price)
+                                  }
+                                  className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded">
+                                  {Number(price).toLocaleString()}
+                                </div>
+                              )
                             ) : (
-                              <button className="hover:text-blue-600 text-blue-600">
+                              <button
+                                onClick={() =>
+                                  handleAddProductToPriceBook(
+                                    product.id,
+                                    pb.id,
+                                    product.retailPrice
+                                  )
+                                }
+                                className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                                title={`Thêm vào ${pb.name}`}>
                                 +
                               </button>
                             )}
@@ -249,14 +396,8 @@ export function PriceBookTable({
                   ))
                 ) : (
                   <tr>
-                    <td
-                      colSpan={
-                        4 +
-                        (hasDefaultPriceBook ? 1 : 0) +
-                        realPriceBooks.length
-                      }
-                      className="p-8 text-center text-gray-500">
-                      Chưa có sản phẩm
+                    <td colSpan={100} className="p-8 text-center text-gray-500">
+                      Không có sản phẩm
                     </td>
                   </tr>
                 )}
