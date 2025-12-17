@@ -1,13 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRootCategories } from "@/lib/hooks/useCategories";
+import { CategorySelectorModal } from "@/components/products/CategorySelectorModal";
 import type { PriceBook } from "@/lib/api/price-books";
+import type { Category } from "@/lib/api/categories";
 
 interface PriceBookSidebarProps {
   priceBooks?: PriceBook[];
   selectedIds: number[];
   onSelectedIdsChange: (ids: number[]) => void;
   onCreateNew: () => void;
+  selectedCategoryIds: number[];
+  onSelectedCategoryIdsChange: (ids: number[]) => void;
 }
 
 export function PriceBookSidebar({
@@ -15,9 +20,14 @@ export function PriceBookSidebar({
   selectedIds,
   onSelectedIdsChange,
   onCreateNew,
+  selectedCategoryIds,
+  onSelectedCategoryIdsChange,
 }: PriceBookSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showCategorySelector, setShowCategorySelector] = useState(false);
+
+  const { data: categories } = useRootCategories();
 
   const filteredPriceBooks = priceBooks?.filter((pb) =>
     pb.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -33,11 +43,45 @@ export function PriceBookSidebar({
 
   const getDisplayText = () => {
     if (selectedIds.length === 0) return "Chọn bảng giá";
-    if (selectedIds.length === 1) {
-      const selected = priceBooks?.find((pb) => pb.id === selectedIds[0]);
+
+    const hasDefaultPriceBook = selectedIds.includes(0);
+    const realPriceBooks = selectedIds.filter((id) => id !== 0);
+
+    if (hasDefaultPriceBook && realPriceBooks.length === 0) {
+      return "Bảng giá chung";
+    }
+
+    if (hasDefaultPriceBook && realPriceBooks.length > 0) {
+      return `Bảng giá chung + ${realPriceBooks.length} bảng giá`;
+    }
+
+    if (realPriceBooks.length === 1) {
+      const selected = priceBooks?.find((pb) => pb.id === realPriceBooks[0]);
       return selected?.name || "Chọn bảng giá";
     }
-    return `Đã chọn ${selectedIds.length} bảng giá`;
+
+    return `Đã chọn ${realPriceBooks.length} bảng giá`;
+  };
+
+  const flattenCategories = (cats: Category[]): Category[] => {
+    return cats.reduce((acc, cat) => {
+      acc.push(cat);
+      if (cat.children) {
+        acc.push(...flattenCategories(cat.children));
+      }
+      return acc;
+    }, [] as Category[]);
+  };
+
+  const getSelectedCategoryNames = () => {
+    if (!categories || selectedCategoryIds.length === 0) return "";
+    const allCategories = flattenCategories(categories);
+    const selectedNames = selectedCategoryIds
+      .map((id) => allCategories.find((cat) => cat.id === id)?.name)
+      .filter(Boolean);
+    if (selectedNames.length === 0) return "";
+    if (selectedNames.length === 1) return selectedNames[0];
+    return `${selectedNames.length} nhóm đã chọn`;
   };
 
   return (
@@ -88,6 +132,22 @@ export function PriceBookSidebar({
               </div>
 
               <div className="max-h-60 overflow-y-auto">
+                {/* Bảng giá chung - Virtual Price Book */}
+                <label
+                  className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 border-b ${
+                    selectedIds.includes(0) ? "bg-blue-50" : ""
+                  }`}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(0)}
+                    onChange={() => togglePriceBook(0)}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm flex-1 font-medium">
+                    Bảng giá chung
+                  </span>
+                </label>
+
                 {filteredPriceBooks?.map((pb) => (
                   <label
                     key={pb.id}
@@ -111,9 +171,25 @@ export function PriceBookSidebar({
 
       <div>
         <label className="block text-sm font-medium mb-2">Nhóm hàng</label>
-        <select className="w-full border rounded px-3 py-2 bg-white text-sm">
-          <option value="">Chọn nhóm hàng</option>
-        </select>
+        <button
+          onClick={() => setShowCategorySelector(true)}
+          className="w-full border rounded px-3 py-2 text-left flex items-center justify-between hover:bg-gray-50 bg-white">
+          <span className="text-sm text-gray-600">
+            {getSelectedCategoryNames() || "Chọn nhóm hàng"}
+          </span>
+          <svg
+            className="w-4 h-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </button>
       </div>
 
       <div>
@@ -132,6 +208,15 @@ export function PriceBookSidebar({
           <option value="">Chọn giá so sánh</option>
         </select>
       </div>
+
+      {showCategorySelector && categories && (
+        <CategorySelectorModal
+          categories={categories}
+          selectedIds={selectedCategoryIds}
+          onApply={onSelectedCategoryIdsChange}
+          onClose={() => setShowCategorySelector(false)}
+        />
+      )}
     </div>
   );
 }

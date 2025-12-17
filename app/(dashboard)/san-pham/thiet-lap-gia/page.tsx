@@ -8,18 +8,23 @@ import { PriceBookForm } from "@/components/price-books/PriceBookForm";
 import { PriceBookProductSelector } from "@/components/price-books/PriceBookProductSelector";
 
 export default function PriceBooksPage() {
-  const [selectedPriceBookIds, setSelectedPriceBookIds] = useState<number[]>(
-    []
-  );
+  const [selectedPriceBookIds, setSelectedPriceBookIds] = useState<number[]>([
+    0,
+  ]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [showProductSelector, setShowProductSelector] = useState(false);
 
   const { data: priceBooksData } = usePriceBooks();
 
-  const selectedPriceBooks =
-    priceBooksData?.data?.filter((pb) =>
-      selectedPriceBookIds.includes(pb.id)
-    ) || [];
+  const allPriceBooks = [
+    { id: 0, name: "Bảng giá chung" },
+    ...(priceBooksData?.data || []),
+  ];
+
+  const selectedPriceBooks = allPriceBooks.filter((pb) =>
+    selectedPriceBookIds.includes(pb.id)
+  );
 
   return (
     <div className="h-screen flex flex-col">
@@ -33,11 +38,14 @@ export default function PriceBooksPage() {
           selectedIds={selectedPriceBookIds}
           onSelectedIdsChange={setSelectedPriceBookIds}
           onCreateNew={() => setShowForm(true)}
+          selectedCategoryIds={selectedCategoryIds}
+          onSelectedCategoryIdsChange={setSelectedCategoryIds}
         />
 
         <PriceBookTable
           selectedPriceBooks={selectedPriceBooks}
           onAddProducts={() => setShowProductSelector(true)}
+          selectedCategoryIds={selectedCategoryIds}
         />
       </div>
 

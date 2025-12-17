@@ -5,25 +5,37 @@ import { useProductsWithPrices } from "@/lib/hooks/usePriceBooks";
 import type { PriceBook } from "@/lib/api/price-books";
 
 interface PriceBookTableProps {
-  selectedPriceBooks: PriceBook[];
+  selectedPriceBooks: (PriceBook | { id: number; name: string })[];
   onAddProducts?: () => void;
+  selectedCategoryIds: number[];
 }
 
 export function PriceBookTable({
   selectedPriceBooks,
   onAddProducts,
+  selectedCategoryIds,
 }: PriceBookTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
 
+  // Separate real price books from virtual "Bảng giá chung"
+  const hasDefaultPriceBook = selectedPriceBooks.some((pb) => pb.id === 0);
+  const realPriceBooks = selectedPriceBooks.filter(
+    (pb) => pb.id !== 0
+  ) as PriceBook[];
+
   const priceBookIds = useMemo(
-    () => selectedPriceBooks.map((pb) => pb.id),
-    [selectedPriceBooks]
+    () => realPriceBooks.map((pb) => pb.id),
+    [realPriceBooks]
   );
+
+  const categoryIds =
+    selectedCategoryIds.length > 0 ? selectedCategoryIds.join(",") : undefined;
 
   const { data: products, isLoading } = useProductsWithPrices({
     priceBookIds,
     search: searchQuery,
+    categoryId: categoryIds ? parseInt(categoryIds.split(",")[0]) : undefined,
   });
 
   const toggleSelectAll = () => {
@@ -118,7 +130,7 @@ export function PriceBookTable({
                   <th className="p-3 text-left text-sm font-medium whitespace-nowrap sticky left-[48px] bg-gray-50 z-30 border-r">
                     Mã hàng
                   </th>
-                  <th className="p-3 text-left text-sm font-medium whitespace-nowrap sticky left-[168px] bg-gray-50 z-30 border-r">
+                  <th className="p-3 text-left text-sm font-medium whitespace-nowrap sticky left-[168px] bg-gray-50 z-30 border-r min-w-[200px]">
                     Tên hàng
                   </th>
                   <th className="p-3 text-right text-sm font-medium whitespace-nowrap sticky left-[368px] bg-gray-50 z-30 border-r">
@@ -126,10 +138,12 @@ export function PriceBookTable({
                   </th>
 
                   {/* Dynamic price book columns */}
-                  <th className="p-3 text-right text-sm font-medium whitespace-nowrap bg-blue-50">
-                    Bảng giá chung
-                  </th>
-                  {selectedPriceBooks.map((pb) => (
+                  {hasDefaultPriceBook && (
+                    <th className="p-3 text-right text-sm font-medium whitespace-nowrap bg-blue-50">
+                      Bảng giá chung
+                    </th>
+                  )}
+                  {realPriceBooks.map((pb) => (
                     <th
                       key={pb.id}
                       className="p-3 text-right text-sm font-medium whitespace-nowrap">
@@ -153,7 +167,7 @@ export function PriceBookTable({
                       <td className="p-3 text-sm sticky left-[48px] bg-white z-10 border-r">
                         {product.code}
                       </td>
-                      <td className="p-3 text-sm sticky left-[168px] bg-white z-10 border-r">
+                      <td className="p-3 text-sm sticky left-[168px] bg-white z-10 border-r min-w-[200px]">
                         {product.name}
                       </td>
                       <td className="p-3 text-sm text-right sticky left-[368px] bg-white z-10 border-r">
@@ -161,10 +175,12 @@ export function PriceBookTable({
                       </td>
 
                       {/* Dynamic price columns */}
-                      <td className="p-3 text-sm text-right bg-blue-50">
-                        {product.retailPrice.toLocaleString()}
-                      </td>
-                      {selectedPriceBooks.map((pb) => {
+                      {hasDefaultPriceBook && (
+                        <td className="p-3 text-sm text-right bg-blue-50">
+                          {product.retailPrice.toLocaleString()}
+                        </td>
+                      )}
+                      {realPriceBooks.map((pb) => {
                         const price = product.prices[pb.id];
                         return (
                           <td key={pb.id} className="p-3 text-sm text-right">
@@ -185,7 +201,11 @@ export function PriceBookTable({
                 ) : (
                   <tr>
                     <td
-                      colSpan={5 + selectedPriceBooks.length}
+                      colSpan={
+                        4 +
+                        (hasDefaultPriceBook ? 1 : 0) +
+                        realPriceBooks.length
+                      }
                       className="p-8 text-center text-gray-500">
                       Chưa có sản phẩm
                     </td>
