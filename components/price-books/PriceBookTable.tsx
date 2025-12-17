@@ -2,17 +2,32 @@
 
 import { useState, useMemo } from "react";
 import { useProductsWithPrices } from "@/lib/hooks/usePriceBooks";
+import { useProducts } from "@/lib/hooks/useProducts";
 import type { PriceBook } from "@/lib/api/price-books";
+
+// Define unified interface for products in this table
+interface TableProduct {
+  id: number;
+  code: string;
+  name: string;
+  purchasePrice: number;
+  retailPrice: number;
+  stockQuantity: number;
+  unit?: string;
+  prices: Record<number, number>; // Always Record, even if empty
+}
 
 interface PriceBookTableProps {
   selectedPriceBooks: (PriceBook | { id: number; name: string })[];
   onAddProducts?: () => void;
+  onCreateNew: () => void;
   selectedCategoryIds: number[];
 }
 
 export function PriceBookTable({
   selectedPriceBooks,
   onAddProducts,
+  onCreateNew,
   selectedCategoryIds,
 }: PriceBookTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -21,7 +36,7 @@ export function PriceBookTable({
   // Separate real price books from virtual "Bảng giá chung"
   const hasDefaultPriceBook = selectedPriceBooks.some((pb) => pb.id === 0);
   const realPriceBooks = selectedPriceBooks.filter(
-    (pb) => pb.id !== 0
+    (pb) => pb.id !== 0 && "isActive" in pb
   ) as PriceBook[];
 
   const priceBookIds = useMemo(
@@ -32,11 +47,45 @@ export function PriceBookTable({
   const categoryIds =
     selectedCategoryIds.length > 0 ? selectedCategoryIds.join(",") : undefined;
 
-  const { data: products, isLoading } = useProductsWithPrices({
-    priceBookIds,
+  // Use different hooks based on selection
+  const isDefaultOnly = hasDefaultPriceBook && realPriceBooks.length === 0;
+
+  // Fetch all products when only "Bảng giá chung" is selected
+  const { data: allProductsData, isLoading: isLoadingAll } = useProducts({
     search: searchQuery,
-    categoryId: categoryIds ? parseInt(categoryIds.split(",")[0]) : undefined,
+    categoryIds,
+    limit: 1000,
   });
+
+  // Fetch products with multiple price books
+  const { data: productsWithPrices, isLoading: isLoadingPrices } =
+    useProductsWithPrices({
+      priceBookIds,
+      search: searchQuery,
+      categoryId: categoryIds ? parseInt(categoryIds.split(",")[0]) : undefined,
+    });
+
+  // Transform data based on selection
+  const products = useMemo<TableProduct[] | undefined>(() => {
+    if (isDefaultOnly) {
+      // Only "Bảng giá chung" selected - use all products
+      return allProductsData?.data?.map((p) => ({
+        id: p.id,
+        code: p.code,
+        name: p.name,
+        purchasePrice: Number(p.purchasePrice),
+        retailPrice: Number(p.retailPrice),
+        stockQuantity: p.stockQuantity,
+        unit: p.unit,
+        prices: {} as Record<number, number>, // Type assertion to Record
+      }));
+    } else {
+      // Has real price books selected
+      return productsWithPrices as TableProduct[] | undefined;
+    }
+  }, [isDefaultOnly, allProductsData, productsWithPrices]);
+
+  const isLoading = isDefaultOnly ? isLoadingAll : isLoadingPrices;
 
   const toggleSelectAll = () => {
     if (selectedProductIds.length === products?.length) {
@@ -77,7 +126,7 @@ export function PriceBookTable({
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={onAddProducts}
+            onClick={onCreateNew}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
             + Bảng giá
           </button>

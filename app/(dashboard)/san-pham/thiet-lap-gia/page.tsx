@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { usePriceBooks } from "@/lib/hooks/usePriceBooks";
 import { PriceBookSidebar } from "@/components/price-books/PriceBookSidebar";
 import { PriceBookTable } from "@/components/price-books/PriceBookTable";
@@ -10,7 +10,7 @@ import { PriceBookProductSelector } from "@/components/price-books/PriceBookProd
 export default function PriceBooksPage() {
   const [selectedPriceBookIds, setSelectedPriceBookIds] = useState<number[]>([
     0,
-  ]);
+  ]); // Default: Bảng giá chung
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [showProductSelector, setShowProductSelector] = useState(false);
@@ -45,6 +45,7 @@ export default function PriceBooksPage() {
         <PriceBookTable
           selectedPriceBooks={selectedPriceBooks}
           onAddProducts={() => setShowProductSelector(true)}
+          onCreateNew={() => setShowForm(true)}
           selectedCategoryIds={selectedCategoryIds}
         />
       </div>
