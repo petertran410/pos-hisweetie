@@ -10,6 +10,8 @@ import { useAuthStore } from "@/lib/store/auth";
 import { Category } from "@/lib/api/categories";
 import { useRootCategories } from "@/lib/hooks/useCategories";
 import { CategorySelect } from "./CategorySelect";
+import { useBranchStore } from "@/lib/store/branch";
+import { CostConfirmationModal } from "./CostConfirmationModal";
 
 interface ProductFormProps {
   product?: Product;
@@ -32,6 +34,8 @@ export function ProductForm({
 }: ProductFormProps) {
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [images, setImages] = useState<ImageItem[]>([]);
+  const [showCostConfirmation, setShowCostConfirmation] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
 
   const [attributes, setAttributes] = useState<
     { name: string; value: string }[]
@@ -48,6 +52,7 @@ export function ProductForm({
 
   const { data: categories } = useRootCategories();
   const { data: trademarks } = useTrademarks();
+  const { selectedBranch } = useBranchStore();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
 
@@ -63,7 +68,7 @@ export function ProductForm({
       retailPrice: product?.retailPrice || 0,
       stockQuantity: product?.stockQuantity || 0,
       minStockAlert: product?.minStockAlert || 0,
-      maxStockAlert: product?.minStockAlert || 0,
+      maxStockAlert: product?.maxStockAlert || 0,
       weight: product?.weight || undefined,
       weightUnit: product?.weightUnit || "kg",
       unit: product?.unit || "",
@@ -71,6 +76,16 @@ export function ProductForm({
       isActive: product?.isActive ?? true,
     },
   });
+
+  useEffect(() => {
+    if (product?.images) {
+      const loadedImages = product.images.map((img) => ({
+        url: img.image,
+        preview: img.image,
+      }));
+      setImages(loadedImages);
+    }
+  }, [product]);
 
   const uploadFile = async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -119,6 +134,38 @@ export function ProductForm({
     }
   };
 
+  const hasCostChanged = (newCost: number): boolean => {
+    if (!product) return newCost > 0;
+    return Number(product.purchasePrice) !== newCost;
+  };
+
+  const submitProduct = async (formData: any) => {
+    setIsSubmitting(true);
+    try {
+      if (product) {
+        await updateProduct.mutateAsync(
+          { id: product.id, data: formData },
+          {
+            onSuccess: () => {
+              onSuccess();
+            },
+          }
+        );
+      } else {
+        await createProduct.mutateAsync(formData, {
+          onSuccess: () => {
+            onSuccess();
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+    } finally {
+      setIsSubmitting(false);
+      setPendingFormData(null);
+    }
+  };
+
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
@@ -160,6 +207,7 @@ export function ProductForm({
         imageUrls: uploadedUrls,
         isDirectSale: Boolean(data.isDirectSale),
         isActive: Boolean(data.isActive),
+        branchId: selectedBranch?.id,
       };
 
       if (product) {
@@ -170,11 +218,35 @@ export function ProductForm({
       } else {
         await createProduct.mutateAsync(formData, { onSuccess });
       }
+
+      if (hasCostChanged(formData.purchasePrice)) {
+        setPendingFormData(formData);
+        setShowCostConfirmation(true);
+        return;
+      }
+      await submitProduct(formData);
     } catch (error) {
       console.error("Submit error:", error);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCostConfirm = async (
+    scope: "all" | "specific",
+    branchId?: number
+  ) => {
+    setShowCostConfirmation(false);
+
+    if (!pendingFormData) return;
+
+    const finalData = {
+      ...pendingFormData,
+      costScope: scope,
+      costBranchId: branchId,
+    };
+
+    await submitProduct(finalData);
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,6 +268,24 @@ export function ProductForm({
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addAttribute = () => {
+    setAttributes([...attributes, { name: "", value: "" }]);
+  };
+
+  const updateAttribute = (
+    index: number,
+    field: "name" | "value",
+    value: string
+  ) => {
+    const updated = [...attributes];
+    updated[index][field] = value;
+    setAttributes(updated);
+  };
+
+  const removeAttribute = (index: number) => {
+    setAttributes(attributes.filter((_, i) => i !== index));
   };
 
   useEffect(() => {
@@ -290,70 +380,77 @@ export function ProductForm({
               </div>
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-3">Giá vốn, giá bán</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Giá vốn
-                  </label>
-                  <input
-                    {...register("purchasePrice", { valueAsNumber: true })}
-                    type="number"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Giá bán
-                  </label>
-                  <input
-                    {...register("retailPrice", { valueAsNumber: true })}
-                    type="number"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="0"
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Giá vốn
+                </label>
+                <input
+                  {...register("purchasePrice")}
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Giá bán
+                </label>
+                <input
+                  {...register("retailPrice")}
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="0"
+                />
               </div>
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-3">Tồn kho</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Tồn kho
-                  </label>
-                  <input
-                    {...register("stockQuantity", { valueAsNumber: true })}
-                    type="number"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Định mức tồn tối thiểu
-                  </label>
-                  <input
-                    {...register("minStockAlert", { valueAsNumber: true })}
-                    type="number"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Định mức tồn tối đa
-                  </label>
-                  <input
-                    {...register("maxStockAlert", { valueAsNumber: true })}
-                    type="number"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="999,999,999"
-                  />
-                </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Tồn kho
+                </label>
+                <input
+                  {...register("stockQuantity")}
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Chi nhánh: {selectedBranch?.name || "Chưa chọn"}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Định mức tồn thấp nhất
+                </label>
+                <input
+                  {...register("minStockAlert")}
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Định mức tồn cao nhất
+                </label>
+                <input
+                  {...register("maxStockAlert")}
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="0"
+                />
               </div>
             </div>
 
@@ -480,6 +577,17 @@ export function ProductForm({
             setShowUnitModal(false);
           }}
           onClose={() => setShowUnitModal(false)}
+        />
+      )}
+
+      {showCostConfirmation && (
+        <CostConfirmationModal
+          onConfirm={handleCostConfirm}
+          onCancel={() => {
+            setShowCostConfirmation(false);
+            setPendingFormData(null);
+            setIsSubmitting(false);
+          }}
         />
       )}
     </div>
