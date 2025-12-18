@@ -13,6 +13,7 @@ import { useRootCategories } from "@/lib/hooks/useCategories";
 import { CategorySelect } from "./CategorySelect";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
+import { CostConfirmationModal } from "./CostConfirmationModal";
 
 interface ComboComponent {
   id?: number;
@@ -44,6 +45,8 @@ export function ComboProductForm({
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showCostConfirmation, setShowCostConfirmation] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
   const itemsPerPage = 10;
 
   const { data: categories } = useRootCategories();
@@ -75,6 +78,37 @@ export function ComboProductForm({
       isActive: product?.isActive ?? true,
     },
   });
+
+  const hasCostChanged = (): boolean => {
+    const newCost = calculateTotalPurchasePrice();
+
+    if (!product) return newCost > 0;
+
+    const currentCost =
+      product.inventories?.find((inv) => inv.branchId === selectedBranch?.id)
+        ?.cost || 0;
+
+    return Number(currentCost) !== newCost;
+  };
+
+  const submitProduct = async (formData: any) => {
+    setIsSubmitting(true);
+    try {
+      if (product) {
+        await updateProduct.mutateAsync(
+          { id: product.id, data: formData },
+          { onSuccess }
+        );
+      } else {
+        await createProduct.mutateAsync(formData, { onSuccess });
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+    } finally {
+      setIsSubmitting(false);
+      setPendingFormData(null);
+    }
+  };
 
   useEffect(() => {
     if (product?.comboComponents) {
@@ -224,6 +258,8 @@ export function ComboProductForm({
         }
       }
 
+      const comboCost = calculateTotalPurchasePrice();
+
       const formData = {
         code: data.code,
         name: data.name,
@@ -233,7 +269,7 @@ export function ComboProductForm({
         categoryId: data.categoryId ? Number(data.categoryId) : undefined,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
         basePrice: Number(data.basePrice) || 0,
-        purchasePrice: 0,
+        purchasePrice: comboCost,
         stockQuantity: 0,
         minStockAlert: Number(data.minStockAlert) || 0,
         maxStockAlert: Number(data.maxStockAlert) || 0,
@@ -247,21 +283,38 @@ export function ComboProductForm({
           componentProductId: comp.componentProductId,
           quantity: comp.quantity,
         })),
+        branchId: selectedBranch?.id,
       };
 
-      if (product) {
-        await updateProduct.mutateAsync(
-          { id: product.id, data: formData },
-          { onSuccess }
-        );
-      } else {
-        await createProduct.mutateAsync(formData, { onSuccess });
+      if (hasCostChanged()) {
+        setPendingFormData(formData);
+        setShowCostConfirmation(true);
+        setIsSubmitting(false);
+        return;
       }
+
+      await submitProduct(formData);
     } catch (error) {
       console.error("Submit error:", error);
-    } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCostConfirm = async (
+    scope: "all" | "specific",
+    branchId?: number
+  ) => {
+    setShowCostConfirmation(false);
+
+    if (!pendingFormData) return;
+
+    const finalData = {
+      ...pendingFormData,
+      costScope: scope,
+      costBranchId: branchId,
+    };
+
+    await submitProduct(finalData);
   };
 
   return (
@@ -675,6 +728,16 @@ export function ComboProductForm({
           </div>
         </form>
       </div>
+      {showCostConfirmation && (
+        <CostConfirmationModal
+          onConfirm={handleCostConfirm}
+          onCancel={() => {
+            setShowCostConfirmation(false);
+            setPendingFormData(null);
+            setIsSubmitting(false);
+          }}
+        />
+      )}
     </div>
   );
 }

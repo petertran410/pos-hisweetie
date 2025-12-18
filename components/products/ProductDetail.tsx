@@ -138,17 +138,6 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
             }`}>
             Thông tin
           </button>
-          {product.type === 1 && (
-            <button
-              onClick={() => setActiveTab("components")}
-              className={`py-3 border-b-2 ${
-                activeTab === "components"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent"
-              }`}>
-              Hàng thành phần
-            </button>
-          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
