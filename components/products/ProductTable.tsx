@@ -215,7 +215,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
 
 export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
   const { selectedBranch } = useBranchStore();
-  const [searchDebounced, setSearchDebounced] = useState(search);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [search, setSearch] = useState("");
@@ -223,6 +222,7 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [productType, setProductType] = useState<number | null>(null);
+  const [searchDebounced, setSearchDebounced] = useState(search);
 
   const handleCreateProduct = (type: number) => {
     setProductType(type);
@@ -302,14 +302,6 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
   };
 
   const visibleColumns = columns.filter((col) => col.visible);
-
-  // if (error) {
-  //   return (
-  //     <div className="flex items-center justify-center h-full">
-  //       <p className="text-red-500">Lỗi tải dữ liệu sản phẩm</p>
-  //     </div>
-  //   );
-  // }
 
   return (
     <div className="flex flex-col h-full">

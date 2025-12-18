@@ -11,7 +11,6 @@ import {
   useUpdateProductRetailPrice,
 } from "@/lib/hooks/useProducts";
 import type { PriceBook } from "@/lib/api/price-books";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 
 interface TableProduct {

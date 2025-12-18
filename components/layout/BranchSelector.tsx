@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useBranchStore } from "@/lib/store/branch";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useAuthStore } from "@/lib/store/auth";
+import { Branch } from "@/lib/api/branches";
 
 export function BranchSelector() {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,9 +17,11 @@ export function BranchSelector() {
   useEffect(() => {
     if (!selectedBranch && branches && branches.length > 0) {
       const userBranch = branches.find((b) => b.id === user?.branchId);
-      setSelectedBranch(userBranch || branches[0]);
+
+      const defaultBranch = userBranch || branches[0];
+      setSelectedBranch(defaultBranch);
     }
-  }, [branches, selectedBranch, user]);
+  }, [branches, selectedBranch, user, setSelectedBranch]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -34,7 +37,7 @@ export function BranchSelector() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSelectBranch = (branch: typeof selectedBranch) => {
+  const handleSelectBranch = (branch: Branch) => {
     setSelectedBranch(branch);
     setIsOpen(false);
   };
