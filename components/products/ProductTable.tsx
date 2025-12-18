@@ -20,7 +20,7 @@ type ColumnKey =
   | "type"
   | "channelLink"
   | "basePrice"
-  | "purchasePrice"
+  | "inventory.cost"
   | "tradeMark"
   | "stock"
   | "customerOrder"
@@ -55,14 +55,21 @@ const getProductTypeLabel = (type: number) => {
 };
 
 const calculateComboPurchasePrice = (product: Product): number => {
-  if (product.type !== 1 || !product.comboComponents) {
-    return Number(product.purchasePrice);
-  }
+  if (!product.comboComponents) return 0;
+
+  const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
 
   return product.comboComponents.reduce((sum, comp) => {
-    const price = Number(comp.componentProduct?.purchasePrice || 0);
+    const componentProduct = comp.componentProduct;
+    if (!componentProduct) return sum;
+
+    const inventory = componentProduct.inventories?.find(
+      (inv) => inv.branchId === selectedBranchId
+    );
+    const cost = inventory ? Number(inventory.cost) : 0;
     const quantity = Number(comp.quantity || 0);
-    return sum + price * quantity;
+
+    return sum + cost * quantity;
   }, 0);
 };
 
@@ -122,15 +129,20 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (product) => Number(product.basePrice).toLocaleString() + " đ",
   },
   {
-    key: "purchasePrice",
+    key: "inventory.cost",
     label: "Giá vốn",
     visible: false,
     render: (product) => {
-      const price =
-        product.type === 1
-          ? calculateComboPurchasePrice(product)
-          : Number(product.purchasePrice);
-      return price.toLocaleString() + " đ";
+      if (product.type === 1) {
+        return calculateComboPurchasePrice(product).toLocaleString() + " đ";
+      }
+
+      const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
+      const inventory = product.inventories?.find(
+        (inv) => inv.branchId === selectedBranchId
+      );
+      const cost = inventory ? Number(inventory.cost) : 0;
+      return cost.toLocaleString() + " đ";
     },
   },
   {
@@ -143,7 +155,23 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "stock",
     label: "Tồn kho",
     visible: true,
-    render: (product) => product.stockQuantity,
+    render: (product) => {
+      const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
+
+      if (selectedBranchId) {
+        const inventory = product.inventories?.find(
+          (inv) => inv.branchId === selectedBranchId
+        );
+        return inventory ? Number(inventory.onHand).toLocaleString() : "0";
+      } else {
+        const totalStock =
+          product.inventories?.reduce(
+            (sum, inv) => sum + Number(inv.onHand),
+            0
+          ) || 0;
+        return totalStock.toLocaleString();
+      }
+    },
   },
   {
     key: "customerOrder",
@@ -179,13 +207,25 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "minStock",
     label: "Định mức tồn ít nhất",
     visible: false,
-    render: (product) => product.minStockAlert,
+    render: (product) => {
+      const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
+      const inventory = product.inventories?.find(
+        (inv) => inv.branchId === selectedBranchId
+      );
+      return inventory ? Number(inventory.minQuality).toLocaleString() : "0";
+    },
   },
   {
     key: "maxStock",
     label: "Định mức tồn nhiều nhất",
     visible: false,
-    render: (product) => product.maxStockAlert,
+    render: (product) => {
+      const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
+      const inventory = product.inventories?.find(
+        (inv) => inv.branchId === selectedBranchId
+      );
+      return inventory ? Number(inventory.maxQuality).toLocaleString() : "0";
+    },
   },
   {
     key: "status",

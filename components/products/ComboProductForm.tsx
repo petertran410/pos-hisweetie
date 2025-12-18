@@ -12,6 +12,7 @@ import { useTrademarks } from "@/lib/hooks/useTrademarks";
 import { useRootCategories } from "@/lib/hooks/useCategories";
 import { CategorySelect } from "./CategorySelect";
 import { useAuthStore } from "@/lib/store/auth";
+import { useBranchStore } from "@/lib/store/branch";
 
 interface ComboComponent {
   id?: number;
@@ -42,8 +43,8 @@ export function ComboProductForm({
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1); // Thêm state cho pagination
-  const itemsPerPage = 10; // Số item mỗi trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { data: categories } = useRootCategories();
   const { data: trademarks } = useTrademarks();
@@ -51,6 +52,7 @@ export function ComboProductForm({
     search: searchQuery,
     limit: 10,
   });
+  const { selectedBranch } = useBranchStore();
 
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
@@ -63,9 +65,9 @@ export function ComboProductForm({
       orderTemplate: product?.orderTemplate || "",
       categoryId: product?.categoryId || undefined,
       tradeMarkId: product?.tradeMarkId || undefined,
-      retailPrice: product?.retailPrice || 0,
-      minStockAlert: product?.minStockAlert || 0,
-      maxStockAlert: product?.maxStockAlert || 0,
+      basePrice: product?.basePrice || 0,
+      minStockAlert: 0,
+      maxStockAlert: 0,
       weight: product?.weight || undefined,
       weightUnit: product?.weightUnit || "kg",
       unit: product?.unit || "",
@@ -157,19 +159,31 @@ export function ComboProductForm({
 
   const calculateTotalPurchasePrice = () => {
     return components.reduce((sum, comp) => {
-      const price = Number(comp.componentProduct?.purchasePrice || 0);
-      return sum + price * comp.quantity;
+      const componentProduct = comp.componentProduct;
+      if (!componentProduct) return sum;
+
+      const inventory = componentProduct.inventories?.find(
+        (inv) => inv.branchId === selectedBranch?.id
+      );
+      const cost = inventory ? Number(inventory.cost) : 0;
+      const quantity = Number(comp.quantity || 0);
+
+      return sum + cost * quantity;
     }, 0);
   };
 
   const calculateTotalRetailPrice = () => {
     return components.reduce((sum, comp) => {
-      const price = Number(comp.componentProduct?.retailPrice || 0);
-      return sum + price * comp.quantity;
+      const componentProduct = comp.componentProduct;
+      if (!componentProduct) return sum;
+
+      const price = Number(componentProduct.basePrice || 0);
+      const quantity = Number(comp.quantity || 0);
+
+      return sum + price * quantity;
     }, 0);
   };
 
-  // Pagination calculations
   const totalPages = Math.ceil(components.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -218,17 +232,18 @@ export function ComboProductForm({
         orderTemplate: data.orderTemplate || undefined,
         categoryId: data.categoryId ? Number(data.categoryId) : undefined,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
+        basePrice: Number(data.basePrice) || 0,
+        retailPrice: Number(data.basePrice) || 0,
         purchasePrice: 0,
-        retailPrice: Number(data.retailPrice) || 0,
         stockQuantity: 0,
         minStockAlert: Number(data.minStockAlert) || 0,
         maxStockAlert: Number(data.maxStockAlert) || 0,
         weight: data.weight ? Number(data.weight) : undefined,
-        weightUnit: data.weightUnit || undefined,
+        weightUnit: data.weightUnit || "kg",
         unit: data.unit || undefined,
+        isDirectSale: data.isDirectSale || false,
+        isActive: data.isActive ?? true,
         imageUrls: uploadedUrls,
-        isDirectSale: Boolean(data.isDirectSale),
-        isActive: Boolean(data.isActive),
         components: components.map((comp) => ({
           componentProductId: comp.componentProductId,
           quantity: comp.quantity,
@@ -368,7 +383,7 @@ export function ComboProductForm({
                           </span>
                           <span className="flex-1">{product.name}</span>
                           <span className="text-sm text-gray-500">
-                            {Number(product.retailPrice).toLocaleString()} đ
+                            {Number(product.basePrice).toLocaleString()} đ
                           </span>
                         </button>
                       ))}
@@ -423,11 +438,17 @@ export function ComboProductForm({
                   <tbody>
                     {currentComponents.map((comp, index) => {
                       const actualIndex = startIndex + index;
-                      const purchasePrice = Number(
-                        comp.componentProduct?.purchasePrice || 0
+                      const componentProduct = comp.componentProduct;
+
+                      const inventory = componentProduct?.inventories?.find(
+                        (inv) => inv.branchId === selectedBranch?.id
                       );
+                      const purchasePrice = inventory
+                        ? Number(inventory.cost)
+                        : 0;
+
                       const retailPrice = Number(
-                        comp.componentProduct?.retailPrice || 0
+                        componentProduct?.basePrice || 0
                       );
                       const totalPurchase = purchasePrice * comp.quantity;
                       const totalRetail = retailPrice * comp.quantity;
@@ -546,7 +567,7 @@ export function ComboProductForm({
                     Giá bán
                   </label>
                   <input
-                    {...register("retailPrice", { valueAsNumber: true })}
+                    {...register("basePrice", { valueAsNumber: true })}
                     type="number"
                     className="w-full border rounded px-3 py-2"
                     placeholder="0"

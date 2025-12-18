@@ -36,7 +36,6 @@ export function ProductForm({
   const [images, setImages] = useState<ImageItem[]>([]);
   const [showCostConfirmation, setShowCostConfirmation] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<any>(null);
-
   const [attributes, setAttributes] = useState<
     { name: string; value: string }[]
   >(
@@ -47,14 +46,15 @@ export function ProductForm({
         })
       : []
   );
-
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const { data: categories } = useRootCategories();
   const { data: trademarks } = useTrademarks();
   const { selectedBranch } = useBranchStore();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const currentBranchInventory = product?.inventories?.find(
+    (inv) => inv.branchId === selectedBranch?.id
+  );
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
@@ -64,11 +64,19 @@ export function ProductForm({
       orderTemplate: product?.orderTemplate || "",
       categoryId: product?.categoryId || undefined,
       tradeMarkId: product?.tradeMarkId || undefined,
-      purchasePrice: product?.purchasePrice || 0,
-      retailPrice: product?.retailPrice || 0,
-      stockQuantity: product?.stockQuantity || 0,
-      minStockAlert: product?.minStockAlert || 0,
-      maxStockAlert: product?.maxStockAlert || 0,
+      basePrice: product?.basePrice || 0,
+      purchasePrice: currentBranchInventory
+        ? Number(currentBranchInventory.cost)
+        : 0,
+      stockQuantity: currentBranchInventory
+        ? Number(currentBranchInventory.onHand)
+        : 0,
+      minStockAlert: currentBranchInventory
+        ? Number(currentBranchInventory.minQuality)
+        : 0,
+      maxStockAlert: currentBranchInventory
+        ? Number(currentBranchInventory.maxQuality)
+        : 0,
       weight: product?.weight || undefined,
       weightUnit: product?.weightUnit || "kg",
       unit: product?.unit || "",
@@ -136,7 +144,7 @@ export function ProductForm({
 
   const hasCostChanged = (newCost: number): boolean => {
     if (!product) return newCost > 0;
-    return Number(product.purchasePrice) !== newCost;
+    return Number(currentBranchInventory?.cost) !== newCost;
   };
 
   const submitProduct = async (formData: any) => {
@@ -190,7 +198,7 @@ export function ProductForm({
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
         variantId: data.variantId ? Number(data.variantId) : undefined,
         purchasePrice: Number(data.purchasePrice) || 0,
-        retailPrice: Number(data.retailPrice) || 0,
+        basePrice: Number(data.basePrice) || 0,
         stockQuantity: Number(data.stockQuantity) || 0,
         minStockAlert: Number(data.minStockAlert) || 0,
         maxStockAlert: Number(data.maxStockAlert) || 0,
@@ -268,24 +276,6 @@ export function ProductForm({
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const addAttribute = () => {
-    setAttributes([...attributes, { name: "", value: "" }]);
-  };
-
-  const updateAttribute = (
-    index: number,
-    field: "name" | "value",
-    value: string
-  ) => {
-    const updated = [...attributes];
-    updated[index][field] = value;
-    setAttributes(updated);
-  };
-
-  const removeAttribute = (index: number) => {
-    setAttributes(attributes.filter((_, i) => i !== index));
   };
 
   useEffect(() => {
@@ -399,7 +389,7 @@ export function ProductForm({
                   Giá bán
                 </label>
                 <input
-                  {...register("retailPrice")}
+                  {...register("basePrice")}
                   type="number"
                   min="0"
                   step="1"

@@ -8,6 +8,24 @@ export interface ProductComponent {
   componentProduct: Product;
 }
 
+export interface Inventory {
+  id: number;
+  productId: number;
+  productCode: string;
+  productName: string;
+  branchId: number;
+  branchName: string;
+  cost: number;
+  onHand: number;
+  reserved: number;
+  onOrder: number;
+  minQuality: number;
+  maxQuality: number;
+  createdAt: string;
+  updatedAt: string;
+  branch?: { id: number; name: string };
+}
+
 export interface Product {
   id: number;
   code: string;
@@ -20,9 +38,6 @@ export interface Product {
   tradeMarkId?: number;
   variantId?: number;
   basePrice: number;
-  stockQuantity: number;
-  minStockAlert: number;
-  maxStockAlert: number;
   weight?: number;
   weightUnit?: string;
   unit?: string;
@@ -39,6 +54,7 @@ export interface Product {
   variant?: { id: number; name: string };
   images?: { id: number; image: string }[];
   comboComponents?: ProductComponent[];
+  inventories?: Inventory[];
 }
 
 export interface ProductsResponse {

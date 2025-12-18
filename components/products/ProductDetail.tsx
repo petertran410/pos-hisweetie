@@ -5,6 +5,7 @@ import type { Product } from "@/lib/api/products";
 import { useDeleteProduct } from "@/lib/hooks/useProducts";
 import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
+import { useBranchStore } from "@/lib/store/branch";
 
 interface ProductDetailProps {
   product: Product;
@@ -15,10 +16,11 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
   const [activeTab, setActiveTab] = useState("info");
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1); // Thêm state pagination
-  const itemsPerPage = 10; // 10 items per page
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const deleteProduct = useDeleteProduct();
+  const { selectedBranch } = useBranchStore();
 
   const handleDelete = () => {
     deleteProduct.mutate(product.id, {
@@ -46,10 +48,19 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
     if (!product.comboComponents || product.comboComponents.length === 0) {
       return 0;
     }
+
     return product.comboComponents.reduce((sum, comp) => {
-      const price = Number(comp.componentProduct?.purchasePrice || 0);
+      const componentProduct = comp.componentProduct;
+      if (!componentProduct) return sum;
+
+      // Lấy cost từ inventory của chi nhánh hiện tại
+      const inventory = componentProduct.inventories?.find(
+        (inv) => inv.branchId === selectedBranch?.id
+      );
+      const cost = inventory ? Number(inventory.cost) : 0;
       const quantity = Number(comp.quantity || 0);
-      return sum + price * quantity;
+
+      return sum + cost * quantity;
     }, 0);
   };
 
@@ -57,19 +68,27 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
     if (!product.comboComponents || product.comboComponents.length === 0) {
       return 0;
     }
+
     return product.comboComponents.reduce((sum, comp) => {
-      const price = Number(comp.componentProduct?.retailPrice || 0);
+      const componentProduct = comp.componentProduct;
+      if (!componentProduct) return sum;
+
+      const price = Number(componentProduct.basePrice || 0);
       const quantity = Number(comp.quantity || 0);
+
       return sum + price * quantity;
     }, 0);
   };
 
-  // Pagination for combo components
   const components = product.comboComponents || [];
   const totalPages = Math.ceil(components.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentComponents = components.slice(startIndex, endIndex);
+
+  const currentBranchInventory = product.inventories?.find(
+    (inv) => inv.branchId === selectedBranch?.id
+  );
 
   if (isEditing) {
     if (product.type === 1) {
@@ -99,22 +118,9 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-white w-full max-w-4xl h-[90vh] flex flex-col rounded-lg">
-        {/* Header */}
-        <div className="border-b p-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {product.images && product.images.length > 0 && (
-              <img
-                src={product.images[0].image}
-                alt={product.name}
-                className="w-16 h-16 object-cover rounded"
-              />
-            )}
-            <div>
-              <h2 className="text-xl font-semibold">{product.name}</h2>
-              <p className="text-sm text-gray-500">{product.code}</p>
-            </div>
-          </div>
+      <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-xl font-semibold">Chi tiết sản phẩm</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600">
@@ -122,55 +128,46 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b px-4">
-          <div className="flex gap-6">
+        <div className="border-b px-4 flex gap-4">
+          <button
+            onClick={() => setActiveTab("info")}
+            className={`py-3 border-b-2 ${
+              activeTab === "info"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent"
+            }`}>
+            Thông tin
+          </button>
+          {product.type === 1 && (
             <button
+              onClick={() => setActiveTab("components")}
               className={`py-3 border-b-2 ${
-                activeTab === "info"
+                activeTab === "components"
                   ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-600"
-              }`}
-              onClick={() => setActiveTab("info")}>
-              Thông tin
+                  : "border-transparent"
+              }`}>
+              Hàng thành phần
             </button>
-            <button
-              className={`py-3 border-b-2 ${
-                activeTab === "description"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-600"
-              }`}
-              onClick={() => setActiveTab("description")}>
-              Mô tả
-            </button>
-            {product.type !== 1 && (
-              <button
-                className={`py-3 border-b-2 ${
-                  activeTab === "inventory"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-600"
-                }`}
-                onClick={() => setActiveTab("inventory")}>
-                Tồn kho
-              </button>
-            )}
-            <button
-              className={`py-3 border-b-2 ${
-                activeTab === "links"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-600"
-              }`}
-              onClick={() => setActiveTab("links")}>
-              Liên kết kiểm bán
-            </button>
-          </div>
+          )}
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === "info" && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              {product.images && product.images.length > 0 && (
+                <div className="flex gap-2">
+                  {product.images.map((img) => (
+                    <img
+                      key={img.id}
+                      src={img.image}
+                      alt={product.name}
+                      className="w-24 h-24 object-cover rounded border"
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="text-sm text-gray-600">Mã hàng</label>
                   <p className="font-medium">{product.code}</p>
@@ -189,12 +186,6 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                   <label className="text-sm text-gray-600">Nhóm hàng</label>
                   <p className="font-medium">{product.category?.name || "-"}</p>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600">Thương hiệu</label>
-                  <p className="font-medium">
-                    {product.tradeMark?.name || "-"}
-                  </p>
-                </div>
 
                 {product.type === 1 ? (
                   <>
@@ -207,42 +198,70 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                       </p>
                     </div>
                     <div>
-                      <label className="text-sm text-gray-600">Giá bán</label>
+                      <label className="text-sm text-gray-600">
+                        Giá bán cơ bản
+                      </label>
                       <p className="font-medium">
-                        {Number(product.retailPrice).toLocaleString()} đ
+                        {Number(product.basePrice).toLocaleString()} đ
                       </p>
                     </div>
                   </>
                 ) : (
                   <>
                     <div>
-                      <label className="text-sm text-gray-600">Giá vốn</label>
+                      <label className="text-sm text-gray-600">
+                        Giá bán cơ bản
+                      </label>
                       <p className="font-medium">
-                        {Number(product.purchasePrice).toLocaleString()} đ
+                        {Number(product.basePrice).toLocaleString()} đ
                       </p>
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Giá bán</label>
-                      <p className="font-medium">
-                        {Number(product.retailPrice).toLocaleString()} đ
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Tồn kho</label>
-                      <p className="font-medium">{product.stockQuantity}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">
-                        Định mức tồn ít nhất
-                      </label>
-                      <p className="font-medium">{product.minStockAlert}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">
-                        Định mức tồn nhiều nhất
-                      </label>
-                      <p className="font-medium">{product.maxStockAlert}</p>
-                    </div>
+
+                    {currentBranchInventory && (
+                      <>
+                        <div>
+                          <label className="text-sm text-gray-600">
+                            Giá vốn ({currentBranchInventory.branchName})
+                          </label>
+                          <p className="font-medium">
+                            {Number(
+                              currentBranchInventory.cost
+                            ).toLocaleString()}{" "}
+                            đ
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-600">
+                            Tồn kho ({currentBranchInventory.branchName})
+                          </label>
+                          <p className="font-medium">
+                            {Number(
+                              currentBranchInventory.onHand
+                            ).toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-600">
+                            Định mức tồn ít nhất
+                          </label>
+                          <p className="font-medium">
+                            {Number(
+                              currentBranchInventory.minQuality
+                            ).toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-600">
+                            Định mức tồn nhiều nhất
+                          </label>
+                          <p className="font-medium">
+                            {Number(
+                              currentBranchInventory.maxQuality
+                            ).toLocaleString()}
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
 
@@ -266,7 +285,81 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                     {product.isDirectSale ? "Có" : "Không"}
                   </p>
                 </div>
+                <div>
+                  <label className="text-sm text-gray-600">Trạng thái</label>
+                  <p className="font-medium">
+                    {product.isActive ? "Hoạt động" : "Ngừng"}
+                  </p>
+                </div>
               </div>
+
+              {product.description && (
+                <div>
+                  <label className="text-sm text-gray-600">Mô tả</label>
+                  <p className="font-medium">{product.description}</p>
+                </div>
+              )}
+
+              {product.orderTemplate && (
+                <div>
+                  <label className="text-sm text-gray-600">
+                    Ghi chú đơn hàng
+                  </label>
+                  <p className="font-medium">{product.orderTemplate}</p>
+                </div>
+              )}
+
+              {product.inventories && product.inventories.length > 0 && (
+                <div className="border-t pt-6">
+                  <h4 className="font-semibold mb-3">Tồn kho theo chi nhánh</h4>
+                  <div className="border rounded overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="p-3 text-left">Chi nhánh</th>
+                          <th className="p-3 text-right">Giá vốn</th>
+                          <th className="p-3 text-right">Tồn kho</th>
+                          <th className="p-3 text-right">Đã đặt</th>
+                          <th className="p-3 text-right">Đang giao</th>
+                          <th className="p-3 text-right">
+                            Định mức tồn ít nhất
+                          </th>
+                          <th className="p-3 text-right">
+                            Định mức tồn nhiều nhất
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {product.inventories.map((inv) => (
+                          <tr key={inv.id} className="border-t">
+                            <td className="p-3 font-medium">
+                              {inv.branchName}
+                            </td>
+                            <td className="p-3 text-right">
+                              {Number(inv.cost).toLocaleString()} đ
+                            </td>
+                            <td className="p-3 text-right">
+                              {Number(inv.onHand).toLocaleString()}
+                            </td>
+                            <td className="p-3 text-right">
+                              {Number(inv.onOrder).toLocaleString()}
+                            </td>
+                            <td className="p-3 text-right">
+                              {Number(inv.reserved).toLocaleString()}
+                            </td>
+                            <td className="p-3 text-right">
+                              {Number(inv.minQuality).toLocaleString()}
+                            </td>
+                            <td className="p-3 text-right">
+                              {Number(inv.maxQuality).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {product.type === 1 && product.comboComponents && (
                 <div className="border-t pt-6">
@@ -321,11 +414,18 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                       <tbody>
                         {currentComponents.map((comp, index) => {
                           const actualIndex = startIndex + index;
-                          const purchasePrice = Number(
-                            comp.componentProduct?.purchasePrice || 0
+                          const componentProduct = comp.componentProduct;
+
+                          // Lấy giá vốn từ inventory
+                          const inventory = componentProduct?.inventories?.find(
+                            (inv) => inv.branchId === selectedBranch?.id
                           );
+                          const purchasePrice = inventory
+                            ? Number(inventory.cost)
+                            : 0;
+
                           const retailPrice = Number(
-                            comp.componentProduct?.retailPrice || 0
+                            componentProduct?.basePrice || 0
                           );
                           const quantity = Number(comp.quantity);
                           const totalPurchase = purchasePrice * quantity;
@@ -335,10 +435,10 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                             <tr key={comp.id} className="border-t">
                               <td className="px-4 py-2">{actualIndex + 1}</td>
                               <td className="px-4 py-2 text-sm">
-                                {comp.componentProduct?.code}
+                                {componentProduct?.code}
                               </td>
                               <td className="px-4 py-2">
-                                {comp.componentProduct?.name}
+                                {componentProduct?.name}
                               </td>
                               <td className="px-4 py-2 text-center">
                                 {quantity}
@@ -358,163 +458,67 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                             </tr>
                           );
                         })}
-                        {components.length === 0 && (
-                          <tr>
-                            <td
-                              colSpan={8}
-                              className="px-4 py-8 text-center text-gray-500">
-                              Chưa có hàng thành phần
-                            </td>
-                          </tr>
-                        )}
                       </tbody>
                     </table>
 
-                    {/* Pagination */}
                     {totalPages > 1 && (
-                      <div className="border-t p-3 flex items-center justify-between bg-gray-50">
-                        <div className="text-sm text-gray-600">
-                          Hiển thị {startIndex + 1} -{" "}
-                          {Math.min(endIndex, components.length)} trong tổng{" "}
-                          {components.length} sản phẩm
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCurrentPage(Math.max(1, currentPage - 1))
-                            }
-                            disabled={currentPage === 1}
-                            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                            ‹
-                          </button>
-                          <span className="text-sm">
-                            Trang {currentPage} / {totalPages}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCurrentPage(
-                                Math.min(totalPages, currentPage + 1)
-                              )
-                            }
-                            disabled={currentPage === totalPages}
-                            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                            ›
-                          </button>
-                        </div>
+                      <div className="border-t p-3 flex items-center justify-between">
+                        <button
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(1, p - 1))
+                          }
+                          disabled={currentPage === 1}
+                          className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
+                          Trước
+                        </button>
+                        <span className="text-sm">
+                          Trang {currentPage} / {totalPages}
+                        </span>
+                        <button
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
+                          Sau
+                        </button>
                       </div>
                     )}
                   </div>
                 </div>
               )}
-
-              <div className="grid grid-cols-2 gap-4">
-                {product.attributesText && (
-                  <div>
-                    <label className="text-sm text-gray-600">Thuộc tính</label>
-                    <div className="mt-2 space-y-1">
-                      {product.attributesText.split("|").map((attr, idx) => {
-                        const [name, value] = attr.split(":");
-                        return (
-                          <p key={idx} className="text-sm">
-                            <span className="font-medium">{name}:</span> {value}
-                          </p>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                <div>
-                  {product.images?.[0] ? (
-                    <img
-                      src={product.images[0].image}
-                      alt={product.name}
-                      className="w-30 max-h-[15rem] rounded"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs">
-                      N/A
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "description" && (
-            <div>
-              <div className="mb-3 p-6 bg-gray-50 w-full border rounded-lg">
-                <p className="mb-3">Mô tả:</p>
-                <p className="whitespace-pre-wrap text-center">
-                  {product.description || "Chưa có mô tả"}
-                </p>
-              </div>
-              <div className="p-6 bg-gray-50 w-full border rounded-lg">
-                <p className="mb-3">Ghi chú đơn hàng:</p>
-                <p className="whitespace-pre-wrap text-center">
-                  {product.orderTemplate || "Chưa có ghi chú đơn hàng"}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "inventory" && product.type !== 1 && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="border rounded p-4">
-                  <p className="text-sm text-gray-600">Tồn kho</p>
-                  <p className="text-2xl font-bold">{product.stockQuantity}</p>
-                </div>
-                <div className="border rounded p-4">
-                  <p className="text-sm text-gray-600">
-                    Định mức tồn thấp nhất
-                  </p>
-                  <p className="text-2xl font-bold">{product.minStockAlert}</p>
-                </div>
-                <div className="border rounded p-4">
-                  <p className="text-sm text-gray-600">
-                    Định mức tồn nhiều nhất
-                  </p>
-                  <p className="text-2xl font-bold">{product.maxStockAlert}</p>
-                </div>
-                <div className="border rounded p-4">
-                  <p className="text-sm text-gray-600">Khách đặt</p>
-                  <p className="text-2xl font-bold">0</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "links" && (
-            <div>
-              <p className="text-gray-500">Chưa có liên kết kiểm bán</p>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="border-t p-4 flex items-center justify-between">
+        <div className="border-t p-4 flex justify-between">
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="px-4 py-2 text-red-600 border border-red-600 rounded hover:bg-red-50">
             Xóa
           </button>
-          <button
-            onClick={() => setIsEditing(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            Chỉnh sửa
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border rounded hover:bg-gray-50">
+              Đóng
+            </button>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+              Sửa
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Delete Confirmation */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center">
           <div className="bg-white rounded-lg p-6 max-w-md">
             <h3 className="text-lg font-semibold mb-4">Xác nhận xóa</h3>
             <p className="text-gray-600 mb-6">
-              Bạn có chắc chắn muốn xóa sản phẩm "{product.name}"?
+              Bạn có chắc chắn muốn xóa sản phẩm này? Hành động này không thể
+              hoàn tác.
             </p>
             <div className="flex justify-end gap-2">
               <button
