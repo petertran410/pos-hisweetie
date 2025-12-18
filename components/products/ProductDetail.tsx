@@ -53,7 +53,6 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
       const componentProduct = comp.componentProduct;
       if (!componentProduct) return sum;
 
-      // Lấy cost từ inventory của chi nhánh hiện tại
       const inventory = componentProduct.inventories?.find(
         (inv) => inv.branchId === selectedBranch?.id
       );

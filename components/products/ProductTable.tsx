@@ -270,6 +270,8 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
     setShowCreateDropdown(false);
   };
 
+  console.log(selectedProduct);
+
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
