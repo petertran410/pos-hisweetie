@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
+import { BranchSelector } from "./BranchSelector";
 
 export function DashboardHeader() {
   const router = useRouter();
@@ -125,6 +126,8 @@ export function DashboardHeader() {
             className="px-4 py-2 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
             🛒 Bán hàng
           </Link>
+
+          <BranchSelector />
 
           <div className="relative">
             <button

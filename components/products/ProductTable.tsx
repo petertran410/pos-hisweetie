@@ -6,6 +6,7 @@ import { ProductDetail } from "./ProductDetail";
 import { ProductForm } from "./ProductForm";
 import type { Product } from "@/lib/api/products";
 import { ComboProductForm } from "./ComboProductForm";
+import { useBranchStore } from "@/lib/store/branch";
 
 interface ProductTableProps {
   selectedCategoryIds: number[];
@@ -213,6 +214,8 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
 ];
 
 export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
+  const { selectedBranch } = useBranchStore();
+  const [searchDebounced, setSearchDebounced] = useState(search);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [search, setSearch] = useState("");
@@ -252,12 +255,21 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
   const categoryIds =
     selectedCategoryIds.length > 0 ? selectedCategoryIds.join(",") : undefined;
 
-  const { data, isLoading, error } = useProducts({
+  const { data, isLoading } = useProducts({
     page,
     limit,
-    search,
-    categoryIds,
+    search: searchDebounced,
+    categoryIds: selectedCategoryIds.join(","),
+    branchId: selectedBranch?.id,
   });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchDebounced(search);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     setPage(1);
@@ -291,13 +303,13 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
 
   const visibleColumns = columns.filter((col) => col.visible);
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-red-500">Lỗi tải dữ liệu sản phẩm</p>
-      </div>
-    );
-  }
+  // if (error) {
+  //   return (
+  //     <div className="flex items-center justify-center h-full">
+  //       <p className="text-red-500">Lỗi tải dữ liệu sản phẩm</p>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="flex flex-col h-full">

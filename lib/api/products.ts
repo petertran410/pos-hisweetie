@@ -56,6 +56,7 @@ export const productsApi = {
     search?: string;
     categoryIds?: string;
     isActive?: boolean;
+    branchId?: number;
   }): Promise<ProductsResponse> => {
     return apiClient.get("/products", params);
   },
