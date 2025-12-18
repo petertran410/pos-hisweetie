@@ -259,6 +259,9 @@ export function ComboProductForm({
       }
 
       const comboCost = calculateTotalPurchasePrice();
+      const comboRetailPrice = calculateTotalRetailPrice();
+
+      const finalBasePrice = Number(data.basePrice) || comboRetailPrice || 0;
 
       const formData = {
         code: data.code,
@@ -268,7 +271,7 @@ export function ComboProductForm({
         orderTemplate: data.orderTemplate || undefined,
         categoryId: data.categoryId ? Number(data.categoryId) : undefined,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
-        basePrice: Number(data.basePrice) || 0,
+        basePrice: finalBasePrice,
         purchasePrice: comboCost,
         stockQuantity: 0,
         minStockAlert: Number(data.minStockAlert) || 0,

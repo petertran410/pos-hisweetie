@@ -131,7 +131,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "inventory.cost",
     label: "Giá vốn",
-    visible: false,
+    visible: true,
     render: (product) => {
       if (product.type === 1) {
         return calculateComboPurchasePrice(product).toLocaleString() + " đ";
