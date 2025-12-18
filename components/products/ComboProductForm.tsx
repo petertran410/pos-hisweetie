@@ -233,7 +233,6 @@ export function ComboProductForm({
         categoryId: data.categoryId ? Number(data.categoryId) : undefined,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
         basePrice: Number(data.basePrice) || 0,
-        retailPrice: Number(data.basePrice) || 0,
         purchasePrice: 0,
         stockQuantity: 0,
         minStockAlert: Number(data.minStockAlert) || 0,
