@@ -32,7 +32,7 @@ export function PriceBookProductSelector({
     } else {
       newSelected.set(product.id, {
         product,
-        price: Number(product.retailPrice),
+        price: Number(product.basePrice),
       });
     }
     setSelectedProducts(newSelected);
@@ -115,7 +115,7 @@ export function PriceBookProductSelector({
                     <td className="p-3 text-sm">{product.code}</td>
                     <td className="p-3 text-sm">{product.name}</td>
                     <td className="p-3 text-sm text-right">
-                      {Number(product.retailPrice).toLocaleString()}
+                      {Number(product.basePrice).toLocaleString()}
                     </td>
                     <td className="p-3 text-sm text-right">
                       {isSelected ? (

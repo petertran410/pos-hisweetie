@@ -19,7 +19,7 @@ type ColumnKey =
   | "category"
   | "type"
   | "channelLink"
-  | "retailPrice"
+  | "basePrice"
   | "purchasePrice"
   | "tradeMark"
   | "stock"
@@ -116,10 +116,10 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: () => "-",
   },
   {
-    key: "retailPrice",
+    key: "basePrice",
     label: "Giá bán",
     visible: true,
-    render: (product) => Number(product.retailPrice).toLocaleString() + " đ",
+    render: (product) => Number(product.basePrice).toLocaleString() + " đ",
   },
   {
     key: "purchasePrice",

@@ -19,8 +19,7 @@ export interface Product {
   categoryId?: number;
   tradeMarkId?: number;
   variantId?: number;
-  purchasePrice: number;
-  retailPrice: number;
+  basePrice: number;
   stockQuantity: number;
   minStockAlert: number;
   maxStockAlert: number;
