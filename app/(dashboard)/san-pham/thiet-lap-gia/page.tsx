@@ -6,16 +6,20 @@ import { PriceBookSidebar } from "@/components/price-books/PriceBookSidebar";
 import { PriceBookTable } from "@/components/price-books/PriceBookTable";
 import { PriceBookForm } from "@/components/price-books/PriceBookForm";
 import { PriceBookProductSelector } from "@/components/price-books/PriceBookProductSelector";
+import { useBranchStore } from "@/lib/store/branch";
 
 export default function PriceBooksPage() {
   const [selectedPriceBookIds, setSelectedPriceBookIds] = useState<number[]>([
     0,
-  ]); // Default: Bảng giá chung
+  ]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [showProductSelector, setShowProductSelector] = useState(false);
+  const { selectedBranch } = useBranchStore();
 
-  const { data: priceBooksData } = usePriceBooks();
+  const { data: priceBooksData } = usePriceBooks({
+    branchId: selectedBranch?.id,
+  });
 
   const allPriceBooks = [
     { id: 0, name: "Bảng giá chung" },
@@ -47,6 +51,7 @@ export default function PriceBooksPage() {
           onAddProducts={() => setShowProductSelector(true)}
           onCreateNew={() => setShowForm(true)}
           selectedCategoryIds={selectedCategoryIds}
+          branchId={selectedBranch?.id}
         />
       </div>
 

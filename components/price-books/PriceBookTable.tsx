@@ -30,6 +30,7 @@ interface PriceBookTableProps {
   onAddProducts?: () => void;
   onCreateNew: () => void;
   selectedCategoryIds: number[];
+  branchId?: number;
 }
 
 export function PriceBookTable({
@@ -37,6 +38,7 @@ export function PriceBookTable({
   onAddProducts,
   onCreateNew,
   selectedCategoryIds,
+  branchId,
 }: PriceBookTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
@@ -45,8 +47,6 @@ export function PriceBookTable({
     priceBookId: number;
     value: string;
   } | null>(null);
-
-  const queryClient = useQueryClient();
 
   const updateRetailPrice = useUpdateProductRetailPrice();
   const updateProductPrice = useUpdateProductPrice();
@@ -71,6 +71,7 @@ export function PriceBookTable({
     search: searchQuery,
     categoryIds,
     limit: 1000,
+    branchId,
   });
 
   const { data: productsWithPrices, isLoading: isLoadingPrices } =
@@ -78,6 +79,7 @@ export function PriceBookTable({
       priceBookIds,
       search: searchQuery,
       categoryIds: categoryIds,
+      branchId,
     });
 
   const products = useMemo<TableProduct[] | undefined>(() => {
