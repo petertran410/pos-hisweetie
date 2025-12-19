@@ -5,7 +5,7 @@ import { useTransfers } from "@/lib/hooks/useTransfers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { TransferTable } from "@/components/transfers/TransferTable";
 import { TransferForm } from "@/components/transfers/TransferForm";
-import { Plus, FileDown, FileUp, Settings2, X } from "lucide-react";
+import { Plus, FileDown, FileUp } from "lucide-react";
 import type { Transfer } from "@/lib/api/transfers";
 import type { TransferQueryParams } from "@/lib/api/transfers";
 
@@ -14,15 +14,12 @@ export default function TransferPage() {
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(
     null
   );
-  const [showColumnModal, setShowColumnModal] = useState(false);
 
-  // Filter states
   const [fromBranchId, setFromBranchId] = useState<string>("");
   const [toBranchId, setToBranchId] = useState<string>("");
   const [selectedStatuses, setSelectedStatuses] = useState<number[]>([]);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
-  // Time filter states
   const [enableTransferDate, setEnableTransferDate] = useState(false);
   const [enableReceiveDate, setEnableReceiveDate] = useState(false);
   const [timeMode, setTimeMode] = useState<"preset" | "custom">("preset");
@@ -32,7 +29,6 @@ export default function TransferPage() {
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
 
-  // Receive status filter
   const [receiveStatus, setReceiveStatus] = useState<string>("all");
 
   const { data: branches } = useBranches();
@@ -203,10 +199,8 @@ export default function TransferPage() {
 
   return (
     <div className="flex h-full">
-      {/* Sidebar */}
       <aside className="w-64 border-r bg-gray-50 overflow-y-auto">
         <div className="p-4 space-y-6">
-          {/* Chuyển đi */}
           <div>
             <label className="block text-sm font-medium mb-2">Chuyển đi</label>
             <select
@@ -222,7 +216,6 @@ export default function TransferPage() {
             </select>
           </div>
 
-          {/* Nhận về */}
           <div>
             <label className="block text-sm font-medium mb-2">Nhận về</label>
             <select
@@ -238,7 +231,6 @@ export default function TransferPage() {
             </select>
           </div>
 
-          {/* Trạng thái */}
           <div>
             <label className="block text-sm font-medium mb-2">
               Trạng thái <span className="text-red-500">*</span>
@@ -258,7 +250,7 @@ export default function TransferPage() {
                       <button
                         onClick={() => removeStatus(status)}
                         className="hover:bg-black/10 rounded-full p-0.5">
-                        <X className="w-3 h-3" />
+                        ✕
                       </button>
                     </span>
                   );
@@ -319,7 +311,6 @@ export default function TransferPage() {
             )}
           </div>
 
-          {/* Thời gian */}
           <div>
             <label className="block text-sm font-medium mb-2">Thời gian</label>
 
@@ -425,7 +416,8 @@ export default function TransferPage() {
                     <div className="flex gap-4 mb-4">
                       <div className="flex-1">
                         <label className="block text-xs text-gray-600 mb-1">
-                          Từ ngày: {fromDate?.toLocaleDateString("vi-VN")}
+                          Từ ngày:{" "}
+                          {fromDate?.toLocaleDateString("vi-VN") || "-"}
                         </label>
                         <input
                           type="date"
@@ -438,7 +430,7 @@ export default function TransferPage() {
                       </div>
                       <div className="flex-1">
                         <label className="block text-xs text-gray-600 mb-1">
-                          Đến ngày: {toDate?.toLocaleDateString("vi-VN")}
+                          Đến ngày: {toDate?.toLocaleDateString("vi-VN") || "-"}
                         </label>
                         <input
                           type="date"
@@ -474,7 +466,6 @@ export default function TransferPage() {
             )}
           </div>
 
-          {/* Tình trạng nhận hàng */}
           <div>
             <label className="block text-sm font-medium mb-2">
               Tình trạng nhận hàng
@@ -510,7 +501,6 @@ export default function TransferPage() {
             </div>
           </div>
 
-          {/* Clear filters button */}
           {(fromBranchId ||
             toBranchId ||
             selectedStatuses.length > 0 ||
@@ -526,9 +516,7 @@ export default function TransferPage() {
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
         <div className="border-b p-4 flex items-center justify-between bg-white">
           <h1 className="text-2xl font-bold">Chuyển hàng</h1>
 
@@ -544,13 +532,6 @@ export default function TransferPage() {
             </button>
 
             <button
-              onClick={() => setShowColumnModal(!showColumnModal)}
-              className="flex items-center gap-2 px-4 py-2 border rounded hover:bg-gray-50 relative">
-              <Settings2 className="w-4 h-4" />
-              Cột hiển thị
-            </button>
-
-            <button
               onClick={() => setShowForm(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
               <Plus className="w-4 h-4" />
@@ -559,7 +540,6 @@ export default function TransferPage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="flex-1 overflow-auto">
           <TransferTable
             transfers={filteredData}
@@ -568,13 +548,10 @@ export default function TransferPage() {
               setSelectedTransfer(transfer);
               setShowForm(true);
             }}
-            showColumnModal={showColumnModal}
-            onCloseColumnModal={() => setShowColumnModal(false)}
           />
         </div>
       </main>
 
-      {/* Transfer Form Modal */}
       {showForm && (
         <TransferForm
           transfer={selectedTransfer}
