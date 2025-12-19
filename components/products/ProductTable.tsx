@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, SetStateAction } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { ProductDetail } from "./ProductDetail";
 import { ProductForm } from "./ProductForm";
@@ -325,7 +325,7 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
     if (selectedIds.length === data?.data.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(data?.data.map((p) => p.id) || []);
+      setSelectedIds(data?.data.map((p: { id: any }) => p.id) || []);
     }
   };
 
@@ -466,7 +466,7 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
               </thead>
               <tbody>
                 {data?.data && data.data.length > 0 ? (
-                  data.data.map((product) => (
+                  data.data.map((product: Product) => (
                     <tr
                       key={product.id}
                       className="border-b hover:bg-gray-50 cursor-pointer"

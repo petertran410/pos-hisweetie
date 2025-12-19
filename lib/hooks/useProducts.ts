@@ -9,6 +9,7 @@ export const useProducts = (params?: {
   categoryIds?: string;
   isActive?: boolean;
   branchId?: number;
+  branchIds?: number[];
 }) => {
   return useQuery({
     queryKey: ["products", params],

@@ -65,15 +65,33 @@ export interface ProductsResponse {
 }
 
 export const productsApi = {
-  getProducts: (params?: {
+  async getProducts(params?: {
     page?: number;
     limit?: number;
     search?: string;
     categoryIds?: string;
     isActive?: boolean;
     branchId?: number;
-  }): Promise<ProductsResponse> => {
-    return apiClient.get("/products", params);
+    branchIds?: number[];
+  }): Promise<ProductsResponse> {
+    const queryParams = new URLSearchParams();
+
+    if (params?.page) queryParams.append("page", params.page.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.search) queryParams.append("search", params.search);
+    if (params?.categoryIds)
+      queryParams.append("categoryIds", params.categoryIds);
+    if (params?.isActive !== undefined)
+      queryParams.append("isActive", params.isActive.toString());
+    if (params?.branchId)
+      queryParams.append("branchId", params.branchId.toString());
+    if (params?.branchIds) {
+      params.branchIds.forEach((id) =>
+        queryParams.append("branchIds", id.toString())
+      );
+    }
+
+    return apiClient.get(`/products?${queryParams.toString()}`);
   },
 
   getProduct: (id: number): Promise<Product> => {

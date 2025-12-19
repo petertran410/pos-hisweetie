@@ -50,7 +50,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
   const { data: searchResults } = useProducts({
     search: searchQuery,
     limit: 20,
-    branchId: fromBranchId,
+    branchIds: [fromBranchId, toBranchId].filter((id) => id > 0),
   });
 
   useEffect(() => {
@@ -329,7 +329,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                   value={toBranchId}
                   onChange={(e) => setToBranchId(Number(e.target.value))}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Kho bán hàng</option>
                   {branches
                     ?.filter((b) => b.id !== fromBranchId)
                     .map((branch) => (
@@ -379,7 +378,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                       Không tìm thấy sản phẩm
                     </div>
                   ) : (
-                    searchResults.data.map((product) => {
+                    searchResults.data.map((product: Product) => {
                       const inventory = product.inventories?.find(
                         (inv) => inv.branchId === fromBranchId
                       );

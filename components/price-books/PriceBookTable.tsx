@@ -11,7 +11,7 @@ import {
   useUpdateProductRetailPrice,
 } from "@/lib/hooks/useProducts";
 import type { PriceBook } from "@/lib/api/price-books";
-import type { Inventory } from "@/lib/api/products";
+import type { Inventory, Product } from "@/lib/api/products";
 import { toast } from "react-hot-toast";
 import { useBranchStore } from "@/lib/store/branch";
 import { Book } from "lucide-react";
@@ -86,14 +86,13 @@ export function PriceBookTable({
 
   const products = useMemo<TableProduct[] | undefined>(() => {
     if (isDefaultOnly) {
-      return allProductsData?.data?.map((p) => ({
+      return allProductsData?.data?.map((p: Product) => ({
         id: p.id,
         code: p.code,
         name: p.name,
         basePrice: Number(p.basePrice),
         unit: p.unit,
         prices: {},
-        // Tính tổng tồn kho từ inventories
         stockQuantity:
           p.inventories?.reduce((sum, inv) => sum + Number(inv.onHand), 0) || 0,
         inventories: p.inventories,
