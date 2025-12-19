@@ -14,6 +14,7 @@ import type { PriceBook } from "@/lib/api/price-books";
 import type { Inventory } from "@/lib/api/products";
 import { toast } from "react-hot-toast";
 import { useBranchStore } from "@/lib/store/branch";
+import { Book } from "lucide-react";
 
 interface TableProduct {
   id: number;
@@ -203,6 +204,27 @@ export function PriceBookTable({
     );
   }
 
+  const handleAddProductToPriceBook = async (
+    productId: number,
+    priceBookId: number,
+    initialPrice: number
+  ) => {
+    try {
+      await addProductsToPriceBook.mutateAsync({
+        priceBookId,
+        products: [{ productId, price: initialPrice }],
+      });
+
+      setEditingCell({
+        productId,
+        priceBookId,
+        value: initialPrice.toString(),
+      });
+    } catch (error: any) {
+      toast.error(error.message || "Có lỗi xảy ra");
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col">
       <div className="border-b p-4 flex items-center justify-between">
@@ -216,13 +238,6 @@ export function PriceBookTable({
           />
         </div>
         <div className="flex items-center gap-2">
-          {!isDefaultOnly && onAddProducts && (
-            <button
-              onClick={onAddProducts}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              + Thêm sản phẩm
-            </button>
-          )}
           <button
             onClick={onCreateNew}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
@@ -318,16 +333,28 @@ export function PriceBookTable({
                       const isEditing =
                         editingCell?.productId === product.id &&
                         editingCell?.priceBookId === pb.id;
-                      const price =
-                        pb.id === 0
-                          ? product.basePrice
-                          : product.prices[pb.id] || product.basePrice;
+
+                      // Kiểm tra xem sản phẩm có trong bảng giá hay chưa
+                      const priceExists =
+                        pb.id === 0 || product.prices[pb.id] !== undefined;
+                      const displayPrice =
+                        pb.id === 0 ? product.basePrice : product.prices[pb.id];
 
                       return (
                         <td
                           key={pb.id}
                           className="p-3 text-sm text-right cursor-pointer hover:bg-blue-50"
-                          onClick={() => handleCellClick(product.id, pb.id)}>
+                          onClick={() => {
+                            if (pb.id !== 0 && !priceExists) {
+                              handleAddProductToPriceBook(
+                                product.id,
+                                pb.id,
+                                product.basePrice
+                              );
+                            } else {
+                              handleCellClick(product.id, pb.id);
+                            }
+                          }}>
                           {isEditing ? (
                             <input
                               type="number"
@@ -340,8 +367,12 @@ export function PriceBookTable({
                               autoFocus
                               className="w-full border rounded px-2 py-1 text-right"
                             />
+                          ) : pb.id !== 0 && !priceExists ? (
+                            <button className="text-blue-600 hover:text-blue-800 text-xl font-bold">
+                              +
+                            </button>
                           ) : (
-                            <span>{price.toLocaleString()}</span>
+                            <span>{displayPrice.toLocaleString()}</span>
                           )}
                         </td>
                       );

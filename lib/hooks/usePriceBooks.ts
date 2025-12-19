@@ -130,7 +130,6 @@ export function useAddProductsToPriceBook() {
         { queryKey: ["products-with-prices"] },
         (old: any) => {
           if (!old || !Array.isArray(old)) return old;
-
           return old.map((product: any) => {
             const newPrice = products.find((p) => p.productId === product.id);
             if (newPrice) {
