@@ -99,13 +99,48 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
 
       loadProductsWithInventory();
     }
-  }, [transfer, fromBranchId, toBranchId]);
+  }, [transfer]);
 
   useEffect(() => {
-    if (fromBranchId) {
-      setProducts([]);
-    }
-  }, [fromBranchId]);
+    if (products.length === 0) return;
+    if (!fromBranchId || !toBranchId) return;
+
+    const updateProductsInventory = async () => {
+      const updatedProducts = await Promise.all(
+        products.map(async (item) => {
+          try {
+            const response = await fetch(`/api/products/${item.productId}`);
+            const product = await response.json();
+
+            const fromInventory = product.inventories?.find(
+              (inv: any) => inv.branchId === fromBranchId
+            );
+            const toInventory = product.inventories?.find(
+              (inv: any) => inv.branchId === toBranchId
+            );
+
+            return {
+              ...item,
+              price: Number(fromInventory?.cost || product.basePrice || 0),
+              fromInventory: Number(fromInventory?.onHand || 0),
+              toInventory: Number(toInventory?.onHand || 0),
+            };
+          } catch (error) {
+            return {
+              ...item,
+              price: 0,
+              fromInventory: 0,
+              toInventory: 0,
+            };
+          }
+        })
+      );
+
+      setProducts(updatedProducts);
+    };
+
+    updateProductsInventory();
+  }, [fromBranchId, toBranchId]);
 
   const handleAddProduct = (product: Product) => {
     const existingIndex = products.findIndex((p) => p.productId === product.id);
@@ -193,14 +228,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
     setProducts((prev) => {
       const updated = [...prev];
       updated[index].price = price;
-      return updated;
-    });
-  };
-
-  const handleChangeNote = (index: number, value: string) => {
-    setProducts((prev) => {
-      const updated = [...prev];
-      updated[index].note = value;
       return updated;
     });
   };
