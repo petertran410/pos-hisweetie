@@ -102,8 +102,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
   }, [transfer]);
 
   useEffect(() => {
-    if (products.length === 0) return;
-    if (!fromBranchId || !toBranchId) return;
+    if (!fromBranchId || !toBranchId || products.length === 0) return;
 
     const updateProductsInventory = async () => {
       const updatedProducts = await Promise.all(
@@ -126,6 +125,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
               toInventory: Number(toInventory?.onHand || 0),
             };
           } catch (error) {
+            console.error(`Error fetching product ${item.productId}:`, error);
             return {
               ...item,
               price: 0,
@@ -140,7 +140,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
     };
 
     updateProductsInventory();
-  }, [fromBranchId, toBranchId]);
+  }, [fromBranchId, toBranchId, products.length]);
 
   const handleAddProduct = (product: Product) => {
     const existingIndex = products.findIndex((p) => p.productId === product.id);
