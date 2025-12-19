@@ -54,20 +54,52 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
   });
 
   useEffect(() => {
-    if (transfer?.details) {
-      setProducts(
-        transfer.details.map((detail) => ({
-          productId: detail.productId,
-          productCode: detail.productCode,
-          productName: detail.productName,
-          sendQuantity: Number(detail.sendQuantity),
-          price: Number(detail.sendPrice),
-          fromInventory: 0,
-          toInventory: 0,
-        }))
-      );
+    if (transfer?.details && fromBranchId && toBranchId) {
+      const loadProductsWithInventory = async () => {
+        const productsWithInventory = await Promise.all(
+          transfer.details.map(async (detail) => {
+            try {
+              const product = await fetch(
+                `/api/products/${detail.productId}`
+              ).then((res) => res.json());
+
+              const fromInventory = product.inventories?.find(
+                (inv: any) => inv.branchId === fromBranchId
+              );
+              const toInventory = product.inventories?.find(
+                (inv: any) => inv.branchId === toBranchId
+              );
+
+              return {
+                productId: detail.productId,
+                productCode: detail.productCode,
+                productName: detail.productName,
+                unit: product.unit,
+                sendQuantity: Number(detail.sendQuantity),
+                price: Number(detail.sendPrice),
+                fromInventory: Number(fromInventory?.onHand || 0),
+                toInventory: Number(toInventory?.onHand || 0),
+              };
+            } catch (error) {
+              return {
+                productId: detail.productId,
+                productCode: detail.productCode,
+                productName: detail.productName,
+                sendQuantity: Number(detail.sendQuantity),
+                price: Number(detail.sendPrice),
+                fromInventory: 0,
+                toInventory: 0,
+              };
+            }
+          })
+        );
+
+        setProducts(productsWithInventory);
+      };
+
+      loadProductsWithInventory();
     }
-  }, [transfer]);
+  }, [transfer, fromBranchId, toBranchId]);
 
   useEffect(() => {
     if (fromBranchId) {
@@ -418,9 +450,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                           Tên hàng
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                          ĐVT
-                        </th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                           Tồn kho
                         </th>
@@ -436,93 +465,83 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                           Thành tiền
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                          Ghi chú
-                        </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap"></th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {products.map((item, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                            {index + 1}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                            {item.productCode}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900 min-w-[200px]">
-                            {item.productName}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                            {item.unit || "-"}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                            {item.fromInventory.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                            {item.toInventory.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => handleUpdateQuantity(index, -1)}
-                                className="p-1 hover:bg-gray-200 rounded transition">
-                                <Minus className="w-4 h-4 text-gray-600" />
-                              </button>
+                      {products.map((item, index) => {
+                        console.log(item);
+                        return (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {index + 1}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {item.productCode}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 min-w-[200px]">
+                              {item.productName}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
+                              {item.fromInventory.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
+                              {item.toInventory.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() =>
+                                    handleUpdateQuantity(index, -1)
+                                  }
+                                  className="p-1 hover:bg-gray-200 rounded transition">
+                                  <Minus className="w-4 h-4 text-gray-600" />
+                                </button>
+                                <input
+                                  type="number"
+                                  value={item.sendQuantity}
+                                  onChange={(e) =>
+                                    handleChangeQuantity(index, e.target.value)
+                                  }
+                                  className="w-20 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  min="0"
+                                  step="1"
+                                />
+                                <button
+                                  onClick={() => handleUpdateQuantity(index, 1)}
+                                  className="p-1 hover:bg-gray-200 rounded transition">
+                                  <Plus className="w-4 h-4 text-gray-600" />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
                               <input
                                 type="number"
-                                value={item.sendQuantity}
+                                value={item.price}
                                 onChange={(e) =>
-                                  handleChangeQuantity(index, e.target.value)
+                                  handleChangePrice(index, e.target.value)
                                 }
-                                className="w-20 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-28 border border-gray-300 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 min="0"
-                                step="1"
+                                step="1000"
                               />
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                              {(
+                                item.sendQuantity * item.price
+                              ).toLocaleString()}{" "}
+                              đ
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-center">
                               <button
-                                onClick={() => handleUpdateQuantity(index, 1)}
-                                className="p-1 hover:bg-gray-200 rounded transition">
-                                <Plus className="w-4 h-4 text-gray-600" />
+                                onClick={() => handleRemoveProduct(index)}
+                                className="p-1 hover:bg-red-50 rounded transition text-red-600">
+                                <Trash2 className="w-4 h-4" />
                               </button>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <input
-                              type="number"
-                              value={item.price}
-                              onChange={(e) =>
-                                handleChangePrice(index, e.target.value)
-                              }
-                              className="w-28 border border-gray-300 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              min="0"
-                              step="1000"
-                            />
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">
-                            {(item.sendQuantity * item.price).toLocaleString()}{" "}
-                            đ
-                          </td>
-                          <td className="px-4 py-3">
-                            <input
-                              type="text"
-                              value={item.note || ""}
-                              onChange={(e) =>
-                                handleChangeNote(index, e.target.value)
-                              }
-                              placeholder="Ghi chú..."
-                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-center">
-                            <button
-                              onClick={() => handleRemoveProduct(index)}
-                              className="p-1 hover:bg-red-50 rounded transition text-red-600">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

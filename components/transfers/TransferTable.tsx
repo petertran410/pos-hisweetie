@@ -128,6 +128,20 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: false,
     render: () => "-",
   },
+  // THÊM MỚI: Tổng SL chuyển
+  {
+    key: "totalSendQuantity",
+    label: "Tổng SL chuyển",
+    visible: false,
+    render: (transfer) => {
+      const total =
+        transfer.details?.reduce(
+          (sum, item) => sum + Number(item.sendQuantity),
+          0
+        ) || 0;
+      return total.toLocaleString();
+    },
+  },
   {
     key: "totalTransfer",
     label: "Giá trị chuyển",
@@ -139,6 +153,13 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Tổng SL nhận",
     visible: false,
     render: (transfer) => calculateTotalItems(transfer).toLocaleString(),
+  },
+  // THÊM MỚI: Giá trị nhận
+  {
+    key: "totalReceiveValue",
+    label: "Giá trị nhận",
+    visible: false,
+    render: (transfer) => formatMoney(transfer.totalReceive || 0),
   },
   {
     key: "totalGoods",
