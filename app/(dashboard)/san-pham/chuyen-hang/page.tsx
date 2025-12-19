@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTransfers } from "@/lib/hooks/useTransfers";
 import { TransferTable } from "@/components/transfers/TransferTable";
 import { TransferForm } from "@/components/transfers/TransferForm";
-import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
 export default function TransferPage() {
@@ -16,10 +15,12 @@ export default function TransferPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Chuyển hàng</h1>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="w-4 h-4 mr-2" />
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          <Plus className="w-4 h-4" />
           Chuyển hàng
-        </Button>
+        </button>
       </div>
 
       <TransferTable

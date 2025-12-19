@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { apiClient } from "@/lib/config/api";
 
 export interface TransferDetail {
   id?: number;
@@ -64,17 +64,18 @@ export interface CreateTransferData {
 
 export const transfersApi = {
   getAll: (params?: TransferQueryParams) =>
-    api.get<{ total: number; pageSize: number; data: Transfer[] }>(
+    apiClient.get<{ total: number; pageSize: number; data: Transfer[] }>(
       "/transfers",
-      { params }
+      params
     ),
 
-  getById: (id: number) => api.get<Transfer>(`/transfers/${id}`),
+  getById: (id: number) => apiClient.get<Transfer>(`/transfers/${id}`),
 
-  create: (data: CreateTransferData) => api.post<Transfer>("/transfers", data),
+  create: (data: CreateTransferData) =>
+    apiClient.post<Transfer>("/transfers", data),
 
   update: (id: number, data: Partial<CreateTransferData>) =>
-    api.put<Transfer>(`/transfers/${id}`, data),
+    apiClient.put<Transfer>(`/transfers/${id}`, data),
 
-  delete: (id: number) => api.delete(`/transfers/${id}`),
+  delete: (id: number) => apiClient.delete(`/transfers/${id}`),
 };
