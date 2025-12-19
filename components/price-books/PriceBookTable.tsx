@@ -13,6 +13,7 @@ import {
 import type { PriceBook } from "@/lib/api/price-books";
 import type { Inventory } from "@/lib/api/products";
 import { toast } from "react-hot-toast";
+import { useBranchStore } from "@/lib/store/branch";
 
 interface TableProduct {
   id: number;
@@ -281,8 +282,7 @@ export function PriceBookTable({
                 </th>
                 <th className="p-3 text-left text-sm font-medium">Mã hàng</th>
                 <th className="p-3 text-left text-sm font-medium">Tên hàng</th>
-                <th className="p-3 text-right text-sm font-medium">Tồn kho</th>
-                <th className="p-3 text-center text-sm font-medium">Đơn vị</th>
+                <th className="p-3 text-right text-sm font-medium">Giá vốn</th>
                 {selectedPriceBooks.map((pb) => (
                   <th
                     key={pb.id}
@@ -293,57 +293,62 @@ export function PriceBookTable({
               </tr>
             </thead>
             <tbody>
-              {products.map((product) => (
-                <tr key={product.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedProductIds.includes(product.id)}
-                      onChange={() => toggleSelect(product.id)}
-                    />
-                  </td>
-                  <td className="p-3 text-sm">{product.code}</td>
-                  <td className="p-3 text-sm">{product.name}</td>
-                  <td className="p-3 text-sm text-right">
-                    {product.stockQuantity.toLocaleString()}
-                  </td>
-                  <td className="p-3 text-sm text-center">
-                    {product.unit || "-"}
-                  </td>
-                  {selectedPriceBooks.map((pb) => {
-                    const isEditing =
-                      editingCell?.productId === product.id &&
-                      editingCell?.priceBookId === pb.id;
-                    const price =
-                      pb.id === 0
-                        ? product.basePrice
-                        : product.prices[pb.id] || product.basePrice;
+              {products.map((product) => {
+                const selectedBranchId =
+                  useBranchStore.getState().selectedBranch?.id;
+                const inventory = product.inventories?.find(
+                  (inv) => inv.branchId === selectedBranchId
+                );
+                const cost = inventory ? Number(inventory.cost) : 0;
+                return (
+                  <tr key={product.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedProductIds.includes(product.id)}
+                        onChange={() => toggleSelect(product.id)}
+                      />
+                    </td>
+                    <td className="p-3 text-sm">{product.code}</td>
+                    <td className="p-3 text-sm">{product.name}</td>
+                    <td className="p-3 text-sm text-right">
+                      {cost.toLocaleString()}
+                    </td>
+                    {selectedPriceBooks.map((pb) => {
+                      const isEditing =
+                        editingCell?.productId === product.id &&
+                        editingCell?.priceBookId === pb.id;
+                      const price =
+                        pb.id === 0
+                          ? product.basePrice
+                          : product.prices[pb.id] || product.basePrice;
 
-                    return (
-                      <td
-                        key={pb.id}
-                        className="p-3 text-sm text-right cursor-pointer hover:bg-blue-50"
-                        onClick={() => handleCellClick(product.id, pb.id)}>
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            value={editingCell.value}
-                            onChange={(e) =>
-                              handlePriceChange(e, product.id, pb.id)
-                            }
-                            onBlur={handleBlur}
-                            onKeyDown={handleKeyDown}
-                            autoFocus
-                            className="w-full border rounded px-2 py-1 text-right"
-                          />
-                        ) : (
-                          <span>{price.toLocaleString()}</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                      return (
+                        <td
+                          key={pb.id}
+                          className="p-3 text-sm text-right cursor-pointer hover:bg-blue-50"
+                          onClick={() => handleCellClick(product.id, pb.id)}>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              value={editingCell.value}
+                              onChange={(e) =>
+                                handlePriceChange(e, product.id, pb.id)
+                              }
+                              onBlur={handleBlur}
+                              onKeyDown={handleKeyDown}
+                              autoFocus
+                              className="w-full border rounded px-2 py-1 text-right"
+                            />
+                          ) : (
+                            <span>{price.toLocaleString()}</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
