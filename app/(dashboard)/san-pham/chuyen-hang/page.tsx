@@ -5,10 +5,13 @@ import { useTransfers } from "@/lib/hooks/useTransfers";
 import { TransferTable } from "@/components/transfers/TransferTable";
 import { TransferForm } from "@/components/transfers/TransferForm";
 import { Plus } from "lucide-react";
+import { Transfer } from "@/lib/api/transfers";
 
 export default function TransferPage() {
   const [showForm, setShowForm] = useState(false);
-  const [selectedTransfer, setSelectedTransfer] = useState(null);
+  const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(
+    null
+  );
   const { data, isLoading } = useTransfers();
 
   return (

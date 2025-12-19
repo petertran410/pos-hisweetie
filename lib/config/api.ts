@@ -17,7 +17,10 @@ const getAuthHeaders = (): HeadersInit => {
 };
 
 export const apiClient = {
-  get: async (endpoint: string, params?: Record<string, any>) => {
+  get: async <T = any>(
+    endpoint: string,
+    params?: Record<string, any>
+  ): Promise<T> => {
     const url = new URL(`${API_URL}${endpoint}`);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -43,7 +46,7 @@ export const apiClient = {
     return res.json();
   },
 
-  post: async (endpoint: string, data?: any) => {
+  post: async <T = any>(endpoint: string, data?: any): Promise<T> => {
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: "POST",
       headers: getAuthHeaders(),
@@ -71,18 +74,18 @@ export const apiClient = {
 
     const text = await res.text();
     if (!text || text.trim() === "") {
-      return null;
+      return null as T;
     }
 
     try {
       return JSON.parse(text);
     } catch (e) {
       console.error("Failed to parse JSON:", text);
-      return null;
+      return null as T;
     }
   },
 
-  put: async (endpoint: string, data?: any) => {
+  put: async <T = any>(endpoint: string, data?: any): Promise<T> => {
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: "PUT",
       headers: getAuthHeaders(),
@@ -101,7 +104,7 @@ export const apiClient = {
     return res.json();
   },
 
-  delete: async (endpoint: string, data?: any) => {
+  delete: async <T = any>(endpoint: string, data?: any): Promise<T> => {
     const options: RequestInit = {
       method: "DELETE",
       headers: getAuthHeaders(),
