@@ -92,7 +92,7 @@ export const productsApi = {
     return apiClient.delete(`/products/${id}`);
   },
 
-  updateRetailPrice: (id: number, retailPrice: number): Promise<Product> => {
-    return apiClient.put(`/products/${id}`, { retailPrice });
+  updateRetailPrice: (id: number, basePrice: number): Promise<Product> => {
+    return apiClient.put(`/products/${id}`, { basePrice });
   },
 };

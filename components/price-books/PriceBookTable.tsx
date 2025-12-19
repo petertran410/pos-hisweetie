@@ -147,7 +147,7 @@ export function PriceBookTable({
         // Cập nhật giá bán cơ bản
         await updateRetailPrice.mutateAsync({
           id: editingCell.productId,
-          retailPrice: newPrice,
+          basePrice: newPrice,
         });
         toast.success("Cập nhật giá bán cơ bản thành công");
       } else {

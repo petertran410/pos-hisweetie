@@ -76,8 +76,8 @@ export function useUpdateProductRetailPrice() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, retailPrice }: { id: number; retailPrice: number }) =>
-      productsApi.updateRetailPrice(id, retailPrice),
+    mutationFn: ({ id, basePrice }: { id: number; basePrice: number }) =>
+      productsApi.updateRetailPrice(id, basePrice),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["products-with-prices"] });
