@@ -21,6 +21,7 @@ interface ProductItem {
   productName: string;
   unit?: string;
   sendQuantity: number;
+  receivedQuantity: number;
   price: number;
   fromInventory: number;
   toInventory: number;
@@ -43,6 +44,11 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
   const [noteBySource, setNoteBySource] = useState(
     transfer?.noteBySource || ""
   );
+  const [noteByDestination, setNoteByDestination] = useState(
+    transfer?.noteByDestination || ""
+  );
+  const isReceiver = transfer && selectedBranch?.id === transfer.toBranchId;
+  const isSender = !transfer || selectedBranch?.id === transfer.fromBranchId;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -52,6 +58,28 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
     limit: 20,
     branchIds: [fromBranchId, toBranchId].filter((id) => id > 0),
   });
+
+  const handleChangeReceivedQuantity = (index: number, value: string) => {
+    const quantity = parseFloat(value) || 0;
+
+    if (quantity < 0) {
+      toast.error("Số lượng nhận không được nhỏ hơn 0");
+      return;
+    }
+
+    if (quantity > products[index].sendQuantity) {
+      toast.error(
+        `Số lượng nhận không được lớn hơn số lượng chuyển (${products[index].sendQuantity})`
+      );
+      return;
+    }
+
+    setProducts((prev) => {
+      const updated = [...prev];
+      updated[index].receivedQuantity = quantity;
+      return updated;
+    });
+  };
 
   useEffect(() => {
     if (transfer?.details && fromBranchId && toBranchId) {
@@ -78,24 +106,18 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                   productName: detail.productName,
                   unit: product.unit,
                   sendQuantity: Number(detail.sendQuantity),
+                  receivedQuantity: isReceiver
+                    ? Number(detail.receivedQuantity || detail.sendQuantity)
+                    : Number(detail.sendQuantity),
                   price: Number(detail.sendPrice),
                   fromInventory: Number(fromInventory?.onHand || 0),
                   toInventory: Number(toInventory?.onHand || 0),
                 };
               } catch (error: any) {
                 if (error.name === "AbortError") {
-                  throw error;
+                  return error;
                 }
-
-                return {
-                  productId: detail.productId,
-                  productCode: detail.productCode,
-                  productName: detail.productName,
-                  sendQuantity: Number(detail.sendQuantity),
-                  price: Number(detail.sendPrice),
-                  fromInventory: 0,
-                  toInventory: 0,
-                };
+                return error;
               }
             })
           );
@@ -103,10 +125,8 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
           if (isActive && !abortController.signal.aborted) {
             setProducts(productsWithInventory);
           }
-        } catch (error: any) {
-          if (error.name !== "AbortError") {
-            console.error("Error loading products:", error);
-          }
+        } catch (error) {
+          console.error("Error updating products inventory:", error);
         }
       };
 
@@ -117,7 +137,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
         abortController.abort();
       };
     }
-  }, [transfer]);
+  }, [fromBranchId, toBranchId, transfer, isReceiver]);
 
   useEffect(() => {
     if (!fromBranchId || !toBranchId || products.length === 0) return;
@@ -198,6 +218,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
       price: Number(fromInventory?.cost || product.basePrice || 0),
       fromInventory: Number(fromInventory?.onHand || 0),
       toInventory: Number(toInventory?.onHand || 0),
+      receivedQuantity: 0,
     };
 
     setProducts((prev) => [...prev, newProduct]);
@@ -302,16 +323,27 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
       return;
     }
 
+    // Xác định status dựa trên role và action
+    let newStatus: number;
+    if (isReceiver) {
+      // Người nhận: "Lưu tạm" giữ status = 2, "Nhận hàng" đổi status = 3
+      newStatus = isDraft ? 2 : 3;
+    } else {
+      // Người chuyển: "Lưu tạm" = status 1, "Đang chuyển" = status 2
+      newStatus = isDraft ? 1 : 2;
+    }
+
     const transferData = {
       fromBranchId,
       toBranchId,
-      isDraft,
-      description: noteBySource,
-      status: isDraft ? 1 : 2,
+      isDraft: false, // Luôn là false vì đã xử lý bằng status
+      description: isReceiver ? noteByDestination : noteBySource,
+      status: newStatus,
       transferDetails: products.map((p) => ({
         productCode: p.productCode,
         productId: p.productId,
         sendQuantity: p.sendQuantity,
+        receivedQuantity: isReceiver ? p.receivedQuantity : p.sendQuantity,
         price: p.price,
       })),
     };
@@ -322,7 +354,11 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
           id: transfer.id,
           data: transferData,
         });
-        toast.success("Cập nhật phiếu chuyển hàng thành công");
+        toast.success(
+          isReceiver && !isDraft
+            ? "Nhận hàng thành công"
+            : "Cập nhật phiếu chuyển hàng thành công"
+        );
       } else {
         await createTransfer.mutateAsync(transferData);
         toast.success("Tạo phiếu chuyển hàng thành công");
@@ -527,6 +563,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
+                      {/* TRONG TBODY */}
                       {products.map((item, index) => {
                         return (
                           <tr key={index} className="hover:bg-gray-50">
@@ -545,57 +582,133 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
                               {item.toInventory.toLocaleString()}
                             </td>
+
+                            {/* CỘT SỐ LƯỢNG CHUYỂN - chỉ edit được khi là sender */}
                             <td className="px-4 py-3 whitespace-nowrap">
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  onClick={() =>
-                                    handleUpdateQuantity(index, -1)
-                                  }
-                                  className="p-1 hover:bg-gray-200 rounded transition">
-                                  <Minus className="w-4 h-4 text-gray-600" />
-                                </button>
+                              {isSender && !transfer ? (
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    onClick={() =>
+                                      handleUpdateQuantity(index, -1)
+                                    }
+                                    className="p-1 hover:bg-gray-200 rounded transition">
+                                    <Minus className="w-4 h-4 text-gray-600" />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    value={item.sendQuantity}
+                                    onChange={(e) =>
+                                      handleChangeQuantity(
+                                        index,
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-20 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    min="0"
+                                    step="1"
+                                  />
+                                  <button
+                                    onClick={() =>
+                                      handleUpdateQuantity(index, 1)
+                                    }
+                                    className="p-1 hover:bg-gray-200 rounded transition">
+                                    <Plus className="w-4 h-4 text-gray-600" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="text-center text-sm text-gray-900">
+                                  {item.sendQuantity.toLocaleString()}
+                                </div>
+                              )}
+                            </td>
+
+                            {isReceiver && (
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    onClick={() => {
+                                      const newQty = Math.max(
+                                        0,
+                                        item.receivedQuantity - 1
+                                      );
+                                      handleChangeReceivedQuantity(
+                                        index,
+                                        newQty.toString()
+                                      );
+                                    }}
+                                    className="p-1 hover:bg-gray-200 rounded transition">
+                                    <Minus className="w-4 h-4 text-gray-600" />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    value={item.receivedQuantity}
+                                    onChange={(e) =>
+                                      handleChangeReceivedQuantity(
+                                        index,
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-20 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    min="0"
+                                    max={item.sendQuantity}
+                                    step="1"
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      const newQty = Math.min(
+                                        item.sendQuantity,
+                                        item.receivedQuantity + 1
+                                      );
+                                      handleChangeReceivedQuantity(
+                                        index,
+                                        newQty.toString()
+                                      );
+                                    }}
+                                    className="p-1 hover:bg-gray-200 rounded transition">
+                                    <Plus className="w-4 h-4 text-gray-600" />
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+
+                            {/* CỘT ĐƠN GIÁ - chỉ edit được khi là sender */}
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              {isSender && !transfer ? (
                                 <input
                                   type="number"
-                                  value={item.sendQuantity}
+                                  value={item.price}
                                   onChange={(e) =>
-                                    handleChangeQuantity(index, e.target.value)
+                                    handleChangePrice(index, e.target.value)
                                   }
-                                  className="w-20 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className="w-28 border border-gray-300 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                   min="0"
-                                  step="1"
+                                  step="1000"
                                 />
-                                <button
-                                  onClick={() => handleUpdateQuantity(index, 1)}
-                                  className="p-1 hover:bg-gray-200 rounded transition">
-                                  <Plus className="w-4 h-4 text-gray-600" />
-                                </button>
-                              </div>
+                              ) : (
+                                <div className="text-right text-sm text-gray-900">
+                                  {item.price.toLocaleString()} đ
+                                </div>
+                              )}
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <input
-                                type="number"
-                                value={item.price}
-                                onChange={(e) =>
-                                  handleChangePrice(index, e.target.value)
-                                }
-                                className="w-28 border border-gray-300 rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                min="0"
-                                step="1000"
-                              />
-                            </td>
+
+                            {/* THÀNH TIỀN */}
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">
                               {(
                                 item.sendQuantity * item.price
                               ).toLocaleString()}{" "}
                               đ
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-center">
-                              <button
-                                onClick={() => handleRemoveProduct(index)}
-                                className="p-1 hover:bg-red-50 rounded transition text-red-600">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
+
+                            {/* NÚT XÓA - chỉ hiện khi là sender và đang tạo mới */}
+                            {isSender && !transfer && (
+                              <td className="px-4 py-3 whitespace-nowrap text-center">
+                                <button
+                                  onClick={() => handleRemoveProduct(index)}
+                                  className="p-1 hover:bg-red-50 rounded transition text-red-600">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
@@ -650,10 +763,12 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
               {createTransfer.isPending || updateTransfer.isPending ? (
                 <>
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  Đang lưu...
+                  Đang xử lý...
                 </>
+              ) : isReceiver ? (
+                "Nhận hàng"
               ) : (
-                "Hoàn thành"
+                "Đang chuyển"
               )}
             </button>
           </div>
