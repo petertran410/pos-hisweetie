@@ -7,7 +7,7 @@ import { useProducts } from "@/lib/hooks/useProducts";
 import { useCreateTransfer, useUpdateTransfer } from "@/lib/hooks/useTransfers";
 import { useBranchStore } from "@/lib/store/branch";
 import type { Transfer } from "@/lib/api/transfers";
-import type { Product } from "@/lib/api/products";
+import { productsApi, type Product } from "@/lib/api/products";
 import { toast } from "sonner";
 
 interface TransferFormProps {
@@ -63,11 +63,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
           const productsWithInventory = await Promise.all(
             transfer.details.map(async (detail) => {
               try {
-                const response = await fetch(
-                  `/api/products/${detail.productId}`,
-                  { signal: abortController.signal }
-                );
-                const product = await response.json();
+                const product = await productsApi.getProduct(detail.productId);
 
                 const fromInventory = product.inventories?.find(
                   (inv: any) => inv.branchId === fromBranchId
@@ -134,15 +130,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
         const updatedProducts = await Promise.all(
           products.map(async (item) => {
             try {
-              const response = await fetch(`/api/products/${item.productId}`, {
-                signal: abortController.signal,
-              });
-
-              if (!response.ok) {
-                throw new Error("Failed to fetch product");
-              }
-
-              const product = await response.json();
+              const product = await productsApi.getProduct(item.productId);
 
               const fromInventory = product.inventories?.find(
                 (inv: any) => inv.branchId === fromBranchId
