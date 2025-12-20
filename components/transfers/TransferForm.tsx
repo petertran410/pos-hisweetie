@@ -402,17 +402,26 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                 <select
                   value={fromBranchId}
                   onChange={(e) => setFromBranchId(Number(e.target.value))}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value={selectedBranch?.id}>
-                    {selectedBranch?.name || "Kho Sài Gòn"}
-                  </option>
-                  {branches
-                    ?.filter((b) => b.id !== toBranchId)
-                    .map((branch) => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.name}
+                  disabled={!!isReceiver}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-600">
+                  {transfer ? (
+                    <option value={transfer.fromBranchId}>
+                      {transfer.fromBranchName}
+                    </option>
+                  ) : (
+                    <>
+                      <option value={selectedBranch?.id}>
+                        {selectedBranch?.name || "Chọn chi nhánh"}
                       </option>
-                    ))}
+                      {branches
+                        ?.filter((b) => b.id !== toBranchId)
+                        .map((branch) => (
+                          <option key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </option>
+                        ))}
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -423,14 +432,24 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                 <select
                   value={toBranchId}
                   onChange={(e) => setToBranchId(Number(e.target.value))}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  {branches
-                    ?.filter((b) => b.id !== fromBranchId)
-                    .map((branch) => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.name}
-                      </option>
-                    ))}
+                  disabled={!!isReceiver}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-600">
+                  {transfer ? (
+                    <option value={transfer.toBranchId}>
+                      {transfer.toBranchName}
+                    </option>
+                  ) : (
+                    <>
+                      <option value="">Chọn chi nhánh</option>
+                      {branches
+                        ?.filter((b) => b.id !== fromBranchId)
+                        .map((branch) => (
+                          <option key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </option>
+                        ))}
+                    </>
+                  )}
                 </select>
               </div>
             </div>
@@ -553,17 +572,40 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                           SL chuyển
                         </th>
+
+                        {/* CỘT HEADER SL NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
+                        {isReceiver && (
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                            SL nhận
+                          </th>
+                        )}
+
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                          Đơn giá
+                          {isReceiver ? "Đơn giá chuyển" : "Đơn giá"}
                         </th>
+
+                        {/* CỘT HEADER GIÁ NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
+                        {isReceiver && (
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                            Đơn giá nhận
+                          </th>
+                        )}
+
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                          Thành tiền
+                          {isReceiver ? "Thành tiền chuyển" : "Thành tiền"}
                         </th>
+
+                        {/* CỘT HEADER THÀNH TIỀN NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
+                        {isReceiver && (
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                            Thành tiền nhận
+                          </th>
+                        )}
+
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap"></th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {/* TRONG TBODY */}
                       {products.map((item, index) => {
                         return (
                           <tr key={index} className="hover:bg-gray-50">
@@ -583,7 +625,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               {item.toInventory.toLocaleString()}
                             </td>
 
-                            {/* CỘT SỐ LƯỢNG CHUYỂN - chỉ edit được khi là sender */}
+                            {/* CỘT SỐ LƯỢNG CHUYỂN */}
                             <td className="px-4 py-3 whitespace-nowrap">
                               {isSender && !transfer ? (
                                 <div className="flex items-center justify-center gap-1">
@@ -622,6 +664,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               )}
                             </td>
 
+                            {/* CỘT SỐ LƯỢNG NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
                             {isReceiver && (
                               <td className="px-4 py-3 whitespace-nowrap">
                                 <div className="flex items-center justify-center gap-1">
@@ -671,7 +714,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               </td>
                             )}
 
-                            {/* CỘT ĐƠN GIÁ - chỉ edit được khi là sender */}
+                            {/* CỘT ĐƠN GIÁ CHUYỂN */}
                             <td className="px-4 py-3 whitespace-nowrap">
                               {isSender && !transfer ? (
                                 <input
@@ -691,13 +734,30 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               )}
                             </td>
 
-                            {/* THÀNH TIỀN */}
+                            {/* CỘT ĐƠN GIÁ NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
+                            {isReceiver && (
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
+                                {item.price.toLocaleString()} đ
+                              </td>
+                            )}
+
+                            {/* CỘT THÀNH TIỀN CHUYỂN */}
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">
                               {(
                                 item.sendQuantity * item.price
                               ).toLocaleString()}{" "}
                               đ
                             </td>
+
+                            {/* CỘT THÀNH TIỀN NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
+                            {isReceiver && (
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-green-600">
+                                {(
+                                  item.receivedQuantity * item.price
+                                ).toLocaleString()}{" "}
+                                đ
+                              </td>
+                            )}
 
                             {/* NÚT XÓA - chỉ hiện khi là sender và đang tạo mới */}
                             {isSender && !transfer && (
@@ -720,15 +780,33 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ghi chú
+                Ghi chú {isReceiver && "(Chi nhánh nhận)"}
               </label>
               <textarea
-                value={noteBySource}
-                onChange={(e) => setNoteBySource(e.target.value)}
-                placeholder="Nhập ghi chú cho phiếu chuyển hàng..."
+                value={isReceiver ? noteByDestination : noteBySource}
+                onChange={(e) =>
+                  isReceiver
+                    ? setNoteByDestination(e.target.value)
+                    : setNoteBySource(e.target.value)
+                }
+                placeholder={
+                  isReceiver
+                    ? "Nhập ghi chú từ chi nhánh nhận..."
+                    : "Nhập ghi chú cho phiếu chuyển hàng..."
+                }
                 rows={3}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
+              {isReceiver && transfer?.noteBySource && (
+                <div className="mt-2 p-3 bg-gray-50 rounded border border-gray-200">
+                  <p className="text-xs text-gray-600 mb-1">
+                    Ghi chú từ chi nhánh chuyển:
+                  </p>
+                  <p className="text-sm text-gray-900">
+                    {transfer.noteBySource}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
