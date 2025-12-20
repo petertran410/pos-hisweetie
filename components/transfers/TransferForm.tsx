@@ -55,13 +55,94 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
 
   useEffect(() => {
     if (transfer?.details && fromBranchId && toBranchId) {
+      const abortController = new AbortController();
+      let isActive = true;
+
       const loadProductsWithInventory = async () => {
-        const productsWithInventory = await Promise.all(
-          transfer.details.map(async (detail) => {
+        try {
+          const productsWithInventory = await Promise.all(
+            transfer.details.map(async (detail) => {
+              try {
+                const response = await fetch(
+                  `/api/products/${detail.productId}`,
+                  { signal: abortController.signal }
+                );
+                const product = await response.json();
+
+                const fromInventory = product.inventories?.find(
+                  (inv: any) => inv.branchId === fromBranchId
+                );
+                const toInventory = product.inventories?.find(
+                  (inv: any) => inv.branchId === toBranchId
+                );
+
+                return {
+                  productId: detail.productId,
+                  productCode: detail.productCode,
+                  productName: detail.productName,
+                  unit: product.unit,
+                  sendQuantity: Number(detail.sendQuantity),
+                  price: Number(detail.sendPrice),
+                  fromInventory: Number(fromInventory?.onHand || 0),
+                  toInventory: Number(toInventory?.onHand || 0),
+                };
+              } catch (error: any) {
+                if (error.name === "AbortError") {
+                  throw error;
+                }
+
+                return {
+                  productId: detail.productId,
+                  productCode: detail.productCode,
+                  productName: detail.productName,
+                  sendQuantity: Number(detail.sendQuantity),
+                  price: Number(detail.sendPrice),
+                  fromInventory: 0,
+                  toInventory: 0,
+                };
+              }
+            })
+          );
+
+          if (isActive && !abortController.signal.aborted) {
+            setProducts(productsWithInventory);
+          }
+        } catch (error: any) {
+          if (error.name !== "AbortError") {
+            console.error("Error loading products:", error);
+          }
+        }
+      };
+
+      loadProductsWithInventory();
+
+      return () => {
+        isActive = false;
+        abortController.abort();
+      };
+    }
+  }, [transfer]);
+
+  useEffect(() => {
+    if (!fromBranchId || !toBranchId || products.length === 0) return;
+
+    const abortController = new AbortController();
+    let isLatestRequest = true;
+
+    const updateProductsInventory = async () => {
+      try {
+        const updatedProducts = await Promise.all(
+          products.map(async (item) => {
             try {
-              const product = await fetch(
-                `/api/products/${detail.productId}`
-              ).then((res) => res.json());
+              const response = await fetch(`/api/products/${item.productId}`, {
+                signal: abortController.signal,
+              });
+
+              if (!response.ok) {
+                throw new Error("Failed to fetch product");
+              }
+
+              const product = await response.json();
 
               const fromInventory = product.inventories?.find(
                 (inv: any) => inv.branchId === fromBranchId
@@ -71,76 +152,39 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
               );
 
               return {
-                productId: detail.productId,
-                productCode: detail.productCode,
-                productName: detail.productName,
-                unit: product.unit,
-                sendQuantity: Number(detail.sendQuantity),
-                price: Number(detail.sendPrice),
+                ...item,
+                price: Number(
+                  fromInventory?.cost || product.basePrice || item.price || 0
+                ),
                 fromInventory: Number(fromInventory?.onHand || 0),
                 toInventory: Number(toInventory?.onHand || 0),
               };
-            } catch (error) {
-              return {
-                productId: detail.productId,
-                productCode: detail.productCode,
-                productName: detail.productName,
-                sendQuantity: Number(detail.sendQuantity),
-                price: Number(detail.sendPrice),
-                fromInventory: 0,
-                toInventory: 0,
-              };
+            } catch (error: any) {
+              if (error.name === "AbortError") {
+                return item;
+              }
+
+              console.error(`Error fetching product ${item.productId}:`, error);
+              return item;
             }
           })
         );
 
-        setProducts(productsWithInventory);
-      };
-
-      loadProductsWithInventory();
-    }
-  }, [transfer]);
-
-  useEffect(() => {
-    if (!fromBranchId || !toBranchId || products.length === 0) return;
-
-    const updateProductsInventory = async () => {
-      const updatedProducts = await Promise.all(
-        products.map(async (item) => {
-          try {
-            const response = await fetch(`/api/products/${item.productId}`);
-            const product = await response.json();
-
-            const fromInventory = product.inventories?.find(
-              (inv: any) => inv.branchId === fromBranchId
-            );
-            const toInventory = product.inventories?.find(
-              (inv: any) => inv.branchId === toBranchId
-            );
-
-            return {
-              ...item,
-              price: Number(fromInventory?.cost || product.basePrice || 0),
-              fromInventory: Number(fromInventory?.onHand || 0),
-              toInventory: Number(toInventory?.onHand || 0),
-            };
-          } catch (error) {
-            console.error(`Error fetching product ${item.productId}:`, error);
-            return {
-              ...item,
-              price: 0,
-              fromInventory: 0,
-              toInventory: 0,
-            };
-          }
-        })
-      );
-
-      setProducts(updatedProducts);
+        if (isLatestRequest && !abortController.signal.aborted) {
+          setProducts(updatedProducts);
+        }
+      } catch (error) {
+        console.error("Error updating products inventory:", error);
+      }
     };
 
     updateProductsInventory();
-  }, [fromBranchId, toBranchId, products.length]);
+
+    return () => {
+      isLatestRequest = false;
+      abortController.abort();
+    };
+  }, [fromBranchId, toBranchId]);
 
   const handleAddProduct = (product: Product) => {
     const existingIndex = products.findIndex((p) => p.productId === product.id);

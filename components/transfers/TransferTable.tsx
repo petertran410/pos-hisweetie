@@ -259,11 +259,7 @@ export function TransferTable({
       {/* Header Actions */}
       <div className="p-4 border-b flex justify-between items-center bg-white">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">
-            {selectedIds.length > 0
-              ? `Đã chọn ${selectedIds.length} phiếu`
-              : `Tổng: ${transfers.length} phiếu`}
-          </span>
+          <span className="text-sm text-gray-600"></span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -395,23 +391,6 @@ export function TransferTable({
           </tbody>
         </table>
       </div>
-
-      {/* Summary Footer */}
-      {transfers.length > 0 && (
-        <div className="border-t p-4 bg-gray-50">
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              Hiển thị {transfers.length} phiếu
-            </div>
-            <div className="text-lg font-semibold">
-              Tổng giá trị:{" "}
-              {formatMoney(
-                transfers.reduce((sum, t) => sum + Number(t.totalTransfer), 0)
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
