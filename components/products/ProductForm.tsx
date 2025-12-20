@@ -218,18 +218,10 @@ export function ProductForm({
         branchId: selectedBranch?.id,
       };
 
-      if (product) {
-        await updateProduct.mutateAsync(
-          { id: product.id, data: formData },
-          { onSuccess }
-        );
-      } else {
-        await createProduct.mutateAsync(formData, { onSuccess });
-      }
-
       if (hasCostChanged(formData.purchasePrice)) {
         setPendingFormData(formData);
         setShowCostConfirmation(true);
+        setIsSubmitting(false);
         return;
       }
       await submitProduct(formData);
