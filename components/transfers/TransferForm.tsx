@@ -623,18 +623,14 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
 
         <div className="border-t px-6 py-4 bg-gray-50 flex items-center justify-between">
           <div>
-            <div className="text-sm text-gray-600">Tổng giá trị chuyển</div>
-            <div className="text-2xl font-bold text-blue-600">
-              {calculateTotal().toLocaleString()} đ
-            </div>
-          </div>
-          <div className="flex gap-3">
             <button
               onClick={onClose}
               disabled={createTransfer.isPending || updateTransfer.isPending}
               className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed">
               Đóng
             </button>
+          </div>
+          <div className="flex gap-3">
             <button
               onClick={() => handleSubmit(true)}
               disabled={createTransfer.isPending || updateTransfer.isPending}
