@@ -75,8 +75,8 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
   const handleChangeReceivedQuantity = (index: number, value: string) => {
     const quantity = parseFloat(value) || 0;
 
-    if (quantity < 0) {
-      toast.error("Số lượng nhận không được nhỏ hơn 0");
+    if (quantity < 1) {
+      toast.error("Số lượng nhận không được nhỏ hơn 1");
       return;
     }
 
@@ -259,8 +259,8 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
       const updated = [...prev];
       const newQuantity = updated[index].sendQuantity + delta;
 
-      if (newQuantity < 0) {
-        toast.error("Số lượng không được nhỏ hơn 0");
+      if (newQuantity < 1) {
+        toast.error("Số lượng chuyển không được nhỏ hơn 1");
         return prev;
       }
 
@@ -279,8 +279,8 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
   const handleChangeQuantity = (index: number, value: string) => {
     const quantity = parseFloat(value) || 0;
 
-    if (quantity < 0) {
-      toast.error("Số lượng không được nhỏ hơn 0");
+    if (quantity < 1) {
+      toast.error("Số lượng chuyển không được nhỏ hơn 1");
       return;
     }
 
@@ -696,13 +696,17 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                     onClick={() =>
                                       handleUpdateQuantity(index, -1)
                                     }
-                                    disabled={isReadOnly || isReceived}
+                                    disabled={
+                                      isReadOnly ||
+                                      isReceived ||
+                                      item.sendQuantity <= 1
+                                    }
                                     className="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
                                     -
                                   </button>
                                   <input
                                     type="number"
-                                    min="0"
+                                    min="1"
                                     value={item.sendQuantity}
                                     onChange={(e) =>
                                       handleChangeQuantity(
@@ -711,7 +715,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                       )
                                     }
                                     disabled={isReadOnly || isReceived}
-                                    className="w-20 border rounded px-2 py-1 text-center disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                    className="w-20 border rounded px-2 py-1 text-center disabled:bg-gray-100 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
                                   <button
                                     type="button"
@@ -738,13 +742,17 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                     onClick={() =>
                                       handleUpdateQuantity(index, -1)
                                     }
-                                    disabled={isReadOnly || !isSender}
+                                    disabled={
+                                      isReadOnly ||
+                                      !isSender ||
+                                      item.receivedQuantity <= 1
+                                    }
                                     className="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
                                     -
                                   </button>
                                   <input
                                     type="number"
-                                    min="0"
+                                    min="1"
                                     value={item.receivedQuantity}
                                     onChange={(e) =>
                                       handleChangeReceivedQuantity(
@@ -753,9 +761,8 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                       )
                                     }
                                     disabled={isReadOnly}
-                                    className="w-20 border rounded px-2 py-1 text-center disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                    className="w-20 border rounded px-2 py-1 text-center disabled:bg-gray-100 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
-
                                   <button
                                     type="button"
                                     onClick={() =>
@@ -810,11 +817,12 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               </td>
                             )}
 
-                            {isSender && !transfer && (
+                            {isSender && isDraft && !isCancelled && (
                               <td className="px-4 py-3 whitespace-nowrap text-center">
                                 <button
                                   onClick={() => handleRemoveProduct(index)}
-                                  className="p-1 hover:bg-red-50 rounded transition text-red-600">
+                                  className="p-1 hover:bg-red-50 rounded transition text-red-600"
+                                  title="Xóa sản phẩm">
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               </td>
