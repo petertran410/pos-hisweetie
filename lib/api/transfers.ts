@@ -62,6 +62,10 @@ export interface CreateTransferData {
   }[];
 }
 
+export interface CancelTransferData {
+  cancelReason?: string;
+}
+
 export const transfersApi = {
   getAll: (params?: TransferQueryParams) =>
     apiClient.get<{ total: number; pageSize: number; data: Transfer[] }>(
@@ -78,4 +82,7 @@ export const transfersApi = {
     apiClient.put<Transfer>(`/transfers/${id}`, data),
 
   delete: (id: number) => apiClient.delete(`/transfers/${id}`),
+
+  cancel: (id: number, data?: CancelTransferData) =>
+    apiClient.put(`/transfers/${id}/cancel`, data || {}),
 };

@@ -3,6 +3,7 @@ import {
   transfersApi,
   type TransferQueryParams,
   type CreateTransferData,
+  CancelTransferData,
 } from "../api/transfers";
 import { toast } from "sonner";
 
@@ -68,6 +69,18 @@ export function useDeleteTransfer() {
     },
     onError: () => {
       toast.error("Không thể xóa phiếu chuyển hàng");
+    },
+  });
+}
+
+export function useCancelTransfer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data?: CancelTransferData }) =>
+      transfersApi.cancel(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transfers"] });
     },
   });
 }

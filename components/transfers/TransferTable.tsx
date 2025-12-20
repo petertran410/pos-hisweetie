@@ -90,13 +90,13 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "transferDate",
     label: "Ngày chuyển",
     visible: true,
-    render: (transfer) => formatDate(transfer.transferredDate),
+    render: (transfer) => formatDateTime(transfer.transferredDate),
   },
   {
     key: "receiveDate",
     label: "Ngày nhận",
     visible: true,
-    render: (transfer) => formatDate(transfer.receivedDate),
+    render: (transfer) => formatDateTime(transfer.receivedDate),
   },
   {
     key: "createTime",
