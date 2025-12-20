@@ -255,47 +255,57 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
   };
 
   const handleUpdateQuantity = (index: number, delta: number) => {
-    setProducts((prev) => {
-      const updated = [...prev];
-      const newQuantity = updated[index].sendQuantity + delta;
+    const currentProduct = products[index];
+    if (!currentProduct) return;
 
-      if (newQuantity < 1) {
-        toast.error("Số lượng chuyển không được nhỏ hơn 1");
-        return prev;
-      }
+    const newQuantity = currentProduct.sendQuantity + delta;
 
-      if (newQuantity > updated[index].fromInventory) {
-        toast.error(
-          `Số lượng chuyển vượt quá tồn kho (${updated[index].fromInventory})`
-        );
-        return prev;
-      }
+    if (newQuantity < 1) {
+      toast.error("Số lượng chuyển không được nhỏ hơn 1");
+      return;
+    }
 
-      updated[index].sendQuantity = newQuantity;
-      return updated;
-    });
+    if (newQuantity > currentProduct.fromInventory) {
+      toast.error(
+        `Số lượng chuyển vượt quá tồn kho (${currentProduct.fromInventory})`
+      );
+      return;
+    }
+
+    const updatedProducts = [...products];
+    updatedProducts[index] = {
+      ...updatedProducts[index],
+      sendQuantity: newQuantity,
+    };
+
+    setProducts(updatedProducts);
   };
 
   const handleUpdateReceivedQuantity = (index: number, delta: number) => {
-    setProducts((prev) => {
-      const updated = [...prev];
-      const newQuantity = updated[index].receivedQuantity + delta;
+    const currentProduct = products[index];
+    if (!currentProduct) return;
 
-      if (newQuantity < 1) {
-        toast.error("Số lượng nhận không được nhỏ hơn 1");
-        return prev;
-      }
+    const newQuantity = currentProduct.receivedQuantity + delta;
 
-      if (newQuantity > updated[index].sendQuantity) {
-        toast.error(
-          `Số lượng nhận không được lớn hơn số lượng chuyển (${updated[index].sendQuantity})`
-        );
-        return prev;
-      }
+    if (newQuantity < 1) {
+      toast.error("Số lượng nhận không được nhỏ hơn 1");
+      return;
+    }
 
-      updated[index].receivedQuantity = newQuantity;
-      return updated;
-    });
+    if (newQuantity > currentProduct.sendQuantity) {
+      toast.error(
+        `Số lượng nhận không được lớn hơn số lượng chuyển (${currentProduct.sendQuantity})`
+      );
+      return;
+    }
+
+    const updatedProducts = [...products];
+    updatedProducts[index] = {
+      ...updatedProducts[index],
+      receivedQuantity: newQuantity,
+    };
+
+    setProducts(updatedProducts);
   };
 
   const handleChangeQuantity = (index: number, value: string) => {
@@ -728,7 +738,9 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                     -
                                   </button>
                                   <input
-                                    type="number"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     min="1"
                                     value={item.sendQuantity}
                                     onChange={(e) =>
@@ -738,7 +750,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                       )
                                     }
                                     disabled={isReadOnly || isReceived}
-                                    className="w-20 border rounded px-2 py-1 text-center disabled:bg-gray-100 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="w-20 border rounded px-2 py-1 text-center disabled:bg-gray-100 disabled:cursor-not-allowed"
                                   />
                                   <button
                                     type="button"
@@ -769,14 +781,16 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                     }}
                                     disabled={
                                       isReadOnly ||
-                                      !isSender ||
+                                      isSender ||
                                       item.receivedQuantity <= 1
                                     }
                                     className="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
                                     -
                                   </button>
                                   <input
-                                    type="number"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     min="1"
                                     value={item.receivedQuantity}
                                     onChange={(e) =>
@@ -786,7 +800,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                       )
                                     }
                                     disabled={isReadOnly}
-                                    className="w-20 border rounded px-2 py-1 text-center disabled:bg-gray-100 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="w-20 border rounded px-2 py-1 text-center disabled:bg-gray-100 disabled:cursor-not-allowed"
                                   />
                                   <button
                                     type="button"
@@ -794,7 +808,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                       e.stopPropagation();
                                       handleUpdateReceivedQuantity(index, 1);
                                     }}
-                                    disabled={isReadOnly || !isSender}
+                                    disabled={isReadOnly || isSender}
                                     className="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
                                     +
                                   </button>
