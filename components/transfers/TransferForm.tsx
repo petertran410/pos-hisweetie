@@ -689,7 +689,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                             </td>
 
                             <td className="px-4 py-3 whitespace-nowrap">
-                              {isSender && !transfer ? (
+                              {isSender && !isReadOnly && !isReceived ? (
                                 <div className="flex items-center justify-center gap-1">
                                   <button
                                     type="button"
@@ -718,7 +718,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                     onClick={() =>
                                       handleUpdateQuantity(index, 1)
                                     }
-                                    disabled={isReadOnly || !isSender}
+                                    disabled={isReadOnly || isReceived}
                                     className="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
                                     +
                                   </button>
