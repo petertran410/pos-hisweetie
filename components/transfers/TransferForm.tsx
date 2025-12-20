@@ -276,6 +276,28 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
     });
   };
 
+  const handleUpdateReceivedQuantity = (index: number, delta: number) => {
+    setProducts((prev) => {
+      const updated = [...prev];
+      const newQuantity = updated[index].receivedQuantity + delta;
+
+      if (newQuantity < 1) {
+        toast.error("Số lượng nhận không được nhỏ hơn 1");
+        return prev;
+      }
+
+      if (newQuantity > updated[index].sendQuantity) {
+        toast.error(
+          `Số lượng nhận không được lớn hơn số lượng chuyển (${updated[index].sendQuantity})`
+        );
+        return prev;
+      }
+
+      updated[index].receivedQuantity = newQuantity;
+      return updated;
+    });
+  };
+
   const handleChangeQuantity = (index: number, value: string) => {
     const quantity = parseFloat(value) || 0;
 
@@ -693,9 +715,10 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                 <div className="flex items-center justify-center gap-1">
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleUpdateQuantity(index, -1)
-                                    }
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUpdateQuantity(index, -1);
+                                    }}
                                     disabled={
                                       isReadOnly ||
                                       isReceived ||
@@ -719,9 +742,10 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                   />
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleUpdateQuantity(index, 1)
-                                    }
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUpdateQuantity(index, 1);
+                                    }}
                                     disabled={isReadOnly || isReceived}
                                     className="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
                                     +
@@ -739,9 +763,10 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                 <div className="flex items-center justify-center gap-1">
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleUpdateQuantity(index, -1)
-                                    }
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUpdateReceivedQuantity(index, -1);
+                                    }}
                                     disabled={
                                       isReadOnly ||
                                       !isSender ||
@@ -765,9 +790,10 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                   />
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleUpdateQuantity(index, 1)
-                                    }
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUpdateReceivedQuantity(index, 1);
+                                    }}
                                     disabled={isReadOnly || !isSender}
                                     className="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
                                     +
