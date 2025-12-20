@@ -323,13 +323,10 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
       return;
     }
 
-    // Xác định status dựa trên role và action
     let newStatus: number;
     if (isReceiver) {
-      // Người nhận: "Lưu tạm" giữ status = 2, "Nhận hàng" đổi status = 3
       newStatus = isDraft ? 2 : 3;
     } else {
-      // Người chuyển: "Lưu tạm" = status 1, "Đang chuyển" = status 2
       newStatus = isDraft ? 1 : 2;
     }
 
@@ -564,16 +561,15 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                           Tên hàng
                         </th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                          Tồn kho
+                          Tồn kho ({transfer?.fromBranchName})
                         </th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                          Tồn kho nhận
+                          Tồn kho nhận ({transfer?.toBranchName})
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                           SL chuyển
                         </th>
 
-                        {/* CỘT HEADER SL NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
                         {isReceiver && (
                           <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                             SL nhận
@@ -584,7 +580,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                           {isReceiver ? "Đơn giá chuyển" : "Đơn giá"}
                         </th>
 
-                        {/* CỘT HEADER GIÁ NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
                         {isReceiver && (
                           <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                             Đơn giá nhận
@@ -595,7 +590,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                           {isReceiver ? "Thành tiền chuyển" : "Thành tiền"}
                         </th>
 
-                        {/* CỘT HEADER THÀNH TIỀN NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
                         {isReceiver && (
                           <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                             Thành tiền nhận
@@ -625,7 +619,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               {item.toInventory.toLocaleString()}
                             </td>
 
-                            {/* CỘT SỐ LƯỢNG CHUYỂN */}
                             <td className="px-4 py-3 whitespace-nowrap">
                               {isSender && !transfer ? (
                                 <div className="flex items-center justify-center gap-1">
@@ -664,7 +657,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               )}
                             </td>
 
-                            {/* CỘT SỐ LƯỢNG NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
                             {isReceiver && (
                               <td className="px-4 py-3 whitespace-nowrap">
                                 <div className="flex items-center justify-center gap-1">
@@ -714,7 +706,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               </td>
                             )}
 
-                            {/* CỘT ĐƠN GIÁ CHUYỂN */}
                             <td className="px-4 py-3 whitespace-nowrap">
                               {isSender && !transfer ? (
                                 <input
@@ -734,14 +725,12 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               )}
                             </td>
 
-                            {/* CỘT ĐƠN GIÁ NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
                             {isReceiver && (
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
                                 {item.price.toLocaleString()} đ
                               </td>
                             )}
 
-                            {/* CỘT THÀNH TIỀN CHUYỂN */}
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">
                               {(
                                 item.sendQuantity * item.price
@@ -749,7 +738,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               đ
                             </td>
 
-                            {/* CỘT THÀNH TIỀN NHẬN - CHỈ HIỂN THỊ KHI LÀ RECEIVER */}
                             {isReceiver && (
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-green-600">
                                 {(
@@ -759,7 +747,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               </td>
                             )}
 
-                            {/* NÚT XÓA - chỉ hiện khi là sender và đang tạo mới */}
                             {isSender && !transfer && (
                               <td className="px-4 py-3 whitespace-nowrap text-center">
                                 <button
