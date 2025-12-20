@@ -528,7 +528,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {products.map((item, index) => {
-                        console.log(item);
                         return (
                           <tr key={index} className="hover:bg-gray-50">
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">

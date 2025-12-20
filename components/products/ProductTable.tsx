@@ -73,6 +73,11 @@ const calculateComboPurchasePrice = (product: Product): number => {
   }, 0);
 };
 
+const formatDateTime = (date?: string) => {
+  if (!date) return "-";
+  return new Date(date).toLocaleString("vi-VN");
+};
+
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "image",
@@ -183,19 +188,13 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "createdAt",
     label: "Thời gian tạo",
     visible: false,
-    render: (product) =>
-      product.createdAt
-        ? new Date(product.createdAt).toLocaleDateString("vi-VN")
-        : "-",
+    render: (product) => formatDateTime(product.createdAt),
   },
   {
     key: "updatedAt",
     label: "Thời gian cập nhật",
     visible: false,
-    render: (product) =>
-      product.updatedAt
-        ? new Date(product.updatedAt).toLocaleDateString("vi-VN")
-        : "-",
+    render: (product) => formatDateTime(product.updatedAt),
   },
   {
     key: "stockOutDate",
@@ -269,8 +268,6 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
     setShowCreateForm(true);
     setShowCreateDropdown(false);
   };
-
-  console.log(selectedProduct);
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showColumnModal, setShowColumnModal] = useState(false);
