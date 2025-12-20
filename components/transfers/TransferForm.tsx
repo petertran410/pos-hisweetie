@@ -525,7 +525,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
 
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tìm hàng hóa theo mã hoặc tên (F3)
+                Tìm hàng hóa theo mã hoặc tên
               </label>
               <div className="relative">
                 <input
