@@ -255,49 +255,45 @@ export function TransferTable({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden relative">
-      {/* Header Actions */}
+    <div className="flex-1 flex flex-col relative">
       <div className="p-4 border-b flex justify-between items-center bg-white">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600"></span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 relative">
           <button
             onClick={() => setShowColumnModal(!showColumnModal)}
             className="px-3 py-2 border rounded hover:bg-gray-50 text-sm">
             Cột hiển thị
           </button>
+          {showColumnModal && (
+            <div className="absolute right-0 top-full mt-2 bg-white border rounded shadow-lg z-50 p-4 w-64 max-h-96 overflow-y-auto">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">Hiển thị cột</h3>
+                <button
+                  onClick={() => setShowColumnModal(false)}
+                  className="text-gray-400 hover:text-gray-600">
+                  ✕
+                </button>
+              </div>
+              <div className="space-y-2">
+                {columns.map((col) => (
+                  <label key={col.key} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={col.visible}
+                      onChange={() => toggleColumnVisibility(col.key)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">{col.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Column Visibility Modal */}
-      {showColumnModal && (
-        <div className="absolute right-4 top-20 bg-white border rounded shadow-lg z-50 p-4 w-64 max-h-96 overflow-y-auto">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold">Hiển thị cột</h3>
-            <button
-              onClick={() => setShowColumnModal(false)}
-              className="text-gray-400 hover:text-gray-600">
-              ✕
-            </button>
-          </div>
-          <div className="space-y-2">
-            {columns.map((col) => (
-              <label key={col.key} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={col.visible}
-                  onChange={() => toggleColumnVisibility(col.key)}
-                  className="cursor-pointer"
-                />
-                <span className="text-sm">{col.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Table */}
       <div className="flex-1 overflow-auto">
         <table className="w-full" style={{ minWidth: "max-content" }}>
           <thead className="bg-gray-50 sticky top-0 z-10">

@@ -513,7 +513,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white w-full max-w-7xl max-h-[95vh] flex flex-col rounded-lg shadow-xl">
-        {/* HEADER */}
         <div className="border-b px-6 py-4 flex items-center justify-between bg-gray-50">
           <div>
             <h2 className="text-xl font-semibold">
@@ -534,10 +533,8 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
           </button>
         </div>
 
-        {/* BODY */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
-            {/* CHI NHÁNH */}
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
