@@ -6,20 +6,18 @@ import { useBranches } from "@/lib/hooks/useBranches";
 import { TransferTable } from "@/components/transfers/TransferTable";
 import { TransferForm } from "@/components/transfers/TransferForm";
 import { Plus, FileDown, FileUp } from "lucide-react";
-import type { Transfer } from "@/lib/api/transfers";
-import type { TransferQueryParams } from "@/lib/api/transfers";
+import type { Transfer, TransferQueryParams } from "@/lib/api/transfers";
+import { useBranchStore } from "@/lib/store/branch";
 
 export default function TransferPage() {
   const [showForm, setShowForm] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(
     null
   );
-
   const [fromBranchId, setFromBranchId] = useState<string>("");
   const [toBranchId, setToBranchId] = useState<string>("");
   const [selectedStatuses, setSelectedStatuses] = useState<number[]>([]);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-
   const [enableTransferDate, setEnableTransferDate] = useState(false);
   const [enableReceiveDate, setEnableReceiveDate] = useState(false);
   const [timeMode, setTimeMode] = useState<"preset" | "custom">("preset");
@@ -28,18 +26,25 @@ export default function TransferPage() {
   const [selectedPreset, setSelectedPreset] = useState<string>("this_month");
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
-
   const [receiveStatus, setReceiveStatus] = useState<string>("all");
-
   const { data: branches } = useBranches();
+  const { selectedBranch } = useBranchStore();
 
   const buildQueryParams = (): TransferQueryParams => {
     const params: TransferQueryParams = {};
-
-    if (fromBranchId) params.fromBranchIds = [parseInt(fromBranchId)];
-    if (toBranchId) params.toBranchIds = [parseInt(toBranchId)];
-    if (selectedStatuses.length > 0) params.status = selectedStatuses;
-
+    const currentBranchId = selectedBranch?.id;
+    if (currentBranchId) {
+      params.currentBranchId = currentBranchId;
+    }
+    if (fromBranchId) {
+      params.fromBranchIds = [parseInt(fromBranchId)];
+    }
+    if (toBranchId) {
+      params.toBranchIds = [parseInt(toBranchId)];
+    }
+    if (selectedStatuses.length > 0) {
+      params.status = selectedStatuses;
+    }
     if (enableTransferDate && fromDate && toDate) {
       params.fromTransferDate = fromDate.toISOString();
       params.toTransferDate = toDate.toISOString();

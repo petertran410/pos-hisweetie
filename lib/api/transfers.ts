@@ -37,6 +37,7 @@ export interface Transfer {
 export interface TransferQueryParams {
   fromBranchIds?: number[];
   toBranchIds?: number[];
+  currentBranchId?: number;
   status?: number[];
   pageSize?: number;
   currentItem?: number;
