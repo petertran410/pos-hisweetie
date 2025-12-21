@@ -108,13 +108,11 @@ export function TransferSidebar({
 }: TransferSidebarProps) {
   const { data: branches } = useBranches();
 
-  // Local state
   const [fromBranchId, setFromBranchId] = useState<string>("");
   const [toBranchId, setToBranchId] = useState<string>("");
   const [selectedStatuses, setSelectedStatuses] = useState<number[]>([]);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
-  // Time filter state
   const [enableTransferDate, setEnableTransferDate] = useState(false);
   const [enableReceiveDate, setEnableReceiveDate] = useState(false);
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
@@ -124,12 +122,10 @@ export function TransferSidebar({
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
 
-  // Receive status
   const [receiveStatus, setReceiveStatus] = useState<
     "all" | "matched" | "unmatched"
   >("all");
 
-  // Initialize filters from props
   useEffect(() => {
     if (filters.fromBranchIds?.[0]) {
       setFromBranchId(filters.fromBranchIds[0].toString());
@@ -240,7 +236,6 @@ export function TransferSidebar({
   return (
     <aside className="w-80 border-r bg-white overflow-y-auto">
       <div className="p-4 space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Bộ lọc</h2>
           <button

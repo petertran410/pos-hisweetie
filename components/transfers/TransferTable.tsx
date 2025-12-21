@@ -14,6 +14,11 @@ interface ColumnConfig {
 interface TransferTableProps {
   transfers: Transfer[];
   isLoading: boolean;
+  total: number;
+  page: number;
+  limit: number;
+  onPageChange: (page: number) => void;
+  onLimitChange: (limit: number) => void;
   onEdit: (transfer: Transfer) => void;
   onDelete?: (id: number) => void;
 }
@@ -128,7 +133,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: false,
     render: () => "-",
   },
-  // THÊM MỚI: Tổng SL chuyển
   {
     key: "totalSendQuantity",
     label: "Tổng SL chuyển",
@@ -154,7 +158,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: false,
     render: (transfer) => calculateTotalItems(transfer).toLocaleString(),
   },
-  // THÊM MỚI: Giá trị nhận
   {
     key: "totalReceiveValue",
     label: "Giá trị nhận",
@@ -191,6 +194,11 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
 export function TransferTable({
   transfers,
   isLoading,
+  total,
+  page,
+  limit,
+  onPageChange,
+  onLimitChange,
   onEdit,
   onDelete,
 }: TransferTableProps) {
@@ -246,6 +254,8 @@ export function TransferTable({
     );
   };
 
+  const totalPages = Math.ceil(total / limit);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -255,7 +265,7 @@ export function TransferTable({
   }
 
   return (
-    <div className="flex-1 flex flex-col relative">
+    <div className="flex-1 flex flex-col overflow-hidden">
       <div className="p-4 border-b flex justify-between items-center bg-white">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600"></span>
@@ -386,6 +396,40 @@ export function TransferTable({
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="border-t p-4 flex items-center justify-between bg-white">
+        <div className="flex items-center gap-2">
+          <span>Hiển thị</span>
+          <select
+            className="border rounded px-2 py-1"
+            value={limit}
+            onChange={(e) => onLimitChange(Number(e.target.value))}>
+            <option value={15}>15</option>
+            <option value={20}>20</option>
+            <option value={30}>30</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+          <span>trên tổng {total} phiếu chuyển</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            className="px-3 py-1 border rounded disabled:opacity-50"
+            disabled={page === 1}
+            onClick={() => onPageChange(page - 1)}>
+            Trước
+          </button>
+          <span>
+            Trang {page} / {totalPages || 1}
+          </span>
+          <button
+            className="px-3 py-1 border rounded disabled:opacity-50"
+            disabled={page >= totalPages}
+            onClick={() => onPageChange(page + 1)}>
+            Sau
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -14,6 +14,8 @@ export default function TransferPage() {
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(
     null
   );
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(15);
   const [fromBranchId, setFromBranchId] = useState<string>("");
   const [toBranchId, setToBranchId] = useState<string>("");
   const [selectedStatuses, setSelectedStatuses] = useState<number[]>([]);
@@ -55,6 +57,9 @@ export default function TransferPage() {
       params.toReceivedDate = toDate.toISOString();
     }
 
+    params.pageSize = limit;
+    params.currentItem = (page - 1) * limit;
+
     return params;
   };
 
@@ -74,10 +79,10 @@ export default function TransferPage() {
     : [];
 
   const STATUS_OPTIONS = [
-    { value: 1, label: "Phiếu tạm", color: "bg-gray-100 text-gray-700" },
-    { value: 2, label: "Đang chuyển", color: "bg-blue-100 text-blue-700" },
-    { value: 3, label: "Đã nhận", color: "bg-green-100 text-green-700" },
-    { value: 4, label: "Đã hủy", color: "bg-red-100 text-red-700" },
+    { value: 1, label: "Phiếu tạm", color: "bg-gray-100 text-gray-600" },
+    { value: 2, label: "Đang chuyển", color: "bg-blue-100 text-blue-600" },
+    { value: 3, label: "Đã nhận", color: "bg-green-100 text-green-600" },
+    { value: 4, label: "Đã hủy", color: "bg-red-100 text-red-600" },
   ];
 
   const TIME_PRESETS = [
@@ -87,90 +92,50 @@ export default function TransferPage() {
     { value: "last_week", label: "Tuần trước" },
     { value: "this_month", label: "Tháng này" },
     { value: "last_month", label: "Tháng trước" },
-    { value: "last_7_days", label: "7 ngày qua" },
-    { value: "last_30_days", label: "30 ngày qua" },
-    { value: "this_quarter", label: "Quý này" },
-    { value: "last_quarter", label: "Quý trước" },
-    { value: "this_year", label: "Năm nay" },
-    { value: "last_year", label: "Năm trước" },
   ];
 
   const applyTimePreset = (preset: string) => {
     const now = new Date();
-    let start: Date;
-    let end: Date = new Date(now);
+    let from: Date, to: Date;
 
     switch (preset) {
       case "today":
-        start = new Date(now.setHours(0, 0, 0, 0));
-        end = new Date(now.setHours(23, 59, 59, 999));
+        from = new Date(now.setHours(0, 0, 0, 0));
+        to = new Date(now.setHours(23, 59, 59, 999));
         break;
       case "yesterday":
-        start = new Date(now.setDate(now.getDate() - 1));
-        start.setHours(0, 0, 0, 0);
-        end = new Date(start);
-        end.setHours(23, 59, 59, 999);
+        from = new Date(now.setDate(now.getDate() - 1));
+        from.setHours(0, 0, 0, 0);
+        to = new Date(from);
+        to.setHours(23, 59, 59, 999);
         break;
       case "this_week":
-        const day = now.getDay();
-        start = new Date(
-          now.setDate(now.getDate() - day + (day === 0 ? -6 : 1))
-        );
-        start.setHours(0, 0, 0, 0);
-        end = new Date();
+        from = new Date(now.setDate(now.getDate() - now.getDay()));
+        from.setHours(0, 0, 0, 0);
+        to = new Date();
         break;
       case "last_week":
-        const lastWeekStart = new Date(
-          now.setDate(now.getDate() - now.getDay() - 6)
-        );
-        start = new Date(lastWeekStart);
-        start.setHours(0, 0, 0, 0);
-        end = new Date(lastWeekStart.setDate(lastWeekStart.getDate() + 6));
-        end.setHours(23, 59, 59, 999);
+        from = new Date(now.setDate(now.getDate() - now.getDay() - 7));
+        from.setHours(0, 0, 0, 0);
+        to = new Date(from);
+        to.setDate(to.getDate() + 6);
+        to.setHours(23, 59, 59, 999);
         break;
       case "this_month":
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date();
+        from = new Date(now.getFullYear(), now.getMonth(), 1);
+        to = new Date();
         break;
       case "last_month":
-        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        end = new Date(now.getFullYear(), now.getMonth(), 0);
-        break;
-      case "last_7_days":
-        start = new Date(now.setDate(now.getDate() - 7));
-        end = new Date();
-        break;
-      case "last_30_days":
-        start = new Date(now.setDate(now.getDate() - 30));
-        end = new Date();
-        break;
-      case "this_quarter":
-        const quarter = Math.floor(now.getMonth() / 3);
-        start = new Date(now.getFullYear(), quarter * 3, 1);
-        end = new Date();
-        break;
-      case "last_quarter":
-        const lastQuarter = Math.floor(now.getMonth() / 3) - 1;
-        start = new Date(now.getFullYear(), lastQuarter * 3, 1);
-        end = new Date(now.getFullYear(), (lastQuarter + 1) * 3, 0);
-        break;
-      case "this_year":
-        start = new Date(now.getFullYear(), 0, 1);
-        end = new Date();
-        break;
-      case "last_year":
-        start = new Date(now.getFullYear() - 1, 0, 1);
-        end = new Date(now.getFullYear() - 1, 11, 31);
+        from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        to = new Date(now.getFullYear(), now.getMonth(), 0);
         break;
       default:
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date();
+        return;
     }
 
-    setFromDate(start);
-    setToDate(end);
+    setFromDate(from);
+    setToDate(to);
     setSelectedPreset(preset);
-    setShowTimeDropdown(false);
   };
 
   const toggleStatus = (status: number) => {
@@ -194,6 +159,7 @@ export default function TransferPage() {
     setFromDate(null);
     setToDate(null);
     setReceiveStatus("all");
+    setPage(1);
   };
 
   useEffect(() => {
@@ -201,6 +167,19 @@ export default function TransferPage() {
       applyTimePreset(selectedPreset);
     }
   }, [timeMode]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [
+    fromBranchId,
+    toBranchId,
+    selectedStatuses,
+    enableTransferDate,
+    enableReceiveDate,
+    fromDate,
+    toDate,
+    limit,
+  ]);
 
   return (
     <div className="flex h-full">
@@ -289,7 +268,7 @@ export default function TransferPage() {
               </button>
 
               {showStatusDropdown && (
-                <div className="absolute top-full left-0 w-full mt-1 bg-white border rounded shadow-lg z-10">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-10">
                   {STATUS_OPTIONS.map((option) => (
                     <label
                       key={option.value}
@@ -306,14 +285,6 @@ export default function TransferPage() {
                 </div>
               )}
             </div>
-
-            {selectedStatuses.length > 0 && (
-              <button
-                onClick={() => setSelectedStatuses([])}
-                className="text-sm text-blue-600 hover:text-blue-700 mt-2">
-                +1 khác
-              </button>
-            )}
           </div>
 
           <div>
@@ -374,38 +345,26 @@ export default function TransferPage() {
                     <input
                       type="radio"
                       checked={timeMode === "custom"}
-                      onChange={() => setTimeMode("custom")}
+                      onChange={() => {
+                        setTimeMode("custom");
+                        setShowCalendar(true);
+                      }}
                       className="rounded-full"
                     />
-                    <span className="text-sm flex-1">Tùy chỉnh</span>
-                    {timeMode === "custom" && (
-                      <button
-                        onClick={() => setShowCalendar(!showCalendar)}
-                        className="text-blue-600 hover:text-blue-700">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </button>
-                    )}
+                    <span className="text-sm">Tùy chọn</span>
                   </label>
                 </div>
 
                 {showTimeDropdown && timeMode === "preset" && (
-                  <div className="bg-white border rounded shadow-lg p-2 space-y-1 mb-3">
+                  <div className="bg-white border rounded shadow-lg p-2 mb-3 space-y-1">
                     {TIME_PRESETS.map((preset) => (
                       <button
                         key={preset.value}
-                        onClick={() => applyTimePreset(preset.value)}
-                        className={`w-full text-left px-3 py-2 rounded text-sm hover:bg-gray-50 ${
+                        onClick={() => {
+                          applyTimePreset(preset.value);
+                          setShowTimeDropdown(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded text-sm hover:bg-gray-100 ${
                           selectedPreset === preset.value
                             ? "bg-blue-50 text-blue-600"
                             : ""
@@ -445,26 +404,11 @@ export default function TransferPage() {
                         />
                       </div>
                     </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setShowCalendar(false)}
-                        className="flex-1 px-3 py-1.5 border rounded text-sm hover:bg-gray-50">
-                        Bỏ qua
-                      </button>
-                      <button
-                        onClick={() => setShowCalendar(false)}
-                        className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-                        Áp dụng
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {fromDate && toDate && (
-                  <div className="text-xs text-gray-600 bg-blue-50 px-3 py-2 rounded">
-                    Từ ngày: {fromDate.toLocaleDateString("vi-VN")} - Đến ngày:{" "}
-                    {toDate.toLocaleDateString("vi-VN")}
+                    <button
+                      onClick={() => setShowCalendar(false)}
+                      className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                      Áp dụng
+                    </button>
                   </div>
                 )}
               </>
@@ -545,16 +489,19 @@ export default function TransferPage() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto">
-          <TransferTable
-            transfers={filteredData}
-            isLoading={isLoading}
-            onEdit={(transfer) => {
-              setSelectedTransfer(transfer);
-              setShowForm(true);
-            }}
-          />
-        </div>
+        <TransferTable
+          transfers={filteredData}
+          isLoading={isLoading}
+          total={data?.total || 0}
+          page={page}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+          onEdit={(transfer) => {
+            setSelectedTransfer(transfer);
+            setShowForm(true);
+          }}
+        />
       </main>
 
       {showForm && (
