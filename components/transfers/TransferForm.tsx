@@ -227,6 +227,30 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
       (inv: any) => inv.branchId === toBranchId
     );
 
+    if (!toInventory && toBranchId) {
+      const toBranchName =
+        branches?.find((b) => b.id === toBranchId)?.name || "chi nhánh đích";
+      toast.error(
+        `Sản phẩm "${product.code}" chưa tồn tại ở ${toBranchName}. Vui lòng tạo sản phẩm tại chi nhánh đích trước khi chuyển hàng.`,
+        {
+          duration: 5000,
+        }
+      );
+      return;
+    }
+
+    if (!fromInventory) {
+      const fromBranchName =
+        branches?.find((b) => b.id === fromBranchId)?.name || "chi nhánh nguồn";
+      toast.error(
+        `Sản phẩm "${product.code}" chưa tồn tại ở ${fromBranchName}.`,
+        {
+          duration: 5000,
+        }
+      );
+      return;
+    }
+
     const newProduct: ProductItem = {
       productId: product.id,
       productCode: product.code,
@@ -298,7 +322,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
     setProducts(updatedProducts);
   };
 
-  // THAY ĐỔI SỐ LƯỢNG CHUYỂN
   const handleChangeQuantity = (index: number, value: string) => {
     const quantity = parseFloat(value) || 0;
 
@@ -321,7 +344,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
     });
   };
 
-  // THAY ĐỔI ĐƠN GIÁ
   const handleChangePrice = (index: number, value: string) => {
     const price = parseFloat(value) || 0;
 
@@ -337,20 +359,10 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
     });
   };
 
-  // XÓA SẢN PHẨM
   const handleRemoveProduct = (index: number) => {
     setProducts((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // TÍNH TỔNG TIỀN
-  const calculateTotal = () => {
-    return products.reduce(
-      (sum, item) => sum + item.sendQuantity * item.price,
-      0
-    );
-  };
-
-  // XỬ LÝ LƯU PHIẾU
   const handleSubmit = async (isDraft: boolean) => {
     if (!fromBranchId) {
       toast.error("Vui lòng chọn chi nhánh chuyển");
@@ -375,6 +387,24 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
     const hasInvalidQuantity = products.some((p) => p.sendQuantity <= 0);
     if (hasInvalidQuantity) {
       toast.error("Số lượng chuyển phải lớn hơn 0");
+      return;
+    }
+
+    const productsWithoutDestInventory = products.filter(
+      (p) => p.toInventory === undefined || p.toInventory < 0
+    );
+    if (!isDraft && productsWithoutDestInventory.length > 0) {
+      const productCodes = productsWithoutDestInventory
+        .map((p) => p.productCode)
+        .join(", ");
+      const toBranchName =
+        branches?.find((b) => b.id === toBranchId)?.name || "chi nhánh đích";
+      toast.error(
+        `Các sản phẩm sau chưa tồn tại ở ${toBranchName}: ${productCodes}. Vui lòng tạo sản phẩm tại chi nhánh đích trước.`,
+        {
+          duration: 6000,
+        }
+      );
       return;
     }
 
@@ -418,7 +448,9 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
       }
       onClose();
     } catch (error: any) {
-      toast.error(error?.message || "Có lỗi xảy ra khi lưu phiếu chuyển hàng");
+      toast.error(error?.message || "Có lỗi xảy ra khi lưu phiếu chuyển hàng", {
+        duration: 5000,
+      });
     }
   };
 
@@ -427,6 +459,24 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
 
     if (products.length === 0) {
       toast.error("Vui lòng thêm ít nhất một sản phẩm");
+      return;
+    }
+
+    const productsWithoutDestInventory = products.filter(
+      (p) => p.toInventory === undefined || p.toInventory < 0
+    );
+    if (statusToKeep >= 2 && productsWithoutDestInventory.length > 0) {
+      const productCodes = productsWithoutDestInventory
+        .map((p) => p.productCode)
+        .join(", ");
+      const toBranchName =
+        branches?.find((b) => b.id === toBranchId)?.name || "chi nhánh đích";
+      toast.error(
+        `Các sản phẩm sau chưa tồn tại ở ${toBranchName}: ${productCodes}. Vui lòng tạo sản phẩm tại chi nhánh đích trước.`,
+        {
+          duration: 6000,
+        }
+      );
       return;
     }
 
@@ -454,7 +504,9 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
       toast.success("Lưu thông tin phiếu chuyển hàng thành công");
       onClose();
     } catch (error: any) {
-      toast.error(error?.message || "Có lỗi xảy ra khi lưu phiếu chuyển hàng");
+      toast.error(error?.message || "Có lỗi xảy ra khi lưu phiếu chuyển hàng", {
+        duration: 5000,
+      });
     }
   };
 

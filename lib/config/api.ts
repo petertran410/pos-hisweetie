@@ -16,6 +16,34 @@ const getAuthHeaders = (): HeadersInit => {
   return headers;
 };
 
+const handleApiError = async (res: Response) => {
+  if (res.status === 401) {
+    useAuthStore.getState().clearAuth();
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    throw new Error("Phiên đăng nhập đã hết hạn");
+  }
+
+  const errorText = await res.text();
+  let errorMessage = "Có lỗi xảy ra";
+
+  try {
+    const errorJson = JSON.parse(errorText);
+    if (typeof errorJson.message === "string") {
+      errorMessage = errorJson.message;
+    } else if (errorJson.message?.message) {
+      errorMessage = errorJson.message.message;
+    } else if (Array.isArray(errorJson.message)) {
+      errorMessage = errorJson.message.join(", ");
+    }
+  } catch (e) {
+    errorMessage = errorText || "Có lỗi xảy ra";
+  }
+
+  throw new Error(errorMessage);
+};
+
 export const apiClient = {
   get: async <T = any>(
     endpoint: string,
@@ -35,14 +63,9 @@ export const apiClient = {
     });
 
     if (!res.ok) {
-      if (res.status === 401) {
-        useAuthStore.getState().clearAuth();
-        if (typeof window !== "undefined") {
-          window.location.href = "/login";
-        }
-      }
-      throw new Error("API Error");
+      await handleApiError(res);
     }
+
     return res.json();
   },
 
@@ -54,22 +77,7 @@ export const apiClient = {
     });
 
     if (!res.ok) {
-      if (res.status === 401) {
-        useAuthStore.getState().clearAuth();
-        if (typeof window !== "undefined") {
-          window.location.href = "/login";
-        }
-      }
-
-      const errorText = await res.text();
-      try {
-        const errorJson = JSON.parse(errorText);
-        console.error("API Error Details:", errorJson);
-      } catch (e) {
-        console.error("Raw Error:", errorText);
-      }
-
-      throw new Error("API Error");
+      await handleApiError(res);
     }
 
     const text = await res.text();
@@ -93,14 +101,9 @@ export const apiClient = {
     });
 
     if (!res.ok) {
-      if (res.status === 401) {
-        useAuthStore.getState().clearAuth();
-        if (typeof window !== "undefined") {
-          window.location.href = "/login";
-        }
-      }
-      throw new Error("API Error");
+      await handleApiError(res);
     }
+
     return res.json();
   },
 
@@ -117,14 +120,9 @@ export const apiClient = {
     const res = await fetch(`${API_URL}${endpoint}`, options);
 
     if (!res.ok) {
-      if (res.status === 401) {
-        useAuthStore.getState().clearAuth();
-        if (typeof window !== "undefined") {
-          window.location.href = "/login";
-        }
-      }
-      throw new Error("API Error");
+      await handleApiError(res);
     }
+
     return res.json();
   },
 };
