@@ -874,37 +874,56 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ghi chú {isReceiver && "(Chi nhánh nhận)"}
+                {isReceiver ? "Ghi chú từ chi nhánh nhận" : "Ghi chú"}
               </label>
-              <textarea
-                value={noteByDestination}
-                onChange={(e) => setNoteByDestination(e.target.value)}
-                disabled={isReadOnly}
-                placeholder={
-                  isReadOnly
-                    ? ""
-                    : isReceiver
-                    ? "Nhập ghi chú từ chi nhánh nhận..."
-                    : "Nhập ghi chú cho phiếu chuyển hàng..."
-                }
-                rows={3}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-              {isReceiver && transfer?.noteBySource && (
-                <div className="mt-2 p-3 bg-gray-50 rounded border border-gray-200">
-                  <p className="text-xs text-gray-600 mb-1">
-                    Ghi chú từ chi nhánh chuyển:
-                  </p>
-                  <p className="text-sm text-gray-900">
-                    {transfer.noteBySource}
-                  </p>
-                </div>
+
+              {isReceiver ? (
+                <>
+                  <textarea
+                    value={noteByDestination}
+                    onChange={(e) => setNoteByDestination(e.target.value)}
+                    disabled={isCancelled}
+                    placeholder="Nhập ghi chú từ chi nhánh nhận..."
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  />
+                  {transfer?.noteBySource && (
+                    <div className="mt-3 p-3 bg-gray-50 rounded border border-gray-200">
+                      <p className="text-xs text-gray-600 mb-1 font-medium">
+                        Ghi chú từ chi nhánh chuyển:
+                      </p>
+                      <p className="text-sm text-gray-900">
+                        {transfer.noteBySource}
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <textarea
+                    value={noteBySource}
+                    onChange={(e) => setNoteBySource(e.target.value)}
+                    disabled={isCancelled}
+                    placeholder="Nhập ghi chú cho phiếu chuyển hàng..."
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  />
+                  {transfer?.noteByDestination && isInTransit && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                      <p className="text-xs text-blue-600 mb-1 font-medium">
+                        Ghi chú từ chi nhánh nhận:
+                      </p>
+                      <p className="text-sm text-gray-900">
+                        {transfer.noteByDestination}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
         </div>
 
-        {/* FOOTER - BUTTONS */}
         <div className="border-t px-6 py-4 bg-gray-50 flex items-center justify-between">
           <div>
             <button
@@ -1032,18 +1051,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                 Bạn có chắc chắn muốn hủy phiếu chuyển hàng này? Tồn kho sẽ được
                 hoàn trả về ban đầu.
               </p>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">
-                  Lý do hủy (tùy chọn)
-                </label>
-                <textarea
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="Nhập lý do hủy phiếu..."
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                />
-              </div>
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => {
