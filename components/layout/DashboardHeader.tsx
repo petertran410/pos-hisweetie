@@ -51,6 +51,12 @@ export function DashboardHeader() {
     },
   ];
 
+  const orderSubmenu = [
+    { label: "Đặt hàng", href: "/don-hang/dat-hang" },
+    { label: "Hóa đơn", href: "/don-hang/hoa-don" },
+    { label: "Trả hàng", href: "/don-hang/tra-hang" },
+  ];
+
   return (
     <header className="bg-blue-600 text-white">
       <div className="flex items-center h-14">
@@ -75,7 +81,7 @@ export function DashboardHeader() {
               </button>
 
               {hoveredMenu === "products" && (
-                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-lg rounded-b-lg min-w-max z-50">
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-lg rounded-md min-w-max z-50">
                   <div className="flex gap-6 p-6">
                     {productSubmenu.map((section) => (
                       <div key={section.title} className="min-w-[150px]">
@@ -87,7 +93,7 @@ export function DashboardHeader() {
                             <li key={item.href}>
                               <Link
                                 href={item.href}
-                                className="block px-3 py-2 hover:bg-gray-100 rounded text-sm transition-colors">
+                                className="block px-3 py-2 hover:bg-gray-100 rounded-md text-sm transition-colors">
                                 {item.label}
                               </Link>
                             </li>
@@ -100,11 +106,30 @@ export function DashboardHeader() {
               )}
             </div>
 
-            <Link
-              href="/don-hang"
-              className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
-              Đơn hàng
-            </Link>
+            <div
+              className="relative"
+              onMouseEnter={() => setHoveredMenu("orders")}
+              onMouseLeave={() => setHoveredMenu(null)}>
+              <button className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
+                Đơn hàng
+              </button>
+
+              {hoveredMenu === "orders" && (
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-lg rounded-md min-w-max z-50">
+                  <ul className="px-2 py-2">
+                    {orderSubmenu.map((item) => (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          className="block px-4 py-2 hover:bg-gray-100 rounded-md text-sm transition-colors">
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
 
             <Link
               href="/khach-hang"
