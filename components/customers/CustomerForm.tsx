@@ -78,6 +78,7 @@ export function CustomerForm({
   const [filteredInvoiceCommunes, setFilteredInvoiceCommunes] = useState<
     Commune[]
   >([]);
+  const [isPopulating, setIsPopulating] = useState(false);
 
   const { data: customerGroupsData } = useCustomerGroups();
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
@@ -95,25 +96,37 @@ export function CustomerForm({
       "https://raw.githubusercontent.com/giaodienblog/provinces/refs/heads/main/district.json"
     )
       .then((res) => res.json())
-      .then((data) => setCities(data))
+      .then((data) => {
+        setCities(data);
+      })
       .catch((error) => {
         console.error("Error fetching cities:", error);
-        toast.error("Không thể tải danh sách tỉnh/thành phố");
       });
 
     fetch("https://production.cas.so/address-kit/2025-07-01/provinces")
-      .then((res) => res.json())
-      .then((data) => setInvoiceProvinces(data.provinces))
-      .catch((error) =>
-        console.error("Error fetching invoice provinces:", error)
-      );
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch");
+        return res.json();
+      })
+      .then((data) => {
+        setInvoiceProvinces(data.provinces || []);
+      })
+      .catch((error) => {
+        console.warn("Cannot load invoice provinces:", error);
+      });
 
     fetch("https://production.cas.so/address-kit/2025-07-01/communes")
-      .then((res) => res.json())
-      .then((data) => setInvoiceCommunes(data.communes))
-      .catch((error) =>
-        console.error("Error fetching invoice communes:", error)
-      );
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch");
+        return res.json();
+      })
+      .then((data) => {
+        console.log(data);
+        setInvoiceCommunes(data.communes || []);
+      })
+      .catch((error) => {
+        console.warn("Cannot load invoice communes:", error);
+      });
   }, []);
 
   useEffect(() => {
@@ -132,7 +145,7 @@ export function CustomerForm({
   }, []);
 
   useEffect(() => {
-    if (selectedCityCode) {
+    if (selectedCityCode && !isPopulating) {
       const city = cities.find(
         (c) => String(c.code) === String(selectedCityCode)
       );
@@ -142,11 +155,11 @@ export function CustomerForm({
         setValue("wardCode", "");
         setWards([]);
       }
-    } else {
+    } else if (!selectedCityCode && !isPopulating) {
       setDistricts([]);
       setWards([]);
     }
-  }, [selectedCityCode, cities, setValue]);
+  }, [selectedCityCode, cities, setValue, isPopulating]);
 
   useEffect(() => {
     if (selectedDistrictCode) {
@@ -163,19 +176,23 @@ export function CustomerForm({
   }, [selectedDistrictCode, districts, setValue]);
 
   useEffect(() => {
-    if (selectedInvoiceCityCode) {
-      const filtered = invoiceCommunes.filter(
-        (c) => c.provinceCode === selectedInvoiceCityCode
+    if (selectedDistrictCode && !isPopulating) {
+      const district = districts.find(
+        (d) => String(d.code) === String(selectedDistrictCode)
       );
-      setFilteredInvoiceCommunes(filtered);
-      setValue("invoiceWardCode", "");
-    } else {
-      setFilteredInvoiceCommunes([]);
+      if (district) {
+        setWards(district.wards || []);
+        setValue("wardCode", "");
+      }
+    } else if (!selectedDistrictCode && !isPopulating) {
+      setWards([]);
     }
-  }, [selectedInvoiceCityCode, invoiceCommunes, setValue]);
+  }, [selectedDistrictCode, districts, setValue, isPopulating]);
 
   useEffect(() => {
-    if (customer) {
+    if (customer && cities.length > 0) {
+      setIsPopulating(true);
+
       setValue("code", customer.code || "");
       setValue("name", customer.name);
       setValue("contactNumber", customer.contactNumber || "");
@@ -189,9 +206,35 @@ export function CustomerForm({
         customer.gender === null ? "" : customer.gender ? "true" : "false"
       );
       setValue("email", customer.email || "");
-      setValue("cityCode", customer.cityCode || "");
-      setValue("districtCode", customer.districtCode || "");
-      setValue("wardCode", customer.wardCode || "");
+
+      if (customer.cityCode) {
+        setValue("cityCode", customer.cityCode);
+
+        const city = cities.find(
+          (c) => String(c.code) === String(customer.cityCode)
+        );
+
+        if (city) {
+          setDistricts(city.districts || []);
+
+          if (customer.districtCode) {
+            setValue("districtCode", customer.districtCode);
+
+            const district = city.districts.find(
+              (d) => String(d.code) === String(customer.districtCode)
+            );
+
+            if (district) {
+              setWards(district.wards || []);
+
+              if (customer.wardCode) {
+                setValue("wardCode", customer.wardCode);
+              }
+            }
+          }
+        }
+      }
+
       setValue("address", customer.address || "");
       setValue("type", String(customer.type || 0));
       setValue("organization", customer.organization || "");
@@ -206,6 +249,7 @@ export function CustomerForm({
       setValue("invoicePhone", customer.invoicePhone || "");
       setValue("invoiceDvqhnsCode", customer.invoiceDvqhnsCode || "");
       setValue("comments", customer.comments || "");
+
       if (
         customer.customerGroupDetails &&
         customer.customerGroupDetails.length > 0
@@ -215,8 +259,12 @@ export function CustomerForm({
         );
         setSelectedGroupIds(groupIds);
       }
+
+      setTimeout(() => {
+        setIsPopulating(false);
+      }, 100);
     }
-  }, [customer, setValue]);
+  }, [customer, cities, setValue]);
 
   const handleToggleGroup = (groupId: number) => {
     setSelectedGroupIds((prev) =>
