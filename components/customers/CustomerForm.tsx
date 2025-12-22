@@ -464,7 +464,6 @@ export function CustomerForm({
         { id: customer.id, data: formattedData },
         {
           onSuccess: () => {
-            toast.success("Cập nhật khách hàng thành công");
             onSuccess?.();
             onClose();
           },
@@ -476,7 +475,6 @@ export function CustomerForm({
     } else {
       createCustomer.mutate(formattedData, {
         onSuccess: () => {
-          toast.success("Tạo khách hàng thành công");
           onSuccess?.();
           onClose();
         },

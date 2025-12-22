@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/store/auth";
@@ -12,10 +12,13 @@ interface LoginForm {
   password: string;
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
-  const { setAuth, isAuthenticated } = useAuthStore();
+  const searchParams = useSearchParams();
+  const { setAuth, isAuthenticated, _hasHydrated } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+
+  const returnUrl = searchParams.get("returnUrl") || "/";
 
   const {
     register,
@@ -24,10 +27,10 @@ export default function LoginPage() {
   } = useForm<LoginForm>();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.replace("/");
+    if (_hasHydrated && isAuthenticated) {
+      router.replace(returnUrl);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, _hasHydrated, router, returnUrl]);
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
@@ -35,13 +38,21 @@ export default function LoginPage() {
       const response = await authApi.login(data);
       setAuth(response.user, response.accessToken);
       toast.success("Đăng nhập thành công!");
-      router.replace("/");
+      router.replace(returnUrl);
     } catch (error: any) {
       toast.error(error.message || "Đăng nhập thất bại");
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (!_hasHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -126,5 +137,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

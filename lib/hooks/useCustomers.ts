@@ -71,7 +71,8 @@ export function useUpdateCustomer() {
     }) => {
       return await apiClient.put<Customer>(`/customers/${id}`, data);
     },
-    onSuccess: () => {
+    onSuccess: (updatedCustomer, variables) => {
+      queryClient.setQueryData(["customers", variables.id], updatedCustomer);
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast.success("Cập nhật khách hàng thành công");
     },
