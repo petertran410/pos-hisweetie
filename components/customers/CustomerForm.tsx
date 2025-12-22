@@ -229,12 +229,7 @@ export function CustomerForm({
   }, [selectedDistrictCode, districts, setValue, isPopulating]);
 
   useEffect(() => {
-    if (
-      customer &&
-      cities.length > 0 &&
-      invoiceProvinces.length > 0 &&
-      invoiceCommunes.length > 0
-    ) {
+    if (customer) {
       setIsPopulating(true);
 
       setValue("code", customer.code || "");
