@@ -10,6 +10,7 @@ import {
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { Customer } from "@/lib/types/customer";
+import { useRouter } from "next/navigation";
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -59,6 +60,7 @@ export function CustomerForm({
   onClose,
   onSuccess,
 }: CustomerFormProps) {
+  const router = useRouter();
   const {
     register,
     handleSubmit,
@@ -463,9 +465,9 @@ export function CustomerForm({
         {
           onSuccess: () => {
             toast.success("Cập nhật khách hàng thành công");
-            setTimeout(() => {
-              window.location.href = "/khach-hang";
-            }, 500);
+            onClose();
+            router.refresh();
+            router.push("/san-pham/danh-sach");
           },
           onError: (error: any) => {
             toast.error(error.message || "Có lỗi xảy ra");
