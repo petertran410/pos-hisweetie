@@ -120,16 +120,23 @@ export function CustomerForm({
           "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/build_customer/new-province-location.json"
         );
 
-        console.log(response);
-
         if (!response.ok) {
           throw new Error("Failed to load invoice provinces");
         }
 
         const data = await response.json();
-        setInvoiceProvinces(data);
+
+        if (Array.isArray(data)) {
+          setInvoiceProvinces(data);
+        } else if (data && Array.isArray(data.provinces)) {
+          setInvoiceProvinces(data.provinces);
+        } else {
+          console.error("Invalid provinces data structure:", data);
+          setInvoiceProvinces([]);
+        }
       } catch (error) {
         console.error("Error loading invoice provinces:", error);
+        setInvoiceProvinces([]);
       }
     };
 
@@ -148,10 +155,18 @@ export function CustomerForm({
         }
 
         const data = await response.json();
-        console.log(data);
-        setInvoiceCommunes(data);
+
+        if (Array.isArray(data)) {
+          setInvoiceCommunes(data);
+        } else if (data && Array.isArray(data.communes)) {
+          setInvoiceCommunes(data.communes);
+        } else {
+          console.error("Invalid communes data structure:", data);
+          setInvoiceCommunes([]);
+        }
       } catch (error) {
         console.error("Error loading invoice communes:", error);
+        setInvoiceCommunes([]);
       }
     };
 
@@ -298,6 +313,7 @@ export function CustomerForm({
           setValue("invoiceWardCode", customer.invoiceWardCode);
         }
       }
+
       setValue("comments", customer.comments || "");
       if (
         customer.customerGroupDetails &&
@@ -736,11 +752,12 @@ export function CustomerForm({
                     {...register("invoiceCityCode")}
                     className="w-full border rounded px-3 py-2">
                     <option value="">Tìm Tỉnh/Thành phố</option>
-                    {invoiceProvinces.map((province) => (
-                      <option key={province.code} value={province.code}>
-                        {province.name}
-                      </option>
-                    ))}
+                    {Array.isArray(invoiceProvinces) &&
+                      invoiceProvinces.map((province) => (
+                        <option key={province.code} value={province.code}>
+                          {province.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
@@ -851,11 +868,12 @@ export function CustomerForm({
                     {...register("invoiceCityCode")}
                     className="w-full border rounded px-3 py-2">
                     <option value="">Tìm Tỉnh/Thành phố</option>
-                    {invoiceProvinces.map((province) => (
-                      <option key={province.code} value={province.code}>
-                        {province.name}
-                      </option>
-                    ))}
+                    {Array.isArray(invoiceProvinces) &&
+                      invoiceProvinces.map((province) => (
+                        <option key={province.code} value={province.code}>
+                          {province.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
