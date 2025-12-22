@@ -95,7 +95,7 @@ export function CustomerForm({
     const loadCities = async () => {
       try {
         const response = await fetch(
-          "https://raw.githubusercontent.com/giaodienblog/provinces/refs/heads/main/district.json"
+          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/build_customer/old-location.json"
         );
 
         if (!response.ok) {
@@ -117,8 +117,10 @@ export function CustomerForm({
     const loadInvoiceProvinces = async () => {
       try {
         const response = await fetch(
-          "https://production.cas.so/address-kit/2025-07-01/provinces"
+          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/build_customer/new-province-location.json"
         );
+
+        console.log(response);
 
         if (!response.ok) {
           throw new Error("Failed to load invoice provinces");
@@ -138,7 +140,7 @@ export function CustomerForm({
     const loadInvoiceCommunes = async () => {
       try {
         const response = await fetch(
-          "https://production.cas.so/address-kit/2025-07-01/communes"
+          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/build_customer/new-commune-locatin.json"
         );
 
         if (!response.ok) {
