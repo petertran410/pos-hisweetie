@@ -463,8 +463,9 @@ export function CustomerForm({
         {
           onSuccess: () => {
             toast.success("Cập nhật khách hàng thành công");
-            onSuccess?.();
-            onClose();
+            setTimeout(() => {
+              window.location.href = "/khach-hang";
+            }, 500);
           },
           onError: (error: any) => {
             toast.error(error.message || "Có lỗi xảy ra");

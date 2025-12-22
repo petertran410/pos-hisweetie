@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useCustomers } from "@/lib/hooks/useCustomers";
+import { useCustomers, useCustomer } from "@/lib/hooks/useCustomers";
 import { Customer, CustomerFilters } from "@/lib/types/customer";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Loader2, Plus } from "lucide-react";
@@ -194,11 +194,14 @@ export function CustomersTable({
   onCreateClick,
   onEditClick,
 }: CustomersTableProps) {
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
+    null
+  );
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState(search);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
@@ -227,6 +230,10 @@ export function CustomersTable({
     name: searchDebounced,
   });
 
+  const { data: customerDetail, isLoading: isLoadingDetail } = useCustomer(
+    selectedCustomerId || 0
+  );
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchDebounced(search);
@@ -242,6 +249,13 @@ export function CustomersTable({
   useEffect(() => {
     localStorage.setItem("customerTableColumns", JSON.stringify(columns));
   }, [columns]);
+
+  useEffect(() => {
+    if (customerDetail && !isLoadingDetail && selectedCustomerId) {
+      onEditClick(customerDetail);
+      setSelectedCustomerId(null);
+    }
+  }, [customerDetail, isLoadingDetail, selectedCustomerId, onEditClick]);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === data?.data.length) {
@@ -327,7 +341,7 @@ export function CustomersTable({
       )}
 
       <div className="flex-1 overflow-auto">
-        {isLoading ? (
+        {isLoading || isLoadingDetail ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
           </div>
@@ -359,7 +373,7 @@ export function CustomersTable({
                   customers.map((customer: Customer) => (
                     <tr
                       key={customer.id}
-                      onClick={() => onEditClick(customer)}
+                      onClick={() => setSelectedCustomerId(customer.id)}
                       className="border-b hover:bg-gray-50 cursor-pointer">
                       <td
                         className="px-6 py-3 sticky left-0 bg-white z-10"
