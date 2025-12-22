@@ -125,10 +125,9 @@ export function CustomerForm({
         }
 
         const data = await response.json();
-        setInvoiceProvinces(data.provinces || []);
+        setInvoiceProvinces(data);
       } catch (error) {
         console.error("Error loading invoice provinces:", error);
-        toast.error("Không thể tải dữ liệu Tỉnh/Thành phố cho hóa đơn");
       }
     };
 
@@ -147,10 +146,10 @@ export function CustomerForm({
         }
 
         const data = await response.json();
-        setInvoiceCommunes(data.communes || []);
+        console.log(data);
+        setInvoiceCommunes(data);
       } catch (error) {
         console.error("Error loading invoice communes:", error);
-        toast.error("Không thể tải dữ liệu Phường/Xã cho hóa đơn");
       }
     };
 
