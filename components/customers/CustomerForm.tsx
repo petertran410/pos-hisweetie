@@ -79,6 +79,8 @@ export function CustomerForm({
     Commune[]
   >([]);
   const [isPopulating, setIsPopulating] = useState(false);
+  const [citiesLoaded, setCitiesLoaded] = useState(false);
+  const [invoiceDataLoaded, setInvoiceDataLoaded] = useState(false);
 
   const { data: customerGroupsData } = useCustomerGroups();
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
@@ -90,6 +92,12 @@ export function CustomerForm({
   const selectedCityCode = watch("cityCode");
   const selectedDistrictCode = watch("districtCode");
   const selectedInvoiceCityCode = watch("invoiceCityCode");
+
+  const checkInvoiceDataLoaded = () => {
+    if (invoiceProvinces.length > 0 && invoiceCommunes.length > 0) {
+      setInvoiceDataLoaded(true);
+    }
+  };
 
   useEffect(() => {
     const loadCities = async () => {
@@ -103,10 +111,20 @@ export function CustomerForm({
         }
 
         const data = await response.json();
-        setCities(data);
+
+        if (Array.isArray(data)) {
+          setCities(data);
+          setCitiesLoaded(true);
+        } else {
+          console.error("Invalid cities data structure:", data);
+          setCities([]);
+          setCitiesLoaded(true);
+        }
       } catch (error) {
         console.error("Error loading cities:", error);
         toast.error("Không thể tải dữ liệu Tỉnh/Thành phố");
+        setCities([]);
+        setCitiesLoaded(true);
       }
     };
 
@@ -134,9 +152,12 @@ export function CustomerForm({
           console.error("Invalid provinces data structure:", data);
           setInvoiceProvinces([]);
         }
+
+        checkInvoiceDataLoaded();
       } catch (error) {
         console.error("Error loading invoice provinces:", error);
         setInvoiceProvinces([]);
+        checkInvoiceDataLoaded();
       }
     };
 
@@ -164,14 +185,29 @@ export function CustomerForm({
           console.error("Invalid communes data structure:", data);
           setInvoiceCommunes([]);
         }
+
+        checkInvoiceDataLoaded();
       } catch (error) {
         console.error("Error loading invoice communes:", error);
         setInvoiceCommunes([]);
+        checkInvoiceDataLoaded();
       }
     };
 
     loadInvoiceCommunes();
   }, []);
+
+  useEffect(() => {
+    if (selectedInvoiceCityCode && invoiceCommunes.length > 0) {
+      const filtered = invoiceCommunes.filter(
+        (commune) =>
+          String(commune.provinceCode) === String(selectedInvoiceCityCode)
+      );
+      setFilteredInvoiceCommunes(filtered);
+    } else {
+      setFilteredInvoiceCommunes([]);
+    }
+  }, [selectedInvoiceCityCode, invoiceCommunes]);
 
   useEffect(() => {
     if (selectedInvoiceCityCode && invoiceCommunes.length > 0) {
@@ -217,20 +253,6 @@ export function CustomerForm({
   }, [selectedCityCode, cities, setValue, isPopulating]);
 
   useEffect(() => {
-    if (selectedDistrictCode) {
-      const district = districts.find(
-        (d) => String(d.code) === String(selectedDistrictCode)
-      );
-      if (district) {
-        setWards(district.wards || []);
-        setValue("wardCode", "");
-      }
-    } else {
-      setWards([]);
-    }
-  }, [selectedDistrictCode, districts, setValue]);
-
-  useEffect(() => {
     if (selectedDistrictCode && !isPopulating) {
       const district = districts.find(
         (d) => String(d.code) === String(selectedDistrictCode)
@@ -261,7 +283,8 @@ export function CustomerForm({
         customer.gender === null ? "" : customer.gender ? "true" : "false"
       );
       setValue("email", customer.email || "");
-      if (customer.cityCode) {
+
+      if (customer.cityCode && cities.length > 0) {
         setValue("cityCode", customer.cityCode);
 
         const city = cities.find(
@@ -301,11 +324,12 @@ export function CustomerForm({
       setValue("invoicePhone", customer.invoicePhone || "");
       setValue("invoiceDvqhnsCode", customer.invoiceDvqhnsCode || "");
 
-      if (customer.invoiceCityCode) {
+      if (customer.invoiceCityCode && invoiceCommunes.length > 0) {
         setValue("invoiceCityCode", customer.invoiceCityCode);
 
         const filtered = invoiceCommunes.filter(
-          (commune) => commune.provinceCode === customer.invoiceCityCode
+          (commune) =>
+            String(commune.provinceCode) === String(customer.invoiceCityCode)
         );
         setFilteredInvoiceCommunes(filtered);
 
@@ -315,6 +339,7 @@ export function CustomerForm({
       }
 
       setValue("comments", customer.comments || "");
+
       if (
         customer.customerGroupDetails &&
         customer.customerGroupDetails.length > 0
@@ -329,7 +354,15 @@ export function CustomerForm({
         setIsPopulating(false);
       }, 100);
     }
-  }, [customer, cities, invoiceProvinces, invoiceCommunes, setValue]);
+  }, [
+    customer,
+    cities,
+    citiesLoaded,
+    invoiceProvinces,
+    invoiceCommunes,
+    invoiceDataLoaded,
+    setValue,
+  ]);
 
   const handleToggleGroup = (groupId: number) => {
     setSelectedGroupIds((prev) =>
