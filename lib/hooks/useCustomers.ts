@@ -35,7 +35,7 @@ export function useCustomerGroups() {
       const response = await apiClient.get<{
         data: CustomerGroup[];
         total: number;
-      }>("/customers/group");
+      }>("/customer-groups");
       return response;
     },
   });
