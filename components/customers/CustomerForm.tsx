@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useCreateCustomer } from "@/lib/hooks/useCustomers";
-import { X, Calendar } from "lucide-react";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 
 interface CustomerFormProps {
@@ -13,19 +13,28 @@ interface CustomerFormProps {
 
 interface City {
   name: string;
-  code: string;
+  code: number;
+  codename: string;
+  division_type: string;
+  phone_code: number;
   districts: District[];
 }
 
 interface District {
   name: string;
-  code: string;
+  code: number;
+  codename: string;
+  division_type: string;
+  short_codename: string;
   wards: Ward[];
 }
 
 interface Ward {
   name: string;
-  code: string;
+  code: number;
+  codename: string;
+  division_type: string;
+  short_codename: string;
 }
 
 interface Province {
@@ -59,7 +68,7 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
     Commune[]
   >([]);
 
-  const customerType = watch("type", 0);
+  const customerType = watch("type", "0");
   const selectedCityCode = watch("cityCode");
   const selectedDistrictCode = watch("districtCode");
   const selectedInvoiceCityCode = watch("invoiceCityCode");
@@ -69,31 +78,55 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
       "https://raw.githubusercontent.com/giaodienblog/provinces/refs/heads/main/district.json"
     )
       .then((res) => res.json())
-      .then((data) => setCities(data));
+      .then((data) => setCities(data))
+      .catch((error) => {
+        console.error("Error fetching cities:", error);
+        toast.error("Không thể tải danh sách tỉnh/thành phố");
+      });
 
     fetch("https://production.cas.so/address-kit/2025-07-01/provinces")
       .then((res) => res.json())
-      .then((data) => setInvoiceProvinces(data.provinces));
+      .then((data) => setInvoiceProvinces(data.provinces))
+      .catch((error) =>
+        console.error("Error fetching invoice provinces:", error)
+      );
 
     fetch("https://production.cas.so/address-kit/2025-07-01/communes")
       .then((res) => res.json())
-      .then((data) => setInvoiceCommunes(data.communes));
+      .then((data) => setInvoiceCommunes(data.communes))
+      .catch((error) =>
+        console.error("Error fetching invoice communes:", error)
+      );
   }, []);
 
   useEffect(() => {
     if (selectedCityCode) {
-      const city = cities.find((c) => c.code === selectedCityCode);
-      setDistricts(city?.districts || []);
-      setValue("districtCode", "");
-      setValue("wardCode", "");
+      const city = cities.find(
+        (c) => String(c.code) === String(selectedCityCode)
+      );
+      if (city) {
+        setDistricts(city.districts || []);
+        setValue("districtCode", "");
+        setValue("wardCode", "");
+        setWards([]);
+      }
+    } else {
+      setDistricts([]);
+      setWards([]);
     }
   }, [selectedCityCode, cities, setValue]);
 
   useEffect(() => {
     if (selectedDistrictCode) {
-      const district = districts.find((d) => d.code === selectedDistrictCode);
-      setWards(district?.wards || []);
-      setValue("wardCode", "");
+      const district = districts.find(
+        (d) => String(d.code) === String(selectedDistrictCode)
+      );
+      if (district) {
+        setWards(district.wards || []);
+        setValue("wardCode", "");
+      }
+    } else {
+      setWards([]);
     }
   }, [selectedDistrictCode, districts, setValue]);
 
@@ -104,15 +137,21 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
       );
       setFilteredInvoiceCommunes(filtered);
       setValue("invoiceWardCode", "");
+    } else {
+      setFilteredInvoiceCommunes([]);
     }
   }, [selectedInvoiceCityCode, invoiceCommunes, setValue]);
 
   const onSubmit = async (data: any) => {
-    const cityName = cities.find((c) => c.code === data.cityCode)?.name;
-    const districtName = districts.find(
-      (d) => d.code === data.districtCode
+    const cityName = cities.find(
+      (c) => String(c.code) === String(data.cityCode)
     )?.name;
-    const wardName = wards.find((w) => w.code === data.wardCode)?.name;
+    const districtName = districts.find(
+      (d) => String(d.code) === String(data.districtCode)
+    )?.name;
+    const wardName = wards.find(
+      (w) => String(w.code) === String(data.wardCode)
+    )?.name;
 
     const invoiceCityName = invoiceProvinces.find(
       (p) => p.code === data.invoiceCityCode
@@ -123,13 +162,17 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
 
     const formattedData = {
       ...data,
-      cityName,
-      districtName,
-      wardName,
-      invoiceCityName,
-      invoiceWardName,
+      cityCode: data.cityCode ? String(data.cityCode) : undefined,
+      cityName: cityName || undefined,
+      districtCode: data.districtCode ? String(data.districtCode) : undefined,
+      districtName: districtName || undefined,
+      wardCode: data.wardCode ? String(data.wardCode) : undefined,
+      wardName: wardName || undefined,
+      invoiceCityName: invoiceCityName || undefined,
+      invoiceWardName: invoiceWardName || undefined,
       type: parseInt(data.type),
       birthDate: data.birthDate || undefined,
+      gender: data.gender === "" ? undefined : data.gender === "true",
     };
 
     createCustomer.mutate(formattedData, {
@@ -329,14 +372,14 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
                 <label className="flex items-center gap-2">
                   <input
                     type="radio"
-                    value={0}
+                    value="0"
                     {...register("type")}
                     defaultChecked
                   />
                   <span>Cá nhân</span>
                 </label>
                 <label className="flex items-center gap-2">
-                  <input type="radio" value={1} {...register("type")} />
+                  <input type="radio" value="1" {...register("type")} />
                   <span>Tổ chức/ Hộ kinh doanh</span>
                 </label>
               </div>
