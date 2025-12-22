@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useCustomers } from "@/lib/hooks/useCustomers";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/config/api";
 import { Plus } from "lucide-react";
 
 interface CustomerSearchProps {
@@ -18,9 +19,17 @@ export function CustomerSearch({
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: customersData } = useCustomers({
-    search: searchDebounced,
-    limit: 10,
+  const { data: customersData } = useQuery({
+    queryKey: ["customers-search", searchDebounced],
+    queryFn: async () => {
+      if (!searchDebounced) return { data: [], total: 0 };
+      return await apiClient.get<{ data: any[]; total: number }>("/customers", {
+        name: searchDebounced,
+        pageSize: 10,
+        currentItem: 0,
+      });
+    },
+    enabled: !!searchDebounced,
   });
 
   const customers = customersData?.data || [];
