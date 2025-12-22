@@ -22,6 +22,7 @@ type ColumnKey =
   | "customerType"
   | "organization"
   | "taxCode"
+  | "cityName"
   | "wardName"
   | "address"
   | "debtAmount"
@@ -114,6 +115,12 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (customer) => customer.taxCode || "-",
   },
   {
+    key: "cityName",
+    label: "Thành Phố",
+    visible: false,
+    render: (customer) => customer.cityName || "-",
+  },
+  {
     key: "wardName",
     label: "Phường/Xã",
     visible: false,
@@ -160,12 +167,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Điểm thưởng",
     visible: false,
     render: (customer) => customer.rewardPoint.toLocaleString(),
-  },
-  {
-    key: "facebook",
-    label: "Facebook",
-    visible: false,
-    render: (customer) => customer.facebook || "-",
   },
   {
     key: "branch",

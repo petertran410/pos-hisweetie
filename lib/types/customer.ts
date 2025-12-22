@@ -10,6 +10,7 @@ export interface Customer {
   zalo?: string;
   address?: string;
   locationName?: string;
+  cityName?: string;
   wardName?: string;
   email?: string;
   type: number;
