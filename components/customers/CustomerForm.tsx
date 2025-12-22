@@ -92,41 +92,69 @@ export function CustomerForm({
   const selectedInvoiceCityCode = watch("invoiceCityCode");
 
   useEffect(() => {
-    fetch(
-      "https://raw.githubusercontent.com/giaodienblog/provinces/refs/heads/main/district.json"
-    )
-      .then((res) => res.json())
-      .then((data) => {
+    const loadCities = async () => {
+      try {
+        const response = await fetch(
+          "https://raw.githubusercontent.com/giaodienblog/provinces/refs/heads/main/district.json"
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to load cities");
+        }
+
+        const data = await response.json();
         setCities(data);
-      })
-      .catch((error) => {
-        console.error("Error fetching cities:", error);
-      });
+      } catch (error) {
+        console.error("Error loading cities:", error);
+        toast.error("Không thể tải dữ liệu Tỉnh/Thành phố");
+      }
+    };
 
-    fetch("https://production.cas.so/address-kit/2025-07-01/provinces")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch");
-        return res.json();
-      })
-      .then((data) => {
+    loadCities();
+  }, []);
+
+  useEffect(() => {
+    const loadInvoiceProvinces = async () => {
+      try {
+        const response = await fetch(
+          "https://production.cas.so/address-kit/2025-07-01/provinces"
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to load invoice provinces");
+        }
+
+        const data = await response.json();
         setInvoiceProvinces(data.provinces || []);
-      })
-      .catch((error) => {
-        console.warn("Cannot load invoice provinces:", error);
-      });
+      } catch (error) {
+        console.error("Error loading invoice provinces:", error);
+        toast.error("Không thể tải dữ liệu Tỉnh/Thành phố cho hóa đơn");
+      }
+    };
 
-    fetch("https://production.cas.so/address-kit/2025-07-01/communes")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch");
-        return res.json();
-      })
-      .then((data) => {
-        console.log(data);
+    loadInvoiceProvinces();
+  }, []);
+
+  useEffect(() => {
+    const loadInvoiceCommunes = async () => {
+      try {
+        const response = await fetch(
+          "https://production.cas.so/address-kit/2025-07-01/communes"
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to load invoice communes");
+        }
+
+        const data = await response.json();
         setInvoiceCommunes(data.communes || []);
-      })
-      .catch((error) => {
-        console.warn("Cannot load invoice communes:", error);
-      });
+      } catch (error) {
+        console.error("Error loading invoice communes:", error);
+        toast.error("Không thể tải dữ liệu Phường/Xã cho hóa đơn");
+      }
+    };
+
+    loadInvoiceCommunes();
   }, []);
 
   useEffect(() => {
@@ -222,7 +250,6 @@ export function CustomerForm({
         customer.gender === null ? "" : customer.gender ? "true" : "false"
       );
       setValue("email", customer.email || "");
-
       if (customer.cityCode) {
         setValue("cityCode", customer.cityCode);
 
@@ -262,7 +289,6 @@ export function CustomerForm({
       setValue("invoiceEmail", customer.invoiceEmail || "");
       setValue("invoicePhone", customer.invoicePhone || "");
       setValue("invoiceDvqhnsCode", customer.invoiceDvqhnsCode || "");
-      setValue("comments", customer.comments || "");
 
       if (customer.invoiceCityCode) {
         setValue("invoiceCityCode", customer.invoiceCityCode);
@@ -276,7 +302,7 @@ export function CustomerForm({
           setValue("invoiceWardCode", customer.invoiceWardCode);
         }
       }
-
+      setValue("comments", customer.comments || "");
       if (
         customer.customerGroupDetails &&
         customer.customerGroupDetails.length > 0
