@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { useCreateCustomer } from "@/lib/hooks/useCustomers";
+import { useCreateCustomer, useCustomerGroups } from "@/lib/hooks/useCustomers";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -68,6 +68,12 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
     Commune[]
   >([]);
 
+  const { data: customerGroupsData } = useCustomerGroups();
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
+  const [showGroupDropdown, setShowGroupDropdown] = useState(false);
+  const [groupSearchTerm, setGroupSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const customerType = watch("type", "0");
   const selectedCityCode = watch("cityCode");
   const selectedDistrictCode = watch("districtCode");
@@ -97,6 +103,21 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
       .catch((error) =>
         console.error("Error fetching invoice communes:", error)
       );
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowGroupDropdown(false);
+        setGroupSearchTerm("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -142,6 +163,28 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
     }
   }, [selectedInvoiceCityCode, invoiceCommunes, setValue]);
 
+  const handleToggleGroup = (groupId: number) => {
+    setSelectedGroupIds((prev) =>
+      prev.includes(groupId)
+        ? prev.filter((id) => id !== groupId)
+        : [...prev, groupId]
+    );
+  };
+
+  const handleRemoveGroup = (groupId: number) => {
+    setSelectedGroupIds((prev) => prev.filter((id) => id !== groupId));
+  };
+
+  const filteredGroups =
+    customerGroupsData?.data?.filter((group) =>
+      group.name.toLowerCase().includes(groupSearchTerm.toLowerCase())
+    ) || [];
+
+  const selectedGroups =
+    customerGroupsData?.data?.filter((group) =>
+      selectedGroupIds.includes(group.id)
+    ) || [];
+
   const onSubmit = async (data: any) => {
     const cityName = cities.find(
       (c) => String(c.code) === String(data.cityCode)
@@ -162,6 +205,7 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
 
     const formattedData = {
       ...data,
+      groupIds: selectedGroupIds.length > 0 ? selectedGroupIds : undefined,
       code: data.code || undefined,
       cityCode: data.cityCode ? String(data.cityCode) : undefined,
       cityName: cityName || undefined,
@@ -368,14 +412,102 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Ghi chú</label>
-            <textarea
-              {...register("comments")}
-              placeholder="Nhập ghi chú"
-              className="w-full border rounded px-3 py-2"
-              rows={3}
-            />
+          <div className="border-t pt-6">
+            <h3 className="font-semibold mb-4">Nhóm khách hàng, ghi chú</h3>
+
+            <div className="space-y-4">
+              {/* Multi-select với tags */}
+              <div className="relative" ref={dropdownRef}>
+                <label className="block text-sm font-medium mb-2">
+                  Nhóm khách hàng
+                </label>
+
+                {/* Input container với tags */}
+                <div
+                  className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
+                  onClick={() => setShowGroupDropdown(true)}>
+                  {/* Tags hiển thị các nhóm đã chọn */}
+                  {selectedGroups.map((group) => (
+                    <span
+                      key={group.id}
+                      className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                      {group.name}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveGroup(group.id);
+                        }}
+                        className="hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center">
+                        ×
+                      </button>
+                    </span>
+                  ))}
+
+                  {/* Input search */}
+                  <input
+                    type="text"
+                    value={groupSearchTerm}
+                    onChange={(e) => setGroupSearchTerm(e.target.value)}
+                    onFocus={() => setShowGroupDropdown(true)}
+                    placeholder={
+                      selectedGroups.length === 0 ? "Chọn nhóm khách hàng" : ""
+                    }
+                    className="flex-1 outline-none min-w-[120px] bg-transparent"
+                  />
+                </div>
+
+                {/* Dropdown danh sách nhóm */}
+                {showGroupDropdown && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-[240px] overflow-y-auto">
+                    {filteredGroups.length > 0 ? (
+                      filteredGroups.map((group) => {
+                        const isSelected = selectedGroupIds.includes(group.id);
+                        return (
+                          <div
+                            key={group.id}
+                            onClick={() => handleToggleGroup(group.id)}
+                            className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
+                            <span className="text-sm">{group.name}</span>
+                            {isSelected && (
+                              <svg
+                                className="w-5 h-5 text-blue-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="px-4 py-2 text-sm text-gray-500">
+                        Không tìm thấy nhóm khách hàng
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Ghi chú */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Ghi chú
+                </label>
+                <textarea
+                  {...register("comments")}
+                  placeholder="Nhập ghi chú"
+                  className="w-full border rounded px-3 py-2"
+                  rows={3}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="border-t pt-6">
