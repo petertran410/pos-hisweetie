@@ -1,22 +1,47 @@
 "use client";
 
 import { useState } from "react";
-import { useCustomerFiltersStore } from "@/lib/store/customerFilters";
 import { useCustomerGroups } from "@/lib/hooks/useCustomers";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { Calendar } from "lucide-react";
+import { CustomerFilters } from "@/lib/types/customer";
 
-export function CustomersSidebar() {
-  const { filters, setFilters, resetFilters } = useCustomerFiltersStore();
+interface CustomersSidebarProps {
+  filters: CustomerFilters;
+  setFilters: (filters: Partial<CustomerFilters>) => void;
+}
+
+export function CustomersSidebar({
+  filters,
+  setFilters,
+}: CustomersSidebarProps) {
   const { data: groupsData } = useCustomerGroups();
   const { data: branchesData } = useBranches();
 
-  const [dateType, setDateType] = useState<"all" | "custom">("all");
-  const [birthdayType, setBirthdayType] = useState<"all" | "custom">("all");
-  const [lastTransactionType, setLastTransactionType] = useState<
-    "all" | "custom"
-  >("all");
-  const [timeType, setTimeType] = useState<"all" | "custom">("all");
+  const resetFilters = () => {
+    setFilters({
+      pageSize: 15,
+      currentItem: 0,
+      orderBy: "createdAt",
+      orderDirection: "desc",
+      isActive: true,
+      customerType: undefined,
+      gender: undefined,
+      groupId: undefined,
+      branchId: undefined,
+      createdDateFrom: undefined,
+      createdDateTo: undefined,
+      birthdayFrom: undefined,
+      birthdayTo: undefined,
+      totalPurchasedFrom: undefined,
+      totalPurchasedTo: undefined,
+      debtFrom: undefined,
+      debtTo: undefined,
+      debtDaysFrom: undefined,
+      debtDaysTo: undefined,
+      pointFrom: undefined,
+      pointTo: undefined,
+    });
+  };
 
   return (
     <div className="w-64 border-r bg-white p-4 space-y-6 overflow-y-auto h-[calc(100vh-64px)]">
@@ -27,7 +52,7 @@ export function CustomersSidebar() {
           <button
             onClick={resetFilters}
             className="text-xs text-blue-600 hover:underline">
-            Tạo mới
+            Đặt lại
           </button>
         </div>
         <select
@@ -47,68 +72,24 @@ export function CustomersSidebar() {
         </select>
       </div>
 
-      {/* Chi nhánh tạo */}
+      {/* Chi nhánh */}
       <div>
-        <label className="text-sm font-medium mb-2 flex items-center gap-1">
-          Chi nhánh tạo
-          <span className="text-blue-500">•</span>
-        </label>
-        <input
-          type="text"
-          placeholder="Chọn chi nhánh"
+        <label className="text-sm font-medium mb-2 block">Chi nhánh</label>
+        <select
           className="w-full border rounded px-3 py-2 text-sm"
           value={filters.branchId || ""}
           onChange={(e) =>
             setFilters({
               branchId: e.target.value ? Number(e.target.value) : undefined,
             })
-          }
-        />
-      </div>
-
-      {/* Ngày tạo */}
-      <div>
-        <label className="text-sm font-medium mb-2 block">Ngày tạo</label>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="dateType"
-              checked={dateType === "all"}
-              onChange={() => {
-                setDateType("all");
-                setFilters({
-                  createdDateFrom: undefined,
-                  createdDateTo: undefined,
-                });
-              }}
-              className="w-4 h-4"
-            />
-            <span className="text-sm">Toàn thời gian</span>
-            <span className="ml-auto text-sm text-gray-400">›</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="dateType"
-              checked={dateType === "custom"}
-              onChange={() => setDateType("custom")}
-              className="w-4 h-4"
-            />
-            <span className="text-sm">Tùy chỉnh</span>
-            <Calendar className="ml-auto w-4 h-4 text-gray-400" />
-          </label>
-        </div>
-      </div>
-
-      {/* Người tạo */}
-      <div>
-        <label className="text-sm font-medium mb-2 block">Người tạo</label>
-        <input
-          type="text"
-          placeholder="Chọn người tạo"
-          className="w-full border rounded px-3 py-2 text-sm"
-        />
+          }>
+          <option value="">Tất cả chi nhánh</option>
+          {branchesData?.map((branch) => (
+            <option key={branch.id} value={branch.id}>
+              {branch.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Loại khách hàng */}
@@ -116,131 +97,68 @@ export function CustomersSidebar() {
         <label className="text-sm font-medium mb-2 block">
           Loại khách hàng
         </label>
-        <div className="flex gap-2">
+        <div className="space-y-2">
           <button
             onClick={() => setFilters({ customerType: "all" })}
-            className={`flex-1 px-3 py-2 rounded text-sm font-medium ${
-              filters.customerType === "all"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            className={`border w-full px-3 py-2 rounded text-sm text-left ${
+              filters.customerType === "all" || !filters.customerType
+                ? "bg-blue-50 text-blue-600"
+                : "hover:bg-gray-50"
             }`}>
             Tất cả
           </button>
           <button
             onClick={() => setFilters({ customerType: "individual" })}
-            className={`flex-1 px-3 py-2 rounded text-sm ${
+            className={`border w-full px-3 py-2 rounded text-sm text-left ${
               filters.customerType === "individual"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-blue-50 text-blue-600"
+                : "hover:bg-gray-50"
             }`}>
             Cá nhân
           </button>
+          <button
+            onClick={() => setFilters({ customerType: "company" })}
+            className={`border w-full px-3 py-2 rounded text-sm text-left ${
+              filters.customerType === "company"
+                ? "bg-blue-50 text-blue-600"
+                : "hover:bg-gray-50"
+            }`}>
+            Công ty
+          </button>
         </div>
-        <button
-          onClick={() => setFilters({ customerType: "company" })}
-          className={`w-full mt-2 px-3 py-2 rounded text-sm ${
-            filters.customerType === "company"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}>
-          Công ty
-        </button>
       </div>
 
       {/* Giới tính */}
       <div>
         <label className="text-sm font-medium mb-2 block">Giới tính</label>
-        <div className="flex gap-2">
+        <div className="space-y-2">
           <button
             onClick={() => setFilters({ gender: "all" })}
-            className={`flex-1 px-3 py-2 rounded text-sm font-medium ${
-              filters.gender === "all"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            className={`border w-full px-3 py-2 rounded text-sm text-left ${
+              filters.gender === "all" || !filters.gender
+                ? "bg-blue-50 text-blue-600"
+                : "hover:bg-gray-50"
             }`}>
             Tất cả
           </button>
           <button
             onClick={() => setFilters({ gender: "male" })}
-            className={`flex-1 px-3 py-2 rounded text-sm ${
+            className={`border w-full px-3 py-2 rounded text-sm text-left ${
               filters.gender === "male"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-blue-50 text-blue-600"
+                : "hover:bg-gray-50"
             }`}>
             Nam
           </button>
           <button
             onClick={() => setFilters({ gender: "female" })}
-            className={`flex-1 px-3 py-2 rounded text-sm ${
+            className={`border w-full px-3 py-2 rounded text-sm text-left ${
               filters.gender === "female"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-blue-50 text-blue-600"
+                : "hover:bg-gray-50"
             }`}>
             Nữ
           </button>
-        </div>
-      </div>
-
-      {/* Sinh nhật */}
-      <div>
-        <label className="text-sm font-medium mb-2 block">Sinh nhật</label>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="birthdayType"
-              checked={birthdayType === "all"}
-              onChange={() => {
-                setBirthdayType("all");
-                setFilters({ birthdayFrom: undefined, birthdayTo: undefined });
-              }}
-              className="w-4 h-4"
-            />
-            <span className="text-sm">Toàn thời gian</span>
-            <span className="ml-auto text-sm text-gray-400">›</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="birthdayType"
-              checked={birthdayType === "custom"}
-              onChange={() => setBirthdayType("custom")}
-              className="w-4 h-4"
-            />
-            <span className="text-sm">Tùy chỉnh</span>
-            <Calendar className="ml-auto w-4 h-4 text-gray-400" />
-          </label>
-        </div>
-      </div>
-
-      {/* Ngày giao dịch cuối */}
-      <div>
-        <label className="text-sm font-medium mb-2 block">
-          Ngày giao dịch cuối
-        </label>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="lastTransactionType"
-              checked={lastTransactionType === "all"}
-              onChange={() => setLastTransactionType("all")}
-              className="w-4 h-4"
-            />
-            <span className="text-sm">Toàn thời gian</span>
-            <span className="ml-auto text-sm text-gray-400">›</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="lastTransactionType"
-              checked={lastTransactionType === "custom"}
-              onChange={() => setLastTransactionType("custom")}
-              className="w-4 h-4"
-            />
-            <span className="text-sm">Tùy chỉnh</span>
-            <Calendar className="ml-auto w-4 h-4 text-gray-400" />
-          </label>
         </div>
       </div>
 
@@ -248,13 +166,11 @@ export function CustomersSidebar() {
       <div>
         <label className="text-sm font-medium mb-2 block">Tổng bán</label>
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Giá trị</span>
-          </div>
           <input
             type="number"
             placeholder="Từ"
             className="w-full border rounded px-3 py-2 text-sm"
+            value={filters.totalPurchasedFrom || ""}
             onChange={(e) =>
               setFilters({
                 totalPurchasedFrom: e.target.value
@@ -265,8 +181,9 @@ export function CustomersSidebar() {
           />
           <input
             type="number"
-            placeholder="Nhập giá trị"
+            placeholder="Đến"
             className="w-full border rounded px-3 py-2 text-sm"
+            value={filters.totalPurchasedTo || ""}
             onChange={(e) =>
               setFilters({
                 totalPurchasedTo: e.target.value
@@ -278,43 +195,15 @@ export function CustomersSidebar() {
         </div>
       </div>
 
-      {/* Thời gian */}
+      {/* Công nợ */}
       <div>
-        <label className="text-sm font-medium mb-2 block">Thời gian</label>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="timeType"
-              checked={timeType === "all"}
-              onChange={() => setTimeType("all")}
-              className="w-4 h-4"
-            />
-            <span className="text-sm">Toàn thời gian</span>
-            <span className="ml-auto text-sm text-gray-400">›</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="timeType"
-              checked={timeType === "custom"}
-              onChange={() => setTimeType("custom")}
-              className="w-4 h-4"
-            />
-            <span className="text-sm">Tùy chỉnh</span>
-            <Calendar className="ml-auto w-4 h-4 text-gray-400" />
-          </label>
-        </div>
-      </div>
-
-      {/* Nợ hiện tại */}
-      <div>
-        <label className="text-sm font-medium mb-2 block">Nợ hiện tại</label>
+        <label className="text-sm font-medium mb-2 block">Công nợ</label>
         <div className="space-y-2">
           <input
             type="number"
             placeholder="Từ"
             className="w-full border rounded px-3 py-2 text-sm"
+            value={filters.debtFrom || ""}
             onChange={(e) =>
               setFilters({
                 debtFrom: e.target.value ? Number(e.target.value) : undefined,
@@ -323,8 +212,9 @@ export function CustomersSidebar() {
           />
           <input
             type="number"
-            placeholder="Nhập giá trị"
+            placeholder="Đến"
             className="w-full border rounded px-3 py-2 text-sm"
+            value={filters.debtTo || ""}
             onChange={(e) =>
               setFilters({
                 debtTo: e.target.value ? Number(e.target.value) : undefined,
@@ -342,6 +232,7 @@ export function CustomersSidebar() {
             type="number"
             placeholder="Từ"
             className="w-full border rounded px-3 py-2 text-sm"
+            value={filters.debtDaysFrom || ""}
             onChange={(e) =>
               setFilters({
                 debtDaysFrom: e.target.value
@@ -352,8 +243,9 @@ export function CustomersSidebar() {
           />
           <input
             type="number"
-            placeholder="Nhập giá trị"
+            placeholder="Đến"
             className="w-full border rounded px-3 py-2 text-sm"
+            value={filters.debtDaysTo || ""}
             onChange={(e) =>
               setFilters({
                 debtDaysTo: e.target.value ? Number(e.target.value) : undefined,
@@ -371,6 +263,7 @@ export function CustomersSidebar() {
             type="number"
             placeholder="Từ"
             className="w-full border rounded px-3 py-2 text-sm"
+            value={filters.pointFrom || ""}
             onChange={(e) =>
               setFilters({
                 pointFrom: e.target.value ? Number(e.target.value) : undefined,
@@ -379,8 +272,9 @@ export function CustomersSidebar() {
           />
           <input
             type="number"
-            placeholder="Nhập giá trị"
+            placeholder="Đến"
             className="w-full border rounded px-3 py-2 text-sm"
+            value={filters.pointTo || ""}
             onChange={(e) =>
               setFilters({
                 pointTo: e.target.value ? Number(e.target.value) : undefined,
@@ -388,18 +282,6 @@ export function CustomersSidebar() {
             }
           />
         </div>
-      </div>
-
-      {/* Khu vực giao hàng */}
-      <div>
-        <label className="text-sm font-medium mb-2 block">
-          Khu vực giao hàng
-        </label>
-        <input
-          type="text"
-          placeholder="Chọn Tỉnh/TP - Quận/Huyện"
-          className="w-full border rounded px-3 py-2 text-sm"
-        />
       </div>
 
       {/* Trạng thái */}
@@ -410,7 +292,7 @@ export function CustomersSidebar() {
             onClick={() => setFilters({ isActive: undefined })}
             className={`w-full px-3 py-2 rounded text-sm text-left ${
               filters.isActive === undefined
-                ? "bg-gray-100 text-gray-700"
+                ? "bg-blue-50 text-blue-600"
                 : "hover:bg-gray-50"
             }`}>
             Tất cả
@@ -419,7 +301,7 @@ export function CustomersSidebar() {
             onClick={() => setFilters({ isActive: true })}
             className={`w-full px-3 py-2 rounded text-sm text-left ${
               filters.isActive === true
-                ? "bg-blue-600 text-white"
+                ? "bg-blue-50 text-blue-600"
                 : "hover:bg-gray-50"
             }`}>
             Đang hoạt động
@@ -428,7 +310,7 @@ export function CustomersSidebar() {
             onClick={() => setFilters({ isActive: false })}
             className={`w-full px-3 py-2 rounded text-sm text-left ${
               filters.isActive === false
-                ? "bg-gray-100 text-gray-700"
+                ? "bg-blue-50 text-blue-600"
                 : "hover:bg-gray-50"
             }`}>
             Ngừng hoạt động

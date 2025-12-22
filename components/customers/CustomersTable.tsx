@@ -2,98 +2,327 @@
 
 import { useState, useEffect } from "react";
 import { useCustomers } from "@/lib/hooks/useCustomers";
-import { useCustomerFiltersStore } from "@/lib/store/customerFilters";
-import { Customer } from "@/lib/types/customer";
+import { Customer, CustomerFilters } from "@/lib/types/customer";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Loader2, Search, Plus, Filter } from "lucide-react";
-import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
+import { Loader2, Plus } from "lucide-react";
 
 interface CustomersTableProps {
+  filters: CustomerFilters;
   onCreateClick: () => void;
 }
 
-export function CustomersTable({ onCreateClick }: CustomersTableProps) {
-  const { filters, setFilters } = useCustomerFiltersStore();
-  const [currentItem, setCurrentItem] = useState(0);
-  const [pageSize, setPageSize] = useState(15);
+type ColumnKey =
+  | "code"
+  | "name"
+  | "contactNumber"
+  | "phone"
+  | "email"
+  | "gender"
+  | "birthDate"
+  | "customerType"
+  | "organization"
+  | "taxCode"
+  | "wardName"
+  | "address"
+  | "debtAmount"
+  | "debtDays"
+  | "totalPurchased"
+  | "totalRevenue"
+  | "totalPoint"
+  | "rewardPoint"
+  | "facebook"
+  | "branch"
+  | "createdAt"
+  | "updatedAt";
+
+interface ColumnConfig {
+  key: ColumnKey;
+  label: string;
+  visible: boolean;
+  render: (customer: Customer) => React.ReactNode;
+}
+
+const formatDateTime = (date?: string) => {
+  if (!date) return "-";
+  return new Date(date).toLocaleString("vi-VN");
+};
+
+const DEFAULT_COLUMNS: ColumnConfig[] = [
+  {
+    key: "code",
+    label: "Mã khách hàng",
+    visible: true,
+    render: (customer) => customer.code,
+  },
+  {
+    key: "name",
+    label: "Tên khách hàng",
+    visible: true,
+    render: (customer) => <span className="font-medium">{customer.name}</span>,
+  },
+  {
+    key: "contactNumber",
+    label: "Điện thoại",
+    visible: true,
+    render: (customer) => customer.contactNumber || customer.phone || "-",
+  },
+  {
+    key: "phone",
+    label: "Điện thoại 2",
+    visible: false,
+    render: (customer) => customer.phone || "-",
+  },
+  {
+    key: "email",
+    label: "Email",
+    visible: false,
+    render: (customer) => customer.email || "-",
+  },
+  {
+    key: "gender",
+    label: "Giới tính",
+    visible: false,
+    render: (customer) => {
+      if (customer.gender === true) return "Nam";
+      if (customer.gender === false) return "Nữ";
+      return "-";
+    },
+  },
+  {
+    key: "birthDate",
+    label: "Sinh nhật",
+    visible: false,
+    render: (customer) =>
+      customer.birthDate ? formatDate(customer.birthDate) : "-",
+  },
+  {
+    key: "customerType",
+    label: "Loại khách hàng",
+    visible: false,
+    render: (customer) => (customer.type === 0 ? "Cá nhân" : "Công ty"),
+  },
+  {
+    key: "organization",
+    label: "Tên công ty",
+    visible: false,
+    render: (customer) => customer.organization || "-",
+  },
+  {
+    key: "taxCode",
+    label: "Mã số thuế",
+    visible: false,
+    render: (customer) => customer.taxCode || "-",
+  },
+  {
+    key: "wardName",
+    label: "Phường/Xã",
+    visible: false,
+    render: (customer) => customer.wardName || "-",
+  },
+  {
+    key: "address",
+    label: "Địa chỉ",
+    visible: false,
+    render: (customer) => customer.address || "-",
+  },
+  {
+    key: "debtAmount",
+    label: "Nợ hiện tại",
+    visible: true,
+    render: (customer) => formatCurrency(customer.totalDebt),
+  },
+  {
+    key: "debtDays",
+    label: "Số ngày nợ",
+    visible: true,
+    render: () => "0",
+  },
+  {
+    key: "totalPurchased",
+    label: "Tổng bán",
+    visible: true,
+    render: (customer) => formatCurrency(customer.totalPurchased),
+  },
+  {
+    key: "totalRevenue",
+    label: "Tổng bán trừ trả hàng",
+    visible: true,
+    render: (customer) => formatCurrency(customer.totalRevenue),
+  },
+  {
+    key: "totalPoint",
+    label: "Tổng điểm",
+    visible: false,
+    render: (customer) => Number(customer.totalPoint).toLocaleString(),
+  },
+  {
+    key: "rewardPoint",
+    label: "Điểm thưởng",
+    visible: false,
+    render: (customer) => customer.rewardPoint.toLocaleString(),
+  },
+  {
+    key: "facebook",
+    label: "Facebook",
+    visible: false,
+    render: (customer) => customer.facebook || "-",
+  },
+  {
+    key: "branch",
+    label: "Chi nhánh",
+    visible: false,
+    render: (customer) => customer.branch?.name || "-",
+  },
+  {
+    key: "createdAt",
+    label: "Ngày tạo",
+    visible: false,
+    render: (customer) => formatDateTime(customer.createdAt),
+  },
+  {
+    key: "updatedAt",
+    label: "Cập nhật lần cuối",
+    visible: false,
+    render: (customer) => formatDateTime(customer.updatedAt),
+  },
+];
+
+export function CustomersTable({
+  filters,
+  onCreateClick,
+}: CustomersTableProps) {
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(15);
   const [search, setSearch] = useState("");
-  const [searchDebounced, setSearchDebounced] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState(search);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [showColumnModal, setShowColumnModal] = useState(false);
+  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("customerTableColumns");
+      if (saved) {
+        try {
+          const savedColumns = JSON.parse(saved);
+          return DEFAULT_COLUMNS.map((col) => ({
+            ...col,
+            visible:
+              savedColumns.find((s: any) => s.key === col.key)?.visible ??
+              col.visible,
+          }));
+        } catch {
+          return DEFAULT_COLUMNS;
+        }
+      }
+    }
+    return DEFAULT_COLUMNS;
+  });
 
   const { data, isLoading } = useCustomers({
     ...filters,
-    currentItem,
-    pageSize,
+    currentItem: (page - 1) * limit,
+    pageSize: limit,
     name: searchDebounced,
   });
-
-  const { visibleColumns } = useCustomerFiltersStore();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchDebounced(search);
     }, 300);
+
     return () => clearTimeout(timer);
   }, [search]);
 
   useEffect(() => {
-    setCurrentItem(0);
-  }, [searchDebounced, filters]);
+    setPage(1);
+  }, [search, filters]);
 
-  const isColumnVisible = (column: string) => visibleColumns.includes(column);
+  useEffect(() => {
+    localStorage.setItem("customerTableColumns", JSON.stringify(columns));
+  }, [columns]);
 
-  const customers = data?.data || [];
-  const total = data?.total || 0;
-  const currentPage = Math.floor(currentItem / pageSize) + 1;
-  const totalPages = Math.ceil(total / pageSize);
-
-  const totals = customers.reduce(
-    (acc, customer) => ({
-      debt: acc.debt + Number(customer.totalDebt),
-      totalPurchased: acc.totalPurchased + Number(customer.totalPurchased),
-      totalRevenue: acc.totalRevenue + Number(customer.totalRevenue),
-    }),
-    { debt: 0, totalPurchased: 0, totalRevenue: 0 }
-  );
-
-  const handlePageChange = (newPage: number) => {
-    setCurrentItem((newPage - 1) * pageSize);
+  const toggleSelectAll = () => {
+    if (selectedIds.length === data?.data.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(data?.data.map((c: { id: any }) => c.id) || []);
+    }
   };
 
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* HEADER SECTION */}
-      <div className="border-b p-4 bg-white">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold">Khách hàng</h1>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onCreateClick}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Khách hàng
-            </button>
-            <ColumnVisibilityDropdown />
-          </div>
-        </div>
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
 
+  const toggleColumnVisibility = (key: ColumnKey) => {
+    setColumns((prev) =>
+      prev.map((col) =>
+        col.key === key ? { ...col, visible: !col.visible } : col
+      )
+    );
+  };
+
+  const visibleColumns = columns.filter((col) => col.visible);
+  const customers = data?.data || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / limit);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Theo mã, tên, số điện thoại"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded"
-            />
-          </div>
-          <button className="p-2 border rounded hover:bg-gray-50">
-            <Filter className="w-5 h-5" />
+          <button
+            onClick={onCreateClick}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Khách hàng
+          </button>
+          <input
+            type="text"
+            placeholder="Theo mã, tên, số điện thoại"
+            className="border rounded px-3 py-2 w-64"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="px-3 py-2 border rounded hover:bg-gray-50">
+            Import file
+          </button>
+          <button
+            onClick={() => setShowColumnModal(!showColumnModal)}
+            className="px-3 py-2 border rounded hover:bg-gray-50 relative">
+            Cột hiển thị
           </button>
         </div>
       </div>
 
-      {/* TABLE SECTION */}
+      {showColumnModal && (
+        <div className="absolute right-4 top-32 bg-white border rounded shadow-lg z-50 p-4 w-64 max-h-96 overflow-y-auto">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold">Hiển thị cột</h3>
+            <button
+              onClick={() => setShowColumnModal(false)}
+              className="text-gray-400 hover:text-gray-600">
+              ✕
+            </button>
+          </div>
+          <div className="space-y-2">
+            {columns.map((col) => (
+              <label key={col.key} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={col.visible}
+                  onChange={() => toggleColumnVisibility(col.key)}
+                  className="cursor-pointer"
+                />
+                <span className="text-sm">{col.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
@@ -102,165 +331,74 @@ export function CustomersTable({ onCreateClick }: CustomersTableProps) {
         ) : (
           <div className="overflow-x-auto">
             <table
-              className="w-full border-collapse bg-white"
-              style={{ minWidth: "max-content" }}>
-              <thead className="sticky top-0 bg-gray-50 border-b z-10">
+              className="w-full"
+              style={{ minWidth: "max-content", borderSpacing: "0 1px" }}>
+              <thead className="bg-gray-50 sticky top-0">
                 <tr>
-                  <th className="p-2 border-r">
-                    <input type="checkbox" className="w-4 h-4" />
+                  <th className="px-6 py-3 text-left sticky left-0 bg-gray-50 z-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length === data?.data.length}
+                      onChange={toggleSelectAll}
+                    />
                   </th>
-                  {isColumnVisible("code") && (
-                    <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
-                      Mã khách hàng
+                  {visibleColumns.map((col) => (
+                    <th
+                      key={col.key}
+                      className="px-6 py-3 text-left whitespace-nowrap">
+                      {col.label}
                     </th>
-                  )}
-                  {isColumnVisible("name") && (
-                    <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
-                      Tên khách hàng
-                    </th>
-                  )}
-                  {isColumnVisible("contactNumber") && (
-                    <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
-                      Điện thoại
-                    </th>
-                  )}
-                  {isColumnVisible("debtAmount") && (
-                    <th className="p-2 text-right text-sm font-medium border-r whitespace-nowrap">
-                      Nợ hiện tại
-                    </th>
-                  )}
-                  {isColumnVisible("debtDays") && (
-                    <th className="p-2 text-right text-sm font-medium border-r whitespace-nowrap">
-                      Số ngày nợ
-                    </th>
-                  )}
-                  {isColumnVisible("totalPurchased") && (
-                    <th className="p-2 text-right text-sm font-medium border-r whitespace-nowrap">
-                      Tổng bán
-                    </th>
-                  )}
-                  {isColumnVisible("totalRevenue") && (
-                    <th className="p-2 text-right text-sm font-medium whitespace-nowrap">
-                      Tổng bán trừ trả hàng
-                    </th>
-                  )}
-                  {isColumnVisible("wardName") && (
-                    <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
-                      Phương/Xã
-                    </th>
-                  )}
-                  {isColumnVisible("customerType") && (
-                    <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
-                      Loại khách hàng
-                    </th>
-                  )}
-                  {isColumnVisible("gender") && (
-                    <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
-                      Giới tính
-                    </th>
-                  )}
-                  {isColumnVisible("email") && (
-                    <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
-                      Email
-                    </th>
-                  )}
-                  {isColumnVisible("createdAt") && (
-                    <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
-                      Ngày tạo
-                    </th>
-                  )}
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {customers.map((customer: Customer) => (
-                  <tr
-                    key={customer.id}
-                    className="border-b hover:bg-gray-50 cursor-pointer">
-                    <td className="p-2 border-r">
-                      <input type="checkbox" className="w-4 h-4" />
+                {customers && customers.length > 0 ? (
+                  customers.map((customer: Customer) => (
+                    <tr
+                      key={customer.id}
+                      className="border-b hover:bg-gray-50 cursor-pointer">
+                      <td
+                        className="px-6 py-3 sticky left-0 bg-white z-10"
+                        onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(customer.id)}
+                          onChange={() => toggleSelect(customer.id)}
+                        />
+                      </td>
+                      {visibleColumns.map((col) => (
+                        <td
+                          key={col.key}
+                          className="px-6 py-3 whitespace-nowrap">
+                          {col.render(customer)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={visibleColumns.length + 1}
+                      className="text-center py-12 text-gray-500">
+                      Không tìm thấy khách hàng nào
                     </td>
-                    {isColumnVisible("code") && (
-                      <td className="p-2 text-sm border-r whitespace-nowrap">
-                        {customer.code}
-                      </td>
-                    )}
-                    {isColumnVisible("name") && (
-                      <td className="p-2 text-sm border-r font-medium whitespace-nowrap">
-                        {customer.name}
-                      </td>
-                    )}
-                    {isColumnVisible("contactNumber") && (
-                      <td className="p-2 text-sm border-r whitespace-nowrap">
-                        {customer.contactNumber || customer.phone}
-                      </td>
-                    )}
-                    {isColumnVisible("debtAmount") && (
-                      <td className="p-2 text-sm text-right border-r whitespace-nowrap">
-                        {formatCurrency(customer.totalDebt)}
-                      </td>
-                    )}
-                    {isColumnVisible("debtDays") && (
-                      <td className="p-2 text-sm text-right border-r whitespace-nowrap">
-                        0
-                      </td>
-                    )}
-                    {isColumnVisible("totalPurchased") && (
-                      <td className="p-2 text-sm text-right border-r whitespace-nowrap">
-                        {formatCurrency(customer.totalPurchased)}
-                      </td>
-                    )}
-                    {isColumnVisible("totalRevenue") && (
-                      <td className="p-2 text-sm text-right whitespace-nowrap">
-                        {formatCurrency(customer.totalRevenue)}
-                      </td>
-                    )}
-                    {isColumnVisible("wardName") && (
-                      <td className="p-2 text-sm border-r whitespace-nowrap">
-                        {customer.wardName}
-                      </td>
-                    )}
-                    {isColumnVisible("customerType") && (
-                      <td className="p-2 text-sm border-r whitespace-nowrap">
-                        {customer.type === 0 ? "Cá nhân" : "Công ty"}
-                      </td>
-                    )}
-                    {isColumnVisible("gender") && (
-                      <td className="p-2 text-sm border-r whitespace-nowrap">
-                        {customer.gender === true
-                          ? "Nam"
-                          : customer.gender === false
-                          ? "Nữ"
-                          : ""}
-                      </td>
-                    )}
-                    {isColumnVisible("email") && (
-                      <td className="p-2 text-sm border-r whitespace-nowrap">
-                        {customer.email}
-                      </td>
-                    )}
-                    {isColumnVisible("createdAt") && (
-                      <td className="p-2 text-sm border-r whitespace-nowrap">
-                        {formatDate(customer.createdAt)}
-                      </td>
-                    )}
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* PAGINATION SECTION */}
       <div className="border-t p-4 flex items-center justify-between bg-white">
         <div className="flex items-center gap-2">
           <span>Hiển thị</span>
           <select
             className="border rounded px-2 py-1"
-            value={pageSize}
+            value={limit}
             onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setCurrentItem(0);
+              setLimit(Number(e.target.value));
+              setPage(1);
             }}>
             <option value={15}>15</option>
             <option value={20}>20</option>
@@ -273,27 +411,21 @@ export function CustomersTable({ onCreateClick }: CustomersTableProps) {
         <div className="flex items-center gap-2">
           <button
             className="px-3 py-1 border rounded disabled:opacity-50"
-            disabled={currentPage === 1}
-            onClick={() => handlePageChange(currentPage - 1)}>
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}>
             Trước
           </button>
           <span>
-            Trang {currentPage} / {totalPages || 1}
+            Trang {page} / {totalPages || 1}
           </span>
           <button
             className="px-3 py-1 border rounded disabled:opacity-50"
-            disabled={currentPage >= totalPages}
-            onClick={() => handlePageChange(currentPage + 1)}>
+            disabled={page >= totalPages}
+            onClick={() => setPage(page + 1)}>
             Sau
           </button>
         </div>
       </div>
-
-      {customers.length === 0 && !isLoading && (
-        <div className="text-center py-12 text-gray-500">
-          Không tìm thấy khách hàng nào
-        </div>
-      )}
     </div>
   );
 }
