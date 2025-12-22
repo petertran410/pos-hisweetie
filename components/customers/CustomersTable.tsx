@@ -1,4 +1,3 @@
-// components/customers/CustomersTable.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,17 +13,17 @@ interface CustomersTableProps {
 }
 
 export function CustomersTable({ onCreateClick }: CustomersTableProps) {
-  const { filters } = useCustomerFiltersStore();
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(15);
+  const { filters, setFilters } = useCustomerFiltersStore();
+  const [currentItem, setCurrentItem] = useState(0);
+  const [pageSize, setPageSize] = useState(15);
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
 
   const { data, isLoading } = useCustomers({
     ...filters,
-    page,
-    limit,
-    search: searchDebounced,
+    currentItem,
+    pageSize,
+    name: searchDebounced,
   });
 
   const { visibleColumns } = useCustomerFiltersStore();
@@ -37,14 +36,15 @@ export function CustomersTable({ onCreateClick }: CustomersTableProps) {
   }, [search]);
 
   useEffect(() => {
-    setPage(1);
+    setCurrentItem(0);
   }, [searchDebounced, filters]);
 
   const isColumnVisible = (column: string) => visibleColumns.includes(column);
 
   const customers = data?.data || [];
   const total = data?.total || 0;
-  const totalPages = Math.ceil(total / limit);
+  const currentPage = Math.floor(currentItem / pageSize) + 1;
+  const totalPages = Math.ceil(total / pageSize);
 
   const totals = customers.reduce(
     (acc, customer) => ({
@@ -55,9 +55,13 @@ export function CustomersTable({ onCreateClick }: CustomersTableProps) {
     { debt: 0, totalPurchased: 0, totalRevenue: 0 }
   );
 
+  const handlePageChange = (newPage: number) => {
+    setCurrentItem((newPage - 1) * pageSize);
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* HEADER SECTION - Tương tự ProductTable */}
+      {/* HEADER SECTION */}
       <div className="border-b p-4 bg-white">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-semibold">Khách hàng</h1>
@@ -168,33 +172,6 @@ export function CustomersTable({ onCreateClick }: CustomersTableProps) {
                 </tr>
               </thead>
               <tbody>
-                <tr className="bg-blue-50 font-medium">
-                  <td className="p-2"></td>
-                  {isColumnVisible("code") && <td className="p-2"></td>}
-                  {isColumnVisible("name") && (
-                    <td className="p-2 text-sm">{total.toLocaleString()}</td>
-                  )}
-                  {isColumnVisible("contactNumber") && (
-                    <td className="p-2"></td>
-                  )}
-                  {isColumnVisible("debtAmount") && (
-                    <td className="p-2 text-right text-sm">
-                      {formatCurrency(totals.debt)}
-                    </td>
-                  )}
-                  {isColumnVisible("debtDays") && <td className="p-2"></td>}
-                  {isColumnVisible("totalPurchased") && (
-                    <td className="p-2 text-right text-sm">
-                      {formatCurrency(totals.totalPurchased)}
-                    </td>
-                  )}
-                  {isColumnVisible("totalRevenue") && (
-                    <td className="p-2 text-right text-sm">
-                      {formatCurrency(totals.totalRevenue)}
-                    </td>
-                  )}
-                </tr>
-
                 {customers.map((customer: Customer) => (
                   <tr
                     key={customer.id}
@@ -274,14 +251,17 @@ export function CustomersTable({ onCreateClick }: CustomersTableProps) {
         )}
       </div>
 
-      {/* PAGINATION SECTION - Tương tự ProductTable */}
+      {/* PAGINATION SECTION */}
       <div className="border-t p-4 flex items-center justify-between bg-white">
         <div className="flex items-center gap-2">
           <span>Hiển thị</span>
           <select
             className="border rounded px-2 py-1"
-            value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}>
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setCurrentItem(0);
+            }}>
             <option value={15}>15</option>
             <option value={20}>20</option>
             <option value={30}>30</option>
@@ -293,17 +273,17 @@ export function CustomersTable({ onCreateClick }: CustomersTableProps) {
         <div className="flex items-center gap-2">
           <button
             className="px-3 py-1 border rounded disabled:opacity-50"
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}>
+            disabled={currentPage === 1}
+            onClick={() => handlePageChange(currentPage - 1)}>
             Trước
           </button>
           <span>
-            Trang {page} / {totalPages || 1}
+            Trang {currentPage} / {totalPages || 1}
           </span>
           <button
             className="px-3 py-1 border rounded disabled:opacity-50"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}>
+            disabled={currentPage >= totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}>
             Sau
           </button>
         </div>
