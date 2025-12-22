@@ -9,6 +9,7 @@ import { Loader2, Plus } from "lucide-react";
 interface CustomersTableProps {
   filters: CustomerFilters;
   onCreateClick: () => void;
+  onEditClick: (customer: Customer) => void;
 }
 
 type ColumnKey =
@@ -191,6 +192,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
 export function CustomersTable({
   filters,
   onCreateClick,
+  onEditClick,
 }: CustomersTableProps) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
@@ -357,6 +359,7 @@ export function CustomersTable({
                   customers.map((customer: Customer) => (
                     <tr
                       key={customer.id}
+                      onClick={() => onEditClick(customer)}
                       className="border-b hover:bg-gray-50 cursor-pointer">
                       <td
                         className="px-6 py-3 sticky left-0 bg-white z-10"

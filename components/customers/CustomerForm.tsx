@@ -2,11 +2,17 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { useCreateCustomer, useCustomerGroups } from "@/lib/hooks/useCustomers";
+import {
+  useCreateCustomer,
+  useCustomerGroups,
+  useUpdateCustomer,
+} from "@/lib/hooks/useCustomers";
 import { X } from "lucide-react";
 import { toast } from "sonner";
+import { Customer } from "@/lib/types/customer";
 
 interface CustomerFormProps {
+  customer?: Customer;
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -48,7 +54,11 @@ interface Commune {
   provinceCode: string;
 }
 
-export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
+export function CustomerForm({
+  customer,
+  onClose,
+  onSuccess,
+}: CustomerFormProps) {
   const {
     register,
     handleSubmit,
@@ -57,6 +67,7 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
     formState: { errors },
   } = useForm();
   const createCustomer = useCreateCustomer();
+  const updateCustomer = useUpdateCustomer();
 
   const [cities, setCities] = useState<City[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
@@ -163,6 +174,50 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
     }
   }, [selectedInvoiceCityCode, invoiceCommunes, setValue]);
 
+  useEffect(() => {
+    if (customer) {
+      setValue("code", customer.code || "");
+      setValue("name", customer.name);
+      setValue("contactNumber", customer.contactNumber || "");
+      setValue("phone", customer.phone || "");
+      setValue(
+        "birthDate",
+        customer.birthDate ? customer.birthDate.split("T")[0] : ""
+      );
+      setValue(
+        "gender",
+        customer.gender === null ? "" : customer.gender ? "true" : "false"
+      );
+      setValue("email", customer.email || "");
+      setValue("cityCode", customer.cityCode || "");
+      setValue("districtCode", customer.districtCode || "");
+      setValue("wardCode", customer.wardCode || "");
+      setValue("address", customer.address || "");
+      setValue("type", String(customer.type || 0));
+      setValue("organization", customer.organization || "");
+      setValue("taxCode", customer.taxCode || "");
+      setValue("invoiceBuyerName", customer.invoiceBuyerName || "");
+      setValue("invoiceCityCode", customer.invoiceCityCode || "");
+      setValue("invoiceWardCode", customer.invoiceWardCode || "");
+      setValue("invoiceAddress", customer.invoiceAddress || "");
+      setValue("invoiceCccdCmnd", customer.invoiceCccdCmnd || "");
+      setValue("invoiceBankAccount", customer.invoiceBankAccount || "");
+      setValue("invoiceEmail", customer.invoiceEmail || "");
+      setValue("invoicePhone", customer.invoicePhone || "");
+      setValue("invoiceDvqhnsCode", customer.invoiceDvqhnsCode || "");
+      setValue("comments", customer.comments || "");
+      if (
+        customer.customerGroupDetails &&
+        customer.customerGroupDetails.length > 0
+      ) {
+        const groupIds = customer.customerGroupDetails.map(
+          (detail: any) => detail.groupId
+        );
+        setSelectedGroupIds(groupIds);
+      }
+    }
+  }, [customer, setValue]);
+
   const handleToggleGroup = (groupId: number) => {
     setSelectedGroupIds((prev) =>
       prev.includes(groupId)
@@ -236,23 +291,41 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
       gender: data.gender === "" ? undefined : data.gender === "true",
     };
 
-    createCustomer.mutate(formattedData, {
-      onSuccess: () => {
-        toast.success("Tạo khách hàng thành công");
-        onSuccess?.();
-        onClose();
-      },
-      onError: (error: any) => {
-        toast.error(error.message || "Có lỗi xảy ra");
-      },
-    });
+    if (customer) {
+      updateCustomer.mutate(
+        { id: customer.id, data: formattedData },
+        {
+          onSuccess: () => {
+            toast.success("Cập nhật khách hàng thành công");
+            onSuccess?.();
+            onClose();
+          },
+          onError: (error: any) => {
+            toast.error(error.message || "Có lỗi xảy ra");
+          },
+        }
+      );
+    } else {
+      createCustomer.mutate(formattedData, {
+        onSuccess: () => {
+          toast.success("Tạo khách hàng thành công");
+          onSuccess?.();
+          onClose();
+        },
+        onError: (error: any) => {
+          toast.error(error.message || "Có lỗi xảy ra");
+        },
+      });
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4">
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-xl font-semibold">Tạo khách hàng</h2>
+          <h2 className="text-xl font-semibold">
+            {customer ? "Chỉnh sửa khách hàng" : "Tạo khách hàng"}
+          </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
             <X className="w-5 h-5" />
           </button>
@@ -785,9 +858,13 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
             </button>
             <button
               type="submit"
-              disabled={createCustomer.isPending}
+              disabled={createCustomer.isPending || updateCustomer.isPending}
               className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-              {createCustomer.isPending ? "Đang lưu..." : "Lưu"}
+              {createCustomer.isPending || updateCustomer.isPending
+                ? "Đang lưu..."
+                : customer
+                ? "Cập nhật"
+                : "Lưu"}
             </button>
           </div>
         </form>

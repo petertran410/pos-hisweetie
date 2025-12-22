@@ -6,17 +6,30 @@ export interface Customer {
   birthDate?: string;
   contactNumber?: string;
   phone?: string;
-  facebook?: string;
-  zalo?: string;
+  email?: string;
+  cityCode?: string;
+  cityName?: string;
+  districtCode?: string;
+  districtName?: string;
+  wardCode?: string;
+  wardName?: string;
   address?: string;
   locationName?: string;
-  cityName?: string;
-  wardName?: string;
-  email?: string;
   type: number;
   organization?: string;
   taxCode?: string;
   comments?: string;
+  invoiceBuyerName?: string;
+  invoiceCityCode?: string;
+  invoiceCityName?: string;
+  invoiceWardCode?: string;
+  invoiceWardName?: string;
+  invoiceAddress?: string;
+  invoiceCccdCmnd?: string;
+  invoiceBankAccount?: string;
+  invoiceEmail?: string;
+  invoicePhone?: string;
+  invoiceDvqhnsCode?: string;
   customerTypeId?: number;
   branchId?: number;
   totalPurchased: number;
@@ -25,8 +38,6 @@ export interface Customer {
   totalPoint: number;
   totalRevenue: number;
   rewardPoint: number;
-  psidFacebook?: string;
-  isWalkIn: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -42,6 +53,7 @@ export interface Customer {
     id: number;
     customerId: number;
     customerGroupId: number;
+    groupId: number;
     customerGroup: {
       id: number;
       name: string;
@@ -64,8 +76,6 @@ export interface CustomerFilters {
   birthDate?: string;
   groupId?: number;
   includeCustomerSocial?: boolean;
-
-  // Extended filters
   customerType?: "all" | "individual" | "company";
   gender?: "all" | "male" | "female";
   branchId?: number;

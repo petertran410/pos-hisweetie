@@ -5,9 +5,11 @@ import { CustomersSidebar } from "@/components/customers/CustomersSidebar";
 import { CustomersTable } from "@/components/customers/CustomersTable";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { CustomerFilters } from "@/lib/types/customer";
+import { Customer } from "@/lib/types/customer";
 
 export default function CustomersPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [filters, setFilters] = useState<CustomerFilters>({
     pageSize: 15,
     currentItem: 0,
@@ -28,6 +30,7 @@ export default function CustomersPage() {
         <CustomersTable
           filters={filters}
           onCreateClick={() => setShowCreateForm(true)}
+          onEditClick={(customer) => setEditingCustomer(customer)}
         />
       </main>
 
@@ -35,6 +38,14 @@ export default function CustomersPage() {
         <CustomerForm
           onClose={() => setShowCreateForm(false)}
           onSuccess={() => setShowCreateForm(false)}
+        />
+      )}
+
+      {editingCustomer && (
+        <CustomerForm
+          customer={editingCustomer}
+          onClose={() => setEditingCustomer(null)}
+          onSuccess={() => setEditingCustomer(null)}
         />
       )}
     </div>
