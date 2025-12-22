@@ -465,9 +465,8 @@ export function CustomerForm({
         {
           onSuccess: () => {
             toast.success("Cập nhật khách hàng thành công");
+            onSuccess?.();
             onClose();
-            router.refresh();
-            router.push("/san-pham/danh-sach");
           },
           onError: (error: any) => {
             toast.error(error.message || "Có lỗi xảy ra");
