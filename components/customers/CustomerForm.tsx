@@ -140,7 +140,7 @@ export function CustomerForm({
     const loadInvoiceCommunes = async () => {
       try {
         const response = await fetch(
-          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/build_customer/new-commune-locatin.json"
+          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/build_customer/new-commune-location.json"
         );
 
         if (!response.ok) {
