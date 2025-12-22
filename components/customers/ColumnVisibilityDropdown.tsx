@@ -7,8 +7,8 @@ import { Settings2 } from "lucide-react";
 const ALL_COLUMNS = [
   { key: "code", label: "Mã khách hàng" },
   { key: "name", label: "Tên khách hàng" },
-  { key: "contactNumber", label: "Điện thoại" },
   { key: "debtAmount", label: "Nợ hiện tại" },
+  { key: "contactNumber", label: "Điện thoại" },
   { key: "debtDays", label: "Số ngày nợ" },
   { key: "totalPurchased", label: "Tổng bán" },
   { key: "totalRevenue", label: "Tổng bán trừ trả hàng" },

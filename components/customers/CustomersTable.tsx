@@ -24,7 +24,6 @@ export function CustomersTable() {
   const customers = data?.data || [];
   const total = data?.total || 0;
 
-  // Calculate totals
   const totals = customers.reduce(
     (acc, customer) => ({
       debt: acc.debt + Number(customer.totalDebt),
@@ -35,77 +34,78 @@ export function CustomersTable() {
   );
 
   return (
-    <div className="flex-1 overflow-auto">
-      <table className="w-full border-collapse bg-white">
-        <thead className="sticky top-0 bg-gray-50 border-b">
+    <div className="flex-1 overflow-x-auto">
+      <table
+        className="w-full border-collapse bg-white"
+        style={{ minWidth: "max-content" }}>
+        <thead className="sticky top-0 bg-gray-50 border-b z-10">
           <tr>
             <th className="p-2 border-r">
               <input type="checkbox" className="w-4 h-4" />
             </th>
             {isColumnVisible("code") && (
-              <th className="p-2 text-left text-sm font-medium border-r">
+              <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
                 Mã khách hàng
               </th>
             )}
             {isColumnVisible("name") && (
-              <th className="p-2 text-left text-sm font-medium border-r">
+              <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
                 Tên khách hàng
               </th>
             )}
             {isColumnVisible("contactNumber") && (
-              <th className="p-2 text-left text-sm font-medium border-r">
+              <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
                 Điện thoại
               </th>
             )}
             {isColumnVisible("debtAmount") && (
-              <th className="p-2 text-right text-sm font-medium border-r">
+              <th className="p-2 text-right text-sm font-medium border-r whitespace-nowrap">
                 Nợ hiện tại
               </th>
             )}
             {isColumnVisible("debtDays") && (
-              <th className="p-2 text-right text-sm font-medium border-r">
+              <th className="p-2 text-right text-sm font-medium border-r whitespace-nowrap">
                 Số ngày nợ
               </th>
             )}
             {isColumnVisible("totalPurchased") && (
-              <th className="p-2 text-right text-sm font-medium border-r">
+              <th className="p-2 text-right text-sm font-medium border-r whitespace-nowrap">
                 Tổng bán
               </th>
             )}
             {isColumnVisible("totalRevenue") && (
-              <th className="p-2 text-right text-sm font-medium">
+              <th className="p-2 text-right text-sm font-medium whitespace-nowrap">
                 Tổng bán trừ trả hàng
               </th>
             )}
             {isColumnVisible("wardName") && (
-              <th className="p-2 text-left text-sm font-medium border-r">
+              <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
                 Phương/Xã
               </th>
             )}
             {isColumnVisible("customerType") && (
-              <th className="p-2 text-left text-sm font-medium border-r">
+              <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
                 Loại khách hàng
               </th>
             )}
             {isColumnVisible("gender") && (
-              <th className="p-2 text-left text-sm font-medium border-r">
+              <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
                 Giới tính
               </th>
             )}
             {isColumnVisible("email") && (
-              <th className="p-2 text-left text-sm font-medium border-r">
+              <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
                 Email
               </th>
             )}
             {isColumnVisible("createdAt") && (
-              <th className="p-2 text-left text-sm font-medium border-r">
+              <th className="p-2 text-left text-sm font-medium border-r whitespace-nowrap">
                 Ngày tạo
               </th>
             )}
           </tr>
         </thead>
         <tbody>
-          {/* Summary row */}
           <tr className="bg-blue-50 font-medium">
             <td className="p-2"></td>
             {isColumnVisible("code") && <td className="p-2"></td>}
@@ -131,7 +131,6 @@ export function CustomersTable() {
             )}
           </tr>
 
-          {/* Data rows */}
           {customers.map((customer: Customer) => (
             <tr
               key={customer.id}
@@ -140,46 +139,52 @@ export function CustomersTable() {
                 <input type="checkbox" className="w-4 h-4" />
               </td>
               {isColumnVisible("code") && (
-                <td className="p-2 text-sm border-r">{customer.code}</td>
+                <td className="p-2 text-sm border-r whitespace-nowrap">
+                  {customer.code}
+                </td>
               )}
               {isColumnVisible("name") && (
-                <td className="p-2 text-sm border-r font-medium">
+                <td className="p-2 text-sm border-r font-medium whitespace-nowrap">
                   {customer.name}
                 </td>
               )}
               {isColumnVisible("contactNumber") && (
-                <td className="p-2 text-sm border-r">
+                <td className="p-2 text-sm border-r whitespace-nowrap">
                   {customer.contactNumber || customer.phone}
                 </td>
               )}
               {isColumnVisible("debtAmount") && (
-                <td className="p-2 text-sm text-right border-r">
+                <td className="p-2 text-sm text-right border-r whitespace-nowrap">
                   {formatCurrency(customer.totalDebt)}
                 </td>
               )}
               {isColumnVisible("debtDays") && (
-                <td className="p-2 text-sm text-right border-r">0</td>
+                <td className="p-2 text-sm text-right border-r whitespace-nowrap">
+                  0
+                </td>
               )}
               {isColumnVisible("totalPurchased") && (
-                <td className="p-2 text-sm text-right border-r">
+                <td className="p-2 text-sm text-right border-r whitespace-nowrap">
                   {formatCurrency(customer.totalPurchased)}
                 </td>
               )}
               {isColumnVisible("totalRevenue") && (
-                <td className="p-2 text-sm text-right">
+                <td className="p-2 text-sm text-right whitespace-nowrap">
                   {formatCurrency(customer.totalRevenue)}
                 </td>
               )}
               {isColumnVisible("wardName") && (
-                <td className="p-2 text-sm border-r">{customer.wardName}</td>
+                <td className="p-2 text-sm border-r whitespace-nowrap">
+                  {customer.wardName}
+                </td>
               )}
               {isColumnVisible("customerType") && (
-                <td className="p-2 text-sm border-r">
+                <td className="p-2 text-sm border-r whitespace-nowrap">
                   {customer.type === 0 ? "Cá nhân" : "Công ty"}
                 </td>
               )}
               {isColumnVisible("gender") && (
-                <td className="p-2 text-sm border-r">
+                <td className="p-2 text-sm border-r whitespace-nowrap">
                   {customer.gender === true
                     ? "Nam"
                     : customer.gender === false
@@ -188,10 +193,12 @@ export function CustomersTable() {
                 </td>
               )}
               {isColumnVisible("email") && (
-                <td className="p-2 text-sm border-r">{customer.email}</td>
+                <td className="p-2 text-sm border-r whitespace-nowrap">
+                  {customer.email}
+                </td>
               )}
               {isColumnVisible("createdAt") && (
-                <td className="p-2 text-sm border-r">
+                <td className="p-2 text-sm border-r whitespace-nowrap">
                   {formatDate(customer.createdAt)}
                 </td>
               )}
