@@ -242,15 +242,24 @@ export function CustomerForm({
       );
       if (city) {
         setDistricts(city.districts || []);
-        setValue("districtCode", "");
-        setValue("wardCode", "");
-        setWards([]);
+
+        const currentDistrictCode = watch("districtCode");
+        if (
+          !currentDistrictCode ||
+          !city.districts.find(
+            (d) => String(d.code) === String(currentDistrictCode)
+          )
+        ) {
+          setValue("districtCode", "");
+          setValue("wardCode", "");
+          setWards([]);
+        }
       }
     } else if (!selectedCityCode && !isPopulating) {
       setDistricts([]);
       setWards([]);
     }
-  }, [selectedCityCode, cities, setValue, isPopulating]);
+  }, [selectedCityCode, cities, setValue, isPopulating, watch]);
 
   useEffect(() => {
     if (selectedDistrictCode && !isPopulating) {
@@ -259,12 +268,21 @@ export function CustomerForm({
       );
       if (district) {
         setWards(district.wards || []);
-        setValue("wardCode", "");
+
+        const currentWardCode = watch("wardCode");
+        if (
+          !currentWardCode ||
+          !district.wards.find(
+            (w) => String(w.code) === String(currentWardCode)
+          )
+        ) {
+          setValue("wardCode", "");
+        }
       }
     } else if (!selectedDistrictCode && !isPopulating) {
       setWards([]);
     }
-  }, [selectedDistrictCode, districts, setValue, isPopulating]);
+  }, [selectedDistrictCode, districts, setValue, isPopulating, watch]);
 
   useEffect(() => {
     if (customer) {
@@ -283,35 +301,6 @@ export function CustomerForm({
         customer.gender === null ? "" : customer.gender ? "true" : "false"
       );
       setValue("email", customer.email || "");
-
-      if (customer.cityCode && cities.length > 0) {
-        setValue("cityCode", customer.cityCode);
-
-        const city = cities.find(
-          (c) => String(c.code) === String(customer.cityCode)
-        );
-
-        if (city) {
-          setDistricts(city.districts || []);
-
-          if (customer.districtCode) {
-            setValue("districtCode", customer.districtCode);
-
-            const district = city.districts.find(
-              (d) => String(d.code) === String(customer.districtCode)
-            );
-
-            if (district) {
-              setWards(district.wards || []);
-
-              if (customer.wardCode) {
-                setValue("wardCode", customer.wardCode);
-              }
-            }
-          }
-        }
-      }
-
       setValue("address", customer.address || "");
       setValue("type", String(customer.type || 0));
       setValue("organization", customer.organization || "");
@@ -323,6 +312,38 @@ export function CustomerForm({
       setValue("invoiceEmail", customer.invoiceEmail || "");
       setValue("invoicePhone", customer.invoicePhone || "");
       setValue("invoiceDvqhnsCode", customer.invoiceDvqhnsCode || "");
+      setValue("comments", customer.comments || "");
+
+      if (customer.cityCode && cities.length > 0) {
+        const city = cities.find(
+          (c) => String(c.code) === String(customer.cityCode)
+        );
+
+        if (city) {
+          setDistricts(city.districts || []);
+          setValue("cityCode", customer.cityCode);
+
+          if (customer.districtCode) {
+            const district = city.districts.find(
+              (d) => String(d.code) === String(customer.districtCode)
+            );
+
+            if (district) {
+              setWards(district.wards || []);
+
+              setTimeout(() => {
+                setValue("districtCode", customer.districtCode);
+
+                if (customer.wardCode) {
+                  setTimeout(() => {
+                    setValue("wardCode", customer.wardCode);
+                  }, 50);
+                }
+              }, 50);
+            }
+          }
+        }
+      }
 
       if (customer.invoiceCityCode && invoiceCommunes.length > 0) {
         setValue("invoiceCityCode", customer.invoiceCityCode);
@@ -352,7 +373,7 @@ export function CustomerForm({
 
       setTimeout(() => {
         setIsPopulating(false);
-      }, 100);
+      }, 150);
     }
   }, [
     customer,
@@ -415,7 +436,6 @@ export function CustomerForm({
       wardCode: data.wardCode ? String(data.wardCode) : undefined,
       wardName: wardName || undefined,
       email: data.email || undefined,
-      facebook: data.facebook || undefined,
       phone: data.phone || undefined,
       address: data.address || undefined,
       comments: data.comments || undefined,
@@ -551,15 +571,6 @@ export function CustomerForm({
                 type="email"
                 {...register("email")}
                 placeholder="email@gmail.com"
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Facebook</label>
-              <input
-                {...register("facebook")}
-                placeholder="facebook.com/username"
                 className="w-full border rounded px-3 py-2"
               />
             </div>
