@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useCreateCustomer } from "@/lib/hooks/useCustomers";
-import { X } from "lucide-react";
+import { X, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 interface CustomerFormProps {
@@ -13,19 +13,19 @@ interface CustomerFormProps {
 
 interface City {
   name: string;
-  code: number;
+  code: string;
   districts: District[];
 }
 
 interface District {
   name: string;
-  code: number;
+  code: string;
   wards: Ward[];
 }
 
 interface Ward {
   name: string;
-  code: number;
+  code: string;
 }
 
 interface Province {
@@ -59,71 +59,30 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
     Commune[]
   >([]);
 
-  const [loadingCities, setLoadingCities] = useState(false);
-  const [loadingProvinces, setLoadingProvinces] = useState(false);
-
   const customerType = watch("type", 0);
   const selectedCityCode = watch("cityCode");
   const selectedDistrictCode = watch("districtCode");
   const selectedInvoiceCityCode = watch("invoiceCityCode");
 
   useEffect(() => {
-    const fetchAddressData = async () => {
-      try {
-        setLoadingCities(true);
-        const citiesResponse = await fetch(
-          "https://raw.githubusercontent.com/kenzouno1/DiaGioiHanhChinhVN/master/data.json"
-        );
+    fetch(
+      "https://raw.githubusercontent.com/giaodienblog/provinces/refs/heads/main/district.json"
+    )
+      .then((res) => res.json())
+      .then((data) => setCities(data));
 
-        if (!citiesResponse.ok) {
-          throw new Error("Không thể tải dữ liệu thành phố");
-        }
+    fetch("https://production.cas.so/address-kit/2025-07-01/provinces")
+      .then((res) => res.json())
+      .then((data) => setInvoiceProvinces(data.provinces));
 
-        const citiesData = await citiesResponse.json();
-        setCities(citiesData);
-      } catch (error) {
-        console.error("Error loading cities:", error);
-        toast.error("Không thể tải danh sách tỉnh/thành phố");
-      } finally {
-        setLoadingCities(false);
-      }
-
-      try {
-        setLoadingProvinces(true);
-        const [provincesResponse, communesResponse] = await Promise.all([
-          fetch("https://production.cas.so/address-kit/2025-07-01/provinces"),
-          fetch("https://production.cas.so/address-kit/2025-07-01/communes"),
-        ]);
-
-        if (provincesResponse.ok) {
-          const provincesData = await provincesResponse.json();
-          setInvoiceProvinces(provincesData.provinces || []);
-        } else {
-          console.warn("CAS provinces API not available");
-        }
-
-        if (communesResponse.ok) {
-          const communesData = await communesResponse.json();
-          setInvoiceCommunes(communesData.communes || []);
-        } else {
-          console.warn("CAS communes API not available");
-        }
-      } catch (error) {
-        console.error("Error loading invoice address data:", error);
-        toast.error("Không thể tải dữ liệu địa chỉ xuất hóa đơn");
-      } finally {
-        setLoadingProvinces(false);
-      }
-    };
-
-    fetchAddressData();
+    fetch("https://production.cas.so/address-kit/2025-07-01/communes")
+      .then((res) => res.json())
+      .then((data) => setInvoiceCommunes(data.communes));
   }, []);
 
   useEffect(() => {
     if (selectedCityCode) {
-      const city = cities.find(
-        (c) => String(c.code) === String(selectedCityCode)
-      );
+      const city = cities.find((c) => c.code === selectedCityCode);
       setDistricts(city?.districts || []);
       setValue("districtCode", "");
       setValue("wardCode", "");
@@ -132,9 +91,7 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
 
   useEffect(() => {
     if (selectedDistrictCode) {
-      const district = districts.find(
-        (d) => String(d.code) === String(selectedDistrictCode)
-      );
+      const district = districts.find((d) => d.code === selectedDistrictCode);
       setWards(district?.wards || []);
       setValue("wardCode", "");
     }
@@ -151,15 +108,11 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
   }, [selectedInvoiceCityCode, invoiceCommunes, setValue]);
 
   const onSubmit = async (data: any) => {
-    const cityName = cities.find(
-      (c) => String(c.code) === String(data.cityCode)
-    )?.name;
+    const cityName = cities.find((c) => c.code === data.cityCode)?.name;
     const districtName = districts.find(
-      (d) => String(d.code) === String(data.districtCode)
+      (d) => d.code === data.districtCode
     )?.name;
-    const wardName = wards.find(
-      (w) => String(w.code) === String(data.wardCode)
-    )?.name;
+    const wardName = wards.find((w) => w.code === data.wardCode)?.name;
 
     const invoiceCityName = invoiceProvinces.find(
       (p) => p.code === data.invoiceCityCode
@@ -170,18 +123,12 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
 
     const formattedData = {
       ...data,
-      cityCode: data.cityCode || undefined,
       cityName,
-      districtCode: data.districtCode || undefined,
       districtName,
-      wardCode: data.wardCode || undefined,
       wardName,
-      invoiceCityCode: data.invoiceCityCode || undefined,
       invoiceCityName,
-      invoiceWardCode: data.invoiceWardCode || undefined,
       invoiceWardName,
       type: parseInt(data.type),
-      gender: data.gender === "" ? undefined : data.gender === "true",
       birthDate: data.birthDate || undefined,
     };
 
@@ -297,15 +244,10 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
 
           <div className="border-t pt-6">
             <h3 className="font-semibold mb-4">Địa chỉ</h3>
-            {loadingCities && (
-              <p className="text-sm text-gray-500 mb-2">
-                Đang tải dữ liệu địa chỉ...
-              </p>
-            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Địa chỉ cụ thể
+                  Khu vực
                 </label>
                 <input
                   {...register("address")}
@@ -320,8 +262,7 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
                 </label>
                 <select
                   {...register("cityCode")}
-                  className="w-full border rounded px-3 py-2"
-                  disabled={loadingCities}>
+                  className="w-full border rounded px-3 py-2">
                   <option value="">Chọn Tỉnh/Thành phố</option>
                   {cities.map((city) => (
                     <option key={city.code} value={city.code}>
@@ -401,12 +342,6 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
               </div>
             </div>
 
-            {loadingProvinces && (
-              <p className="text-sm text-gray-500 mb-2">
-                Đang tải dữ liệu địa chỉ xuất hóa đơn...
-              </p>
-            )}
-
             {customerType === "0" && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
@@ -437,8 +372,7 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
                   </label>
                   <select
                     {...register("invoiceCityCode")}
-                    className="w-full border rounded px-3 py-2"
-                    disabled={loadingProvinces}>
+                    className="w-full border rounded px-3 py-2">
                     <option value="">Tìm Tỉnh/Thành phố</option>
                     {invoiceProvinces.map((province) => (
                       <option key={province.code} value={province.code}>
@@ -455,7 +389,7 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
                   <select
                     {...register("invoiceWardCode")}
                     className="w-full border rounded px-3 py-2"
-                    disabled={!selectedInvoiceCityCode || loadingProvinces}>
+                    disabled={!selectedInvoiceCityCode}>
                     <option value="">Tìm Phường/Xã</option>
                     {filteredInvoiceCommunes.map((commune) => (
                       <option key={commune.code} value={commune.code}>
@@ -553,8 +487,7 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
                   </label>
                   <select
                     {...register("invoiceCityCode")}
-                    className="w-full border rounded px-3 py-2"
-                    disabled={loadingProvinces}>
+                    className="w-full border rounded px-3 py-2">
                     <option value="">Tìm Tỉnh/Thành phố</option>
                     {invoiceProvinces.map((province) => (
                       <option key={province.code} value={province.code}>
@@ -571,7 +504,7 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
                   <select
                     {...register("invoiceWardCode")}
                     className="w-full border rounded px-3 py-2"
-                    disabled={!selectedInvoiceCityCode || loadingProvinces}>
+                    disabled={!selectedInvoiceCityCode}>
                     <option value="">Tìm Phường/Xã</option>
                     {filteredInvoiceCommunes.map((commune) => (
                       <option key={commune.code} value={commune.code}>
@@ -628,10 +561,21 @@ export function CustomerForm({ onClose, onSuccess }: CustomerFormProps) {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
+                    Ngân hàng
+                  </label>
+                  <select
+                    {...register("invoiceBankAccount")}
+                    className="w-full border rounded px-3 py-2">
+                    <option value="">Chọn ngân hàng</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
                     Số tài khoản ngân hàng
                   </label>
                   <input
-                    {...register("invoiceBankAccount")}
+                    {...register("invoiceBankAccountNumber")}
                     placeholder="Nhập số tài khoản ngân hàng"
                     className="w-full border rounded px-3 py-2"
                   />
