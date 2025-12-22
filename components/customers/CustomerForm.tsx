@@ -130,6 +130,17 @@ export function CustomerForm({
   }, []);
 
   useEffect(() => {
+    if (selectedInvoiceCityCode && invoiceCommunes.length > 0) {
+      const filtered = invoiceCommunes.filter(
+        (commune) => commune.provinceCode === selectedInvoiceCityCode
+      );
+      setFilteredInvoiceCommunes(filtered);
+    } else {
+      setFilteredInvoiceCommunes([]);
+    }
+  }, [selectedInvoiceCityCode, invoiceCommunes]);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
@@ -190,7 +201,12 @@ export function CustomerForm({
   }, [selectedDistrictCode, districts, setValue, isPopulating]);
 
   useEffect(() => {
-    if (customer && cities.length > 0) {
+    if (
+      customer &&
+      cities.length > 0 &&
+      invoiceProvinces.length > 0 &&
+      invoiceCommunes.length > 0
+    ) {
       setIsPopulating(true);
 
       setValue("code", customer.code || "");
@@ -240,8 +256,6 @@ export function CustomerForm({
       setValue("organization", customer.organization || "");
       setValue("taxCode", customer.taxCode || "");
       setValue("invoiceBuyerName", customer.invoiceBuyerName || "");
-      setValue("invoiceCityCode", customer.invoiceCityCode || "");
-      setValue("invoiceWardCode", customer.invoiceWardCode || "");
       setValue("invoiceAddress", customer.invoiceAddress || "");
       setValue("invoiceCccdCmnd", customer.invoiceCccdCmnd || "");
       setValue("invoiceBankAccount", customer.invoiceBankAccount || "");
@@ -249,6 +263,19 @@ export function CustomerForm({
       setValue("invoicePhone", customer.invoicePhone || "");
       setValue("invoiceDvqhnsCode", customer.invoiceDvqhnsCode || "");
       setValue("comments", customer.comments || "");
+
+      if (customer.invoiceCityCode) {
+        setValue("invoiceCityCode", customer.invoiceCityCode);
+
+        const filtered = invoiceCommunes.filter(
+          (commune) => commune.provinceCode === customer.invoiceCityCode
+        );
+        setFilteredInvoiceCommunes(filtered);
+
+        if (customer.invoiceWardCode) {
+          setValue("invoiceWardCode", customer.invoiceWardCode);
+        }
+      }
 
       if (
         customer.customerGroupDetails &&
@@ -264,7 +291,7 @@ export function CustomerForm({
         setIsPopulating(false);
       }, 100);
     }
-  }, [customer, cities, setValue]);
+  }, [customer, cities, invoiceProvinces, invoiceCommunes, setValue]);
 
   const handleToggleGroup = (groupId: number) => {
     setSelectedGroupIds((prev) =>
