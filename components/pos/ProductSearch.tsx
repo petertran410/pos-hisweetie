@@ -4,16 +4,27 @@ import { useState, useEffect, useRef } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useBranchStore } from "@/lib/store/branch";
 import { toast } from "sonner";
+import { X, Minus, Plus } from "lucide-react";
+import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 
 interface ProductSearchProps {
   onAddProduct: (product: any) => void;
+  cartItems: CartItem[];
+  onUpdateItem: (productId: number, updates: Partial<CartItem>) => void;
+  onRemoveItem: (productId: number) => void;
 }
 
-export function ProductSearch({ onAddProduct }: ProductSearchProps) {
+export function ProductSearch({
+  onAddProduct,
+  cartItems,
+  onUpdateItem,
+  onRemoveItem,
+}: ProductSearchProps) {
   const { selectedBranch } = useBranchStore();
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: productsData } = useProducts({
@@ -130,14 +141,109 @@ export function ProductSearch({ onAddProduct }: ProductSearchProps) {
         )}
       </div>
 
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-sm text-gray-500 text-center">
-          {search && products.length === 0 && searchDebounced ? (
-            <div>Không tìm thấy sản phẩm</div>
-          ) : (
-            <div>Nhập tên hoặc mã sản phẩm để tìm kiếm</div>
-          )}
-        </div>
+      <div className="flex-1 overflow-y-auto">
+        {cartItems.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-gray-400 text-center">
+            <div>
+              {search && products.length === 0 && searchDebounced ? (
+                <div>Không tìm thấy sản phẩm</div>
+              ) : (
+                <div>Nhập tên hoặc mã sản phẩm để tìm kiếm</div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="text-sm font-medium mb-2">Bảng giá chung</div>
+            <div className="border rounded divide-y">
+              {cartItems.map((item) => (
+                <div
+                  key={item.product.id}
+                  className="p-3 hover:bg-gray-50 relative"
+                  onMouseEnter={() => setHoveredItemId(item.product.id)}
+                  onMouseLeave={() => setHoveredItemId(null)}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">
+                        {item.product.code}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        {item.product.name}
+                      </div>
+                      {item.note && (
+                        <div className="text-xs text-gray-500 italic mt-1">
+                          Đây cũng là test
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-right flex items-center gap-2">
+                      <div className="text-sm font-medium">{item.quantity}</div>
+                      <div className="text-blue-600 font-medium">
+                        {(
+                          item.quantity * item.price -
+                          item.discount
+                        ).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {hoveredItemId === item.product.id && (
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() =>
+                            onUpdateItem(item.product.id, {
+                              quantity: Math.max(1, item.quantity - 1),
+                            })
+                          }
+                          className="p-1 hover:bg-gray-200 rounded">
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            onUpdateItem(item.product.id, {
+                              quantity: Math.max(1, Number(e.target.value)),
+                            })
+                          }
+                          className="w-16 text-center border rounded px-1 py-1 text-sm"
+                        />
+                        <button
+                          onClick={() =>
+                            onUpdateItem(item.product.id, {
+                              quantity: item.quantity + 1,
+                            })
+                          }
+                          className="p-1 hover:bg-gray-200 rounded">
+                          <Plus className="w-3 h-3" />
+                        </button>
+                        <span className="text-xs text-gray-600">×</span>
+                        <input
+                          type="number"
+                          value={item.price}
+                          onChange={(e) =>
+                            onUpdateItem(item.product.id, {
+                              price: Number(e.target.value),
+                            })
+                          }
+                          className="w-24 text-right border rounded px-2 py-1 text-sm"
+                        />
+                      </div>
+
+                      <button
+                        onClick={() => onRemoveItem(item.product.id)}
+                        className="text-gray-400 hover:text-red-600">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

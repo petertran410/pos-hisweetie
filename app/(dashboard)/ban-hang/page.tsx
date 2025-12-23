@@ -141,13 +141,16 @@ export default function BanHangPage() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <ProductSearch onAddProduct={addToCart} />
+        <ProductSearch
+          onAddProduct={addToCart}
+          cartItems={cartItems}
+          onUpdateItem={updateCartItem}
+          onRemoveItem={removeFromCart}
+        />
         <OrderCart
           cartItems={cartItems}
           selectedCustomer={selectedCustomer}
           onSelectCustomer={setSelectedCustomer}
-          onUpdateItem={updateCartItem}
-          onRemoveItem={removeFromCart}
           orderNote={orderNote}
           onOrderNoteChange={setOrderNote}
           discount={discount}
