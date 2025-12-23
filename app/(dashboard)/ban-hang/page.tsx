@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ProductSearch } from "@/components/pos/ProductSearch";
+import { ProductSearchDropdown } from "@/components/pos/ProductSearchDropdown";
+import { CartItemsList } from "@/components/pos/CartItemsList";
 import { OrderCart } from "@/components/pos/OrderCart";
 import { useBranchStore } from "@/lib/store/branch";
 import { useCreateOrder } from "@/lib/hooks/useOrders";
@@ -122,21 +123,25 @@ export default function BanHangPage() {
 
   return (
     <div className="h-screen flex flex-col bg-blue-600">
-      <div className="text-orange-600 px-4 py-2 flex items-center gap-4">
+      <div className="px-4 py-3 flex items-center gap-4">
+        <div className="flex-1 max-w-md">
+          <ProductSearchDropdown onAddProduct={addToCart} />
+        </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1 rounded bg-white/50">
-            <span className="text-white">Đặt hàng</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-white/50">
+            <span className="text-white font-medium">Đặt hàng</span>
             <button className="hover:bg-white/20 p-1 rounded">
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 text-white" />
             </button>
           </div>
-          <button className="px-3 py-1 rounded text-white">+</button>
+          <button className="px-3 py-1.5 rounded text-white hover:bg-white/20 font-medium">
+            +
+          </button>
         </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <ProductSearch
-          onAddProduct={addToCart}
+        <CartItemsList
           cartItems={cartItems}
           onUpdateItem={updateCartItem}
           onRemoveItem={removeFromCart}
