@@ -53,8 +53,8 @@ export function OrderCart({
   };
 
   return (
-    <div className="w-1/2 bg-white border-l flex flex-col">
-      <div className="p-4 border-b space-y-3">
+    <div className="w-1/2 h-full bg-white border-l flex flex-col">
+      <div className="p-4 border-b space-y-3 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button className="px-3 py-1 border rounded hover:bg-gray-50">
@@ -110,7 +110,7 @@ export function OrderCart({
 
       <div className="flex-1"></div>
 
-      <div className="border-t p-4 space-y-3">
+      <div className="p-4 space-y-3 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm">Thu hộ tiền (COD)</span>
@@ -133,16 +133,16 @@ export function OrderCart({
           <div className="flex items-center justify-between text-sm">
             <span>Tiền thừa trả khách</span>
             <span className="text-red-600">
-              - {Math.max(0, paymentAmount - calculateTotal()).toLocaleString()}
+              {Math.max(0, paymentAmount - calculateTotal()).toLocaleString()}
             </span>
           </div>
         )}
 
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm font-medium">
-            <span>{useCOD ? "Tính vào công nợ" : "Khách thanh toán"}</span>
+            <span>{useCOD ? "Tính vào công nợ" : ""}</span>
             <span className="text-blue-600">
-              {useCOD ? calculateTotal().toLocaleString() : "0"}
+              {useCOD ? calculateTotal().toLocaleString() : ""}
             </span>
           </div>
 
@@ -161,7 +161,7 @@ export function OrderCart({
           onClick={onCreateOrder}
           disabled={cartItems.length === 0}
           className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-lg">
-          Tạo đơn (F9)
+          ĐẶT HÀNG
         </button>
       </div>
     </div>

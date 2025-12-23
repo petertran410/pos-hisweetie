@@ -122,8 +122,8 @@ export default function BanHangPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-blue-600">
-      <div className="px-4 py-3 flex items-center gap-4">
+    <div className="h-full flex flex-col bg-blue-600">
+      <div className="px-4 py-3 flex items-center gap-4 flex-shrink-0">
         <div className="flex-1 max-w-md">
           <ProductSearchDropdown onAddProduct={addToCart} />
         </div>
@@ -140,7 +140,7 @@ export default function BanHangPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex min-h-0">
         <CartItemsList
           cartItems={cartItems}
           onUpdateItem={updateCartItem}

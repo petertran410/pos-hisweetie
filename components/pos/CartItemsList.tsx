@@ -45,7 +45,7 @@ export function CartItemsList({
   }
 
   return (
-    <div className="w-1/2 bg-white flex flex-col">
+    <div className="w-1/2 bg-white flex flex-col pb-4">
       <div className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-3">
           {cartItems.map((item) => (
@@ -57,10 +57,10 @@ export function CartItemsList({
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-2">
-                    <span className="text-sm font-medium text-gray-600">
+                    <span className="text-md font-medium text-gray-600">
                       {item.product.code}
                     </span>
-                    <span className="text-sm font-semibold text-gray-900">
+                    <span className="text-md font-semibold text-gray-900">
                       {item.product.name}
                     </span>
                   </div>
@@ -115,9 +115,6 @@ export function CartItemsList({
                   <div className="text-lg font-semibold text-blue-600">
                     {(item.quantity * item.price).toLocaleString()}
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {item.price.toLocaleString()} × {item.quantity}
-                  </div>
                 </div>
               </div>
             </div>
@@ -125,22 +122,21 @@ export function CartItemsList({
         </div>
       </div>
 
-      <div className="border-t p-4 space-y-3 bg-white">
-        <div className="flex items-center justify-between text-sm">
+      <div className="p-4 space-y-3 bg-white">
+        <div className="flex items-center justify-between text-md">
           <button className="text-gray-600 hover:text-gray-800 flex items-center gap-1">
             <span>✏️</span>
             <span>Ghi chú đơn hàng</span>
           </button>
           <div className="flex items-center gap-4">
             <span className="text-gray-600">Tổng tiền hàng</span>
-            <span className="font-medium">{cartItems.length}</span>
             <span className="font-semibold">
               {calculateSubtotal().toLocaleString()}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between text-md">
           <span className="text-gray-600">Giảm giá</span>
           <input
             type="number"
@@ -150,7 +146,7 @@ export function CartItemsList({
           />
         </div>
 
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between text-md">
           <div className="flex items-center gap-2">
             <span className="text-gray-600">Thu khác</span>
             <button className="text-blue-600 hover:text-blue-700">ⓘ</button>
