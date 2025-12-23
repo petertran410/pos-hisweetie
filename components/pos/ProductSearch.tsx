@@ -64,7 +64,7 @@ export function ProductSearch({ onAddProduct }: ProductSearchProps) {
   };
 
   return (
-    <div className="w-1/2 bg-white p-4 overflow-hidden flex flex-col">
+    <div className="w-1/2 bg-white p-4 flex flex-col h-full">
       <div className="relative mb-4" ref={dropdownRef}>
         <input
           type="text"
@@ -78,10 +78,10 @@ export function ProductSearch({ onAddProduct }: ProductSearchProps) {
         {showDropdown && products.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg max-h-96 overflow-y-auto z-50">
             {products.map((product) => (
-              <button
+              <div
                 key={product.id}
                 onClick={() => handleAddProduct(product)}
-                className="w-full px-4 py-3 hover:bg-gray-50 flex items-start gap-3 text-left border-b last:border-b-0">
+                className="w-full px-4 py-3 hover:bg-gray-50 flex items-start gap-3 cursor-pointer border-b last:border-b-0">
                 <div className="w-12 h-12 bg-gray-200 rounded flex-shrink-0">
                   {product.images?.[0] ? (
                     <img
@@ -103,10 +103,6 @@ export function ProductSearch({ onAddProduct }: ProductSearchProps) {
                       Tồn: {getInventoryQuantity(product)}
                     </span>
                     <span className="text-xs">|</span>
-                    <span className="text-xs text-gray-600">
-                      Đặt NCC: {product.supplierOrder || 0}
-                    </span>
-                    <span className="text-xs">|</span>
                     <span className="text-xs text-gray-600">KH đặt: 0</span>
                   </div>
                 </div>
@@ -115,17 +111,17 @@ export function ProductSearch({ onAddProduct }: ProductSearchProps) {
                     {Number(product.basePrice).toLocaleString()}
                   </div>
                   <div className="flex gap-1 mt-1">
-                    <button
+                    <span
                       onClick={(e) => {
                         e.stopPropagation();
                         toast.info("Hộp");
                       }}
-                      className="px-2 py-0.5 text-xs border rounded hover:bg-gray-100">
+                      className="px-2 py-0.5 text-xs border rounded hover:bg-gray-100 cursor-pointer inline-block">
                       Hộp
-                    </button>
+                    </span>
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
             <button className="w-full py-2 text-sm text-blue-600 hover:bg-blue-50 border-t">
               + Thêm mới hàng hóa
@@ -134,11 +130,14 @@ export function ProductSearch({ onAddProduct }: ProductSearchProps) {
         )}
       </div>
 
-      <div className="text-sm text-gray-500 text-center py-8">
-        {search && products.length === 0 && searchDebounced && (
-          <div>Không tìm thấy sản phẩm</div>
-        )}
-        {!search && <div>Nhập tên hoặc mã sản phẩm để tìm kiếm</div>}
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-sm text-gray-500 text-center">
+          {search && products.length === 0 && searchDebounced ? (
+            <div>Không tìm thấy sản phẩm</div>
+          ) : (
+            <div>Nhập tên hoặc mã sản phẩm để tìm kiếm</div>
+          )}
+        </div>
       </div>
     </div>
   );
