@@ -85,7 +85,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "invoiceCode",
     label: "Mã hóa đơn",
-    visible: false,
+    visible: true,
     render: () => "-",
   },
   {
