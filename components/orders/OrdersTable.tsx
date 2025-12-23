@@ -156,13 +156,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
       order.delivery?.wardName || order.customer?.wardName || "-",
   },
   {
-    key: "birthDate",
-    label: "Ngày sinh",
-    visible: false,
-    render: (order) =>
-      order.customer?.birthDate ? formatDate(order.customer.birthDate) : "-",
-  },
-  {
     key: "deliveryPartner",
     label: "Đối tác giao hàng",
     visible: false,

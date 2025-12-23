@@ -4,12 +4,14 @@ import { useState } from "react";
 import { OrdersTable } from "@/components/orders/OrdersTable";
 import { OrdersSidebar } from "@/components/orders/OrdersSidebar";
 import type { Order } from "@/lib/types/order";
+import { useRouter } from "next/navigation";
 
 export default function DatHangPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState({});
 
   const handleCreateClick = () => {
-    alert("Tạo đơn đặt hàng mới - Form sẽ được triển khai sau");
+    router.push("/ban-hang");
   };
 
   const handleEditClick = (order: Order) => {
