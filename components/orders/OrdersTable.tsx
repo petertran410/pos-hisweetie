@@ -350,7 +350,7 @@ export function OrdersTable({
         <table className="w-full text-sm">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-3 text-left sticky left-0 bg-gray-50">
+              <th className="px-6 py-3 text-left sticky left-0 bg-gray-50">
                 <input
                   type="checkbox"
                   checked={
@@ -363,7 +363,7 @@ export function OrdersTable({
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
+                  className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
                   {col.label}
                 </th>
               ))}
@@ -374,7 +374,7 @@ export function OrdersTable({
               <tr>
                 <td
                   colSpan={visibleColumns.length + 3}
-                  className="px-4 py-8 text-center text-gray-500">
+                  className="px-6 py-8 text-center text-gray-500">
                   Đang tải...
                 </td>
               </tr>
@@ -382,7 +382,7 @@ export function OrdersTable({
               <tr>
                 <td
                   colSpan={visibleColumns.length + 3}
-                  className="px-4 py-8 text-center text-gray-500">
+                  className="px-6 py-8 text-center text-gray-500">
                   Chưa có đơn đặt hàng nào
                 </td>
               </tr>
@@ -393,7 +393,7 @@ export function OrdersTable({
                   className="border-b hover:bg-gray-50 cursor-pointer"
                   onClick={() => onEditClick(order)}>
                   <td
-                    className="px-4 py-3 sticky left-0 bg-white"
+                    className="px-6 py-3 sticky left-0 bg-white"
                     onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
@@ -403,19 +403,19 @@ export function OrdersTable({
                     />
                   </td>
                   <td
-                    className="px-4 py-3 text-center sticky left-12 bg-white"
+                    className="px-6 py-3 text-center sticky left-12 bg-white"
                     onClick={(e) => e.stopPropagation()}>
                     ⭐
                   </td>
                   {visibleColumns.map((col) => (
                     <td
                       key={col.key}
-                      className="px-4 py-3 text-sm whitespace-nowrap">
+                      className="px-6 py-3 text-sm whitespace-nowrap">
                       {col.render(order)}
                     </td>
                   ))}
                   <td
-                    className="px-4 py-3 text-center sticky right-0 bg-white"
+                    className="px-6 py-3 text-center sticky right-0 bg-white"
                     onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => onEditClick(order)}
