@@ -74,9 +74,6 @@ export function ProductSearch({ onAddProduct }: ProductSearchProps) {
           onFocus={() => search && setShowDropdown(true)}
           className="w-full border rounded px-3 py-2 pr-10"
         />
-        <button className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400">
-          📷
-        </button>
 
         {showDropdown && products.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg max-h-96 overflow-y-auto z-50">
@@ -104,6 +101,10 @@ export function ProductSearch({ onAddProduct }: ProductSearchProps) {
                   <div className="flex items-center gap-4 mt-1">
                     <span className="text-xs text-gray-600">
                       Tồn: {getInventoryQuantity(product)}
+                    </span>
+                    <span className="text-xs">|</span>
+                    <span className="text-xs text-gray-600">
+                      Đặt NCC: {product.supplierOrder || 0}
                     </span>
                     <span className="text-xs">|</span>
                     <span className="text-xs text-gray-600">KH đặt: 0</span>

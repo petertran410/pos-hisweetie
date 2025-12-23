@@ -113,8 +113,10 @@ export default function BanHangPage() {
       setOrderNote("");
       setDiscount(0);
       setPaymentAmount(0);
+      toast.success("Tạo đơn hàng thành công");
     } catch (error) {
       console.error("Create order error:", error);
+      toast.error("Tạo đơn hàng thất bại");
     }
   };
 
