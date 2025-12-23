@@ -128,7 +128,7 @@ export default function BanHangPage() {
           <ProductSearchDropdown onAddProduct={addToCart} />
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-white/50">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 rounded-md">
             <span className="text-white font-medium">Đặt hàng</span>
             <button className="hover:bg-white/20 p-1 rounded">
               <X className="w-4 h-4 text-white" />

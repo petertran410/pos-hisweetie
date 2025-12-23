@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Minus, Plus, X } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 
 interface CartItemsListProps {
@@ -35,17 +35,9 @@ export function CartItemsList({
         {cartItems.map((item) => (
           <div
             key={item.product.id}
-            className="border rounded-lg p-4 hover:shadow-md transition-shadow relative"
+            className="border rounded-lg p-4 hover:shadow-md transition-shadow"
             onMouseEnter={() => setHoveredItemId(item.product.id)}
             onMouseLeave={() => setHoveredItemId(null)}>
-            {hoveredItemId === item.product.id && (
-              <button
-                onClick={() => onRemoveItem(item.product.id)}
-                className="absolute top-2 right-2 p-1.5 bg-red-100 hover:bg-red-200 rounded-full text-red-600 transition-colors z-10">
-                <X className="w-4 h-4" />
-              </button>
-            )}
-
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 mb-2">
@@ -63,7 +55,7 @@ export function CartItemsList({
                   </div>
                 )}
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() =>
                       onUpdateItem(item.product.id, {
@@ -99,9 +91,13 @@ export function CartItemsList({
                 <div className="text-lg font-semibold text-blue-600">
                   {(item.quantity * item.price).toLocaleString()}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {item.price.toLocaleString()} × {item.quantity}
-                </div>
+                {hoveredItemId === item.product.id && (
+                  <button
+                    onClick={() => onRemoveItem(item.product.id)}
+                    className="p-1.5 bg-red-100 hover:bg-red-200 rounded text-red-600 transition-colors ml-2">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
