@@ -73,17 +73,12 @@ export function OrderCart({
           onSelectCustomer={onSelectCustomer}
         />
 
-        <button className="w-full flex items-center justify-between border rounded px-3 py-2 hover:bg-gray-50">
-          <span className="text-sm">Bảng giá chung</span>
-          <span className="text-gray-400">▼</span>
-        </button>
-
         {selectedCustomer && (
           <div className="p-3 bg-gray-50 rounded space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-red-500 font-medium">
-                  {selectedCustomer.name} +{selectedCustomer.contactNumber}
+                <span className="text-black font-medium">
+                  {selectedCustomer.name} - {selectedCustomer.contactNumber}
                 </span>
                 <button
                   onClick={() => onSelectCustomer(null)}
@@ -99,35 +94,28 @@ export function OrderCart({
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-blue-500">📍</span>
-                <input
+                <span>{selectedBranch?.address || ""}</span>
+                {/* <input
                   type="text"
                   defaultValue={selectedBranch?.address || ""}
                   className="flex-1 border rounded px-2 py-1 text-sm"
-                  placeholder="262/1/1D Phan Anh, Phường Hiệp Tân..."
-                />
-                <button className="text-gray-400">▼</button>
+                  placeholder="Địa chỉ chi nhánh"
+                /> */}
               </div>
 
               <div className="flex items-center gap-2">
                 <span className="text-green-500">📍</span>
                 <div className="flex-1 space-y-1">
-                  <input
-                    type="text"
-                    defaultValue={selectedCustomer.name || ""}
-                    placeholder="Tên người nhận"
-                    className="w-full border rounded px-2 py-1 text-sm"
-                  />
-                  <input
-                    type="text"
-                    defaultValue={selectedCustomer.contactNumber || ""}
-                    placeholder="Số điện thoại"
-                    className="w-full border rounded px-2 py-1 text-sm"
-                  />
+                  <span>
+                    {selectedCustomer.address || ""},{" "}
+                    {selectedCustomer.invoiceCityName || ""},{" "}
+                    {selectedCustomer.invoiceWardName || ""}
+                  </span>
                 </div>
                 <button className="text-gray-400">+</button>
               </div>
 
-              <input
+              {/* <input
                 type="text"
                 defaultValue={selectedCustomer.address || ""}
                 placeholder="Địa chỉ chi tiết (Số nhà, ngõ, đường)"
@@ -146,7 +134,7 @@ export function OrderCart({
                 defaultValue={selectedCustomer.invoiceWardName || ""}
                 placeholder="Phường/Xã"
                 className="w-full border rounded px-2 py-1 text-sm"
-              />
+              /> */}
 
               <div className="flex items-center gap-2">
                 <span>📦</span>

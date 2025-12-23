@@ -83,11 +83,11 @@ export function ProductSearch({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onFocus={() => search && setShowDropdown(true)}
-          className="w-full border rounded px-3 py-2 pr-10"
+          className="w-full border rounded-xl px-3 py-2 pr-10"
         />
 
         {showDropdown && products.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg max-h-96 overflow-y-auto z-50">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-xl shadow-lg max-h-96 overflow-y-auto z-50">
             {products.map((product) => (
               <div
                 key={product.id}
@@ -134,9 +134,6 @@ export function ProductSearch({
                 </div>
               </div>
             ))}
-            <button className="w-full py-2 text-sm text-blue-600 hover:bg-blue-50 border-t">
-              + Thêm mới hàng hóa
-            </button>
           </div>
         )}
       </div>
@@ -154,8 +151,7 @@ export function ProductSearch({
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="text-sm font-medium mb-2">Bảng giá chung</div>
-            <div className="border rounded divide-y">
+            <div className="border-2 rounded-xl divide-y">
               {cartItems.map((item) => (
                 <div
                   key={item.product.id}
@@ -163,42 +159,33 @@ export function ProductSearch({
                   onMouseEnter={() => setHoveredItemId(item.product.id)}
                   onMouseLeave={() => setHoveredItemId(null)}>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">
-                        {item.product.code}
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        {item.product.name}
-                      </div>
-                      {item.note && (
-                        <div className="text-xs text-gray-500 italic mt-1">
-                          Đây cũng là test
+                    <div className="flex">
+                      <div className="flex-1">
+                        <div className="font-medium text-md">
+                          {item.product.code}
                         </div>
-                      )}
-                    </div>
-
-                    <div className="text-right flex items-center gap-2">
-                      <div className="text-sm font-medium">{item.quantity}</div>
-                      <div className="text-blue-600 font-medium">
-                        {(
-                          item.quantity * item.price -
-                          item.discount
-                        ).toLocaleString()}
+                        <div className="border-t mt-2"></div>
+                        <div className="text-md mt-2 text-black">
+                          {item.product.name}
+                        </div>
+                        {item.note ? (
+                          <div className="text-xs text-gray-500 italic mt-1">
+                            {item.note}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-500 italic mt-1"></div>
+                        )}
                       </div>
-                    </div>
-                  </div>
 
-                  {hoveredItemId === item.product.id && (
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between ml-10">
                         <button
                           onClick={() =>
                             onUpdateItem(item.product.id, {
                               quantity: Math.max(1, item.quantity - 1),
                             })
                           }
-                          className="p-1 hover:bg-gray-200 rounded">
-                          <Minus className="w-3 h-3" />
+                          className="p-2 hover:bg-gray-200 rounded">
+                          <Minus className="w-4 h-4" />
                         </button>
                         <input
                           type="number"
@@ -208,7 +195,7 @@ export function ProductSearch({
                               quantity: Math.max(1, Number(e.target.value)),
                             })
                           }
-                          className="w-16 text-center border rounded px-1 py-1 text-sm"
+                          className="w-16 text-center border rounded px-1 py-1 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                         />
                         <button
                           onClick={() =>
@@ -216,29 +203,59 @@ export function ProductSearch({
                               quantity: item.quantity + 1,
                             })
                           }
-                          className="p-1 hover:bg-gray-200 rounded">
-                          <Plus className="w-3 h-3" />
+                          className="p-2 hover:bg-gray-200 rounded">
+                          <Plus className="w-4 h-4" />
                         </button>
-                        <span className="text-xs text-gray-600">×</span>
-                        <input
-                          type="number"
-                          value={item.price}
-                          onChange={(e) =>
-                            onUpdateItem(item.product.id, {
-                              price: Number(e.target.value),
-                            })
-                          }
-                          className="w-24 text-right border rounded px-2 py-1 text-sm"
-                        />
                       </div>
+                    </div>
 
+                    <div className="text-right flex items-center gap-2">
+                      <div className="text-blue-600 font-medium text-xl">
+                        {(
+                          item.quantity * item.price -
+                          item.discount
+                        ).toLocaleString()}
+                      </div>
                       <button
                         onClick={() => onRemoveItem(item.product.id)}
                         className="text-gray-400 hover:text-red-600">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                  )}
+                  </div>
+
+                  {/* <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          onUpdateItem(item.product.id, {
+                            quantity: Math.max(1, item.quantity - 1),
+                          })
+                        }
+                        className="p-1 hover:bg-gray-200 rounded">
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          onUpdateItem(item.product.id, {
+                            quantity: Math.max(1, Number(e.target.value)),
+                          })
+                        }
+                        className="w-16 text-center border rounded px-1 py-1 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                      <button
+                        onClick={() =>
+                          onUpdateItem(item.product.id, {
+                            quantity: item.quantity + 1,
+                          })
+                        }
+                        className="p-1 hover:bg-gray-200 rounded">
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div> */}
                 </div>
               ))}
             </div>

@@ -25,9 +25,9 @@ export function PriceBookForm({
   const [activeTab, setActiveTab] = useState<"info" | "scope">("info");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: branchesData } = useBranches(); // Trả về Branch[]
-  const { data: customerGroupsData } = useCustomerGroups(); // Trả về CustomerGroup[]
-  const { data: usersData } = useUsers(); // Trả về User[]
+  const { data: branchesData } = useBranches();
+  const { data: customerGroupsData } = useCustomerGroups();
+  const { data: usersData } = useUsers();
 
   const createPriceBook = useCreatePriceBook();
   const updatePriceBook = useUpdatePriceBook();

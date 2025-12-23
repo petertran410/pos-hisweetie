@@ -121,23 +121,17 @@ export default function BanHangPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100">
-      <div className="bg-blue-600 text-white px-4 py-2 flex items-center gap-4">
+    <div className="h-screen flex flex-col bg-blue-600">
+      <div className="text-orange-600 px-4 py-2 flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <button className="hover:bg-blue-700 p-2 rounded">⟲</button>
-          <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded">
-            <span className="text-white">Đặt hàng 1</span>
+          <div className="flex items-center gap-2 px-3 py-1 rounded bg-white/50">
+            <span className="text-white">Đặt hàng</span>
             <button className="hover:bg-white/20 p-1 rounded">
               <X className="w-4 h-4" />
             </button>
           </div>
-          <button className="hover:bg-blue-700 px-3 py-1 rounded text-white">
-            +
-          </button>
+          <button className="px-3 py-1 rounded text-white">+</button>
         </div>
-        <button className="ml-auto hover:bg-blue-700 px-3 py-1 rounded">
-          ?
-        </button>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
