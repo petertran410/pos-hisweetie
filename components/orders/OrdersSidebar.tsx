@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useCustomers } from "@/lib/hooks/useCustomers";
+import { useUsers } from "@/lib/hooks/useUsers";
+import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 import { ChevronDown, X } from "lucide-react";
 
 interface OrdersSidebarProps {
@@ -26,7 +28,16 @@ const STATUS_OPTIONS = [
     label: "Hoàn thành",
     color: "bg-green-100 text-green-700",
   },
-  { value: "cancelled", label: "Đã hủy", color: "bg-red-100 text-red-700" },
+  {
+    value: "cancelled",
+    label: "Hủy",
+    color: "bg-red-100 text-red-700",
+  },
+  {
+    value: "confirmed",
+    label: "Đã xác nhận",
+    color: "bg-teal-100 text-teal-700",
+  },
 ];
 
 const PAYMENT_STATUS_OPTIONS = [
@@ -104,7 +115,9 @@ export function OrdersSidebar({
   onFiltersChange,
 }: OrdersSidebarProps) {
   const { data: branches } = useBranches();
-  const { data: customersData } = useCustomers({ limit: 1000 });
+  const { data: customersData } = useCustomers({ pageSize: 1000 });
+  const { data: users } = useUsers();
+  const { data: saleChannels } = useSaleChannels();
 
   const [branchId, setBranchId] = useState<string>("");
   const [customerId, setCustomerId] = useState<string>("");
@@ -124,6 +137,10 @@ export function OrdersSidebar({
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
 
+  const [creatorId, setCreatorId] = useState<string>("");
+  const [saleChannelId, setSaleChannelId] = useState<string>("");
+  const [showSaleChannelModal, setShowSaleChannelModal] = useState(false);
+
   const customers = customersData?.data || [];
 
   useEffect(() => {
@@ -138,6 +155,8 @@ export function OrdersSidebar({
     selectedPreset,
     fromDate,
     toDate,
+    creatorId,
+    saleChannelId,
   ]);
 
   const applyFilters = () => {
@@ -179,6 +198,14 @@ export function OrdersSidebar({
       newFilters.toDate = dateRange.to.toISOString();
     }
 
+    if (creatorId) {
+      newFilters.soldById = parseInt(creatorId);
+    }
+
+    if (saleChannelId) {
+      newFilters.saleChannelId = parseInt(saleChannelId);
+    }
+
     onFiltersChange(newFilters);
   };
 
@@ -214,6 +241,8 @@ export function OrdersSidebar({
     setSelectedPreset("this_month");
     setFromDate("");
     setToDate("");
+    setCreatorId("");
+    setSaleChannelId("");
     onFiltersChange({});
   };
 
@@ -460,6 +489,54 @@ export function OrdersSidebar({
             <option value="cash">Tiền mặt</option>
             <option value="bank">Chuyển khoản</option>
             <option value="card">Thẻ</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Người tạo</label>
+          <select
+            value={creatorId}
+            onChange={(e) => setCreatorId(e.target.value)}
+            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Chọn người tạo</option>
+            {users?.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Người nhận đặt
+          </label>
+          <select
+            className="w-full border rounded px-3 py-2 text-sm"
+            defaultValue="">
+            <option value="">Chọn người nhận đặt</option>
+          </select>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium">Kênh bán</label>
+            <button
+              onClick={() => setShowSaleChannelModal(true)}
+              className="text-sm text-blue-600 hover:text-blue-700">
+              Tạo mới
+            </button>
+          </div>
+          <select
+            value={saleChannelId}
+            onChange={(e) => setSaleChannelId(e.target.value)}
+            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Chọn kênh bán</option>
+            {saleChannels?.map((channel) => (
+              <option key={channel.id} value={channel.id}>
+                {channel.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>

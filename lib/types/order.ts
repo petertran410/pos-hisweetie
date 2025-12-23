@@ -2,11 +2,9 @@ export interface Order {
   id: number;
   code: string;
   customerId?: number;
-  customer?: any;
   branchId?: number;
-  branch?: any;
   soldById?: number;
-  soldBy?: any;
+  saleChannelId?: number;
   orderDate: string;
   totalAmount: number;
   discount: number;
@@ -14,45 +12,63 @@ export interface Order {
   grandTotal: number;
   paidAmount: number;
   debtAmount: number;
-  orderStatus: string;
+  depositAmount: number;
   paymentStatus: string;
+  orderStatus: string;
+  usingCod: boolean;
   description?: string;
-  items: OrderItem[];
-  payments: OrderPayment[];
+  createdBy: number;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface OrderItem {
-  id: number;
-  productId: number;
-  product?: any;
-  productCode: string;
-  productName: string;
-  quantity: number;
-  price: number;
-  appliedPrice: number;
-  discount: number;
-  discountRatio: number;
-  totalPrice: number;
-  note?: string;
-  serialNumbers?: string;
-}
-
-export interface OrderPayment {
-  id: number;
-  code: string;
-  orderId: number;
-  amount: number;
-  paymentDate: string;
-  paymentMethod: string;
-  description?: string;
-  status: number;
+  customer?: {
+    id: number;
+    name: string;
+    code?: string;
+    contactNumber?: string;
+    phone?: string;
+    address?: string;
+    cityName?: string;
+    wardName?: string;
+    birthDate?: string;
+  };
+  branch?: {
+    id: number;
+    name: string;
+  };
+  soldBy?: {
+    id: number;
+    name: string;
+  };
+  creator?: {
+    id: number;
+    name: string;
+  };
+  saleChannel?: {
+    id: number;
+    name: string;
+  };
+  items?: any[];
+  payments?: any[];
+  delivery?: {
+    id: number;
+    deliveryCode?: string;
+    receiver?: string;
+    contactNumber?: string;
+    address?: string;
+    locationName?: string;
+    wardName?: string;
+    expectedDelivery?: string;
+    partnerDelivery?: {
+      id: number;
+      name: string;
+    };
+  };
 }
 
 export interface CreateOrderDto {
   customerId?: number;
   branchId?: number;
+  saleChannelId?: number;
   orderDate?: string;
   discountAmount?: number;
   discountRatio?: number;
