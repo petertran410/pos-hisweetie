@@ -71,12 +71,6 @@ const getStatusText = (status: string) => {
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
-    key: "trackingCode",
-    label: "Mã vận đơn",
-    visible: false,
-    render: (order) => order.delivery?.deliveryCode || "-",
-  },
-  {
     key: "code",
     label: "Mã đặt hàng",
     visible: true,
@@ -373,9 +367,6 @@ export function OrdersTable({
                   {col.label}
                 </th>
               ))}
-              <th className="px-4 py-3 text-center font-medium text-gray-700 sticky right-0 bg-gray-50">
-                Thao tác
-              </th>
             </tr>
           </thead>
           <tbody>
