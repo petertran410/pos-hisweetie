@@ -395,11 +395,6 @@ export function OrdersTable({
                       className="cursor-pointer"
                     />
                   </td>
-                  <td
-                    className="px-6 py-3 text-center sticky left-12 bg-white"
-                    onClick={(e) => e.stopPropagation()}>
-                    ⭐
-                  </td>
                   {visibleColumns.map((col) => (
                     <td
                       key={col.key}

@@ -128,8 +128,8 @@ export default function BanHangPage() {
           <ProductSearchDropdown onAddProduct={addToCart} />
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 rounded-md">
-            <span className="text-white font-medium">Đặt hàng</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-white/50">
+            <span className="text-white font-medium">Đặt hàng 1</span>
             <button className="hover:bg-white/20 p-1 rounded">
               <X className="w-4 h-4 text-white" />
             </button>
@@ -145,20 +145,19 @@ export default function BanHangPage() {
           cartItems={cartItems}
           onUpdateItem={updateCartItem}
           onRemoveItem={removeFromCart}
+          discount={discount}
+          onDiscountChange={setDiscount}
         />
         <OrderCart
           cartItems={cartItems}
           selectedCustomer={selectedCustomer}
           onSelectCustomer={setSelectedCustomer}
-          orderNote={orderNote}
-          onOrderNoteChange={setOrderNote}
-          discount={discount}
-          onDiscountChange={setDiscount}
           useCOD={useCOD}
           onUseCODChange={setUseCOD}
           paymentAmount={paymentAmount}
           onPaymentAmountChange={setPaymentAmount}
           onCreateOrder={handleCreateOrder}
+          discount={discount}
         />
       </div>
     </div>
