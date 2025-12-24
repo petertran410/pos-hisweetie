@@ -111,8 +111,15 @@ export function CartItemsList({
                   </div>
                 </div>
 
-                <div className="text-right flex-shrink-0">
+                {/* <div className="">
                   <div className="text-lg font-semibold text-blue-600">
+                    {item.price.toLocaleString()}
+                  </div>
+                </div> */}
+
+                <div className="text-right flex gap-60">
+                  <div className="text-lg">{item.price.toLocaleString()}</div>
+                  <div className="text-lg font-extrabold">
                     {(item.quantity * item.price).toLocaleString()}
                   </div>
                 </div>
@@ -122,10 +129,9 @@ export function CartItemsList({
         </div>
       </div>
 
-      <div className="px-3 pb-3 space-y-2 bg-white border-t pt-2">
+      <div className="px-3 pb-10 space-y-2">
         <div className="flex items-center justify-between">
           <button className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm">
-            <span>✏️</span>
             <span>Ghi chú đơn hàng</span>
           </button>
           <div className="flex items-center gap-3">
@@ -156,7 +162,7 @@ export function CartItemsList({
           <span className="font-medium">0</span>
         </div>
 
-        <div className="flex items-center justify-between font-semibold text-base border-t pt-2">
+        <div className="flex items-center justify-between font-semibold text-base">
           <span>Khách cần trả</span>
           <span className="text-blue-600 text-lg">
             {calculateTotal().toLocaleString()}

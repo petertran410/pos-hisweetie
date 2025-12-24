@@ -72,12 +72,6 @@ export function OrderCart({
               <button className="px-2 py-1 text-sm border rounded hover:bg-gray-50">
                 {user?.name || "Admin"}
               </button>
-              <button className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded">
-                <User className="w-3.5 h-3.5 text-gray-600" />
-              </button>
-              <button className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded text-gray-600 text-xs">
-                ▼
-              </button>
             </div>
             <div className="text-xs text-gray-600">{formatDate()}</div>
           </div>
@@ -92,24 +86,25 @@ export function OrderCart({
           <div className="p-3 space-y-2 flex-1">
             <div className="flex items-start gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 mt-0.5" />
-              <span className="text-xs leading-relaxed">
+              <span className="text-md leading-relaxed">
                 {selectedBranch?.address || ""}
               </span>
             </div>
 
             <div className="flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-              <input
+              <span>{deliveryInfo.receiver}</span>
+              {/* <input
                 type="text"
                 value={deliveryInfo.receiver}
                 onChange={(e) =>
                   handleDeliveryChange("receiver", e.target.value)
                 }
                 placeholder="Tên người nhận"
-                className="flex-1 text-sm bg-transparent outline-none"
-              />
-              <Phone className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-              <input
+                className="flex-1 text-md bg-transparent outline-none"
+              /> */}
+
+              {/* <input
                 type="text"
                 value={deliveryInfo.contactNumber}
                 onChange={(e) =>
@@ -117,10 +112,20 @@ export function OrderCart({
                 }
                 placeholder="Số điện thoại"
                 className="w-28 text-sm bg-transparent outline-none"
-              />
+              /> */}
             </div>
 
-            <input
+            <span className="flex gap-1.5">
+              <Phone className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />{" "}
+              {deliveryInfo.contactNumber}
+            </span>
+            <div className="flex flex-col gap-1.5">
+              <span>{deliveryInfo.detailAddress}</span>
+              <span>{deliveryInfo.locationName}</span>
+              <span>{deliveryInfo.wardName}</span>
+            </div>
+
+            {/* <input
               type="text"
               value={deliveryInfo.detailAddress}
               onChange={(e) =>
@@ -128,9 +133,9 @@ export function OrderCart({
               }
               placeholder="Địa chỉ chi tiết (Số nhà, ngõ, đường)"
               className="w-full text-sm bg-transparent border-b border-gray-200 py-1.5 outline-none"
-            />
+            /> */}
 
-            <input
+            {/* <input
               type="text"
               value={deliveryInfo.locationName}
               onChange={(e) =>
@@ -146,7 +151,7 @@ export function OrderCart({
               onChange={(e) => handleDeliveryChange("wardName", e.target.value)}
               placeholder="Phường/Xã"
               className="w-full text-sm bg-transparent border-b border-gray-200 py-1.5 outline-none"
-            />
+            /> */}
 
             <div className="flex items-center gap-1.5 flex-wrap py-2">
               <span className="text-base flex-shrink-0">📦</span>
@@ -229,10 +234,10 @@ export function OrderCart({
         )}
       </div>
 
-      <div className="p-3 space-y-2.5 flex-shrink-0 border-t bg-white">
+      <div className="p-3 space-y-2.5 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm">Thu hộ tiền (COD)</span>
+            <span className="text-md">Thu hộ tiền (COD)</span>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
