@@ -182,7 +182,7 @@ export default function TransferPage() {
   ]);
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full border-t">
       <aside className="w-64 border-r bg-gray-50 overflow-y-auto">
         <div className="p-4 space-y-6">
           <div>

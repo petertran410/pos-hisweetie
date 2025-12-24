@@ -58,7 +58,7 @@ export function DashboardHeader() {
   ];
 
   return (
-    <header className="bg-blue-600 text-white">
+    <header className="text-black">
       <div className="flex items-center h-14">
         <div className="px-4 flex items-center gap-8">
           <Link href="/" className="font-bold text-lg">
@@ -68,7 +68,7 @@ export function DashboardHeader() {
           <nav className="flex items-center gap-1">
             <Link
               href="/"
-              className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
+              className="px-4 py-3 hover:bg-gray-300 rounded transition-colors">
               Tổng quan
             </Link>
 
@@ -76,16 +76,16 @@ export function DashboardHeader() {
               className="relative"
               onMouseEnter={() => setHoveredMenu("products")}
               onMouseLeave={() => setHoveredMenu(null)}>
-              <button className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
+              <button className="px-4 py-3 hover:bg-gray-300 rounded transition-colors">
                 Hàng hóa
               </button>
 
               {hoveredMenu === "products" && (
-                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-lg rounded-md min-w-max z-50">
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border mt-1">
                   <div className="flex gap-6 p-6">
                     {productSubmenu.map((section) => (
                       <div key={section.title} className="min-w-[150px]">
-                        <h3 className="font-semibold text-sm px-3 mb-3 text-gray-600">
+                        <h3 className="font-semibold text-md px-3 mb-3 text-gray-600">
                           {section.title}
                         </h3>
                         <ul className="space-y-2">
@@ -93,7 +93,7 @@ export function DashboardHeader() {
                             <li key={item.href}>
                               <Link
                                 href={item.href}
-                                className="block px-3 py-2 hover:bg-gray-100 rounded-md text-sm transition-colors">
+                                className="block px-3 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
                                 {item.label}
                               </Link>
                             </li>
@@ -110,18 +110,18 @@ export function DashboardHeader() {
               className="relative"
               onMouseEnter={() => setHoveredMenu("orders")}
               onMouseLeave={() => setHoveredMenu(null)}>
-              <button className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
+              <button className="px-4 py-3 hover:bg-gray-300 rounded transition-colors">
                 Đơn hàng
               </button>
 
               {hoveredMenu === "orders" && (
-                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-lg rounded-md min-w-max z-50">
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-lg rounded-md min-w-max z-50 mt-1">
                   <ul className="px-2 py-2">
                     {orderSubmenu.map((item) => (
                       <li key={item.href}>
                         <Link
                           href={item.href}
-                          className="block px-4 py-2 hover:bg-gray-100 rounded-md text-sm transition-colors">
+                          className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
                           {item.label}
                         </Link>
                       </li>
@@ -133,13 +133,13 @@ export function DashboardHeader() {
 
             <Link
               href="/khach-hang"
-              className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
+              className="px-4 py-3 hover:bg-gray-300 rounded transition-colors">
               Khách hàng
             </Link>
 
             <Link
               href="/so-quy"
-              className="px-4 py-3 hover:bg-blue-700 rounded transition-colors">
+              className="px-4 py-3 hover:bg-gray-300 rounded transition-colors">
               Sổ quỹ
             </Link>
           </nav>
@@ -157,7 +157,7 @@ export function DashboardHeader() {
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-blue-700 rounded transition-colors">
+              className="flex items-center gap-2 px-3 py-2 hover:bg-gray-300 rounded transition-colors">
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                 {user?.avatar ? (
                   <img

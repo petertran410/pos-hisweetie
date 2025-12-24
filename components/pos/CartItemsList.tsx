@@ -200,6 +200,46 @@ export function CartItemsList({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-gray-600 text-md">Giảm giá</span>
+            {/* <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleDiscountTypeChange("amount")}
+                className={`px-3 py-1 text-md rounded transition-colors ${
+                  discountType === "amount"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}>
+                Số tiền
+              </button>
+              <button
+                onClick={() => handleDiscountTypeChange("ratio")}
+                className={`px-3 py-1 text-md rounded transition-colors ${
+                  discountType === "ratio"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}>
+                %
+              </button>
+            </div> */}
+            <span className="text-md font-medium text-red-600 min-w-[100px] text-right">
+              - {calculateDiscountAmount().toLocaleString()}
+              {discountType === "ratio" && ` (${discountValue}%)`}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between w-full">
+            <input
+              type="number"
+              value={discountValue || ""}
+              onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
+              placeholder={
+                discountType === "amount" ? "Nhập số tiền" : "Nhập %"
+              }
+              className="text-center border rounded-xl px-3 py-1.5 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {/* <span className="text-md font-medium text-red-600 min-w-[100px] text-right">
+              - {calculateDiscountAmount().toLocaleString()}
+              {discountType === "ratio" && ` (${discountValue}%)`}
+            </span> */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleDiscountTypeChange("amount")}
@@ -220,22 +260,6 @@ export function CartItemsList({
                 %
               </button>
             </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <input
-              type="number"
-              value={discountValue || ""}
-              onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
-              placeholder={
-                discountType === "amount" ? "Nhập số tiền" : "Nhập %"
-              }
-              className="flex-1 mr-2 text-right border rounded px-3 py-1.5 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-md font-medium text-red-600 min-w-[100px] text-right">
-              - {calculateDiscountAmount().toLocaleString()}
-              {discountType === "ratio" && ` (${discountValue}%)`}
-            </span>
           </div>
         </div>
 
