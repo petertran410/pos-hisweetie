@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProductSearchDropdown } from "@/components/pos/ProductSearchDropdown";
 import { CartItemsList } from "@/components/pos/CartItemsList";
 import { OrderCart } from "@/components/pos/OrderCart";
@@ -36,6 +36,7 @@ export default function BanHangPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [orderNote, setOrderNote] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [discountRatio, setDiscountRatio] = useState(0);
   const [useCOD, setUseCOD] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo>({
@@ -45,13 +46,30 @@ export default function BanHangPage() {
     locationName: "",
     wardName: "",
     weight: 0,
-    length: 0,
-    width: 0,
-    height: 0,
+    length: 10,
+    width: 10,
+    height: 10,
     noteForDriver: "",
   });
 
   const createOrder = useCreateOrder();
+
+  useEffect(() => {
+    const totalWeight = cartItems.reduce((sum, item) => {
+      const productWeight = item.product.weight || 0;
+      const weightInGrams =
+        item.product.weightUnit === "kg" ? productWeight * 1000 : productWeight;
+      return sum + weightInGrams * item.quantity;
+    }, 0);
+
+    setDeliveryInfo((prev) => ({
+      ...prev,
+      weight: totalWeight,
+      length: prev.length || 10,
+      width: prev.width || 10,
+      height: prev.height || 10,
+    }));
+  }, [cartItems]);
 
   const handleCustomerSelect = (customer: any) => {
     setSelectedCustomer(customer);
@@ -72,9 +90,9 @@ export default function BanHangPage() {
         locationName: "",
         wardName: "",
         weight: 0,
-        length: 0,
-        width: 0,
-        height: 0,
+        length: 10,
+        width: 10,
+        height: 10,
         noteForDriver: "",
       });
     }
@@ -123,7 +141,7 @@ export default function BanHangPage() {
       (sum, item) => sum + item.quantity * item.price - item.discount,
       0
     );
-    return subtotal - discount;
+    return subtotal - discount - (subtotal * discountRatio) / 100;
   };
 
   const handleCreateOrder = async () => {
@@ -132,15 +150,17 @@ export default function BanHangPage() {
       return;
     }
 
-    if (!useCOD && paymentAmount === 0) {
-      toast.error("Vui lòng nhập số tiền thanh toán");
+    const total = calculateTotal();
+    const actualPayment = useCOD ? 0 : paymentAmount;
+    const debtAmount = Math.max(0, total - actualPayment);
+
+    if (!useCOD && paymentAmount < 0) {
+      toast.error("Số tiền thanh toán không hợp lệ");
       return;
     }
 
-    const total = calculateTotal();
-
-    if (!useCOD && paymentAmount < total) {
-      toast.error("Số tiền thanh toán không đủ");
+    if (!useCOD && paymentAmount > total) {
+      toast.error("Số tiền thanh toán không được lớn hơn tổng tiền");
       return;
     }
 
@@ -150,6 +170,7 @@ export default function BanHangPage() {
         branchId: selectedBranch?.id,
         notes: orderNote,
         discountAmount: discount,
+        discountRatio: discountRatio,
         depositAmount: useCOD ? 0 : paymentAmount,
         orderStatus: "pending",
         items: cartItems.map((item) => ({
@@ -159,6 +180,18 @@ export default function BanHangPage() {
           discount: item.discount,
           note: item.note,
         })),
+        delivery: {
+          receiver: deliveryInfo.receiver,
+          contactNumber: deliveryInfo.contactNumber,
+          address: deliveryInfo.detailAddress,
+          locationName: deliveryInfo.locationName,
+          wardName: deliveryInfo.wardName,
+          weight: deliveryInfo.weight,
+          length: deliveryInfo.length || 10,
+          width: deliveryInfo.width || 10,
+          height: deliveryInfo.height || 10,
+          noteForDriver: deliveryInfo.noteForDriver,
+        },
       });
 
       setCartItems([]);
@@ -173,12 +206,19 @@ export default function BanHangPage() {
         locationName: "",
         wardName: "",
         weight: 0,
-        length: 0,
-        width: 0,
-        height: 0,
+        length: 10,
+        width: 10,
+        height: 10,
         noteForDriver: "",
       });
-      toast.success("Tạo đơn hàng thành công");
+
+      if (debtAmount > 0) {
+        toast.success(
+          `Tạo đơn hàng thành công. Công nợ: ${debtAmount.toLocaleString()} đ`
+        );
+      } else {
+        toast.success("Tạo đơn hàng thành công");
+      }
     } catch (error) {
       console.error("Create order error:", error);
       toast.error("Tạo đơn hàng thất bại");
@@ -211,6 +251,10 @@ export default function BanHangPage() {
           onRemoveItem={removeFromCart}
           discount={discount}
           onDiscountChange={setDiscount}
+          discountRatio={discountRatio}
+          onDiscountRatioChange={setDiscountRatio}
+          orderNote={orderNote}
+          onOrderNoteChange={setOrderNote}
         />
         <OrderCart
           cartItems={cartItems}
@@ -222,6 +266,7 @@ export default function BanHangPage() {
           onPaymentAmountChange={setPaymentAmount}
           onCreateOrder={handleCreateOrder}
           discount={discount}
+          discountRatio={discountRatio}
           deliveryInfo={deliveryInfo}
           onDeliveryInfoChange={setDeliveryInfo}
         />

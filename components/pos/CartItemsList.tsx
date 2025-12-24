@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 
@@ -10,6 +10,10 @@ interface CartItemsListProps {
   onRemoveItem: (productId: number) => void;
   discount: number;
   onDiscountChange: (discount: number) => void;
+  discountRatio: number;
+  onDiscountRatioChange: (ratio: number) => void;
+  orderNote: string;
+  onOrderNoteChange: (note: string) => void;
 }
 
 export function CartItemsList({
@@ -18,8 +22,17 @@ export function CartItemsList({
   onRemoveItem,
   discount,
   onDiscountChange,
+  discountRatio,
+  onDiscountRatioChange,
+  orderNote,
+  onOrderNoteChange,
 }: CartItemsListProps) {
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [discountType, setDiscountType] = useState<"amount" | "ratio">(
+    "amount"
+  );
+  const [discountValue, setDiscountValue] = useState(0);
 
   const calculateSubtotal = () => {
     return cartItems.reduce(
@@ -28,8 +41,31 @@ export function CartItemsList({
     );
   };
 
+  const calculateDiscountAmount = () => {
+    const subtotal = calculateSubtotal();
+    if (discountType === "ratio") {
+      return (subtotal * discountValue) / 100;
+    }
+    return discountValue;
+  };
+
   const calculateTotal = () => {
-    return calculateSubtotal() - discount;
+    return calculateSubtotal() - calculateDiscountAmount();
+  };
+
+  useEffect(() => {
+    if (discountType === "amount") {
+      onDiscountChange(discountValue);
+      onDiscountRatioChange(0);
+    } else {
+      onDiscountChange(0);
+      onDiscountRatioChange(discountValue);
+    }
+  }, [discountValue, discountType]);
+
+  const handleDiscountTypeChange = (type: "amount" | "ratio") => {
+    setDiscountType(type);
+    setDiscountValue(0);
   };
 
   if (cartItems.length === 0) {
@@ -117,10 +153,21 @@ export function CartItemsList({
                   </div>
                 </div> */}
 
-                <div className="text-right flex gap-60">
+                {/* <div className="text-right flex gap-60">
                   <div className="text-lg">{item.price.toLocaleString()}</div>
                   <div className="text-lg font-extrabold">
                     {(item.quantity * item.price).toLocaleString()}
+                  </div>
+                </div> */}
+                <div className="text-right flex gap-60">
+                  <div className="text-md text-gray-500">
+                    {item.price.toLocaleString()}
+                  </div>
+                  <div className="text-md font-medium">
+                    {(
+                      item.quantity * item.price -
+                      item.discount
+                    ).toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -129,42 +176,72 @@ export function CartItemsList({
         </div>
       </div>
 
-      <div className="px-3 pb-10 space-y-2">
+      <div className="border-t p-3 flex-shrink-0 space-y-2.5">
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">
+            Ghi chú đơn hàng
+          </label>
+          <textarea
+            value={orderNote}
+            onChange={(e) => onOrderNoteChange(e.target.value)}
+            placeholder="Nhập ghi chú cho đơn hàng..."
+            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            rows={2}
+          />
+        </div>
+
         <div className="flex items-center justify-between">
-          <button className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-md">
-            <span>Ghi chú đơn hàng</span>
-          </button>
-          <div className="flex items-center gap-3">
-            <span className="text-gray-600 text-md">Tổng tiền hàng</span>
-            <span className="font-semibold">
-              {calculateSubtotal().toLocaleString()}
+          <span className="text-gray-600 text-sm">Tổng tiền hàng</span>
+          <span className="font-semibold text-sm">
+            {calculateSubtotal().toLocaleString()}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 text-sm">Giảm giá</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleDiscountTypeChange("amount")}
+                className={`px-3 py-1 text-xs rounded transition-colors ${
+                  discountType === "amount"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}>
+                Số tiền
+              </button>
+              <button
+                onClick={() => handleDiscountTypeChange("ratio")}
+                className={`px-3 py-1 text-xs rounded transition-colors ${
+                  discountType === "ratio"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}>
+                %
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <input
+              type="number"
+              value={discountValue || ""}
+              onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
+              placeholder={
+                discountType === "amount" ? "Nhập số tiền" : "Nhập %"
+              }
+              className="flex-1 mr-2 text-right border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-red-600 min-w-[100px] text-right">
+              - {calculateDiscountAmount().toLocaleString()}
+              {discountType === "ratio" && ` (${discountValue}%)`}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-gray-600 text-md">Giảm giá</span>
-          <input
-            type="number"
-            value={discount}
-            onChange={(e) => onDiscountChange(Number(e.target.value))}
-            className="w-28 text-right border rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        {/* <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <span className="text-gray-600 text-md">Thu khác</span>
-            <button className="text-blue-600 hover:text-blue-700 text-md">
-              ⓘ
-            </button>
-          </div>
-          <span className="font-medium">0</span>
-        </div> */}
-
-        <div className="flex items-center justify-between font-semibold text-lg">
+        <div className="flex items-center justify-between font-semibold text-base pt-1 border-t">
           <span>Khách cần trả</span>
-          <span className="text-blue-600 text-lg">
+          <span className="text-blue-600">
             {calculateTotal().toLocaleString()}
           </span>
         </div>

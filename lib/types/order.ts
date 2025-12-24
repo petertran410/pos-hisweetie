@@ -84,4 +84,16 @@ export interface CreateOrderDto {
     note?: string;
     serialNumbers?: string;
   }[];
+  delivery?: {
+    receiver?: string;
+    contactNumber?: string;
+    address?: string;
+    locationName?: string;
+    wardName?: string;
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    noteForDriver?: string;
+  };
 }

@@ -43,6 +43,12 @@ export function OrderCart({
     );
   };
 
+  const calculateDebt = () => {
+    const total = calculateTotal();
+    if (useCOD) return total;
+    return Math.max(0, total - paymentAmount);
+  };
+
   const calculateTotal = () => {
     return calculateSubtotal() - discount;
   };
@@ -173,7 +179,7 @@ export function OrderCart({
               </select>
               <input
                 type="number"
-                value={deliveryInfo.length || ""}
+                value={deliveryInfo.length || 10}
                 onChange={(e) =>
                   handleDeliveryChange("length", Number(e.target.value))
                 }
@@ -183,7 +189,7 @@ export function OrderCart({
               <span className="text-gray-400 text-xs">×</span>
               <input
                 type="number"
-                value={deliveryInfo.width || ""}
+                value={deliveryInfo.width || 10}
                 onChange={(e) =>
                   handleDeliveryChange("width", Number(e.target.value))
                 }
@@ -193,7 +199,7 @@ export function OrderCart({
               <span className="text-gray-400 text-xs">×</span>
               <input
                 type="number"
-                value={deliveryInfo.height || ""}
+                value={deliveryInfo.height || 10}
                 onChange={(e) =>
                   handleDeliveryChange("height", Number(e.target.value))
                 }
@@ -236,7 +242,6 @@ export function OrderCart({
           </div>
         )}
       </div>
-
       <div className="p-3 space-y-2.5 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -256,32 +261,57 @@ export function OrderCart({
           </span>
         </div>
 
+        <div className="flex items-center justify-between text-sm">
+          <span>Khách cần trả</span>
+          <span className="text-blue-600 font-semibold">
+            {calculateTotal().toLocaleString()}
+          </span>
+        </div>
+
         {!useCOD && (
-          <div className="flex items-center justify-between text-md">
-            <span>Tiền thừa trả khách</span>
-            <span className="text-red-600">
-              {Math.max(0, paymentAmount - calculateTotal()).toLocaleString()}
-            </span>
-          </div>
+          <>
+            <input
+              type="number"
+              value={paymentAmount || ""}
+              onChange={(e) => onPaymentAmountChange(Number(e.target.value))}
+              placeholder="Nhập số tiền khách trả"
+              className="w-full border rounded px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            <div className="flex items-center justify-between text-sm">
+              <span>Khách đã trả</span>
+              <span className="text-green-600 font-medium">
+                {paymentAmount.toLocaleString()}
+              </span>
+            </div>
+
+            {calculateDebt() > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span>Công nợ</span>
+                <span className="text-red-600 font-medium">
+                  {calculateDebt().toLocaleString()}
+                </span>
+              </div>
+            )}
+
+            {paymentAmount > calculateTotal() && (
+              <div className="flex items-center justify-between text-sm">
+                <span>Tiền thừa trả khách</span>
+                <span className="text-red-600">
+                  {(paymentAmount - calculateTotal()).toLocaleString()}
+                </span>
+              </div>
+            )}
+          </>
         )}
 
         {useCOD && (
           <div className="flex items-center justify-between text-sm">
             <span>Tính vào công nợ</span>
-            <span className="text-blue-600 font-medium">
-              - {calculateTotal().toLocaleString()}
+            <span className="text-orange-600 font-medium">
+              {calculateTotal().toLocaleString()}
             </span>
           </div>
-        )}
-
-        {!useCOD && (
-          <input
-            type="number"
-            value={paymentAmount || ""}
-            onChange={(e) => onPaymentAmountChange(Number(e.target.value))}
-            placeholder="Nhập số tiền thanh toán"
-            className="w-full border rounded px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
         )}
 
         <button
