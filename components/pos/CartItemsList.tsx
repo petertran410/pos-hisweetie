@@ -34,10 +34,10 @@ export function CartItemsList({
 
   if (cartItems.length === 0) {
     return (
-      <div className="w-1/2 bg-white p-6 flex items-center justify-center">
+      <div className="w-[70%] bg-white p-8 flex items-center justify-center">
         <div className="text-center text-gray-400">
-          <div className="text-4xl mb-2">🛒</div>
-          <p>Chưa có sản phẩm trong giỏ hàng</p>
+          <div className="text-5xl mb-3">🛒</div>
+          <p className="text-base">Chưa có sản phẩm trong giỏ hàng</p>
           <p className="text-sm mt-1">Tìm kiếm và thêm sản phẩm để bắt đầu</p>
         </div>
       </div>
@@ -45,28 +45,28 @@ export function CartItemsList({
   }
 
   return (
-    <div className="w-1/2 bg-white flex flex-col pb-4">
-      <div className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-3">
+    <div className="w-[70%] bg-white flex flex-col">
+      <div className="flex-1 p-3 overflow-y-auto">
+        <div className="space-y-2">
           {cartItems.map((item) => (
             <div
               key={item.product.id}
-              className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+              className="border rounded-lg p-3 hover:shadow-md transition-shadow"
               onMouseEnter={() => setHoveredItemId(item.product.id)}
               onMouseLeave={() => setHoveredItemId(null)}>
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 mb-2">
-                    <span className="text-md font-medium text-gray-600">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-sm font-medium text-gray-600">
                       {item.product.code}
                     </span>
-                    <span className="text-md font-semibold text-gray-900">
+                    <span className="text-base font-semibold text-gray-900">
                       {item.product.name}
                     </span>
                   </div>
 
                   {item.note && (
-                    <div className="text-xs text-gray-500 italic mb-2">
+                    <div className="text-xs text-gray-500 italic mb-1">
                       {item.note}
                     </div>
                   )}
@@ -78,8 +78,8 @@ export function CartItemsList({
                           quantity: Math.max(1, item.quantity - 1),
                         })
                       }
-                      className="p-1.5 hover:bg-gray-100 rounded border">
-                      <Minus className="w-4 h-4" />
+                      className="p-1 hover:bg-gray-100 rounded border">
+                      <Minus className="w-3.5 h-3.5" />
                     </button>
                     <input
                       type="number"
@@ -89,7 +89,7 @@ export function CartItemsList({
                           quantity: Math.max(1, Number(e.target.value)),
                         })
                       }
-                      className="w-16 text-center border rounded px-2 py-1.5 text-sm"
+                      className="w-14 text-center border rounded px-2 py-1 text-sm"
                     />
                     <button
                       onClick={() =>
@@ -97,15 +97,15 @@ export function CartItemsList({
                           quantity: item.quantity + 1,
                         })
                       }
-                      className="p-1.5 hover:bg-gray-100 rounded border">
-                      <Plus className="w-4 h-4" />
+                      className="p-1 hover:bg-gray-100 rounded border">
+                      <Plus className="w-3.5 h-3.5" />
                     </button>
 
                     {hoveredItemId === item.product.id && (
                       <button
                         onClick={() => onRemoveItem(item.product.id)}
-                        className="p-1.5 bg-red-100 hover:bg-red-200 rounded text-red-600 transition-colors ml-2">
-                        <Trash2 className="w-4 h-4" />
+                        className="p-1 bg-red-100 hover:bg-red-200 rounded text-red-600 transition-colors ml-2">
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
@@ -122,41 +122,43 @@ export function CartItemsList({
         </div>
       </div>
 
-      <div className="p-4 space-y-3 bg-white">
-        <div className="flex items-center justify-between text-md">
-          <button className="text-gray-600 hover:text-gray-800 flex items-center gap-1">
+      <div className="px-3 pb-3 space-y-2 bg-white border-t pt-2">
+        <div className="flex items-center justify-between">
+          <button className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm">
             <span>✏️</span>
             <span>Ghi chú đơn hàng</span>
           </button>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-600">Tổng tiền hàng</span>
+          <div className="flex items-center gap-3">
+            <span className="text-gray-600 text-sm">Tổng tiền hàng</span>
             <span className="font-semibold">
               {calculateSubtotal().toLocaleString()}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-md">
-          <span className="text-gray-600">Giảm giá</span>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-600 text-sm">Giảm giá</span>
           <input
             type="number"
             value={discount}
             onChange={(e) => onDiscountChange(Number(e.target.value))}
-            className="w-32 text-right border rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-28 text-right border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        <div className="flex items-center justify-between text-md">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-600">Thu khác</span>
-            <button className="text-blue-600 hover:text-blue-700">ⓘ</button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <span className="text-gray-600 text-sm">Thu khác</span>
+            <button className="text-blue-600 hover:text-blue-700 text-xs">
+              ⓘ
+            </button>
           </div>
           <span className="font-medium">0</span>
         </div>
 
-        <div className="flex items-center justify-between font-semibold text-lg border-t pt-3">
+        <div className="flex items-center justify-between font-semibold text-base border-t pt-2">
           <span>Khách cần trả</span>
-          <span className="text-blue-600">
+          <span className="text-blue-600 text-lg">
             {calculateTotal().toLocaleString()}
           </span>
         </div>

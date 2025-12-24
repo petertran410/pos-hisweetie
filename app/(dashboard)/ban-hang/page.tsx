@@ -17,6 +17,19 @@ export interface CartItem {
   note?: string;
 }
 
+export interface DeliveryInfo {
+  receiver: string;
+  contactNumber: string;
+  detailAddress: string;
+  locationName: string;
+  wardName: string;
+  weight: number;
+  length: number;
+  width: number;
+  height: number;
+  noteForDriver: string;
+}
+
 export default function BanHangPage() {
   const { selectedBranch } = useBranchStore();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -25,8 +38,47 @@ export default function BanHangPage() {
   const [discount, setDiscount] = useState(0);
   const [useCOD, setUseCOD] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
+  const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo>({
+    receiver: "",
+    contactNumber: "",
+    detailAddress: "",
+    locationName: "",
+    wardName: "",
+    weight: 0,
+    length: 0,
+    width: 0,
+    height: 0,
+    noteForDriver: "",
+  });
 
   const createOrder = useCreateOrder();
+
+  const handleCustomerSelect = (customer: any) => {
+    setSelectedCustomer(customer);
+    if (customer) {
+      setDeliveryInfo({
+        ...deliveryInfo,
+        receiver: customer.name || "",
+        contactNumber: customer.contactNumber || customer.phone || "",
+        detailAddress: customer.address || "",
+        locationName: customer.cityName || "",
+        wardName: customer.wardName || "",
+      });
+    } else {
+      setDeliveryInfo({
+        receiver: "",
+        contactNumber: "",
+        detailAddress: "",
+        locationName: "",
+        wardName: "",
+        weight: 0,
+        length: 0,
+        width: 0,
+        height: 0,
+        noteForDriver: "",
+      });
+    }
+  };
 
   const addToCart = (product: any) => {
     const existingItem = cartItems.find(
@@ -114,6 +166,18 @@ export default function BanHangPage() {
       setOrderNote("");
       setDiscount(0);
       setPaymentAmount(0);
+      setDeliveryInfo({
+        receiver: "",
+        contactNumber: "",
+        detailAddress: "",
+        locationName: "",
+        wardName: "",
+        weight: 0,
+        length: 0,
+        width: 0,
+        height: 0,
+        noteForDriver: "",
+      });
       toast.success("Tạo đơn hàng thành công");
     } catch (error) {
       console.error("Create order error:", error);
@@ -151,13 +215,15 @@ export default function BanHangPage() {
         <OrderCart
           cartItems={cartItems}
           selectedCustomer={selectedCustomer}
-          onSelectCustomer={setSelectedCustomer}
+          onSelectCustomer={handleCustomerSelect}
           useCOD={useCOD}
           onUseCODChange={setUseCOD}
           paymentAmount={paymentAmount}
           onPaymentAmountChange={setPaymentAmount}
           onCreateOrder={handleCreateOrder}
           discount={discount}
+          deliveryInfo={deliveryInfo}
+          onDeliveryInfoChange={setDeliveryInfo}
         />
       </div>
     </div>
