@@ -45,7 +45,7 @@ export function CartItemsList({
   }
 
   return (
-    <div className="w-[70%] bg-white flex flex-col">
+    <div className="w-[60%] bg-white flex flex-col">
       <div className="flex-1 p-3 overflow-y-auto">
         <div className="space-y-2">
           {cartItems.map((item) => (

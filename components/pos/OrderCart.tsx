@@ -64,7 +64,7 @@ export function OrderCart({
   };
 
   return (
-    <div className="w-[30%] h-full bg-white border-l flex flex-col">
+    <div className="w-[40%] h-full bg-white border-l flex flex-col">
       <div className="flex-1 flex flex-col overflow-y-auto">
         <div className="p-3 border-b space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -84,16 +84,14 @@ export function OrderCart({
 
         {selectedCustomer && (
           <div className="p-3 space-y-2 flex-1">
-            <div className="flex items-start gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 mt-0.5" />
-              <span className="text-md leading-relaxed">
-                {selectedBranch?.address || ""}
-              </span>
+            <div className="flex items-center gap-1.5">
+              <MapPin className="w-5 h-5 text-blue-500 flex-shrink-0" />
+              <span className="text-lg">{selectedBranch?.address || ""}</span>
             </div>
 
             <div className="flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-              <span>{deliveryInfo.receiver}</span>
+              <User className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <span className="text-lg">{deliveryInfo.receiver || ""}</span>
               {/* <input
                 type="text"
                 value={deliveryInfo.receiver}
@@ -115,9 +113,11 @@ export function OrderCart({
               /> */}
             </div>
 
-            <span className="flex gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />{" "}
-              {deliveryInfo.contactNumber}
+            <span className="flex items-center gap-1.5">
+              <Phone className="w-5 h-5 text-gray-400 flex-shrink-0" />{" "}
+              <span className="text-lg">
+                {deliveryInfo.contactNumber || ""}
+              </span>
             </span>
             <div className="flex flex-col gap-1.5">
               <span>{deliveryInfo.detailAddress}</span>
