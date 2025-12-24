@@ -176,34 +176,34 @@ export function CartItemsList({
         </div>
       </div>
 
-      <div className="border-t p-3 flex-shrink-0 space-y-2.5">
+      <div className="m-3 border p-3 flex-shrink-0 space-y-2.5 rounded-xl shadow-xl">
         <div>
-          <label className="block text-sm text-gray-600 mb-1">
+          <label className="block text-md text-gray-600 mb-1">
             Ghi chú đơn hàng
           </label>
           <textarea
             value={orderNote}
             onChange={(e) => onOrderNoteChange(e.target.value)}
             placeholder="Nhập ghi chú cho đơn hàng..."
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             rows={2}
           />
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-gray-600 text-sm">Tổng tiền hàng</span>
-          <span className="font-semibold text-sm">
+          <span className="text-gray-600 text-md">Tổng tiền hàng</span>
+          <span className="font-semibold text-md">
             {calculateSubtotal().toLocaleString()}
           </span>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-gray-600 text-sm">Giảm giá</span>
+            <span className="text-gray-600 text-md">Giảm giá</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleDiscountTypeChange("amount")}
-                className={`px-3 py-1 text-xs rounded transition-colors ${
+                className={`px-3 py-1 text-md rounded transition-colors ${
                   discountType === "amount"
                     ? "bg-blue-600 text-white"
                     : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -212,7 +212,7 @@ export function CartItemsList({
               </button>
               <button
                 onClick={() => handleDiscountTypeChange("ratio")}
-                className={`px-3 py-1 text-xs rounded transition-colors ${
+                className={`px-3 py-1 text-md rounded transition-colors ${
                   discountType === "ratio"
                     ? "bg-blue-600 text-white"
                     : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -230,18 +230,18 @@ export function CartItemsList({
               placeholder={
                 discountType === "amount" ? "Nhập số tiền" : "Nhập %"
               }
-              className="flex-1 mr-2 text-right border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 mr-2 text-right border rounded px-3 py-1.5 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <span className="text-sm font-medium text-red-600 min-w-[100px] text-right">
+            <span className="text-md font-medium text-red-600 min-w-[100px] text-right">
               - {calculateDiscountAmount().toLocaleString()}
               {discountType === "ratio" && ` (${discountValue}%)`}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between font-semibold text-base pt-1 border-t">
+        <div className="flex items-center justify-between font-semibold text-lg pt-1 border-t">
           <span>Khách cần trả</span>
-          <span className="text-blue-600">
+          <span className="text-blue-600 text-lg">
             {calculateTotal().toLocaleString()}
           </span>
         </div>

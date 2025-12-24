@@ -74,12 +74,12 @@ export function CustomerSearch({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onFocus={() => search && setShowDropdown(true)}
-          className="flex-1 border rounded px-3 py-2"
+          className="flex-1 border rounded-xl px-3 py-2"
         />
-        <button className="p-2 border rounded hover:bg-gray-50">
+        <button className="p-2 border rounded-md hover:bg-gray-50">
           <Plus className="w-4 h-4" />
         </button>
-        <button className="px-3 py-2 border rounded hover:bg-gray-50">
+        <button className="px-3 py-2 border rounded-xl hover:bg-gray-50">
           Bảng giá chung ▼
         </button>
       </div>

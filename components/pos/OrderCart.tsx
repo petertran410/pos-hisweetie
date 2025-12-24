@@ -4,7 +4,7 @@ import { CustomerSearch } from "./CustomerSearch";
 import { CartItem, DeliveryInfo } from "@/app/(dashboard)/ban-hang/page";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
-import { X, MapPin, User, Phone } from "lucide-react";
+import { X, MapPin, User, Phone, House, MapPinHouse } from "lucide-react";
 
 interface OrderCartProps {
   cartItems: CartItem[];
@@ -16,6 +16,7 @@ interface OrderCartProps {
   onPaymentAmountChange: (amount: number) => void;
   onCreateOrder: () => void;
   discount: number;
+  discountRatio: number;
   deliveryInfo: DeliveryInfo;
   onDeliveryInfoChange: (info: DeliveryInfo) => void;
 }
@@ -30,6 +31,7 @@ export function OrderCart({
   onPaymentAmountChange,
   onCreateOrder,
   discount,
+  discountRatio,
   deliveryInfo,
   onDeliveryInfoChange,
 }: OrderCartProps) {
@@ -43,14 +45,15 @@ export function OrderCart({
     );
   };
 
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    return subtotal - discount - (subtotal * discountRatio) / 100;
+  };
+
   const calculateDebt = () => {
     const total = calculateTotal();
     if (useCOD) return total;
     return Math.max(0, total - paymentAmount);
-  };
-
-  const calculateTotal = () => {
-    return calculateSubtotal() - discount;
   };
 
   const formatDate = () => {
@@ -70,35 +73,39 @@ export function OrderCart({
   };
 
   return (
-    <div className="w-[40%] h-full bg-white border-l flex flex-col">
-      <div className="flex-1 flex flex-col overflow-y-auto">
-        <div className="p-3 border-b space-y-2 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <button className="px-2 py-1 text-sm border rounded hover:bg-gray-50">
-                {user?.name || "Admin"}
-              </button>
+    <div className="w-[40%] h-full bg-white border-l flex flex-col ">
+      <div className="border shadow-inner mr-3 ml-3 rounded-xl mt-3">
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          <div className="p-3 space-y-2 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button className="px-2 py-1 text-sm border rounded-md hover:bg-gray-50">
+                  {user?.name || "Admin"}
+                </button>
+              </div>
+              <div className="text-xs text-gray-600">{formatDate()}</div>
             </div>
-            <div className="text-xs text-gray-600">{formatDate()}</div>
+
+            <CustomerSearch
+              selectedCustomer={selectedCustomer}
+              onSelectCustomer={onSelectCustomer}
+            />
           </div>
 
-          <CustomerSearch
-            selectedCustomer={selectedCustomer}
-            onSelectCustomer={onSelectCustomer}
-          />
-        </div>
+          {selectedCustomer && (
+            <div className="pl-3 pr-3 pb-3 space-y-2 flex-1">
+              <div className="border rounded-xl shadow-sm p-3 space-y-5">
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  <span className="text-lg">
+                    {selectedBranch?.address || ""}
+                  </span>
+                </div>
 
-        {selectedCustomer && (
-          <div className="p-3 space-y-2 flex-1">
-            <div className="flex items-center gap-1.5">
-              <MapPin className="w-5 h-5 text-blue-500 flex-shrink-0" />
-              <span className="text-lg">{selectedBranch?.address || ""}</span>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <User className="w-5 h-5 text-green-500 flex-shrink-0" />
-              <span className="text-lg">{deliveryInfo.receiver || ""}</span>
-              {/* <input
+                <div className="flex items-center gap-1.5">
+                  <User className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span className="text-lg">{deliveryInfo.receiver || ""}</span>
+                  {/* <input
                 type="text"
                 value={deliveryInfo.receiver}
                 onChange={(e) =>
@@ -108,7 +115,7 @@ export function OrderCart({
                 className="flex-1 text-md bg-transparent outline-none"
               /> */}
 
-              {/* <input
+                  {/* <input
                 type="text"
                 value={deliveryInfo.contactNumber}
                 onChange={(e) =>
@@ -117,24 +124,26 @@ export function OrderCart({
                 placeholder="Số điện thoại"
                 className="w-28 text-sm bg-transparent outline-none"
               /> */}
-            </div>
+                </div>
 
-            <span className="flex items-center gap-1.5">
-              <Phone className="w-5 h-5 text-gray-400 flex-shrink-0" />{" "}
-              <span className="text-lg">
-                {deliveryInfo.contactNumber || ""}
-              </span>
-            </span>
-            <div className="flex flex-col gap-1.5">
-              <span>
-                {deliveryInfo.detailAddress}, {deliveryInfo.locationName},{" "}
-                {deliveryInfo.wardName}
-              </span>
-              {/* <span>{deliveryInfo.locationName}</span>
+                <div className="flex items-center gap-1.5">
+                  <Phone className="w-5 h-5 text-gray-400 flex-shrink-0" />{" "}
+                  <span className="text-lg">
+                    {deliveryInfo.contactNumber || ""}
+                  </span>
+                </div>
+                <div className="flex gap-1.5">
+                  <House className="w-5 h-5 flex-shrink-0" />
+                  <span>
+                    {deliveryInfo.detailAddress}, {deliveryInfo.locationName},{" "}
+                    {deliveryInfo.wardName}
+                  </span>
+                  {/* <span>{deliveryInfo.locationName}</span>
               <span>{deliveryInfo.wardName}</span> */}
-            </div>
+                </div>
+              </div>
 
-            {/* <input
+              {/* <input
               type="text"
               value={deliveryInfo.detailAddress}
               onChange={(e) =>
@@ -144,7 +153,7 @@ export function OrderCart({
               className="w-full text-sm bg-transparent border-b border-gray-200 py-1.5 outline-none"
             /> */}
 
-            {/* <input
+              {/* <input
               type="text"
               value={deliveryInfo.locationName}
               onChange={(e) =>
@@ -161,165 +170,167 @@ export function OrderCart({
               placeholder="Phường/Xã"
               className="w-full text-sm bg-transparent border-b border-gray-200 py-1.5 outline-none"
             /> */}
-
-            <div className="flex items-center gap-1.5 flex-wrap py-2">
-              <span className="text-base flex-shrink-0">📦</span>
-              <input
-                type="number"
-                value={deliveryInfo.weight || ""}
-                onChange={(e) =>
-                  handleDeliveryChange("weight", Number(e.target.value))
-                }
-                placeholder="500"
-                className="w-14 text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
-              />
-              <select className="text-sm bg-transparent outline-none">
-                <option>gram</option>
-                <option>kg</option>
-              </select>
-              <input
-                type="number"
-                value={deliveryInfo.length || 10}
-                onChange={(e) =>
-                  handleDeliveryChange("length", Number(e.target.value))
-                }
-                placeholder="10"
-                className="w-12 text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
-              />
-              <span className="text-gray-400 text-xs">×</span>
-              <input
-                type="number"
-                value={deliveryInfo.width || 10}
-                onChange={(e) =>
-                  handleDeliveryChange("width", Number(e.target.value))
-                }
-                placeholder="10"
-                className="w-12 text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
-              />
-              <span className="text-gray-400 text-xs">×</span>
-              <input
-                type="number"
-                value={deliveryInfo.height || 10}
-                onChange={(e) =>
-                  handleDeliveryChange("height", Number(e.target.value))
-                }
-                placeholder="10"
-                className="w-12 text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
-              />
-              <select className="text-sm bg-transparent outline-none">
-                <option>cm</option>
-                <option>m</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1.5 py-2">
-              <input
-                type="checkbox"
-                checked={deliveryInfo.noteForDriver !== ""}
-                onChange={(e) => {
-                  if (!e.target.checked) {
-                    handleDeliveryChange("noteForDriver", "");
-                  } else {
-                    handleDeliveryChange("noteForDriver", " ");
-                  }
-                }}
-                className="w-3.5 h-3.5 text-blue-600 rounded"
-              />
-              <span className="text-sm text-gray-700">Ghi chú cho bưu tá</span>
-            </div>
-
-            {deliveryInfo.noteForDriver !== "" && (
-              <textarea
-                value={deliveryInfo.noteForDriver}
-                onChange={(e) =>
-                  handleDeliveryChange("noteForDriver", e.target.value)
-                }
-                placeholder="Nhập ghi chú..."
-                className="w-full text-sm border rounded p-2 outline-none focus:border-blue-500"
-                rows={3}
-              />
-            )}
-          </div>
-        )}
-      </div>
-      <div className="p-3 space-y-2.5 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-md">Thu hộ tiền (COD)</span>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useCOD}
-                onChange={(e) => onUseCODChange(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
-          <span className="font-semibold">
-            {useCOD ? calculateTotal().toLocaleString() : "0"}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between text-sm">
-          <span>Khách cần trả</span>
-          <span className="text-blue-600 font-semibold">
-            {calculateTotal().toLocaleString()}
-          </span>
-        </div>
-
-        {!useCOD && (
-          <>
-            <input
-              type="number"
-              value={paymentAmount || ""}
-              onChange={(e) => onPaymentAmountChange(Number(e.target.value))}
-              placeholder="Nhập số tiền khách trả"
-              className="w-full border rounded px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-
-            <div className="flex items-center justify-between text-sm">
-              <span>Khách đã trả</span>
-              <span className="text-green-600 font-medium">
-                {paymentAmount.toLocaleString()}
-              </span>
-            </div>
-
-            {calculateDebt() > 0 && (
-              <div className="flex items-center justify-between text-sm">
-                <span>Công nợ</span>
-                <span className="text-red-600 font-medium">
-                  {calculateDebt().toLocaleString()}
-                </span>
+              <div className="border rounded-xl shadow-sm p-3">
+                <div className="flex items-center gap-1.5 flex-wrap py-2">
+                  <span className="text-base flex-shrink-0">📦</span>
+                  <input
+                    type="number"
+                    value={deliveryInfo.weight || ""}
+                    onChange={(e) =>
+                      handleDeliveryChange("weight", Number(e.target.value))
+                    }
+                    placeholder="500"
+                    className="w-14 text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  />
+                  <select className="text-sm bg-transparent outline-none">
+                    <option>gram</option>
+                    <option>kg</option>
+                  </select>
+                  <input
+                    type="number"
+                    value={deliveryInfo.length || 10}
+                    onChange={(e) =>
+                      handleDeliveryChange("length", Number(e.target.value))
+                    }
+                    placeholder="10"
+                    className="w-12 text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  />
+                  <span className="text-gray-400 text-xs">×</span>
+                  <input
+                    type="number"
+                    value={deliveryInfo.width || 10}
+                    onChange={(e) =>
+                      handleDeliveryChange("width", Number(e.target.value))
+                    }
+                    placeholder="10"
+                    className="w-12 text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  />
+                  <span className="text-gray-400 text-xs">×</span>
+                  <input
+                    type="number"
+                    value={deliveryInfo.height || 10}
+                    onChange={(e) =>
+                      handleDeliveryChange("height", Number(e.target.value))
+                    }
+                    placeholder="10"
+                    className="w-12 text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  />
+                  <select className="text-sm bg-transparent outline-none">
+                    <option>cm</option>
+                    <option>m</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-1.5 py-2">
+                  <input
+                    type="checkbox"
+                    checked={deliveryInfo.noteForDriver !== ""}
+                    onChange={(e) => {
+                      if (!e.target.checked) {
+                        handleDeliveryChange("noteForDriver", "");
+                      } else {
+                        handleDeliveryChange("noteForDriver", " ");
+                      }
+                    }}
+                    className="w-3.5 h-3.5 text-blue-600 rounded"
+                  />
+                  <span className="text-sm text-gray-700">
+                    Ghi chú cho bưu tá
+                  </span>
+                </div>
+                {deliveryInfo.noteForDriver !== "" && (
+                  <textarea
+                    value={deliveryInfo.noteForDriver}
+                    onChange={(e) =>
+                      handleDeliveryChange("noteForDriver", e.target.value)
+                    }
+                    placeholder="Nhập ghi chú..."
+                    className="w-full text-sm border rounded-xl p-2 outline-none focus:border-blue-500 resize-none"
+                    rows={3}
+                  />
+                )}
               </div>
-            )}
+            </div>
+          )}
+        </div>
+        <div className="p-3 space-y-2.5 flex-shrink-0 border mr-3 ml-3 mb-3 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-md">Thu hộ tiền (COD)</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useCOD}
+                  onChange={(e) => onUseCODChange(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+            <span className="font-semibold">
+              {useCOD ? calculateTotal().toLocaleString() : "0"}
+            </span>
+          </div>
 
-            {paymentAmount > calculateTotal() && (
-              <div className="flex items-center justify-between text-sm">
-                <span>Tiền thừa trả khách</span>
-                <span className="text-red-600">
-                  {(paymentAmount - calculateTotal()).toLocaleString()}
-                </span>
-              </div>
-            )}
-          </>
-        )}
-
-        {useCOD && (
           <div className="flex items-center justify-between text-sm">
-            <span>Tính vào công nợ</span>
-            <span className="text-orange-600 font-medium">
+            <span>Khách cần trả</span>
+            <span className="text-blue-600 font-semibold">
               {calculateTotal().toLocaleString()}
             </span>
           </div>
-        )}
 
-        <button
-          onClick={onCreateOrder}
-          disabled={cartItems.length === 0}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
-          ĐẶT HÀNG
-        </button>
+          {!useCOD && (
+            <>
+              <input
+                type="number"
+                value={paymentAmount || ""}
+                onChange={(e) => onPaymentAmountChange(Number(e.target.value))}
+                placeholder="Nhập số tiền khách trả"
+                className="w-full border rounded px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+
+              <div className="flex items-center justify-between text-sm">
+                <span>Khách đã trả</span>
+                <span className="text-green-600 font-medium">
+                  {paymentAmount.toLocaleString()}
+                </span>
+              </div>
+
+              {calculateDebt() > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span>Công nợ</span>
+                  <span className="text-red-600 font-medium">
+                    {calculateDebt().toLocaleString()}
+                  </span>
+                </div>
+              )}
+
+              {paymentAmount > calculateTotal() && (
+                <div className="flex items-center justify-between text-sm">
+                  <span>Tiền thừa trả khách</span>
+                  <span className="text-red-600">
+                    {(paymentAmount - calculateTotal()).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
+          {useCOD && (
+            <div className="flex items-center justify-between text-sm">
+              <span>Tính vào công nợ</span>
+              <span className="text-orange-600 font-medium">
+                {calculateTotal().toLocaleString()}
+              </span>
+            </div>
+          )}
+
+          <button
+            onClick={onCreateOrder}
+            disabled={cartItems.length === 0}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
+            ĐẶT HÀNG
+          </button>
+        </div>
       </div>
     </div>
   );
