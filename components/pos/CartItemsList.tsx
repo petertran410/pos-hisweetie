@@ -152,7 +152,7 @@ export function CartItemsList({
           />
         </div>
 
-        <div className="flex items-center justify-between">
+        {/* <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             <span className="text-gray-600 text-md">Thu khác</span>
             <button className="text-blue-600 hover:text-blue-700 text-md">
@@ -160,7 +160,7 @@ export function CartItemsList({
             </button>
           </div>
           <span className="font-medium">0</span>
-        </div>
+        </div> */}
 
         <div className="flex items-center justify-between font-semibold text-lg">
           <span>Khách cần trả</span>

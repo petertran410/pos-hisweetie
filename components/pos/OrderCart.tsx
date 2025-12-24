@@ -257,10 +257,10 @@ export function OrderCart({
         </div>
 
         {!useCOD && (
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-md">
             <span>Tiền thừa trả khách</span>
             <span className="text-red-600">
-              - {Math.max(0, paymentAmount - calculateTotal()).toLocaleString()}
+              {Math.max(0, paymentAmount - calculateTotal()).toLocaleString()}
             </span>
           </div>
         )}
