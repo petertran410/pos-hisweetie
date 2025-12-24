@@ -145,6 +145,11 @@ export default function BanHangPage() {
   };
 
   const handleCreateOrder = async () => {
+    if (!selectedCustomer) {
+      toast.error("Vui lòng chọn khách hàng trước khi tạo đơn hàng");
+      return;
+    }
+
     if (cartItems.length === 0) {
       toast.error("Vui lòng thêm sản phẩm vào đơn hàng");
       return;
@@ -166,7 +171,7 @@ export default function BanHangPage() {
 
     try {
       await createOrder.mutateAsync({
-        customerId: selectedCustomer?.id,
+        customerId: selectedCustomer.id,
         branchId: selectedBranch?.id,
         notes: orderNote,
         discountAmount: discount,
@@ -214,14 +219,16 @@ export default function BanHangPage() {
 
       if (debtAmount > 0) {
         toast.success(
-          `Tạo đơn hàng thành công. Công nợ: ${debtAmount.toLocaleString()} đ`
+          `Tạo đơn hàng thành công. Khách hàng còn nợ ${new Intl.NumberFormat(
+            "vi-VN"
+          ).format(debtAmount)}đ`
         );
       } else {
         toast.success("Tạo đơn hàng thành công");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Create order error:", error);
-      toast.error("Tạo đơn hàng thất bại");
+      toast.error(error.message || "Không thể tạo đơn hàng");
     }
   };
 

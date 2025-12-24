@@ -5,6 +5,7 @@ import { CartItem, DeliveryInfo } from "@/app/(dashboard)/ban-hang/page";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { X, MapPin, User, Phone, House, MapPinHouse } from "lucide-react";
+import { useState } from "react";
 
 interface OrderCartProps {
   cartItems: CartItem[];
@@ -37,6 +38,33 @@ export function OrderCart({
 }: OrderCartProps) {
   const { user } = useAuthStore();
   const { selectedBranch } = useBranchStore();
+  const [paymentDisplayValue, setPaymentDisplayValue] = useState("");
+
+  const formatNumber = (value: number): string => {
+    if (!value) return "";
+    return value.toLocaleString("en-US");
+  };
+
+  const handlePaymentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const onlyNumbers = inputValue.replace(/[^\d]/g, "");
+
+    if (onlyNumbers === "") {
+      setPaymentDisplayValue("");
+      onPaymentAmountChange(0);
+      return;
+    }
+
+    const numericValue = parseInt(onlyNumbers, 10);
+    onPaymentAmountChange(numericValue);
+    setPaymentDisplayValue(formatNumber(numericValue));
+  };
+
+  const handlePaymentInputBlur = () => {
+    if (paymentAmount === 0) {
+      setPaymentDisplayValue("");
+    }
+  };
 
   const calculateSubtotal = () => {
     return cartItems.reduce(
@@ -102,25 +130,6 @@ export function OrderCart({
               <div className="flex items-center gap-1.5">
                 <User className="w-5 h-5 text-green-500 flex-shrink-0" />
                 <span className="text-lg">{deliveryInfo.receiver || ""}</span>
-                {/* <input
-                type="text"
-                value={deliveryInfo.receiver}
-                onChange={(e) =>
-                  handleDeliveryChange("receiver", e.target.value)
-                }
-                placeholder="Tên người nhận"
-                className="flex-1 text-md bg-transparent outline-none"
-              /> */}
-
-                {/* <input
-                type="text"
-                value={deliveryInfo.contactNumber}
-                onChange={(e) =>
-                  handleDeliveryChange("contactNumber", e.target.value)
-                }
-                placeholder="Số điện thoại"
-                className="w-28 text-sm bg-transparent outline-none"
-              /> */}
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -135,38 +144,9 @@ export function OrderCart({
                   {deliveryInfo.detailAddress}, {deliveryInfo.locationName},{" "}
                   {deliveryInfo.wardName}
                 </span>
-                {/* <span>{deliveryInfo.locationName}</span>
-              <span>{deliveryInfo.wardName}</span> */}
               </div>
             </div>
 
-            {/* <input
-              type="text"
-              value={deliveryInfo.detailAddress}
-              onChange={(e) =>
-                handleDeliveryChange("detailAddress", e.target.value)
-              }
-              placeholder="Địa chỉ chi tiết (Số nhà, ngõ, đường)"
-              className="w-full text-sm bg-transparent border-b border-gray-200 py-1.5 outline-none"
-            /> */}
-
-            {/* <input
-              type="text"
-              value={deliveryInfo.locationName}
-              onChange={(e) =>
-                handleDeliveryChange("locationName", e.target.value)
-              }
-              placeholder="Khu vực"
-              className="w-full text-sm bg-transparent border-b border-gray-200 py-1.5 outline-none"
-            />
-
-            <input
-              type="text"
-              value={deliveryInfo.wardName}
-              onChange={(e) => handleDeliveryChange("wardName", e.target.value)}
-              placeholder="Phường/Xã"
-              className="w-full text-sm bg-transparent border-b border-gray-200 py-1.5 outline-none"
-            /> */}
             <div className="border rounded-xl shadow-sm p-3">
               <div className="flex items-center gap-1.5 flex-wrap py-2">
                 <span className="text-base flex-shrink-0">📦</span>
@@ -281,11 +261,10 @@ export function OrderCart({
               <div>
                 <span className="mr-1">Khách đã trả:</span>
                 <input
-                  type="number"
-                  value={paymentAmount || ""}
-                  onChange={(e) =>
-                    onPaymentAmountChange(Number(e.target.value))
-                  }
+                  type="text"
+                  value={paymentDisplayValue}
+                  onChange={handlePaymentInputChange}
+                  onBlur={handlePaymentInputBlur}
                   placeholder="Nhập số tiền"
                   className="border rounded-xl px-3 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />

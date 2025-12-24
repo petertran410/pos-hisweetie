@@ -20,7 +20,7 @@ interface OrdersTableProps {
 }
 
 const formatMoney = (value: number) => {
-  return new Intl.NumberFormat("vi-VN").format(value);
+  return new Intl.NumberFormat("en-US").format(value);
 };
 
 const formatDateTime = (dateString: string) => {

@@ -33,6 +33,33 @@ export function CartItemsList({
     "amount"
   );
   const [discountValue, setDiscountValue] = useState(0);
+  const [displayValue, setDisplayValue] = useState("");
+
+  const formatNumber = (value: number): string => {
+    if (!value) return "";
+    return value.toLocaleString("en-US");
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const onlyNumbers = inputValue.replace(/[^\d]/g, "");
+
+    if (onlyNumbers === "") {
+      setDisplayValue("");
+      setDiscountValue(0);
+      return;
+    }
+
+    const numericValue = parseInt(onlyNumbers, 10);
+    setDiscountValue(numericValue);
+    setDisplayValue(formatNumber(numericValue));
+  };
+
+  const handleInputBlur = () => {
+    if (discountValue === 0) {
+      setDisplayValue("");
+    }
+  };
 
   const calculateSubtotal = () => {
     return cartItems.reduce(
@@ -66,6 +93,7 @@ export function CartItemsList({
   const handleDiscountTypeChange = (type: "amount" | "ratio") => {
     setDiscountType(type);
     setDiscountValue(0);
+    setDisplayValue("");
   };
 
   if (cartItems.length === 0) {
@@ -118,7 +146,7 @@ export function CartItemsList({
                       <Minus className="w-3.5 h-3.5" />
                     </button>
                     <input
-                      type="number"
+                      type="text"
                       value={item.quantity}
                       onChange={(e) =>
                         onUpdateItem(item.product.id, {
@@ -147,18 +175,6 @@ export function CartItemsList({
                   </div>
                 </div>
 
-                {/* <div className="">
-                  <div className="text-lg font-semibold text-blue-600">
-                    {item.price.toLocaleString()}
-                  </div>
-                </div> */}
-
-                {/* <div className="text-right flex gap-60">
-                  <div className="text-lg">{item.price.toLocaleString()}</div>
-                  <div className="text-lg font-extrabold">
-                    {(item.quantity * item.price).toLocaleString()}
-                  </div>
-                </div> */}
                 <div className="text-right flex gap-60">
                   <div className="text-md text-gray-500">
                     {item.price.toLocaleString()}
@@ -200,26 +216,6 @@ export function CartItemsList({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-gray-600 text-md">Giảm giá</span>
-            {/* <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleDiscountTypeChange("amount")}
-                className={`px-3 py-1 text-md rounded transition-colors ${
-                  discountType === "amount"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}>
-                Số tiền
-              </button>
-              <button
-                onClick={() => handleDiscountTypeChange("ratio")}
-                className={`px-3 py-1 text-md rounded transition-colors ${
-                  discountType === "ratio"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}>
-                %
-              </button>
-            </div> */}
             <span className="text-md font-medium text-red-600 min-w-[100px] text-right">
               - {calculateDiscountAmount().toLocaleString()}
               {discountType === "ratio" && ` (${discountValue}%)`}
@@ -228,18 +224,15 @@ export function CartItemsList({
 
           <div className="flex items-center justify-between w-full">
             <input
-              type="number"
-              value={discountValue || ""}
-              onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
+              type="text"
+              value={displayValue}
+              onChange={handleInputChange}
+              onBlur={handleInputBlur}
               placeholder={
                 discountType === "amount" ? "Nhập số tiền" : "Nhập %"
               }
               className="text-center border rounded-xl px-3 py-1.5 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {/* <span className="text-md font-medium text-red-600 min-w-[100px] text-right">
-              - {calculateDiscountAmount().toLocaleString()}
-              {discountType === "ratio" && ` (${discountValue}%)`}
-            </span> */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleDiscountTypeChange("amount")}
