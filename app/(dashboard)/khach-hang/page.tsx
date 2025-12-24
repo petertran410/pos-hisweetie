@@ -19,7 +19,7 @@ export default function CustomersPage() {
   });
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full border-t">
       <aside className="w-64 border-r shrink-0 overflow-hidden">
         <div className="h-full overflow-y-auto">
           <CustomersSidebar filters={filters} setFilters={setFilters} />

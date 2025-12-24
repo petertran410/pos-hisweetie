@@ -100,33 +100,62 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: false,
     render: (order) => formatDateTime(order.updatedAt),
   },
-  {
-    key: "deliveryTime",
-    label: "Thời gian giao hàng",
-    visible: false,
-    render: (order) =>
-      order.delivery?.expectedDelivery
-        ? formatDateTime(order.delivery.expectedDelivery)
-        : "-",
-  },
-  {
-    key: "waitingDays",
-    label: "Số ngày chờ",
-    visible: false,
-    render: (order) => {
-      if (!order.orderDate) return "-";
-      const orderDate = new Date(order.orderDate);
-      const now = new Date();
-      const diffTime = Math.abs(now.getTime() - orderDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays;
-    },
-  },
+  // {
+  //   key: "deliveryTime",
+  //   label: "Thời gian giao hàng",
+  //   visible: false,
+  //   render: (order) =>
+  //     order.delivery?.expectedDelivery
+  //       ? formatDateTime(order.delivery.expectedDelivery)
+  //       : "-",
+  // },
   {
     key: "customer",
     label: "Khách hàng",
     visible: true,
     render: (order) => order.customer?.name || "Khách vãng lai",
+  },
+  {
+    key: "totalAmount",
+    label: "Tổng tiền hàng",
+    visible: false,
+    render: (order) => formatMoney(Number(order.totalAmount)),
+  },
+  {
+    key: "discount",
+    label: "Giảm giá",
+    visible: false,
+    render: (order) => formatMoney(Number(order.discount)),
+  },
+  {
+    key: "discountRatio",
+    label: "Phần trăm giảm giá",
+    visible: false,
+    render: (order) => <span>{formatMoney(Number(order.discountRatio))}%</span>,
+  },
+  {
+    key: "grandTotal",
+    label: "Tổng sau giảm giá",
+    visible: false,
+    render: (order) => formatMoney(Number(order.grandTotal)),
+  },
+  {
+    key: "otherFees",
+    label: "Thu khác",
+    visible: false,
+    render: () => "-",
+  },
+  {
+    key: "customerDebt",
+    label: "Khách cần trả",
+    visible: true,
+    render: (order) => formatMoney(Number(order.grandTotal)),
+  },
+  {
+    key: "customerPaid",
+    label: "Khách đã trả",
+    visible: true,
+    render: (order) => formatMoney(Number(order.paidAmount)),
   },
   {
     key: "phone",
@@ -186,40 +215,17 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (order) => order.description || "-",
   },
   {
-    key: "totalAmount",
-    label: "Tổng tiền hàng",
+    key: "waitingDays",
+    label: "Số ngày chờ",
     visible: false,
-    render: (order) => formatMoney(Number(order.totalAmount)),
-  },
-  {
-    key: "discount",
-    label: "Giảm giá",
-    visible: false,
-    render: (order) => formatMoney(Number(order.discount)),
-  },
-  {
-    key: "grandTotal",
-    label: "Tổng sau giảm giá",
-    visible: false,
-    render: (order) => formatMoney(Number(order.grandTotal)),
-  },
-  {
-    key: "otherFees",
-    label: "Thu khác",
-    visible: false,
-    render: () => "-",
-  },
-  {
-    key: "customerDebt",
-    label: "Khách cần trả",
-    visible: true,
-    render: (order) => formatMoney(Number(order.grandTotal)),
-  },
-  {
-    key: "customerPaid",
-    label: "Khách đã trả",
-    visible: true,
-    render: (order) => formatMoney(Number(order.paidAmount)),
+    render: (order) => {
+      if (!order.orderDate) return "-";
+      const orderDate = new Date(order.orderDate);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - orderDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    },
   },
   {
     key: "status",
@@ -402,16 +408,6 @@ export function OrdersTable({
                       {col.render(order)}
                     </td>
                   ))}
-                  <td
-                    className="px-6 py-3 text-center sticky right-0 bg-white"
-                    onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => onEditClick(order)}
-                      className="p-1 hover:bg-gray-200 rounded"
-                      title="Sửa">
-                      <Pencil className="w-4 h-4 text-blue-600" />
-                    </button>
-                  </td>
                 </tr>
               ))
             )}

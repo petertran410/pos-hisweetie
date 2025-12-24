@@ -19,7 +19,7 @@ export default function DatHangPage() {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full border-t">
       <OrdersSidebar filters={filters} onFiltersChange={setFilters} />
       <OrdersTable
         filters={filters}
