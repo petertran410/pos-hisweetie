@@ -57,10 +57,10 @@ export function CartItemsList({
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-sm font-medium text-gray-600">
+                    <span className="text-md font-medium text-gray-600">
                       {item.product.code}
                     </span>
-                    <span className="text-base font-semibold text-gray-900">
+                    <span className="text-md font-semibold text-gray-900">
                       {item.product.name}
                     </span>
                   </div>
@@ -131,11 +131,11 @@ export function CartItemsList({
 
       <div className="px-3 pb-10 space-y-2">
         <div className="flex items-center justify-between">
-          <button className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm">
+          <button className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-md">
             <span>Ghi chú đơn hàng</span>
           </button>
           <div className="flex items-center gap-3">
-            <span className="text-gray-600 text-sm">Tổng tiền hàng</span>
+            <span className="text-gray-600 text-md">Tổng tiền hàng</span>
             <span className="font-semibold">
               {calculateSubtotal().toLocaleString()}
             </span>
@@ -143,26 +143,26 @@ export function CartItemsList({
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-gray-600 text-sm">Giảm giá</span>
+          <span className="text-gray-600 text-md">Giảm giá</span>
           <input
             type="number"
             value={discount}
             onChange={(e) => onDiscountChange(Number(e.target.value))}
-            className="w-28 text-right border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-28 text-right border rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
-            <span className="text-gray-600 text-sm">Thu khác</span>
-            <button className="text-blue-600 hover:text-blue-700 text-xs">
+            <span className="text-gray-600 text-md">Thu khác</span>
+            <button className="text-blue-600 hover:text-blue-700 text-md">
               ⓘ
             </button>
           </div>
           <span className="font-medium">0</span>
         </div>
 
-        <div className="flex items-center justify-between font-semibold text-base">
+        <div className="flex items-center justify-between font-semibold text-lg">
           <span>Khách cần trả</span>
           <span className="text-blue-600 text-lg">
             {calculateTotal().toLocaleString()}

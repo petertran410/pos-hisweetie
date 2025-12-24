@@ -120,9 +120,12 @@ export function OrderCart({
               </span>
             </span>
             <div className="flex flex-col gap-1.5">
-              <span>{deliveryInfo.detailAddress}</span>
-              <span>{deliveryInfo.locationName}</span>
-              <span>{deliveryInfo.wardName}</span>
+              <span>
+                {deliveryInfo.detailAddress}, {deliveryInfo.locationName},{" "}
+                {deliveryInfo.wardName}
+              </span>
+              {/* <span>{deliveryInfo.locationName}</span>
+              <span>{deliveryInfo.wardName}</span> */}
             </div>
 
             {/* <input
