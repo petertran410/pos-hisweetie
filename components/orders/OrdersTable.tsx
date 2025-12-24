@@ -324,7 +324,7 @@ export function OrdersTable({
               placeholder="Theo mã phiếu đặt"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-80 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-80 border rounded px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -332,13 +332,13 @@ export function OrdersTable({
         <div className="flex items-center gap-2">
           <button
             onClick={onCreateClick}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm flex items-center gap-2">
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Đặt hàng
           </button>
           <button
             onClick={() => setShowColumnModal(true)}
-            className="px-4 py-2 border rounded hover:bg-gray-50 text-sm flex items-center gap-2">
+            className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
             <Settings className="w-4 h-4" />
             Cột hiển thị
           </button>
@@ -346,7 +346,7 @@ export function OrdersTable({
       </div>
 
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-md">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-6 py-3 text-left sticky left-0 bg-gray-50">
@@ -404,7 +404,7 @@ export function OrdersTable({
                   {visibleColumns.map((col) => (
                     <td
                       key={col.key}
-                      className="px-6 py-3 text-sm whitespace-nowrap">
+                      className="px-6 py-3 text-md whitespace-nowrap">
                       {col.render(order)}
                     </td>
                   ))}
@@ -417,7 +417,7 @@ export function OrdersTable({
 
       <div className="border-t p-4 flex items-center justify-between bg-white">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">
+          <span className="text-md text-gray-600">
             Hiển thị {(page - 1) * limit + 1} - {Math.min(page * limit, total)}{" "}
             / {total} đơn
           </span>
@@ -427,7 +427,7 @@ export function OrdersTable({
               setLimit(Number(e.target.value));
               setPage(1);
             }}
-            className="border rounded px-2 py-1 text-sm">
+            className="border rounded px-2 py-1 text-md">
             <option value={15}>15</option>
             <option value={30}>30</option>
             <option value={50}>50</option>
@@ -442,7 +442,7 @@ export function OrdersTable({
             className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
             ←
           </button>
-          <span className="text-sm">
+          <span className="text-md">
             Trang {page} / {Math.ceil(total / limit) || 1}
           </span>
           <button
@@ -477,7 +477,7 @@ export function OrdersTable({
                     onChange={() => toggleColumnVisibility(col.key)}
                     className="cursor-pointer"
                   />
-                  <span className="text-sm">{col.label}</span>
+                  <span className="text-md">{col.label}</span>
                 </label>
               ))}
             </div>
