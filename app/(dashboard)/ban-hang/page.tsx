@@ -6,7 +6,11 @@ import { ProductSearchDropdown } from "@/components/pos/ProductSearchDropdown";
 import { CartItemsList } from "@/components/pos/CartItemsList";
 import { OrderCart } from "@/components/pos/OrderCart";
 import { useBranchStore } from "@/lib/store/branch";
-import { useCreateOrder, useOrder } from "@/lib/hooks/useOrders";
+import {
+  useCreateOrder,
+  useUpdateOrder,
+  useOrder,
+} from "@/lib/hooks/useOrders";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 
@@ -57,6 +61,7 @@ export default function BanHangPage() {
   });
 
   const createOrder = useCreateOrder();
+  const updateOrder = useUpdateOrder();
   const { data: existingOrder, isLoading: isLoadingOrder } = useOrder(
     orderId ? Number(orderId) : 0
   );
@@ -76,7 +81,7 @@ export default function BanHangPage() {
             name: item.productName,
             basePrice: item.price,
           },
-          quantity: item.quantity,
+          quantity: Number(item.quantity),
           price: Number(item.price),
           discount: Number(item.discount) || 0,
           note: item.note || "",
@@ -230,16 +235,16 @@ export default function BanHangPage() {
       orderDate: new Date().toISOString(),
       orderStatus: "pending",
       notes: orderNote,
-      discountAmount: discount,
-      discountRatio: discountRatio,
-      depositAmount: actualPayment,
+      discountAmount: Number(discount) || 0,
+      discountRatio: Number(discountRatio) || 0,
+      depositAmount: Number(actualPayment) || 0,
       items: cartItems.map((item) => ({
-        productId: item.product.id,
-        quantity: item.quantity,
-        unitPrice: item.price,
-        discount: item.discount,
+        productId: Number(item.product.id),
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.price),
+        discount: Number(item.discount) || 0,
         discountRatio: 0,
-        note: item.note,
+        note: item.note || "",
       })),
       delivery: {
         receiver: deliveryInfo.receiver,
@@ -247,25 +252,42 @@ export default function BanHangPage() {
         address: deliveryInfo.detailAddress,
         locationName: deliveryInfo.locationName,
         wardName: deliveryInfo.wardName,
-        weight: deliveryInfo.weight,
-        length: deliveryInfo.length,
-        width: deliveryInfo.width,
-        height: deliveryInfo.height,
+        weight: Number(deliveryInfo.weight) || 0,
+        length: Number(deliveryInfo.length) || 10,
+        width: Number(deliveryInfo.width) || 10,
+        height: Number(deliveryInfo.height) || 10,
         noteForDriver: deliveryInfo.noteForDriver,
       },
     };
 
     try {
-      const result = await createOrder.mutateAsync(orderData);
+      if (orderId) {
+        await updateOrder.mutateAsync({
+          id: Number(orderId),
+          data: orderData,
+        });
 
-      if (debtAmount > 0) {
-        toast.warning(
-          `Khách hàng còn nợ ${new Intl.NumberFormat("vi-VN").format(
-            debtAmount
-          )}đ`
-        );
+        if (debtAmount > 0) {
+          toast.warning(
+            `Khách hàng còn nợ ${new Intl.NumberFormat("vi-VN").format(
+              debtAmount
+            )}đ`
+          );
+        } else {
+          toast.success("Cập nhật đơn hàng thành công");
+        }
       } else {
-        toast.success("Tạo đơn hàng thành công");
+        const result = await createOrder.mutateAsync(orderData);
+
+        if (debtAmount > 0) {
+          toast.warning(
+            `Khách hàng còn nợ ${new Intl.NumberFormat("vi-VN").format(
+              debtAmount
+            )}đ`
+          );
+        } else {
+          toast.success("Tạo đơn hàng thành công");
+        }
       }
     } catch (error: any) {
       console.error("Create order error:", error);
