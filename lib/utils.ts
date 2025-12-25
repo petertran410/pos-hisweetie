@@ -5,5 +5,5 @@ export function formatCurrency(amount: number | string): string {
 
 export function formatDate(date: string | Date): string {
   const d = new Date(date);
-  return d.toLocaleDateString("en-US");
+  return d.toLocaleDateString("vi-VN");
 }

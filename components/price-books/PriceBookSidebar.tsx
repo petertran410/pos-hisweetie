@@ -87,12 +87,12 @@ export function PriceBookSidebar({
   return (
     <div className="w-80 border-r bg-gray-50 p-4 space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-2">Bảng giá</label>
+        <label className="block text-md font-medium mb-2">Bảng giá</label>
         <div className="relative">
           <div
             onClick={() => setShowDropdown(!showDropdown)}
             className="w-full border rounded px-3 py-2 bg-white cursor-pointer flex items-center justify-between">
-            <span className="text-sm">{getDisplayText()}</span>
+            <span className="text-md">{getDisplayText()}</span>
             <svg
               className="w-4 h-4"
               fill="none"
@@ -115,7 +115,7 @@ export function PriceBookSidebar({
                   placeholder="Tìm kiếm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full border rounded px-3 py-2 text-sm"
+                  className="w-full border rounded px-3 py-2 text-md"
                   autoFocus
                 />
               </div>
@@ -126,13 +126,12 @@ export function PriceBookSidebar({
                     onCreateNew();
                     setShowDropdown(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded">
+                  className="w-full text-left px-3 py-2 text-md text-blue-600 hover:bg-blue-50 rounded">
                   + Tạo mới
                 </button>
               </div>
 
               <div className="max-h-60 overflow-y-auto">
-                {/* Bảng giá chung - Virtual Price Book */}
                 <label
                   className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 border-b ${
                     selectedIds.includes(0) ? "bg-blue-50" : ""
@@ -143,7 +142,7 @@ export function PriceBookSidebar({
                     onChange={() => togglePriceBook(0)}
                     className="rounded border-gray-300"
                   />
-                  <span className="text-sm flex-1 font-medium">
+                  <span className="text-md flex-1 font-medium">
                     Bảng giá chung
                   </span>
                 </label>
@@ -160,7 +159,7 @@ export function PriceBookSidebar({
                       onChange={() => togglePriceBook(pb.id)}
                       className="rounded border-gray-300"
                     />
-                    <span className="text-sm flex-1">{pb.name}</span>
+                    <span className="text-md flex-1">{pb.name}</span>
                   </label>
                 ))}
               </div>
@@ -170,15 +169,15 @@ export function PriceBookSidebar({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Nhóm hàng</label>
+        <label className="block text-md font-medium mb-2">Nhóm hàng</label>
         <button
           onClick={() => setShowCategorySelector(true)}
           className="w-full border rounded px-3 py-2 text-left flex items-center justify-between hover:bg-gray-50 bg-white">
-          <span className="text-sm text-gray-600">
+          <span className="text-md">
             {getSelectedCategoryNames() || "Chọn nhóm hàng"}
           </span>
           <svg
-            className="w-4 h-4 text-gray-400"
+            className="w-4 h-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24">
@@ -193,8 +192,8 @@ export function PriceBookSidebar({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Tồn kho</label>
-        <select className="w-full border rounded px-3 py-2 bg-white text-sm">
+        <label className="block text-md font-medium mb-2">Tồn kho</label>
+        <select className="w-full border rounded px-3 py-2 bg-white text-md">
           <option value="">Chọn điều kiện</option>
           <option value="all">Tất cả</option>
           <option value="instock">Còn hàng</option>
@@ -203,8 +202,8 @@ export function PriceBookSidebar({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Giá bán</label>
-        <select className="w-full border rounded px-3 py-2 bg-white text-sm">
+        <label className="block text-md font-medium mb-2">Giá bán</label>
+        <select className="w-full border rounded px-3 py-2 bg-white text-md">
           <option value="">Chọn giá so sánh</option>
         </select>
       </div>

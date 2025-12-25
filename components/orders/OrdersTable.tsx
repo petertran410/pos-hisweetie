@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useOrders } from "@/lib/hooks/useOrders";
 import { useBranchStore } from "@/lib/store/branch";
 import { Plus, ChevronDown, Pencil, Settings } from "lucide-react";
 import type { Order } from "@/lib/types/order";
+import { OrderDetailRow } from "./OrderDetailRow";
 
 interface ColumnConfig {
   key: string;
@@ -27,12 +28,6 @@ const formatDateTime = (dateString: string) => {
   if (!dateString) return "-";
   const date = new Date(dateString);
   return date.toLocaleString("vi-VN");
-};
-
-const formatDate = (dateString: string) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("vi-VN");
 };
 
 const getStatusColor = (status: string) => {
@@ -100,15 +95,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: false,
     render: (order) => formatDateTime(order.updatedAt),
   },
-  // {
-  //   key: "deliveryTime",
-  //   label: "Thời gian giao hàng",
-  //   visible: false,
-  //   render: (order) =>
-  //     order.delivery?.expectedDelivery
-  //       ? formatDateTime(order.delivery.expectedDelivery)
-  //       : "-",
-  // },
   {
     key: "customer",
     label: "Khách hàng",
@@ -249,6 +235,7 @@ export function OrdersTable({
 }: OrdersTableProps) {
   const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -312,6 +299,10 @@ export function OrdersTable({
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
+  };
+
+  const toggleExpand = (orderId: number) => {
+    setExpandedOrderId((prev) => (prev === orderId ? null : orderId));
   };
 
   return (
@@ -387,28 +378,37 @@ export function OrdersTable({
               </tr>
             ) : (
               orders.map((order) => (
-                <tr
-                  key={order.id}
-                  className="border-b hover:bg-gray-50 cursor-pointer"
-                  onClick={() => onEditClick(order)}>
-                  <td
-                    className="px-6 py-3 sticky left-0 bg-white"
-                    onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(order.id)}
-                      onChange={() => toggleSelect(order.id)}
-                      className="cursor-pointer"
-                    />
-                  </td>
-                  {visibleColumns.map((col) => (
+                <Fragment key={order.id}>
+                  <tr
+                    className={`border-b cursor-pointer ${
+                      expandedOrderId === order.id ? "" : ""
+                    }`}
+                    onClick={() => toggleExpand(order.id)}>
                     <td
-                      key={col.key}
-                      className="px-6 py-3 text-md whitespace-nowrap">
-                      {col.render(order)}
+                      className="px-6 py-3 sticky left-0 bg-white"
+                      onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(order.id)}
+                        onChange={() => toggleSelect(order.id)}
+                        className="cursor-pointer"
+                      />
                     </td>
-                  ))}
-                </tr>
+                    {visibleColumns.map((col) => (
+                      <td
+                        key={col.key}
+                        className="px-6 py-3 text-md whitespace-nowrap">
+                        {col.render(order)}
+                      </td>
+                    ))}
+                  </tr>
+                  {expandedOrderId === order.id && (
+                    <OrderDetailRow
+                      orderId={order.id}
+                      colSpan={visibleColumns.length + 1}
+                    />
+                  )}
+                </Fragment>
               ))
             )}
           </tbody>

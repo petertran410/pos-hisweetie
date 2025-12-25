@@ -14,9 +14,7 @@ export default function DatHangPage() {
     router.push("/ban-hang");
   };
 
-  const handleEditClick = (order: Order) => {
-    alert(`Sửa đơn hàng ${order.code} - Form sẽ được triển khai sau`);
-  };
+  const handleEditClick = (order: Order) => {};
 
   return (
     <div className="flex h-full border-t">
