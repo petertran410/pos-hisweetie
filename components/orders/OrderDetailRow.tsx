@@ -1,8 +1,11 @@
 "use client";
 
-import { useOrder } from "@/lib/hooks/useOrders";
-import { tr } from "date-fns/locale";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useOrder, useUpdateOrder } from "@/lib/hooks/useOrders";
 import { Loader2, MapPin } from "lucide-react";
+import { toast } from "sonner";
+import { ORDER_STATUS } from "@/lib/types/order";
 
 interface OrderDetailRowProps {
   orderId: number;
@@ -20,9 +23,66 @@ const formatDateTime = (dateString: string) => {
 };
 
 export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
+  const router = useRouter();
   const { data: order, isLoading } = useOrder(orderId);
+  const updateOrder = useUpdateOrder();
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const branchName = order?.branch?.name;
+  useEffect(() => {
+    if (order) {
+      setSelectedStatus(order.status || ORDER_STATUS.PENDING);
+    }
+  }, [order]);
+
+  const handleCancel = async () => {
+    if (!order) return;
+
+    if (confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
+      try {
+        setIsSaving(true);
+        await updateOrder.mutateAsync({
+          id: order.id,
+          data: { orderStatus: "cancelled" },
+        });
+        toast.success("Đã hủy đơn hàng thành công");
+      } catch (error) {
+        toast.error("Không thể hủy đơn hàng");
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    if (!order) return;
+
+    const statusMap = {
+      [ORDER_STATUS.PENDING]: "pending",
+      [ORDER_STATUS.CONFIRMED]: "confirmed",
+      [ORDER_STATUS.PROCESSING]: "processing",
+      [ORDER_STATUS.COMPLETED]: "completed",
+      [ORDER_STATUS.CANCELLED]: "cancelled",
+    };
+
+    try {
+      setIsSaving(true);
+      await updateOrder.mutateAsync({
+        id: order.id,
+        data: { orderStatus: statusMap[selectedStatus] },
+      });
+      toast.success("Lưu đơn hàng thành công");
+    } catch (error) {
+      toast.error("Không thể lưu đơn hàng");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleProcessOrder = () => {
+    if (!order) return;
+    router.push(`/ban-hang?orderId=${order.id}`);
+  };
 
   if (isLoading) {
     return (
@@ -116,13 +176,20 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                       Trạng thái:
                     </label>
                     <select
-                      value={order.orderStatus}
+                      value={selectedStatus}
+                      onChange={(e) =>
+                        setSelectedStatus(Number(e.target.value))
+                      }
                       className="w-full px-3 py-2 text-md border rounded bg-white font-medium">
-                      <option value="pending">Phiếu tạm</option>
-                      <option value="confirmed">Đã xác nhận</option>
-                      <option value="processing">Đang giao hàng</option>
-                      <option value="completed">Hoàn thành</option>
-                      <option value="cancelled">Hủy</option>
+                      <option value={ORDER_STATUS.PENDING}>Phiếu tạm</option>
+                      <option value={ORDER_STATUS.CONFIRMED}>
+                        Đã xác nhận
+                      </option>
+                      <option value={ORDER_STATUS.PROCESSING}>
+                        Đang giao hàng
+                      </option>
+                      <option value={ORDER_STATUS.COMPLETED}>Hoàn thành</option>
+                      <option value={ORDER_STATUS.CANCELLED}>Đã hủy</option>
                     </select>
                   </div>
                 </div>
@@ -222,16 +289,16 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                               <span className="text-md text-gray-900">
                                 {item.discount
                                   ? formatMoney(Number(item.discount))
-                                  : item.discountRati}
+                                  : "-"}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
                               <span className="text-md font-medium text-gray-900">
-                                {formatMoney(Number(item.price))}
+                                {formatMoney(Number(item.appliedPrice))}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <span className="text-md font-bold text-blue-600">
+                              <span className="text-md font-semibold text-blue-600">
                                 {formatMoney(Number(item.totalPrice))}
                               </span>
                             </td>
@@ -242,72 +309,57 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                   </div>
                 </div>
 
-                <div className="border-t border-gray-200 pt-6">
-                  <div className="flex gap-6">
-                    <div className="flex-1">
-                      <label className="block text-md font-medium text-gray-500 mb-2">
-                        Ghi chú:
-                      </label>
-                      <textarea
-                        className="w-full px-3 py-2 text-md border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        rows={3}
-                        placeholder="Nhập ghi chú cho đơn hàng..."
-                        value={order.description || ""}
-                        readOnly
-                      />
-                    </div>
+                <div className="flex justify-end gap-6">
+                  <div className="w-96">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                      <div className="flex justify-between items-center text-md">
+                        <span className="text-gray-600">
+                          Tổng tiền hàng ({order.items?.length || 0}):
+                        </span>
+                        <span className="font-semibold text-gray-900">
+                          {formatMoney(Number(order.totalAmount))}
+                        </span>
+                      </div>
 
-                    <div className="w-80 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center text-md">
-                          <span className="text-gray-600">
-                            Tổng tiền hàng ({order.items?.length || 0}):
+                      <div className="flex justify-between items-center text-md">
+                        <span className="text-gray-600">
+                          Giảm giá phiếu đặt:
+                        </span>
+                        <span className="font-semibold text-red-600">
+                          -{formatMoney(Number(order.discount))}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-md">
+                        <span className="text-gray-600">Phí ship:</span>
+                        <span className="font-semibold text-gray-900">0</span>
+                      </div>
+
+                      <div className="border-t border-gray-300 pt-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-md font-bold text-gray-900">
+                            Tổng cộng:
                           </span>
-                          <span className="font-semibold text-gray-900">
-                            {formatMoney(Number(order.totalAmount))}
+                          <span className="text-md font-bold text-blue-600">
+                            {formatMoney(Number(order.grandTotal))}
                           </span>
                         </div>
+                      </div>
 
-                        <div className="flex justify-between items-center text-md">
-                          <span className="text-gray-600">
-                            Giảm giá phiếu đặt:
-                          </span>
-                          <span className="font-semibold text-red-600">
-                            -{formatMoney(Number(order.discount))}
-                          </span>
-                        </div>
+                      <div className="flex justify-between items-center text-md pt-2 border-t border-gray-200">
+                        <span className="text-gray-600">Khách đã trả:</span>
+                        <span className="font-semibold text-green-600">
+                          {formatMoney(Number(order.paidAmount))}
+                        </span>
+                      </div>
 
-                        <div className="flex justify-between items-center text-md">
-                          <span className="text-gray-600">Phí ship:</span>
-                          <span className="font-semibold text-gray-900">0</span>
-                        </div>
-
-                        <div className="border-t border-gray-300 pt-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-md font-bold text-gray-900">
-                              Tổng cộng:
-                            </span>
-                            <span className="text-md font-bold text-blue-600">
-                              {formatMoney(Number(order.grandTotal))}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-between items-center text-md pt-2 border-t border-gray-200">
-                          <span className="text-gray-600">Khách đã trả:</span>
-                          <span className="font-semibold text-green-600">
-                            {formatMoney(Number(order.paidAmount))}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center rounded-b-lg border-t-2 border-red-200 pt-2">
-                          <span className="text-lg font-bold text-gray-900">
-                            Khách cần trả:
-                          </span>
-                          <span className="text-lg font-bold text-red-600">
-                            {formatMoney(Number(order.debtAmount))}
-                          </span>
-                        </div>
+                      <div className="flex justify-between items-center rounded-b-lg border-t-2 border-red-200 pt-2">
+                        <span className="text-lg font-bold text-gray-900">
+                          Khách cần trả:
+                        </span>
+                        <span className="text-lg font-bold text-red-600">
+                          {formatMoney(Number(order.debtAmount))}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -315,16 +367,27 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                   <div className="flex gap-2">
-                    <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                      Hủy
+                    <button
+                      onClick={handleCancel}
+                      disabled={
+                        isSaving || order.status === ORDER_STATUS.CANCELLED
+                      }
+                      className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isSaving ? "Đang xử lý..." : "Hủy"}
                     </button>
-                    <button className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm">
+                    <button
+                      onClick={handleProcessOrder}
+                      disabled={isSaving}
+                      className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                       Xử lý đơn hàng
                     </button>
                   </div>
                   <div className="flex gap-2">
-                    <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                      Lưu
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isSaving ? "Đang lưu..." : "Lưu"}
                     </button>
                     <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
                       Kết thúc

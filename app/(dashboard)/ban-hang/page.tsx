@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { ProductSearchDropdown } from "@/components/pos/ProductSearchDropdown";
 import { CartItemsList } from "@/components/pos/CartItemsList";
 import { OrderCart } from "@/components/pos/OrderCart";
 import { useBranchStore } from "@/lib/store/branch";
-import { useCreateOrder } from "@/lib/hooks/useOrders";
+import { useCreateOrder, useOrder } from "@/lib/hooks/useOrders";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 
@@ -31,6 +32,9 @@ export interface DeliveryInfo {
 }
 
 export default function BanHangPage() {
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get("orderId");
+
   const { selectedBranch } = useBranchStore();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
@@ -53,6 +57,67 @@ export default function BanHangPage() {
   });
 
   const createOrder = useCreateOrder();
+  const { data: existingOrder, isLoading: isLoadingOrder } = useOrder(
+    orderId ? Number(orderId) : 0
+  );
+
+  useEffect(() => {
+    if (existingOrder && orderId) {
+      setSelectedCustomer(existingOrder.customer);
+      setOrderNote(existingOrder.description || "");
+      setDiscount(Number(existingOrder.discount) || 0);
+      setDiscountRatio(Number(existingOrder.discountRatio) || 0);
+
+      const items: CartItem[] =
+        existingOrder.items?.map((item: any) => ({
+          product: item.product || {
+            id: item.productId,
+            code: item.productCode,
+            name: item.productName,
+            basePrice: item.price,
+          },
+          quantity: item.quantity,
+          price: Number(item.price),
+          discount: Number(item.discount) || 0,
+          note: item.note || "",
+        })) || [];
+
+      setCartItems(items);
+
+      if (existingOrder.delivery || existingOrder.customer) {
+        setDeliveryInfo({
+          receiver:
+            existingOrder.delivery?.receiver ||
+            existingOrder.customer?.name ||
+            "",
+          contactNumber:
+            existingOrder.delivery?.contactNumber ||
+            existingOrder.customer?.contactNumber ||
+            existingOrder.customer?.phone ||
+            "",
+          detailAddress:
+            existingOrder.delivery?.address ||
+            existingOrder.customer?.address ||
+            "",
+          locationName:
+            existingOrder.delivery?.locationName ||
+            existingOrder.customer?.cityName ||
+            "",
+          wardName:
+            existingOrder.delivery?.wardName ||
+            existingOrder.customer?.wardName ||
+            "",
+          weight: Number(existingOrder.delivery?.weight) || 0,
+          length: Number(existingOrder.delivery?.length) || 10,
+          width: Number(existingOrder.delivery?.width) || 10,
+          height: Number(existingOrder.delivery?.height) || 10,
+          noteForDriver: existingOrder.delivery?.noteForDriver || "",
+        });
+      }
+
+      toast.success("Đã tải thông tin đơn hàng");
+    }
+  }, [existingOrder, orderId]);
 
   useEffect(() => {
     const totalWeight = cartItems.reduce((sum, item) => {
@@ -156,72 +221,48 @@ export default function BanHangPage() {
     }
 
     const total = calculateTotal();
-    const actualPayment = useCOD ? 0 : paymentAmount;
-    const debtAmount = Math.max(0, total - actualPayment);
+    const actualPayment = useCOD ? 0 : paymentAmount || 0;
+    const debtAmount = total - actualPayment;
 
-    if (!useCOD && paymentAmount < 0) {
-      toast.error("Số tiền thanh toán không hợp lệ");
-      return;
-    }
-
-    if (!useCOD && paymentAmount > total) {
-      toast.error("Số tiền thanh toán không được lớn hơn tổng tiền");
-      return;
-    }
+    const orderData = {
+      customerId: selectedCustomer.id,
+      branchId: selectedBranch?.id,
+      orderDate: new Date().toISOString(),
+      orderStatus: "pending",
+      notes: orderNote,
+      discountAmount: discount,
+      discountRatio: discountRatio,
+      depositAmount: actualPayment,
+      items: cartItems.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        discount: item.discount,
+        discountRatio: 0,
+        note: item.note,
+      })),
+      delivery: {
+        receiver: deliveryInfo.receiver,
+        contactNumber: deliveryInfo.contactNumber,
+        address: deliveryInfo.detailAddress,
+        locationName: deliveryInfo.locationName,
+        wardName: deliveryInfo.wardName,
+        weight: deliveryInfo.weight,
+        length: deliveryInfo.length,
+        width: deliveryInfo.width,
+        height: deliveryInfo.height,
+        noteForDriver: deliveryInfo.noteForDriver,
+      },
+    };
 
     try {
-      await createOrder.mutateAsync({
-        customerId: selectedCustomer.id,
-        branchId: selectedBranch?.id,
-        notes: orderNote,
-        discountAmount: discount,
-        discountRatio: discountRatio,
-        depositAmount: useCOD ? 0 : paymentAmount,
-        orderStatus: "pending",
-        items: cartItems.map((item) => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-          unitPrice: item.price,
-          discount: item.discount,
-          note: item.note,
-        })),
-        delivery: {
-          receiver: deliveryInfo.receiver,
-          contactNumber: deliveryInfo.contactNumber,
-          address: deliveryInfo.detailAddress,
-          locationName: deliveryInfo.locationName,
-          wardName: deliveryInfo.wardName,
-          weight: deliveryInfo.weight,
-          length: deliveryInfo.length || 10,
-          width: deliveryInfo.width || 10,
-          height: deliveryInfo.height || 10,
-          noteForDriver: deliveryInfo.noteForDriver,
-        },
-      });
-
-      setCartItems([]);
-      setSelectedCustomer(null);
-      setOrderNote("");
-      setDiscount(0);
-      setPaymentAmount(0);
-      setDeliveryInfo({
-        receiver: "",
-        contactNumber: "",
-        detailAddress: "",
-        locationName: "",
-        wardName: "",
-        weight: 0,
-        length: 10,
-        width: 10,
-        height: 10,
-        noteForDriver: "",
-      });
+      const result = await createOrder.mutateAsync(orderData);
 
       if (debtAmount > 0) {
-        toast.success(
-          `Tạo đơn hàng thành công. Khách hàng còn nợ ${new Intl.NumberFormat(
-            "vi-VN"
-          ).format(debtAmount)}đ`
+        toast.warning(
+          `Khách hàng còn nợ ${new Intl.NumberFormat("vi-VN").format(
+            debtAmount
+          )}đ`
         );
       } else {
         toast.success("Tạo đơn hàng thành công");
@@ -232,6 +273,14 @@ export default function BanHangPage() {
     }
   };
 
+  if (isLoadingOrder && orderId) {
+    return (
+      <div className="h-full flex items-center justify-center bg-blue-600">
+        <div className="text-white text-lg">Đang tải đơn hàng...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col bg-blue-600">
       <div className="px-4 py-3 flex items-center gap-4 flex-shrink-0">
@@ -240,7 +289,9 @@ export default function BanHangPage() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-white/50">
-            <span className="text-white font-medium">Đặt hàng</span>
+            <span className="text-white font-medium">
+              {orderId ? "Xử lý đơn hàng" : "Đặt hàng"}
+            </span>
             <button className="hover:bg-white/20 p-1 rounded">
               <X className="w-4 h-4 text-white" />
             </button>

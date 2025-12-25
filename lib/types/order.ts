@@ -1,3 +1,19 @@
+export const ORDER_STATUS = {
+  PENDING: 1,
+  CONFIRMED: 2,
+  PROCESSING: 5,
+  COMPLETED: 3,
+  CANCELLED: 4,
+} as const;
+
+export const ORDER_STATUS_LABELS = {
+  [ORDER_STATUS.PENDING]: "Phiếu tạm",
+  [ORDER_STATUS.CONFIRMED]: "Đã xác nhận",
+  [ORDER_STATUS.PROCESSING]: "Đang giao hàng",
+  [ORDER_STATUS.COMPLETED]: "Hoàn thành",
+  [ORDER_STATUS.CANCELLED]: "Đã hủy",
+} as const;
+
 export interface Order {
   id: number;
   code: string;
@@ -15,6 +31,8 @@ export interface Order {
   depositAmount: number;
   paymentStatus: string;
   orderStatus: string;
+  status: number;
+  statusValue?: string;
   usingCod: boolean;
   description?: string;
   createdBy: number;
@@ -57,6 +75,11 @@ export interface Order {
     address?: string;
     locationName?: string;
     wardName?: string;
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    noteForDriver?: string;
     expectedDelivery?: string;
     partnerDelivery?: {
       id: number;
