@@ -90,8 +90,9 @@ export function OrderCart({
     if (useCOD) return calculateTotal();
 
     if (isEditMode && existingOrder) {
-      const currentDebtAmount = Number(existingOrder.debtAmount || 0);
-      const newDebt = currentDebtAmount - paymentAmount;
+      const currentPaidAmount = Number(existingOrder.paidAmount || 0);
+      const totalPaid = currentPaidAmount + paymentAmount;
+      const newDebt = calculateTotal() - totalPaid;
       return Math.max(0, newDebt);
     }
 
