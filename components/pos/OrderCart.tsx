@@ -23,6 +23,7 @@ interface OrderCartProps {
   deliveryInfo: DeliveryInfo;
   onDeliveryInfoChange: (info: DeliveryInfo) => void;
   isEditMode?: boolean;
+  existingOrder?: any;
 }
 
 export function OrderCart({
@@ -41,6 +42,7 @@ export function OrderCart({
   deliveryInfo,
   onDeliveryInfoChange,
   isEditMode = false,
+  existingOrder,
 }: OrderCartProps) {
   const { user } = useAuthStore();
   const { selectedBranch } = useBranchStore();
@@ -86,6 +88,13 @@ export function OrderCart({
 
   const calculateDebt = () => {
     if (useCOD) return calculateTotal();
+
+    if (isEditMode && existingOrder) {
+      const currentDebtAmount = Number(existingOrder.debtAmount || 0);
+      const newDebt = currentDebtAmount - paymentAmount;
+      return Math.max(0, newDebt);
+    }
+
     return Math.max(0, calculateTotal() - paymentAmount);
   };
 
@@ -264,7 +273,9 @@ export function OrderCart({
           <>
             <div className="flex items-center justify-between text-md">
               <div>
-                <span className="mr-1">Khách đã trả:</span>
+                <span className="mr-1">
+                  {isEditMode ? "Khách trả thêm:" : "Khách đã trả:"}
+                </span>
                 <input
                   type="text"
                   value={paymentDisplayValue}
@@ -280,6 +291,17 @@ export function OrderCart({
               </span>
             </div>
 
+            {isEditMode && existingOrder && (
+              <div className="flex items-center justify-between text-md bg-green-50 px-3 py-2 rounded">
+                <span className="text-green-700">Tổng khách đã trả:</span>
+                <span className="font-semibold text-green-700">
+                  {(
+                    Number(existingOrder.paidAmount || 0) + paymentAmount
+                  ).toLocaleString()}
+                </span>
+              </div>
+            )}
+
             {calculateDebt() > 0 && (
               <div className="flex items-center justify-between text-md">
                 <span>Công nợ</span>
@@ -289,7 +311,7 @@ export function OrderCart({
               </div>
             )}
 
-            {paymentAmount > calculateTotal() && (
+            {!isEditMode && paymentAmount > calculateTotal() && (
               <div className="flex items-center justify-between text-md">
                 <span>Tiền thừa trả khách</span>
                 <span className="font-semibold">

@@ -231,7 +231,6 @@ export default function BanHangPage() {
 
     const total = calculateTotal();
     const actualPayment = useCOD ? 0 : paymentAmount || 0;
-    const debtAmount = total - actualPayment;
 
     const orderData = {
       customerId: selectedCustomer.id,
@@ -241,7 +240,8 @@ export default function BanHangPage() {
       notes: orderNote,
       discountAmount: Number(discount) || 0,
       discountRatio: Number(discountRatio) || 0,
-      depositAmount: Number(actualPayment) || 0,
+      depositAmount:
+        Number(existingOrder.paidAmount || 0) + Number(actualPayment),
       items: cartItems.map((item) => ({
         productId: Number(item.product.id),
         quantity: Number(item.quantity),
@@ -265,10 +265,27 @@ export default function BanHangPage() {
     };
 
     try {
+      if (actualPayment > 0) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/order-payments`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            orderId: Number(orderId),
+            amount: actualPayment,
+            paymentMethod: "cash",
+            notes: "Thanh toán bổ sung",
+          }),
+        });
+      }
+
       await updateOrder.mutateAsync({
         id: Number(orderId),
         data: orderData,
       });
+
       toast.success("Lưu đơn hàng thành công");
       router.push("/don-hang/dat-hang");
     } catch (error: any) {
@@ -402,6 +419,7 @@ export default function BanHangPage() {
           deliveryInfo={deliveryInfo}
           onDeliveryInfoChange={setDeliveryInfo}
           isEditMode={!!orderId}
+          existingOrder={existingOrder}
         />
       </div>
     </div>
