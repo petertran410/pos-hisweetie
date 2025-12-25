@@ -318,9 +318,6 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                     <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
                       Hủy
                     </button>
-                    <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                      Sao chép
-                    </button>
                     <button className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm">
                       Xử lý đơn hàng
                     </button>
