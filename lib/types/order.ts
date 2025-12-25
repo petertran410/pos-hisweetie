@@ -1,7 +1,7 @@
 export const ORDER_STATUS = {
   PENDING: 1,
-  CONFIRMED: 2,
-  PROCESSING: 5,
+  CONFIRMED: 5,
+  PROCESSING: 2,
   COMPLETED: 3,
   CANCELLED: 4,
 } as const;
@@ -13,6 +13,14 @@ export const ORDER_STATUS_LABELS = {
   [ORDER_STATUS.COMPLETED]: "Hoàn thành",
   [ORDER_STATUS.CANCELLED]: "Đã hủy",
 } as const;
+
+export const ORDER_STATUS_NUMBER_TO_STRING: Record<number, string> = {
+  [ORDER_STATUS.PENDING]: "pending",
+  [ORDER_STATUS.CONFIRMED]: "confirmed",
+  [ORDER_STATUS.PROCESSING]: "processing",
+  [ORDER_STATUS.COMPLETED]: "completed",
+  [ORDER_STATUS.CANCELLED]: "cancelled",
+};
 
 export interface Order {
   id: number;

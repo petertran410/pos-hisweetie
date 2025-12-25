@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useOrder, useUpdateOrder } from "@/lib/hooks/useOrders";
 import { Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { ORDER_STATUS } from "@/lib/types/order";
+import { ORDER_STATUS, ORDER_STATUS_NUMBER_TO_STRING } from "@/lib/types/order";
 
 interface OrderDetailRowProps {
   orderId: number;
@@ -26,7 +26,9 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const router = useRouter();
   const { data: order, isLoading } = useOrder(orderId);
   const updateOrder = useUpdateOrder();
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<number>(
+    ORDER_STATUS.PENDING
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -57,19 +59,17 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const handleSave = async () => {
     if (!order) return;
 
-    const statusMap = {
-      [ORDER_STATUS.PENDING]: "pending",
-      [ORDER_STATUS.CONFIRMED]: "confirmed",
-      [ORDER_STATUS.PROCESSING]: "processing",
-      [ORDER_STATUS.COMPLETED]: "completed",
-      [ORDER_STATUS.CANCELLED]: "cancelled",
-    };
+    const statusString = ORDER_STATUS_NUMBER_TO_STRING[selectedStatus];
+    if (!statusString) {
+      toast.error("Trạng thái không hợp lệ");
+      return;
+    }
 
     try {
       setIsSaving(true);
       await updateOrder.mutateAsync({
         id: order.id,
-        data: { orderStatus: statusMap[selectedStatus] },
+        data: { orderStatus: statusString },
       });
       toast.success("Lưu đơn hàng thành công");
     } catch (error) {
