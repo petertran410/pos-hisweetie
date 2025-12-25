@@ -377,7 +377,9 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                     </button>
                     <button
                       onClick={handleProcessOrder}
-                      disabled={isSaving}
+                      disabled={
+                        isSaving || order.status === ORDER_STATUS.CANCELLED
+                      }
                       className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                       Xử lý đơn hàng
                     </button>
