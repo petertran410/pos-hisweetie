@@ -16,10 +16,13 @@ interface OrderCartProps {
   paymentAmount: number;
   onPaymentAmountChange: (amount: number) => void;
   onCreateOrder: () => void;
+  onSaveOrder?: () => void;
+  onCreateInvoice?: () => void;
   discount: number;
   discountRatio: number;
   deliveryInfo: DeliveryInfo;
   onDeliveryInfoChange: (info: DeliveryInfo) => void;
+  isEditMode?: boolean;
 }
 
 export function OrderCart({
@@ -31,10 +34,13 @@ export function OrderCart({
   paymentAmount,
   onPaymentAmountChange,
   onCreateOrder,
+  onSaveOrder,
+  onCreateInvoice,
   discount,
   discountRatio,
   deliveryInfo,
   onDeliveryInfoChange,
+  isEditMode = false,
 }: OrderCartProps) {
   const { user } = useAuthStore();
   const { selectedBranch } = useBranchStore();
@@ -79,9 +85,8 @@ export function OrderCart({
   };
 
   const calculateDebt = () => {
-    const total = calculateTotal();
-    if (useCOD) return total;
-    return Math.max(0, total - paymentAmount);
+    if (useCOD) return calculateTotal();
+    return Math.max(0, calculateTotal() - paymentAmount);
   };
 
   const formatDate = () => {
@@ -304,12 +309,29 @@ export function OrderCart({
           </div>
         )}
 
-        <button
-          onClick={onCreateOrder}
-          disabled={cartItems.length === 0}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
-          ĐẶT HÀNG
-        </button>
+        {isEditMode ? (
+          <div className="flex gap-4">
+            <button
+              onClick={onCreateInvoice}
+              disabled={cartItems.length === 0}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
+              HÓA ĐƠN
+            </button>
+            <button
+              onClick={onSaveOrder}
+              disabled={cartItems.length === 0}
+              className="w-full bg-orange-400 text-white py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
+              LƯU
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onCreateOrder}
+            disabled={cartItems.length === 0}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
+            ĐẶT HÀNG
+          </button>
+        )}
       </div>
     </div>
   );

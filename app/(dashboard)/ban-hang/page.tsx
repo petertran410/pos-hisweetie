@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ProductSearchDropdown } from "@/components/pos/ProductSearchDropdown";
 import { CartItemsList } from "@/components/pos/CartItemsList";
 import { OrderCart } from "@/components/pos/OrderCart";
@@ -38,6 +38,7 @@ export interface DeliveryInfo {
 export default function BanHangPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
+  const router = useRouter();
 
   const { selectedBranch } = useBranchStore();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -119,8 +120,6 @@ export default function BanHangPage() {
           noteForDriver: existingOrder.delivery?.noteForDriver || "",
         });
       }
-
-      toast.success("Đã tải thông tin đơn hàng");
     }
   }, [existingOrder, orderId]);
 
@@ -214,6 +213,70 @@ export default function BanHangPage() {
     return subtotal - discount - (subtotal * discountRatio) / 100;
   };
 
+  const handleSaveOrder = async () => {
+    if (!selectedCustomer) {
+      toast.error("Vui lòng chọn khách hàng trước khi lưu đơn hàng");
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      toast.error("Vui lòng thêm sản phẩm vào đơn hàng");
+      return;
+    }
+
+    if (!orderId || !existingOrder) {
+      toast.error("Không tìm thấy thông tin đơn hàng");
+      return;
+    }
+
+    const total = calculateTotal();
+    const actualPayment = useCOD ? 0 : paymentAmount || 0;
+    const debtAmount = total - actualPayment;
+
+    const orderData = {
+      customerId: selectedCustomer.id,
+      branchId: selectedBranch?.id,
+      orderDate: new Date().toISOString(),
+      orderStatus: existingOrder.orderStatus,
+      notes: orderNote,
+      discountAmount: Number(discount) || 0,
+      discountRatio: Number(discountRatio) || 0,
+      depositAmount: Number(actualPayment) || 0,
+      items: cartItems.map((item) => ({
+        productId: Number(item.product.id),
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.price),
+        discount: Number(item.discount) || 0,
+        discountRatio: 0,
+        note: item.note || "",
+      })),
+      delivery: {
+        receiver: deliveryInfo.receiver,
+        contactNumber: deliveryInfo.contactNumber,
+        address: deliveryInfo.detailAddress,
+        locationName: deliveryInfo.locationName,
+        wardName: deliveryInfo.wardName,
+        weight: Number(deliveryInfo.weight) || 0,
+        length: Number(deliveryInfo.length) || 10,
+        width: Number(deliveryInfo.width) || 10,
+        height: Number(deliveryInfo.height) || 10,
+        noteForDriver: deliveryInfo.noteForDriver,
+      },
+    };
+
+    try {
+      await updateOrder.mutateAsync({
+        id: Number(orderId),
+        data: orderData,
+      });
+      toast.success("Lưu đơn hàng thành công");
+      router.push("/don-hang/dat-hang");
+    } catch (error: any) {
+      console.error("Save order error:", error);
+      toast.error(error.message || "Không thể lưu đơn hàng");
+    }
+  };
+
   const handleCreateOrder = async () => {
     if (!selectedCustomer) {
       toast.error("Vui lòng chọn khách hàng trước khi tạo đơn hàng");
@@ -261,38 +324,25 @@ export default function BanHangPage() {
     };
 
     try {
-      if (orderId) {
-        await updateOrder.mutateAsync({
-          id: Number(orderId),
-          data: orderData,
-        });
+      const result = await createOrder.mutateAsync(orderData);
 
-        if (debtAmount > 0) {
-          toast.warning(
-            `Khách hàng còn nợ ${new Intl.NumberFormat("vi-VN").format(
-              debtAmount
-            )}đ`
-          );
-        } else {
-          toast.success("Cập nhật đơn hàng thành công");
-        }
+      if (debtAmount > 0) {
+        toast.warning(
+          `Khách hàng còn nợ ${new Intl.NumberFormat("vi-VN").format(
+            debtAmount
+          )}đ`
+        );
       } else {
-        const result = await createOrder.mutateAsync(orderData);
-
-        if (debtAmount > 0) {
-          toast.warning(
-            `Khách hàng còn nợ ${new Intl.NumberFormat("vi-VN").format(
-              debtAmount
-            )}đ`
-          );
-        } else {
-          toast.success("Tạo đơn hàng thành công");
-        }
+        toast.success("Tạo đơn hàng thành công");
       }
     } catch (error: any) {
       console.error("Create order error:", error);
       toast.error(error.message || "Không thể tạo đơn hàng");
     }
+  };
+
+  const handleCreateInvoice = () => {
+    toast.info("Chức năng tạo hóa đơn đang được phát triển");
   };
 
   if (isLoadingOrder && orderId) {
@@ -345,10 +395,13 @@ export default function BanHangPage() {
           paymentAmount={paymentAmount}
           onPaymentAmountChange={setPaymentAmount}
           onCreateOrder={handleCreateOrder}
+          onSaveOrder={handleSaveOrder}
+          onCreateInvoice={handleCreateInvoice}
           discount={discount}
           discountRatio={discountRatio}
           deliveryInfo={deliveryInfo}
           onDeliveryInfoChange={setDeliveryInfo}
+          isEditMode={!!orderId}
         />
       </div>
     </div>

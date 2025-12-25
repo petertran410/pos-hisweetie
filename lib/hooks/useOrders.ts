@@ -44,7 +44,6 @@ export function useUpdateOrder() {
       ordersApi.updateOrder(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-      toast.success("Cập nhật đơn hàng thành công");
     },
     onError: (error: any) => {
       toast.error(error.message || "Cập nhật đơn hàng thất bại");
