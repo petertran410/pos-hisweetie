@@ -253,16 +253,16 @@ export function InvoicesTable({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-white">
+    <div className="flex-1 flex flex-col overflow-hidden bg-white">
       <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-semibold">Hóa đơn</h2>
+        <div className="flex items-center gap-4 w-[500px]">
+          <h2 className="text-xl font-semibold w-[150px]">Hóa đơn</h2>
           <input
             type="text"
-            placeholder="Tìm kiếm theo mã hóa đơn..."
+            placeholder="Tìm kiếm hóa đơn..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="px-3 py-2 border rounded-lg w-96"
+            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -299,7 +299,7 @@ export function InvoicesTable({
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-6 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
+                  className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
                   {col.label}
                 </th>
               ))}

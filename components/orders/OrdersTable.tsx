@@ -308,16 +308,15 @@ export function OrdersTable({
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white">
       <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Theo mã phiếu đặt"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-80 border rounded px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        <div className="flex items-center gap-4 w-[500px]">
+          <h2 className="text-xl font-semibold w-[150px]">Đơn hàng</h2>
+          <input
+            type="text"
+            placeholder="Tìm kiếm đơn hàng..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
 
         <div className="flex items-center gap-2">
