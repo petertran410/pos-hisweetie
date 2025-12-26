@@ -115,7 +115,7 @@ export function DashboardHeader() {
               </button>
 
               {hoveredMenu === "orders" && (
-                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-lg rounded-md min-w-max z-50 mt-1">
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border mt-1">
                   <ul className="px-2 py-2">
                     {orderSubmenu.map((item) => (
                       <li key={item.href}>

@@ -238,7 +238,7 @@ export function InvoicesTable({
     if (selectedIds.length === invoices.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(invoices.map((i) => i.id));
+      setSelectedIds(invoices.map((i: { id: any }) => i.id));
     }
   };
 
@@ -267,16 +267,16 @@ export function InvoicesTable({
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowColumnModal(true)}
-            className="px-4 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Tùy chỉnh cột
-          </button>
-          <button
             onClick={onCreateClick}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
             <Plus className="w-5 h-5" />
             Tạo hóa đơn
+          </button>
+          <button
+            onClick={() => setShowColumnModal(true)}
+            className="px-4 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            Tùy chỉnh cột
           </button>
         </div>
       </div>
@@ -323,7 +323,7 @@ export function InvoicesTable({
                 </td>
               </tr>
             ) : (
-              invoices.map((invoice) => (
+              invoices.map((invoice: Invoice) => (
                 <Fragment key={invoice.id}>
                   <tr
                     className="border-b cursor-pointer"

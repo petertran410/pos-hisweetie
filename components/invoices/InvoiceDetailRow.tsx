@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import {
   INVOICE_STATUS,
   INVOICE_STATUS_NUMBER_TO_STRING,
+  InvoiceDetail,
 } from "@/lib/types/invoice";
 
 interface InvoiceDetailRowProps {
@@ -220,7 +221,7 @@ export function InvoiceDetailRow({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {invoice.details?.map((item) => (
+                        {invoice.details?.map((item: InvoiceDetail) => (
                           <tr key={item.id} className="hover:bg-gray-50">
                             <td className="px-4 py-3 text-md text-gray-900">
                               {item.productCode}

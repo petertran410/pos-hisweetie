@@ -1,4 +1,4 @@
-import api from "./config";
+import { apiClient } from "@/lib/config/api";
 
 export interface CreateInvoiceDto {
   customerId: number;
@@ -35,27 +35,27 @@ export interface CreateInvoiceDto {
 
 export const invoicesApi = {
   getInvoices: async (params?: any) => {
-    const response = await api.get("/invoices", { params });
-    return response.data;
+    const response = await apiClient.get("/invoices", params);
+    return response;
   },
 
   getInvoice: async (id: number) => {
-    const response = await api.get(`/invoices/${id}`);
-    return response.data;
+    const response = await apiClient.get(`/invoices/${id}`);
+    return response;
   },
 
   createInvoice: async (data: CreateInvoiceDto) => {
-    const response = await api.post("/invoices", data);
-    return response.data;
+    const response = await apiClient.post("/invoices", data);
+    return response;
   },
 
   updateInvoice: async (id: number, data: any) => {
-    const response = await api.put(`/invoices/${id}`, data);
-    return response.data;
+    const response = await apiClient.put(`/invoices/${id}`, data);
+    return response;
   },
 
   deleteInvoice: async (id: number) => {
-    const response = await api.delete(`/invoices/${id}`);
-    return response.data;
+    const response = await apiClient.delete(`/invoices/${id}`);
+    return response;
   },
 };
