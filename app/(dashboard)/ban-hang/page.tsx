@@ -102,6 +102,8 @@ export default function BanHangPage() {
   const { data: existingOrder, isLoading: isLoadingOrder } = useOrder(
     orderId ? Number(orderId) : 0
   );
+
+  console.log(existingOrder);
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(
     invoiceId ? Number(invoiceId) : 0
   );
@@ -129,7 +131,7 @@ export default function BanHangPage() {
           discountRatio: Number(existingOrder.discountRatio) || 0,
           useCOD: false,
           paymentAmount: 0,
-          deliveryInfo: existingOrder.delivery
+          deliveryInfo: existingOrder.delivery?.id
             ? {
                 receiver: existingOrder.delivery.receiver || "",
                 contactNumber: existingOrder.delivery.contactNumber || "",
@@ -692,10 +694,10 @@ export default function BanHangPage() {
           onSaveOrder={handleSaveOrder}
           discount={activeTab.discount}
           discountRatio={activeTab.discountRatio}
-          deliveryInfo={activeTab.deliveryInfo}
           onDeliveryInfoChange={(deliveryInfo) =>
             updateActiveTab({ deliveryInfo })
           }
+          deliveryInfo={activeTab.deliveryInfo}
           isEditMode={!!activeTab.documentId}
           existingOrder={
             activeTab.type === "order" && activeTab.documentId
