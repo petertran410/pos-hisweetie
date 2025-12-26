@@ -1,61 +1,60 @@
 import { apiClient } from "@/lib/config/api";
 
-export interface CreateInvoiceDto {
-  customerId: number;
+export interface Invoice {
+  id: number;
+  code: string;
+  customerId?: number;
   branchId?: number;
+  soldById?: number;
   saleChannelId?: number;
-  purchaseDate?: string;
-  discountAmount?: number;
-  discountRatio?: number;
-  totalPayment?: number;
-  usingCod?: boolean;
-  notes?: string;
-  items: Array<{
-    productId: number;
-    quantity: number;
-    unitPrice: number;
-    discount?: number;
-    discountRatio?: number;
-    note?: string;
-    serialNumbers?: string;
-  }>;
-  delivery?: {
-    receiver?: string;
-    contactNumber?: string;
-    address?: string;
-    locationName?: string;
-    wardName?: string;
-    weight?: number;
-    length?: number;
-    width?: number;
-    height?: number;
-    partnerDeliveryId?: number;
-  };
+  purchaseDate: string;
+  totalAmount: number;
+  discount: number;
+  discountRatio: number;
+  grandTotal: number;
+  paidAmount: number;
+  debtAmount: number;
+  status: number;
+  statusValue?: string;
+  usingCod: boolean;
+  description?: string;
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
+  customer?: any;
+  branch?: any;
+  soldBy?: any;
+  creator?: any;
+  details?: any[];
+  payments?: any[];
+  delivery?: any;
+}
+
+export interface InvoicesResponse {
+  data: Invoice[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export const invoicesApi = {
-  getInvoices: async (params?: any) => {
-    const response = await apiClient.get("/invoices", params);
-    return response;
+  getInvoices: (params?: any): Promise<InvoicesResponse> => {
+    return apiClient.get("/invoices", params);
   },
 
-  getInvoice: async (id: number) => {
-    const response = await apiClient.get(`/invoices/${id}`);
-    return response;
+  getInvoice: (id: number): Promise<Invoice> => {
+    return apiClient.get(`/invoices/${id}`);
   },
 
-  createInvoice: async (data: CreateInvoiceDto) => {
-    const response = await apiClient.post("/invoices", data);
-    return response;
+  createInvoice: (data: any): Promise<Invoice> => {
+    return apiClient.post("/invoices", data);
   },
 
-  updateInvoice: async (id: number, data: any) => {
-    const response = await apiClient.put(`/invoices/${id}`, data);
-    return response;
+  updateInvoice: (id: number, data: any): Promise<Invoice> => {
+    return apiClient.put(`/invoices/${id}`, data);
   },
 
-  deleteInvoice: async (id: number) => {
-    const response = await apiClient.delete(`/invoices/${id}`);
-    return response;
+  deleteInvoice: (id: number): Promise<void> => {
+    return apiClient.delete(`/invoices/${id}`);
   },
 };

@@ -24,6 +24,7 @@ interface OrderCartProps {
   onDeliveryInfoChange: (info: DeliveryInfo) => void;
   isEditMode?: boolean;
   existingOrder?: any;
+  documentType?: "order" | "invoice";
 }
 
 export function OrderCart({
@@ -43,6 +44,7 @@ export function OrderCart({
   onDeliveryInfoChange,
   isEditMode = false,
   existingOrder,
+  documentType,
 }: OrderCartProps) {
   const { user } = useAuthStore();
   const { selectedBranch } = useBranchStore();
@@ -352,7 +354,7 @@ export function OrderCart({
             onClick={onCreateOrder}
             disabled={cartItems.length === 0}
             className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
-            ĐẶT HÀNG
+            {documentType === "invoice" ? "Tạo hóa đơn" : "Tạo đơn hàng"}
           </button>
         )}
       </div>
