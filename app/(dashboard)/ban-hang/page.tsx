@@ -420,7 +420,6 @@ export default function BanHangPage() {
       return;
     }
 
-    const total = calculateTotal();
     const actualPayment = activeTab.useCOD ? 0 : activeTab.paymentAmount || 0;
 
     const orderData = {
@@ -431,8 +430,6 @@ export default function BanHangPage() {
       notes: activeTab.orderNote,
       discountAmount: Number(activeTab.discount) || 0,
       discountRatio: Number(activeTab.discountRatio) || 0,
-      depositAmount:
-        Number(existingOrder.paidAmount || 0) + Number(actualPayment),
       items: activeTab.cartItems.map((item) => ({
         productId: Number(item.product.id),
         quantity: Number(item.quantity),
