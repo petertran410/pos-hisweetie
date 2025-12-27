@@ -4,8 +4,8 @@ import { CustomerSearch } from "./CustomerSearch";
 import { CartItem, DeliveryInfo } from "@/app/(dashboard)/ban-hang/page";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
-import { X, MapPin, User, Phone, House, MapPinHouse } from "lucide-react";
-import { useState } from "react";
+import { MapPin, User, Phone, House } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface OrderCartProps {
   cartItems: CartItem[];
@@ -49,6 +49,11 @@ export function OrderCart({
   const { user } = useAuthStore();
   const { selectedBranch } = useBranchStore();
   const [paymentDisplayValue, setPaymentDisplayValue] = useState("");
+  useEffect(() => {
+    if (isEditMode && existingOrder && paymentAmount > 0) {
+      setPaymentDisplayValue(formatNumber(paymentAmount));
+    }
+  }, [isEditMode, existingOrder, paymentAmount]);
 
   const formatNumber = (value: number): string => {
     if (!value) return "";

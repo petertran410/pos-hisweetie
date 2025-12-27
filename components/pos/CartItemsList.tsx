@@ -35,6 +35,18 @@ export function CartItemsList({
   const [discountValue, setDiscountValue] = useState(0);
   const [displayValue, setDisplayValue] = useState("");
 
+  useEffect(() => {
+    if (discountRatio > 0) {
+      setDiscountType("ratio");
+      setDiscountValue(discountRatio);
+      setDisplayValue(formatNumber(discountRatio));
+    } else if (discount > 0) {
+      setDiscountType("amount");
+      setDiscountValue(discount);
+      setDisplayValue(formatNumber(discount));
+    }
+  }, [discount, discountRatio]);
+
   const formatNumber = (value: number): string => {
     if (!value) return "";
     return value.toLocaleString("en-US");
@@ -129,53 +141,70 @@ export function CartItemsList({
                     </span>
                   </div>
 
-                  {item.note && (
-                    <div className="text-xs text-gray-500 italic mb-1">
-                      {item.note}
+                  {!editingNoteId || editingNoteId !== item.product.id ? (
+                    <div
+                      onClick={() => setEditingNoteId(item.product.id)}
+                      className="text-md text-gray-500 cursor-pointer hover:text-gray-700 min-h-[20px]">
+                      {item.note || "Nhấn để thêm ghi chú..."}
                     </div>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        onUpdateItem(item.product.id, {
-                          quantity: Math.max(1, item.quantity - 1),
-                        })
-                      }
-                      className="p-1 hover:bg-gray-100 rounded border">
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
+                  ) : (
                     <input
                       type="text"
-                      value={item.quantity}
+                      value={item.note || ""}
                       onChange={(e) =>
-                        onUpdateItem(item.product.id, {
-                          quantity: Math.max(1, Number(e.target.value)),
-                        })
+                        onUpdateItem(item.product.id, { note: e.target.value })
                       }
-                      className="w-14 text-center border rounded px-2 py-1 text-sm"
+                      onBlur={() => setEditingNoteId(null)}
+                      autoFocus
+                      placeholder="Nhập ghi chú cho sản phẩm"
+                      className="text-md text-gray-700 border-b border-blue-500 focus:outline-none w-full"
                     />
-                    <button
-                      onClick={() =>
-                        onUpdateItem(item.product.id, {
-                          quantity: item.quantity + 1,
-                        })
-                      }
-                      className="p-1 hover:bg-gray-100 rounded border">
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-
-                    {hoveredItemId === item.product.id && (
-                      <button
-                        onClick={() => onRemoveItem(item.product.id)}
-                        className="p-1 bg-red-100 hover:bg-red-200 rounded text-red-600 transition-colors ml-2">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
 
-                <div className="text-right flex gap-60">
+                {hoveredItemId === item.product.id && (
+                  <button
+                    onClick={() => onRemoveItem(item.product.id)}
+                    className="text-red-500 hover:text-red-700 p-1">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() =>
+                      onUpdateItem(item.product.id, {
+                        quantity: Math.max(1, item.quantity - 1),
+                      })
+                    }
+                    className="w-7 h-7 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <input
+                    type="text"
+                    value={item.quantity}
+                    onChange={(e) =>
+                      onUpdateItem(item.product.id, {
+                        quantity: Math.max(1, parseInt(e.target.value) || 1),
+                      })
+                    }
+                    className="w-12 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="1"
+                  />
+                  <button
+                    onClick={() =>
+                      onUpdateItem(item.product.id, {
+                        quantity: item.quantity + 1,
+                      })
+                    }
+                    className="w-7 h-7 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
                   <div className="text-md text-gray-500">
                     {item.price.toLocaleString()}
                   </div>
