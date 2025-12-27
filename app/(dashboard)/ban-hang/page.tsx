@@ -428,6 +428,7 @@ export default function BanHangPage() {
       orderDate: new Date().toISOString(),
       orderStatus: existingOrder.orderStatus,
       notes: activeTab.orderNote,
+      paidAmount: actualPayment,
       discountAmount: Number(activeTab.discount) || 0,
       discountRatio: Number(activeTab.discountRatio) || 0,
       items: activeTab.cartItems.map((item) => ({
@@ -473,6 +474,8 @@ export default function BanHangPage() {
         id: activeTab.documentId,
         data: orderData,
       });
+
+      console.log(orderData);
 
       toast.success("Lưu đơn hàng thành công");
       router.push("/don-hang/dat-hang");
