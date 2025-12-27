@@ -103,7 +103,6 @@ export default function BanHangPage() {
     orderId ? Number(orderId) : 0
   );
 
-  console.log(existingOrder);
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(
     invoiceId ? Number(invoiceId) : 0
   );
@@ -131,31 +130,18 @@ export default function BanHangPage() {
           discountRatio: Number(existingOrder.discountRatio) || 0,
           useCOD: false,
           paymentAmount: 0,
-          deliveryInfo: existingOrder.delivery?.id
-            ? {
-                receiver: existingOrder.delivery.receiver || "",
-                contactNumber: existingOrder.delivery.contactNumber || "",
-                detailAddress: existingOrder.delivery.address || "",
-                locationName: existingOrder.delivery.locationName || "",
-                wardName: existingOrder.delivery.wardName || "",
-                weight: Number(existingOrder.delivery.weight) || 0,
-                length: Number(existingOrder.delivery.length) || 10,
-                width: Number(existingOrder.delivery.width) || 10,
-                height: Number(existingOrder.delivery.height) || 10,
-                noteForDriver: existingOrder.delivery.noteForDriver || "",
-              }
-            : {
-                receiver: "",
-                contactNumber: "",
-                detailAddress: "",
-                locationName: "",
-                wardName: "",
-                weight: 0,
-                length: 10,
-                width: 10,
-                height: 10,
-                noteForDriver: "",
-              },
+          deliveryInfo: {
+            receiver: existingOrder.delivery?.receiver || "",
+            contactNumber: existingOrder.delivery?.contactNumber || "",
+            detailAddress: existingOrder.delivery?.address || "",
+            locationName: existingOrder.delivery?.locationName || "",
+            wardName: existingOrder.delivery?.wardName || "",
+            weight: Number(existingOrder.delivery?.weight) || 0,
+            length: Number(existingOrder.delivery?.length) || 10,
+            width: Number(existingOrder.delivery?.width) || 10,
+            height: Number(existingOrder.delivery?.height) || 10,
+            noteForDriver: existingOrder.delivery?.noteForDriver || "",
+          },
           documentId: existingOrder.id,
         },
       ]);
