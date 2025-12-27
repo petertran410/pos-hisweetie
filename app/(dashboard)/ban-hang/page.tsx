@@ -308,16 +308,20 @@ export default function BanHangPage() {
       return sum + weightInGrams * item.quantity;
     }, 0);
 
-    updateActiveTab({
-      deliveryInfo: {
-        ...activeTab.deliveryInfo,
-        weight: totalWeight,
-        length: activeTab.deliveryInfo.length || 10,
-        width: activeTab.deliveryInfo.width || 10,
-        height: activeTab.deliveryInfo.height || 10,
-      },
-    });
-  }, [activeTab.cartItems]);
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) =>
+        tab.id === activeTabId
+          ? {
+              ...tab,
+              deliveryInfo: {
+                ...tab.deliveryInfo,
+                weight: totalWeight,
+              },
+            }
+          : tab
+      )
+    );
+  }, [activeTab.cartItems, activeTabId]);
 
   const handleCustomerSelect = (customer: any) => {
     updateActiveTab({

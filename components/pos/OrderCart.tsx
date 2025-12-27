@@ -295,9 +295,9 @@ export function OrderCart({
             </div>
 
             {isEditMode && existingOrder && (
-              <div className="flex items-center justify-between text-md bg-green-50 px-3 py-2 rounded">
-                <span className="text-green-700">Tổng khách đã trả:</span>
-                <span className="font-semibold text-green-700">
+              <div className="flex items-center justify-between text-md">
+                <span>Tổng khách đã trả:</span>
+                <span className="font-semibold">
                   {(
                     Number(existingOrder.paidAmount || 0) + paymentAmount
                   ).toLocaleString()}
