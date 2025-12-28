@@ -18,6 +18,7 @@ import {
 } from "@/lib/hooks/useInvoices";
 import { toast } from "sonner";
 import { X, Plus, ArrowLeftRight } from "lucide-react";
+import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
 
 export interface CartItem {
   product: any;
@@ -95,6 +96,7 @@ export default function BanHangPage() {
   const activeTab = tabs.find((tab) => tab.id === activeTabId)!;
 
   const createOrder = useCreateOrder();
+  const createOrderPayment = useCreateOrderPayment();
   const updateOrder = useUpdateOrder();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
@@ -455,18 +457,11 @@ export default function BanHangPage() {
 
     try {
       if (actualPayment > 0) {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/order-payments`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            orderId: activeTab.documentId,
-            amount: actualPayment,
-            paymentMethod: "cash",
-            notes: "Thanh toán bổ sung",
-          }),
+        await createOrderPayment.mutateAsync({
+          orderId: activeTab.documentId,
+          amount: actualPayment,
+          paymentMethod: "cash",
+          notes: "Thanh toán bổ sung",
         });
       }
 
@@ -474,8 +469,6 @@ export default function BanHangPage() {
         id: activeTab.documentId,
         data: orderData,
       });
-
-      console.log(orderData);
 
       toast.success("Lưu đơn hàng thành công");
       router.push("/don-hang/dat-hang");
