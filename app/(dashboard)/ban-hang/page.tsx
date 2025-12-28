@@ -497,7 +497,6 @@ export default function BanHangPage() {
       return;
     }
 
-    const total = calculateTotal();
     const actualPayment = activeTab.useCOD ? 0 : activeTab.paymentAmount || 0;
 
     const documentData: any = {
@@ -505,15 +504,6 @@ export default function BanHangPage() {
       branchId: selectedBranch?.id,
       discountAmount: Number(activeTab.discount) || 0,
       discountRatio: Number(activeTab.discountRatio) || 0,
-      items: activeTab.cartItems.map((item) => ({
-        productId: Number(item.product.id),
-        productCode: item.product.code,
-        productName: item.product.name,
-        quantity: Number(item.quantity),
-        discount: Number(item.discount) || 0,
-        discountRatio: 0,
-        note: item.note || "",
-      })),
     };
 
     if (activeTab.type === "order") {
@@ -521,12 +511,13 @@ export default function BanHangPage() {
       documentData.orderStatus = "pending";
       documentData.notes = activeTab.orderNote;
       documentData.depositAmount = Number(actualPayment) || 0;
-      documentData.items = documentData.items.map((item: any) => ({
-        ...item,
-        unitPrice: Number(
-          activeTab.cartItems.find((ci) => ci.product.id === item.productId)
-            ?.price || 0
-        ),
+      documentData.items = activeTab.cartItems.map((item) => ({
+        productId: Number(item.product.id),
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.price),
+        discount: Number(item.discount) || 0,
+        discountRatio: 0,
+        note: item.note || "",
       }));
       documentData.delivery = {
         receiver: activeTab.deliveryInfo.receiver,
@@ -544,17 +535,20 @@ export default function BanHangPage() {
       documentData.purchaseDate = new Date().toISOString();
       documentData.description = activeTab.orderNote;
       documentData.paidAmount = Number(actualPayment) || 0;
-      documentData.items = documentData.items.map((item: any) => {
-        const cartItem = activeTab.cartItems.find(
-          (ci) => ci.product.id === item.productId
-        );
-        const price = Number(cartItem?.price || 0);
+      documentData.items = activeTab.cartItems.map((item) => {
+        const price = Number(item.price);
         const quantity = Number(item.quantity);
-        const discount = Number(item.discount || 0);
+        const discount = Number(item.discount) || 0;
         return {
-          ...item,
-          price,
+          productId: Number(item.product.id),
+          productCode: item.product.code,
+          productName: item.product.name,
+          quantity: quantity,
+          price: price,
+          discount: discount,
+          discountRatio: 0,
           totalPrice: quantity * price - discount,
+          note: item.note || "",
         };
       });
       documentData.delivery = {
@@ -572,7 +566,16 @@ export default function BanHangPage() {
 
     try {
       if (activeTab.type === "order") {
-        await createOrder.mutateAsync(documentData);
+        const result = await createOrder.mutateAsync(documentData);
+
+        if (actualPayment > 0 && result?.order?.id) {
+          await createOrderPayment.mutateAsync({
+            orderId: result.order.id,
+            amount: actualPayment,
+            paymentMethod: "cash",
+            notes: "Thanh toán khi tạo đơn",
+          });
+        }
       } else {
         await createInvoice.mutateAsync(documentData);
       }
@@ -586,8 +589,19 @@ export default function BanHangPage() {
         useCOD: false,
         paymentAmount: 0,
       });
+
+      toast.success(
+        `Tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"} thành công`
+      );
+      router.push(
+        activeTab.type === "order" ? "/don-hang/dat-hang" : "/don-hang/hoa-don"
+      );
     } catch (error: any) {
       console.error("Create document error:", error);
+      toast.error(
+        error.message ||
+          `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`
+      );
     }
   };
 
