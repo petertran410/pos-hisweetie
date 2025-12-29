@@ -57,4 +57,8 @@ export const invoicesApi = {
   deleteInvoice: (id: number): Promise<void> => {
     return apiClient.delete(`/invoices/${id}`);
   },
+
+  createInvoiceFromOrder: (orderId: number): Promise<Invoice> => {
+    return apiClient.post(`/invoices/from-order/${orderId}`);
+  },
 };
