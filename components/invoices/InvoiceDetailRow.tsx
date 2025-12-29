@@ -192,6 +192,19 @@ export function InvoiceDetailRow({
                       </option>
                     </select>
                   </div>
+
+                  <div className="col-span-4">
+                    <label className="block text-md font-medium text-gray-500 mb-1.5">
+                      Ghi chú hóa đơn:
+                    </label>
+                    <textarea
+                      value={invoice.description || ""}
+                      readOnly
+                      className="w-full px-3 py-2 text-md border rounded bg-gray-50 resize-none"
+                      rows={2}
+                      placeholder="Không có ghi chú"
+                    />
+                  </div>
                 </div>
 
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -211,6 +224,8 @@ export function InvoiceDetailRow({
                           invoice.delivery?.wardName ||
                             invoice.customer?.wardName,
                           invoice.delivery?.locationName ||
+                            invoice.customer?.districtName,
+                          invoice.delivery?.cityName ||
                             invoice.customer?.cityName,
                         ]
                           .filter(Boolean)
@@ -312,6 +327,7 @@ export function InvoiceDetailRow({
                     </table>
                   </div>
                 </div>
+
                 <div className="flex justify-end gap-6">
                   <div className="w-96">
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">

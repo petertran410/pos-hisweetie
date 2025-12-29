@@ -238,7 +238,7 @@ export function OrderCart({
               </div>
               {deliveryInfo.noteForDriver !== "" && (
                 <textarea
-                  value={deliveryInfo.noteForDriver}
+                  value={deliveryInfo.noteForDriver || ""}
                   onChange={(e) =>
                     handleDeliveryChange("noteForDriver", e.target.value)
                   }
