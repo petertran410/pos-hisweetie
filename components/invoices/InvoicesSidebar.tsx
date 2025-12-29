@@ -420,137 +420,6 @@ export function InvoicesSidebar({
           </div>
         </div>
 
-        {/* Trạng thái HĐBT */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Trạng thái HĐBT
-          </label>
-          <select className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
-            <option value="">Chọn trạng thái</option>
-          </select>
-        </div>
-
-        {/* Trạng thái giao hàng */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Trạng thái giao hàng
-          </label>
-          <select className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
-            <option value="">Chọn trạng thái</option>
-            <option value="1">Chờ xử lý</option>
-            <option value="2">Đang giao hàng</option>
-            <option value="3">Giao thành công</option>
-            <option value="4">Đang chuyển hoàn</option>
-            <option value="5">Đã chuyển hoàn</option>
-            <option value="6">Đã hủy</option>
-          </select>
-        </div>
-
-        {/* Đối tác giao hàng */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Đối tác giao hàng
-          </label>
-          <select
-            value={deliveryPartnerId}
-            onChange={(e) => setDeliveryPartnerId(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
-            <option value="">Chọn đối tác giao hàng</option>
-          </select>
-        </div>
-
-        {/* Thời gian giao hàng */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Thời gian giao hàng
-          </label>
-          <div className="space-y-2">
-            <button
-              onClick={() => setDeliveryDateMode("all")}
-              className={`w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between text-sm ${
-                deliveryDateMode === "all" ? "bg-blue-50 border-blue-600" : ""
-              }`}>
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={deliveryDateMode === "all"}
-                  onChange={() => setDeliveryDateMode("all")}
-                  className="cursor-pointer"
-                />
-                <span>Toàn thời gian</span>
-              </div>
-              <ChevronDown className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => setDeliveryDateMode("custom")}
-              className={`w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between text-sm ${
-                deliveryDateMode === "custom"
-                  ? "bg-blue-50 border-blue-600"
-                  : ""
-              }`}>
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={deliveryDateMode === "custom"}
-                  onChange={() => setDeliveryDateMode("custom")}
-                  className="cursor-pointer"
-                />
-                <span>Tùy chỉnh</span>
-              </div>
-              <Calendar className="w-4 h-4" />
-            </button>
-
-            {deliveryDateMode === "custom" && (
-              <div className="space-y-2 pl-6">
-                <input
-                  type="date"
-                  value={deliveryFromDate}
-                  onChange={(e) => setDeliveryFromDate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-                <input
-                  type="date"
-                  value={deliveryToDate}
-                  onChange={(e) => setDeliveryToDate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Khu vực giao hàng */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Khu vực giao hàng
-          </label>
-          <input
-            type="text"
-            placeholder="Chọn Tỉnh/TP - Quận/Huyện"
-            value={locationId}
-            onChange={(e) => setLocationId(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500"
-          />
-        </div>
-
-        {/* Phương thức thanh toán */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Phương thức thanh toán
-          </label>
-          <select
-            value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
-            <option value="">Chọn phương thức thanh toán...</option>
-            <option value="cash">Tiền mặt</option>
-            <option value="transfer">Chuyển khoản</option>
-            <option value="card">Thẻ</option>
-          </select>
-        </div>
-
-        {/* Người tạo */}
         <div>
           <label className="block text-sm font-medium mb-2">Người tạo</label>
           <select
@@ -566,7 +435,6 @@ export function InvoicesSidebar({
           </select>
         </div>
 
-        {/* Người bán */}
         <div>
           <label className="block text-sm font-medium mb-2">Người bán</label>
           <select
@@ -582,24 +450,9 @@ export function InvoicesSidebar({
           </select>
         </div>
 
-        {/* Bảng giá */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Bảng giá</label>
-          <select
-            value={priceBookId}
-            onChange={(e) => setPriceBookId(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
-            <option value="">Chọn bảng giá</option>
-          </select>
-        </div>
-
-        {/* Kênh bán */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium">Kênh bán</label>
-            <button className="text-xs text-blue-600 hover:underline">
-              Tạo mới
-            </button>
           </div>
           <select
             value={saleChannelId}
@@ -611,16 +464,6 @@ export function InvoicesSidebar({
                 {channel.name}
               </option>
             ))}
-          </select>
-        </div>
-
-        {/* Loại thu khác */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Loại thu khác
-          </label>
-          <select className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
-            <option value="">Chọn loại thu khác</option>
           </select>
         </div>
       </div>

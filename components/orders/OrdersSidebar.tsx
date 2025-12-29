@@ -428,71 +428,6 @@ export function OrdersSidebar({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">
-            Đối tác giao hàng
-          </label>
-          <input
-            type="text"
-            placeholder="Chọn đối tác giao hàng"
-            className="w-full border rounded px-3 py-2 text-sm"
-            disabled
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Thời gian giao hàng
-          </label>
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="deliveryTime"
-                value="all"
-                defaultChecked
-                className="cursor-pointer"
-              />
-              <span className="text-sm">Toàn thời gian</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="deliveryTime"
-                value="custom"
-                className="cursor-pointer"
-              />
-              <span className="text-sm">Tùy chỉnh</span>
-            </label>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Khu vực giao hàng
-          </label>
-          <input
-            type="text"
-            placeholder="Chọn Tỉnh/TP - Quận/Huyện"
-            className="w-full border rounded px-3 py-2 text-sm"
-            disabled
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Phương thức thanh toán
-          </label>
-          <select
-            className="w-full border rounded px-3 py-2 text-sm"
-            defaultValue="">
-            <option value="">Chọn phương thức thanh toán</option>
-            <option value="cash">Tiền mặt</option>
-            <option value="bank">Chuyển khoản</option>
-            <option value="card">Thẻ</option>
-          </select>
-        </div>
-
-        <div>
           <label className="block text-sm font-medium mb-2">Người tạo</label>
           <select
             value={creatorId}
@@ -521,11 +456,6 @@ export function OrdersSidebar({
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium">Kênh bán</label>
-            <button
-              onClick={() => setShowSaleChannelModal(true)}
-              className="text-sm text-blue-600 hover:text-blue-700">
-              Tạo mới
-            </button>
           </div>
           <select
             value={saleChannelId}
