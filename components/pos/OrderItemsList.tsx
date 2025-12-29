@@ -16,7 +16,7 @@ interface CartItemsListProps {
   onOrderNoteChange: (note: string) => void;
 }
 
-export function CartItemsList({
+export function OrderItemsList({
   cartItems,
   onUpdateItem,
   onRemoveItem,

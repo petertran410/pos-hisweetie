@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductSearchDropdown } from "@/components/pos/ProductSearchDropdown";
-import { CartItemsList } from "@/components/pos/CartItemsList";
+import { OrderItemsList } from "@/components/pos/OrderItemsList";
 import { OrderCart } from "@/components/pos/OrderCart";
 import { useBranchStore } from "@/lib/store/branch";
 import {
@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import { X, Plus, ArrowLeftRight } from "lucide-react";
 import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
 import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
+import { InvoiceCart } from "@/components/pos/InvoiceCart";
+import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
 
 export interface CartItem {
   product: any;
@@ -398,16 +400,6 @@ export default function BanHangPage() {
     });
   };
 
-  const calculateTotal = () => {
-    const subtotal = activeTab.cartItems.reduce(
-      (sum, item) => sum + item.quantity * item.price - item.discount,
-      0
-    );
-    return (
-      subtotal - activeTab.discount - (subtotal * activeTab.discountRatio) / 100
-    );
-  };
-
   const handleSaveOrder = async () => {
     if (!activeTab.selectedCustomer) {
       toast.error(
@@ -750,45 +742,83 @@ export default function BanHangPage() {
       </div>
 
       <div className="flex-1 flex min-h-0">
-        <CartItemsList
-          cartItems={activeTab.cartItems}
-          onUpdateItem={updateCartItem}
-          onRemoveItem={removeFromCart}
-          discount={activeTab.discount}
-          onDiscountChange={(discount) => updateActiveTab({ discount })}
-          discountRatio={activeTab.discountRatio}
-          onDiscountRatioChange={(discountRatio) =>
-            updateActiveTab({ discountRatio })
-          }
-          orderNote={activeTab.orderNote}
-          onOrderNoteChange={(orderNote) => updateActiveTab({ orderNote })}
-        />
-        <OrderCart
-          cartItems={activeTab.cartItems}
-          selectedCustomer={activeTab.selectedCustomer}
-          onSelectCustomer={handleCustomerSelect}
-          useCOD={activeTab.useCOD}
-          onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
-          paymentAmount={activeTab.paymentAmount}
-          onPaymentAmountChange={(paymentAmount) =>
-            updateActiveTab({ paymentAmount })
-          }
-          onCreateOrder={handleCreateDocument}
-          onSaveOrder={handleSaveOrder}
-          discount={activeTab.discount}
-          discountRatio={activeTab.discountRatio}
-          onDeliveryInfoChange={(deliveryInfo) =>
-            updateActiveTab({ deliveryInfo })
-          }
-          deliveryInfo={activeTab.deliveryInfo}
-          isEditMode={!!activeTab.documentId}
-          existingOrder={
-            activeTab.type === "order" && activeTab.documentId
-              ? existingOrder
-              : undefined
-          }
-          documentType={activeTab.type}
-        />
+        {activeTab.type === "order" ? (
+          <>
+            <OrderItemsList
+              cartItems={activeTab.cartItems}
+              onUpdateItem={updateCartItem}
+              onRemoveItem={removeFromCart}
+              discount={activeTab.discount}
+              onDiscountChange={(discount) => updateActiveTab({ discount })}
+              discountRatio={activeTab.discountRatio}
+              onDiscountRatioChange={(discountRatio) =>
+                updateActiveTab({ discountRatio })
+              }
+              orderNote={activeTab.orderNote}
+              onOrderNoteChange={(orderNote) => updateActiveTab({ orderNote })}
+            />
+            <OrderCart
+              cartItems={activeTab.cartItems}
+              selectedCustomer={activeTab.selectedCustomer}
+              onSelectCustomer={handleCustomerSelect}
+              useCOD={activeTab.useCOD}
+              onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
+              paymentAmount={activeTab.paymentAmount}
+              onPaymentAmountChange={(paymentAmount) =>
+                updateActiveTab({ paymentAmount })
+              }
+              onCreateOrder={handleCreateDocument}
+              onSaveOrder={handleSaveOrder}
+              discount={activeTab.discount}
+              discountRatio={activeTab.discountRatio}
+              onDeliveryInfoChange={(deliveryInfo) =>
+                updateActiveTab({ deliveryInfo })
+              }
+              deliveryInfo={activeTab.deliveryInfo}
+              isEditMode={!!activeTab.documentId}
+              existingOrder={existingOrder}
+              documentType={activeTab.type}
+            />
+          </>
+        ) : (
+          <>
+            <InvoiceItemsList
+              cartItems={activeTab.cartItems}
+              onUpdateItem={updateCartItem}
+              onRemoveItem={removeFromCart}
+              discount={activeTab.discount}
+              onDiscountChange={(discount) => updateActiveTab({ discount })}
+              discountRatio={activeTab.discountRatio}
+              onDiscountRatioChange={(discountRatio) =>
+                updateActiveTab({ discountRatio })
+              }
+              orderNote={activeTab.orderNote}
+              onOrderNoteChange={(orderNote) => updateActiveTab({ orderNote })}
+            />
+            <InvoiceCart
+              cartItems={activeTab.cartItems}
+              selectedCustomer={activeTab.selectedCustomer}
+              onSelectCustomer={handleCustomerSelect}
+              useCOD={activeTab.useCOD}
+              onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
+              paymentAmount={activeTab.paymentAmount}
+              onPaymentAmountChange={(paymentAmount) =>
+                updateActiveTab({ paymentAmount })
+              }
+              onCreateOrder={handleCreateDocument}
+              onSaveOrder={handleSaveOrder}
+              discount={activeTab.discount}
+              discountRatio={activeTab.discountRatio}
+              onDeliveryInfoChange={(deliveryInfo) =>
+                updateActiveTab({ deliveryInfo })
+              }
+              deliveryInfo={activeTab.deliveryInfo}
+              isEditMode={!!activeTab.documentId}
+              existingOrder={existingInvoice}
+              documentType={activeTab.type}
+            />
+          </>
+        )}
       </div>
     </div>
   );
