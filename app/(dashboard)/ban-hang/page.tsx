@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { X, Plus, ArrowLeftRight } from "lucide-react";
 import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
+import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 
 export interface CartItem {
   product: any;
@@ -97,6 +98,7 @@ export default function BanHangPage() {
 
   const createOrder = useCreateOrder();
   const createOrderPayment = useCreateOrderPayment();
+  const createInvoicePayment = useCreateInvoicePayment();
   const updateOrder = useUpdateOrder();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
@@ -506,7 +508,6 @@ export default function BanHangPage() {
         customerId: activeTab.selectedCustomer.id,
         branchId: selectedBranch?.id,
         description: activeTab.orderNote,
-        paidAmount: actualPayment,
         discountAmount: Number(activeTab.discount) || 0,
         discountRatio: Number(activeTab.discountRatio) || 0,
         usingCod: activeTab.useCOD,
@@ -540,6 +541,15 @@ export default function BanHangPage() {
       };
 
       try {
+        if (actualPayment > 0) {
+          await createInvoicePayment.mutateAsync({
+            invoiceId: activeTab.documentId,
+            amount: actualPayment,
+            paymentMethod: "cash",
+            notes: "Thanh toán bổ sung",
+          });
+        }
+
         await updateInvoice.mutateAsync({
           id: activeTab.documentId,
           data: invoiceData,
