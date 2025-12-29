@@ -11,12 +11,10 @@ export default function HoaDonPage() {
   const [filters, setFilters] = useState({});
 
   const handleCreateClick = () => {
-    router.push("/tao-hoa-don");
+    router.push("/ban-hang");
   };
 
-  const handleEditClick = (invoice: Invoice) => {
-    router.push(`/tao-hoa-don?invoiceId=${invoice.id}`);
-  };
+  const handleEditClick = (invoice: Invoice) => {};
 
   return (
     <div className="flex h-full border-t">

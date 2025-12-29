@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment } from "react";
 import { useOrders } from "@/lib/hooks/useOrders";
 import { useBranchStore } from "@/lib/store/branch";
-import { Plus, ChevronDown, Pencil, Settings } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 import type { Order } from "@/lib/types/order";
 import { OrderDetailRow } from "./OrderDetailRow";
 
