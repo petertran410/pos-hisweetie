@@ -408,73 +408,149 @@ export default function BanHangPage() {
 
   const handleSaveOrder = async () => {
     if (!activeTab.selectedCustomer) {
-      toast.error("Vui lòng chọn khách hàng trước khi lưu đơn hàng");
+      toast.error(
+        `Vui lòng chọn khách hàng trước khi lưu ${
+          activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+        }`
+      );
       return;
     }
 
     if (activeTab.cartItems.length === 0) {
-      toast.error("Vui lòng thêm sản phẩm vào đơn hàng");
+      toast.error(
+        `Vui lòng thêm sản phẩm vào ${
+          activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+        }`
+      );
       return;
     }
 
-    if (!activeTab.documentId || !existingOrder) {
-      toast.error("Không tìm thấy thông tin đơn hàng");
+    if (!activeTab.documentId) {
+      toast.error(
+        `Không tìm thấy thông tin ${
+          activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+        }`
+      );
       return;
     }
 
-    const actualPayment = activeTab.useCOD ? 0 : activeTab.paymentAmount || 0;
-
-    const orderData = {
-      customerId: activeTab.selectedCustomer.id,
-      branchId: selectedBranch?.id,
-      orderDate: new Date().toISOString(),
-      orderStatus: existingOrder.orderStatus,
-      notes: activeTab.orderNote,
-      paidAmount: actualPayment,
-      discountAmount: Number(activeTab.discount) || 0,
-      discountRatio: Number(activeTab.discountRatio) || 0,
-      items: activeTab.cartItems.map((item) => ({
-        productId: Number(item.product.id),
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.price),
-        discount: Number(item.discount) || 0,
-        discountRatio: 0,
-        note: item.note || "",
-      })),
-      delivery: {
-        receiver: activeTab.deliveryInfo.receiver,
-        contactNumber: activeTab.deliveryInfo.contactNumber,
-        address: activeTab.deliveryInfo.detailAddress,
-        locationName: activeTab.deliveryInfo.locationName,
-        wardName: activeTab.deliveryInfo.wardName,
-        weight: Number(activeTab.deliveryInfo.weight) || 0,
-        length: Number(activeTab.deliveryInfo.length) || 10,
-        width: Number(activeTab.deliveryInfo.width) || 10,
-        height: Number(activeTab.deliveryInfo.height) || 10,
-        noteForDriver: activeTab.deliveryInfo.noteForDriver,
-      },
-    };
-
-    try {
-      if (actualPayment > 0) {
-        await createOrderPayment.mutateAsync({
-          orderId: activeTab.documentId,
-          amount: actualPayment,
-          paymentMethod: "cash",
-          notes: "Thanh toán bổ sung",
-        });
+    if (activeTab.type === "order") {
+      if (!existingOrder) {
+        toast.error("Không tìm thấy thông tin đơn hàng");
+        return;
       }
 
-      await updateOrder.mutateAsync({
-        id: activeTab.documentId,
-        data: orderData,
-      });
+      const actualPayment = activeTab.useCOD ? 0 : activeTab.paymentAmount || 0;
 
-      toast.success("Lưu đơn hàng thành công");
-      router.push("/don-hang/dat-hang");
-    } catch (error: any) {
-      console.error("Save order error:", error);
-      toast.error(error.message || "Không thể lưu đơn hàng");
+      const orderData = {
+        customerId: activeTab.selectedCustomer.id,
+        branchId: selectedBranch?.id,
+        orderDate: new Date().toISOString(),
+        orderStatus: existingOrder.orderStatus,
+        notes: activeTab.orderNote,
+        paidAmount: actualPayment,
+        discountAmount: Number(activeTab.discount) || 0,
+        discountRatio: Number(activeTab.discountRatio) || 0,
+        items: activeTab.cartItems.map((item) => ({
+          productId: Number(item.product.id),
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.price),
+          discount: Number(item.discount) || 0,
+          discountRatio: 0,
+          note: item.note || "",
+        })),
+        delivery: {
+          receiver: activeTab.deliveryInfo.receiver,
+          contactNumber: activeTab.deliveryInfo.contactNumber,
+          address: activeTab.deliveryInfo.detailAddress,
+          locationName: activeTab.deliveryInfo.locationName,
+          wardName: activeTab.deliveryInfo.wardName,
+          weight: Number(activeTab.deliveryInfo.weight) || 0,
+          length: Number(activeTab.deliveryInfo.length) || 10,
+          width: Number(activeTab.deliveryInfo.width) || 10,
+          height: Number(activeTab.deliveryInfo.height) || 10,
+          noteForDriver: activeTab.deliveryInfo.noteForDriver,
+        },
+      };
+
+      try {
+        if (actualPayment > 0) {
+          await createOrderPayment.mutateAsync({
+            orderId: activeTab.documentId,
+            amount: actualPayment,
+            paymentMethod: "cash",
+            notes: "Thanh toán bổ sung",
+          });
+        }
+
+        await updateOrder.mutateAsync({
+          id: activeTab.documentId,
+          data: orderData,
+        });
+
+        toast.success("Lưu đơn hàng thành công");
+        router.push("/don-hang/dat-hang");
+      } catch (error: any) {
+        console.error("Save order error:", error);
+        toast.error(error.message || "Không thể lưu đơn hàng");
+      }
+    } else {
+      if (!existingInvoice) {
+        toast.error("Không tìm thấy thông tin hóa đơn");
+        return;
+      }
+
+      const actualPayment = activeTab.useCOD ? 0 : activeTab.paymentAmount || 0;
+
+      const invoiceData = {
+        customerId: activeTab.selectedCustomer.id,
+        branchId: selectedBranch?.id,
+        description: activeTab.orderNote,
+        paidAmount: actualPayment,
+        discountAmount: Number(activeTab.discount) || 0,
+        discountRatio: Number(activeTab.discountRatio) || 0,
+        usingCod: activeTab.useCOD,
+        items: activeTab.cartItems.map((item) => ({
+          productId: Number(item.product.id),
+          productCode: item.product.code,
+          productName: item.product.name,
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+          discount: Number(item.discount) || 0,
+          discountRatio: 0,
+          totalPrice:
+            Number(item.quantity) * Number(item.price) -
+            Number(item.discount || 0),
+          note: item.note || "",
+        })),
+        delivery: activeTab.deliveryInfo.receiver
+          ? {
+              receiver: activeTab.deliveryInfo.receiver,
+              contactNumber: activeTab.deliveryInfo.contactNumber,
+              address: activeTab.deliveryInfo.detailAddress,
+              locationName: activeTab.deliveryInfo.locationName,
+              wardName: activeTab.deliveryInfo.wardName,
+              weight: Number(activeTab.deliveryInfo.weight) || 0,
+              length: Number(activeTab.deliveryInfo.length) || 10,
+              width: Number(activeTab.deliveryInfo.width) || 10,
+              height: Number(activeTab.deliveryInfo.height) || 10,
+              noteForDriver: activeTab.deliveryInfo.noteForDriver,
+            }
+          : undefined,
+      };
+
+      try {
+        await updateInvoice.mutateAsync({
+          id: activeTab.documentId,
+          data: invoiceData,
+        });
+
+        toast.success("Lưu hóa đơn thành công");
+        router.push("/don-hang/hoa-don");
+      } catch (error: any) {
+        console.error("Save invoice error:", error);
+        toast.error(error.message || "Không thể lưu hóa đơn");
+      }
     }
   };
 
