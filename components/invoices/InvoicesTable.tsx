@@ -38,7 +38,7 @@ const getStatusColor = (status: number) => {
       return "bg-green-100 text-green-700";
     case 2:
       return "bg-red-100 text-red-700";
-    case 5:
+    case 4:
       return "bg-yellow-100 text-yellow-700";
     default:
       return "bg-gray-100 text-gray-700";
@@ -53,7 +53,7 @@ const getStatusText = (status: number) => {
       return "Hoàn thành";
     case 2:
       return "Đã hủy";
-    case 5:
+    case 4:
       return "Không giao được";
     default:
       return "Không xác định";
@@ -66,6 +66,28 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã hóa đơn",
     visible: true,
     render: (invoice) => invoice.code,
+  },
+  {
+    key: "orderCode",
+    label: "Mã vận đơn",
+    visible: false,
+    render: (invoice) => invoice.delivery?.deliveryCode || "-",
+  },
+  {
+    key: "deliveryStatus",
+    label: "Trạng thái giao hàng",
+    visible: false,
+    render: (invoice) => {
+      const deliveryStatus = invoice.delivery?.status;
+      if (!deliveryStatus) return "-";
+      return deliveryStatus === 1 ? "Chưa giao" : "Đã giao";
+    },
+  },
+  {
+    key: "reconciliationCode",
+    label: "Mã đối soát",
+    visible: false,
+    render: () => "-",
   },
   {
     key: "purchaseDate",
@@ -82,14 +104,72 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "updateDate",
     label: "Ngày cập nhật",
-    visible: false,
+    visible: true,
     render: (invoice) => formatDateTime(invoice.updatedAt),
+  },
+  {
+    key: "returnCode",
+    label: "Mã trả hàng",
+    visible: false,
+    render: () => "-",
+  },
+  {
+    key: "customerCode",
+    label: "Mã KH",
+    visible: true,
+    render: (invoice) => invoice.customer?.code || "-",
   },
   {
     key: "customer",
     label: "Khách hàng",
     visible: true,
-    render: (invoice) => invoice.customer?.name || "Khách vãng lai",
+    render: (invoice) => invoice.customer?.name || "-",
+  },
+  {
+    key: "email",
+    label: "Email",
+    visible: false,
+    render: (invoice) => invoice.customer?.email || "-",
+  },
+  {
+    key: "phone",
+    label: "Điện thoại",
+    visible: false,
+    render: (invoice) =>
+      invoice.customer?.contactNumber || invoice.customer?.phone || "-",
+  },
+  {
+    key: "address",
+    label: "Địa chỉ",
+    visible: false,
+    render: (invoice) => invoice.customer?.address || "-",
+  },
+  {
+    key: "area",
+    label: "Khu vực",
+    visible: false,
+    render: (invoice) => invoice.customer?.cityName || "-",
+  },
+  {
+    key: "ward",
+    label: "Phường/Xã",
+    visible: false,
+    render: (invoice) => invoice.customer?.wardName || "-",
+  },
+  {
+    key: "birthDate",
+    label: "Ngày sinh",
+    visible: false,
+    render: (invoice) => {
+      if (!invoice.customer?.birthDate) return "-";
+      return formatDateTime(invoice.customer.birthDate);
+    },
+  },
+  {
+    key: "branch",
+    label: "Chi nhánh",
+    visible: false,
+    render: (invoice) => invoice.branch?.name || "-",
   },
   {
     key: "seller",
@@ -102,6 +182,24 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Người tạo",
     visible: true,
     render: (invoice) => invoice.creator?.name || "-",
+  },
+  {
+    key: "saleChannel",
+    label: "Kênh bán",
+    visible: false,
+    render: (invoice) => invoice.saleChannel?.name || "Khác",
+  },
+  {
+    key: "deliveryPartner",
+    label: "Đối tác giao hàng",
+    visible: false,
+    render: (invoice) => invoice.delivery?.partnerDelivery?.name || "-",
+  },
+  {
+    key: "notes",
+    label: "Ghi chú",
+    visible: false,
+    render: (invoice) => invoice.description || "-",
   },
   {
     key: "totalAmount",
@@ -122,6 +220,24 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (invoice) => formatMoney(Number(invoice.grandTotal)),
   },
   {
+    key: "taxDiscount",
+    label: "Giảm thuế",
+    visible: false,
+    render: () => "-",
+  },
+  {
+    key: "otherFees",
+    label: "Thu khác",
+    visible: false,
+    render: () => "-",
+  },
+  {
+    key: "paymentDiscount",
+    label: "Chiết khấu thanh toán",
+    visible: false,
+    render: () => "-",
+  },
+  {
     key: "customerDebt",
     label: "Khách cần trả",
     visible: true,
@@ -134,29 +250,34 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (invoice) => formatMoney(Number(invoice.paidAmount)),
   },
   {
-    key: "phone",
-    label: "Điện thoại",
+    key: "codAmount",
+    label: "Còn cần thu (COD)",
+    visible: false,
+    render: (invoice) => formatMoney(Number(invoice.debtAmount)),
+  },
+  {
+    key: "deliveryFee",
+    label: "Phí trả ĐTGH",
     visible: false,
     render: (invoice) =>
-      invoice.customer?.contactNumber || invoice.customer?.phone || "-",
+      invoice.delivery?.price
+        ? formatMoney(Number(invoice.delivery.price))
+        : "-",
   },
   {
-    key: "address",
-    label: "Địa chỉ",
+    key: "deliveryNote",
+    label: "Ghi chú trạng thái giao hàng",
     visible: false,
-    render: (invoice) => invoice.customer?.address || "-",
+    render: () => "-",
   },
   {
-    key: "saleChannel",
-    label: "Kênh bán",
+    key: "deliveryTime",
+    label: "Thời gian giao hàng",
     visible: false,
-    render: (invoice) => invoice.saleChannel?.name || "Khác",
-  },
-  {
-    key: "notes",
-    label: "Ghi chú",
-    visible: false,
-    render: (invoice) => invoice.description || "-",
+    render: (invoice) => {
+      if (!invoice.delivery?.createdAt) return "-";
+      return formatDateTime(invoice.delivery.createdAt);
+    },
   },
   {
     key: "status",
@@ -180,13 +301,13 @@ export function InvoicesTable({
 }: InvoicesTableProps) {
   const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
+    null
+  );
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
-  const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
-    null
-  );
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
@@ -226,6 +347,8 @@ export function InvoicesTable({
   const total = data?.total || 0;
   const visibleColumns = columns.filter((col) => col.visible);
 
+  console.log(invoices);
+
   const toggleColumnVisibility = (key: string) => {
     setColumns((prev) =>
       prev.map((col) =>
@@ -238,7 +361,7 @@ export function InvoicesTable({
     if (selectedIds.length === invoices.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(invoices.map((i: { id: any }) => i.id));
+      setSelectedIds(invoices.map((i) => i.id));
     }
   };
 
@@ -248,8 +371,8 @@ export function InvoicesTable({
     );
   };
 
-  const toggleExpand = (id: number) => {
-    setExpandedInvoiceId((prev) => (prev === id ? null : id));
+  const toggleExpand = (invoiceId: number) => {
+    setExpandedInvoiceId((prev) => (prev === invoiceId ? null : invoiceId));
   };
 
   return (
@@ -265,32 +388,33 @@ export function InvoicesTable({
             className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+
         <div className="flex items-center gap-2">
           <button
             onClick={onCreateClick}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-            <Plus className="w-5 h-5" />
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
+            <Plus className="w-4 h-4" />
             Tạo hóa đơn
           </button>
           <button
             onClick={() => setShowColumnModal(true)}
-            className="px-4 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2">
+            className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
             <Settings className="w-4 h-4" />
-            Tùy chỉnh cột
+            Cột hiển thị
           </button>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b sticky top-0">
+        <table className="w-full text-md">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-6 py-3 text-left sticky left-0 bg-gray-50">
                 <input
                   type="checkbox"
                   checked={
-                    invoices.length > 0 &&
-                    selectedIds.length === invoices.length
+                    selectedIds.length === invoices.length &&
+                    invoices.length > 0
                   }
                   onChange={toggleSelectAll}
                   className="cursor-pointer"
@@ -305,7 +429,7 @@ export function InvoicesTable({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody>
             {isLoading ? (
               <tr>
                 <td
@@ -323,10 +447,12 @@ export function InvoicesTable({
                 </td>
               </tr>
             ) : (
-              invoices.map((invoice: Invoice) => (
+              invoices.map((invoice) => (
                 <Fragment key={invoice.id}>
                   <tr
-                    className="border-b cursor-pointer"
+                    className={`border-b cursor-pointer ${
+                      expandedInvoiceId === invoice.id ? "" : ""
+                    }`}
                     onClick={() => toggleExpand(invoice.id)}>
                     <td
                       className="px-6 py-3 sticky left-0 bg-white"
@@ -367,8 +493,11 @@ export function InvoicesTable({
           </span>
           <select
             value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}
-            className="px-2 py-1 border rounded">
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="border rounded px-2 py-1 text-md">
             <option value={15}>15</option>
             <option value={30}>30</option>
             <option value={50}>50</option>
@@ -380,44 +509,53 @@ export function InvoicesTable({
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-3 py-1 border rounded disabled:opacity-50">
-            Trước
+            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+            ←
           </button>
-          <span className="px-3 py-1">
-            Trang {page} / {Math.ceil(total / limit)}
+          <span className="text-md">
+            Trang {page} / {Math.ceil(total / limit) || 1}
           </span>
           <button
             onClick={() => setPage((p) => p + 1)}
             disabled={page >= Math.ceil(total / limit)}
-            className="px-3 py-1 border rounded disabled:opacity-50">
-            Sau
+            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+            →
           </button>
         </div>
       </div>
 
       {showColumnModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">
-              Tùy chỉnh cột hiển thị
-            </h3>
-            <div className="space-y-2">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Tùy chỉnh cột hiển thị</h3>
+              <button
+                onClick={() => setShowColumnModal(false)}
+                className="text-gray-400 hover:text-gray-600">
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
               {columns.map((col) => (
-                <label key={col.key} className="flex items-center gap-2">
+                <label
+                  key={col.key}
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
                   <input
                     type="checkbox"
                     checked={col.visible}
                     onChange={() => toggleColumnVisibility(col.key)}
                     className="cursor-pointer"
                   />
-                  <span>{col.label}</span>
+                  <span className="text-md">{col.label}</span>
                 </label>
               ))}
             </div>
-            <div className="mt-4 flex justify-end">
+
+            <div className="mt-6 flex justify-end gap-2">
               <button
                 onClick={() => setShowColumnModal(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                className="px-4 py-2 border rounded hover:bg-gray-50">
                 Đóng
               </button>
             </div>

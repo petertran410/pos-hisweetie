@@ -113,7 +113,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     <tr className="bg-blue-50">
       <td colSpan={colSpan} className="p-0">
         <div className="bg-blue-50 border-y-2 border-blue-200">
-          <div className="sm:max-w-[640px] md:max-w-[768px] lg:max-w-[1024px] xl:max-w-[1280px] 2xl:max-w-[1570px]">
+          <div className="sm:max-w-[640px] md:max-w-[768px] lg:max-w-[1024px] xl:max-w-[1280px] 2xl:max-w-[1585px]">
             <div className="bg-white shadow-sm border border-gray-200 overflow-hidden">
               <div className="px-6 py-4">
                 <div className="flex flex-col gap-2">
@@ -323,10 +323,10 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
                       <div className="flex justify-between items-center text-md">
                         <span className="text-gray-600">
-                          Giảm giá phiếu đặt:
+                          Giảm giá đơn hàng:
                         </span>
                         <span className="font-semibold text-red-600">
-                          -{formatMoney(Number(order.discount))}
+                          - {formatMoney(Number(order.discount))}
                         </span>
                       </div>
 

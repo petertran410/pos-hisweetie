@@ -49,19 +49,19 @@ export const INVOICE_STATUS = {
   COMPLETED: 1,
   CANCELLED: 2,
   PROCESSING: 3,
-  NOT_DELIVERED: 5,
+  FAILED_DELIVERY: 4,
 } as const;
 
 export const INVOICE_STATUS_NUMBER_TO_STRING: Record<number, string> = {
   1: "completed",
   2: "cancelled",
   3: "processing",
-  5: "not_delivered",
+  4: "failed-delivery",
 };
 
 export const INVOICE_STATUS_STRING_TO_NUMBER: Record<string, number> = {
   completed: 1,
   cancelled: 2,
   processing: 3,
-  not_delivered: 5,
+  "failed-delivery": 4,
 };

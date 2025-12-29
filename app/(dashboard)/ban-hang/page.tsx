@@ -184,7 +184,7 @@ export default function BanHangPage() {
                 length: Number(existingInvoice.delivery.length) || 10,
                 width: Number(existingInvoice.delivery.width) || 10,
                 height: Number(existingInvoice.delivery.height) || 10,
-                noteForDriver: "",
+                noteForDriver: existingInvoice.delivery.noteForDriver,
               }
             : {
                 receiver: "",
