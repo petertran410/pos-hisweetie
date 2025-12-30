@@ -34,7 +34,6 @@ export function OrderItemsList({
   );
   const [discountValue, setDiscountValue] = useState(0);
   const [displayValue, setDisplayValue] = useState("");
-  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     if (discountRatio > 0) {
@@ -50,7 +49,6 @@ export function OrderItemsList({
       setDiscountValue(0);
       setDisplayValue("");
     }
-    setIsInitialized(true);
   }, [discount, discountRatio]);
 
   const formatNumber = (value: number): string => {
@@ -65,12 +63,27 @@ export function OrderItemsList({
     if (onlyNumbers === "") {
       setDisplayValue("");
       setDiscountValue(0);
+      if (discountType === "amount") {
+        onDiscountChange(0);
+        onDiscountRatioChange(0);
+      } else {
+        onDiscountChange(0);
+        onDiscountRatioChange(0);
+      }
       return;
     }
 
     const numericValue = parseInt(onlyNumbers, 10);
     setDiscountValue(numericValue);
     setDisplayValue(formatNumber(numericValue));
+
+    if (discountType === "amount") {
+      onDiscountChange(numericValue);
+      onDiscountRatioChange(0);
+    } else {
+      onDiscountChange(0);
+      onDiscountRatioChange(numericValue);
+    }
   };
 
   const handleInputBlur = () => {
@@ -98,22 +111,12 @@ export function OrderItemsList({
     return calculateSubtotal() - calculateDiscountAmount();
   };
 
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    if (discountType === "amount") {
-      onDiscountChange(discountValue);
-      onDiscountRatioChange(0);
-    } else {
-      onDiscountChange(0);
-      onDiscountRatioChange(discountValue);
-    }
-  }, [discountValue, discountType, isInitialized]);
-
   const handleDiscountTypeChange = (type: "amount" | "ratio") => {
     setDiscountType(type);
     setDiscountValue(0);
     setDisplayValue("");
+    onDiscountChange(0);
+    onDiscountRatioChange(0);
   };
 
   if (cartItems.length === 0) {
