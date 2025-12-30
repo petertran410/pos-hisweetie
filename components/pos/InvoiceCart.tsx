@@ -100,7 +100,8 @@ export function InvoiceCart({
 
     if (isCreatingFromOrder && existingOrder) {
       const currentPaidAmount = Number(existingOrder.paidAmount || 0);
-      const newDebt = calculateTotal() - currentPaidAmount;
+      const totalPaid = currentPaidAmount + paymentAmount;
+      const newDebt = calculateTotal() - totalPaid;
       return Math.max(0, newDebt);
     }
 

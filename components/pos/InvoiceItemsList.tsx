@@ -44,6 +44,10 @@ export function InvoiceItemsList({
       setDiscountType("amount");
       setDiscountValue(discount);
       setDisplayValue(formatNumber(discount));
+    } else {
+      setDiscountType("amount");
+      setDiscountValue(0);
+      setDisplayValue("");
     }
   }, [discount, discountRatio]);
 
