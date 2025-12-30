@@ -107,7 +107,6 @@ export default function BanHangPage() {
   const updateOrder = useUpdateOrder();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
-  const STORAGE_KEY = "pos-hisweetie-draft";
 
   const { data: existingOrder, isLoading: isLoadingOrder } = useOrder(
     orderId ? Number(orderId) : 0
@@ -116,41 +115,6 @@ export default function BanHangPage() {
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(
     invoiceId ? Number(invoiceId) : 0
   );
-
-  useEffect(() => {
-    const savedDraft = localStorage.getItem(STORAGE_KEY);
-    if (savedDraft && !orderId && !invoiceId) {
-      try {
-        const draft = JSON.parse(savedDraft);
-        if (
-          confirm("Bạn có muốn tiếp tục làm việc với dữ liệu đã nhập trước đó?")
-        ) {
-          setTabs(draft.tabs);
-          setActiveTabId(draft.activeTabId);
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
-        }
-      } catch (error) {
-        console.error("Error loading draft:", error);
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!orderId && !invoiceId) {
-      const draft = {
-        tabs,
-        activeTabId,
-        timestamp: new Date().toISOString(),
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
-    }
-  }, [tabs, activeTabId, orderId, invoiceId]);
-
-  const clearDraft = () => {
-    localStorage.removeItem(STORAGE_KEY);
-  };
 
   useEffect(() => {
     if (existingOrder && orderId) {
