@@ -235,6 +235,7 @@ export default function BanHangPage() {
               sourceOrderId: tab.documentId,
               sourceOrder: existingOrder,
               documentId: undefined,
+              paymentAmount: 0,
             }
           : tab
       )

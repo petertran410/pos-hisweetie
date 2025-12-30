@@ -98,6 +98,12 @@ export function InvoiceCart({
   const calculateDebt = () => {
     if (useCOD) return calculateTotal();
 
+    if (isCreatingFromOrder && existingOrder) {
+      const currentPaidAmount = Number(existingOrder.paidAmount || 0);
+      const newDebt = calculateTotal() - currentPaidAmount;
+      return Math.max(0, newDebt);
+    }
+
     if (isEditMode && existingOrder) {
       const currentPaidAmount = Number(existingOrder.paidAmount || 0);
       const totalPaid = currentPaidAmount + paymentAmount;
@@ -284,7 +290,9 @@ export function InvoiceCart({
             <div className="flex items-center justify-between text-md">
               <div>
                 <span className="mr-1">
-                  {isEditMode ? "Khách trả thêm:" : "Khách đã trả:"}
+                  {isEditMode || isCreatingFromOrder
+                    ? "Khách trả thêm:"
+                    : "Khách đã trả:"}
                 </span>
                 <input
                   type="text"
@@ -321,14 +329,16 @@ export function InvoiceCart({
               </div>
             )}
 
-            {!isEditMode && paymentAmount > calculateTotal() && (
-              <div className="flex items-center justify-between text-md">
-                <span>Tiền thừa trả khách</span>
-                <span className="font-semibold">
-                  {(paymentAmount - calculateTotal()).toLocaleString()}
-                </span>
-              </div>
-            )}
+            {!isEditMode &&
+              !isCreatingFromOrder &&
+              paymentAmount > calculateTotal() && (
+                <div className="flex items-center justify-between text-md">
+                  <span>Tiền thừa trả khách</span>
+                  <span className="font-semibold">
+                    {(paymentAmount - calculateTotal()).toLocaleString()}
+                  </span>
+                </div>
+              )}
           </>
         )}
 

@@ -81,7 +81,7 @@ export function DashboardHeader() {
               </button>
 
               {hoveredMenu === "products" && (
-                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border mt-1">
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
                   <div className="flex gap-6 p-6">
                     {productSubmenu.map((section) => (
                       <div key={section.title} className="min-w-[150px]">
@@ -115,7 +115,7 @@ export function DashboardHeader() {
               </button>
 
               {hoveredMenu === "orders" && (
-                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border mt-1">
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
                   <ul className="px-2 py-2">
                     {orderSubmenu.map((item) => (
                       <li key={item.href}>
