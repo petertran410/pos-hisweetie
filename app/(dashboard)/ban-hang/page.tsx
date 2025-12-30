@@ -22,6 +22,7 @@ import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
 import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
+import { invoicesApi } from "@/lib/api/invoices";
 
 export interface CartItem {
   product: any;
@@ -59,6 +60,7 @@ interface Tab {
   paymentAmount: number;
   deliveryInfo: DeliveryInfo;
   documentId?: number;
+  sourceOrderId?: number;
 }
 
 export default function BanHangPage() {
@@ -214,6 +216,47 @@ export default function BanHangPage() {
         tab.id === activeTabId ? { ...tab, ...updates } : tab
       )
     );
+  };
+
+  const handleConvertToInvoice = () => {
+    if (!activeTab.documentId || activeTab.type !== "order") {
+      toast.error("Không tìm thấy thông tin đơn hàng");
+      return;
+    }
+
+    setTabs(
+      tabs.map((tab) =>
+        tab.id === activeTabId
+          ? {
+              ...tab,
+              type: "invoice",
+              label: "Tạo hóa đơn",
+              sourceOrderId: tab.documentId,
+              documentId: undefined,
+            }
+          : tab
+      )
+    );
+
+    toast.success("Chuyển sang giao diện tạo hóa đơn");
+  };
+
+  const handlePayment = async () => {
+    if (!activeTab.sourceOrderId) {
+      toast.error("Không tìm thấy thông tin đơn hàng gốc");
+      return;
+    }
+
+    try {
+      const invoice = await invoicesApi.createInvoiceFromOrder(
+        activeTab.sourceOrderId
+      );
+      toast.success("Tạo hóa đơn thành công");
+      router.push(`/don-hang/hoa-don`);
+    } catch (error: any) {
+      console.error("Create invoice from order error:", error);
+      toast.error(error.message || "Không thể tạo hóa đơn");
+    }
   };
 
   const handleAddTab = () => {
@@ -769,6 +812,7 @@ export default function BanHangPage() {
               }
               onCreateOrder={handleCreateDocument}
               onSaveOrder={handleSaveOrder}
+              onCreateInvoice={handleConvertToInvoice}
               discount={activeTab.discount}
               discountRatio={activeTab.discountRatio}
               onDeliveryInfoChange={(deliveryInfo) =>
@@ -807,6 +851,7 @@ export default function BanHangPage() {
               }
               onCreateOrder={handleCreateDocument}
               onSaveOrder={handleSaveOrder}
+              onPayment={handlePayment}
               discount={activeTab.discount}
               discountRatio={activeTab.discountRatio}
               onDeliveryInfoChange={(deliveryInfo) =>
@@ -814,6 +859,7 @@ export default function BanHangPage() {
               }
               deliveryInfo={activeTab.deliveryInfo}
               isEditMode={!!activeTab.documentId}
+              isCreatingFromOrder={!!activeTab.sourceOrderId}
               existingOrder={existingInvoice}
               documentType={activeTab.type}
             />

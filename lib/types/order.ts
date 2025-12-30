@@ -25,6 +25,7 @@ export const ORDER_STATUS_NUMBER_TO_STRING: Record<number, string> = {
 export interface Order {
   id: number;
   code: string;
+  invoiceCode: string;
   customerId?: number;
   branchId?: number;
   soldById?: number;

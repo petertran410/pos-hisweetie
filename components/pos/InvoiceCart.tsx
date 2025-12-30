@@ -17,12 +17,13 @@ interface InvoiceCartProps {
   onPaymentAmountChange: (amount: number) => void;
   onCreateOrder: () => void;
   onSaveOrder?: () => void;
-  onCreateInvoice?: () => void;
+  onPayment?: () => void;
   discount: number;
   discountRatio: number;
   deliveryInfo: DeliveryInfo;
   onDeliveryInfoChange: (info: DeliveryInfo) => void;
   isEditMode?: boolean;
+  isCreatingFromOrder?: boolean;
   existingOrder?: any;
   documentType?: "order" | "invoice";
 }
@@ -37,12 +38,13 @@ export function InvoiceCart({
   onPaymentAmountChange,
   onCreateOrder,
   onSaveOrder,
-  onCreateInvoice,
+  onPayment,
   discount,
   discountRatio,
   deliveryInfo,
   onDeliveryInfoChange,
   isEditMode = false,
+  isCreatingFromOrder = false,
   existingOrder,
   documentType,
 }: InvoiceCartProps) {
@@ -339,21 +341,20 @@ export function InvoiceCart({
           </div>
         )}
 
-        {isEditMode ? (
-          <div className="flex gap-4">
-            <button
-              onClick={onCreateInvoice}
-              disabled={cartItems.length === 0}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
-              HÓA ĐƠN
-            </button>
-            <button
-              onClick={onSaveOrder}
-              disabled={cartItems.length === 0}
-              className="w-full bg-orange-400 text-white py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
-              LƯU
-            </button>
-          </div>
+        {isCreatingFromOrder ? (
+          <button
+            onClick={onPayment}
+            disabled={cartItems.length === 0}
+            className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
+            THANH TOÁN
+          </button>
+        ) : isEditMode ? (
+          <button
+            onClick={onSaveOrder}
+            disabled={cartItems.length === 0}
+            className="w-full bg-orange-400 text-white py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
+            LƯU
+          </button>
         ) : (
           <button
             onClick={onCreateOrder}

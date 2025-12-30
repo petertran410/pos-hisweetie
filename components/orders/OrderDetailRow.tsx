@@ -109,6 +109,10 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     );
   }
 
+  const isCompleted = order.status === ORDER_STATUS.COMPLETED;
+  const isCancelled = order.status === ORDER_STATUS.CANCELLED;
+  const canEdit = !isCompleted && !isCancelled;
+
   return (
     <tr className="bg-blue-50">
       <td colSpan={colSpan} className="p-0">
@@ -180,16 +184,20 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                       onChange={(e) =>
                         setSelectedStatus(Number(e.target.value))
                       }
-                      className="w-full px-3 py-2 text-md border rounded bg-white font-medium">
+                      className="w-full px-3 py-2 text-md border rounded bg-white font-medium"
+                      disabled={!canEdit}>
                       <option value={ORDER_STATUS.PENDING}>Phiếu tạm</option>
                       <option value={ORDER_STATUS.CONFIRMED}>
                         Đã xác nhận
                       </option>
-                      <option value={ORDER_STATUS.PROCESSING}>
-                        Đang giao hàng
-                      </option>
-                      <option value={ORDER_STATUS.COMPLETED}>Hoàn thành</option>
-                      <option value={ORDER_STATUS.CANCELLED}>Đã hủy</option>
+                      {isCompleted && (
+                        <option value={ORDER_STATUS.COMPLETED}>
+                          Hoàn thành
+                        </option>
+                      )}
+                      {isCancelled && (
+                        <option value={ORDER_STATUS.CANCELLED}>Đã hủy</option>
+                      )}
                     </select>
                   </div>
                 </div>
