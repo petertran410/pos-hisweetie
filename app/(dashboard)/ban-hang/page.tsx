@@ -61,6 +61,7 @@ interface Tab {
   deliveryInfo: DeliveryInfo;
   documentId?: number;
   sourceOrderId?: number;
+  sourceOrder?: any;
 }
 
 export default function BanHangPage() {
@@ -232,6 +233,7 @@ export default function BanHangPage() {
               type: "invoice",
               label: "Tạo hóa đơn",
               sourceOrderId: tab.documentId,
+              sourceOrder: existingOrder,
               documentId: undefined,
             }
           : tab
@@ -860,7 +862,7 @@ export default function BanHangPage() {
               deliveryInfo={activeTab.deliveryInfo}
               isEditMode={!!activeTab.documentId}
               isCreatingFromOrder={!!activeTab.sourceOrderId}
-              existingOrder={existingInvoice}
+              existingOrder={activeTab.sourceOrder || existingInvoice}
               documentType={activeTab.type}
             />
           </>

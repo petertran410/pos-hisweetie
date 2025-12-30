@@ -301,7 +301,7 @@ export function InvoiceCart({
               </span>
             </div>
 
-            {isEditMode && existingOrder && (
+            {(isEditMode || isCreatingFromOrder) && existingOrder && (
               <div className="flex items-center justify-between text-md">
                 <span>Tổng khách đã trả:</span>
                 <span className="font-semibold">
