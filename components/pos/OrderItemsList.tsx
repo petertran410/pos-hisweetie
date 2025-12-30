@@ -34,6 +34,7 @@ export function OrderItemsList({
   );
   const [discountValue, setDiscountValue] = useState(0);
   const [displayValue, setDisplayValue] = useState("");
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     if (discountRatio > 0) {
@@ -49,6 +50,7 @@ export function OrderItemsList({
       setDiscountValue(0);
       setDisplayValue("");
     }
+    setIsInitialized(true);
   }, [discount, discountRatio]);
 
   const formatNumber = (value: number): string => {
@@ -97,6 +99,8 @@ export function OrderItemsList({
   };
 
   useEffect(() => {
+    if (!isInitialized) return;
+
     if (discountType === "amount") {
       onDiscountChange(discountValue);
       onDiscountRatioChange(0);
@@ -104,7 +108,7 @@ export function OrderItemsList({
       onDiscountChange(0);
       onDiscountRatioChange(discountValue);
     }
-  }, [discountValue, discountType]);
+  }, [discountValue, discountType, isInitialized]);
 
   const handleDiscountTypeChange = (type: "amount" | "ratio") => {
     setDiscountType(type);
