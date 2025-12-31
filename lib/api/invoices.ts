@@ -58,7 +58,12 @@ export const invoicesApi = {
     return apiClient.delete(`/invoices/${id}`);
   },
 
-  createInvoiceFromOrder: (orderId: number): Promise<Invoice> => {
-    return apiClient.post(`/invoices/from-order/${orderId}`);
+  createInvoiceFromOrder: (
+    orderId: number,
+    additionalPayment?: number
+  ): Promise<Invoice> => {
+    return apiClient.post(`/invoices/from-order/${orderId}`, {
+      additionalPayment: additionalPayment || 0,
+    });
   },
 };

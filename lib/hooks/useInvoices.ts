@@ -62,7 +62,13 @@ export function useDeleteInvoice() {
 export function useCreateInvoiceFromOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: invoicesApi.createInvoiceFromOrder,
+    mutationFn: ({
+      orderId,
+      additionalPayment,
+    }: {
+      orderId: number;
+      additionalPayment?: number;
+    }) => invoicesApi.createInvoiceFromOrder(orderId, additionalPayment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });

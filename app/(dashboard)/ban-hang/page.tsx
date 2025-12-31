@@ -251,8 +251,13 @@ export default function BanHangPage() {
       return;
     }
 
+    const additionalPayment = activeTab.paymentAmount || 0;
+
     try {
-      await createInvoiceFromOrder.mutateAsync(activeTab.sourceOrderId);
+      await createInvoiceFromOrder.mutateAsync({
+        orderId: activeTab.sourceOrderId,
+        additionalPayment: additionalPayment,
+      });
       toast.success("Tạo hóa đơn thành công");
       router.push(`/don-hang/hoa-don`);
     } catch (error: any) {
