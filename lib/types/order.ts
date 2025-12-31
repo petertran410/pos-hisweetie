@@ -26,6 +26,7 @@ export interface Order {
   id: number;
   code: string;
   invoiceCode: string;
+  invoiceId: number;
   customerId?: number;
   branchId?: number;
   soldById?: number;

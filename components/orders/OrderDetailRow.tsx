@@ -40,6 +40,13 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const handleCancel = async () => {
     if (!order) return;
 
+    if (order.invoiceId || order.invoiceCode) {
+      toast.error(
+        "Đơn hàng có hóa đơn, vui lòng hủy hóa đơn trước khi hủy đơn hàng"
+      );
+      return;
+    }
+
     if (confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
       try {
         setIsSaving(true);

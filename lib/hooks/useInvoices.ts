@@ -58,3 +58,17 @@ export function useDeleteInvoice() {
     },
   });
 }
+
+export function useCreateInvoiceFromOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: invoicesApi.createInvoiceFromOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Tạo hóa đơn từ đơn hàng thất bại");
+    },
+  });
+}

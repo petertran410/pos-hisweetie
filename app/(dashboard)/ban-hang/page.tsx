@@ -15,6 +15,7 @@ import {
   useCreateInvoice,
   useUpdateInvoice,
   useInvoice,
+  useCreateInvoiceFromOrder,
 } from "@/lib/hooks/useInvoices";
 import { toast } from "sonner";
 import { X, Plus, ArrowLeftRight } from "lucide-react";
@@ -22,7 +23,6 @@ import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
 import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
-import { invoicesApi } from "@/lib/api/invoices";
 
 export interface CartItem {
   product: any;
@@ -107,6 +107,7 @@ export default function BanHangPage() {
   const updateOrder = useUpdateOrder();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
+  const createInvoiceFromOrder = useCreateInvoiceFromOrder();
 
   const { data: existingOrder, isLoading: isLoadingOrder } = useOrder(
     orderId ? Number(orderId) : 0
@@ -251,6 +252,7 @@ export default function BanHangPage() {
     }
 
     try {
+      await createInvoiceFromOrder.mutateAsync(activeTab.sourceOrderId);
       toast.success("Tạo hóa đơn thành công");
       router.push(`/don-hang/hoa-don`);
     } catch (error: any) {
