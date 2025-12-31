@@ -108,11 +108,15 @@ export function InvoiceDetailRow({
     );
   }
 
+  const isCompleted = invoice.status === INVOICE_STATUS.COMPLETED;
+  const isCancelled = invoice.status === INVOICE_STATUS.CANCELLED;
+  const canEdit = !isCompleted && !isCancelled;
+
   return (
     <tr className="bg-blue-50">
       <td colSpan={colSpan} className="p-0">
         <div className="bg-blue-50 border-y-2 border-blue-200">
-          <div className="sm:max-w-[640px] md:max-w-[768px] lg:max-w-[1024px] xl:max-w-[1280px] 2xl:max-w-[1585px]">
+          <div className="sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1135px] 2xl:max-w-[1585px]">
             <div className="bg-white shadow-sm border border-gray-200 overflow-hidden">
               <div className="px-6 py-4">
                 <div className="flex flex-col gap-2">
@@ -179,7 +183,8 @@ export function InvoiceDetailRow({
                       onChange={(e) =>
                         setSelectedStatus(Number(e.target.value))
                       }
-                      className="w-full px-3 py-2 text-md border rounded bg-white">
+                      className="w-full px-3 py-2 text-md border rounded bg-white"
+                      disabled={!canEdit}>
                       <option value={INVOICE_STATUS.PROCESSING}>
                         Đang xử lý
                       </option>
@@ -384,7 +389,7 @@ export function InvoiceDetailRow({
                   <div className="flex gap-2">
                     <button
                       onClick={handleCancel}
-                      disabled={
+                      hidden={
                         isSaving || invoice.status === INVOICE_STATUS.CANCELLED
                       }
                       className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
@@ -392,8 +397,10 @@ export function InvoiceDetailRow({
                     </button>
                     <button
                       onClick={handleProcessInvoice}
-                      disabled={
-                        isSaving || invoice.status === INVOICE_STATUS.CANCELLED
+                      hidden={
+                        isSaving ||
+                        invoice.status === INVOICE_STATUS.CANCELLED ||
+                        invoice.status === INVOICE_STATUS.COMPLETED
                       }
                       className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                       Xử lý hóa đơn

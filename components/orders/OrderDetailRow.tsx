@@ -384,7 +384,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                   <div className="flex gap-2">
                     <button
                       onClick={handleCancel}
-                      disabled={
+                      hidden={
                         isSaving || order.status === ORDER_STATUS.CANCELLED
                       }
                       className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
@@ -392,8 +392,10 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                     </button>
                     <button
                       onClick={handleProcessOrder}
-                      disabled={
-                        isSaving || order.status === ORDER_STATUS.CANCELLED
+                      hidden={
+                        isSaving ||
+                        order.status === ORDER_STATUS.CANCELLED ||
+                        order.status === ORDER_STATUS.COMPLETED
                       }
                       className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                       Xử lý đơn hàng

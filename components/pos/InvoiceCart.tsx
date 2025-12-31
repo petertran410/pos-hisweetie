@@ -264,18 +264,18 @@ export function InvoiceCart({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-md">Thu hộ tiền (COD)</span>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex items-center cursor-not-allowed opacity-60">
               <input
                 type="checkbox"
-                checked={useCOD}
-                onChange={(e) => onUseCODChange(e.target.checked)}
+                checked={true}
+                disabled={true}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-9 h-5 bg-blue-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
             </label>
           </div>
           <span className="font-semibold text-md">
-            {useCOD ? calculateTotal().toLocaleString() : "0"}
+            {calculateTotal().toLocaleString()}
           </span>
         </div>
 
@@ -286,71 +286,58 @@ export function InvoiceCart({
           </span>
         </div>
 
-        {!useCOD && (
-          <>
-            <div className="flex items-center justify-between text-md">
-              <div>
-                <span className="mr-1">
-                  {isEditMode || isCreatingFromOrder
-                    ? "Khách trả thêm:"
-                    : "Khách đã trả:"}
-                </span>
-                <input
-                  type="text"
-                  value={paymentDisplayValue}
-                  onChange={handlePaymentInputChange}
-                  onBlur={handlePaymentInputBlur}
-                  placeholder="Nhập số tiền"
-                  className="border rounded-xl px-3 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+        <div className="flex items-center justify-between text-md">
+          <div>
+            <span className="mr-1">
+              {isEditMode || isCreatingFromOrder
+                ? "Khách trả thêm:"
+                : "Khách đã trả:"}
+            </span>
+            <input
+              type="text"
+              value={paymentDisplayValue}
+              onChange={handlePaymentInputChange}
+              onBlur={handlePaymentInputBlur}
+              placeholder="Nhập số tiền"
+              className="border rounded-xl px-3 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-              <span className="font-semibold">
-                {paymentAmount.toLocaleString()}
-              </span>
-            </div>
+          <span className="font-semibold">
+            {paymentAmount.toLocaleString()}
+          </span>
+        </div>
 
-            {(isEditMode || isCreatingFromOrder) && existingOrder && (
-              <div className="flex items-center justify-between text-md">
-                <span>Tổng khách đã trả:</span>
-                <span className="font-semibold">
-                  {(
-                    Number(existingOrder.paidAmount || 0) + paymentAmount
-                  ).toLocaleString()}
-                </span>
-              </div>
-            )}
-
-            {calculateDebt() > 0 && (
-              <div className="flex items-center justify-between text-md">
-                <span>Công nợ</span>
-                <span className="font-semibold">
-                  {calculateDebt().toLocaleString()}
-                </span>
-              </div>
-            )}
-
-            {!isEditMode &&
-              !isCreatingFromOrder &&
-              paymentAmount > calculateTotal() && (
-                <div className="flex items-center justify-between text-md">
-                  <span>Tiền thừa trả khách</span>
-                  <span className="font-semibold">
-                    {(paymentAmount - calculateTotal()).toLocaleString()}
-                  </span>
-                </div>
-              )}
-          </>
-        )}
-
-        {useCOD && (
+        {(isEditMode || isCreatingFromOrder) && existingOrder && (
           <div className="flex items-center justify-between text-md">
-            <span>Tính vào công nợ</span>
+            <span>Tổng khách đã trả:</span>
             <span className="font-semibold">
-              {calculateTotal().toLocaleString()}
+              {(
+                Number(existingOrder.paidAmount || 0) + paymentAmount
+              ).toLocaleString()}
             </span>
           </div>
         )}
+
+        {calculateDebt() > 0 && (
+          <div className="flex items-center justify-between text-md">
+            <span>Công nợ</span>
+            <span className="font-semibold">
+              {calculateDebt().toLocaleString()}
+            </span>
+          </div>
+        )}
+
+        {!isEditMode &&
+          !isCreatingFromOrder &&
+          paymentAmount > calculateTotal() && (
+            <div className="flex items-center justify-between text-md">
+              <span>Tiền thừa trả khách</span>
+              <span className="font-semibold">
+                {(paymentAmount - calculateTotal()).toLocaleString()}
+              </span>
+            </div>
+          )}
 
         {isCreatingFromOrder ? (
           <button

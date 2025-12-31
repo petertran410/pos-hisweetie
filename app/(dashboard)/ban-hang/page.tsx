@@ -446,6 +446,15 @@ export default function BanHangPage() {
   };
 
   const handleSaveOrder = async () => {
+    if (!selectedBranch) {
+      toast.error(
+        `Vui lòng chọn chi nhánh trước khi lưu ${
+          activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+        }`
+      );
+      return;
+    }
+
     if (!activeTab.selectedCustomer) {
       toast.error(
         `Vui lòng chọn khách hàng trước khi lưu ${
@@ -479,7 +488,7 @@ export default function BanHangPage() {
         return;
       }
 
-      const actualPayment = activeTab.useCOD ? 0 : activeTab.paymentAmount || 0;
+      const actualPayment = activeTab.paymentAmount || 0;
 
       const orderData = {
         customerId: activeTab.selectedCustomer.id,
@@ -539,42 +548,43 @@ export default function BanHangPage() {
         return;
       }
 
-      const actualPayment = activeTab.useCOD ? 0 : activeTab.paymentAmount || 0;
+      const actualPayment = activeTab.paymentAmount || 0;
 
       const invoiceData = {
         customerId: activeTab.selectedCustomer.id,
         branchId: selectedBranch?.id,
+        purchaseDate: new Date().toISOString(),
         description: activeTab.orderNote,
+        paidAmount: actualPayment,
         discountAmount: Number(activeTab.discount) || 0,
         discountRatio: Number(activeTab.discountRatio) || 0,
-        usingCod: activeTab.useCOD,
-        items: activeTab.cartItems.map((item) => ({
-          productId: Number(item.product.id),
-          productCode: item.product.code,
-          productName: item.product.name,
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-          discount: Number(item.discount) || 0,
-          discountRatio: 0,
-          totalPrice:
-            Number(item.quantity) * Number(item.price) -
-            Number(item.discount || 0),
-          note: item.note || "",
-        })),
-        delivery: activeTab.deliveryInfo.receiver
-          ? {
-              receiver: activeTab.deliveryInfo.receiver,
-              contactNumber: activeTab.deliveryInfo.contactNumber,
-              address: activeTab.deliveryInfo.detailAddress,
-              locationName: activeTab.deliveryInfo.locationName,
-              wardName: activeTab.deliveryInfo.wardName,
-              weight: Number(activeTab.deliveryInfo.weight) || 0,
-              length: Number(activeTab.deliveryInfo.length) || 10,
-              width: Number(activeTab.deliveryInfo.width) || 10,
-              height: Number(activeTab.deliveryInfo.height) || 10,
-              noteForDriver: activeTab.deliveryInfo.noteForDriver,
-            }
-          : undefined,
+        items: activeTab.cartItems.map((item) => {
+          const price = Number(item.price);
+          const quantity = Number(item.quantity);
+          const discount = Number(item.discount) || 0;
+          return {
+            productId: Number(item.product.id),
+            productCode: item.product.code,
+            productName: item.product.name,
+            quantity: quantity,
+            price: price,
+            discount: discount,
+            discountRatio: 0,
+            totalPrice: quantity * price - discount,
+            note: item.note || "",
+          };
+        }),
+        delivery: {
+          receiver: activeTab.deliveryInfo.receiver,
+          contactNumber: activeTab.deliveryInfo.contactNumber,
+          address: activeTab.deliveryInfo.detailAddress,
+          locationName: activeTab.deliveryInfo.locationName,
+          wardName: activeTab.deliveryInfo.wardName,
+          weight: Number(activeTab.deliveryInfo.weight) || 0,
+          length: Number(activeTab.deliveryInfo.length) || 10,
+          width: Number(activeTab.deliveryInfo.width) || 10,
+          height: Number(activeTab.deliveryInfo.height) || 10,
+        },
       };
 
       try {
@@ -602,6 +612,15 @@ export default function BanHangPage() {
   };
 
   const handleCreateDocument = async () => {
+    if (!selectedBranch) {
+      toast.error(
+        `Vui lòng chọn chi nhánh trước khi tạo ${
+          activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+        }`
+      );
+      return;
+    }
+
     if (!activeTab.selectedCustomer) {
       toast.error(
         `Vui lòng chọn khách hàng trước khi tạo ${
@@ -620,7 +639,7 @@ export default function BanHangPage() {
       return;
     }
 
-    const actualPayment = activeTab.useCOD ? 0 : activeTab.paymentAmount || 0;
+    const actualPayment = activeTab.paymentAmount || 0;
 
     const documentData: any = {
       customerId: activeTab.selectedCustomer.id,
