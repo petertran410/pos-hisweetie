@@ -30,34 +30,34 @@ const formatDateTime = (dateString: string) => {
   return date.toLocaleString("vi-VN");
 };
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: number) => {
   switch (status) {
-    case "pending":
+    case 1:
       return "bg-yellow-100 text-yellow-700";
-    case "processing":
+    case 2:
       return "bg-blue-100 text-blue-700";
-    case "completed":
+    case 3:
       return "bg-green-100 text-green-700";
-    case "cancelled":
+    case 4:
       return "bg-red-100 text-red-700";
-    case "confirmed":
+    case 5:
       return "bg-teal-100 text-teal-700";
     default:
       return "bg-gray-100 text-gray-700";
   }
 };
 
-const getStatusText = (status: string) => {
+const getStatusText = (status: number) => {
   switch (status) {
-    case "pending":
+    case 1:
       return "Phiếu tạm";
-    case "processing":
+    case 2:
       return "Đang giao hàng";
-    case "completed":
+    case 3:
       return "Hoàn thành";
-    case "cancelled":
+    case 4:
       return "Hủy";
-    case "confirmed":
+    case 5:
       return "Đã xác nhận";
     default:
       return status;
@@ -220,19 +220,15 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (order) => (
       <span
         className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-          order.orderStatus
+          order.status
         )}`}>
-        {getStatusText(order.orderStatus)}
+        {getStatusText(order.status)}
       </span>
     ),
   },
 ];
 
-export function OrdersTable({
-  filters,
-  onCreateClick,
-  onEditClick,
-}: OrdersTableProps) {
+export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
   const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);

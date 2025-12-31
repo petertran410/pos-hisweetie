@@ -96,6 +96,12 @@ export interface Order {
       name: string;
     };
   };
+  invoice?: {
+    id: number;
+    code: string;
+    status: number;
+    statusValue?: string;
+  };
 }
 
 export interface CreateOrderDto {
