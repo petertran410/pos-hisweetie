@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useCashFlows } from "@/lib/hooks/useCashflows";
+import { useState, useEffect, useRef } from "react";
+import { useCashFlows, useOpeningBalance } from "@/lib/hooks/useCashflows";
 import { useBranchStore } from "@/lib/store/branch";
-import { Plus, Settings, FileDown } from "lucide-react";
+import { Plus, Settings, FileDown, ChevronDown } from "lucide-react";
+import { CreateCashFlowModal } from "./CreateCashFlowModal";
 import type { CashFlow } from "@/lib/types/cashflow";
 
 interface ColumnConfig {
@@ -163,6 +164,12 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   },
 ];
 
+const RECEIPT_TYPES = [
+  { type: "cash", label: "Tiền mặt" },
+  { type: "bank", label: "Ngân hàng" },
+  { type: "ewallet", label: "Ví điện tử" },
+];
+
 export function CashFlowsTable({
   filters,
   onCreateReceiptClick,
@@ -174,6 +181,16 @@ export function CashFlowsTable({
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
+  const [showReceiptDropdown, setShowReceiptDropdown] = useState(false);
+  const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [modalType, setModalType] = useState<"cash" | "bank" | "ewallet">(
+    "cash"
+  );
+  const [isReceipt, setIsReceipt] = useState(true);
+
+  const receiptButtonRef = useRef<HTMLDivElement>(null);
+  const paymentButtonRef = useRef<HTMLDivElement>(null);
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
@@ -201,11 +218,33 @@ export function CashFlowsTable({
     ...filters,
   });
 
+  const { data: openingBalanceData } = useOpeningBalance(filters);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("cashflowTableColumns", JSON.stringify(columns));
     }
   }, [columns]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        receiptButtonRef.current &&
+        !receiptButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowReceiptDropdown(false);
+      }
+      if (
+        paymentButtonRef.current &&
+        !paymentButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowPaymentDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const cashflows = data?.data || [];
   const total = data?.total || 0;
@@ -246,246 +285,313 @@ export function CashFlowsTable({
       0
     );
 
+    const openingBalance = openingBalanceData || 0;
+    const closingBalance = openingBalance + totalReceipts - totalPayments;
+
     return {
-      openingBalance: 132569727287,
+      openingBalance,
       totalReceipts,
       totalPayments,
-      closingBalance: 132569727287 + totalReceipts - totalPayments,
+      closingBalance,
     };
   };
 
   const stats = calculateStats();
 
+  const handleCreateClick = (
+    type: "cash" | "bank" | "ewallet",
+    receipt: boolean
+  ) => {
+    setModalType(type);
+    setIsReceipt(receipt);
+    setShowCreateModal(true);
+    setShowReceiptDropdown(false);
+    setShowPaymentDropdown(false);
+  };
+
   return (
-    <div className="flex-1 flex flex-col bg-white">
-      <div className="border-b p-4 bg-gray-50">
-        <div className="grid grid-cols-4 gap-4 mb-4">
-          <div className="text-center">
-            <div className="text-sm text-gray-600 mb-1">Quỹ đầu kỳ</div>
-            <div className="text-lg font-semibold">
-              {formatMoney(stats.openingBalance)}
+    <>
+      <div className="flex-1 flex flex-col bg-white">
+        <div className="border-b p-4 bg-gray-50">
+          <div className="grid grid-cols-4 gap-4 mb-4">
+            <div className="text-center">
+              <div className="text-sm text-gray-600 mb-1">Quỹ đầu kỳ</div>
+              <div className="text-lg font-semibold">
+                {formatMoney(stats.openingBalance)}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-gray-600 mb-1">Tổng thu</div>
+              <div className="text-lg font-semibold text-green-600">
+                {formatMoney(stats.totalReceipts)}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-gray-600 mb-1">Tổng chi</div>
+              <div className="text-lg font-semibold text-red-600">
+                -{formatMoney(stats.totalPayments)}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-gray-600 mb-1">Tồn quỹ</div>
+              <div className="text-lg font-semibold text-blue-600">
+                {formatMoney(stats.closingBalance)}
+              </div>
             </div>
           </div>
-          <div className="text-center">
-            <div className="text-sm text-gray-600 mb-1">Tổng thu</div>
-            <div className="text-lg font-semibold text-green-600">
-              {formatMoney(stats.totalReceipts)}
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Theo mã phiếu"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 pr-4 py-2 border rounded-lg text-sm w-80"
+                />
+                <svg
+                  className="w-5 h-5 absolute left-3 top-2.5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
             </div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm text-gray-600 mb-1">Tổng chi</div>
-            <div className="text-lg font-semibold text-red-600">
-              -{formatMoney(stats.totalPayments)}
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm text-gray-600 mb-1">Tồn quỹ</div>
-            <div className="text-lg font-semibold text-blue-600">
-              {formatMoney(stats.closingBalance)}
+
+            <div className="flex items-center gap-2">
+              <div className="relative" ref={receiptButtonRef}>
+                <button
+                  onMouseEnter={() => setShowReceiptDropdown(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm font-medium">
+                  <Plus className="w-4 h-4" />
+                  Phiếu thu
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+
+                {showReceiptDropdown && (
+                  <div
+                    onMouseLeave={() => setShowReceiptDropdown(false)}
+                    className="absolute top-full right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[150px]">
+                    {RECEIPT_TYPES.map((item) => (
+                      <button
+                        key={item.type}
+                        onClick={() =>
+                          handleCreateClick(item.type as any, true)
+                        }
+                        className="w-full px-4 py-2 text-sm text-left hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg">
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative" ref={paymentButtonRef}>
+                <button
+                  onMouseEnter={() => setShowPaymentDropdown(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-medium">
+                  <Plus className="w-4 h-4" />
+                  Phiếu chi
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+
+                {showPaymentDropdown && (
+                  <div
+                    onMouseLeave={() => setShowPaymentDropdown(false)}
+                    className="absolute top-full right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[150px]">
+                    {RECEIPT_TYPES.map((item) => (
+                      <button
+                        key={item.type}
+                        onClick={() =>
+                          handleCreateClick(item.type as any, false)
+                        }
+                        className="w-full px-4 py-2 text-sm text-left hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg">
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => setShowColumnModal(true)}
+                className="p-2 border rounded-lg hover:bg-gray-50"
+                title="Tùy chỉnh cột">
+                <Settings className="w-5 h-5" />
+              </button>
+              <button
+                className="p-2 border rounded-lg hover:bg-gray-50"
+                title="Xuất file">
+                <FileDown className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Theo mã phiếu"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 pr-4 py-2 border rounded-lg text-sm w-80"
-              />
-              <svg
-                className="w-5 h-5 absolute left-3 top-2.5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
+        <div className="flex-1 overflow-auto">
+          <table className="w-full border-collapse">
+            <thead className="bg-gray-50 sticky top-0 z-10">
+              <tr>
+                <th className="px-6 py-3 text-left sticky left-0 bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={
+                      cashflows.length > 0 &&
+                      selectedIds.length === cashflows.length
+                    }
+                    onChange={toggleSelectAll}
+                    className="cursor-pointer"
+                  />
+                </th>
+                {visibleColumns.map((col) => (
+                  <th
+                    key={col.key}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {isLoading ? (
+                <tr>
+                  <td
+                    colSpan={visibleColumns.length + 1}
+                    className="px-6 py-8 text-center text-gray-500">
+                    Đang tải...
+                  </td>
+                </tr>
+              ) : cashflows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={visibleColumns.length + 1}
+                    className="px-6 py-8 text-center text-gray-500">
+                    Chưa có phiếu thu/chi nào
+                  </td>
+                </tr>
+              ) : (
+                cashflows.map((cashflow) => (
+                  <tr
+                    key={cashflow.id}
+                    className="border-b hover:bg-gray-50 cursor-pointer">
+                    <td
+                      className="px-6 py-3 sticky left-0 bg-white"
+                      onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(cashflow.id)}
+                        onChange={() => toggleSelect(cashflow.id)}
+                        className="cursor-pointer"
+                      />
+                    </td>
+                    {visibleColumns.map((col) => (
+                      <td
+                        key={col.key}
+                        className="px-6 py-3 text-sm whitespace-nowrap">
+                        {col.render(cashflow)}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="border-t p-4 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">
+              Hiển thị {(page - 1) * limit + 1} -{" "}
+              {Math.min(page * limit, total)} / {total} phiếu
+            </span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="border rounded px-2 py-1 text-sm">
+              <option value={15}>15</option>
+              <option value={30}>30</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={onCreateReceiptClick}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm font-medium">
-              <Plus className="w-4 h-4" />
-              Phiếu thu
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+              ←
             </button>
+            <span className="text-sm">
+              Trang {page} / {Math.ceil(total / limit) || 1}
+            </span>
             <button
-              onClick={onCreatePaymentClick}
-              className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-medium">
-              <Plus className="w-4 h-4" />
-              Phiếu chi
-            </button>
-            <button
-              onClick={() => setShowColumnModal(true)}
-              className="p-2 border rounded-lg hover:bg-gray-50"
-              title="Tùy chỉnh cột">
-              <Settings className="w-5 h-5" />
-            </button>
-            <button
-              className="p-2 border rounded-lg hover:bg-gray-50"
-              title="Xuất file">
-              <FileDown className="w-5 h-5" />
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= Math.ceil(total / limit)}
+              className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+              →
             </button>
           </div>
         </div>
-      </div>
 
-      <div className="flex-1 overflow-auto">
-        <table className="w-full border-collapse">
-          <thead className="bg-gray-50 sticky top-0 z-10">
-            <tr>
-              <th className="px-6 py-3 text-left sticky left-0 bg-gray-50">
-                <input
-                  type="checkbox"
-                  checked={
-                    cashflows.length > 0 &&
-                    selectedIds.length === cashflows.length
-                  }
-                  onChange={toggleSelectAll}
-                  className="cursor-pointer"
-                />
-              </th>
-              {visibleColumns.map((col) => (
-                <th
-                  key={col.key}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {isLoading ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length + 1}
-                  className="px-6 py-8 text-center text-gray-500">
-                  Đang tải...
-                </td>
-              </tr>
-            ) : cashflows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length + 1}
-                  className="px-6 py-8 text-center text-gray-500">
-                  Chưa có phiếu thu/chi nào
-                </td>
-              </tr>
-            ) : (
-              cashflows.map((cashflow) => (
-                <tr
-                  key={cashflow.id}
-                  className="border-b hover:bg-gray-50 cursor-pointer">
-                  <td
-                    className="px-6 py-3 sticky left-0 bg-white"
-                    onClick={(e) => e.stopPropagation()}>
+        {showColumnModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  Tùy chỉnh cột hiển thị
+                </h3>
+                <button
+                  onClick={() => setShowColumnModal(false)}
+                  className="text-gray-400 hover:text-gray-600">
+                  ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                {columns.map((col) => (
+                  <label
+                    key={col.key}
+                    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
                     <input
                       type="checkbox"
-                      checked={selectedIds.includes(cashflow.id)}
-                      onChange={() => toggleSelect(cashflow.id)}
+                      checked={col.visible}
+                      onChange={() => toggleColumnVisibility(col.key)}
                       className="cursor-pointer"
                     />
-                  </td>
-                  {visibleColumns.map((col) => (
-                    <td
-                      key={col.key}
-                      className="px-6 py-3 text-sm whitespace-nowrap">
-                      {col.render(cashflow)}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                    <span className="text-sm">{col.label}</span>
+                  </label>
+                ))}
+              </div>
 
-      <div className="border-t p-4 flex items-center justify-between bg-white">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">
-            Hiển thị {(page - 1) * limit + 1} - {Math.min(page * limit, total)}{" "}
-            / {total} phiếu
-          </span>
-          <select
-            value={limit}
-            onChange={(e) => {
-              setLimit(Number(e.target.value));
-              setPage(1);
-            }}
-            className="border rounded px-2 py-1 text-sm">
-            <option value={15}>15</option>
-            <option value={30}>30</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
-            ←
-          </button>
-          <span className="text-sm">
-            Trang {page} / {Math.ceil(total / limit) || 1}
-          </span>
-          <button
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page >= Math.ceil(total / limit)}
-            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
-            →
-          </button>
-        </div>
-      </div>
-
-      {showColumnModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Tùy chỉnh cột hiển thị</h3>
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="text-gray-400 hover:text-gray-600">
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-              {columns.map((col) => (
-                <label
-                  key={col.key}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                  <input
-                    type="checkbox"
-                    checked={col.visible}
-                    onChange={() => toggleColumnVisibility(col.key)}
-                    className="cursor-pointer"
-                  />
-                  <span className="text-sm">{col.label}</span>
-                </label>
-              ))}
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="px-4 py-2 border rounded hover:bg-gray-50">
-                Đóng
-              </button>
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  onClick={() => setShowColumnModal(false)}
+                  className="px-4 py-2 border rounded hover:bg-gray-50">
+                  Đóng
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      <CreateCashFlowModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        type={modalType}
+        isReceipt={isReceipt}
+      />
+    </>
   );
 }

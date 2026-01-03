@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cashflowsApi } from "@/lib/api/cashflows";
+import { apiClient } from "@/lib/config/api";
 
 export function useCashFlows(params?: any) {
   return useQuery({
@@ -55,5 +56,19 @@ export function useCreatePayment() {
       queryClient.invalidateQueries({ queryKey: ["cashflows"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
+  });
+}
+
+export function useOpeningBalance(filters: any) {
+  return useQuery({
+    queryKey: ["cashflows", "opening-balance", filters],
+    queryFn: async () => {
+      const response = await apiClient.get(
+        "/cashflows/opening-balance",
+        filters
+      );
+      return response;
+    },
+    enabled: !!filters.startDate,
   });
 }
