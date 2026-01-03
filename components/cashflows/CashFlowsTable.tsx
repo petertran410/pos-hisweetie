@@ -309,9 +309,19 @@ export function CashFlowsTable({
     setShowPaymentDropdown(false);
   };
 
+  const handleReceiptMouseEnter = () => {
+    setShowReceiptDropdown(true);
+    setShowPaymentDropdown(false);
+  };
+
+  const handlePaymentMouseEnter = () => {
+    setShowPaymentDropdown(true);
+    setShowReceiptDropdown(false);
+  };
+
   return (
     <>
-      <div className="flex-1 flex flex-col bg-white">
+      <div className="flex-1 flex flex-col bg-white relative">
         <div className="border-b p-4 bg-gray-50">
           <div className="grid grid-cols-4 gap-4 mb-4">
             <div className="text-center">
@@ -368,7 +378,7 @@ export function CashFlowsTable({
             <div className="flex items-center gap-2">
               <div className="relative" ref={receiptButtonRef}>
                 <button
-                  onMouseEnter={() => setShowReceiptDropdown(true)}
+                  onMouseEnter={handleReceiptMouseEnter}
                   className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm font-medium">
                   <Plus className="w-4 h-4" />
                   Phiếu thu
@@ -378,7 +388,7 @@ export function CashFlowsTable({
                 {showReceiptDropdown && (
                   <div
                     onMouseLeave={() => setShowReceiptDropdown(false)}
-                    className="absolute top-full right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[150px]">
+                    className="absolute top-full right-0 mt-1 bg-white border rounded-lg shadow-lg z-[100] min-w-[150px]">
                     {RECEIPT_TYPES.map((item) => (
                       <button
                         key={item.type}
@@ -395,7 +405,7 @@ export function CashFlowsTable({
 
               <div className="relative" ref={paymentButtonRef}>
                 <button
-                  onMouseEnter={() => setShowPaymentDropdown(true)}
+                  onMouseEnter={handlePaymentMouseEnter}
                   className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-medium">
                   <Plus className="w-4 h-4" />
                   Phiếu chi
@@ -405,7 +415,7 @@ export function CashFlowsTable({
                 {showPaymentDropdown && (
                   <div
                     onMouseLeave={() => setShowPaymentDropdown(false)}
-                    className="absolute top-full right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[150px]">
+                    className="absolute top-full right-0 mt-1 bg-white border rounded-lg shadow-lg z-[100] min-w-[150px]">
                     {RECEIPT_TYPES.map((item) => (
                       <button
                         key={item.type}
@@ -422,29 +432,27 @@ export function CashFlowsTable({
 
               <button
                 onClick={() => setShowColumnModal(true)}
-                className="p-2 border rounded-lg hover:bg-gray-50"
-                title="Tùy chỉnh cột">
-                <Settings className="w-5 h-5" />
+                className="p-2 border rounded-lg hover:bg-gray-50">
+                <Settings className="w-5 h-5 text-gray-600" />
               </button>
-              <button
-                className="p-2 border rounded-lg hover:bg-gray-50"
-                title="Xuất file">
-                <FileDown className="w-5 h-5" />
+
+              <button className="p-2 border rounded-lg hover:bg-gray-50">
+                <FileDown className="w-5 h-5 text-gray-600" />
               </button>
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-auto">
-          <table className="w-full border-collapse">
-            <thead className="bg-gray-50 sticky top-0 z-10">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b sticky top-0 z-10">
               <tr>
                 <th className="px-6 py-3 text-left sticky left-0 bg-gray-50">
                   <input
                     type="checkbox"
                     checked={
-                      cashflows.length > 0 &&
-                      selectedIds.length === cashflows.length
+                      selectedIds.length === cashflows.length &&
+                      cashflows.length > 0
                     }
                     onChange={toggleSelectAll}
                     className="cursor-pointer"
@@ -453,7 +461,7 @@ export function CashFlowsTable({
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     {col.label}
                   </th>
                 ))}
@@ -513,11 +521,8 @@ export function CashFlowsTable({
             </span>
             <select
               value={limit}
-              onChange={(e) => {
-                setLimit(Number(e.target.value));
-                setPage(1);
-              }}
-              className="border rounded px-2 py-1 text-sm">
+              onChange={(e) => setLimit(Number(e.target.value))}
+              className="px-3 py-1 border rounded text-sm">
               <option value={15}>15</option>
               <option value={30}>30</option>
               <option value={50}>50</option>
@@ -529,7 +534,7 @@ export function CashFlowsTable({
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+              className="px-3 py-1 border rounded text-sm disabled:opacity-50">
               ←
             </button>
             <span className="text-sm">
@@ -538,60 +543,51 @@ export function CashFlowsTable({
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={page >= Math.ceil(total / limit)}
-              className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
+              className="px-3 py-1 border rounded text-sm disabled:opacity-50">
               →
             </button>
           </div>
         </div>
-
-        {showColumnModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">
-                  Tùy chỉnh cột hiển thị
-                </h3>
-                <button
-                  onClick={() => setShowColumnModal(false)}
-                  className="text-gray-400 hover:text-gray-600">
-                  ✕
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-                {columns.map((col) => (
-                  <label
-                    key={col.key}
-                    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                    <input
-                      type="checkbox"
-                      checked={col.visible}
-                      onChange={() => toggleColumnVisibility(col.key)}
-                      className="cursor-pointer"
-                    />
-                    <span className="text-sm">{col.label}</span>
-                  </label>
-                ))}
-              </div>
-
-              <div className="mt-6 flex justify-end gap-2">
-                <button
-                  onClick={() => setShowColumnModal(false)}
-                  className="px-4 py-2 border rounded hover:bg-gray-50">
-                  Đóng
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      <CreateCashFlowModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        type={modalType}
-        isReceipt={isReceipt}
-      />
+      {showColumnModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h3 className="text-lg font-semibold mb-4">Tùy chỉnh cột</h3>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {columns.map((col) => (
+                <label
+                  key={col.key}
+                  className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={col.visible}
+                    onChange={() => toggleColumnVisibility(col.key)}
+                    className="cursor-pointer"
+                  />
+                  <span className="text-sm">{col.label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setShowColumnModal(false)}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateModal && (
+        <CreateCashFlowModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          type={modalType}
+          isReceipt={isReceipt}
+        />
+      )}
     </>
   );
 }
