@@ -1,26 +1,20 @@
 "use client";
 
-import {
-  useCustomer,
-  useUpdateCustomer,
-  useDeleteCustomer,
-} from "@/lib/hooks/useCustomers";
-import { Loader2, Pencil, Trash2, Ban, CheckCircle } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { Customer } from "@/lib/types/customer";
-import { toast } from "sonner";
+import { useState } from "react";
+import { useCustomer } from "@/lib/hooks/useCustomers";
+import { formatCurrency, formatDate } from "@/lib/utils/format";
+import { Pencil, Trash2, Loader2 } from "lucide-react";
+import { useDeleteCustomer, useUpdateCustomer } from "@/lib/hooks/useCustomers";
+import { CustomerGroupsModal } from "./CustomerGroupsModal";
+import { CustomerInvoicesTab } from "./CustomerInvoicesTab";
+import { CustomerOrdersTab } from "./CustomerOrdersTab";
+import { CustomerDebtsTab } from "./CustomerDebtsTab";
 
 interface CustomerDetailRowProps {
   customerId: number;
   colSpan: number;
-  onEditClick: (customer: Customer) => void;
+  onEditClick: (customer: any) => void;
 }
-
-const formatDateTime = (dateString?: string) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleString("vi-VN");
-};
 
 export function CustomerDetailRow({
   customerId,
@@ -30,10 +24,12 @@ export function CustomerDetailRow({
   const { data: customer, isLoading } = useCustomer(customerId);
   const updateCustomer = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
+  const [activeTab, setActiveTab] = useState;
+  "info" | "addresses" | "invoices" | "orders" | "debts" | ("points" > "info");
+  const [showGroupsModal, setShowGroupsModal] = useState(false);
 
-  const handleToggleActive = async () => {
+  const handleStatusToggle = () => {
     if (!customer) return;
-
     const action = customer.isActive ? "ngừng hoạt động" : "kích hoạt";
     if (confirm(`Bạn có chắc chắn muốn ${action} khách hàng này?`)) {
       updateCustomer.mutate({
@@ -92,6 +88,9 @@ export function CustomerDetailRow({
                 </h3>
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <span>
+                    Người tạo: <strong>admin</strong>
+                  </span>
+                  <span>
                     Ngày tạo: <strong>{formatDate(customer.createdAt)}</strong>
                   </span>
                   {customer.customerGroupDetails &&
@@ -101,7 +100,9 @@ export function CustomerDetailRow({
                         <strong>
                           {customer.customerGroupDetails.length} nhóm.{" "}
                         </strong>
-                        <button className="text-blue-600 hover:underline">
+                        <button
+                          onClick={() => setShowGroupsModal(true)}
+                          className="text-blue-600 hover:underline">
                           Xem chi tiết
                         </button>
                       </span>
@@ -110,155 +111,281 @@ export function CustomerDetailRow({
               </div>
             </div>
 
-            <div className="p-6">
-              <div className="grid grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Điện thoại
-                  </label>
-                  <div className="text-base">
-                    {customer.contactNumber || customer.phone || "Chưa có"}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Sinh nhật
-                  </label>
-                  <div className="text-base">
-                    {customer.birthDate
-                      ? formatDate(customer.birthDate)
-                      : "Chưa có"}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Giới tính
-                  </label>
-                  <div className="text-base">
-                    {customer.gender === true
-                      ? "Nam"
-                      : customer.gender === false
-                      ? "Nữ"
-                      : "Chưa có"}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Email
-                  </label>
-                  <div className="text-base">{customer.email || "Chưa có"}</div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Facebook
-                  </label>
-                  <div className="text-base">Chưa có</div>
-                </div>
-
-                <div className="col-span-3">
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Địa chỉ
-                  </label>
-                  <div className="text-base">
-                    {[
-                      customer.address,
-                      customer.wardName,
-                      customer.districtName,
-                      customer.cityName,
-                    ]
-                      .filter(Boolean)
-                      .join(", ") || "Chưa có"}
-                  </div>
-                </div>
+            <div className="border-b">
+              <div className="flex gap-1 px-6">
+                <button
+                  onClick={() => setActiveTab("info")}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "info"
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}>
+                  Thông tin
+                </button>
+                <button
+                  onClick={() => setActiveTab("addresses")}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "addresses"
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}>
+                  Địa chỉ nhận hàng
+                </button>
+                <button
+                  onClick={() => setActiveTab("invoices")}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "invoices"
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}>
+                  Lịch sử bán hàng/trả hàng
+                </button>
+                <button
+                  onClick={() => setActiveTab("orders")}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "orders"
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}>
+                  Lịch sử đặt hàng
+                </button>
+                <button
+                  onClick={() => setActiveTab("debts")}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "debts"
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}>
+                  Nợ cần thu từ khách
+                </button>
+                <button
+                  onClick={() => setActiveTab("points")}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "points"
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}>
+                  Lịch sử tích điểm
+                </button>
               </div>
+            </div>
 
-              {(customer.type === 1 ||
-                customer.invoiceBuyerName ||
-                customer.invoiceAddress) && (
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h4 className="text-lg font-semibold mb-4">
-                    Thông tin xuất hóa đơn
-                  </h4>
-                  <div className="bg-gray-50 p-4 rounded">
-                    <div className="text-sm space-y-1">
-                      {customer.type === 1 && customer.organization && (
-                        <p>
-                          <strong>{customer.organization}</strong>
-                        </p>
-                      )}
-                      {customer.taxCode && (
-                        <p>
-                          {customer.taxCode} / {customer.invoiceAddress || ""}
-                        </p>
-                      )}
-                      {customer.invoiceAddress && (
-                        <p>
-                          {[
-                            customer.invoiceAddress,
-                            customer.invoiceWardName,
-                            customer.invoiceCityName,
-                          ]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </p>
-                      )}
-                      {customer.invoiceEmail && <p>{customer.invoiceEmail}</p>}
-                      {customer.invoicePhone && <p>{customer.invoicePhone}</p>}
-                      {customer.invoiceBuyerName && (
-                        <p className="mt-2">
-                          <strong>
-                            Ghi chú: Đây là {customer.invoiceBuyerName}
-                          </strong>
-                        </p>
-                      )}
+            <div className="p-6">
+              {activeTab === "info" && (
+                <div>
+                  <div className="grid grid-cols-3 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">
+                        Điện thoại
+                      </label>
+                      <div className="text-base">
+                        {customer.contactNumber || customer.phone || "Chưa có"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">
+                        Sinh nhật
+                      </label>
+                      <div className="text-base">
+                        {customer.birthDate
+                          ? formatDate(customer.birthDate)
+                          : "Chưa có"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">
+                        Giới tính
+                      </label>
+                      <div className="text-base">
+                        {customer.gender === true
+                          ? "Nam"
+                          : customer.gender === false
+                          ? "Nữ"
+                          : "Chưa có"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">
+                        Email
+                      </label>
+                      <div className="text-base">
+                        {customer.email || "Chưa có"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">
+                        Facebook
+                      </label>
+                      <div className="text-base">Chưa có</div>
+                    </div>
+
+                    <div className="col-span-3">
+                      <label className="block text-sm font-medium text-gray-500 mb-1">
+                        Địa chỉ
+                      </label>
+                      <div className="text-base">
+                        {[
+                          customer.address,
+                          customer.wardName,
+                          customer.districtName,
+                          customer.cityName,
+                        ]
+                          .filter(Boolean)
+                          .join(", ") || "Chưa có"}
+                      </div>
                     </div>
                   </div>
+
+                  {(customer.type === 1 ||
+                    customer.invoiceBuyerName ||
+                    customer.invoiceAddress) && (
+                    <div className="mt-8 pt-6 border-t">
+                      <h4 className="text-lg font-semibold mb-4">
+                        Thông tin xuất hóa đơn
+                      </h4>
+                      <div className="grid grid-cols-3 gap-6">
+                        {customer.type === 1 && (
+                          <>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-500 mb-1">
+                                Mã số thuế
+                              </label>
+                              <div className="text-base">
+                                {customer.taxCode || "Chưa có"}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-500 mb-1">
+                                Tên công ty
+                              </label>
+                              <div className="text-base">
+                                {customer.organization || "Chưa có"}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-500 mb-1">
+                            Địa chỉ
+                          </label>
+                          <div className="text-base">
+                            {customer.invoiceAddress || "Chưa có"}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-500 mb-1">
+                            Tỉnh/Thành phố
+                          </label>
+                          <div className="text-base">
+                            {customer.invoiceCityName || "Chưa có"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {customer.comments && (
+                    <div className="mt-8 pt-6 border-t">
+                      <label className="block text-sm font-medium text-gray-500 mb-2">
+                        Ghi chú
+                      </label>
+                      <div className="text-base bg-gray-50 p-4 rounded">
+                        {customer.comments}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
-              <div className="mt-6 pt-6 border-t border-gray-200 flex items-center justify-between">
-                <button
-                  onClick={handleDelete}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 flex items-center gap-2">
-                  <Trash2 className="w-4 h-4" />
-                  Xóa
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onEditClick(customer)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
-                    <Pencil className="w-4 h-4" />
-                    Chỉnh sửa
-                  </button>
-                  <button
-                    onClick={handleToggleActive}
-                    className={`px-4 py-2 border rounded flex items-center gap-2 ${
-                      customer.isActive
-                        ? "border-gray-300 text-gray-700 hover:bg-gray-50"
-                        : "border-green-500 text-green-700 hover:bg-green-50"
-                    }`}>
-                    {customer.isActive ? (
-                      <>
-                        <Ban className="w-4 h-4" />
-                        Ngừng hoạt động
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4" />
-                        Kích hoạt
-                      </>
-                    )}
+              {activeTab === "addresses" && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
+                  <div className="text-blue-800 mb-2">
+                    <svg
+                      className="w-12 h-12 mx-auto mb-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    Địa điểm này đã cập nhật thành{" "}
+                    {customer.wardName ? customer.wardName + " - " : ""}
+                    {customer.districtName ? customer.districtName + ", " : ""}
+                    {customer.cityName ? "Thành phố " + customer.cityName : ""}
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    Bạn có muốn cập nhật địa chỉ mới không?
+                  </p>
+                  <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Cập nhật
                   </button>
                 </div>
-              </div>
+              )}
+
+              {activeTab === "invoices" && (
+                <CustomerInvoicesTab customerId={customer.id} />
+              )}
+
+              {activeTab === "orders" && (
+                <CustomerOrdersTab customerId={customer.id} />
+              )}
+
+              {activeTab === "debts" && (
+                <CustomerDebtsTab
+                  customerId={customer.id}
+                  customerDebt={customer.totalDebt}
+                />
+              )}
+
+              {activeTab === "points" && (
+                <div className="text-center py-8 text-gray-500">
+                  Chưa có lịch sử tích điểm
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t bg-gray-50 flex gap-2">
+              <button
+                onClick={() => onEditClick(customer)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
+                <Pencil className="w-4 h-4" />
+                Chỉnh sửa
+              </button>
+              <button
+                onClick={handleStatusToggle}
+                className="px-4 py-2 border rounded hover:bg-gray-50">
+                {customer.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 border border-red-300 text-red-600 rounded hover:bg-red-50 flex items-center gap-2">
+                <Trash2 className="w-4 h-4" />
+                Xóa
+              </button>
             </div>
           </div>
         </div>
+
+        <CustomerGroupsModal
+          isOpen={showGroupsModal}
+          onClose={() => setShowGroupsModal(false)}
+          customerGroups={customer.customerGroupDetails || []}
+          customerName={customer.name}
+        />
       </td>
     </tr>
   );
