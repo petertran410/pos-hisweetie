@@ -91,7 +91,7 @@ export function CashFlowsSidebar({
   const [accountType, setAccountType] = useState("all");
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
-  const [selectedPreset, setSelectedPreset] = useState("30_days");
+  const [selectedPreset, setSelectedPreset] = useState("this_month");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isReceipt, setIsReceipt] = useState<string>("all");

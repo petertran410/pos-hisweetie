@@ -21,7 +21,7 @@ interface CashFlowsTableProps {
 }
 
 const formatMoney = (value: number) => {
-  return new Intl.NumberFormat("vi-VN").format(value);
+  return new Intl.NumberFormat("en-US").format(value);
 };
 
 const formatDateTime = (dateString: string) => {
@@ -321,7 +321,7 @@ export function CashFlowsTable({
 
   return (
     <>
-      <div className="flex-1 flex flex-col bg-white relative">
+      <div className="flex-1 flex flex-col overflow-hidden bg-white">
         <div className="border-b p-4 bg-gray-50">
           <div className="grid grid-cols-4 gap-4 mb-4">
             <div className="text-center">
