@@ -310,7 +310,7 @@ export function CustomerForm({
       setValue("invoiceBuyerName", customer.invoiceBuyerName || "");
       setValue("invoiceAddress", customer.invoiceAddress || "");
       setValue("invoiceCccdCmnd", customer.invoiceCccdCmnd || "");
-      setValue("invoiceBankAccount", customer.invoiceBankAccount || "");
+      // setValue("invoiceBankAccount", customer.invoiceBankAccount || "");
       setValue("invoiceEmail", customer.invoiceEmail || "");
       setValue("invoicePhone", customer.invoicePhone || "");
       setValue("invoiceDvqhnsCode", customer.invoiceDvqhnsCode || "");
@@ -983,7 +983,7 @@ export function CustomerForm({
                   />
                 </div>
 
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium mb-2">
                     Ngân hàng
                   </label>
@@ -1003,7 +1003,7 @@ export function CustomerForm({
                     placeholder="Nhập số tài khoản ngân hàng"
                     className="w-full border rounded px-3 py-2"
                   />
-                </div>
+                </div> */}
               </div>
             )}
           </div>

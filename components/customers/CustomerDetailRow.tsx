@@ -1,9 +1,14 @@
 "use client";
 
-import { useCustomer } from "@/lib/hooks/useCustomers";
-import { Loader2, Pencil, Trash2, Ban } from "lucide-react";
+import {
+  useCustomer,
+  useUpdateCustomer,
+  useDeleteCustomer,
+} from "@/lib/hooks/useCustomers";
+import { Loader2, Pencil, Trash2, Ban, CheckCircle } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Customer } from "@/lib/types/customer";
+import { toast } from "sonner";
 
 interface CustomerDetailRowProps {
   customerId: number;
@@ -23,6 +28,32 @@ export function CustomerDetailRow({
   onEditClick,
 }: CustomerDetailRowProps) {
   const { data: customer, isLoading } = useCustomer(customerId);
+  const updateCustomer = useUpdateCustomer();
+  const deleteCustomer = useDeleteCustomer();
+
+  const handleToggleActive = async () => {
+    if (!customer) return;
+
+    const action = customer.isActive ? "ngừng hoạt động" : "kích hoạt";
+    if (confirm(`Bạn có chắc chắn muốn ${action} khách hàng này?`)) {
+      updateCustomer.mutate({
+        id: customer.id,
+        data: { isActive: !customer.isActive },
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!customer) return;
+
+    if (
+      confirm(
+        "Bạn có chắc chắn muốn xóa khách hàng này? Hành động này không thể hoàn tác!"
+      )
+    ) {
+      deleteCustomer.mutate(customer.id);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -49,55 +80,32 @@ export function CustomerDetailRow({
   return (
     <tr>
       <td colSpan={colSpan} className="p-0">
-        <div className="bg-gray-50 p-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="border-y-2 border-blue-200">
+          <div className="sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1210px] 2xl:max-w-[1585px]">
             <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-2">
-                  <h3 className="text-xl font-bold">
-                    {customer.name}{" "}
-                    <span className="text-gray-500 font-normal text-lg">
-                      {customer.code}
-                    </span>
-                  </h3>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span>
-                      Người tạo:{" "}
-                      <strong>{customer.creator?.name || "admin"}</strong>
-                    </span>
-                    <span>
-                      Ngày tạo:{" "}
-                      <strong>{formatDate(customer.createdAt)}</strong>
-                    </span>
-                    <span>
-                      Nhóm khách:{" "}
-                      <strong>
-                        {customer.customerGroupDetails &&
-                        customer.customerGroupDetails.length > 0
-                          ? customer.customerGroupDetails.length + " nhóm. "
-                          : ""}
-                      </strong>
-                      <button className="text-blue-600 hover:underline">
-                        Xem chi tiết
-                      </button>
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onEditClick(customer)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
-                    <Pencil className="w-4 h-4" />
-                    Chỉnh sửa
-                  </button>
-                  <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 flex items-center gap-2">
-                    <Trash2 className="w-4 h-4" />
-                    Xóa
-                  </button>
-                  <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 flex items-center gap-2">
-                    <Ban className="w-4 h-4" />
-                    Ngừng hoạt động
-                  </button>
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xl font-bold">
+                  {customer.name}{" "}
+                  <span className="text-gray-500 font-normal text-lg">
+                    {customer.code}
+                  </span>
+                </h3>
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <span>
+                    Ngày tạo: <strong>{formatDate(customer.createdAt)}</strong>
+                  </span>
+                  {customer.customerGroupDetails &&
+                    customer.customerGroupDetails.length > 0 && (
+                      <span>
+                        Nhóm khách:{" "}
+                        <strong>
+                          {customer.customerGroupDetails.length} nhóm.{" "}
+                        </strong>
+                        <button className="text-blue-600 hover:underline">
+                          Xem chi tiết
+                        </button>
+                      </span>
+                    )}
                 </div>
               </div>
             </div>
@@ -176,18 +184,19 @@ export function CustomerDetailRow({
                     Thông tin xuất hóa đơn
                   </h4>
                   <div className="bg-gray-50 p-4 rounded">
-                    <div className="text-sm">
+                    <div className="text-sm space-y-1">
                       {customer.type === 1 && customer.organization && (
                         <p>
-                          <strong>CÔNG TY TNHH {customer.organization}</strong>
+                          <strong>{customer.organization}</strong>
                         </p>
                       )}
                       {customer.taxCode && (
-                        <p>Mã số thuế: {customer.taxCode}</p>
+                        <p>
+                          {customer.taxCode} / {customer.invoiceAddress || ""}
+                        </p>
                       )}
                       {customer.invoiceAddress && (
                         <p>
-                          Địa chỉ:{" "}
                           {[
                             customer.invoiceAddress,
                             customer.invoiceWardName,
@@ -197,12 +206,8 @@ export function CustomerDetailRow({
                             .join(", ")}
                         </p>
                       )}
-                      {customer.invoiceEmail && (
-                        <p>Email: {customer.invoiceEmail}</p>
-                      )}
-                      {customer.invoicePhone && (
-                        <p>Số điện thoại: {customer.invoicePhone}</p>
-                      )}
+                      {customer.invoiceEmail && <p>{customer.invoiceEmail}</p>}
+                      {customer.invoicePhone && <p>{customer.invoicePhone}</p>}
                       {customer.invoiceBuyerName && (
                         <p className="mt-2">
                           <strong>
@@ -214,6 +219,43 @@ export function CustomerDetailRow({
                   </div>
                 </div>
               )}
+
+              <div className="mt-6 pt-6 border-t border-gray-200 flex items-center justify-between">
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 flex items-center gap-2">
+                  <Trash2 className="w-4 h-4" />
+                  Xóa
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onEditClick(customer)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
+                    <Pencil className="w-4 h-4" />
+                    Chỉnh sửa
+                  </button>
+                  <button
+                    onClick={handleToggleActive}
+                    className={`px-4 py-2 border rounded flex items-center gap-2 ${
+                      customer.isActive
+                        ? "border-gray-300 text-gray-700 hover:bg-gray-50"
+                        : "border-green-500 text-green-700 hover:bg-green-50"
+                    }`}>
+                    {customer.isActive ? (
+                      <>
+                        <Ban className="w-4 h-4" />
+                        Ngừng hoạt động
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        Kích hoạt
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

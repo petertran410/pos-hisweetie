@@ -113,7 +113,7 @@ export function InvoiceDetailRow({
   const canEdit = !isCompleted && !isCancelled;
 
   return (
-    <tr className="bg-blue-50">
+    <tr>
       <td colSpan={colSpan} className="p-0">
         <div className="bg-blue-50 border-y-2 border-blue-200">
           <div className="sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1135px] 2xl:max-w-[1585px]">

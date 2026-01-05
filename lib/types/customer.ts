@@ -26,7 +26,7 @@ export interface Customer {
   invoiceWardName?: string;
   invoiceAddress?: string;
   invoiceCccdCmnd?: string;
-  invoiceBankAccount?: string;
+  // invoiceBankAccount?: string;
   invoiceEmail?: string;
   invoicePhone?: string;
   invoiceDvqhnsCode?: string;
