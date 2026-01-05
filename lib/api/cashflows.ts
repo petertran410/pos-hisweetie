@@ -25,4 +25,8 @@ export const cashflowsApi = {
   createPayment: (data: any): Promise<any> => {
     return apiClient.post("/cashflows/payments", data);
   },
+
+  createCustomerPayment: (data: any): Promise<any> => {
+    return apiClient.post("/cashflows/customer-payments", data);
+  },
 };
