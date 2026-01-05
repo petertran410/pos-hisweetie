@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useCustomers, useCustomer } from "@/lib/hooks/useCustomers";
 import { Customer, CustomerFilters } from "@/lib/types/customer";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Loader2, Plus } from "lucide-react";
+import { CustomerDetailRow } from "./CustomerDetailRow";
 
 interface CustomersTableProps {
   filters: CustomerFilters;
@@ -41,6 +42,7 @@ interface ColumnConfig {
   key: ColumnKey;
   label: string;
   visible: boolean;
+  width?: string;
   render: (customer: Customer) => React.ReactNode;
 }
 
@@ -54,36 +56,42 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "code",
     label: "Mã khách hàng",
     visible: true,
+    width: "150px",
     render: (customer) => customer.code,
   },
   {
     key: "name",
     label: "Tên khách hàng",
     visible: true,
+    width: "250px",
     render: (customer) => <span className="font-medium">{customer.name}</span>,
   },
   {
     key: "contactNumber",
     label: "Điện thoại",
     visible: true,
+    width: "150px",
     render: (customer) => customer.contactNumber || customer.phone || "-",
   },
   {
     key: "phone",
     label: "Điện thoại 2",
     visible: false,
+    width: "150px",
     render: (customer) => customer.phone || "-",
   },
   {
     key: "email",
     label: "Email",
     visible: false,
+    width: "200px",
     render: (customer) => customer.email || "-",
   },
   {
     key: "gender",
     label: "Giới tính",
     visible: false,
+    width: "100px",
     render: (customer) => {
       if (customer.gender === true) return "Nam";
       if (customer.gender === false) return "Nữ";
@@ -94,6 +102,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "birthDate",
     label: "Sinh nhật",
     visible: false,
+    width: "150px",
     render: (customer) =>
       customer.birthDate ? formatDate(customer.birthDate) : "-",
   },
@@ -101,90 +110,105 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "customerType",
     label: "Loại khách hàng",
     visible: false,
+    width: "150px",
     render: (customer) => (customer.type === 0 ? "Cá nhân" : "Công ty"),
   },
   {
     key: "organization",
     label: "Tên công ty",
     visible: false,
+    width: "200px",
     render: (customer) => customer.organization || "-",
   },
   {
     key: "taxCode",
     label: "Mã số thuế",
     visible: false,
+    width: "150px",
     render: (customer) => customer.taxCode || "-",
   },
   {
     key: "cityName",
     label: "Thành Phố",
     visible: false,
+    width: "150px",
     render: (customer) => customer.cityName || "-",
   },
   {
     key: "wardName",
     label: "Phường/Xã",
     visible: false,
+    width: "150px",
     render: (customer) => customer.wardName || "-",
   },
   {
     key: "address",
     label: "Địa chỉ",
     visible: false,
+    width: "300px",
     render: (customer) => customer.address || "-",
   },
   {
     key: "debtAmount",
     label: "Nợ hiện tại",
     visible: true,
+    width: "150px",
     render: (customer) => formatCurrency(customer.totalDebt),
   },
   {
     key: "debtDays",
     label: "Số ngày nợ",
     visible: true,
+    width: "120px",
     render: () => "0",
   },
   {
     key: "totalPurchased",
     label: "Tổng bán",
     visible: true,
+    width: "150px",
     render: (customer) => formatCurrency(customer.totalPurchased),
   },
   {
     key: "totalRevenue",
     label: "Tổng bán trừ trả hàng",
     visible: true,
+    width: "180px",
     render: (customer) => formatCurrency(customer.totalRevenue),
   },
   {
     key: "totalPoint",
     label: "Tổng điểm",
     visible: false,
+    width: "120px",
     render: (customer) => Number(customer.totalPoint).toLocaleString(),
   },
   {
     key: "rewardPoint",
     label: "Điểm thưởng",
     visible: false,
+    width: "120px",
     render: (customer) => customer.rewardPoint.toLocaleString(),
   },
   {
     key: "branch",
     label: "Chi nhánh",
     visible: false,
+    width: "150px",
     render: (customer) => customer.branch?.name || "-",
   },
   {
     key: "createdAt",
     label: "Ngày tạo",
     visible: false,
+    width: "180px",
     render: (customer) => formatDateTime(customer.createdAt),
   },
   {
     key: "updatedAt",
     label: "Cập nhật lần cuối",
     visible: false,
+    width: "180px",
     render: (customer) => formatDateTime(customer.updatedAt),
   },
 ];
@@ -195,7 +219,7 @@ export function CustomersTable({
   onEditClick,
 }: CustomersTableProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
+  const [expandedCustomerId, setExpandedCustomerId] = useState<number | null>(
     null
   );
   const [page, setPage] = useState(1);
@@ -215,7 +239,7 @@ export function CustomersTable({
               savedColumns.find((s: any) => s.key === col.key)?.visible ??
               col.visible,
           }));
-        } catch {
+        } catch (e) {
           return DEFAULT_COLUMNS;
         }
       }
@@ -223,52 +247,32 @@ export function CustomersTable({
     return DEFAULT_COLUMNS;
   });
 
-  const { data, isLoading } = useCustomers({
-    ...filters,
-    currentItem: (page - 1) * limit,
-    pageSize: limit,
-    name: searchDebounced,
-  });
-
-  const { data: customerDetail, isLoading: isLoadingDetail } = useCustomer(
-    selectedCustomerId || 0
-  );
-
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchDebounced(search);
-    }, 300);
-
+    const timer = setTimeout(() => setSearchDebounced(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
 
   useEffect(() => {
-    setPage(1);
-  }, [search, filters]);
-
-  useEffect(() => {
-    localStorage.setItem("customerTableColumns", JSON.stringify(columns));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("customerTableColumns", JSON.stringify(columns));
+    }
   }, [columns]);
 
-  useEffect(() => {
-    if (customerDetail && !isLoadingDetail && selectedCustomerId) {
-      onEditClick(customerDetail);
-      setSelectedCustomerId(null);
-    }
-  }, [customerDetail, isLoadingDetail, selectedCustomerId, onEditClick]);
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === data?.data.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(data?.data.map((c: { id: any }) => c.id) || []);
-    }
-  };
+  const { data, isLoading } = useCustomers({
+    ...filters,
+    name: searchDebounced || undefined,
+    pageSize: limit,
+    currentItem: (page - 1) * limit,
+  });
 
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
+  };
+
+  const toggleExpand = (customerId: number) => {
+    setExpandedCustomerId((prev) => (prev === customerId ? null : customerId));
   };
 
   const toggleColumnVisibility = (key: ColumnKey) => {
@@ -341,39 +345,58 @@ export function CustomersTable({
       )}
 
       <div className="flex-1 overflow-auto">
-        {isLoading || isLoadingDetail ? (
+        {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table
-              className="w-full"
-              style={{ minWidth: "max-content", borderSpacing: "0 1px" }}>
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="px-6 py-3 text-left sticky left-0 bg-gray-50 z-10">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.length === data?.data.length}
-                      onChange={toggleSelectAll}
-                    />
+          <table className="w-full">
+            <thead className="bg-gray-50 sticky top-0 z-10">
+              <tr>
+                <th className="px-6 py-3 text-left sticky left-0 bg-gray-50 w-[50px]">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedIds.length === customers.length &&
+                      customers.length > 0
+                    }
+                    onChange={() => {
+                      if (selectedIds.length === customers.length) {
+                        setSelectedIds([]);
+                      } else {
+                        setSelectedIds(customers.map((c) => c.id));
+                      }
+                    }}
+                  />
+                </th>
+                {visibleColumns.map((col) => (
+                  <th
+                    key={col.key}
+                    className="px-6 py-3 text-left font-medium text-gray-700"
+                    style={{
+                      width: col.width,
+                      minWidth: col.width,
+                      maxWidth: col.width,
+                    }}>
+                    {col.label}
                   </th>
-                  {visibleColumns.map((col) => (
-                    <th
-                      key={col.key}
-                      className="px-6 py-3 text-left whitespace-nowrap">
-                      {col.label}
-                    </th>
-                  ))}
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {customers.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={visibleColumns.length + 1}
+                    className="text-center py-12 text-gray-500">
+                    Không tìm thấy khách hàng nào
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {customers && customers.length > 0 ? (
-                  customers.map((customer: Customer) => (
+              ) : (
+                customers.map((customer: Customer) => (
+                  <Fragment key={customer.id}>
                     <tr
-                      key={customer.id}
-                      onClick={() => setSelectedCustomerId(customer.id)}
+                      onClick={() => toggleExpand(customer.id)}
                       className="border-b hover:bg-gray-50 cursor-pointer">
                       <td
                         className="px-6 py-3 sticky left-0 bg-white z-10"
@@ -387,24 +410,30 @@ export function CustomersTable({
                       {visibleColumns.map((col) => (
                         <td
                           key={col.key}
-                          className="px-6 py-3 whitespace-nowrap">
+                          className="px-6 py-3"
+                          style={{
+                            width: col.width,
+                            minWidth: col.width,
+                            maxWidth: col.width,
+                            wordWrap: "break-word",
+                            whiteSpace: "normal",
+                          }}>
                           {col.render(customer)}
                         </td>
                       ))}
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={visibleColumns.length + 1}
-                      className="text-center py-12 text-gray-500">
-                      Không tìm thấy khách hàng nào
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                    {expandedCustomerId === customer.id && (
+                      <CustomerDetailRow
+                        customerId={customer.id}
+                        colSpan={visibleColumns.length + 1}
+                        onEditClick={onEditClick}
+                      />
+                    )}
+                  </Fragment>
+                ))
+              )}
+            </tbody>
+          </table>
         )}
       </div>
 
