@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cashflowsApi } from "@/lib/api/cashflows";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 interface CustomerDebtsTabProps {
@@ -82,7 +82,7 @@ export function CustomerDebtsTab({
               return (
                 <tr key={cf.id} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    
+                    <a
                       href={`/cashflows/${cf.id}`}
                       className="text-blue-600 hover:underline">
                       {cf.code}

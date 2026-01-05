@@ -1,8 +1,8 @@
-</>"use client";
+"use client";
 
 import { useQuery } from "@tanstack/react-query";
 import { invoicesApi } from "@/lib/api/invoices";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 interface CustomerInvoicesTabProps {
@@ -66,7 +66,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
           {invoices.map((invoice) => (
             <tr key={invoice.id} className="border-b hover:bg-gray-50">
               <td className="px-4 py-3">
-                
+                <a
                   href={`/invoices/${invoice.id}`}
                   className="text-blue-600 hover:underline">
                   {invoice.code}

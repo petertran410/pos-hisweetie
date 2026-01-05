@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useCustomer } from "@/lib/hooks/useCustomers";
-import { formatCurrency, formatDate } from "@/lib/utils/format";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { Pencil, Trash2, Loader2 } from "lucide-react";
 import { useDeleteCustomer, useUpdateCustomer } from "@/lib/hooks/useCustomers";
 import { CustomerGroupsModal } from "./CustomerGroupsModal";
@@ -24,8 +24,9 @@ export function CustomerDetailRow({
   const { data: customer, isLoading } = useCustomer(customerId);
   const updateCustomer = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
-  const [activeTab, setActiveTab] = useState;
-  "info" | "addresses" | "invoices" | "orders" | "debts" | ("points" > "info");
+  const [activeTab, setActiveTab] = useState<
+    "info" | "addresses" | "invoices" | "orders" | "debts" | "points"
+  >("info");
   const [showGroupsModal, setShowGroupsModal] = useState(false);
 
   const handleStatusToggle = () => {
@@ -123,15 +124,6 @@ export function CustomerDetailRow({
                   Thông tin
                 </button>
                 <button
-                  onClick={() => setActiveTab("addresses")}
-                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === "addresses"
-                      ? "border-blue-600 text-blue-600"
-                      : "border-transparent text-gray-600 hover:text-gray-900"
-                  }`}>
-                  Địa chỉ nhận hàng
-                </button>
-                <button
                   onClick={() => setActiveTab("invoices")}
                   className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === "invoices"
@@ -157,15 +149,6 @@ export function CustomerDetailRow({
                       : "border-transparent text-gray-600 hover:text-gray-900"
                   }`}>
                   Nợ cần thu từ khách
-                </button>
-                <button
-                  onClick={() => setActiveTab("points")}
-                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === "points"
-                      ? "border-blue-600 text-blue-600"
-                      : "border-transparent text-gray-600 hover:text-gray-900"
-                  }`}>
-                  Lịch sử tích điểm
                 </button>
               </div>
             </div>
@@ -300,42 +283,6 @@ export function CustomerDetailRow({
                   )}
                 </div>
               )}
-
-              {activeTab === "addresses" && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
-                  <div className="text-blue-800 mb-2">
-                    <svg
-                      className="w-12 h-12 mx-auto mb-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    Địa điểm này đã cập nhật thành{" "}
-                    {customer.wardName ? customer.wardName + " - " : ""}
-                    {customer.districtName ? customer.districtName + ", " : ""}
-                    {customer.cityName ? "Thành phố " + customer.cityName : ""}
-                  </div>
-                  <p className="text-sm text-blue-700">
-                    Bạn có muốn cập nhật địa chỉ mới không?
-                  </p>
-                  <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                    Cập nhật
-                  </button>
-                </div>
-              )}
-
               {activeTab === "invoices" && (
                 <CustomerInvoicesTab customerId={customer.id} />
               )}
@@ -349,12 +296,6 @@ export function CustomerDetailRow({
                   customerId={customer.id}
                   customerDebt={customer.totalDebt}
                 />
-              )}
-
-              {activeTab === "points" && (
-                <div className="text-center py-8 text-gray-500">
-                  Chưa có lịch sử tích điểm
-                </div>
               )}
             </div>
 
