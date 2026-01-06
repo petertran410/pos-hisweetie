@@ -29,27 +29,6 @@ export function CustomerDebtsTab({
 
   const timeline = data?.data || [];
 
-  const calculateRunningDebt = () => {
-    let runningDebt = 0;
-    const result: Record<number, number> = {};
-
-    for (let i = timeline.length - 1; i >= 0; i--) {
-      const item = timeline[i];
-
-      if (item.type === "invoice") {
-        runningDebt += item.amount;
-      } else if (item.type === "payment") {
-        runningDebt -= item.amount;
-      }
-
-      result[i] = runningDebt;
-    }
-
-    return result;
-  };
-
-  const runningDebts = calculateRunningDebt();
-
   return (
     <>
       <div>
@@ -108,10 +87,9 @@ export function CustomerDebtsTab({
                   </td>
                 </tr>
               ) : (
-                timeline.map((item: any, index: number) => {
+                timeline.map((item: any) => {
                   const isInvoice = item.type === "invoice";
                   const isPayment = item.type === "payment";
-                  const currentDebt = runningDebts[index] || 0;
 
                   return (
                     <tr
@@ -151,7 +129,9 @@ export function CustomerDebtsTab({
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm text-right font-medium">
-                        {formatCurrency(currentDebt)}
+                        {item.debtSnapshot !== null
+                          ? formatCurrency(item.debtSnapshot)
+                          : "-"}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span
