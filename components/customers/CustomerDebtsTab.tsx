@@ -120,11 +120,6 @@ export function CustomerDebtsTab({
                             <div className="text-red-600 font-medium">
                               {formatCurrency(item.amount)}
                             </div>
-                            {item.paid > 0 && (
-                              <div className="text-xs text-green-600">
-                                Đã trả: {formatCurrency(item.paid)}
-                              </div>
-                            )}
                           </div>
                         )}
                         {isPayment && (
