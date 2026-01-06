@@ -13,6 +13,17 @@ interface CustomerPaymentModalProps {
   onClose: () => void;
 }
 
+const formatNumberInput = (value: string): string => {
+  const numericValue = value.replace(/,/g, "");
+  if (!numericValue || isNaN(Number(numericValue))) return "";
+  return Number(numericValue).toLocaleString("en-US");
+};
+
+const parseNumberInput = (value: string): number => {
+  const numericValue = value.replace(/,/g, "");
+  return Number(numericValue) || 0;
+};
+
 export function CustomerPaymentModal({
   customerId,
   customerDebt,
@@ -26,6 +37,9 @@ export function CustomerPaymentModal({
   const [totalAmount, setTotalAmount] = useState("");
   const [description, setDescription] = useState("");
   const [showMethodDropdown, setShowMethodDropdown] = useState(false);
+  const [invoicePayments, setInvoicePayments] = useState<
+    Record<number, string>
+  >({});
 
   const { data: invoicesData, isLoading } = useQuery({
     queryKey: ["invoices", "customer", customerId, "unpaid"],
@@ -53,46 +67,98 @@ export function CustomerPaymentModal({
   const unpaidInvoices =
     invoicesData?.data.filter((inv: any) => Number(inv.debtAmount) > 0) || [];
 
-  const handleSubmit = async () => {
-    if (!totalAmount || Number(totalAmount) <= 0) {
-      alert("Vui lòng nhập số tiền hợp lệ");
-      return;
+  useEffect(() => {
+    const amount = parseNumberInput(totalAmount);
+    if (unpaidInvoices.length > 0 && amount > 0) {
+      distributeAmount(amount);
     }
+  }, [totalAmount]);
 
-    let remainingAmount = Number(totalAmount);
-    const invoicePayments: any[] = [];
+  const distributeAmount = (amount: number) => {
+    let remainingAmount = amount;
+    const newPayments: Record<number, string> = {};
 
     for (const invoice of unpaidInvoices) {
-      if (remainingAmount <= 0) break;
+      if (remainingAmount <= 0) {
+        newPayments[invoice.id] = "";
+        continue;
+      }
 
       const debtAmount = Number(invoice.debtAmount);
       const paymentAmount = Math.min(remainingAmount, debtAmount);
 
-      invoicePayments.push({
-        invoiceId: invoice.id,
-        amount: paymentAmount,
-      });
-
+      newPayments[invoice.id] = formatNumberInput(paymentAmount.toString());
       remainingAmount -= paymentAmount;
     }
 
     if (remainingAmount > 0 && unpaidInvoices.length > 0) {
-      const lastInvoice = invoicePayments[invoicePayments.length - 1];
-      lastInvoice.amount += remainingAmount;
+      const lastInvoiceId = unpaidInvoices[unpaidInvoices.length - 1].id;
+      const lastPayment = parseNumberInput(newPayments[lastInvoiceId] || "0");
+      newPayments[lastInvoiceId] = formatNumberInput(
+        (lastPayment + remainingAmount).toString()
+      );
     }
 
-    if (invoicePayments.length === 0) {
-      alert("Không có hóa đơn nào để thanh toán");
+    setInvoicePayments(newPayments);
+  };
+
+  const handleTotalAmountChange = (value: string) => {
+    const numericValue = value.replace(/,/g, "");
+    if (numericValue === "" || /^\d+$/.test(numericValue)) {
+      setTotalAmount(formatNumberInput(numericValue));
+    }
+  };
+
+  const handleInvoicePaymentChange = (invoiceId: number, value: string) => {
+    const numericValue = value.replace(/,/g, "");
+    if (numericValue === "" || /^\d+$/.test(numericValue)) {
+      setInvoicePayments((prev) => ({
+        ...prev,
+        [invoiceId]: formatNumberInput(numericValue),
+      }));
+    }
+  };
+
+  const calculateActualTotal = () => {
+    return Object.values(invoicePayments).reduce(
+      (sum, amount) => sum + parseNumberInput(amount),
+      0
+    );
+  };
+
+  const calculateUnallocated = () => {
+    const totalInput = parseNumberInput(totalAmount);
+    const actualTotal = calculateActualTotal();
+    return totalInput - actualTotal;
+  };
+
+  const handleSubmit = async () => {
+    const invoicesToPay = Object.entries(invoicePayments)
+      .filter(([_, amount]) => parseNumberInput(amount) > 0)
+      .map(([invoiceId, amount]) => ({
+        invoiceId: Number(invoiceId),
+        amount: parseNumberInput(amount),
+      }));
+
+    if (invoicesToPay.length === 0) {
+      alert("Vui lòng nhập số tiền thanh toán cho ít nhất một hóa đơn");
+      return;
+    }
+
+    const actualTotal = calculateActualTotal();
+
+    if (actualTotal <= 0) {
+      alert("Tổng số tiền thanh toán phải lớn hơn 0");
       return;
     }
 
     await createPayment.mutateAsync({
       customerId,
-      totalAmount: Number(totalAmount),
+      totalAmount: actualTotal,
       transDate,
       method,
       description,
-      invoices: invoicePayments,
+      invoices: invoicesToPay,
     });
   };
 
@@ -106,7 +172,12 @@ export function CustomerPaymentModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-[900px] max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-lg font-semibold">Thanh toán</h3>
+          <div>
+            <h3 className="text-lg font-semibold">Thanh toán</h3>
+            <p className="text-sm text-gray-600">
+              Nợ hiện tại: {formatCurrency(customerDebt)}
+            </p>
+          </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600">
@@ -195,12 +266,11 @@ export function CustomerPaymentModal({
             <div>
               <label className="block text-sm font-medium mb-2">Số tiền</label>
               <input
-                type="number"
+                type="text"
                 value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
+                onChange={(e) => handleTotalAmountChange(e.target.value)}
                 placeholder="0"
                 className="w-full px-3 py-2 border rounded-lg text-right"
-                min="0"
               />
               <div className="text-right text-xs text-gray-500 mt-1">
                 Nợ còn: {formatCurrency(customerDebt)}
@@ -234,20 +304,19 @@ export function CustomerPaymentModal({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
-                    <th className="px-4 py-3 text-left">Mã phiếu</th>
+                    <th className="px-4 py-3 text-left">Mã hóa đơn</th>
                     <th className="px-4 py-3 text-left">Thời gian</th>
-                    <th className="px-4 py-3 text-right">Giá trị phiếu</th>
+                    <th className="px-4 py-3 text-right">Giá trị hóa đơn</th>
                     <th className="px-4 py-3 text-right">Đã thu trước</th>
                     <th className="px-4 py-3 text-right">Còn cần thu</th>
-                    <th className="px-4 py-3 text-right">Tiền thu/chi</th>
-                    <th className="px-4 py-3 text-center">Trạng thái</th>
+                    <th className="px-4 py-3 text-right">Tiền thu</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr className="border-b bg-gray-100">
                     <td className="px-4 py-2" colSpan={5}></td>
                     <td className="px-4 py-2 text-right font-semibold">
-                      {formatCurrency(Number(totalAmount) || 0)}
+                      {formatCurrency(calculateActualTotal())}
                     </td>
                     <td className="px-4 py-2"></td>
                   </tr>
@@ -267,26 +336,11 @@ export function CustomerPaymentModal({
                     </tr>
                   ) : (
                     unpaidInvoices.map((invoice: any) => {
-                      let remainingAmount = Number(totalAmount) || 0;
-                      let currentPayment = 0;
-
-                      for (const inv of unpaidInvoices) {
-                        if (inv.id === invoice.id) {
-                          currentPayment = Math.min(
-                            remainingAmount,
-                            Number(inv.debtAmount)
-                          );
-                          break;
-                        } else {
-                          remainingAmount -= Math.min(
-                            remainingAmount,
-                            Number(inv.debtAmount)
-                          );
-                        }
-                      }
-
+                      const paymentAmount = parseNumberInput(
+                        invoicePayments[invoice.id] || "0"
+                      );
                       const willBeCompleted =
-                        currentPayment >= Number(invoice.debtAmount);
+                        paymentAmount >= Number(invoice.debtAmount);
 
                       return (
                         <tr
@@ -321,22 +375,19 @@ export function CustomerPaymentModal({
                           <td className="px-4 py-3 text-right font-medium">
                             {formatCurrency(invoice.debtAmount)}
                           </td>
-                          <td className="px-4 py-3 text-right">
-                            {currentPayment > 0
-                              ? formatCurrency(currentPayment)
-                              : "-"}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span
-                              className={`px-2 py-1 rounded text-xs ${
-                                willBeCompleted
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                              }`}>
-                              {willBeCompleted
-                                ? "Đã thanh toán"
-                                : "Chưa thanh toán"}
-                            </span>
+                          <td className="px-4 py-3">
+                            <input
+                              type="text"
+                              value={invoicePayments[invoice.id] || ""}
+                              onChange={(e) =>
+                                handleInvoicePaymentChange(
+                                  invoice.id,
+                                  e.target.value
+                                )
+                              }
+                              placeholder="0"
+                              className="w-full px-2 py-1 border rounded text-right"
+                            />
                           </td>
                         </tr>
                       );
@@ -346,10 +397,12 @@ export function CustomerPaymentModal({
               </table>
             </div>
 
-            <div className="mt-4 text-sm text-right">
+            {/* <div className="mt-4 text-sm text-right">
               <span className="text-gray-600">Tiền chưa phân bổ: </span>
-              <span className="font-semibold">0</span>
-            </div>
+              <span className="font-semibold">
+                {formatCurrency(Math.max(0, calculateUnallocated()))}
+              </span>
+            </div> */}
           </div>
         </div>
 
