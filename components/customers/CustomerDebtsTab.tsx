@@ -37,7 +37,7 @@ export function CustomerDebtsTab({
       const item = timeline[i];
 
       if (item.type === "invoice") {
-        runningDebt += item.debt;
+        runningDebt += item.amount;
       } else if (item.type === "payment") {
         runningDebt -= item.amount;
       }
