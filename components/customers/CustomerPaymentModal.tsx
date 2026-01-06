@@ -6,6 +6,7 @@ import { invoicesApi } from "@/lib/api/invoices";
 import { cashflowsApi } from "@/lib/api/cashflows";
 import { formatCurrency } from "@/lib/utils";
 import { X, Calendar, Clock } from "lucide-react";
+import { useBranchStore } from "@/lib/store/branch";
 
 interface CustomerPaymentModalProps {
   customerId: number;
@@ -40,6 +41,7 @@ export function CustomerPaymentModal({
   const [invoicePayments, setInvoicePayments] = useState<
     Record<number, string>
   >({});
+  const { selectedBranch } = useBranchStore();
 
   const { data: invoicesData, isLoading } = useQuery({
     queryKey: ["invoices", "customer", customerId, "unpaid"],
@@ -152,9 +154,15 @@ export function CustomerPaymentModal({
       return;
     }
 
+    if (!selectedBranch) {
+      alert("Vui lòng chọn chi nhánh");
+      return;
+    }
+
     await createPayment.mutateAsync({
       customerId,
       totalAmount: actualTotal,
+      branchId: selectedBranch.id,
       transDate,
       method,
       description,

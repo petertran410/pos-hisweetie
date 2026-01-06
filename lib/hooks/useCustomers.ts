@@ -41,6 +41,19 @@ export function useCustomerGroups() {
   });
 }
 
+export function useCustomerDebtTimeline(customerId: number) {
+  return useQuery({
+    queryKey: ["customers", customerId, "debt-timeline"],
+    queryFn: async () => {
+      const response = await apiClient.get<{
+        data: any[];
+      }>(`/customers/${customerId}/debt-timeline`);
+      return response;
+    },
+    enabled: !!customerId,
+  });
+}
+
 export function useCreateCustomer() {
   const queryClient = useQueryClient();
 
