@@ -1,9 +1,7 @@
-"use client";
-
-import { useState } from "react";
 import { useCustomerDebtTimeline } from "@/lib/hooks/useCustomers";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
 import { CustomerPaymentModal } from "./CustomerPaymentModal";
 
 interface CustomerDebtsTabProps {
@@ -28,6 +26,13 @@ export function CustomerDebtsTab({
   }
 
   const timeline = data?.data || [];
+
+  const getPaymentType = (code: string) => {
+    if (code.startsWith("TTDH")) return "Thanh toán đơn hàng";
+    if (code.includes("-")) return "Thanh toán hóa đơn";
+    if (code.startsWith("TT")) return "Thu tiền khách";
+    return "Thanh toán";
+  };
 
   return (
     <>
@@ -104,7 +109,7 @@ export function CustomerDebtsTab({
                         {new Date(item.date).toLocaleString("vi-VN")}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {isInvoice ? "Bán hàng" : "Thanh toán"}
+                        {isInvoice ? "Bán hàng" : getPaymentType(item.code)}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {item.branch?.name || "-"}
@@ -112,7 +117,7 @@ export function CustomerDebtsTab({
                       <td className="px-4 py-3 text-sm text-right">
                         {isInvoice && (
                           <div>
-                            <div className="text-red-600">
+                            <div className="text-red-600 font-medium">
                               {formatCurrency(item.amount)}
                             </div>
                             {item.paid > 0 && (
@@ -123,15 +128,20 @@ export function CustomerDebtsTab({
                           </div>
                         )}
                         {isPayment && (
-                          <span className="text-green-600">
+                          <span className="text-green-600 font-medium">
                             -{formatCurrency(item.amount)}
                           </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm text-right font-medium">
-                        {item.debtSnapshot !== null
-                          ? formatCurrency(item.debtSnapshot)
-                          : "-"}
+                        <span
+                          className={
+                            item.debtSnapshot > 0
+                              ? "text-red-600"
+                              : "text-green-600"
+                          }>
+                          {formatCurrency(item.debtSnapshot)}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span
@@ -140,7 +150,7 @@ export function CustomerDebtsTab({
                               ? "bg-green-100 text-green-700"
                               : "bg-yellow-100 text-yellow-700"
                           }`}>
-                          {item.statusValue}
+                          {item.statusValue || "Đã xử lý"}
                         </span>
                       </td>
                     </tr>
