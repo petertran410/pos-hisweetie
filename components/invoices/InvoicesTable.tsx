@@ -32,12 +32,12 @@ const formatDateTime = (dateString: string) => {
 
 const getStatusColor = (status: number) => {
   switch (status) {
-    case 3:
-      return "bg-blue-100 text-blue-700";
     case 1:
       return "bg-green-100 text-green-700";
     case 2:
       return "bg-red-100 text-red-700";
+    case 3:
+      return "bg-blue-100 text-blue-700";
     case 4:
       return "bg-yellow-100 text-yellow-700";
     default:
@@ -47,12 +47,12 @@ const getStatusColor = (status: number) => {
 
 const getStatusText = (status: number) => {
   switch (status) {
-    case 3:
-      return "Đang xử lý";
     case 1:
       return "Hoàn thành";
     case 2:
       return "Đã hủy";
+    case 3:
+      return "Đang xử lý";
     case 4:
       return "Không giao được";
     default:
