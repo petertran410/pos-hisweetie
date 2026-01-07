@@ -25,15 +25,26 @@ const parseNumberInput = (value: string): number => {
   return Number(numericValue) || 0;
 };
 
+const getLocalISOString = (datetimeLocalValue: string): string => {
+  if (!datetimeLocalValue) return new Date().toISOString();
+  const localDate = new Date(datetimeLocalValue);
+  return localDate.toISOString();
+};
+
 export function CustomerPaymentModal({
   customerId,
   customerDebt,
   onClose,
 }: CustomerPaymentModalProps) {
   const queryClient = useQueryClient();
-  const [transDate, setTransDate] = useState(
-    new Date().toISOString().slice(0, 16)
-  );
+  const now = new Date();
+  const localDateTime = new Date(
+    now.getTime() - now.getTimezoneOffset() * 60000
+  )
+    .toISOString()
+    .slice(0, 16);
+
+  const [transDate, setTransDate] = useState(localDateTime);
   const [method, setMethod] = useState("cash");
   const [totalAmount, setTotalAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -62,63 +73,55 @@ export function CustomerPaymentModal({
       onClose();
     },
     onError: (error: any) => {
-      alert(`Có lỗi xảy ra: ${error.message || "Không xác định"}`);
+      alert(error.message || "Có lỗi xảy ra khi thanh toán");
     },
   });
 
   const unpaidInvoices =
-    invoicesData?.data.filter((inv: any) => Number(inv.debtAmount) > 0) || [];
-
-  useEffect(() => {
-    const amount = parseNumberInput(totalAmount);
-    if (unpaidInvoices.length > 0 && amount > 0) {
-      distributeAmount(amount);
-    }
-  }, [totalAmount]);
-
-  const distributeAmount = (amount: number) => {
-    let remainingAmount = amount;
-    const newPayments: Record<number, string> = {};
-
-    for (const invoice of unpaidInvoices) {
-      if (remainingAmount <= 0) {
-        newPayments[invoice.id] = "";
-        continue;
-      }
-
-      const debtAmount = Number(invoice.debtAmount);
-      const paymentAmount = Math.min(remainingAmount, debtAmount);
-
-      newPayments[invoice.id] = formatNumberInput(paymentAmount.toString());
-      remainingAmount -= paymentAmount;
-    }
-
-    if (remainingAmount > 0 && unpaidInvoices.length > 0) {
-      const lastInvoiceId = unpaidInvoices[unpaidInvoices.length - 1].id;
-      const lastPayment = parseNumberInput(newPayments[lastInvoiceId] || "0");
-      newPayments[lastInvoiceId] = formatNumberInput(
-        (lastPayment + remainingAmount).toString()
-      );
-    }
-
-    setInvoicePayments(newPayments);
-  };
+    invoicesData?.data.filter((invoice: any) => {
+      return Number(invoice.debtAmount) > 0;
+    }) || [];
 
   const handleTotalAmountChange = (value: string) => {
-    const numericValue = value.replace(/,/g, "");
-    if (numericValue === "" || /^\d+$/.test(numericValue)) {
-      setTotalAmount(formatNumberInput(numericValue));
+    const formatted = formatNumberInput(value);
+    setTotalAmount(formatted);
+
+    const numericAmount = parseNumberInput(value);
+    if (numericAmount > 0 && unpaidInvoices.length > 0) {
+      let remaining = numericAmount;
+      const newPayments: Record<number, string> = {};
+
+      for (const invoice of unpaidInvoices) {
+        const debtAmount = Number(invoice.debtAmount);
+
+        if (remaining <= 0) break;
+
+        const paymentForThisInvoice = Math.min(remaining, debtAmount);
+        newPayments[invoice.id] = formatNumberInput(
+          paymentForThisInvoice.toString()
+        );
+        remaining -= paymentForThisInvoice;
+      }
+
+      setInvoicePayments(newPayments);
+    } else {
+      setInvoicePayments({});
     }
   };
 
   const handleInvoicePaymentChange = (invoiceId: number, value: string) => {
-    const numericValue = value.replace(/,/g, "");
-    if (numericValue === "" || /^\d+$/.test(numericValue)) {
-      setInvoicePayments((prev) => ({
-        ...prev,
-        [invoiceId]: formatNumberInput(numericValue),
-      }));
-    }
+    const formatted = formatNumberInput(value);
+    setInvoicePayments((prev) => ({
+      ...prev,
+      [invoiceId]: formatted,
+    }));
+
+    const actualTotal = Object.entries({
+      ...invoicePayments,
+      [invoiceId]: formatted,
+    }).reduce((sum, [_, amount]) => sum + parseNumberInput(amount), 0);
+
+    setTotalAmount(formatNumberInput(actualTotal.toString()));
   };
 
   const calculateActualTotal = () => {
@@ -163,7 +166,7 @@ export function CustomerPaymentModal({
       customerId,
       totalAmount: actualTotal,
       branchId: selectedBranch.id,
-      transDate,
+      transDate: getLocalISOString(transDate),
       method,
       description,
       invoices: invoicesToPay,
@@ -284,50 +287,53 @@ export function CustomerPaymentModal({
                 Nợ còn: {formatCurrency(customerDebt)}
               </div>
             </div>
-
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-2">Ghi chú</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Nhập ghi chú"
-                rows={3}
-                className="w-full px-3 py-2 border rounded-lg resize-none"
-              />
-            </div>
           </div>
 
-          <div className="mb-4">
-            <label className="flex items-center gap-2 mb-4">
-              <input
-                type="checkbox"
-                checked
-                readOnly
-                className="cursor-pointer"
-              />
-              <span className="text-sm font-medium">Phân bổ vào hóa đơn</span>
-            </label>
+          <div>
+            <label className="block text-sm font-medium mb-2">Ghi chú</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Nhập ghi chú"
+              className="w-full px-3 py-2 border rounded-lg resize-none"
+              rows={3}
+            />
+          </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-gray-50">
-                    <th className="px-4 py-3 text-left">Mã hóa đơn</th>
-                    <th className="px-4 py-3 text-left">Thời gian</th>
-                    <th className="px-4 py-3 text-right">Giá trị hóa đơn</th>
-                    <th className="px-4 py-3 text-right">Đã thu trước</th>
-                    <th className="px-4 py-3 text-right">Còn cần thu</th>
-                    <th className="px-4 py-3 text-right">Tiền thu</th>
+          <div className="mt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <input type="checkbox" checked readOnly className="w-4 h-4" />
+              <label className="text-sm font-medium">Phân bổ vào hóa đơn</label>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium">
+                      Mã hóa đơn
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium">
+                      Thời gian
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium">
+                      Giá trị hóa đơn
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium">
+                      Đã thu trước
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium">
+                      Còn cần thu
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium">
+                      Tiền thu
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium">
+                      Trạng thái
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b bg-gray-100">
-                    <td className="px-4 py-2" colSpan={5}></td>
-                    <td className="px-4 py-2 text-right font-semibold">
-                      {formatCurrency(calculateActualTotal())}
-                    </td>
-                    <td className="px-4 py-2"></td>
-                  </tr>
                   {isLoading ? (
                     <tr>
                       <td colSpan={7} className="px-4 py-8 text-center">
@@ -397,6 +403,16 @@ export function CustomerPaymentModal({
                               className="w-full px-2 py-1 border rounded text-right"
                             />
                           </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`text-xs px-2 py-1 rounded ${
+                                willBeCompleted
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                              }`}>
+                              {willBeCompleted ? "Hoàn thành" : "Còn nợ"}
+                            </span>
+                          </td>
                         </tr>
                       );
                     })
@@ -405,30 +421,31 @@ export function CustomerPaymentModal({
               </table>
             </div>
 
-            {/* <div className="mt-4 text-sm text-right">
-              <span className="text-gray-600">Tiền chưa phân bổ: </span>
-              <span className="font-semibold">
-                {formatCurrency(Math.max(0, calculateUnallocated()))}
-              </span>
-            </div> */}
+            {calculateUnallocated() !== 0 && (
+              <div className="mt-2 text-sm text-amber-600">
+                ⚠️ Chưa phân bổ hết: {formatCurrency(calculateUnallocated())}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="border-t p-6 flex justify-end gap-2">
+        <div className="flex items-center justify-between gap-4 p-6 border-t bg-gray-50">
           <button
             onClick={onClose}
-            className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+            className="px-6 py-2 border rounded-lg hover:bg-gray-100">
             Bỏ qua
           </button>
-          <button className="px-4 py-2 border rounded-lg hover:bg-gray-50">
-            Tạo phiếu thu & In
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={createPayment.isPending}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-            {createPayment.isPending ? "Đang lưu..." : "Tạo phiếu thu"}
-          </button>
+          <div className="flex items-center gap-4">
+            <button className="px-6 py-2 border rounded-lg hover:bg-gray-100">
+              Tao phiếu thu & In
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={createPayment.isPending}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {createPayment.isPending ? "Đang xử lý..." : "Tạo phiếu thu"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
