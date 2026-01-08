@@ -7,6 +7,7 @@ import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useUsers } from "@/lib/hooks/useUsers";
 import { useUnpaidInvoicesByPartner } from "@/lib/hooks/useInvoices";
+import { useAuthStore } from "@/lib/store/auth";
 import { CreateCashFlowGroupModal } from "./CreateCashFlowGroupModal";
 import { X, ChevronDown, Calendar, Clock } from "lucide-react";
 
@@ -71,6 +72,7 @@ export function CreateCashFlowModal({
   type,
   isReceipt,
 }: CreateCashFlowModalProps) {
+  const { user } = useAuthStore();
   const [transDate, setTransDate] = useState("");
   const [transDateTime, setTransDateTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -78,7 +80,8 @@ export function CreateCashFlowModal({
   const [cashFlowGroupId, setCashFlowGroupId] = useState<string>("");
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
-  const [partnerType, setPartnerType] = useState("O");
+  const [partnerType, setPartnerType] = useState("C");
+  const [showPartnerTypeDropdown, setShowPartnerTypeDropdown] = useState(false);
   const [showPartnerDropdown, setShowPartnerDropdown] = useState(false);
   const [partnerSearch, setPartnerSearch] = useState("");
   const [selectedPartner, setSelectedPartner] = useState<any>(null);
@@ -95,6 +98,7 @@ export function CreateCashFlowModal({
   >({});
 
   const groupDropdownRef = useRef<HTMLDivElement>(null);
+  const partnerTypeDropdownRef = useRef<HTMLDivElement>(null);
   const partnerDropdownRef = useRef<HTMLDivElement>(null);
   const collectorDropdownRef = useRef<HTMLDivElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -117,12 +121,25 @@ export function CreateCashFlowModal({
   const unpaidInvoices = unpaidInvoicesData?.data || [];
 
   useEffect(() => {
+    if (isOpen && user?.id) {
+      setCollectorUserId(user.id.toString());
+      setTransDateTime(new Date());
+    }
+  }, [isOpen, user]);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         groupDropdownRef.current &&
         !groupDropdownRef.current.contains(event.target as Node)
       ) {
         setShowGroupDropdown(false);
+      }
+      if (
+        partnerTypeDropdownRef.current &&
+        !partnerTypeDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowPartnerTypeDropdown(false);
       }
       if (
         partnerDropdownRef.current &&
@@ -154,12 +171,6 @@ export function CreateCashFlowModal({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (isOpen) {
-      setTransDateTime(new Date());
-    }
-  }, [isOpen]);
-
   if (!isOpen) return null;
 
   const selectedGroup = groups.find(
@@ -168,6 +179,10 @@ export function CreateCashFlowModal({
 
   const selectedCollector = users.find(
     (u: any) => u.id === Number(collectorUserId)
+  );
+
+  const selectedPartnerType = PARTNER_TYPES.find(
+    (pt) => pt.value === partnerType
   );
 
   const getPartnerList = () => {
@@ -257,14 +272,15 @@ export function CreateCashFlowModal({
       finalTransDate = parseDateTime(transDate);
     }
 
-    const invoiceAllocations = allocateToInvoices
-      ? Object.entries(invoicePayments)
-          .filter(([_, amount]) => parseNumberInput(amount) > 0)
-          .map(([invoiceId, amount]) => ({
-            invoiceId: Number(invoiceId),
-            amount: parseNumberInput(amount),
-          }))
-      : undefined;
+    const invoiceAllocations =
+      affectDebt && allocateToInvoices
+        ? Object.entries(invoicePayments)
+            .filter(([_, amount]) => parseNumberInput(amount) > 0)
+            .map(([invoiceId, amount]) => ({
+              invoiceId: Number(invoiceId),
+              amount: parseNumberInput(amount),
+            }))
+        : undefined;
 
     try {
       await createCashFlow.mutateAsync({
@@ -298,10 +314,10 @@ export function CreateCashFlowModal({
     setTransDate("");
     setTransDateTime(new Date());
     setCashFlowGroupId("");
-    setPartnerType("O");
+    setPartnerType("C");
     setPartnerSearch("");
     setSelectedPartner(null);
-    setCollectorUserId("");
+    setCollectorUserId(user?.id?.toString() || "");
     setAmount("");
     setDescription("");
     setUsedForFinancialReporting(false);
@@ -354,12 +370,12 @@ export function CreateCashFlowModal({
                   <button
                     onClick={() => setShowDatePicker(!showDatePicker)}
                     type="button">
-                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <Calendar className="w-4 h-4 text-gray-400 cursor-pointer" />
                   </button>
                   <button
                     onClick={() => setShowTimePicker(!showTimePicker)}
                     type="button">
-                    <Clock className="w-4 h-4 text-gray-400" />
+                    <Clock className="w-4 h-4 text-gray-400 cursor-pointer" />
                   </button>
                 </div>
 
@@ -550,90 +566,105 @@ export function CreateCashFlowModal({
 
               {showCollectorDropdown && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                  {users.map((user: any) => (
+                  {users.map((u: any) => (
                     <button
-                      key={user.id}
+                      key={u.id}
                       onClick={() => {
-                        setCollectorUserId(user.id.toString());
+                        setCollectorUserId(u.id.toString());
                         setShowCollectorDropdown(false);
                       }}
                       className="w-full px-3 py-2 text-left hover:bg-gray-100">
-                      {user.name}
+                      {u.name}
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="col-span-2">
+            <div className="relative" ref={partnerTypeDropdownRef}>
               <label className="block text-sm font-medium mb-2">
                 Đối tượng nộp
               </label>
-              <div className="grid grid-cols-3 gap-2 mb-2">
-                {PARTNER_TYPES.map((pt) => (
-                  <button
-                    key={pt.value}
-                    onClick={() => {
-                      setPartnerType(pt.value);
-                      setSelectedPartner(null);
-                      setPartnerSearch("");
-                    }}
-                    className={`px-3 py-2 rounded-lg text-sm ${
-                      partnerType === pt.value
-                        ? "bg-blue-500 text-white"
-                        : "border"
-                    }`}>
-                    {pt.label}
-                  </button>
-                ))}
-              </div>
+              <button
+                onClick={() =>
+                  setShowPartnerTypeDropdown(!showPartnerTypeDropdown)
+                }
+                className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between">
+                <span>
+                  {selectedPartnerType
+                    ? selectedPartnerType.label
+                    : "Chọn đối tượng"}
+                </span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
 
-              <div className="relative" ref={partnerDropdownRef}>
-                <input
-                  type="text"
-                  value={selectedPartner ? selectedPartner.name : partnerSearch}
-                  onChange={(e) => {
-                    setPartnerSearch(e.target.value);
-                    setSelectedPartner(null);
-                    if (partnerType !== "O") {
-                      setShowPartnerDropdown(true);
-                    }
-                  }}
-                  onFocus={() => {
-                    if (partnerType !== "O") {
-                      setShowPartnerDropdown(true);
-                    }
-                  }}
-                  placeholder="Tên người nộp"
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
+              {showPartnerTypeDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50">
+                  {PARTNER_TYPES.map((pt) => (
+                    <button
+                      key={pt.value}
+                      onClick={() => {
+                        setPartnerType(pt.value);
+                        setSelectedPartner(null);
+                        setPartnerSearch("");
+                        setShowPartnerTypeDropdown(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100">
+                      {pt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-                {showPartnerDropdown && partnerType !== "O" && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                    {filteredPartners.length > 0 ? (
-                      filteredPartners.map((partner: any) => (
-                        <button
-                          key={partner.id}
-                          onClick={() => {
-                            setSelectedPartner(partner);
-                            setPartnerSearch("");
-                            setShowPartnerDropdown(false);
-                          }}
-                          className="w-full px-3 py-2 text-left hover:bg-gray-100">
-                          <div>{partner.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {partner.code} - {partner.contactNumber}
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-gray-500">
-                        Không tìm thấy kết quả
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+            <div className="relative" ref={partnerDropdownRef}>
+              <label className="block text-sm font-medium mb-2">
+                Tên người nộp
+              </label>
+              <input
+                type="text"
+                value={selectedPartner ? selectedPartner.name : partnerSearch}
+                onChange={(e) => {
+                  setPartnerSearch(e.target.value);
+                  setSelectedPartner(null);
+                  if (partnerType !== "O") {
+                    setShowPartnerDropdown(true);
+                  }
+                }}
+                onFocus={() => {
+                  if (partnerType !== "O") {
+                    setShowPartnerDropdown(true);
+                  }
+                }}
+                placeholder="Tên người nộp"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+
+              {showPartnerDropdown && partnerType !== "O" && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {filteredPartners.length > 0 ? (
+                    filteredPartners.map((partner: any) => (
+                      <button
+                        key={partner.id}
+                        onClick={() => {
+                          setSelectedPartner(partner);
+                          setPartnerSearch("");
+                          setShowPartnerDropdown(false);
+                        }}
+                        className="w-full px-3 py-2 text-left hover:bg-gray-100">
+                        <div>{partner.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {partner.code} - {partner.contactNumber}
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2 text-gray-500">
+                      Không tìm thấy kết quả
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="col-span-2">
