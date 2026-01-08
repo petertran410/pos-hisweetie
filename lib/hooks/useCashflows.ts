@@ -17,6 +17,14 @@ export function useCashFlow(id: number) {
   });
 }
 
+export function useRelatedInvoicePayments(cashFlowId: number) {
+  return useQuery({
+    queryKey: ["cashflows", cashFlowId, "invoice-payments"],
+    queryFn: () => cashflowsApi.getRelatedInvoicePayments(cashFlowId),
+    enabled: !!cashFlowId,
+  });
+}
+
 export function useCreateCashFlow() {
   const queryClient = useQueryClient();
   return useMutation({

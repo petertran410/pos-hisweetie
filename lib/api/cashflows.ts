@@ -10,6 +10,10 @@ export const cashflowsApi = {
     return apiClient.get(`/cashflows/${id}`);
   },
 
+  getRelatedInvoicePayments: (id: number): Promise<any> => {
+    return apiClient.get(`/cashflows/${id}/invoice-payments`);
+  },
+
   createCashFlow: (data: any): Promise<CashFlow> => {
     return apiClient.post("/cashflows", data);
   },
