@@ -38,10 +38,10 @@ const getStatusText = (status: number) => {
   switch (status) {
     case 0:
       return "Đã thanh toán";
-    case 1:
+    case 2:
       return "Đã hủy";
     default:
-      return "Không xác định";
+      return "Đang xử lý";
   }
 };
 
@@ -204,18 +204,25 @@ export function CashFlowDetailRow({
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <p className="text-md text-gray-900">
                     {cashFlow.partnerName && `${cashFlow.partnerName}`}
-                    {cashFlow.partnerId && ` - ${cashFlow.partnerId}`}
+                    {cashFlow.partnerType === "C" &&
+                      cashFlow.customer?.code &&
+                      ` - ${cashFlow.customer.code}`}
+                    {cashFlow.partnerType === "S" &&
+                      cashFlow.supplier?.code &&
+                      ` - ${cashFlow.supplier.code}`}
                     {cashFlow.contactNumber && ` - ${cashFlow.contactNumber}`}
                     {!cashFlow.partnerName &&
-                      !cashFlow.partnerId &&
+                      !cashFlow.customer?.code &&
+                      !cashFlow.supplier?.code &&
                       !cashFlow.contactNumber &&
                       "-"}
                   </p>
                   {(cashFlow.address || cashFlow.wardName) && (
                     <p className="text-md text-gray-600 mt-1">
-                      {[cashFlow.address, cashFlow.wardName]
-                        .filter(Boolean)
-                        .join(", ")}
+                      {cashFlow.customer?.address},{" "}
+                      {cashFlow.customer?.wardName},{" "}
+                      {cashFlow.customer?.cityName},{" "}
+                      {cashFlow.customer?.districtName}
                     </p>
                   )}
                 </div>
