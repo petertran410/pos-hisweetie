@@ -121,13 +121,13 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const canEdit = !isCompleted && !isCancelled;
 
   return (
-    <tr className="bg-blue-50">
-      <td colSpan={colSpan} className="p-0">
-        <div className="bg-blue-50 border-y-2 border-blue-200">
-          <div className="sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1135px] 2xl:max-w-[1585px]">
-            <div className="bg-white shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4">
-                <div className="flex flex-col gap-2">
+    <tr>
+      <td colSpan={colSpan} className="px-6 py-6 bg-gray-50">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1135px] 2xl:max-w-[1585px]">
+          <div className="p-6">
+            <div className="border-b border-gray-200 pb-4 mb-6 ">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
                   <h3 className="text-xl font-bold gap-3">
                     Tên khách hàng: {order.customer?.name || ""}
                   </h3>

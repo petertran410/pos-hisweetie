@@ -110,14 +110,14 @@ export function CashFlowDetailRow({
   return (
     <tr>
       <td colSpan={colSpan} className="px-6 py-6 bg-gray-50">
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1135px] 2xl:max-w-[1585px]">
           <div className="p-6">
             <div className="border-b border-gray-200 pb-4 mb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <h3 className="text-xl font-semibold text-gray-800">
+                  <h3 className="text-xl font-extrabold text-gray-800">
                     {cashFlow.isReceipt ? "Phiếu thu" : "Phiếu chi"}{" "}
-                    <span className="text-blue-600">{cashFlow.code}</span>
+                    <span className="text-lg font-thin">{cashFlow.code}</span>
                   </h3>
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
@@ -130,7 +130,7 @@ export function CashFlowDetailRow({
             </div>
 
             <div className="space-y-6">
-              <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-4 gap-6">
                 <div>
                   <label className="block text-md font-medium text-gray-500 mb-1.5">
                     Người tạo:
