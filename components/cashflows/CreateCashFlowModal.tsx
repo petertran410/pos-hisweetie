@@ -5,6 +5,8 @@ import { useCreateCashFlow } from "@/lib/hooks/useCashflows";
 import { useCashFlowGroups } from "@/lib/hooks/useCashflowGroups";
 import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import { useUsers } from "@/lib/hooks/useUsers";
+import { useUnpaidInvoicesByPartner } from "@/lib/hooks/useInvoices";
 import { CreateCashFlowGroupModal } from "./CreateCashFlowGroupModal";
 import { X, ChevronDown, Calendar, Clock } from "lucide-react";
 
@@ -27,16 +29,52 @@ const PARTNER_TYPES = [
   { value: "O", label: "Đối tác giao dịch" },
 ];
 
+const formatNumberInput = (value: string) => {
+  const number = value.replace(/\D/g, "");
+  return new Intl.NumberFormat("en-US").format(Number(number) || 0);
+};
+
+const parseNumberInput = (value: string) => {
+  return Number(value.replace(/,/g, "")) || 0;
+};
+
+const formatDateTime = (date: Date) => {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
+
+const parseDateTime = (value: string) => {
+  const parts = value.trim().split(" ");
+  if (parts.length !== 2) return new Date();
+
+  const dateParts = parts[0].split("/");
+  const timeParts = parts[1].split(":");
+
+  if (dateParts.length !== 3 || timeParts.length !== 2) return new Date();
+
+  const day = parseInt(dateParts[0]);
+  const month = parseInt(dateParts[1]) - 1;
+  const year = parseInt(dateParts[2]);
+  const hours = parseInt(timeParts[0]);
+  const minutes = parseInt(timeParts[1]);
+
+  return new Date(year, month, day, hours, minutes);
+};
+
 export function CreateCashFlowModal({
   isOpen,
   onClose,
   type,
   isReceipt,
 }: CreateCashFlowModalProps) {
-  const [code, setCode] = useState("");
-  const [transDate, setTransDate] = useState(
-    new Date().toISOString().slice(0, 16)
-  );
+  const [transDate, setTransDate] = useState("");
+  const [transDateTime, setTransDateTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [cashFlowGroupId, setCashFlowGroupId] = useState<string>("");
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
@@ -44,22 +82,39 @@ export function CreateCashFlowModal({
   const [showPartnerDropdown, setShowPartnerDropdown] = useState(false);
   const [partnerSearch, setPartnerSearch] = useState("");
   const [selectedPartner, setSelectedPartner] = useState<any>(null);
+  const [collectorUserId, setCollectorUserId] = useState<string>("");
+  const [showCollectorDropdown, setShowCollectorDropdown] = useState(false);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [usedForFinancialReporting, setUsedForFinancialReporting] =
-    useState(true);
+    useState(false);
+  const [affectDebt, setAffectDebt] = useState(true);
+  const [allocateToInvoices, setAllocateToInvoices] = useState(true);
+  const [invoicePayments, setInvoicePayments] = useState<
+    Record<number, string>
+  >({});
 
   const groupDropdownRef = useRef<HTMLDivElement>(null);
   const partnerDropdownRef = useRef<HTMLDivElement>(null);
+  const collectorDropdownRef = useRef<HTMLDivElement>(null);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+  const timePickerRef = useRef<HTMLDivElement>(null);
 
   const createCashFlow = useCreateCashFlow();
   const { data: cashFlowGroups } = useCashFlowGroups(isReceipt);
   const { data: customersData } = useCustomers({ pageSize: 100 });
   const { data: suppliersData } = useSuppliers({ pageSize: 100 });
+  const { data: usersData } = useUsers();
+  const { data: unpaidInvoicesData } = useUnpaidInvoicesByPartner(
+    selectedPartner?.id || null,
+    partnerType
+  );
 
   const groups = cashFlowGroups || [];
   const customers = customersData?.data || [];
   const suppliers = suppliersData?.data || [];
+  const users = usersData || [];
+  const unpaidInvoices = unpaidInvoicesData?.data || [];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,16 +130,44 @@ export function CreateCashFlowModal({
       ) {
         setShowPartnerDropdown(false);
       }
+      if (
+        collectorDropdownRef.current &&
+        !collectorDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowCollectorDropdown(false);
+      }
+      if (
+        datePickerRef.current &&
+        !datePickerRef.current.contains(event.target as Node)
+      ) {
+        setShowDatePicker(false);
+      }
+      if (
+        timePickerRef.current &&
+        !timePickerRef.current.contains(event.target as Node)
+      ) {
+        setShowTimePicker(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (isOpen) {
+      setTransDateTime(new Date());
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const selectedGroup = groups.find(
     (g: any) => g.id === Number(cashFlowGroupId)
+  );
+
+  const selectedCollector = users.find(
+    (u: any) => u.id === Number(collectorUserId)
   );
 
   const getPartnerList = () => {
@@ -97,18 +180,97 @@ export function CreateCashFlowModal({
     p.name.toLowerCase().includes(partnerSearch.toLowerCase())
   );
 
+  const handleDateSelect = (date: Date) => {
+    const newDateTime = new Date(transDateTime);
+    newDateTime.setFullYear(date.getFullYear());
+    newDateTime.setMonth(date.getMonth());
+    newDateTime.setDate(date.getDate());
+    setTransDateTime(newDateTime);
+    setShowDatePicker(false);
+  };
+
+  const handleTimeSelect = (hours: number, minutes: number) => {
+    const newDateTime = new Date(transDateTime);
+    newDateTime.setHours(hours);
+    newDateTime.setMinutes(minutes);
+    setTransDateTime(newDateTime);
+    setShowTimePicker(false);
+  };
+
+  const handleTransDateInput = (value: string) => {
+    setTransDate(value);
+  };
+
+  const handleAmountChange = (value: string) => {
+    const formatted = formatNumberInput(value);
+    setAmount(formatted);
+
+    if (allocateToInvoices && unpaidInvoices.length > 0) {
+      const numericAmount = parseNumberInput(value);
+      let remaining = numericAmount;
+      const newPayments: Record<number, string> = {};
+
+      for (const invoice of unpaidInvoices) {
+        if (remaining <= 0) break;
+
+        const debtAmount = Number(invoice.debtAmount);
+        const paymentForThisInvoice = Math.min(remaining, debtAmount);
+        newPayments[invoice.id] = formatNumberInput(
+          paymentForThisInvoice.toString()
+        );
+        remaining -= paymentForThisInvoice;
+      }
+
+      setInvoicePayments(newPayments);
+    }
+  };
+
+  const handleInvoicePaymentChange = (invoiceId: number, value: string) => {
+    const formatted = formatNumberInput(value);
+    setInvoicePayments((prev) => ({
+      ...prev,
+      [invoiceId]: formatted,
+    }));
+
+    const actualTotal = Object.entries({
+      ...invoicePayments,
+      [invoiceId]: formatted,
+    }).reduce((sum, [_, amount]) => sum + parseNumberInput(amount), 0);
+
+    setAmount(formatNumberInput(actualTotal.toString()));
+  };
+
   const handleSubmit = async () => {
-    if (!amount || Number(amount) <= 0) {
+    const numericAmount = parseNumberInput(amount);
+    if (!numericAmount || numericAmount <= 0) {
       alert("Vui lòng nhập số tiền hợp lệ");
       return;
     }
 
+    if (!collectorUserId) {
+      alert("Vui lòng chọn người thu");
+      return;
+    }
+
+    let finalTransDate = transDateTime;
+    if (transDate) {
+      finalTransDate = parseDateTime(transDate);
+    }
+
+    const invoiceAllocations = allocateToInvoices
+      ? Object.entries(invoicePayments)
+          .filter(([_, amount]) => parseNumberInput(amount) > 0)
+          .map(([invoiceId, amount]) => ({
+            invoiceId: Number(invoiceId),
+            amount: parseNumberInput(amount),
+          }))
+      : undefined;
+
     try {
       await createCashFlow.mutateAsync({
-        code: code || undefined,
         isReceipt,
-        amount: Number(amount),
-        transDate,
+        amount: numericAmount,
+        transDate: finalTransDate.toISOString(),
         method:
           type === "cash" ? "cash" : type === "bank" ? "transfer" : "ewallet",
         cashFlowGroupId: cashFlowGroupId ? Number(cashFlowGroupId) : undefined,
@@ -117,6 +279,11 @@ export function CreateCashFlowModal({
         partnerName: selectedPartner?.name || partnerSearch || undefined,
         description,
         usedForFinancialReporting: usedForFinancialReporting ? 1 : 0,
+        collectorUserId: Number(collectorUserId),
+        affectDebt,
+        allocateToInvoices: affectDebt ? allocateToInvoices : false,
+        invoiceAllocations:
+          affectDebt && allocateToInvoices ? invoiceAllocations : undefined,
       });
 
       resetForm();
@@ -128,21 +295,25 @@ export function CreateCashFlowModal({
   };
 
   const resetForm = () => {
-    setCode("");
-    setTransDate(new Date().toISOString().slice(0, 16));
+    setTransDate("");
+    setTransDateTime(new Date());
     setCashFlowGroupId("");
     setPartnerType("O");
     setPartnerSearch("");
     setSelectedPartner(null);
+    setCollectorUserId("");
     setAmount("");
     setDescription("");
-    setUsedForFinancialReporting(true);
+    setUsedForFinancialReporting(false);
+    setAffectDebt(true);
+    setAllocateToInvoices(true);
+    setInvoicePayments({});
   };
 
   return (
     <>
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-[800px] max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-lg p-6 w-[900px] max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold">
               {isReceipt
@@ -161,10 +332,9 @@ export function CreateCashFlowModal({
               <label className="block text-sm font-medium mb-2">Mã phiếu</label>
               <input
                 type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
                 placeholder="Tự động"
-                className="w-full px-3 py-2 border rounded-lg"
+                disabled
+                className="w-full px-3 py-2 border rounded-lg bg-gray-50"
               />
             </div>
 
@@ -174,15 +344,154 @@ export function CreateCashFlowModal({
               </label>
               <div className="relative">
                 <input
-                  type="datetime-local"
+                  type="text"
                   value={transDate}
-                  onChange={(e) => setTransDate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  onChange={(e) => handleTransDateInput(e.target.value)}
+                  placeholder={formatDateTime(transDateTime)}
+                  className="w-full px-3 py-2 border rounded-lg pr-20"
                 />
-                <div className="absolute right-3 top-2.5 flex items-center gap-2 pointer-events-none">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <Clock className="w-4 h-4 text-gray-400" />
+                <div className="absolute right-3 top-2.5 flex items-center gap-2">
+                  <button
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                    type="button">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                  </button>
+                  <button
+                    onClick={() => setShowTimePicker(!showTimePicker)}
+                    type="button">
+                    <Clock className="w-4 h-4 text-gray-400" />
+                  </button>
                 </div>
+
+                {showDatePicker && (
+                  <div
+                    ref={datePickerRef}
+                    className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg p-4 z-50">
+                    <div className="text-center mb-2">
+                      <select
+                        value={transDateTime.getMonth()}
+                        onChange={(e) => {
+                          const newDate = new Date(transDateTime);
+                          newDate.setMonth(Number(e.target.value));
+                          setTransDateTime(newDate);
+                        }}
+                        className="border rounded px-2 py-1 mr-2">
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <option key={i} value={i}>
+                            Tháng {i + 1}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={transDateTime.getFullYear()}
+                        onChange={(e) => {
+                          const newDate = new Date(transDateTime);
+                          newDate.setFullYear(Number(e.target.value));
+                          setTransDateTime(newDate);
+                        }}
+                        className="border rounded px-2 py-1">
+                        {Array.from({ length: 10 }, (_, i) => {
+                          const year = new Date().getFullYear() - 5 + i;
+                          return (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {Array.from({ length: 42 }, (_, i) => {
+                        const firstDay = new Date(
+                          transDateTime.getFullYear(),
+                          transDateTime.getMonth(),
+                          1
+                        );
+                        const startDay = firstDay.getDay();
+                        const dayNumber = i - startDay + 1;
+                        const daysInMonth = new Date(
+                          transDateTime.getFullYear(),
+                          transDateTime.getMonth() + 1,
+                          0
+                        ).getDate();
+
+                        if (dayNumber < 1 || dayNumber > daysInMonth) {
+                          return <div key={i} className="w-8 h-8" />;
+                        }
+
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => {
+                              const newDate = new Date(
+                                transDateTime.getFullYear(),
+                                transDateTime.getMonth(),
+                                dayNumber
+                              );
+                              handleDateSelect(newDate);
+                            }}
+                            className={`w-8 h-8 rounded hover:bg-blue-100 ${
+                              dayNumber === transDateTime.getDate()
+                                ? "bg-blue-500 text-white"
+                                : ""
+                            }`}>
+                            {dayNumber}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {showTimePicker && (
+                  <div
+                    ref={timePickerRef}
+                    className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg p-4 z-50 w-64">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm mb-2">Giờ</label>
+                        <div className="h-40 overflow-y-auto border rounded">
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() =>
+                                handleTimeSelect(i, transDateTime.getMinutes())
+                              }
+                              className={`w-full px-2 py-1 text-left hover:bg-blue-100 ${
+                                i === transDateTime.getHours()
+                                  ? "bg-blue-500 text-white"
+                                  : ""
+                              }`}>
+                              {String(i).padStart(2, "0")}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-2">Phút</label>
+                        <div className="h-40 overflow-y-auto border rounded">
+                          {Array.from({ length: 60 }, (_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() =>
+                                handleTimeSelect(transDateTime.getHours(), i)
+                              }
+                              className={`w-full px-2 py-1 text-left hover:bg-blue-100 ${
+                                i === transDateTime.getMinutes()
+                                  ? "bg-blue-500 text-white"
+                                  : ""
+                              }`}>
+                              {String(i).padStart(2, "0")}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -194,119 +503,62 @@ export function CreateCashFlowModal({
                 onClick={() => setShowGroupDropdown(!showGroupDropdown)}
                 className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between">
                 <span className={selectedGroup ? "" : "text-gray-400"}>
-                  {selectedGroup?.name || "Chọn loại thu"}
+                  {selectedGroup ? selectedGroup.name : "Chọn loại thu"}
                 </span>
                 <ChevronDown className="w-4 h-4" />
               </button>
 
               {showGroupDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                  <div className="p-2">
-                    <input
-                      type="text"
-                      placeholder="Tìm kiếm"
-                      className="w-full px-3 py-2 border rounded-lg text-sm mb-2"
-                    />
-                  </div>
-                  <div className="py-1">
-                    <div className="px-3 py-2 text-xs text-gray-500 font-medium">
-                      Chọn loại thu
-                    </div>
-                    {groups.map((group: any) => (
-                      <button
-                        key={group.id}
-                        onClick={() => {
-                          setCashFlowGroupId(String(group.id));
-                          setShowGroupDropdown(false);
-                        }}
-                        className="w-full px-3 py-2 text-sm text-left hover:bg-gray-50 flex items-center justify-between">
-                        <span>{group.name}</span>
-                        {cashFlowGroupId === String(group.id) && (
-                          <span className="text-blue-500">✓</span>
-                        )}
-                      </button>
-                    ))}
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {groups.map((group: any) => (
                     <button
+                      key={group.id}
                       onClick={() => {
+                        setCashFlowGroupId(group.id.toString());
                         setShowGroupDropdown(false);
-                        setShowCreateGroupModal(true);
                       }}
-                      className="w-full px-3 py-2 text-sm text-left text-blue-500 hover:bg-gray-50 flex items-center gap-2 border-t">
-                      <span className="text-lg">+</span>
-                      <span>Tạo mới</span>
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100">
+                      {group.name}
                     </button>
-                  </div>
+                  ))}
+                  <button
+                    onClick={() => {
+                      setShowCreateGroupModal(true);
+                      setShowGroupDropdown(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-blue-500 hover:bg-gray-100 border-t">
+                    + Thêm loại thu/chi
+                  </button>
                 </div>
               )}
             </div>
 
-            <div>
+            <div className="relative" ref={collectorDropdownRef}>
               <label className="block text-sm font-medium mb-2">
-                {isReceipt ? "Người thu" : "Người chi"}
+                Người thu
               </label>
-              <select
-                value={partnerType}
-                onChange={(e) => {
-                  setPartnerType(e.target.value);
-                  setSelectedPartner(null);
-                  setPartnerSearch("");
-                }}
-                className="w-full px-3 py-2 border rounded-lg">
-                {PARTNER_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <button
+                onClick={() => setShowCollectorDropdown(!showCollectorDropdown)}
+                className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between">
+                <span className={selectedCollector ? "" : "text-gray-400"}>
+                  {selectedCollector
+                    ? selectedCollector.name
+                    : "Chọn người thu"}
+                </span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
 
-            <div className="col-span-2 relative" ref={partnerDropdownRef}>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium">
-                  Tên {isReceipt ? "người nộp" : "người nhận"}
-                </label>
-                {(partnerType === "C" || partnerType === "S") && (
-                  <button className="text-sm text-blue-500 hover:underline">
-                    Tạo mới
-                  </button>
-                )}
-              </div>
-              <input
-                type="text"
-                value={selectedPartner?.name || partnerSearch}
-                onChange={(e) => {
-                  setPartnerSearch(e.target.value);
-                  setSelectedPartner(null);
-                  if (partnerType !== "O") {
-                    setShowPartnerDropdown(true);
-                  }
-                }}
-                onFocus={() => {
-                  if (partnerType !== "O") {
-                    setShowPartnerDropdown(true);
-                  }
-                }}
-                placeholder={`Tìm ${isReceipt ? "người nộp" : "người nhận"}`}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-
-              {showPartnerDropdown && filteredPartners.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                  {filteredPartners.map((partner: any) => (
+              {showCollectorDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {users.map((user: any) => (
                     <button
-                      key={partner.id}
+                      key={user.id}
                       onClick={() => {
-                        setSelectedPartner(partner);
-                        setPartnerSearch(partner.name);
-                        setShowPartnerDropdown(false);
+                        setCollectorUserId(user.id.toString());
+                        setShowCollectorDropdown(false);
                       }}
-                      className="w-full px-3 py-2 text-sm text-left hover:bg-gray-50">
-                      {partner.name}
-                      {partner.code && (
-                        <span className="text-gray-400 ml-2">
-                          ({partner.code})
-                        </span>
-                      )}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100">
+                      {user.name}
                     </button>
                   ))}
                 </div>
@@ -314,14 +566,84 @@ export function CreateCashFlowModal({
             </div>
 
             <div className="col-span-2">
+              <label className="block text-sm font-medium mb-2">
+                Đối tượng nộp
+              </label>
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {PARTNER_TYPES.map((pt) => (
+                  <button
+                    key={pt.value}
+                    onClick={() => {
+                      setPartnerType(pt.value);
+                      setSelectedPartner(null);
+                      setPartnerSearch("");
+                    }}
+                    className={`px-3 py-2 rounded-lg text-sm ${
+                      partnerType === pt.value
+                        ? "bg-blue-500 text-white"
+                        : "border"
+                    }`}>
+                    {pt.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative" ref={partnerDropdownRef}>
+                <input
+                  type="text"
+                  value={selectedPartner ? selectedPartner.name : partnerSearch}
+                  onChange={(e) => {
+                    setPartnerSearch(e.target.value);
+                    setSelectedPartner(null);
+                    if (partnerType !== "O") {
+                      setShowPartnerDropdown(true);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (partnerType !== "O") {
+                      setShowPartnerDropdown(true);
+                    }
+                  }}
+                  placeholder="Tên người nộp"
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+
+                {showPartnerDropdown && partnerType !== "O" && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    {filteredPartners.length > 0 ? (
+                      filteredPartners.map((partner: any) => (
+                        <button
+                          key={partner.id}
+                          onClick={() => {
+                            setSelectedPartner(partner);
+                            setPartnerSearch("");
+                            setShowPartnerDropdown(false);
+                          }}
+                          className="w-full px-3 py-2 text-left hover:bg-gray-100">
+                          <div>{partner.name}</div>
+                          <div className="text-sm text-gray-500">
+                            {partner.code} - {partner.contactNumber}
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-gray-500">
+                        Không tìm thấy kết quả
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="col-span-2">
               <label className="block text-sm font-medium mb-2">Số tiền</label>
               <input
-                type="number"
+                type="text"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => handleAmountChange(e.target.value)}
                 placeholder="0"
                 className="w-full px-3 py-2 border rounded-lg text-right text-lg"
-                min="0"
               />
             </div>
 
@@ -336,26 +658,125 @@ export function CreateCashFlowModal({
               />
             </div>
 
-            <div className="col-span-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={usedForFinancialReporting}
-                  onChange={(e) =>
-                    setUsedForFinancialReporting(e.target.checked)
-                  }
-                  className="cursor-pointer"
-                />
-                <span className="text-sm flex items-center gap-1">
-                  Hạch toán kết quả kinh doanh
-                  <span
-                    className="text-gray-400 cursor-help"
-                    title="Thông tin thêm">
-                    ⓘ
-                  </span>
-                </span>
-              </label>
-            </div>
+            {partnerType === "C" && selectedPartner && (
+              <div className="col-span-2 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={affectDebt}
+                    onChange={(e) => {
+                      setAffectDebt(e.target.checked);
+                      if (!e.target.checked) {
+                        setAllocateToInvoices(false);
+                        setInvoicePayments({});
+                      }
+                    }}
+                    className="cursor-pointer"
+                  />
+                  <span className="text-sm font-medium">Tính vào công nợ</span>
+                </label>
+
+                {affectDebt && (
+                  <div className="ml-6 space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={allocateToInvoices}
+                        onChange={() => setAllocateToInvoices(true)}
+                        className="cursor-pointer"
+                      />
+                      <span className="text-sm">Phân bổ vào hóa đơn</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={!allocateToInvoices}
+                        onChange={() => {
+                          setAllocateToInvoices(false);
+                          setInvoicePayments({});
+                        }}
+                        className="cursor-pointer"
+                      />
+                      <span className="text-sm">
+                        Chỉ trừ vào công nợ, không phân bổ hóa đơn
+                      </span>
+                    </label>
+
+                    {allocateToInvoices && unpaidInvoices.length > 0 && (
+                      <div className="border rounded-lg overflow-hidden mt-2">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-100 border-b">
+                            <tr>
+                              <th className="px-3 py-2 text-left">
+                                Mã hóa đơn
+                              </th>
+                              <th className="px-3 py-2 text-left">Thời gian</th>
+                              <th className="px-3 py-2 text-right">
+                                Giá trị hóa đơn
+                              </th>
+                              <th className="px-3 py-2 text-right">
+                                Đã thu trước
+                              </th>
+                              <th className="px-3 py-2 text-right">
+                                Còn cần thu
+                              </th>
+                              <th className="px-3 py-2 text-right">Tiền thu</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {unpaidInvoices.map((invoice: any) => (
+                              <tr key={invoice.id} className="border-b">
+                                <td className="px-3 py-2">{invoice.code}</td>
+                                <td className="px-3 py-2">
+                                  {new Date(
+                                    invoice.purchaseDate
+                                  ).toLocaleDateString("vi-VN")}
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  {formatNumberInput(
+                                    invoice.grandTotal.toString()
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  {formatNumberInput(
+                                    invoice.paidAmount.toString()
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  {formatNumberInput(
+                                    invoice.debtAmount.toString()
+                                  )}
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="text"
+                                    value={invoicePayments[invoice.id] || "0"}
+                                    onChange={(e) =>
+                                      handleInvoicePaymentChange(
+                                        invoice.id,
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full px-2 py-1 border rounded text-right"
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {allocateToInvoices && unpaidInvoices.length === 0 && (
+                      <div className="text-sm text-gray-500 italic">
+                        Khách hàng không có hóa đơn nợ
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 mt-6">

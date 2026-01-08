@@ -330,12 +330,13 @@ export function CashFlowDetailRow({
                 </button>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleEdit}
-                    className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2">
-                    <Edit className="w-4 h-4" />
-                    Chỉnh sửa
-                  </button>
+                  {cashFlow.status !== 2 && (
+                    <button
+                      onClick={handleEdit}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <Edit className="w-4 h-4 text-gray-600" />
+                    </button>
+                  )}
                   <button
                     onClick={handlePrint}
                     className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2">

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { invoicesApi } from "../api/invoices";
 import { toast } from "sonner";
+import { apiClient } from "../config/api";
 
 export function useInvoices(params?: any) {
   return useQuery({
@@ -76,5 +77,28 @@ export function useCreateInvoiceFromOrder() {
     onError: (error: any) => {
       toast.error(error.message || "Tạo hóa đơn từ đơn hàng thất bại");
     },
+  });
+}
+
+export function useUnpaidInvoicesByPartner(
+  partnerId: number | null,
+  partnerType: string
+) {
+  return useQuery({
+    queryKey: ["invoices", "unpaid", partnerId, partnerType],
+    queryFn: async () => {
+      if (!partnerId || !partnerType) {
+        return { data: [] };
+      }
+      const response = await apiClient.get<{ data: any[] }>(
+        "/invoices/unpaid-by-partner",
+        {
+          partnerId: partnerId.toString(),
+          partnerType,
+        }
+      );
+      return response;
+    },
+    enabled: !!partnerId && !!partnerType,
   });
 }
