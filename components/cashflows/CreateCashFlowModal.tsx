@@ -8,6 +8,7 @@ import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useUsers } from "@/lib/hooks/useUsers";
 import { useUnpaidInvoicesByPartner } from "@/lib/hooks/useInvoices";
 import { useAuthStore } from "@/lib/store/auth";
+import { useBranchStore } from "@/lib/store/branch";
 import { CreateCashFlowGroupModal } from "./CreateCashFlowGroupModal";
 import { X, ChevronDown, Calendar, Clock } from "lucide-react";
 
@@ -73,6 +74,7 @@ export function CreateCashFlowModal({
   isReceipt,
 }: CreateCashFlowModalProps) {
   const { user } = useAuthStore();
+  const { selectedBranch } = useBranchStore();
   const [transDate, setTransDate] = useState("");
   const [transDateTime, setTransDateTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -86,6 +88,9 @@ export function CreateCashFlowModal({
   const [partnerSearch, setPartnerSearch] = useState("");
   const [selectedPartner, setSelectedPartner] = useState<any>(null);
   const [collectorUserId, setCollectorUserId] = useState<string>("");
+
+  console.log(selectedPartner);
+
   const [showCollectorDropdown, setShowCollectorDropdown] = useState(false);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -256,6 +261,11 @@ export function CreateCashFlowModal({
   };
 
   const handleSubmit = async () => {
+    if (!selectedBranch?.id) {
+      alert("Vui lòng chọn chi nhánh");
+      return;
+    }
+
     const numericAmount = parseNumberInput(amount);
     if (!numericAmount || numericAmount <= 0) {
       alert("Vui lòng nhập số tiền hợp lệ");
@@ -284,6 +294,7 @@ export function CreateCashFlowModal({
 
     try {
       await createCashFlow.mutateAsync({
+        branchId: selectedBranch.id,
         isReceipt,
         amount: numericAmount,
         transDate: finalTransDate.toISOString(),
