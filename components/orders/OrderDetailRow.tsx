@@ -123,19 +123,19 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   return (
     <tr>
       <td colSpan={colSpan} className="px-6 py-6 bg-gray-50">
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1135px] 2xl:max-w-[1585px]">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1090px] 2xl:max-w-[1540px]">
           <div className="p-6">
             <div className="border-b border-gray-200 pb-4 mb-6 ">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <h3 className="text-xl font-bold gap-3">
-                    Tên khách hàng: {order.customer?.name || ""}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col gap-2">
+                  <p className="text-xl font-bold gap-3">{order.code}</p>
+                  <h3 className="text-md">
+                    Tên khách: {order.customer?.name || "Khách vãng lai"}
                   </h3>
-                  <p className="text-md">Mã đơn hàng: {order.code}</p>
                 </div>
               </div>
 
-              <div className="pr-6 pl-6 pb-6 space-y-6">
+              <div className="space-y-6">
                 <div className="grid grid-cols-4 gap-6">
                   <div>
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
