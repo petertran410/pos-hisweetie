@@ -328,9 +328,6 @@ export function CustomerPaymentModal({
                     <th className="px-4 py-3 text-left text-xs font-medium">
                       Tiền thu
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium">
-                      Trạng thái
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -403,16 +400,6 @@ export function CustomerPaymentModal({
                               className="w-full px-2 py-1 border rounded text-right"
                             />
                           </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`text-xs px-2 py-1 rounded ${
-                                willBeCompleted
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                              }`}>
-                              {willBeCompleted ? "Hoàn thành" : "Còn nợ"}
-                            </span>
-                          </td>
                         </tr>
                       );
                     })
@@ -437,7 +424,7 @@ export function CustomerPaymentModal({
           </button>
           <div className="flex items-center gap-4">
             <button className="px-6 py-2 border rounded-lg hover:bg-gray-100">
-              Tao phiếu thu & In
+              Tạo phiếu thu & In
             </button>
             <button
               onClick={handleSubmit}

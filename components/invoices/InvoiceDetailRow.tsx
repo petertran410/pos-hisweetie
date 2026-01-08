@@ -10,6 +10,7 @@ import {
   INVOICE_STATUS_NUMBER_TO_STRING,
   InvoiceDetail,
 } from "@/lib/types/invoice";
+import Swal from "sweetalert2";
 
 interface InvoiceDetailRowProps {
   invoiceId: number;
@@ -47,18 +48,79 @@ export function InvoiceDetailRow({
   const handleCancel = async () => {
     if (!invoice) return;
 
-    if (confirm("Bạn có chắc chắn muốn hủy hóa đơn này?")) {
+    const hasPayments = invoice.payments && invoice.payments.length > 0;
+
+    if (hasPayments) {
+      const result = await Swal.fire({
+        title: "Xác nhận hủy hóa đơn",
+        html: `
+        <p>Hóa đơn này có <strong>${
+          invoice.payments?.length || 0
+        }</strong> phiếu thanh toán.</p>
+        <p class="text-red-600 font-bold mt-2">Bạn có muốn hủy cả phiếu thanh toán không?</p>
+      `,
+        icon: "warning",
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: "Có - Hủy phiếu thanh toán",
+        denyButtonText: "Không - Giữ phiếu thanh toán",
+        cancelButtonText: "Hủy bỏ",
+        confirmButtonColor: "#dc2626",
+        denyButtonColor: "#059669",
+        cancelButtonColor: "#6b7280",
+      });
+
+      if (result.isDismissed) {
+        return;
+      }
+
+      const cancelPayments = result.isConfirmed;
+
       try {
         setIsSaving(true);
         await updateInvoice.mutateAsync({
           id: invoice.id,
-          data: { status: INVOICE_STATUS.CANCELLED },
+          data: {
+            status: INVOICE_STATUS.CANCELLED,
+            cancelPayments: cancelPayments,
+          },
         });
-        toast.success("Đã hủy hóa đơn thành công");
+
+        if (cancelPayments) {
+          toast.success("Đã hủy hóa đơn và phiếu thanh toán");
+        } else {
+          toast.success("Đã hủy hóa đơn, giữ nguyên phiếu thanh toán");
+        }
       } catch (error) {
         toast.error("Không thể hủy hóa đơn");
       } finally {
         setIsSaving(false);
+      }
+    } else {
+      const result = await Swal.fire({
+        title: "Xác nhận hủy hóa đơn",
+        text: "Bạn có chắc chắn muốn hủy hóa đơn này?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Xác nhận",
+        cancelButtonText: "Hủy bỏ",
+        confirmButtonColor: "#dc2626",
+        cancelButtonColor: "#6b7280",
+      });
+
+      if (result.isConfirmed) {
+        try {
+          setIsSaving(true);
+          await updateInvoice.mutateAsync({
+            id: invoice.id,
+            data: { status: INVOICE_STATUS.CANCELLED },
+          });
+          toast.success("Đã hủy hóa đơn thành công");
+        } catch (error) {
+          toast.error("Không thể hủy hóa đơn");
+        } finally {
+          setIsSaving(false);
+        }
       }
     }
   };
