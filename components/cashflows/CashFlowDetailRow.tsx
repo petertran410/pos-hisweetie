@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   useCashFlow,
   useRelatedInvoicePayments,
@@ -63,8 +62,6 @@ export function CashFlowDetailRow({
   const { data: cashFlow, isLoading } = useCashFlow(cashFlowId);
   const { data: invoicePayments } = useRelatedInvoicePayments(cashFlowId);
   const cancelCashFlow = useCancelCashFlow();
-
-  console.log(cashFlow);
 
   const handleDelete = async () => {
     if (!cashFlow) return;
