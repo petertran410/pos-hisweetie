@@ -115,10 +115,10 @@ export function CustomerDetailRow({
               </div>
 
               <div className="border-b">
-                <div className="flex gap-1 px-6">
+                <div className="flex gap-1">
                   <button
                     onClick={() => setActiveTab("info")}
-                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`py-4 text-md font-medium border-b-2 transition-colors ${
                       activeTab === "info"
                         ? "border-blue-600 text-blue-600"
                         : "border-transparent text-gray-600 hover:text-gray-900"
@@ -127,7 +127,7 @@ export function CustomerDetailRow({
                   </button>
                   <button
                     onClick={() => setActiveTab("invoices")}
-                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`px-4 py-4 text-md font-medium border-b-2 transition-colors ${
                       activeTab === "invoices"
                         ? "border-blue-600 text-blue-600"
                         : "border-transparent text-gray-600 hover:text-gray-900"
@@ -136,7 +136,7 @@ export function CustomerDetailRow({
                   </button>
                   <button
                     onClick={() => setActiveTab("orders")}
-                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`px-4 py-4 text-md font-medium border-b-2 transition-colors ${
                       activeTab === "orders"
                         ? "border-blue-600 text-blue-600"
                         : "border-transparent text-gray-600 hover:text-gray-900"
@@ -145,7 +145,7 @@ export function CustomerDetailRow({
                   </button>
                   <button
                     onClick={() => setActiveTab("debts")}
-                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`px-4 py-4 text-md font-medium border-b-2 transition-colors ${
                       activeTab === "debts"
                         ? "border-blue-600 text-blue-600"
                         : "border-transparent text-gray-600 hover:text-gray-900"
@@ -155,12 +155,12 @@ export function CustomerDetailRow({
                 </div>
               </div>
 
-              <div className="p-6">
+              <div className="py-6">
                 {activeTab === "info" && (
                   <div>
                     <div className="grid grid-cols-3 gap-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                        <label className="block text-md font-medium text-gray-500 mb-1">
                           Điện thoại
                         </label>
                         <div className="text-base">

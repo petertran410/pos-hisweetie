@@ -38,7 +38,7 @@ export function CustomerDebtsTab({
     <>
       <div>
         <div className="mb-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
+          <div className="text-md text-gray-600">
             Nợ hiện tại:{" "}
             <span className="font-semibold text-red-600">
               {formatCurrency(customerDebt)}
@@ -59,25 +59,25 @@ export function CustomerDebtsTab({
           <table className="w-full">
             <thead>
               <tr className="border-b bg-gray-50">
-                <th className="px-4 py-3 text-left text-sm font-medium">
+                <th className="px-4 py-3 text-left text-md font-medium">
                   Mã phiếu
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
+                <th className="px-4 py-3 text-left text-md font-medium">
                   Thời gian
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
+                <th className="px-4 py-3 text-left text-md font-medium">
                   Loại
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
+                <th className="px-4 py-3 text-left text-md font-medium">
                   Chi nhánh
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium">
+                <th className="px-4 py-3 text-right text-md font-medium">
                   Giá trị
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium">
+                <th className="px-4 py-3 text-right text-md font-medium">
                   Dư nợ khách hàng
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-medium">
+                <th className="px-4 py-3 text-center text-md font-medium">
                   Trạng thái
                 </th>
               </tr>
@@ -105,16 +105,16 @@ export function CustomerDebtsTab({
                           {item.code}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">
+                      <td className="px-4 py-3 text-md">
                         {new Date(item.date).toLocaleString("vi-VN")}
                       </td>
-                      <td className="px-4 py-3 text-sm">
+                      <td className="px-4 py-3 text-md">
                         {isInvoice ? "Bán hàng" : getPaymentType(item.code)}
                       </td>
-                      <td className="px-4 py-3 text-sm">
+                      <td className="px-4 py-3 text-md">
                         {item.branch?.name || "-"}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right">
+                      <td className="px-4 py-3 text-md text-right">
                         {isInvoice && (
                           <div>
                             <div className="text-red-600 font-medium">
@@ -128,7 +128,7 @@ export function CustomerDebtsTab({
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-medium">
+                      <td className="px-4 py-3 text-md text-right font-medium">
                         <span
                           className={
                             item.debtSnapshot > 0

@@ -3,6 +3,15 @@
 import { useEffect, useState } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
+import { NoteTemplate } from "@/lib/api/note-templates";
+import {
+  useNoteTemplates,
+  useCreateNoteTemplate,
+  useUpdateNoteTemplate,
+  useDeleteNoteTemplate,
+} from "@/lib/hooks/useNoteTemplates";
+import { NoteDropdown } from "./NoteDropdown";
+import { NoteTemplateModal } from "./NoteTemplateModal";
 
 interface CartItemsListProps {
   cartItems: CartItem[];
@@ -34,6 +43,44 @@ export function OrderItemsList({
   );
   const [discountValue, setDiscountValue] = useState(0);
   const [displayValue, setDisplayValue] = useState("");
+  const { data: noteTemplates = [] } = useNoteTemplates();
+  const createNoteTemplate = useCreateNoteTemplate();
+  const updateNoteTemplate = useUpdateNoteTemplate();
+  const deleteNoteTemplate = useDeleteNoteTemplate();
+
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [noteModalMode, setNoteModalMode] = useState<"create" | "edit">(
+    "create"
+  );
+  const [editingTemplate, setEditingTemplate] = useState<NoteTemplate | null>(
+    null
+  );
+
+  const handleCreateTemplate = () => {
+    setNoteModalMode("create");
+    setEditingTemplate(null);
+    setShowNoteModal(true);
+  };
+
+  const handleEditTemplate = (template: NoteTemplate) => {
+    setNoteModalMode("edit");
+    setEditingTemplate(template);
+    setShowNoteModal(true);
+  };
+
+  const handleSaveTemplate = (content: string) => {
+    if (noteModalMode === "create") {
+      createNoteTemplate.mutate({ content });
+    } else if (editingTemplate) {
+      updateNoteTemplate.mutate({ id: editingTemplate.id, data: { content } });
+    }
+  };
+
+  const handleDeleteTemplate = () => {
+    if (editingTemplate) {
+      deleteNoteTemplate.mutate(editingTemplate.id);
+    }
+  };
 
   useEffect(() => {
     if (discountRatio > 0) {
@@ -152,25 +199,13 @@ export function OrderItemsList({
                     </span>
                   </div>
 
-                  {!editingNoteId || editingNoteId !== item.product.id ? (
-                    <div
-                      onClick={() => setEditingNoteId(item.product.id)}
-                      className="text-md text-gray-500 cursor-pointer hover:text-gray-700 min-h-[20px]">
-                      {item.note || "Nhấn để thêm ghi chú..."}
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      value={item.note || ""}
-                      onChange={(e) =>
-                        onUpdateItem(item.product.id, { note: e.target.value })
-                      }
-                      onBlur={() => setEditingNoteId(null)}
-                      autoFocus
-                      placeholder="Nhập ghi chú cho sản phẩm"
-                      className="text-md text-gray-700 border-b border-blue-500 focus:outline-none w-full"
-                    />
-                  )}
+                  <NoteDropdown
+                    value={item.note || ""}
+                    onChange={(note) => onUpdateItem(item.product.id, { note })}
+                    templates={noteTemplates}
+                    onCreateTemplate={handleCreateTemplate}
+                    onEditTemplate={handleEditTemplate}
+                  />
                 </div>
 
                 {hoveredItemId === item.product.id && (
@@ -303,6 +338,14 @@ export function OrderItemsList({
           </span>
         </div>
       </div>
+      <NoteTemplateModal
+        isOpen={showNoteModal}
+        onClose={() => setShowNoteModal(false)}
+        onSave={handleSaveTemplate}
+        onDelete={noteModalMode === "edit" ? handleDeleteTemplate : undefined}
+        initialValue={editingTemplate?.content || ""}
+        mode={noteModalMode}
+      />
     </div>
   );
 }
