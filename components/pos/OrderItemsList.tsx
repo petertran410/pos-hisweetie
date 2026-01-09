@@ -225,7 +225,7 @@ export function OrderItemsList({
                         quantity: Math.max(1, item.quantity - 1),
                       })
                     }
-                    className="w-7 h-7 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                    className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Minus className="w-3 h-3" />
                   </button>
                   <input
@@ -236,7 +236,7 @@ export function OrderItemsList({
                         quantity: Math.max(1, parseInt(e.target.value) || 1),
                       })
                     }
-                    className="w-12 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-9 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                   />
                   <button
@@ -245,7 +245,7 @@ export function OrderItemsList({
                         quantity: item.quantity + 1,
                       })
                     }
-                    className="w-7 h-7 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                    className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>

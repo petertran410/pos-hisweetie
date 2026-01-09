@@ -132,7 +132,6 @@ export function NoteDropdown({
         onClick={() => setIsOpen(!isOpen)}
         className="text-md text-gray-500 cursor-pointer hover:text-gray-700 min-h-[20px] flex items-center gap-1">
         <span className="flex-1">{displayValue}</span>
-        <ChevronDown className="w-4 h-4" />
       </div>
 
       {isOpen && (
