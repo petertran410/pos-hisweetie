@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cashflowsApi } from "@/lib/api/cashflows";
 import { apiClient } from "@/lib/config/api";
+import { toast } from "sonner";
 
 export function useCashFlows(params?: any) {
   return useQuery({
@@ -31,6 +32,12 @@ export function useCreateCashFlow() {
     mutationFn: cashflowsApi.createCashFlow,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashflows"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Tạo phiếu thu/chi thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Tạo phiếu thu/chi thất bại");
     },
   });
 }
@@ -42,6 +49,10 @@ export function useUpdateCashFlow() {
       cashflowsApi.updateCashFlow(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashflows"] });
+      toast.success("Cập nhật phiếu thu/chi thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Cập nhật phiếu thu/chi thất bại");
     },
   });
 }
@@ -52,6 +63,10 @@ export function useCancelCashFlow() {
     mutationFn: cashflowsApi.cancelCashFlow,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashflows"] });
+      toast.success("Hủy phiếu thu/chi thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Hủy phiếu thu/chi thất bại");
     },
   });
 }
@@ -63,6 +78,10 @@ export function useCreatePayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashflows"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Tạo thanh toán thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Tạo thanh toán thất bại");
     },
   });
 }
