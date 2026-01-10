@@ -215,13 +215,6 @@ export function CustomerPaymentModal({
   };
 
   const handleSubmit = async () => {
-    const numericTotalAmount = parseNumberInput(totalAmount);
-
-    if (numericTotalAmount <= 0) {
-      alert("Vui lòng nhập số tiền thanh toán");
-      return;
-    }
-
     if (!selectedBranch) {
       alert("Vui lòng chọn chi nhánh");
       return;
@@ -238,6 +231,7 @@ export function CustomerPaymentModal({
     }
 
     let invoicesToPay: Array<{ invoiceId: number; amount: number }> = [];
+    let finalTotalAmount = parseNumberInput(totalAmount);
 
     if (allocateToInvoices) {
       invoicesToPay = Object.entries(invoicePayments)
@@ -246,11 +240,28 @@ export function CustomerPaymentModal({
           invoiceId: Number(invoiceId),
           amount: parseNumberInput(amount),
         }));
+
+      if (finalTotalAmount <= 0 && invoicesToPay.length === 0) {
+        alert("Vui lòng nhập số tiền thanh toán hoặc phân bổ vào hóa đơn");
+        return;
+      }
+
+      if (finalTotalAmount <= 0 && invoicesToPay.length > 0) {
+        finalTotalAmount = invoicesToPay.reduce(
+          (sum, inv) => sum + inv.amount,
+          0
+        );
+      }
+    } else {
+      if (finalTotalAmount <= 0) {
+        alert("Vui lòng nhập số tiền thanh toán");
+        return;
+      }
     }
 
     await createPayment.mutateAsync({
       customerId,
-      totalAmount: numericTotalAmount,
+      totalAmount: finalTotalAmount,
       branchId: selectedBranch.id,
       transDate: finalTransDate.toISOString(),
       method,
