@@ -163,7 +163,7 @@ export default function BanHangPage() {
     return initialTabs[initialTabs.length - 1]?.id || "tab-1";
   });
 
-  const activeTab = tabs.find((tab) => tab.id === activeTabId)!;
+  const activeTab = tabs.find((tab) => tab.id === activeTabId);
 
   useEffect(() => {
     const draftableTabs = tabs.filter(
@@ -282,7 +282,7 @@ export default function BanHangPage() {
   };
 
   const handleConvertToInvoice = () => {
-    if (!activeTab.documentId || activeTab.type !== "order") {
+    if (!activeTab?.documentId || activeTab.type !== "order") {
       toast.error("Không tìm thấy thông tin đơn hàng");
       return;
     }
@@ -307,7 +307,7 @@ export default function BanHangPage() {
   };
 
   const handlePayment = async () => {
-    if (!activeTab.sourceOrderId) {
+    if (!activeTab?.sourceOrderId) {
       toast.error("Không tìm thấy thông tin đơn hàng gốc");
       return;
     }
@@ -328,6 +328,7 @@ export default function BanHangPage() {
   };
 
   const handleAddTab = () => {
+    if (!activeTab) return;
     const currentType = activeTab.type;
     const nextNumber = getNextTabNumber(tabs, currentType);
     const newTab = createNewTab(currentType, nextNumber);
@@ -355,6 +356,7 @@ export default function BanHangPage() {
   };
 
   const handleToggleType = () => {
+    if (!activeTab) return;
     const currentType = activeTab.type;
     const newType: TabType = currentType === "order" ? "invoice" : "order";
     const nextNumber = getNextTabNumber(tabs, newType);
@@ -378,6 +380,8 @@ export default function BanHangPage() {
   };
 
   useEffect(() => {
+    if (!activeTab) return;
+
     const totalWeight = activeTab.cartItems.reduce((sum, item) => {
       const productWeight = Number(item.product.weight) || 0;
       const weightInGrams =
@@ -398,9 +402,11 @@ export default function BanHangPage() {
           : tab
       )
     );
-  }, [activeTab.cartItems, activeTabId]);
+  }, [activeTab, activeTabId]);
 
   const handleCustomerSelect = (customer: any) => {
+    if (!activeTab) return;
+
     updateActiveTab({
       selectedCustomer: customer,
       deliveryInfo: customer
@@ -417,6 +423,8 @@ export default function BanHangPage() {
   };
 
   const addToCart = (product: any) => {
+    if (!activeTab) return;
+
     const existingItem = activeTab.cartItems.find(
       (item) => item.product.id === product.id
     );
@@ -445,6 +453,8 @@ export default function BanHangPage() {
   };
 
   const updateCartItem = (productId: number, updates: Partial<CartItem>) => {
+    if (!activeTab) return;
+
     updateActiveTab({
       cartItems: activeTab.cartItems.map((item) =>
         item.product.id === productId ? { ...item, ...updates } : item
@@ -453,6 +463,8 @@ export default function BanHangPage() {
   };
 
   const removeFromCart = (productId: number) => {
+    if (!activeTab) return;
+
     updateActiveTab({
       cartItems: activeTab.cartItems.filter(
         (item) => item.product.id !== productId
@@ -461,6 +473,8 @@ export default function BanHangPage() {
   };
 
   const handleSaveOrder = async () => {
+    if (!activeTab) return;
+
     if (!selectedBranch) {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi lưu ${
@@ -629,6 +643,8 @@ export default function BanHangPage() {
   };
 
   const handleCreateDocument = async () => {
+    if (!activeTab) return;
+
     if (!selectedBranch) {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi tạo ${
@@ -770,6 +786,14 @@ export default function BanHangPage() {
     return (
       <div className="h-full flex items-center justify-center bg-blue-600">
         <div className="text-white text-lg">Đang tải dữ liệu...</div>
+      </div>
+    );
+  }
+
+  if (!activeTab) {
+    return (
+      <div className="h-full flex items-center justify-center bg-blue-600">
+        <div className="text-white text-lg">Đang khởi tạo...</div>
       </div>
     );
   }
