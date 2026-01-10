@@ -6,6 +6,7 @@ interface DraftState {
   drafts: Tab[];
   saveDrafts: (tabs: Tab[]) => void;
   clearDrafts: () => void;
+  removeDraft: (tabId: string) => void;
   getDrafts: () => Tab[];
 }
 
@@ -16,16 +17,19 @@ export const useDraftStore = create<DraftState>()(
       saveDrafts: (tabs) => {
         const validDrafts = tabs.filter(
           (tab) =>
-            !tab.documentId &&
-            (tab.cartItems.length > 0 ||
-              tab.selectedCustomer ||
-              tab.orderNote ||
-              tab.discount > 0 ||
-              tab.paymentAmount > 0)
+            tab.cartItems.length > 0 ||
+            tab.selectedCustomer ||
+            tab.orderNote ||
+            tab.discount > 0 ||
+            tab.paymentAmount > 0
         );
         set({ drafts: validDrafts });
       },
       clearDrafts: () => set({ drafts: [] }),
+      removeDraft: (tabId) => {
+        const currentDrafts = get().drafts;
+        set({ drafts: currentDrafts.filter((d) => d.id !== tabId) });
+      },
       getDrafts: () => get().drafts,
     }),
     {
