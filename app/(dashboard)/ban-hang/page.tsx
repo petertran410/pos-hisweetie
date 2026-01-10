@@ -111,7 +111,8 @@ export default function BanHangPage() {
   const typeParam = searchParams.get("type") as TabType | null;
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
-  const { drafts, saveDrafts, removeDraft } = useDraftStore();
+  const drafts = useDraftStore((state) => state.drafts);
+  const removeDraft = useDraftStore((state) => state.removeDraft);
 
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
@@ -128,13 +129,6 @@ export default function BanHangPage() {
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(
     invoiceId ? parseInt(invoiceId) : 0
   );
-
-  const getInitialTabType = (): TabType => {
-    if (orderId) return "order";
-    if (invoiceId) return "invoice";
-    if (typeParam === "invoice" || typeParam === "order") return typeParam;
-    return "order";
-  };
 
   const getInitialTabs = (): Tab[] => {
     if (orderId || invoiceId) {
@@ -195,8 +189,8 @@ export default function BanHangPage() {
         tab.discount > 0 ||
         tab.paymentAmount > 0
     );
-    saveDrafts(draftableTabs);
-  }, [tabs, saveDrafts]);
+    useDraftStore.getState().saveDrafts(draftableTabs);
+  }, [tabs]);
 
   useEffect(() => {
     if (existingOrder && orderId) {
