@@ -164,7 +164,7 @@ export default function BanHangPage() {
       }
       setIsInitialized(true);
     }
-  }, [isInitialized, orderId, invoiceId, drafts, typeParam]);
+  }, [isInitialized, orderId, invoiceId, typeParam]);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
 
@@ -181,6 +181,8 @@ export default function BanHangPage() {
   }, [tabs, activeTab, orderId, invoiceId]);
 
   useEffect(() => {
+    if (!isInitialized) return;
+
     const draftableTabs = tabs.filter(
       (tab) =>
         tab.cartItems.length > 0 ||
@@ -190,7 +192,7 @@ export default function BanHangPage() {
         tab.paymentAmount > 0
     );
     useDraftStore.getState().saveDrafts(draftableTabs);
-  }, [tabs]);
+  }, [tabs, isInitialized]);
 
   useEffect(() => {
     if (existingOrder && orderId) {
@@ -395,7 +397,7 @@ export default function BanHangPage() {
   };
 
   useEffect(() => {
-    if (!activeTab) return;
+    if (!activeTab || !activeTabId) return;
 
     const totalWeight = activeTab.cartItems.reduce((sum, item) => {
       const productWeight = Number(item.product.weight) || 0;
@@ -404,20 +406,22 @@ export default function BanHangPage() {
       return sum + weightInGrams * item.quantity;
     }, 0);
 
-    setTabs((prevTabs) =>
-      prevTabs.map((tab) =>
-        tab.id === activeTabId
-          ? {
-              ...tab,
-              deliveryInfo: {
-                ...tab.deliveryInfo,
-                weight: totalWeight,
-              },
-            }
-          : tab
-      )
-    );
-  }, [activeTab, activeTabId]);
+    if (activeTab.deliveryInfo.weight !== totalWeight) {
+      setTabs((prevTabs) =>
+        prevTabs.map((tab) =>
+          tab.id === activeTabId
+            ? {
+                ...tab,
+                deliveryInfo: {
+                  ...tab.deliveryInfo,
+                  weight: totalWeight,
+                },
+              }
+            : tab
+        )
+      );
+    }
+  }, [activeTab?.cartItems, activeTabId]);
 
   const handleCustomerSelect = (customer: any) => {
     if (!activeTab) return;
