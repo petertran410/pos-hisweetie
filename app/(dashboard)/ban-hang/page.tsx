@@ -157,13 +157,34 @@ export default function BanHangPage() {
     return [createNewTab("order", 1)];
   };
 
-  const [tabs, setTabs] = useState<Tab[]>(getInitialTabs);
-  const [activeTabId, setActiveTabId] = useState(() => {
-    const initialTabs = getInitialTabs();
-    return initialTabs[initialTabs.length - 1]?.id || "tab-1";
-  });
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [tabs, setTabs] = useState<Tab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string>("");
+
+  useEffect(() => {
+    if (!isInitialized && !orderId && !invoiceId) {
+      const initialTabs = getInitialTabs();
+      setTabs(initialTabs);
+      if (initialTabs.length > 0) {
+        setActiveTabId(initialTabs[initialTabs.length - 1].id);
+      }
+      setIsInitialized(true);
+    }
+  }, [isInitialized, orderId, invoiceId, drafts, typeParam]);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
+
+  useEffect(() => {
+    if (!orderId && !invoiceId) {
+      if (tabs.length === 0) {
+        const newTab = createNewTab("order", 1);
+        setTabs([newTab]);
+        setActiveTabId(newTab.id);
+      } else if (!activeTab) {
+        setActiveTabId(tabs[0].id);
+      }
+    }
+  }, [tabs, activeTab, orderId, invoiceId]);
 
   useEffect(() => {
     const draftableTabs = tabs.filter(
@@ -790,7 +811,7 @@ export default function BanHangPage() {
     );
   }
 
-  if (!activeTab) {
+  if (!isInitialized || !activeTab) {
     return (
       <div className="h-full flex items-center justify-center bg-blue-600">
         <div className="text-white text-lg">Đang khởi tạo...</div>
