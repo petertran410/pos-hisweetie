@@ -11,7 +11,7 @@ export default function DatHangPage() {
   const [filters, setFilters] = useState({});
 
   const handleCreateClick = () => {
-    router.push("/ban-hang");
+    router.push("/ban-hang?type=order");
   };
 
   const handleEditClick = (order: Order) => {};

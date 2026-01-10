@@ -23,6 +23,7 @@ import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
 import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
+import { useDraftStore } from "@/lib/store/draft";
 
 export interface CartItem {
   product: any;
@@ -47,7 +48,7 @@ export interface DeliveryInfo {
 
 type TabType = "order" | "invoice";
 
-interface Tab {
+export interface Tab {
   id: string;
   type: TabType;
   label: string;
@@ -68,54 +69,90 @@ export default function BanHangPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const invoiceId = searchParams.get("invoiceId");
+  const typeParam = searchParams.get("type") as TabType | null;
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
-
-  const [tabs, setTabs] = useState<Tab[]>([
-    {
-      id: "tab-1",
-      type: "order",
-      label: "Đơn hàng 1",
-      cartItems: [],
-      selectedCustomer: null,
-      orderNote: "",
-      discount: 0,
-      discountRatio: 0,
-      useCOD: false,
-      paymentAmount: 0,
-      deliveryInfo: {
-        receiver: "",
-        contactNumber: "",
-        detailAddress: "",
-        locationName: "",
-        wardName: "",
-        weight: 0,
-        length: 10,
-        width: 10,
-        height: 10,
-        noteForDriver: "",
-      },
-    },
-  ]);
-
-  const [activeTabId, setActiveTabId] = useState("tab-1");
-  const activeTab = tabs.find((tab) => tab.id === activeTabId)!;
+  const { drafts, saveDrafts, clearDrafts } = useDraftStore();
 
   const createOrder = useCreateOrder();
-  const createOrderPayment = useCreateOrderPayment();
-  const createInvoicePayment = useCreateInvoicePayment();
   const updateOrder = useUpdateOrder();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
   const createInvoiceFromOrder = useCreateInvoiceFromOrder();
+  const createOrderPayment = useCreateOrderPayment();
+  const createInvoicePayment = useCreateInvoicePayment();
 
   const { data: existingOrder, isLoading: isLoadingOrder } = useOrder(
-    orderId ? Number(orderId) : 0
+    orderId ? parseInt(orderId) : 0
   );
 
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(
-    invoiceId ? Number(invoiceId) : 0
+    invoiceId ? parseInt(invoiceId) : 0
   );
+
+  const getInitialTabType = (): TabType => {
+    if (orderId) return "order";
+    if (invoiceId) return "invoice";
+    if (typeParam === "invoice" || typeParam === "order") return typeParam;
+    return "order";
+  };
+
+  const getInitialTabs = (): Tab[] => {
+    if (orderId || invoiceId) {
+      return [];
+    }
+
+    if (drafts && drafts.length > 0) {
+      return drafts;
+    }
+
+    const initialType = getInitialTabType();
+    return [
+      {
+        id: "tab-1",
+        type: initialType,
+        label: initialType === "order" ? "Đơn hàng 1" : "Hóa đơn 1",
+        cartItems: [],
+        selectedCustomer: null,
+        orderNote: "",
+        discount: 0,
+        discountRatio: 0,
+        useCOD: false,
+        paymentAmount: 0,
+        deliveryInfo: {
+          receiver: "",
+          contactNumber: "",
+          detailAddress: "",
+          locationName: "",
+          wardName: "",
+          weight: 0,
+          length: 10,
+          width: 10,
+          height: 10,
+          noteForDriver: "",
+        },
+      },
+    ];
+  };
+
+  const [tabs, setTabs] = useState<Tab[]>(getInitialTabs);
+  const [activeTabId, setActiveTabId] = useState(
+    getInitialTabs()[0]?.id || "tab-1"
+  );
+  const activeTab = tabs.find((tab) => tab.id === activeTabId)!;
+
+  useEffect(() => {
+    const draftableTabs = tabs.filter(
+      (tab) =>
+        !tab.documentId &&
+        (tab.cartItems.length > 0 ||
+          tab.selectedCustomer ||
+          tab.orderNote ||
+          tab.discount > 0 ||
+          tab.paymentAmount > 0)
+    );
+    saveDrafts(draftableTabs);
+  }, [tabs]);
 
   useEffect(() => {
     if (existingOrder && orderId) {
@@ -132,7 +169,7 @@ export default function BanHangPage() {
         {
           id: "tab-1",
           type: "order",
-          label: "Xử lý đơn hàng",
+          label: `Đơn hàng ${existingOrder.code}`,
           cartItems,
           selectedCustomer: existingOrder.customer || null,
           orderNote: existingOrder.description || "",
@@ -155,6 +192,7 @@ export default function BanHangPage() {
           documentId: existingOrder.id,
         },
       ]);
+      setActiveTabId("tab-1");
     }
   }, [existingOrder, orderId]);
 
@@ -173,7 +211,7 @@ export default function BanHangPage() {
         {
           id: "tab-1",
           type: "invoice",
-          label: "Xử lý hóa đơn",
+          label: `Hóa đơn ${existingInvoice.code}`,
           cartItems,
           selectedCustomer: existingInvoice.customer || null,
           orderNote: existingInvoice.description || "",
@@ -541,6 +579,7 @@ export default function BanHangPage() {
           data: orderData,
         });
 
+        clearDrafts();
         toast.success("Lưu đơn hàng thành công");
         router.push("/don-hang/dat-hang");
       } catch (error: any) {
@@ -607,6 +646,7 @@ export default function BanHangPage() {
           data: invoiceData,
         });
 
+        clearDrafts();
         toast.success("Lưu hóa đơn thành công");
         router.push("/don-hang/hoa-don");
       } catch (error: any) {
@@ -727,6 +767,7 @@ export default function BanHangPage() {
         await createInvoice.mutateAsync(documentData);
       }
 
+      clearDrafts();
       updateActiveTab({
         cartItems: [],
         selectedCustomer: null,
