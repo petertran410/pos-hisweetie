@@ -12,6 +12,7 @@ import {
 } from "@/lib/hooks/useNoteTemplates";
 import { NoteDropdown } from "./NoteDropdown";
 import { NoteTemplateModal } from "./NoteTemplateModal";
+import { ItemDiscountModal } from "./ItemDiscountModal";
 
 interface CartItemsListProps {
   cartItems: CartItem[];
@@ -47,6 +48,20 @@ export function OrderItemsList({
   const createNoteTemplate = useCreateNoteTemplate();
   const updateNoteTemplate = useUpdateNoteTemplate();
   const deleteNoteTemplate = useDeleteNoteTemplate();
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [selectedItemForDiscount, setSelectedItemForDiscount] =
+    useState<CartItem | null>(null);
+
+  const handleOpenDiscountModal = (item: CartItem) => {
+    setSelectedItemForDiscount(item);
+    setShowDiscountModal(true);
+  };
+
+  const handleSaveItemDiscount = (discount: number) => {
+    if (selectedItemForDiscount) {
+      onUpdateItem(selectedItemForDiscount.product.id, { discount });
+    }
+  };
 
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteModalMode, setNoteModalMode] = useState<"create" | "edit">(
@@ -251,6 +266,11 @@ export function OrderItemsList({
                 </div>
 
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleOpenDiscountModal(item)}
+                    className="text-blue-600 hover:text-blue-700 text-md font-medium">
+                    Giảm giá
+                  </button>
                   <div className="text-md text-gray-500">
                     {item.price.toLocaleString()}
                   </div>
@@ -346,6 +366,19 @@ export function OrderItemsList({
         initialValue={editingTemplate?.content || ""}
         mode={noteModalMode}
       />
+      {selectedItemForDiscount && (
+        <ItemDiscountModal
+          isOpen={showDiscountModal}
+          onClose={() => setShowDiscountModal(false)}
+          item={{
+            productName: selectedItemForDiscount.product.name,
+            quantity: selectedItemForDiscount.quantity,
+            price: selectedItemForDiscount.price,
+            discount: selectedItemForDiscount.discount,
+          }}
+          onSave={handleSaveItemDiscount}
+        />
+      )}
     </div>
   );
 }
