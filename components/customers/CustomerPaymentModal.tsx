@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { invoicesApi } from "@/lib/api/invoices";
 import { cashflowsApi } from "@/lib/api/cashflows";
+import { useUsers } from "@/lib/hooks/useUsers";
+import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
-import { X, Calendar, Clock } from "lucide-react";
+import { X, Calendar, Clock, ChevronDown } from "lucide-react";
 import { useBranchStore } from "@/lib/store/branch";
 
 interface CustomerPaymentModalProps {
@@ -16,7 +18,7 @@ interface CustomerPaymentModalProps {
 
 const formatNumberInput = (value: string): string => {
   const numericValue = value.replace(/,/g, "");
-  if (!numericValue || isNaN(Number(numericValue))) return "";
+  if (!numericValue || isNaN(Number(numericValue))) return "0";
   return Number(numericValue).toLocaleString("en-US");
 };
 
@@ -25,10 +27,31 @@ const parseNumberInput = (value: string): number => {
   return Number(numericValue) || 0;
 };
 
-const getLocalISOString = (datetimeLocalValue: string): string => {
-  if (!datetimeLocalValue) return new Date().toISOString();
-  const localDate = new Date(datetimeLocalValue);
-  return localDate.toISOString();
+const formatDateTime = (date: Date) => {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
+
+const parseDateTime = (value: string) => {
+  const parts = value.trim().split(" ");
+  if (parts.length !== 2) return new Date();
+
+  const dateParts = parts[0].split("/");
+  const timeParts = parts[1].split(":");
+
+  if (dateParts.length !== 3 || timeParts.length !== 2) return new Date();
+
+  const day = parseInt(dateParts[0]);
+  const month = parseInt(dateParts[1]) - 1;
+  const year = parseInt(dateParts[2]);
+  const hours = parseInt(timeParts[0]);
+  const minutes = parseInt(timeParts[1]);
+
+  return new Date(year, month, day, hours, minutes);
 };
 
 export function CustomerPaymentModal({
@@ -37,22 +60,30 @@ export function CustomerPaymentModal({
   onClose,
 }: CustomerPaymentModalProps) {
   const queryClient = useQueryClient();
-  const now = new Date();
-  const localDateTime = new Date(
-    now.getTime() - now.getTimezoneOffset() * 60000
-  )
-    .toISOString()
-    .slice(0, 16);
+  const { user } = useAuthStore();
+  const { selectedBranch } = useBranchStore();
 
-  const [transDate, setTransDate] = useState(localDateTime);
+  const [transDate, setTransDate] = useState("");
+  const [transDateTime, setTransDateTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [collectorUserId, setCollectorUserId] = useState<string>("");
+  const [showCollectorDropdown, setShowCollectorDropdown] = useState(false);
   const [method, setMethod] = useState("cash");
   const [totalAmount, setTotalAmount] = useState("");
   const [description, setDescription] = useState("");
   const [showMethodDropdown, setShowMethodDropdown] = useState(false);
+  const [allocateToInvoices, setAllocateToInvoices] = useState(true);
   const [invoicePayments, setInvoicePayments] = useState<
     Record<number, string>
   >({});
-  const { selectedBranch } = useBranchStore();
+
+  const datePickerRef = useRef<HTMLDivElement>(null);
+  const timePickerRef = useRef<HTMLDivElement>(null);
+  const collectorDropdownRef = useRef<HTMLDivElement>(null);
+
+  const { data: usersData } = useUsers();
+  const users = usersData || [];
 
   const { data: invoicesData, isLoading } = useQuery({
     queryKey: ["invoices", "customer", customerId, "unpaid"],
@@ -77,83 +108,117 @@ export function CustomerPaymentModal({
     },
   });
 
+  useEffect(() => {
+    if (user?.id) {
+      setCollectorUserId(user.id.toString());
+      setTransDateTime(new Date());
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        collectorDropdownRef.current &&
+        !collectorDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowCollectorDropdown(false);
+      }
+      if (
+        datePickerRef.current &&
+        !datePickerRef.current.contains(event.target as Node)
+      ) {
+        setShowDatePicker(false);
+      }
+      if (
+        timePickerRef.current &&
+        !timePickerRef.current.contains(event.target as Node)
+      ) {
+        setShowTimePicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const unpaidInvoices =
-    invoicesData?.data.filter((invoice: any) => {
-      return Number(invoice.debtAmount) > 0;
-    }) || [];
+    invoicesData?.data
+      .filter((invoice: any) => Number(invoice.debtAmount) > 0)
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.purchaseDate).getTime() -
+          new Date(b.purchaseDate).getTime()
+      ) || [];
+
+  const handleDateSelect = (date: Date) => {
+    const newDateTime = new Date(transDateTime);
+    newDateTime.setFullYear(date.getFullYear());
+    newDateTime.setMonth(date.getMonth());
+    newDateTime.setDate(date.getDate());
+    setTransDateTime(newDateTime);
+    setShowDatePicker(false);
+  };
+
+  const handleTimeSelect = (hours: number, minutes: number) => {
+    const newDateTime = new Date(transDateTime);
+    newDateTime.setHours(hours);
+    newDateTime.setMinutes(minutes);
+    setTransDateTime(newDateTime);
+    setShowTimePicker(false);
+  };
+
+  const handleTransDateInput = (value: string) => {
+    setTransDate(value);
+  };
 
   const handleTotalAmountChange = (value: string) => {
     const formatted = formatNumberInput(value);
     setTotalAmount(formatted);
 
-    const numericAmount = parseNumberInput(value);
-    if (numericAmount > 0 && unpaidInvoices.length > 0) {
-      let remaining = numericAmount;
-      const newPayments: Record<number, string> = {};
+    if (allocateToInvoices && unpaidInvoices.length > 0) {
+      const numericAmount = parseNumberInput(value);
+      if (numericAmount > 0) {
+        let remaining = numericAmount;
+        const newPayments: Record<number, string> = {};
 
-      for (const invoice of unpaidInvoices) {
-        const debtAmount = Number(invoice.debtAmount);
+        for (const invoice of unpaidInvoices) {
+          if (remaining <= 0) break;
 
-        if (remaining <= 0) break;
+          const debtAmount = Number(invoice.debtAmount);
+          const paymentForThisInvoice = Math.min(remaining, debtAmount);
+          newPayments[invoice.id] = formatNumberInput(
+            paymentForThisInvoice.toString()
+          );
+          remaining -= paymentForThisInvoice;
+        }
 
-        const paymentForThisInvoice = Math.min(remaining, debtAmount);
-        newPayments[invoice.id] = formatNumberInput(
-          paymentForThisInvoice.toString()
-        );
-        remaining -= paymentForThisInvoice;
+        setInvoicePayments(newPayments);
+      } else {
+        setInvoicePayments({});
       }
-
-      setInvoicePayments(newPayments);
-    } else {
-      setInvoicePayments({});
     }
   };
 
   const handleInvoicePaymentChange = (invoiceId: number, value: string) => {
-    const formatted = formatNumberInput(value);
+    const invoice = unpaidInvoices.find((inv: any) => inv.id === invoiceId);
+    if (!invoice) return;
+
+    const maxAmount = Number(invoice.debtAmount);
+    const numericValue = parseNumberInput(value);
+    const limitedValue = Math.min(numericValue, maxAmount);
+
+    const formatted = formatNumberInput(limitedValue.toString());
     setInvoicePayments((prev) => ({
       ...prev,
       [invoiceId]: formatted,
     }));
-
-    const actualTotal = Object.entries({
-      ...invoicePayments,
-      [invoiceId]: formatted,
-    }).reduce((sum, [_, amount]) => sum + parseNumberInput(amount), 0);
-
-    setTotalAmount(formatNumberInput(actualTotal.toString()));
-  };
-
-  const calculateActualTotal = () => {
-    return Object.values(invoicePayments).reduce(
-      (sum, amount) => sum + parseNumberInput(amount),
-      0
-    );
-  };
-
-  const calculateUnallocated = () => {
-    const totalInput = parseNumberInput(totalAmount);
-    const actualTotal = calculateActualTotal();
-    return totalInput - actualTotal;
   };
 
   const handleSubmit = async () => {
-    const invoicesToPay = Object.entries(invoicePayments)
-      .filter(([_, amount]) => parseNumberInput(amount) > 0)
-      .map(([invoiceId, amount]) => ({
-        invoiceId: Number(invoiceId),
-        amount: parseNumberInput(amount),
-      }));
+    const numericTotalAmount = parseNumberInput(totalAmount);
 
-    if (invoicesToPay.length === 0) {
-      alert("Vui lòng nhập số tiền thanh toán cho ít nhất một hóa đơn");
-      return;
-    }
-
-    const actualTotal = calculateActualTotal();
-
-    if (actualTotal <= 0) {
-      alert("Tổng số tiền thanh toán phải lớn hơn 0");
+    if (numericTotalAmount <= 0) {
+      alert("Vui lòng nhập số tiền thanh toán");
       return;
     }
 
@@ -162,16 +227,43 @@ export function CustomerPaymentModal({
       return;
     }
 
+    if (!collectorUserId) {
+      alert("Vui lòng chọn người thu");
+      return;
+    }
+
+    let finalTransDate = transDateTime;
+    if (transDate) {
+      finalTransDate = parseDateTime(transDate);
+    }
+
+    let invoicesToPay: Array<{ invoiceId: number; amount: number }> = [];
+
+    if (allocateToInvoices) {
+      invoicesToPay = Object.entries(invoicePayments)
+        .filter(([_, amount]) => parseNumberInput(amount) > 0)
+        .map(([invoiceId, amount]) => ({
+          invoiceId: Number(invoiceId),
+          amount: parseNumberInput(amount),
+        }));
+    }
+
     await createPayment.mutateAsync({
       customerId,
-      totalAmount: actualTotal,
+      totalAmount: numericTotalAmount,
       branchId: selectedBranch.id,
-      transDate: getLocalISOString(transDate),
+      transDate: finalTransDate.toISOString(),
       method,
+      collectorUserId: Number(collectorUserId),
       description,
-      invoices: invoicesToPay,
+      allocateToInvoices,
+      invoices: invoicesToPay.length > 0 ? invoicesToPay : undefined,
     });
   };
+
+  const selectedCollector = users.find(
+    (u: any) => u.id === Number(collectorUserId)
+  );
 
   const methodLabels: Record<string, string> = {
     cash: "Tiền mặt",
@@ -197,34 +289,198 @@ export function CustomerPaymentModal({
         </div>
 
         <div className="p-6 flex-1 overflow-y-auto">
-          <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium mb-2">
                 Thời gian
               </label>
               <div className="relative">
                 <input
-                  type="datetime-local"
+                  type="text"
                   value={transDate}
-                  onChange={(e) => setTransDate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  onChange={(e) => handleTransDateInput(e.target.value)}
+                  placeholder={formatDateTime(transDateTime)}
+                  className="w-full px-3 py-2 border rounded-lg pr-20"
                 />
-                <div className="absolute right-3 top-2.5 flex items-center gap-2 pointer-events-none">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <Clock className="w-4 h-4 text-gray-400" />
+                <div className="absolute right-3 top-2.5 flex items-center gap-2">
+                  <button
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                    type="button">
+                    <Calendar className="w-4 h-4 text-gray-400 cursor-pointer" />
+                  </button>
+                  <button
+                    onClick={() => setShowTimePicker(!showTimePicker)}
+                    type="button">
+                    <Clock className="w-4 h-4 text-gray-400 cursor-pointer" />
+                  </button>
                 </div>
+
+                {showDatePicker && (
+                  <div
+                    ref={datePickerRef}
+                    className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg p-4 z-50">
+                    <div className="text-center mb-2">
+                      <select
+                        value={transDateTime.getMonth()}
+                        onChange={(e) => {
+                          const newDate = new Date(transDateTime);
+                          newDate.setMonth(Number(e.target.value));
+                          setTransDateTime(newDate);
+                        }}
+                        className="border rounded px-2 py-1 mr-2">
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <option key={i} value={i}>
+                            Tháng {i + 1}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={transDateTime.getFullYear()}
+                        onChange={(e) => {
+                          const newDate = new Date(transDateTime);
+                          newDate.setFullYear(Number(e.target.value));
+                          setTransDateTime(newDate);
+                        }}
+                        className="border rounded px-2 py-1">
+                        {Array.from({ length: 10 }, (_, i) => {
+                          const year = new Date().getFullYear() - 5 + i;
+                          return (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {Array.from({ length: 42 }, (_, i) => {
+                        const firstDay = new Date(
+                          transDateTime.getFullYear(),
+                          transDateTime.getMonth(),
+                          1
+                        );
+                        const startDay = firstDay.getDay();
+                        const dayNumber = i - startDay + 1;
+                        const daysInMonth = new Date(
+                          transDateTime.getFullYear(),
+                          transDateTime.getMonth() + 1,
+                          0
+                        ).getDate();
+
+                        if (dayNumber < 1 || dayNumber > daysInMonth) {
+                          return <div key={i} className="w-8 h-8" />;
+                        }
+
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => {
+                              const newDate = new Date(
+                                transDateTime.getFullYear(),
+                                transDateTime.getMonth(),
+                                dayNumber
+                              );
+                              handleDateSelect(newDate);
+                            }}
+                            className={`w-8 h-8 rounded hover:bg-blue-100 ${
+                              dayNumber === transDateTime.getDate()
+                                ? "bg-blue-500 text-white"
+                                : ""
+                            }`}>
+                            {dayNumber}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {showTimePicker && (
+                  <div
+                    ref={timePickerRef}
+                    className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg p-4 z-50 w-64">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm mb-2">Giờ</label>
+                        <div className="h-40 overflow-y-auto border rounded">
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() =>
+                                handleTimeSelect(i, transDateTime.getMinutes())
+                              }
+                              className={`w-full px-2 py-1 text-left hover:bg-blue-100 ${
+                                i === transDateTime.getHours()
+                                  ? "bg-blue-500 text-white"
+                                  : ""
+                              }`}>
+                              {String(i).padStart(2, "0")}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-2">Phút</label>
+                        <div className="h-40 overflow-y-auto border rounded">
+                          {Array.from({ length: 60 }, (_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() =>
+                                handleTimeSelect(transDateTime.getHours(), i)
+                              }
+                              className={`w-full px-2 py-1 text-left hover:bg-blue-100 ${
+                                i === transDateTime.getMinutes()
+                                  ? "bg-blue-500 text-white"
+                                  : ""
+                              }`}>
+                              {String(i).padStart(2, "0")}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div>
+            <div className="relative" ref={collectorDropdownRef}>
               <label className="block text-sm font-medium mb-2">
                 Người thu
               </label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>admin</option>
-              </select>
-            </div>
+              <button
+                onClick={() => setShowCollectorDropdown(!showCollectorDropdown)}
+                className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between">
+                <span className={selectedCollector ? "" : "text-gray-400"}>
+                  {selectedCollector
+                    ? selectedCollector.name
+                    : "Chọn người thu"}
+                </span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
 
+              {showCollectorDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {users.map((u: any) => (
+                    <button
+                      key={u.id}
+                      onClick={() => {
+                        setCollectorUserId(u.id.toString());
+                        setShowCollectorDropdown(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100">
+                      {u.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="relative">
               <label className="block text-sm font-medium mb-2">
                 Phương thức thanh toán
@@ -233,10 +489,11 @@ export function CustomerPaymentModal({
                 onClick={() => setShowMethodDropdown(!showMethodDropdown)}
                 className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between">
                 <span>{methodLabels[method]}</span>
-                <span>▼</span>
+                <ChevronDown className="w-4 h-4" />
               </button>
+
               {showMethodDropdown && (
-                <div className="absolute top-full left-0 w-full bg-white border rounded-lg shadow-lg mt-1 z-10">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50">
                   <button
                     onClick={() => {
                       setMethod("cash");
@@ -283,13 +540,10 @@ export function CustomerPaymentModal({
                 placeholder="0"
                 className="w-full px-3 py-2 border rounded-lg text-right"
               />
-              <div className="text-right text-xs text-gray-500 mt-1">
-                Nợ còn: {formatCurrency(customerDebt)}
-              </div>
             </div>
           </div>
 
-          <div>
+          <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Ghi chú</label>
             <textarea
               value={description}
@@ -300,12 +554,24 @@ export function CustomerPaymentModal({
             />
           </div>
 
-          <div className="mt-6">
-            <div className="flex items-center gap-2 mb-4">
-              <input type="checkbox" checked readOnly className="w-4 h-4" />
-              <label className="text-sm font-medium">Phân bổ vào hóa đơn</label>
-            </div>
+          <div className="mb-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allocateToInvoices}
+                onChange={(e) => {
+                  setAllocateToInvoices(e.target.checked);
+                  if (!e.target.checked) {
+                    setInvoicePayments({});
+                  }
+                }}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium">Phân bổ vào hóa đơn</span>
+            </label>
+          </div>
 
+          {allocateToInvoices && (
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full">
                 <thead className="bg-gray-50">
@@ -333,106 +599,85 @@ export function CustomerPaymentModal({
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center">
+                      <td colSpan={6} className="px-4 py-8 text-center">
                         Đang tải...
                       </td>
                     </tr>
                   ) : unpaidInvoices.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={6}
                         className="px-4 py-8 text-center text-gray-500">
                         Không có hóa đơn nào cần thanh toán
                       </td>
                     </tr>
                   ) : (
-                    unpaidInvoices.map((invoice: any) => {
-                      const paymentAmount = parseNumberInput(
-                        invoicePayments[invoice.id] || "0"
-                      );
-                      const willBeCompleted =
-                        paymentAmount >= Number(invoice.debtAmount);
-
-                      return (
-                        <tr
-                          key={invoice.id}
-                          className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-3">
-                            <span className="text-blue-600">
-                              {invoice.code}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {new Date(invoice.purchaseDate).toLocaleString(
-                              "vi-VN",
-                              {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              }
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            {formatCurrency(invoice.grandTotal)}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            {formatCurrency(
-                              Number(invoice.grandTotal) -
-                                Number(invoice.debtAmount)
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right font-medium">
-                            {formatCurrency(invoice.debtAmount)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <input
-                              type="text"
-                              value={invoicePayments[invoice.id] || ""}
-                              onChange={(e) =>
-                                handleInvoicePaymentChange(
-                                  invoice.id,
-                                  e.target.value
-                                )
-                              }
-                              placeholder="0"
-                              className="w-full px-2 py-1 border rounded text-right"
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })
+                    unpaidInvoices.map((invoice: any) => (
+                      <tr
+                        key={invoice.id}
+                        className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <span className="text-blue-600">{invoice.code}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {new Date(invoice.purchaseDate).toLocaleString(
+                            "vi-VN",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {formatCurrency(invoice.grandTotal)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {formatCurrency(
+                            Number(invoice.grandTotal) -
+                              Number(invoice.debtAmount)
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">
+                          {formatCurrency(invoice.debtAmount)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            value={invoicePayments[invoice.id] || ""}
+                            onChange={(e) =>
+                              handleInvoicePaymentChange(
+                                invoice.id,
+                                e.target.value
+                              )
+                            }
+                            placeholder="0"
+                            className="w-full px-2 py-1 border rounded text-right"
+                          />
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>
             </div>
-
-            {calculateUnallocated() !== 0 && (
-              <div className="mt-2 text-sm text-amber-600">
-                ⚠️ Chưa phân bổ hết: {formatCurrency(calculateUnallocated())}
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
-        <div className="flex items-center justify-between gap-4 p-6 border-t bg-gray-50">
+        <div className="flex justify-end gap-2 p-6 border-t">
           <button
             onClick={onClose}
-            className="px-6 py-2 border rounded-lg hover:bg-gray-100">
+            className="px-4 py-2 border rounded-lg hover:bg-gray-50">
             Bỏ qua
           </button>
-          <div className="flex items-center gap-4">
-            <button className="px-6 py-2 border rounded-lg hover:bg-gray-100">
-              Tạo phiếu thu & In
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={createPayment.isPending}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-              {createPayment.isPending ? "Đang xử lý..." : "Tạo phiếu thu"}
-            </button>
-          </div>
+          <button
+            onClick={handleSubmit}
+            disabled={createPayment.isPending}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50">
+            {createPayment.isPending ? "Đang lưu..." : "Lưu"}
+          </button>
         </div>
       </div>
     </div>
