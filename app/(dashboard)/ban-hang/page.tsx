@@ -160,6 +160,67 @@ export default function BanHangPage() {
     }
   };
 
+  const loadAllEditTabsFromStorage = () => {
+    const editTabs: Tab[] = [];
+
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith(EDIT_STORAGE_KEY)) {
+        try {
+          const editState = JSON.parse(localStorage.getItem(key) || "");
+          if (editState && editState.documentId) {
+            const parts = key.split("-");
+            const type = parts[3] as TabType;
+            const docId = parseInt(parts[4]);
+
+            const editTab: Tab = {
+              id: `edit-${type}-${docId}`,
+              type: editState.type,
+              label: type === "order" ? `Sửa ĐH #${docId}` : `Sửa HĐ #${docId}`,
+              cartItems: editState.cartItems || [],
+              selectedCustomer: editState.selectedCustomer || null,
+              orderNote: editState.orderNote || "",
+              discount: editState.discount || 0,
+              discountRatio: editState.discountRatio || 0,
+              useCOD: editState.useCOD || false,
+              paymentAmount: editState.paymentAmount || 0,
+              deliveryInfo: editState.deliveryInfo || {
+                receiver: "",
+                contactNumber: "",
+                detailAddress: "",
+                locationName: "",
+                wardName: "",
+                weight: 0,
+                length: 10,
+                width: 10,
+                height: 10,
+                noteForDriver: "",
+              },
+              documentId: editState.documentId,
+              isEditMode: true,
+            };
+
+            const editKey = getEditStorageKey(docId, type);
+            initialEditDataRef.current[editKey] = {
+              cartItems: editTab.cartItems,
+              selectedCustomer: editTab.selectedCustomer,
+              orderNote: editTab.orderNote,
+              discount: editTab.discount,
+              discountRatio: editTab.discountRatio,
+              paymentAmount: editTab.paymentAmount,
+              deliveryInfo: editTab.deliveryInfo,
+            };
+
+            editTabs.push(editTab);
+          }
+        } catch (error) {
+          console.error("Error loading edit tab:", key, error);
+        }
+      }
+    });
+
+    return editTabs;
+  };
+
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
   const createInvoice = useCreateInvoice();
@@ -180,16 +241,25 @@ export default function BanHangPage() {
     if (typeof window === "undefined") return;
 
     const savedTabs = localStorage.getItem(STORAGE_KEY);
+    const allTabs: Tab[] = [];
+
     if (savedTabs) {
       try {
         const parsed = JSON.parse(savedTabs);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setTabs(parsed);
-          setActiveTabId(parsed[0].id);
+          allTabs.push(...parsed);
         }
       } catch (error) {
         console.error("Error loading saved tabs:", error);
       }
+    }
+
+    const editTabs = loadAllEditTabsFromStorage();
+    allTabs.push(...editTabs);
+
+    if (allTabs.length > 0) {
+      setTabs(allTabs);
+      setActiveTabId(allTabs[0].id);
     }
 
     setIsInitialized(true);
