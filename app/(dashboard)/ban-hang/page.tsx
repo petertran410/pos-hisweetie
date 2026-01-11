@@ -62,6 +62,7 @@ export interface Tab {
   documentId?: number;
   sourceOrderId?: number;
   sourceOrder?: any;
+  isEditMode?: boolean;
 }
 
 const STORAGE_KEY = "pos-tabs";
@@ -129,16 +130,18 @@ export default function BanHangPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const savedTabs = localStorage.getItem(STORAGE_KEY);
-    if (savedTabs && !orderId && !invoiceId) {
-      try {
-        const parsed = JSON.parse(savedTabs);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setTabs(parsed);
-          setActiveTabId(parsed[0].id);
+    if (!orderId && !invoiceId) {
+      const savedTabs = localStorage.getItem(STORAGE_KEY);
+      if (savedTabs) {
+        try {
+          const parsed = JSON.parse(savedTabs);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTabs(parsed);
+            setActiveTabId(parsed[0].id);
+          }
+        } catch (error) {
+          console.error("Error loading saved tabs:", error);
         }
-      } catch (error) {
-        console.error("Error loading saved tabs:", error);
       }
     }
     setIsInitialized(true);
@@ -173,18 +176,36 @@ export default function BanHangPage() {
   }, [tabType, isInitialized, orderId, invoiceId]);
 
   useEffect(() => {
-    if (!isInitialized || orderId || invoiceId) return;
+    if (!isInitialized) return;
 
-    const tabsToSave = tabs.filter(
-      (tab) => !tab.documentId && tab.cartItems.length > 0
-    );
+    const tabsToSave = tabs.filter((tab) => {
+      if (tab.documentId && tab.isEditMode) {
+        const key = getEditStorageKey(tab.documentId, tab.type);
+        const editState = {
+          documentId: tab.documentId,
+          type: tab.type,
+          cartItems: tab.cartItems,
+          selectedCustomer: tab.selectedCustomer,
+          orderNote: tab.orderNote,
+          discount: tab.discount,
+          discountRatio: tab.discountRatio,
+          useCOD: tab.useCOD,
+          paymentAmount: tab.paymentAmount,
+          deliveryInfo: tab.deliveryInfo,
+          lastModified: new Date().toISOString(),
+        };
+        localStorage.setItem(key, JSON.stringify(editState));
+        return false;
+      }
+      return tab.cartItems.length > 0 || tab.selectedCustomer;
+    });
 
     if (tabsToSave.length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tabsToSave));
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
-  }, [tabs, isInitialized, orderId, invoiceId]);
+  }, [tabs, isInitialized]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -267,44 +288,61 @@ export default function BanHangPage() {
             note: item.note || "",
           })) || [];
 
-      setTabs([
-        {
-          id: "tab-1",
-          type: "order",
-          label: "Xử lý đơn hàng",
-          cartItems,
-          selectedCustomer: restoredState
-            ? restoredState.selectedCustomer
-            : existingOrder.customer || null,
-          orderNote: restoredState
-            ? restoredState.orderNote
-            : existingOrder.description || "",
-          discount: restoredState
-            ? restoredState.discount
-            : Number(existingOrder.discount) || 0,
-          discountRatio: restoredState
-            ? restoredState.discountRatio
-            : Number(existingOrder.discountRatio) || 0,
-          useCOD: restoredState ? restoredState.useCOD : false,
-          paymentAmount: restoredState ? restoredState.paymentAmount : 0,
-          deliveryInfo: restoredState
-            ? restoredState.deliveryInfo
-            : {
-                receiver: existingOrder.delivery?.receiver || "",
-                contactNumber: existingOrder.delivery?.contactNumber || "",
-                detailAddress: existingOrder.delivery?.address || "",
-                locationName: existingOrder.delivery?.locationName || "",
-                wardName: existingOrder.delivery?.wardName || "",
-                weight: Number(existingOrder.delivery?.weight) || 0,
-                length: Number(existingOrder.delivery?.length) || 10,
-                width: Number(existingOrder.delivery?.width) || 10,
-                height: Number(existingOrder.delivery?.height) || 10,
-                noteForDriver: existingOrder.delivery?.noteForDriver || "",
-              },
-          documentId: existingOrder.id,
-        },
-      ]);
-      setActiveTabId("tab-1");
+      const editTab: Tab = {
+        id: `edit-order-${orderId}`,
+        type: "order",
+        label: `Sửa ĐH #${existingOrder.code}`,
+        cartItems,
+        selectedCustomer: restoredState
+          ? restoredState.selectedCustomer
+          : existingOrder.customer || null,
+        orderNote: restoredState
+          ? restoredState.orderNote
+          : existingOrder.description || "",
+        discount: restoredState
+          ? restoredState.discount
+          : Number(existingOrder.discount) || 0,
+        discountRatio: restoredState
+          ? restoredState.discountRatio
+          : Number(existingOrder.discountRatio) || 0,
+        useCOD: restoredState ? restoredState.useCOD : false,
+        paymentAmount: restoredState ? restoredState.paymentAmount : 0,
+        deliveryInfo: restoredState
+          ? restoredState.deliveryInfo
+          : {
+              receiver: existingOrder.delivery?.receiver || "",
+              contactNumber: existingOrder.delivery?.contactNumber || "",
+              detailAddress: existingOrder.delivery?.address || "",
+              locationName: existingOrder.delivery?.locationName || "",
+              wardName: existingOrder.delivery?.wardName || "",
+              weight: Number(existingOrder.delivery?.weight) || 0,
+              length: Number(existingOrder.delivery?.length) || 10,
+              width: Number(existingOrder.delivery?.width) || 10,
+              height: Number(existingOrder.delivery?.height) || 10,
+              noteForDriver: existingOrder.delivery?.noteForDriver || "",
+            },
+        documentId: existingOrder.id,
+        isEditMode: true,
+      };
+
+      setTabs((prevTabs) => {
+        const existingEditIndex = prevTabs.findIndex(
+          (t) => t.documentId === existingOrder.id && t.isEditMode
+        );
+
+        if (existingEditIndex >= 0) {
+          const updated = [...prevTabs];
+          updated[existingEditIndex] = editTab;
+          return updated;
+        } else {
+          const savedTabs = prevTabs.filter(
+            (t) => !t.documentId || !t.isEditMode
+          );
+          return [...savedTabs, editTab];
+        }
+      });
+
+      setActiveTabId(`edit-order-${orderId}`);
     }
   }, [existingOrder, orderId]);
 
@@ -341,59 +379,76 @@ export default function BanHangPage() {
             note: item.note || "",
           })) || [];
 
-      setTabs([
-        {
-          id: "tab-1",
-          type: "invoice",
-          label: "Xử lý hóa đơn",
-          cartItems,
-          selectedCustomer: restoredState
-            ? restoredState.selectedCustomer
-            : existingInvoice.customer || null,
-          orderNote: restoredState
-            ? restoredState.orderNote
-            : existingInvoice.description || "",
-          discount: restoredState
-            ? restoredState.discount
-            : Number(existingInvoice.discount) || 0,
-          discountRatio: restoredState
-            ? restoredState.discountRatio
-            : Number(existingInvoice.discountRatio) || 0,
-          useCOD: restoredState
-            ? restoredState.useCOD
-            : existingInvoice.usingCod || false,
-          paymentAmount: restoredState ? restoredState.paymentAmount : 0,
-          deliveryInfo: restoredState
-            ? restoredState.deliveryInfo
-            : existingInvoice.delivery
-            ? {
-                receiver: existingInvoice.delivery.receiver || "",
-                contactNumber: existingInvoice.delivery.contactNumber || "",
-                detailAddress: existingInvoice.delivery.address || "",
-                locationName: existingInvoice.delivery.locationName || "",
-                wardName: existingInvoice.delivery.wardName || "",
-                weight: Number(existingInvoice.delivery.weight) || 0,
-                length: Number(existingInvoice.delivery.length) || 10,
-                width: Number(existingInvoice.delivery.width) || 10,
-                height: Number(existingInvoice.delivery.height) || 10,
-                noteForDriver: existingInvoice.delivery.noteForDriver,
-              }
-            : {
-                receiver: "",
-                contactNumber: "",
-                detailAddress: "",
-                locationName: "",
-                wardName: "",
-                weight: 0,
-                length: 10,
-                width: 10,
-                height: 10,
-                noteForDriver: "",
-              },
-          documentId: existingInvoice.id,
-        },
-      ]);
-      setActiveTabId("tab-1");
+      const editTab: Tab = {
+        id: `edit-invoice-${invoiceId}`,
+        type: "invoice",
+        label: `Sửa HĐ #${existingInvoice.code}`,
+        cartItems,
+        selectedCustomer: restoredState
+          ? restoredState.selectedCustomer
+          : existingInvoice.customer || null,
+        orderNote: restoredState
+          ? restoredState.orderNote
+          : existingInvoice.description || "",
+        discount: restoredState
+          ? restoredState.discount
+          : Number(existingInvoice.discount) || 0,
+        discountRatio: restoredState
+          ? restoredState.discountRatio
+          : Number(existingInvoice.discountRatio) || 0,
+        useCOD: restoredState
+          ? restoredState.useCOD
+          : existingInvoice.usingCod || false,
+        paymentAmount: restoredState ? restoredState.paymentAmount : 0,
+        deliveryInfo: restoredState
+          ? restoredState.deliveryInfo
+          : existingInvoice.delivery
+          ? {
+              receiver: existingInvoice.delivery.receiver || "",
+              contactNumber: existingInvoice.delivery.contactNumber || "",
+              detailAddress: existingInvoice.delivery.address || "",
+              locationName: existingInvoice.delivery.locationName || "",
+              wardName: existingInvoice.delivery.wardName || "",
+              weight: Number(existingInvoice.delivery.weight) || 0,
+              length: Number(existingInvoice.delivery.length) || 10,
+              width: Number(existingInvoice.delivery.width) || 10,
+              height: Number(existingInvoice.delivery.height) || 10,
+              noteForDriver: existingInvoice.delivery.noteForDriver,
+            }
+          : {
+              receiver: "",
+              contactNumber: "",
+              detailAddress: "",
+              locationName: "",
+              wardName: "",
+              weight: 0,
+              length: 10,
+              width: 10,
+              height: 10,
+              noteForDriver: "",
+            },
+        documentId: existingInvoice.id,
+        isEditMode: true,
+      };
+
+      setTabs((prevTabs) => {
+        const existingEditIndex = prevTabs.findIndex(
+          (t) => t.documentId === existingInvoice.id && t.isEditMode
+        );
+
+        if (existingEditIndex >= 0) {
+          const updated = [...prevTabs];
+          updated[existingEditIndex] = editTab;
+          return updated;
+        } else {
+          const savedTabs = prevTabs.filter(
+            (t) => !t.documentId || !t.isEditMode
+          );
+          return [...savedTabs, editTab];
+        }
+      });
+
+      setActiveTabId(`edit-invoice-${invoiceId}`);
     }
   }, [existingInvoice, invoiceId]);
 
@@ -470,6 +525,13 @@ export default function BanHangPage() {
   };
 
   const handleCloseTab = (tabId: string) => {
+    const closingTab = tabs.find((t) => t.id === tabId);
+
+    if (closingTab?.isEditMode && closingTab.documentId) {
+      const key = getEditStorageKey(closingTab.documentId, closingTab.type);
+      localStorage.removeItem(key);
+    }
+
     if (tabs.length === 1) {
       const lastTab = tabs[0];
       if (lastTab.cartItems.length === 0 && !lastTab.documentId) {
@@ -745,6 +807,8 @@ export default function BanHangPage() {
         const key = getEditStorageKey(activeTab.documentId, "order");
         localStorage.removeItem(key);
 
+        setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
+
         toast.success("Lưu đơn hàng thành công");
         router.push("/don-hang/dat-hang");
       } catch (error: any) {
@@ -813,6 +877,8 @@ export default function BanHangPage() {
 
         const key = getEditStorageKey(activeTab.documentId, "invoice");
         localStorage.removeItem(key);
+
+        setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
 
         toast.success("Lưu hóa đơn thành công");
         router.push("/don-hang/hoa-don");
