@@ -23,7 +23,6 @@ import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
 import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
-import { useDraftStore } from "@/lib/store/draft";
 
 export interface CartItem {
   product: any;
@@ -48,7 +47,7 @@ export interface DeliveryInfo {
 
 type TabType = "order" | "invoice";
 
-export interface Tab {
+interface Tab {
   id: string;
   type: TabType;
   label: string;
@@ -65,140 +64,58 @@ export interface Tab {
   sourceOrder?: any;
 }
 
-const getEmptyDeliveryInfo = (): DeliveryInfo => ({
-  receiver: "",
-  contactNumber: "",
-  detailAddress: "",
-  locationName: "",
-  wardName: "",
-  weight: 0,
-  length: 10,
-  width: 10,
-  height: 10,
-  noteForDriver: "",
-});
-
-const createNewTab = (type: TabType, tabNumber: number): Tab => ({
-  id: `tab-${Date.now()}-${Math.random()}`,
-  type,
-  label: type === "order" ? `Đơn hàng ${tabNumber}` : `Hóa đơn ${tabNumber}`,
-  cartItems: [],
-  selectedCustomer: null,
-  orderNote: "",
-  discount: 0,
-  discountRatio: 0,
-  useCOD: false,
-  paymentAmount: 0,
-  deliveryInfo: getEmptyDeliveryInfo(),
-});
-
-const getNextTabNumber = (
-  tabs: Tab[],
-  drafts: Tab[],
-  type: TabType
-): number => {
-  const allTabs = [...tabs, ...drafts];
-  const tabsOfType = allTabs.filter((t) => t.type === type);
-  if (tabsOfType.length === 0) return 1;
-
-  const numbers = tabsOfType.map((tab) => {
-    const match = tab.label.match(/\d+$/);
-    return match ? parseInt(match[0]) : 0;
-  });
-
-  return Math.max(...numbers) + 1;
-};
-
 export default function BanHangPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const invoiceId = searchParams.get("invoiceId");
-  const typeParam = searchParams.get("type") as TabType | null;
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
-  const drafts = useDraftStore((state) => state.drafts);
-  const removeDraft = useDraftStore((state) => state.removeDraft);
-  const updateDraft = useDraftStore((state) => state.updateDraft);
+
+  const [tabs, setTabs] = useState<Tab[]>([
+    {
+      id: "tab-1",
+      type: "order",
+      label: "Đơn hàng 1",
+      cartItems: [],
+      selectedCustomer: null,
+      orderNote: "",
+      discount: 0,
+      discountRatio: 0,
+      useCOD: false,
+      paymentAmount: 0,
+      deliveryInfo: {
+        receiver: "",
+        contactNumber: "",
+        detailAddress: "",
+        locationName: "",
+        wardName: "",
+        weight: 0,
+        length: 10,
+        width: 10,
+        height: 10,
+        noteForDriver: "",
+      },
+    },
+  ]);
+
+  const [activeTabId, setActiveTabId] = useState("tab-1");
+  const activeTab = tabs.find((tab) => tab.id === activeTabId)!;
 
   const createOrder = useCreateOrder();
+  const createOrderPayment = useCreateOrderPayment();
+  const createInvoicePayment = useCreateInvoicePayment();
   const updateOrder = useUpdateOrder();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
   const createInvoiceFromOrder = useCreateInvoiceFromOrder();
-  const createOrderPayment = useCreateOrderPayment();
-  const createInvoicePayment = useCreateInvoicePayment();
 
   const { data: existingOrder, isLoading: isLoadingOrder } = useOrder(
-    orderId ? parseInt(orderId) : 0
+    orderId ? Number(orderId) : 0
   );
 
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(
-    invoiceId ? parseInt(invoiceId) : 0
+    invoiceId ? Number(invoiceId) : 0
   );
-
-  const getInitialTabs = (): Tab[] => {
-    if (orderId || invoiceId) {
-      return [];
-    }
-
-    const hasDrafts = drafts && drafts.length > 0;
-
-    if (typeParam) {
-      const baseTabs = hasDrafts ? [...drafts] : [];
-      const nextNumber = getNextTabNumber(baseTabs, drafts, typeParam);
-      const newTab = createNewTab(typeParam, nextNumber);
-      return [...baseTabs, newTab];
-    }
-
-    if (hasDrafts) {
-      return drafts;
-    }
-
-    return [createNewTab("order", 1)];
-  };
-
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [tabs, setTabs] = useState<Tab[]>([]);
-  const [activeTabId, setActiveTabId] = useState<string>("");
-
-  useEffect(() => {
-    if (!isInitialized && !orderId && !invoiceId) {
-      const initialTabs = getInitialTabs();
-      setTabs(initialTabs);
-      if (initialTabs.length > 0) {
-        setActiveTabId(initialTabs[initialTabs.length - 1].id);
-      }
-      setIsInitialized(true);
-    }
-  }, [isInitialized, orderId, invoiceId, typeParam]);
-
-  const activeTab = tabs.find((tab) => tab.id === activeTabId);
-
-  useEffect(() => {
-    if (!orderId && !invoiceId) {
-      if (tabs.length === 0) {
-        const newTab = createNewTab("order", 1);
-        setTabs([newTab]);
-        setActiveTabId(newTab.id);
-      } else if (!activeTab) {
-        setActiveTabId(tabs[0].id);
-      }
-    }
-  }, [tabs, activeTab, orderId, invoiceId]);
-
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    const draftableTabs = tabs.filter(
-      (tab) =>
-        tab.cartItems.length > 0 ||
-        tab.selectedCustomer ||
-        tab.orderNote ||
-        tab.discount > 0 ||
-        tab.paymentAmount > 0
-    );
-    useDraftStore.getState().saveDrafts(draftableTabs);
-  }, [tabs, isInitialized]);
 
   useEffect(() => {
     if (existingOrder && orderId) {
@@ -215,7 +132,7 @@ export default function BanHangPage() {
         {
           id: "tab-1",
           type: "order",
-          label: `Đơn hàng ${existingOrder.code}`,
+          label: "Xử lý đơn hàng",
           cartItems,
           selectedCustomer: existingOrder.customer || null,
           orderNote: existingOrder.description || "",
@@ -238,7 +155,6 @@ export default function BanHangPage() {
           documentId: existingOrder.id,
         },
       ]);
-      setActiveTabId("tab-1");
     }
   }, [existingOrder, orderId]);
 
@@ -257,7 +173,7 @@ export default function BanHangPage() {
         {
           id: "tab-1",
           type: "invoice",
-          label: `Hóa đơn ${existingInvoice.code}`,
+          label: "Xử lý hóa đơn",
           cartItems,
           selectedCustomer: existingInvoice.customer || null,
           orderNote: existingInvoice.description || "",
@@ -297,19 +213,15 @@ export default function BanHangPage() {
   }, [existingInvoice, invoiceId]);
 
   const updateActiveTab = (updates: Partial<Tab>) => {
-    if (!activeTab) return;
-
-    const updatedTab = { ...activeTab, ...updates };
-
     setTabs((prevTabs) =>
-      prevTabs.map((tab) => (tab.id === activeTabId ? updatedTab : tab))
+      prevTabs.map((tab) =>
+        tab.id === activeTabId ? { ...tab, ...updates } : tab
+      )
     );
-
-    updateDraft(updatedTab);
   };
 
   const handleConvertToInvoice = () => {
-    if (!activeTab?.documentId || activeTab.type !== "order") {
+    if (!activeTab.documentId || activeTab.type !== "order") {
       toast.error("Không tìm thấy thông tin đơn hàng");
       return;
     }
@@ -334,7 +246,7 @@ export default function BanHangPage() {
   };
 
   const handlePayment = async () => {
-    if (!activeTab?.sourceOrderId) {
+    if (!activeTab.sourceOrderId) {
       toast.error("Không tìm thấy thông tin đơn hàng gốc");
       return;
     }
@@ -355,10 +267,37 @@ export default function BanHangPage() {
   };
 
   const handleAddTab = () => {
-    if (!activeTab) return;
     const currentType = activeTab.type;
-    const nextNumber = getNextTabNumber(tabs, drafts, currentType);
-    const newTab = createNewTab(currentType, nextNumber);
+    const tabsOfSameType = tabs.filter((t) => t.type === currentType);
+    const newTabNumber = tabsOfSameType.length + 1;
+
+    const newTab: Tab = {
+      id: `tab-${Date.now()}`,
+      type: currentType,
+      label:
+        currentType === "order"
+          ? `Đơn hàng ${newTabNumber}`
+          : `Hóa đơn ${newTabNumber}`,
+      cartItems: [],
+      selectedCustomer: null,
+      orderNote: "",
+      discount: 0,
+      discountRatio: 0,
+      useCOD: false,
+      paymentAmount: 0,
+      deliveryInfo: {
+        receiver: "",
+        contactNumber: "",
+        detailAddress: "",
+        locationName: "",
+        wardName: "",
+        weight: 0,
+        length: 10,
+        width: 10,
+        height: 10,
+        noteForDriver: "",
+      },
+    };
 
     setTabs([...tabs, newTab]);
     setActiveTabId(newTab.id);
@@ -366,19 +305,7 @@ export default function BanHangPage() {
 
   const handleCloseTab = (tabId: string) => {
     if (tabs.length === 1) {
-      const tabToClose = tabs[0];
-      const hasContent =
-        tabToClose.cartItems.length > 0 ||
-        tabToClose.selectedCustomer ||
-        tabToClose.orderNote ||
-        tabToClose.discount > 0 ||
-        tabToClose.paymentAmount > 0;
-
-      if (!hasContent) {
-        removeDraft(tabId);
-      }
-
-      router.push("/");
+      router.push("/ban-hang");
       return;
     }
 
@@ -394,17 +321,18 @@ export default function BanHangPage() {
   };
 
   const handleToggleType = () => {
-    if (!activeTab) return;
     const currentType = activeTab.type;
     const newType: TabType = currentType === "order" ? "invoice" : "order";
-    const nextNumber = getNextTabNumber(tabs, drafts, newType);
+
+    const tabsOfNewType = tabs.filter((t) => t.type === newType);
+    const newTabNumber = tabsOfNewType.length + 1;
 
     updateActiveTab({
       type: newType,
       label:
         newType === "order"
-          ? `Đơn hàng ${nextNumber}`
-          : `Hóa đơn ${nextNumber}`,
+          ? `Đơn hàng ${newTabNumber}`
+          : `Hóa đơn ${newTabNumber}`,
       cartItems: [],
       selectedCustomer: null,
       orderNote: "",
@@ -412,14 +340,23 @@ export default function BanHangPage() {
       discountRatio: 0,
       useCOD: false,
       paymentAmount: 0,
-      deliveryInfo: getEmptyDeliveryInfo(),
+      deliveryInfo: {
+        receiver: "",
+        contactNumber: "",
+        detailAddress: "",
+        locationName: "",
+        wardName: "",
+        weight: 0,
+        length: 10,
+        width: 10,
+        height: 10,
+        noteForDriver: "",
+      },
       documentId: undefined,
     });
   };
 
   useEffect(() => {
-    if (!activeTab || !activeTabId) return;
-
     const totalWeight = activeTab.cartItems.reduce((sum, item) => {
       const productWeight = Number(item.product.weight) || 0;
       const weightInGrams =
@@ -427,26 +364,22 @@ export default function BanHangPage() {
       return sum + weightInGrams * item.quantity;
     }, 0);
 
-    if (activeTab.deliveryInfo.weight !== totalWeight) {
-      setTabs((prevTabs) =>
-        prevTabs.map((tab) =>
-          tab.id === activeTabId
-            ? {
-                ...tab,
-                deliveryInfo: {
-                  ...tab.deliveryInfo,
-                  weight: totalWeight,
-                },
-              }
-            : tab
-        )
-      );
-    }
-  }, [activeTab?.cartItems, activeTabId]);
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) =>
+        tab.id === activeTabId
+          ? {
+              ...tab,
+              deliveryInfo: {
+                ...tab.deliveryInfo,
+                weight: totalWeight,
+              },
+            }
+          : tab
+      )
+    );
+  }, [activeTab.cartItems, activeTabId]);
 
   const handleCustomerSelect = (customer: any) => {
-    if (!activeTab) return;
-
     updateActiveTab({
       selectedCustomer: customer,
       deliveryInfo: customer
@@ -458,13 +391,22 @@ export default function BanHangPage() {
             locationName: customer.cityName || "",
             wardName: customer.wardName || "",
           }
-        : getEmptyDeliveryInfo(),
+        : {
+            receiver: "",
+            contactNumber: "",
+            detailAddress: "",
+            locationName: "",
+            wardName: "",
+            weight: 0,
+            length: 10,
+            width: 10,
+            height: 10,
+            noteForDriver: "",
+          },
     });
   };
 
   const addToCart = (product: any) => {
-    if (!activeTab) return;
-
     const existingItem = activeTab.cartItems.find(
       (item) => item.product.id === product.id
     );
@@ -493,8 +435,6 @@ export default function BanHangPage() {
   };
 
   const updateCartItem = (productId: number, updates: Partial<CartItem>) => {
-    if (!activeTab) return;
-
     updateActiveTab({
       cartItems: activeTab.cartItems.map((item) =>
         item.product.id === productId ? { ...item, ...updates } : item
@@ -503,8 +443,6 @@ export default function BanHangPage() {
   };
 
   const removeFromCart = (productId: number) => {
-    if (!activeTab) return;
-
     updateActiveTab({
       cartItems: activeTab.cartItems.filter(
         (item) => item.product.id !== productId
@@ -513,8 +451,6 @@ export default function BanHangPage() {
   };
 
   const handleSaveOrder = async () => {
-    if (!activeTab) return;
-
     if (!selectedBranch) {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi lưu ${
@@ -605,7 +541,6 @@ export default function BanHangPage() {
           data: orderData,
         });
 
-        removeDraft(activeTabId);
         toast.success("Lưu đơn hàng thành công");
         router.push("/don-hang/dat-hang");
       } catch (error: any) {
@@ -672,7 +607,6 @@ export default function BanHangPage() {
           data: invoiceData,
         });
 
-        removeDraft(activeTabId);
         toast.success("Lưu hóa đơn thành công");
         router.push("/don-hang/hoa-don");
       } catch (error: any) {
@@ -683,8 +617,6 @@ export default function BanHangPage() {
   };
 
   const handleCreateDocument = async () => {
-    if (!activeTab) return;
-
     if (!selectedBranch) {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi tạo ${
@@ -795,8 +727,6 @@ export default function BanHangPage() {
         await createInvoice.mutateAsync(documentData);
       }
 
-      removeDraft(activeTabId);
-
       updateActiveTab({
         cartItems: [],
         selectedCustomer: null,
@@ -806,7 +736,6 @@ export default function BanHangPage() {
         useCOD: false,
         paymentAmount: 0,
       });
-
       toast.success(
         `Tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"} thành công`
       );
@@ -830,14 +759,6 @@ export default function BanHangPage() {
     );
   }
 
-  if (!isInitialized || !activeTab) {
-    return (
-      <div className="h-full flex items-center justify-center bg-blue-600">
-        <div className="text-white text-lg">Đang khởi tạo...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="h-full flex flex-col bg-blue-600">
       <div className="px-4 py-3 flex items-center gap-4 flex-shrink-0">
@@ -846,15 +767,13 @@ export default function BanHangPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center bg-white/10 rounded-md overflow-hidden">
             {tabs.map((tab) => (
               <div
                 key={tab.id}
                 onClick={() => setActiveTabId(tab.id)}
-                className={`flex items-center gap-2 px-3 py-2 cursor-pointer rounded-md transition-colors ${
-                  tab.id === activeTabId
-                    ? "bg-white/30"
-                    : "bg-white/10 hover:bg-white/20"
+                className={`flex items-center gap-2 px-3 py-2 cursor-pointer ${
+                  tab.id === activeTabId ? "bg-white/30" : "hover:bg-white/20"
                 }`}>
                 <span className="text-white font-medium">{tab.label}</span>
                 <button
