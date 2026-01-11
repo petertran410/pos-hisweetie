@@ -320,13 +320,13 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
             onClick={onCreateClick}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
             <Plus className="w-4 h-4" />
-            Đặt hàng
+            Tạo Đơn Hàng
           </button>
           <button
             onClick={() => setShowColumnModal(true)}
             className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
             <Settings className="w-4 h-4" />
-            Cột hiển thị
+            Cột Hiển Thị
           </button>
         </div>
       </div>
