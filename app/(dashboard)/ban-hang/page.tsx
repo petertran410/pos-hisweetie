@@ -65,6 +65,11 @@ export interface Tab {
 }
 
 const STORAGE_KEY = "pos-tabs";
+const EDIT_STORAGE_KEY = "pos-edit-state";
+
+const getEditStorageKey = (id: number, type: "order" | "invoice"): string => {
+  return `${EDIT_STORAGE_KEY}-${type}-${id}`;
+};
 
 const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   id: forceId || `tab-${Date.now()}`,
@@ -182,15 +187,85 @@ export default function BanHangPage() {
   }, [tabs, isInitialized, orderId, invoiceId]);
 
   useEffect(() => {
+    if (!isInitialized) return;
+
+    if (orderId && existingOrder && activeTab.documentId) {
+      const editState = {
+        documentId: activeTab.documentId,
+        type: activeTab.type,
+        cartItems: activeTab.cartItems,
+        selectedCustomer: activeTab.selectedCustomer,
+        orderNote: activeTab.orderNote,
+        discount: activeTab.discount,
+        discountRatio: activeTab.discountRatio,
+        useCOD: activeTab.useCOD,
+        paymentAmount: activeTab.paymentAmount,
+        deliveryInfo: activeTab.deliveryInfo,
+        lastModified: new Date().toISOString(),
+      };
+
+      const key = getEditStorageKey(Number(orderId), "order");
+      localStorage.setItem(key, JSON.stringify(editState));
+    } else if (invoiceId && existingInvoice && activeTab.documentId) {
+      const editState = {
+        documentId: activeTab.documentId,
+        type: activeTab.type,
+        cartItems: activeTab.cartItems,
+        selectedCustomer: activeTab.selectedCustomer,
+        orderNote: activeTab.orderNote,
+        discount: activeTab.discount,
+        discountRatio: activeTab.discountRatio,
+        useCOD: activeTab.useCOD,
+        paymentAmount: activeTab.paymentAmount,
+        deliveryInfo: activeTab.deliveryInfo,
+        lastModified: new Date().toISOString(),
+      };
+
+      const key = getEditStorageKey(Number(invoiceId), "invoice");
+      localStorage.setItem(key, JSON.stringify(editState));
+    }
+  }, [
+    tabs,
+    activeTab,
+    isInitialized,
+    orderId,
+    invoiceId,
+    existingOrder,
+    existingInvoice,
+  ]);
+
+  useEffect(() => {
     if (existingOrder && orderId) {
-      const cartItems: CartItem[] =
-        existingOrder.items?.map((item: any) => ({
-          product: item.product,
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-          discount: Number(item.discount) || 0,
-          note: item.note || "",
-        })) || [];
+      const key = getEditStorageKey(Number(orderId), "order");
+      const savedEditState = localStorage.getItem(key);
+
+      let restoredState = null;
+      if (savedEditState) {
+        try {
+          restoredState = JSON.parse(savedEditState);
+          const lastModified = new Date(restoredState.lastModified);
+          const orderUpdated = new Date(existingOrder.updatedAt);
+
+          if (lastModified > orderUpdated) {
+            toast.info("Đã khôi phục thay đổi chưa lưu của bạn");
+          } else {
+            restoredState = null;
+          }
+        } catch (error) {
+          console.error("Error loading edit state:", error);
+          restoredState = null;
+        }
+      }
+
+      const cartItems: CartItem[] = restoredState
+        ? restoredState.cartItems
+        : existingOrder.items?.map((item: any) => ({
+            product: item.product,
+            quantity: Number(item.quantity),
+            price: Number(item.price),
+            discount: Number(item.discount) || 0,
+            note: item.note || "",
+          })) || [];
 
       setTabs([
         {
@@ -198,24 +273,34 @@ export default function BanHangPage() {
           type: "order",
           label: "Xử lý đơn hàng",
           cartItems,
-          selectedCustomer: existingOrder.customer || null,
-          orderNote: existingOrder.description || "",
-          discount: Number(existingOrder.discount) || 0,
-          discountRatio: Number(existingOrder.discountRatio) || 0,
-          useCOD: false,
-          paymentAmount: 0,
-          deliveryInfo: {
-            receiver: existingOrder.delivery?.receiver || "",
-            contactNumber: existingOrder.delivery?.contactNumber || "",
-            detailAddress: existingOrder.delivery?.address || "",
-            locationName: existingOrder.delivery?.locationName || "",
-            wardName: existingOrder.delivery?.wardName || "",
-            weight: Number(existingOrder.delivery?.weight) || 0,
-            length: Number(existingOrder.delivery?.length) || 10,
-            width: Number(existingOrder.delivery?.width) || 10,
-            height: Number(existingOrder.delivery?.height) || 10,
-            noteForDriver: existingOrder.delivery?.noteForDriver || "",
-          },
+          selectedCustomer: restoredState
+            ? restoredState.selectedCustomer
+            : existingOrder.customer || null,
+          orderNote: restoredState
+            ? restoredState.orderNote
+            : existingOrder.description || "",
+          discount: restoredState
+            ? restoredState.discount
+            : Number(existingOrder.discount) || 0,
+          discountRatio: restoredState
+            ? restoredState.discountRatio
+            : Number(existingOrder.discountRatio) || 0,
+          useCOD: restoredState ? restoredState.useCOD : false,
+          paymentAmount: restoredState ? restoredState.paymentAmount : 0,
+          deliveryInfo: restoredState
+            ? restoredState.deliveryInfo
+            : {
+                receiver: existingOrder.delivery?.receiver || "",
+                contactNumber: existingOrder.delivery?.contactNumber || "",
+                detailAddress: existingOrder.delivery?.address || "",
+                locationName: existingOrder.delivery?.locationName || "",
+                wardName: existingOrder.delivery?.wardName || "",
+                weight: Number(existingOrder.delivery?.weight) || 0,
+                length: Number(existingOrder.delivery?.length) || 10,
+                width: Number(existingOrder.delivery?.width) || 10,
+                height: Number(existingOrder.delivery?.height) || 10,
+                noteForDriver: existingOrder.delivery?.noteForDriver || "",
+              },
           documentId: existingOrder.id,
         },
       ]);
@@ -225,14 +310,36 @@ export default function BanHangPage() {
 
   useEffect(() => {
     if (existingInvoice && invoiceId) {
-      const cartItems: CartItem[] =
-        existingInvoice.details?.map((item: any) => ({
-          product: item.product,
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-          discount: Number(item.discount) || 0,
-          note: item.note || "",
-        })) || [];
+      const key = getEditStorageKey(Number(invoiceId), "invoice");
+      const savedEditState = localStorage.getItem(key);
+
+      let restoredState = null;
+      if (savedEditState) {
+        try {
+          restoredState = JSON.parse(savedEditState);
+          const lastModified = new Date(restoredState.lastModified);
+          const invoiceUpdated = new Date(existingInvoice.updatedAt);
+
+          if (lastModified > invoiceUpdated) {
+            toast.info("Đã khôi phục thay đổi chưa lưu của bạn");
+          } else {
+            restoredState = null;
+          }
+        } catch (error) {
+          console.error("Error loading edit state:", error);
+          restoredState = null;
+        }
+      }
+
+      const cartItems: CartItem[] = restoredState
+        ? restoredState.cartItems
+        : existingInvoice.details?.map((item: any) => ({
+            product: item.product,
+            quantity: Number(item.quantity),
+            price: Number(item.price),
+            discount: Number(item.discount) || 0,
+            note: item.note || "",
+          })) || [];
 
       setTabs([
         {
@@ -240,13 +347,25 @@ export default function BanHangPage() {
           type: "invoice",
           label: "Xử lý hóa đơn",
           cartItems,
-          selectedCustomer: existingInvoice.customer || null,
-          orderNote: existingInvoice.description || "",
-          discount: Number(existingInvoice.discount) || 0,
-          discountRatio: Number(existingInvoice.discountRatio) || 0,
-          useCOD: existingInvoice.usingCod || false,
-          paymentAmount: 0,
-          deliveryInfo: existingInvoice.delivery
+          selectedCustomer: restoredState
+            ? restoredState.selectedCustomer
+            : existingInvoice.customer || null,
+          orderNote: restoredState
+            ? restoredState.orderNote
+            : existingInvoice.description || "",
+          discount: restoredState
+            ? restoredState.discount
+            : Number(existingInvoice.discount) || 0,
+          discountRatio: restoredState
+            ? restoredState.discountRatio
+            : Number(existingInvoice.discountRatio) || 0,
+          useCOD: restoredState
+            ? restoredState.useCOD
+            : existingInvoice.usingCod || false,
+          paymentAmount: restoredState ? restoredState.paymentAmount : 0,
+          deliveryInfo: restoredState
+            ? restoredState.deliveryInfo
+            : existingInvoice.delivery
             ? {
                 receiver: existingInvoice.delivery.receiver || "",
                 contactNumber: existingInvoice.delivery.contactNumber || "",
@@ -623,6 +742,9 @@ export default function BanHangPage() {
           data: orderData,
         });
 
+        const key = getEditStorageKey(activeTab.documentId, "order");
+        localStorage.removeItem(key);
+
         toast.success("Lưu đơn hàng thành công");
         router.push("/don-hang/dat-hang");
       } catch (error: any) {
@@ -688,6 +810,9 @@ export default function BanHangPage() {
           id: activeTab.documentId,
           data: invoiceData,
         });
+
+        const key = getEditStorageKey(activeTab.documentId, "invoice");
+        localStorage.removeItem(key);
 
         toast.success("Lưu hóa đơn thành công");
         router.push("/don-hang/hoa-don");
@@ -873,11 +998,8 @@ export default function BanHangPage() {
 
               <button
                 onClick={handleToggleType}
-                className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium flex items-center gap-2">
-                <ArrowLeftRight className="w-4 h-4" />
-                {activeTab.type === "order"
-                  ? "Chuyển sang Hóa đơn"
-                  : "Chuyển sang Đơn hàng"}
+                className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium">
+                <ArrowLeftRight className="w-5 h-5" />
               </button>
             </>
           )}
