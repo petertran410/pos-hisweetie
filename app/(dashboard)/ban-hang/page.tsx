@@ -92,8 +92,13 @@ const createNewTab = (type: TabType, tabNumber: number): Tab => ({
   deliveryInfo: getEmptyDeliveryInfo(),
 });
 
-const getNextTabNumber = (tabs: Tab[], type: TabType): number => {
-  const tabsOfType = tabs.filter((t) => t.type === type);
+const getNextTabNumber = (
+  tabs: Tab[],
+  drafts: Tab[],
+  type: TabType
+): number => {
+  const allTabs = [...tabs, ...drafts];
+  const tabsOfType = allTabs.filter((t) => t.type === type);
   if (tabsOfType.length === 0) return 1;
 
   const numbers = tabsOfType.map((tab) => {
@@ -113,6 +118,7 @@ export default function BanHangPage() {
   const { selectedBranch } = useBranchStore();
   const drafts = useDraftStore((state) => state.drafts);
   const removeDraft = useDraftStore((state) => state.removeDraft);
+  const updateDraft = useDraftStore((state) => state.updateDraft);
 
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
@@ -139,7 +145,7 @@ export default function BanHangPage() {
 
     if (typeParam) {
       const baseTabs = hasDrafts ? [...drafts] : [];
-      const nextNumber = getNextTabNumber(baseTabs, typeParam);
+      const nextNumber = getNextTabNumber(baseTabs, drafts, typeParam);
       const newTab = createNewTab(typeParam, nextNumber);
       return [...baseTabs, newTab];
     }
@@ -291,11 +297,15 @@ export default function BanHangPage() {
   }, [existingInvoice, invoiceId]);
 
   const updateActiveTab = (updates: Partial<Tab>) => {
+    if (!activeTab) return;
+
+    const updatedTab = { ...activeTab, ...updates };
+
     setTabs((prevTabs) =>
-      prevTabs.map((tab) =>
-        tab.id === activeTabId ? { ...tab, ...updates } : tab
-      )
+      prevTabs.map((tab) => (tab.id === activeTabId ? updatedTab : tab))
     );
+
+    updateDraft(updatedTab);
   };
 
   const handleConvertToInvoice = () => {
@@ -347,7 +357,7 @@ export default function BanHangPage() {
   const handleAddTab = () => {
     if (!activeTab) return;
     const currentType = activeTab.type;
-    const nextNumber = getNextTabNumber(tabs, currentType);
+    const nextNumber = getNextTabNumber(tabs, drafts, currentType);
     const newTab = createNewTab(currentType, nextNumber);
 
     setTabs([...tabs, newTab]);
@@ -356,8 +366,19 @@ export default function BanHangPage() {
 
   const handleCloseTab = (tabId: string) => {
     if (tabs.length === 1) {
-      removeDraft(tabId);
-      router.push("/ban-hang");
+      const tabToClose = tabs[0];
+      const hasContent =
+        tabToClose.cartItems.length > 0 ||
+        tabToClose.selectedCustomer ||
+        tabToClose.orderNote ||
+        tabToClose.discount > 0 ||
+        tabToClose.paymentAmount > 0;
+
+      if (!hasContent) {
+        removeDraft(tabId);
+      }
+
+      router.push("/");
       return;
     }
 
@@ -376,7 +397,7 @@ export default function BanHangPage() {
     if (!activeTab) return;
     const currentType = activeTab.type;
     const newType: TabType = currentType === "order" ? "invoice" : "order";
-    const nextNumber = getNextTabNumber(tabs, newType);
+    const nextNumber = getNextTabNumber(tabs, drafts, newType);
 
     updateActiveTab({
       type: newType,
