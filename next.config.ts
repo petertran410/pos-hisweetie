@@ -5,7 +5,6 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_API_URL:
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:3060/api",
   },
-  reactStrictMode: false,
 };
 
 export default nextConfig;
