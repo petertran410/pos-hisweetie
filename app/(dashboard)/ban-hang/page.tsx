@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductSearchDropdown } from "@/components/pos/ProductSearchDropdown";
 import { OrderItemsList } from "@/components/pos/OrderItemsList";
@@ -111,6 +111,55 @@ export default function BanHangPage() {
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
 
+  const initialEditDataRef = useRef<{
+    [key: string]: {
+      cartItems: CartItem[];
+      selectedCustomer: any;
+      orderNote: string;
+      discount: number;
+      discountRatio: number;
+      paymentAmount: number;
+      deliveryInfo: DeliveryInfo;
+    };
+  }>({});
+
+  const saveEditStateIfChanged = (tab: Tab) => {
+    if (!tab.documentId || !tab.isEditMode) return;
+
+    const key = getEditStorageKey(tab.documentId, tab.type);
+    const initialData = initialEditDataRef.current[key];
+
+    if (!initialData) return;
+
+    const hasChanges =
+      JSON.stringify(tab.cartItems) !== JSON.stringify(initialData.cartItems) ||
+      JSON.stringify(tab.selectedCustomer) !==
+        JSON.stringify(initialData.selectedCustomer) ||
+      tab.orderNote !== initialData.orderNote ||
+      tab.discount !== initialData.discount ||
+      tab.discountRatio !== initialData.discountRatio ||
+      tab.paymentAmount !== initialData.paymentAmount ||
+      JSON.stringify(tab.deliveryInfo) !==
+        JSON.stringify(initialData.deliveryInfo);
+
+    if (hasChanges) {
+      const editState = {
+        documentId: tab.documentId,
+        type: tab.type,
+        cartItems: tab.cartItems,
+        selectedCustomer: tab.selectedCustomer,
+        orderNote: tab.orderNote,
+        discount: tab.discount,
+        discountRatio: tab.discountRatio,
+        useCOD: tab.useCOD,
+        paymentAmount: tab.paymentAmount,
+        deliveryInfo: tab.deliveryInfo,
+        lastModified: new Date().toISOString(),
+      };
+      localStorage.setItem(key, JSON.stringify(editState));
+    }
+  };
+
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
   const createInvoice = useCreateInvoice();
@@ -130,22 +179,21 @@ export default function BanHangPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (!orderId && !invoiceId) {
-      const savedTabs = localStorage.getItem(STORAGE_KEY);
-      if (savedTabs) {
-        try {
-          const parsed = JSON.parse(savedTabs);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setTabs(parsed);
-            setActiveTabId(parsed[0].id);
-          }
-        } catch (error) {
-          console.error("Error loading saved tabs:", error);
+    const savedTabs = localStorage.getItem(STORAGE_KEY);
+    if (savedTabs) {
+      try {
+        const parsed = JSON.parse(savedTabs);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTabs(parsed);
+          setActiveTabId(parsed[0].id);
         }
+      } catch (error) {
+        console.error("Error loading saved tabs:", error);
       }
     }
+
     setIsInitialized(true);
-  }, [orderId, invoiceId]);
+  }, []);
 
   useEffect(() => {
     if (!isInitialized || orderId || invoiceId) return;
@@ -180,21 +228,6 @@ export default function BanHangPage() {
 
     const tabsToSave = tabs.filter((tab) => {
       if (tab.documentId && tab.isEditMode) {
-        const key = getEditStorageKey(tab.documentId, tab.type);
-        const editState = {
-          documentId: tab.documentId,
-          type: tab.type,
-          cartItems: tab.cartItems,
-          selectedCustomer: tab.selectedCustomer,
-          orderNote: tab.orderNote,
-          discount: tab.discount,
-          discountRatio: tab.discountRatio,
-          useCOD: tab.useCOD,
-          paymentAmount: tab.paymentAmount,
-          deliveryInfo: tab.deliveryInfo,
-          lastModified: new Date().toISOString(),
-        };
-        localStorage.setItem(key, JSON.stringify(editState));
         return false;
       }
       return tab.cartItems.length > 0 || tab.selectedCustomer;
@@ -208,248 +241,218 @@ export default function BanHangPage() {
   }, [tabs, isInitialized]);
 
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!existingOrder || !orderId) return;
 
-    if (orderId && existingOrder && activeTab.documentId) {
-      const editState = {
-        documentId: activeTab.documentId,
-        type: activeTab.type,
-        cartItems: activeTab.cartItems,
-        selectedCustomer: activeTab.selectedCustomer,
-        orderNote: activeTab.orderNote,
-        discount: activeTab.discount,
-        discountRatio: activeTab.discountRatio,
-        useCOD: activeTab.useCOD,
-        paymentAmount: activeTab.paymentAmount,
-        deliveryInfo: activeTab.deliveryInfo,
-        lastModified: new Date().toISOString(),
-      };
+    const key = getEditStorageKey(Number(orderId), "order");
+    const savedEditState = localStorage.getItem(key);
 
-      const key = getEditStorageKey(Number(orderId), "order");
-      localStorage.setItem(key, JSON.stringify(editState));
-    } else if (invoiceId && existingInvoice && activeTab.documentId) {
-      const editState = {
-        documentId: activeTab.documentId,
-        type: activeTab.type,
-        cartItems: activeTab.cartItems,
-        selectedCustomer: activeTab.selectedCustomer,
-        orderNote: activeTab.orderNote,
-        discount: activeTab.discount,
-        discountRatio: activeTab.discountRatio,
-        useCOD: activeTab.useCOD,
-        paymentAmount: activeTab.paymentAmount,
-        deliveryInfo: activeTab.deliveryInfo,
-        lastModified: new Date().toISOString(),
-      };
+    let restoredState = null;
+    if (savedEditState) {
+      try {
+        restoredState = JSON.parse(savedEditState);
+        const lastModified = new Date(restoredState.lastModified);
+        const orderUpdated = new Date(existingOrder.updatedAt);
 
-      const key = getEditStorageKey(Number(invoiceId), "invoice");
-      localStorage.setItem(key, JSON.stringify(editState));
-    }
-  }, [
-    tabs,
-    activeTab,
-    isInitialized,
-    orderId,
-    invoiceId,
-    existingOrder,
-    existingInvoice,
-  ]);
-
-  useEffect(() => {
-    if (existingOrder && orderId) {
-      const key = getEditStorageKey(Number(orderId), "order");
-      const savedEditState = localStorage.getItem(key);
-
-      let restoredState = null;
-      if (savedEditState) {
-        try {
-          restoredState = JSON.parse(savedEditState);
-          const lastModified = new Date(restoredState.lastModified);
-          const orderUpdated = new Date(existingOrder.updatedAt);
-
-          if (lastModified > orderUpdated) {
-            toast.info("Đã khôi phục thay đổi chưa lưu của bạn");
-          } else {
-            restoredState = null;
-          }
-        } catch (error) {
-          console.error("Error loading edit state:", error);
+        if (lastModified > orderUpdated) {
+          toast.info("Đã khôi phục thay đổi chưa lưu của bạn");
+        } else {
           restoredState = null;
         }
+      } catch (error) {
+        console.error("Error loading edit state:", error);
+        restoredState = null;
       }
-
-      const cartItems: CartItem[] = restoredState
-        ? restoredState.cartItems
-        : existingOrder.items?.map((item: any) => ({
-            product: item.product,
-            quantity: Number(item.quantity),
-            price: Number(item.price),
-            discount: Number(item.discount) || 0,
-            note: item.note || "",
-          })) || [];
-
-      const editTab: Tab = {
-        id: `edit-order-${orderId}`,
-        type: "order",
-        label: `Sửa ĐH #${existingOrder.code}`,
-        cartItems,
-        selectedCustomer: restoredState
-          ? restoredState.selectedCustomer
-          : existingOrder.customer || null,
-        orderNote: restoredState
-          ? restoredState.orderNote
-          : existingOrder.description || "",
-        discount: restoredState
-          ? restoredState.discount
-          : Number(existingOrder.discount) || 0,
-        discountRatio: restoredState
-          ? restoredState.discountRatio
-          : Number(existingOrder.discountRatio) || 0,
-        useCOD: restoredState ? restoredState.useCOD : false,
-        paymentAmount: restoredState ? restoredState.paymentAmount : 0,
-        deliveryInfo: restoredState
-          ? restoredState.deliveryInfo
-          : {
-              receiver: existingOrder.delivery?.receiver || "",
-              contactNumber: existingOrder.delivery?.contactNumber || "",
-              detailAddress: existingOrder.delivery?.address || "",
-              locationName: existingOrder.delivery?.locationName || "",
-              wardName: existingOrder.delivery?.wardName || "",
-              weight: Number(existingOrder.delivery?.weight) || 0,
-              length: Number(existingOrder.delivery?.length) || 10,
-              width: Number(existingOrder.delivery?.width) || 10,
-              height: Number(existingOrder.delivery?.height) || 10,
-              noteForDriver: existingOrder.delivery?.noteForDriver || "",
-            },
-        documentId: existingOrder.id,
-        isEditMode: true,
-      };
-
-      setTabs((prevTabs) => {
-        const existingEditIndex = prevTabs.findIndex(
-          (t) => t.documentId === existingOrder.id && t.isEditMode
-        );
-
-        if (existingEditIndex >= 0) {
-          const updated = [...prevTabs];
-          updated[existingEditIndex] = editTab;
-          return updated;
-        } else {
-          const savedTabs = prevTabs.filter(
-            (t) => !t.documentId || !t.isEditMode
-          );
-          return [...savedTabs, editTab];
-        }
-      });
-
-      setActiveTabId(`edit-order-${orderId}`);
     }
+
+    const cartItems: CartItem[] = restoredState
+      ? restoredState.cartItems
+      : existingOrder.items?.map((item: any) => ({
+          product: item.product,
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+          discount: Number(item.discount) || 0,
+          note: item.note || "",
+        })) || [];
+
+    const editTab: Tab = {
+      id: `edit-order-${orderId}`,
+      type: "order",
+      label: `Sửa ĐH #${existingOrder.code}`,
+      cartItems,
+      selectedCustomer: restoredState
+        ? restoredState.selectedCustomer
+        : existingOrder.customer || null,
+      orderNote: restoredState
+        ? restoredState.orderNote
+        : existingOrder.description || "",
+      discount: restoredState
+        ? restoredState.discount
+        : Number(existingOrder.discount) || 0,
+      discountRatio: restoredState
+        ? restoredState.discountRatio
+        : Number(existingOrder.discountRatio) || 0,
+      useCOD: restoredState ? restoredState.useCOD : false,
+      paymentAmount: restoredState ? restoredState.paymentAmount : 0,
+      deliveryInfo: restoredState
+        ? restoredState.deliveryInfo
+        : {
+            receiver: existingOrder.delivery?.receiver || "",
+            contactNumber: existingOrder.delivery?.contactNumber || "",
+            detailAddress: existingOrder.delivery?.address || "",
+            locationName: existingOrder.delivery?.locationName || "",
+            wardName: existingOrder.delivery?.wardName || "",
+            weight: Number(existingOrder.delivery?.weight) || 0,
+            length: Number(existingOrder.delivery?.length) || 10,
+            width: Number(existingOrder.delivery?.width) || 10,
+            height: Number(existingOrder.delivery?.height) || 10,
+            noteForDriver: existingOrder.delivery?.noteForDriver || "",
+          },
+      documentId: existingOrder.id,
+      isEditMode: true,
+    };
+
+    const editKey = getEditStorageKey(existingOrder.id, "order");
+    initialEditDataRef.current[editKey] = {
+      cartItems: editTab.cartItems,
+      selectedCustomer: editTab.selectedCustomer,
+      orderNote: editTab.orderNote,
+      discount: editTab.discount,
+      discountRatio: editTab.discountRatio,
+      paymentAmount: editTab.paymentAmount,
+      deliveryInfo: editTab.deliveryInfo,
+    };
+
+    setTabs((prevTabs) => {
+      const existingEditIndex = prevTabs.findIndex(
+        (t) => t.documentId === existingOrder.id && t.isEditMode
+      );
+
+      if (existingEditIndex >= 0) {
+        const updated = [...prevTabs];
+        updated[existingEditIndex] = editTab;
+        return updated;
+      } else {
+        const nonEditTabs = prevTabs.filter((t) => !t.isEditMode);
+        return [...nonEditTabs, editTab];
+      }
+    });
+
+    setActiveTabId(`edit-order-${orderId}`);
   }, [existingOrder, orderId]);
 
   useEffect(() => {
-    if (existingInvoice && invoiceId) {
-      const key = getEditStorageKey(Number(invoiceId), "invoice");
-      const savedEditState = localStorage.getItem(key);
+    if (!existingInvoice || !invoiceId) return;
 
-      let restoredState = null;
-      if (savedEditState) {
-        try {
-          restoredState = JSON.parse(savedEditState);
-          const lastModified = new Date(restoredState.lastModified);
-          const invoiceUpdated = new Date(existingInvoice.updatedAt);
+    const key = getEditStorageKey(Number(invoiceId), "invoice");
+    const savedEditState = localStorage.getItem(key);
 
-          if (lastModified > invoiceUpdated) {
-            toast.info("Đã khôi phục thay đổi chưa lưu của bạn");
-          } else {
-            restoredState = null;
-          }
-        } catch (error) {
-          console.error("Error loading edit state:", error);
+    let restoredState = null;
+    if (savedEditState) {
+      try {
+        restoredState = JSON.parse(savedEditState);
+        const lastModified = new Date(restoredState.lastModified);
+        const invoiceUpdated = new Date(existingInvoice.updatedAt);
+
+        if (lastModified > invoiceUpdated) {
+          toast.info("Đã khôi phục thay đổi chưa lưu của bạn");
+        } else {
           restoredState = null;
         }
+      } catch (error) {
+        console.error("Error loading edit state:", error);
+        restoredState = null;
       }
-
-      const cartItems: CartItem[] = restoredState
-        ? restoredState.cartItems
-        : existingInvoice.details?.map((item: any) => ({
-            product: item.product,
-            quantity: Number(item.quantity),
-            price: Number(item.price),
-            discount: Number(item.discount) || 0,
-            note: item.note || "",
-          })) || [];
-
-      const editTab: Tab = {
-        id: `edit-invoice-${invoiceId}`,
-        type: "invoice",
-        label: `Sửa HĐ #${existingInvoice.code}`,
-        cartItems,
-        selectedCustomer: restoredState
-          ? restoredState.selectedCustomer
-          : existingInvoice.customer || null,
-        orderNote: restoredState
-          ? restoredState.orderNote
-          : existingInvoice.description || "",
-        discount: restoredState
-          ? restoredState.discount
-          : Number(existingInvoice.discount) || 0,
-        discountRatio: restoredState
-          ? restoredState.discountRatio
-          : Number(existingInvoice.discountRatio) || 0,
-        useCOD: restoredState
-          ? restoredState.useCOD
-          : existingInvoice.usingCod || false,
-        paymentAmount: restoredState ? restoredState.paymentAmount : 0,
-        deliveryInfo: restoredState
-          ? restoredState.deliveryInfo
-          : existingInvoice.delivery
-          ? {
-              receiver: existingInvoice.delivery.receiver || "",
-              contactNumber: existingInvoice.delivery.contactNumber || "",
-              detailAddress: existingInvoice.delivery.address || "",
-              locationName: existingInvoice.delivery.locationName || "",
-              wardName: existingInvoice.delivery.wardName || "",
-              weight: Number(existingInvoice.delivery.weight) || 0,
-              length: Number(existingInvoice.delivery.length) || 10,
-              width: Number(existingInvoice.delivery.width) || 10,
-              height: Number(existingInvoice.delivery.height) || 10,
-              noteForDriver: existingInvoice.delivery.noteForDriver,
-            }
-          : {
-              receiver: "",
-              contactNumber: "",
-              detailAddress: "",
-              locationName: "",
-              wardName: "",
-              weight: 0,
-              length: 10,
-              width: 10,
-              height: 10,
-              noteForDriver: "",
-            },
-        documentId: existingInvoice.id,
-        isEditMode: true,
-      };
-
-      setTabs((prevTabs) => {
-        const existingEditIndex = prevTabs.findIndex(
-          (t) => t.documentId === existingInvoice.id && t.isEditMode
-        );
-
-        if (existingEditIndex >= 0) {
-          const updated = [...prevTabs];
-          updated[existingEditIndex] = editTab;
-          return updated;
-        } else {
-          const savedTabs = prevTabs.filter(
-            (t) => !t.documentId || !t.isEditMode
-          );
-          return [...savedTabs, editTab];
-        }
-      });
-
-      setActiveTabId(`edit-invoice-${invoiceId}`);
     }
+
+    const cartItems: CartItem[] = restoredState
+      ? restoredState.cartItems
+      : existingInvoice.details?.map((item: any) => ({
+          product: item.product,
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+          discount: Number(item.discount) || 0,
+          note: item.note || "",
+        })) || [];
+
+    const editTab: Tab = {
+      id: `edit-invoice-${invoiceId}`,
+      type: "invoice",
+      label: `Sửa HĐ #${existingInvoice.code}`,
+      cartItems,
+      selectedCustomer: restoredState
+        ? restoredState.selectedCustomer
+        : existingInvoice.customer || null,
+      orderNote: restoredState
+        ? restoredState.orderNote
+        : existingInvoice.description || "",
+      discount: restoredState
+        ? restoredState.discount
+        : Number(existingInvoice.discount) || 0,
+      discountRatio: restoredState
+        ? restoredState.discountRatio
+        : Number(existingInvoice.discountRatio) || 0,
+      useCOD: restoredState
+        ? restoredState.useCOD
+        : existingInvoice.usingCod || false,
+      paymentAmount: restoredState ? restoredState.paymentAmount : 0,
+      deliveryInfo: restoredState
+        ? restoredState.deliveryInfo
+        : existingInvoice.delivery
+        ? {
+            receiver: existingInvoice.delivery.receiver || "",
+            contactNumber: existingInvoice.delivery.contactNumber || "",
+            detailAddress: existingInvoice.delivery.address || "",
+            locationName: existingInvoice.delivery.locationName || "",
+            wardName: existingInvoice.delivery.wardName || "",
+            weight: Number(existingInvoice.delivery.weight) || 0,
+            length: Number(existingInvoice.delivery.length) || 10,
+            width: Number(existingInvoice.delivery.width) || 10,
+            height: Number(existingInvoice.delivery.height) || 10,
+            noteForDriver: existingInvoice.delivery.noteForDriver,
+          }
+        : {
+            receiver: "",
+            contactNumber: "",
+            detailAddress: "",
+            locationName: "",
+            wardName: "",
+            weight: 0,
+            length: 10,
+            width: 10,
+            height: 10,
+            noteForDriver: "",
+          },
+      documentId: existingInvoice.id,
+      isEditMode: true,
+    };
+
+    const editKey = getEditStorageKey(existingInvoice.id, "invoice");
+    initialEditDataRef.current[editKey] = {
+      cartItems: editTab.cartItems,
+      selectedCustomer: editTab.selectedCustomer,
+      orderNote: editTab.orderNote,
+      discount: editTab.discount,
+      discountRatio: editTab.discountRatio,
+      paymentAmount: editTab.paymentAmount,
+      deliveryInfo: editTab.deliveryInfo,
+    };
+
+    setTabs((prevTabs) => {
+      const existingEditIndex = prevTabs.findIndex(
+        (t) => t.documentId === existingInvoice.id && t.isEditMode
+      );
+
+      if (existingEditIndex >= 0) {
+        const updated = [...prevTabs];
+        updated[existingEditIndex] = editTab;
+        return updated;
+      } else {
+        const nonEditTabs = prevTabs.filter((t) => !t.isEditMode);
+        return [...nonEditTabs, editTab];
+      }
+    });
+
+    setActiveTabId(`edit-invoice-${invoiceId}`);
   }, [existingInvoice, invoiceId]);
 
   const updateActiveTab = (updates: Partial<Tab>) => {
@@ -641,6 +644,16 @@ export default function BanHangPage() {
       )
     );
   }, [activeTab?.cartItems, activeTabId]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    tabs.forEach((tab) => {
+      if (tab.documentId && tab.isEditMode) {
+        saveEditStateIfChanged(tab);
+      }
+    });
+  }, [tabs, isInitialized]);
 
   const handleCustomerSelect = (customer: any) => {
     updateActiveTab({
@@ -1033,26 +1046,24 @@ export default function BanHangPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-white/10 rounded-md overflow-hidden">
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                onClick={() => setActiveTabId(tab.id)}
-                className={`flex items-center gap-2 px-3 py-2 cursor-pointer ${
-                  tab.id === activeTabId ? "bg-white/30" : "hover:bg-white/20"
-                }`}>
-                <span className="text-white font-medium">{tab.label}</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCloseTab(tab.id);
-                  }}
-                  className="hover:bg-white/20 p-1 rounded">
-                  <X className="w-4 h-4 text-white" />
-                </button>
-              </div>
-            ))}
-          </div>
+          {tabs.map((tab) => (
+            <div
+              key={tab.id}
+              onClick={() => setActiveTabId(tab.id)}
+              className={`flex items-center gap-2 px-3 py-2 cursor-pointer rounded-md ${
+                tab.id === activeTabId ? "bg-white/30" : "hover:bg-white/20"
+              }`}>
+              <span className="text-white font-medium">{tab.label}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCloseTab(tab.id);
+                }}
+                className="hover:bg-white/20 p-1 rounded">
+                <X className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          ))}
 
           {!activeTab.documentId && (
             <>
