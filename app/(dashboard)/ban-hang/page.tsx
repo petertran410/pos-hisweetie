@@ -47,7 +47,7 @@ export interface DeliveryInfo {
 
 type TabType = "order" | "invoice";
 
-interface Tab {
+export interface Tab {
   id: string;
   type: TabType;
   label: string;
@@ -66,8 +66,8 @@ interface Tab {
 
 const STORAGE_KEY = "pos-tabs";
 
-const getDefaultTab = (type: TabType = "order"): Tab => ({
-  id: `tab-${Date.now()}`,
+const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
+  id: forceId || `tab-${Date.now()}`,
   type,
   label: type === "order" ? "Đơn hàng 1" : "Hóa đơn 1",
   cartItems: [],
@@ -99,11 +99,11 @@ export default function BanHangPage() {
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
 
-  const [tabs, setTabs] = useState<Tab[]>([getDefaultTab()]);
+  const [tabs, setTabs] = useState<Tab[]>([getDefaultTab("order", "tab-1")]);
   const [activeTabId, setActiveTabId] = useState("tab-1");
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const activeTab = tabs.find((tab) => tab.id === activeTabId)!;
+  const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
 
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
@@ -437,6 +437,8 @@ export default function BanHangPage() {
   };
 
   useEffect(() => {
+    if (!activeTab) return;
+
     const totalWeight = activeTab.cartItems.reduce((sum, item) => {
       const productWeight = Number(item.product.weight) || 0;
       const weightInGrams =
@@ -457,7 +459,7 @@ export default function BanHangPage() {
           : tab
       )
     );
-  }, [activeTab.cartItems, activeTabId]);
+  }, [activeTab?.cartItems, activeTabId]);
 
   const handleCustomerSelect = (customer: any) => {
     updateActiveTab({
