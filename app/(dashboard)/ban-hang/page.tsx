@@ -146,6 +146,7 @@ export default function BanHangPage() {
       const editState = {
         documentId: tab.documentId,
         type: tab.type,
+        code: tab.label.split("#")[1] || tab.documentId.toString(),
         cartItems: tab.cartItems,
         selectedCustomer: tab.selectedCustomer,
         orderNote: tab.orderNote,
@@ -172,10 +173,12 @@ export default function BanHangPage() {
             const type = parts[3] as TabType;
             const docId = parseInt(parts[4]);
 
+            const code = editState.code || docId.toString();
+
             const editTab: Tab = {
               id: `edit-${type}-${docId}`,
               type: editState.type,
-              label: type === "order" ? `Sửa ĐH #${docId}` : `Sửa HĐ #${docId}`,
+              label: type === "order" ? `Sửa ĐH #${code}` : `Sửa HĐ #${code}`,
               cartItems: editState.cartItems || [],
               selectedCustomer: editState.selectedCustomer || null,
               orderNote: editState.orderNote || "",
@@ -269,9 +272,27 @@ export default function BanHangPage() {
     if (!isInitialized || orderId || invoiceId) return;
 
     if (tabType) {
-      const savedTabs = tabs.filter(
-        (tab) => !tab.documentId && tab.cartItems.length > 0
-      );
+      const savedTabsStr = localStorage.getItem(STORAGE_KEY);
+      const savedTabs: Tab[] = [];
+
+      if (savedTabsStr) {
+        try {
+          const parsed = JSON.parse(savedTabsStr);
+          if (Array.isArray(parsed)) {
+            savedTabs.push(
+              ...parsed.filter(
+                (t: Tab) =>
+                  !t.documentId &&
+                  (t.cartItems.length > 0 || t.selectedCustomer)
+              )
+            );
+          }
+        } catch (error) {
+          console.error("Error loading saved tabs:", error);
+        }
+      }
+
+      const editTabs = loadAllEditTabsFromStorage();
 
       const tabsOfType = savedTabs.filter((t) => t.type === tabType);
       const newTabNumber = tabsOfType.length + 1;
@@ -285,8 +306,8 @@ export default function BanHangPage() {
             : `Hóa đơn ${newTabNumber}`,
       };
 
-      const updatedTabs = [...savedTabs, newTab];
-      setTabs(updatedTabs);
+      const allTabs = [...savedTabs, ...editTabs, newTab];
+      setTabs(allTabs);
       setActiveTabId(newTab.id);
 
       router.replace("/ban-hang", { scroll: false });
