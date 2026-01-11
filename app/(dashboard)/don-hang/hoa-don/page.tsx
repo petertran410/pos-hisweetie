@@ -11,7 +11,7 @@ export default function HoaDonPage() {
   const [filters, setFilters] = useState({});
 
   const handleCreateClick = () => {
-    router.push("/ban-hang");
+    router.push("/ban-hang?type=invoice");
   };
 
   const handleEditClick = (invoice: Invoice) => {};
