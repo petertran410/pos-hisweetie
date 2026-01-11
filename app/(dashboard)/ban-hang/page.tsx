@@ -51,6 +51,7 @@ export interface Tab {
   id: string;
   type: TabType;
   label: string;
+  code?: string;
   cartItems: CartItem[];
   selectedCustomer: any;
   orderNote: string;
@@ -146,7 +147,7 @@ export default function BanHangPage() {
       const editState = {
         documentId: tab.documentId,
         type: tab.type,
-        code: tab.label.split("#")[1] || tab.documentId.toString(),
+        code: tab.code || tab.documentId.toString(),
         cartItems: tab.cartItems,
         selectedCustomer: tab.selectedCustomer,
         orderNote: tab.orderNote,
@@ -369,6 +370,7 @@ export default function BanHangPage() {
       id: `edit-order-${orderId}`,
       type: "order",
       label: `Sửa ĐH #${existingOrder.code}`,
+      code: existingOrder.code,
       cartItems,
       selectedCustomer: restoredState
         ? restoredState.selectedCustomer
@@ -469,6 +471,7 @@ export default function BanHangPage() {
       id: `edit-invoice-${invoiceId}`,
       type: "invoice",
       label: `Sửa HĐ #${existingInvoice.code}`,
+      code: existingInvoice.code,
       cartItems,
       selectedCustomer: restoredState
         ? restoredState.selectedCustomer
