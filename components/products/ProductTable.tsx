@@ -408,7 +408,7 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
       </div>
 
       {showColumnModal && (
-        <div className="absolute right-4 top-32 bg-white border rounded shadow-lg z-50 p-4 w-64 max-h-96 overflow-y-auto">
+        <div className="absolute right-4 top-36 bg-white border rounded shadow-lg z-50 p-4 w-64 max-h-96 overflow-y-auto custom-sidebar-scroll">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">Hiển thị cột</h3>
             <button
@@ -445,13 +445,6 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
               style={{ minWidth: "max-content", borderSpacing: "0 1px" }}>
               <thead className="bg-gray-50 sticky top-0">
                 <tr>
-                  <th className="px-6 py-3 text-left sticky left-0 bg-gray-50 z-10">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.length === data?.data.length}
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
                   {visibleColumns.map((col) => (
                     <th
                       key={col.key}
@@ -468,15 +461,6 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
                       key={product.id}
                       className="border-b hover:bg-gray-50 cursor-pointer"
                       onClick={() => setSelectedProduct(product)}>
-                      <td
-                        className="px-6 py-3 sticky left-0 bg-white z-10"
-                        onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(product.id)}
-                          onChange={() => toggleSelect(product.id)}
-                        />
-                      </td>
                       {visibleColumns.map((col) => (
                         <td
                           key={col.key}
