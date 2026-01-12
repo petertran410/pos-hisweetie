@@ -248,7 +248,7 @@ export function InvoicesSidebar({
   };
 
   return (
-    <div className="w-[20%] border m-4 rounded-xl overflow-y-auto p-4 space-y-6 bg-white shadow-xl">
+    <div className="w-[20%] border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold">Bộ lọc</h3>

@@ -343,7 +343,7 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
   const visibleColumns = columns.filter((col) => col.visible);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
       <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="relative">
