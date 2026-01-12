@@ -248,8 +248,8 @@ export function InvoicesSidebar({
   };
 
   return (
-    <div className="w-80 border-r bg-white overflow-y-auto">
-      <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+    <div className="w-[20%] border m-4 rounded-xl overflow-y-auto p-4 space-y-6 bg-white shadow-xl">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold">Bộ lọc</h3>
         </div>
@@ -260,212 +260,209 @@ export function InvoicesSidebar({
         </button>
       </div>
 
-      <div className="p-4 space-y-6">
-        {/* Chi nhánh */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Chi nhánh</label>
-          {selectedBranches.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
-              {selectedBranches.map((branchId) => {
-                const branch = branches.find((b) => b.id === branchId);
-                return (
-                  <span
-                    key={branchId}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 text-white text-sm rounded">
-                    {branch?.name}
-                    <button
-                      onClick={() => removeBranch(branchId)}
-                      className="hover:bg-blue-700 rounded-full p-0.5">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                );
-              })}
-            </div>
-          )}
-          <select
-            value=""
-            onChange={(e) => {
-              if (e.target.value) {
-                const branchId = parseInt(e.target.value);
-                if (!selectedBranches.includes(branchId)) {
-                  setSelectedBranches([...selectedBranches, branchId]);
-                }
+      <div>
+        <label className="block text-sm font-medium mb-2">Chi nhánh</label>
+        {selectedBranches.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {selectedBranches.map((branchId) => {
+              const branch = branches.find((b) => b.id === branchId);
+              return (
+                <span
+                  key={branchId}
+                  className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 text-white text-sm rounded">
+                  {branch?.name}
+                  <button
+                    onClick={() => removeBranch(branchId)}
+                    className="hover:bg-blue-700 rounded-full p-0.5">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
+        <select
+          value=""
+          onChange={(e) => {
+            if (e.target.value) {
+              const branchId = parseInt(e.target.value);
+              if (!selectedBranches.includes(branchId)) {
+                setSelectedBranches([...selectedBranches, branchId]);
               }
-            }}
-            className="w-full px-3 py-2 border rounded-lg text-sm">
-            <option value="">Chọn chi nhánh</option>
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
-        </div>
+            }
+          }}
+          className="w-full px-3 py-2 border rounded-lg text-sm">
+          <option value="">Chọn chi nhánh</option>
+          {branches.map((branch) => (
+            <option key={branch.id} value={branch.id}>
+              {branch.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        {/* Thời gian */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Thời gian</label>
-          <div className="space-y-2">
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setDateMode("preset");
-                  setShowDateModeDropdown(!showDateModeDropdown);
-                }}
-                className={`w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between text-sm ${
-                  dateMode === "preset" ? "bg-blue-50 border-blue-600" : ""
-                }`}>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={dateMode === "preset"}
-                    onChange={() => setDateMode("preset")}
-                    className="cursor-pointer"
-                  />
-                  <span>{getPresetLabel(selectedPreset)}</span>
-                </div>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-
-              {showDateModeDropdown && dateMode === "preset" && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto">
-                  {TIME_PRESETS.map((preset) => (
-                    <button
-                      key={preset.value}
-                      onClick={() => applyPreset(preset.value)}
-                      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm">
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
+      {/* Thời gian */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Thời gian</label>
+        <div className="space-y-2">
+          <div className="relative">
             <button
-              onClick={() => setDateMode("custom")}
+              onClick={() => {
+                setDateMode("preset");
+                setShowDateModeDropdown(!showDateModeDropdown);
+              }}
               className={`w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between text-sm ${
-                dateMode === "custom" ? "bg-blue-50 border-blue-600" : ""
+                dateMode === "preset" ? "bg-blue-50 border-blue-600" : ""
               }`}>
               <div className="flex items-center gap-2">
                 <input
                   type="radio"
-                  checked={dateMode === "custom"}
-                  onChange={() => setDateMode("custom")}
+                  checked={dateMode === "preset"}
+                  onChange={() => setDateMode("preset")}
                   className="cursor-pointer"
                 />
-                <span>Tùy chỉnh</span>
+                <span>{getPresetLabel(selectedPreset)}</span>
               </div>
-              <Calendar className="w-4 h-4" />
+              <ChevronDown className="w-4 h-4" />
             </button>
 
-            {dateMode === "custom" && (
-              <div className="space-y-2 pl-6">
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
+            {showDateModeDropdown && dateMode === "preset" && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto">
+                {TIME_PRESETS.map((preset) => (
+                  <button
+                    key={preset.value}
+                    onClick={() => applyPreset(preset.value)}
+                    className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm">
+                    {preset.label}
+                  </button>
+                ))}
               </div>
             )}
           </div>
-        </div>
 
-        {/* Loại hóa đơn */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Loại hóa đơn</label>
-          <div className="space-y-2">
-            {DELIVERY_TYPE_OPTIONS.map((type) => (
-              <label
-                key={type.value}
-                className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedDeliveryTypes.includes(type.value)}
-                  onChange={() => toggleDeliveryType(type.value)}
-                  className="cursor-pointer"
-                />
-                <span className="text-sm">{type.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+          <button
+            onClick={() => setDateMode("custom")}
+            className={`w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between text-sm ${
+              dateMode === "custom" ? "bg-blue-50 border-blue-600" : ""
+            }`}>
+            <div className="flex items-center gap-2">
+              <input
+                type="radio"
+                checked={dateMode === "custom"}
+                onChange={() => setDateMode("custom")}
+                className="cursor-pointer"
+              />
+              <span>Tùy chỉnh</span>
+            </div>
+            <Calendar className="w-4 h-4" />
+          </button>
 
-        {/* Trạng thái hóa đơn */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Trạng thái hóa đơn
-          </label>
-          <div className="space-y-2">
-            {INVOICE_STATUS_OPTIONS.map((status) => (
-              <label
-                key={status.value}
-                className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedStatuses.includes(status.value)}
-                  onChange={() => toggleStatus(status.value)}
-                  className="cursor-pointer"
-                />
-                <span className="text-sm">{status.label}</span>
-              </label>
-            ))}
-          </div>
+          {dateMode === "custom" && (
+            <div className="space-y-2 pl-6">
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+              />
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+              />
+            </div>
+          )}
         </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Người tạo</label>
-          <select
-            value={creatorId}
-            onChange={(e) => setCreatorId(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
-            <option value="">Chọn người tạo</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name}
-              </option>
-            ))}
-          </select>
+      {/* Loại hóa đơn */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Loại hóa đơn</label>
+        <div className="space-y-2">
+          {DELIVERY_TYPE_OPTIONS.map((type) => (
+            <label
+              key={type.value}
+              className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedDeliveryTypes.includes(type.value)}
+                onChange={() => toggleDeliveryType(type.value)}
+                className="cursor-pointer"
+              />
+              <span className="text-sm">{type.label}</span>
+            </label>
+          ))}
         </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Người bán</label>
-          <select
-            value={soldById}
-            onChange={(e) => setSoldById(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
-            <option value="">Chọn người bán</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name}
-              </option>
-            ))}
-          </select>
+      {/* Trạng thái hóa đơn */}
+      <div>
+        <label className="block text-sm font-medium mb-2">
+          Trạng thái hóa đơn
+        </label>
+        <div className="space-y-2">
+          {INVOICE_STATUS_OPTIONS.map((status) => (
+            <label
+              key={status.value}
+              className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedStatuses.includes(status.value)}
+                onChange={() => toggleStatus(status.value)}
+                className="cursor-pointer"
+              />
+              <span className="text-sm">{status.label}</span>
+            </label>
+          ))}
         </div>
+      </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium">Kênh bán</label>
-          </div>
-          <select
-            value={saleChannelId}
-            onChange={(e) => setSaleChannelId(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
-            <option value="">Chọn kênh bán</option>
-            {saleChannels.map((channel) => (
-              <option key={channel.id} value={channel.id}>
-                {channel.name}
-              </option>
-            ))}
-          </select>
+      <div>
+        <label className="block text-sm font-medium mb-2">Người tạo</label>
+        <select
+          value={creatorId}
+          onChange={(e) => setCreatorId(e.target.value)}
+          className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
+          <option value="">Chọn người tạo</option>
+          {users.map((user) => (
+            <option key={user.id} value={user.id}>
+              {user.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Người bán</label>
+        <select
+          value={soldById}
+          onChange={(e) => setSoldById(e.target.value)}
+          className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
+          <option value="">Chọn người bán</option>
+          {users.map((user) => (
+            <option key={user.id} value={user.id}>
+              {user.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium">Kênh bán</label>
         </div>
+        <select
+          value={saleChannelId}
+          onChange={(e) => setSaleChannelId(e.target.value)}
+          className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
+          <option value="">Chọn kênh bán</option>
+          {saleChannels.map((channel) => (
+            <option key={channel.id} value={channel.id}>
+              {channel.name}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );

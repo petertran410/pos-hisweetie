@@ -302,7 +302,7 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-white">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
       <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-4 w-[500px]">
           <h2 className="text-xl font-semibold w-[150px]">Đơn hàng</h2>

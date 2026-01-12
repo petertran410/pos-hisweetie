@@ -247,228 +247,220 @@ export function OrdersSidebar({
   };
 
   return (
-    <aside className="w-80 border-r bg-white overflow-y-auto">
-      <div className="p-4 space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Bộ lọc</h2>
-          <button
-            onClick={clearAllFilters}
-            className="text-sm text-blue-600 hover:text-blue-700">
-            Xóa tất cả
-          </button>
-        </div>
+    <aside className="w-[20%] border m-4 rounded-xl overflow-y-auto p-4 space-y-6 bg-white">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Bộ lọc</h2>
+        <button
+          onClick={clearAllFilters}
+          className="text-sm text-blue-600 hover:text-blue-700">
+          Xóa tất cả
+        </button>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Chi nhánh xử lý
+      <div>
+        <label className="block text-sm font-medium mb-2">Chi nhánh</label>
+        <select
+          value={branchId}
+          onChange={(e) => setBranchId(e.target.value)}
+          className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Chọn chi nhánh</option>
+          {branches?.map((branch) => (
+            <option key={branch.id} value={branch.id}>
+              {branch.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Thời gian</label>
+        <div className="space-y-2 mb-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={enableOrderDate}
+              onChange={(e) => setEnableOrderDate(e.target.checked)}
+              className="cursor-pointer"
+            />
+            <span className="text-sm">Ngày đặt hàng</span>
           </label>
-          <select
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Chọn chi nhánh</option>
-            {branches?.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Thời gian</label>
-          <div className="space-y-2 mb-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={enableOrderDate}
-                onChange={(e) => setEnableOrderDate(e.target.checked)}
-                className="cursor-pointer"
-              />
-              <span className="text-sm">Ngày đặt hàng</span>
-            </label>
-          </div>
+        {enableOrderDate && (
+          <div className="space-y-2">
+            <div className="relative">
+              <button
+                onClick={() => setShowDateModeDropdown(!showDateModeDropdown)}
+                className={`w-full flex items-center justify-between border rounded px-3 py-2 text-sm ${
+                  dateMode === "preset" ? "bg-blue-50" : ""
+                }`}>
+                <span>
+                  {dateMode === "preset"
+                    ? TIME_PRESETS.find((p) => p.value === selectedPreset)
+                        ?.label
+                    : "Tùy chỉnh"}
+                </span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
 
-          {enableOrderDate && (
-            <div className="space-y-2">
-              <div className="relative">
-                <button
-                  onClick={() => setShowDateModeDropdown(!showDateModeDropdown)}
-                  className={`w-full flex items-center justify-between border rounded px-3 py-2 text-sm ${
-                    dateMode === "preset" ? "bg-blue-50" : ""
-                  }`}>
-                  <span>
-                    {dateMode === "preset"
-                      ? TIME_PRESETS.find((p) => p.value === selectedPreset)
-                          ?.label
-                      : "Tùy chỉnh"}
-                  </span>
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-
-                {showDateModeDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-50 max-h-60 overflow-y-auto">
-                    <div className="p-2 space-y-1">
-                      {TIME_PRESETS.map((preset) => (
-                        <button
-                          key={preset.value}
-                          onClick={() => {
-                            setDateMode("preset");
-                            applyPreset(preset.value);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded text-sm hover:bg-gray-100 ${
-                            selectedPreset === preset.value &&
-                            dateMode === "preset"
-                              ? "bg-blue-50 text-blue-600"
-                              : ""
-                          }`}>
-                          {preset.label}
-                        </button>
-                      ))}
+              {showDateModeDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-50 max-h-60 overflow-y-auto">
+                  <div className="p-2 space-y-1">
+                    {TIME_PRESETS.map((preset) => (
                       <button
+                        key={preset.value}
                         onClick={() => {
-                          setDateMode("custom");
-                          setShowDateModeDropdown(false);
+                          setDateMode("preset");
+                          applyPreset(preset.value);
                         }}
                         className={`w-full text-left px-3 py-2 rounded text-sm hover:bg-gray-100 ${
-                          dateMode === "custom"
+                          selectedPreset === preset.value &&
+                          dateMode === "preset"
                             ? "bg-blue-50 text-blue-600"
                             : ""
                         }`}>
-                        Tùy chỉnh
+                        {preset.label}
                       </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {dateMode === "custom" && (
-                <div className="space-y-2 p-3 bg-gray-50 rounded">
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Từ ngày
-                    </label>
-                    <input
-                      type="date"
-                      value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
-                      className="w-full border rounded px-2 py-1 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Đến ngày
-                    </label>
-                    <input
-                      type="date"
-                      value={toDate}
-                      onChange={(e) => setToDate(e.target.value)}
-                      className="w-full border rounded px-2 py-1 text-sm"
-                    />
+                    ))}
+                    <button
+                      onClick={() => {
+                        setDateMode("custom");
+                        setShowDateModeDropdown(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded text-sm hover:bg-gray-100 ${
+                        dateMode === "custom" ? "bg-blue-50 text-blue-600" : ""
+                      }`}>
+                      Tùy chỉnh
+                    </button>
                   </div>
                 </div>
               )}
             </div>
-          )}
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Trạng thái</label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {selectedStatuses.map((status) => {
-              const option = STATUS_OPTIONS.find((o) => o.value === status);
-              return (
-                <span
-                  key={status}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${option?.color}`}>
-                  {option?.label}
-                  <button
-                    onClick={() => removeStatus(status)}
-                    className="hover:bg-black/10 rounded">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              );
-            })}
-          </div>
-
-          <div className="relative">
-            <button
-              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              className="w-full flex items-center justify-between border rounded px-3 py-2 text-sm hover:bg-gray-50">
-              <span className="text-gray-500">
-                {selectedStatuses.length === 0
-                  ? "Chọn trạng thái"
-                  : `Đã chọn ${selectedStatuses.length} trạng thái`}
-              </span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
-
-            {showStatusDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-50 max-h-60 overflow-y-auto">
-                {STATUS_OPTIONS.map((option) => (
-                  <label
-                    key={option.value}
-                    className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={selectedStatuses.includes(option.value)}
-                      onChange={() => toggleStatus(option.value)}
-                      className="cursor-pointer"
-                    />
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs ${option.color}`}>
-                      {option.label}
-                    </span>
+            {dateMode === "custom" && (
+              <div className="space-y-2 p-3 bg-gray-50 rounded">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Từ ngày
                   </label>
-                ))}
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="w-full border rounded px-2 py-1 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Đến ngày
+                  </label>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="w-full border rounded px-2 py-1 text-sm"
+                  />
+                </div>
               </div>
             )}
           </div>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Trạng thái</label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {selectedStatuses.map((status) => {
+            const option = STATUS_OPTIONS.find((o) => o.value === status);
+            return (
+              <span
+                key={status}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${option?.color}`}>
+                {option?.label}
+                <button
+                  onClick={() => removeStatus(status)}
+                  className="hover:bg-black/10 rounded">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            );
+          })}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Người tạo</label>
-          <select
-            value={creatorId}
-            onChange={(e) => setCreatorId(e.target.value)}
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Chọn người tạo</option>
-            {users?.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <div className="relative">
+          <button
+            onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+            className="w-full flex items-center justify-between border rounded px-3 py-2 text-sm hover:bg-gray-50">
+            <span className="text-gray-500">
+              {selectedStatuses.length === 0
+                ? "Chọn trạng thái"
+                : `Đã chọn ${selectedStatuses.length} trạng thái`}
+            </span>
+            <ChevronDown className="w-4 h-4" />
+          </button>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Người nhận đặt
-          </label>
-          <select
-            className="w-full border rounded px-3 py-2 text-sm"
-            defaultValue="">
-            <option value="">Chọn người nhận đặt</option>
-          </select>
+          {showStatusDropdown && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-50 max-h-60 overflow-y-auto">
+              {STATUS_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={selectedStatuses.includes(option.value)}
+                    onChange={() => toggleStatus(option.value)}
+                    className="cursor-pointer"
+                  />
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs ${option.color}`}>
+                    {option.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
+      </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium">Kênh bán</label>
-          </div>
-          <select
-            value={saleChannelId}
-            onChange={(e) => setSaleChannelId(e.target.value)}
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Chọn kênh bán</option>
-            {saleChannels?.map((channel) => (
-              <option key={channel.id} value={channel.id}>
-                {channel.name}
-              </option>
-            ))}
-          </select>
+      <div>
+        <label className="block text-sm font-medium mb-2">Người tạo</label>
+        <select
+          value={creatorId}
+          onChange={(e) => setCreatorId(e.target.value)}
+          className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Chọn người tạo</option>
+          {users?.map((user) => (
+            <option key={user.id} value={user.id}>
+              {user.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Người nhận đặt</label>
+        <select
+          className="w-full border rounded px-3 py-2 text-sm"
+          defaultValue="">
+          <option value="">Chọn người nhận đặt</option>
+        </select>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium">Kênh bán</label>
         </div>
+        <select
+          value={saleChannelId}
+          onChange={(e) => setSaleChannelId(e.target.value)}
+          className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Chọn kênh bán</option>
+          {saleChannels?.map((channel) => (
+            <option key={channel.id} value={channel.id}>
+              {channel.name}
+            </option>
+          ))}
+        </select>
       </div>
     </aside>
   );

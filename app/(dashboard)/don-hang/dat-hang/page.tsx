@@ -17,7 +17,7 @@ export default function DatHangPage() {
   const handleEditClick = (order: Order) => {};
 
   return (
-    <div className="flex h-full border-t">
+    <div className="flex h-full border-t bg-gray-50 w-screen">
       <OrdersSidebar filters={filters} onFiltersChange={setFilters} />
       <OrdersTable
         filters={filters}
