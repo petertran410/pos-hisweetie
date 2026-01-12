@@ -23,11 +23,14 @@ export function CustomerSearch({
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: customersData } = useCustomers({
-    search: searchDebounced,
-    limit: 10,
-    enabled: !!searchDebounced,
-  });
+  const { data: customersData } = useCustomers(
+    searchDebounced
+      ? {
+          name: searchDebounced,
+          pageSize: 10,
+        }
+      : undefined
+  );
 
   const customers = customersData?.data || [];
 

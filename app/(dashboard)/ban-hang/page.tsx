@@ -120,6 +120,7 @@ export default function BanHangPage() {
     [key: string]: {
       cartItems: CartItem[];
       selectedCustomer: any;
+      selectedPriceBookId: number | null;
       orderNote: string;
       discount: number;
       discountRatio: number;
@@ -188,6 +189,7 @@ export default function BanHangPage() {
               label: type === "order" ? `Sửa ĐH #${code}` : `Sửa HĐ #${code}`,
               cartItems: editState.cartItems || [],
               selectedCustomer: editState.selectedCustomer || null,
+              selectedPriceBookId: editState.selectedPriceBookId || null,
               orderNote: editState.orderNote || "",
               discount: editState.discount || 0,
               discountRatio: editState.discountRatio || 0,
@@ -213,6 +215,7 @@ export default function BanHangPage() {
             initialEditDataRef.current[editKey] = {
               cartItems: editTab.cartItems,
               selectedCustomer: editTab.selectedCustomer,
+              selectedPriceBookId: editTab.selectedPriceBookId,
               orderNote: editTab.orderNote,
               discount: editTab.discount,
               discountRatio: editTab.discountRatio,
@@ -414,6 +417,9 @@ export default function BanHangPage() {
       selectedCustomer: restoredState
         ? restoredState.selectedCustomer
         : existingOrder.customer || null,
+      selectedPriceBookId: restoredState
+        ? restoredState.selectedPriceBookId
+        : null,
       orderNote: restoredState
         ? restoredState.orderNote
         : existingOrder.description || "",
@@ -447,6 +453,7 @@ export default function BanHangPage() {
     initialEditDataRef.current[editKey] = {
       cartItems: editTab.cartItems,
       selectedCustomer: editTab.selectedCustomer,
+      selectedPriceBookId: editTab.selectedPriceBookId,
       orderNote: editTab.orderNote,
       discount: editTab.discount,
       discountRatio: editTab.discountRatio,
@@ -515,6 +522,9 @@ export default function BanHangPage() {
       selectedCustomer: restoredState
         ? restoredState.selectedCustomer
         : existingInvoice.customer || null,
+      selectedPriceBookId: restoredState
+        ? restoredState.selectedPriceBookId
+        : null,
       orderNote: restoredState
         ? restoredState.orderNote
         : existingInvoice.description || "",
@@ -563,6 +573,7 @@ export default function BanHangPage() {
     initialEditDataRef.current[editKey] = {
       cartItems: editTab.cartItems,
       selectedCustomer: editTab.selectedCustomer,
+      selectedPriceBookId: editTab.selectedPriceBookId,
       orderNote: editTab.orderNote,
       discount: editTab.discount,
       discountRatio: editTab.discountRatio,
