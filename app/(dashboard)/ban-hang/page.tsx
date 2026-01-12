@@ -234,14 +234,50 @@ export default function BanHangPage() {
     return editTabs;
   };
 
-  const handlePriceBookSelect = (priceBookId: number | null) => {
-    updateActiveTab({ selectedPriceBookId: priceBookId });
-
+  const handlePriceBookSelect = async (priceBookId: number | null) => {
     if (priceBookId !== null) {
       localStorage.setItem(PRICE_BOOK_STORAGE_KEY, priceBookId.toString());
     } else {
       localStorage.removeItem(PRICE_BOOK_STORAGE_KEY);
     }
+
+    const currentCartItems = activeTab.cartItems;
+
+    if (currentCartItems.length === 0) {
+      updateActiveTab({ selectedPriceBookId: priceBookId });
+      return;
+    }
+
+    const updatedCartItems = await Promise.all(
+      currentCartItems.map(async (item) => {
+        let newPrice = Number(item.product.basePrice);
+
+        if (priceBookId && priceBookId !== 0) {
+          try {
+            const priceInfo = await priceBooksApi.getPriceForProduct({
+              productId: item.product.id,
+              branchId: selectedBranch?.id,
+            });
+
+            if (priceInfo.priceBookId === priceBookId) {
+              newPrice = priceInfo.price;
+            }
+          } catch (error) {
+            console.error("Error fetching product price:", error);
+          }
+        }
+
+        return {
+          ...item,
+          price: newPrice,
+        };
+      })
+    );
+
+    updateActiveTab({
+      selectedPriceBookId: priceBookId,
+      cartItems: updatedCartItems,
+    });
   };
 
   const createOrder = useCreateOrder();
