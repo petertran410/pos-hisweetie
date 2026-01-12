@@ -23,6 +23,7 @@ import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
 import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
+import { priceBooksApi } from "@/lib/api";
 
 export interface CartItem {
   product: any;
@@ -54,6 +55,7 @@ export interface Tab {
   code?: string;
   cartItems: CartItem[];
   selectedCustomer: any;
+  selectedPriceBookId: number | null;
   orderNote: string;
   discount: number;
   discountRatio: number;
@@ -68,6 +70,7 @@ export interface Tab {
 
 const STORAGE_KEY = "pos-tabs";
 const EDIT_STORAGE_KEY = "pos-edit-state";
+const PRICE_BOOK_STORAGE_KEY = "pos-selected-price-book";
 
 const getEditStorageKey = (id: number, type: "order" | "invoice"): string => {
   return `${EDIT_STORAGE_KEY}-${type}-${id}`;
@@ -79,6 +82,7 @@ const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   label: type === "order" ? "Đơn hàng 1" : "Hóa đơn 1",
   cartItems: [],
   selectedCustomer: null,
+  selectedPriceBookId: null,
   orderNote: "",
   discount: 0,
   discountRatio: 0,
@@ -140,6 +144,7 @@ export default function BanHangPage() {
       tab.discount !== initialData.discount ||
       tab.discountRatio !== initialData.discountRatio ||
       tab.paymentAmount !== initialData.paymentAmount ||
+      tab.selectedPriceBookId !== initialData.selectedPriceBookId ||
       JSON.stringify(tab.deliveryInfo) !==
         JSON.stringify(initialData.deliveryInfo);
 
@@ -153,11 +158,12 @@ export default function BanHangPage() {
         orderNote: tab.orderNote,
         discount: tab.discount,
         discountRatio: tab.discountRatio,
-        useCOD: tab.useCOD,
         paymentAmount: tab.paymentAmount,
+        selectedPriceBookId: tab.selectedPriceBookId,
         deliveryInfo: tab.deliveryInfo,
-        lastModified: new Date().toISOString(),
+        timestamp: Date.now(),
       };
+
       localStorage.setItem(key, JSON.stringify(editState));
     }
   };
@@ -225,6 +231,16 @@ export default function BanHangPage() {
     return editTabs;
   };
 
+  const handlePriceBookSelect = (priceBookId: number | null) => {
+    updateActiveTab({ selectedPriceBookId: priceBookId });
+
+    if (priceBookId !== null) {
+      localStorage.setItem(PRICE_BOOK_STORAGE_KEY, priceBookId.toString());
+    } else {
+      localStorage.removeItem(PRICE_BOOK_STORAGE_KEY);
+    }
+  };
+
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
   const createInvoice = useCreateInvoice();
@@ -240,6 +256,12 @@ export default function BanHangPage() {
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(
     invoiceId ? Number(invoiceId) : 0
   );
+
+  const [showPriceWarning, setShowPriceWarning] = useState<{
+    productCode: string;
+    productName: string;
+    onConfirm: (confirmed: boolean) => void;
+  } | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -268,6 +290,23 @@ export default function BanHangPage() {
 
     setIsInitialized(true);
   }, []);
+
+  useEffect(() => {
+    if (isInitialized) return;
+
+    const savedPriceBookId = localStorage.getItem(PRICE_BOOK_STORAGE_KEY);
+    if (savedPriceBookId) {
+      const priceBookId = parseInt(savedPriceBookId, 10);
+      if (!isNaN(priceBookId)) {
+        setTabs((prevTabs) =>
+          prevTabs.map((tab) => ({
+            ...tab,
+            selectedPriceBookId: priceBookId,
+          }))
+        );
+      }
+    }
+  }, [isInitialized]);
 
   useEffect(() => {
     if (!isInitialized || orderId || invoiceId) return;
@@ -776,7 +815,46 @@ export default function BanHangPage() {
     });
   };
 
-  const addToCart = (product: any) => {
+  const addToCart = async (product: any) => {
+    const selectedPriceBookId = activeTab.selectedPriceBookId;
+
+    let productPrice = Number(product.basePrice);
+    let useBasePriceForProduct = false;
+
+    if (selectedPriceBookId && selectedPriceBookId !== 0) {
+      try {
+        const priceInfo = await priceBooksApi.getPriceForProduct({
+          productId: product.id,
+          branchId: selectedBranch?.id,
+        });
+
+        if (priceInfo.priceBookId === selectedPriceBookId) {
+          productPrice = priceInfo.price;
+        } else {
+          const shouldAdd = await new Promise<boolean>((resolve) => {
+            const handleConfirm = (confirmed: boolean) => {
+              setShowPriceWarning(null);
+              resolve(confirmed);
+            };
+
+            setShowPriceWarning({
+              productCode: product.code,
+              productName: product.name,
+              onConfirm: handleConfirm,
+            });
+          });
+
+          if (!shouldAdd) return;
+
+          useBasePriceForProduct = true;
+          productPrice = Number(product.basePrice);
+        }
+      } catch (error) {
+        console.error("Error fetching product price:", error);
+        productPrice = Number(product.basePrice);
+      }
+    }
+
     const existingItem = activeTab.cartItems.find(
       (item) => item.product.id === product.id
     );
@@ -796,7 +874,7 @@ export default function BanHangPage() {
           {
             product,
             quantity: 1,
-            price: Number(product.basePrice),
+            price: productPrice,
             discount: 0,
           },
         ],
@@ -1197,6 +1275,8 @@ export default function BanHangPage() {
               cartItems={activeTab.cartItems}
               selectedCustomer={activeTab.selectedCustomer}
               onSelectCustomer={handleCustomerSelect}
+              selectedPriceBookId={activeTab.selectedPriceBookId}
+              onSelectPriceBook={handlePriceBookSelect}
               useCOD={activeTab.useCOD}
               onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
               paymentAmount={activeTab.paymentAmount}
@@ -1212,7 +1292,7 @@ export default function BanHangPage() {
                 updateActiveTab({ deliveryInfo })
               }
               deliveryInfo={activeTab.deliveryInfo}
-              isEditMode={!!activeTab.documentId}
+              isEditMode={!!activeTab.documentId && !activeTab.sourceOrderId}
               existingOrder={existingOrder}
               documentType={activeTab.type}
             />
@@ -1236,6 +1316,8 @@ export default function BanHangPage() {
               cartItems={activeTab.cartItems}
               selectedCustomer={activeTab.selectedCustomer}
               onSelectCustomer={handleCustomerSelect}
+              selectedPriceBookId={activeTab.selectedPriceBookId}
+              onSelectPriceBook={handlePriceBookSelect}
               useCOD={activeTab.useCOD}
               onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
               paymentAmount={activeTab.paymentAmount}
@@ -1259,6 +1341,42 @@ export default function BanHangPage() {
           </>
         )}
       </div>
+      {showPriceWarning && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-red-600 mb-4">
+              Cảnh báo
+            </h3>
+            <p className="text-gray-700 mb-6">
+              Sản phẩm{" "}
+              <span className="font-semibold">
+                {showPriceWarning.productCode}
+              </span>{" "}
+              Hàng{" "}
+              <span className="font-semibold">
+                {showPriceWarning.productName}
+              </span>{" "}
+              vừa lựa chọn{" "}
+              <span className="text-red-600 font-semibold">
+                không thuộc bảng giá Bảng Giá Chuỗi Đào Matcha.
+              </span>{" "}
+              Bạn có muốn thêm vào đơn hàng?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => showPriceWarning.onConfirm(false)}
+                className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                Không
+              </button>
+              <button
+                onClick={() => showPriceWarning.onConfirm(true)}
+                className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                Có
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

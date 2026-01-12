@@ -1,34 +1,31 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/config/api";
+import { useCustomers } from "@/lib/hooks/useCustomers";
 import { Plus } from "lucide-react";
+import { PriceBookDropdown } from "./PriceBookDropdown";
 
 interface CustomerSearchProps {
   selectedCustomer: any;
   onSelectCustomer: (customer: any) => void;
+  selectedPriceBookId: number | null;
+  onSelectPriceBook: (priceBookId: number | null) => void;
 }
 
 export function CustomerSearch({
   selectedCustomer,
   onSelectCustomer,
+  selectedPriceBookId,
+  onSelectPriceBook,
 }: CustomerSearchProps) {
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: customersData } = useQuery({
-    queryKey: ["customers-search", searchDebounced],
-    queryFn: async () => {
-      if (!searchDebounced) return { data: [], total: 0 };
-      return await apiClient.get<{ data: any[]; total: number }>("/customers", {
-        name: searchDebounced,
-        pageSize: 10,
-        currentItem: 0,
-      });
-    },
+  const { data: customersData } = useCustomers({
+    search: searchDebounced,
+    limit: 10,
     enabled: !!searchDebounced,
   });
 
@@ -79,9 +76,10 @@ export function CustomerSearch({
         <button className="p-2 border rounded-md hover:bg-gray-50">
           <Plus className="w-4 h-4" />
         </button>
-        <button className="px-3 py-2 border rounded-xl hover:bg-gray-50">
-          Bảng giá chung ▼
-        </button>
+        <PriceBookDropdown
+          selectedPriceBookId={selectedPriceBookId}
+          onSelectPriceBook={onSelectPriceBook}
+        />
       </div>
 
       {showDropdown && customers.length > 0 && (

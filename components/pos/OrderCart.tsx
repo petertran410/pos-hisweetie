@@ -11,6 +11,8 @@ interface OrderCartProps {
   cartItems: CartItem[];
   selectedCustomer: any;
   onSelectCustomer: (customer: any) => void;
+  selectedPriceBookId: number | null;
+  onSelectPriceBook: (priceBookId: number | null) => void;
   useCOD: boolean;
   onUseCODChange: (useCOD: boolean) => void;
   paymentAmount: number;
@@ -31,6 +33,8 @@ export function OrderCart({
   cartItems,
   selectedCustomer,
   onSelectCustomer,
+  selectedPriceBookId,
+  onSelectPriceBook,
   useCOD,
   onUseCODChange,
   paymentAmount,
@@ -138,6 +142,8 @@ export function OrderCart({
           <CustomerSearch
             selectedCustomer={selectedCustomer}
             onSelectCustomer={onSelectCustomer}
+            selectedPriceBookId={selectedPriceBookId}
+            onSelectPriceBook={onSelectPriceBook}
           />
         </div>
 

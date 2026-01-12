@@ -12,6 +12,8 @@ interface InvoiceCartProps {
   selectedCustomer: any;
   onSelectCustomer: (customer: any) => void;
   useCOD: boolean;
+  selectedPriceBookId: number | null;
+  onSelectPriceBook: (priceBookId: number | null) => void;
   onUseCODChange: (useCOD: boolean) => void;
   paymentAmount: number;
   onPaymentAmountChange: (amount: number) => void;
@@ -32,6 +34,8 @@ export function InvoiceCart({
   cartItems,
   selectedCustomer,
   onSelectCustomer,
+  selectedPriceBookId,
+  onSelectPriceBook,
   useCOD,
   onUseCODChange,
   paymentAmount,
@@ -147,6 +151,8 @@ export function InvoiceCart({
           <CustomerSearch
             selectedCustomer={selectedCustomer}
             onSelectCustomer={onSelectCustomer}
+            selectedPriceBookId={selectedPriceBookId}
+            onSelectPriceBook={onSelectPriceBook}
           />
         </div>
 
