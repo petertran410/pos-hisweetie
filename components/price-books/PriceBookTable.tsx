@@ -225,15 +225,16 @@ export function PriceBookTable({
   };
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
       <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 w-[500px]">
+          <h2 className="text-xl font-semibold w-[200px]">Thiết Lập Giá</h2>
           <input
             type="text"
             placeholder="Theo mã, tên hàng"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="border rounded px-3 py-2 w-80"
+            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="flex items-center gap-2">

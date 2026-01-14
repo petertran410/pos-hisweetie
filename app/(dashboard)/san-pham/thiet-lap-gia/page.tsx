@@ -31,11 +31,7 @@ export default function PriceBooksPage() {
   );
 
   return (
-    <div className="h-screen flex flex-col border-t">
-      <div className="border-b p-4">
-        <h1 className="text-2xl font-bold">Thiết lập giá</h1>
-      </div>
-
+    <div className="flex h-full border-t bg-gray-50">
       <div className="flex-1 flex overflow-hidden">
         <PriceBookSidebar
           priceBooks={priceBooksData?.data}

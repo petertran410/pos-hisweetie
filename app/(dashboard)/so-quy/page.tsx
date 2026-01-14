@@ -16,7 +16,7 @@ export default function SoQuyPage() {
   };
 
   return (
-    <div className="flex h-full border-t">
+    <div className="flex h-full border-t bg-gray-50">
       <CashFlowsSidebar filters={filters} onFiltersChange={setFilters} />
       <CashFlowsTable
         filters={filters}
