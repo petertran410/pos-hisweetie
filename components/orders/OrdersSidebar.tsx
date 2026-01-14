@@ -247,7 +247,7 @@ export function OrdersSidebar({
   };
 
   return (
-    <aside className="w-[20%] border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
+    <aside className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Bộ lọc</h2>
         <button

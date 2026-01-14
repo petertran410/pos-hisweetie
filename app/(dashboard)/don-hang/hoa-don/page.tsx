@@ -17,7 +17,7 @@ export default function HoaDonPage() {
   const handleEditClick = (invoice: Invoice) => {};
 
   return (
-    <div className="flex h-full border-t bg-gray-50 w-screen">
+    <div className="flex h-full border-t bg-gray-50">
       <InvoicesSidebar filters={filters} onFiltersChange={setFilters} />
       <InvoicesTable
         filters={filters}
