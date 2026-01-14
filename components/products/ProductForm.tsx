@@ -8,10 +8,10 @@ import { useTrademarks } from "@/lib/hooks/useTrademarks";
 import { UnitAttributeModal } from "./UnitAttributeModal";
 import { useAuthStore } from "@/lib/store/auth";
 import { Category } from "@/lib/api/categories";
-import { useRootCategories } from "@/lib/hooks/useCategories";
 import { CategorySelect } from "./CategorySelect";
 import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
+import { CategoryDropdown } from "./CategoryDropdown";
 
 interface ProductFormProps {
   product?: Product;
@@ -47,7 +47,6 @@ export function ProductForm({
       : []
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data: categories } = useRootCategories();
   const { data: trademarks } = useTrademarks();
   const { selectedBranch } = useBranchStore();
   const createProduct = useCreateProduct();
@@ -62,7 +61,9 @@ export function ProductForm({
       name: product?.name || "",
       description: product?.description || "",
       orderTemplate: product?.orderTemplate || "",
-      categoryId: product?.categoryId || undefined,
+      parentName: product?.parentName || undefined,
+      middleName: product?.middleName || undefined,
+      childName: product?.childName || undefined,
       tradeMarkId: product?.tradeMarkId || undefined,
       basePrice: product?.basePrice || 0,
       purchasePrice: currentBranchInventory
@@ -82,6 +83,8 @@ export function ProductForm({
       unit: product?.unit || "",
       isDirectSale: product?.isDirectSale || false,
       isActive: product?.isActive ?? true,
+      allowsSale: product?.allowsSale ?? true,
+      isRewardPoint: product?.isRewardPoint ?? true,
     },
   });
 
@@ -116,18 +119,18 @@ export function ProductForm({
     return result.url;
   };
 
-  const flattenCategories = (
-    cats: Category[],
-    level: number = 0
-  ): { id: number; name: string; level: number }[] => {
-    return cats.reduce((acc, cat) => {
-      acc.push({ id: cat.id, name: cat.name, level });
-      if (cat.children && cat.children.length > 0) {
-        acc.push(...flattenCategories(cat.children, level + 1));
-      }
-      return acc;
-    }, [] as { id: number; name: string; level: number }[]);
-  };
+  // const flattenCategories = (
+  //   cats: Category[],
+  //   level: number = 0
+  // ): { id: number; name: string; level: number }[] => {
+  //   return cats.reduce((acc, cat) => {
+  //     acc.push({ id: cat.id, name: cat.name, level });
+  //     if (cat.children && cat.children.length > 0) {
+  //       acc.push(...flattenCategories(cat.children, level + 1));
+  //     }
+  //     return acc;
+  //   }, [] as { id: number; name: string; level: number }[]);
+  // };
 
   const getProductTypeLabel = (type: number) => {
     switch (type) {
@@ -333,18 +336,33 @@ export function ProductForm({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Nhóm hàng
-                </label>
-                <CategorySelect
-                  categories={categories || []}
-                  value={watch("categoryId")}
-                  onChange={(categoryId) => setValue("categoryId", categoryId)}
-                />
-              </div>
+            <div className="grid grid-cols-3 gap-4">
+              <CategoryDropdown
+                type="parent"
+                label="Loại Hàng"
+                placeholder="Chọn loại hàng"
+                value={watch("parentName")}
+                onChange={(value) => setValue("parentName", value)}
+              />
 
+              <CategoryDropdown
+                type="middle"
+                label="Nguồn Gốc"
+                placeholder="Chọn nguồn gốc"
+                value={watch("middleName")}
+                onChange={(value) => setValue("middleName", value)}
+              />
+
+              <CategoryDropdown
+                type="child"
+                label="Danh Mục"
+                placeholder="Chọn danh mục"
+                value={watch("childName")}
+                onChange={(value) => setValue("childName", value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Thương hiệu

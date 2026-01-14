@@ -9,11 +9,11 @@ import {
   useProducts,
 } from "@/lib/hooks/useProducts";
 import { useTrademarks } from "@/lib/hooks/useTrademarks";
-import { useRootCategories } from "@/lib/hooks/useCategories";
 import { CategorySelect } from "./CategorySelect";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
+import { CategoryDropdown } from "./CategoryDropdown";
 
 interface ComboComponent {
   id?: number;
@@ -49,7 +49,6 @@ export function ComboProductForm({
   const [pendingFormData, setPendingFormData] = useState<any>(null);
   const itemsPerPage = 10;
 
-  const { data: categories } = useRootCategories();
   const { data: trademarks } = useTrademarks();
   const { data: searchResults } = useProducts({
     search: searchQuery,
@@ -66,7 +65,9 @@ export function ComboProductForm({
       name: product?.name || "",
       description: product?.description || "",
       orderTemplate: product?.orderTemplate || "",
-      categoryId: product?.categoryId || undefined,
+      parentName: product?.parentName || undefined,
+      middleName: product?.middleName || undefined,
+      childName: product?.childName || undefined,
       tradeMarkId: product?.tradeMarkId || undefined,
       basePrice: product?.basePrice || 0,
       minStockAlert: 0,
@@ -76,6 +77,8 @@ export function ComboProductForm({
       unit: product?.unit || "",
       isDirectSale: product?.isDirectSale || false,
       isActive: product?.isActive ?? true,
+      allowsSale: product?.allowsSale ?? true,
+      isRewardPoint: product?.isRewardPoint ?? true,
     },
   });
 
@@ -368,33 +371,30 @@ export function ComboProductForm({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Nhóm hàng
-                </label>
-                <CategorySelect
-                  categories={categories || []}
-                  value={watch("categoryId")}
-                  onChange={(categoryId) => setValue("categoryId", categoryId)}
-                />
-              </div>
+            <div className="grid grid-cols-3 gap-4">
+              <CategoryDropdown
+                type="parent"
+                label="Loại Hàng"
+                placeholder="Chọn loại hàng"
+                value={watch("parentName")}
+                onChange={(value) => setValue("parentName", value)}
+              />
 
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Thương hiệu
-                </label>
-                <select
-                  {...register("tradeMarkId")}
-                  className="w-full border rounded px-3 py-2">
-                  <option value="">Chọn thương hiệu</option>
-                  {trademarks?.map((tm) => (
-                    <option key={tm.id} value={tm.id}>
-                      {tm.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CategoryDropdown
+                type="middle"
+                label="Nguồn Gốc"
+                placeholder="Chọn nguồn gốc"
+                value={watch("middleName")}
+                onChange={(value) => setValue("middleName", value)}
+              />
+
+              <CategoryDropdown
+                type="child"
+                label="Danh Mục"
+                placeholder="Chọn danh mục"
+                value={watch("childName")}
+                onChange={(value) => setValue("childName", value)}
+              />
             </div>
 
             <div className="border-t pt-6">

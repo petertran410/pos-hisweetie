@@ -1,48 +1,65 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { categoriesApi } from "@/lib/api/categories";
+import {
+  categoriesApi,
+  CategoryType,
+  CreateCategoryDto,
+} from "@/lib/api/categories";
 import { toast } from "sonner";
 
-export const useCategories = () => {
+export function useCategories(type?: CategoryType) {
   return useQuery({
-    queryKey: ["categories"],
-    queryFn: categoriesApi.getCategories,
+    queryKey: ["categories", type],
+    queryFn: () => categoriesApi.getAll(type),
   });
-};
+}
 
-export const useRootCategories = () => {
-  return useQuery({
-    queryKey: ["categories", "roots"],
-    queryFn: categoriesApi.getRootCategories,
-  });
-};
-
-export const useCreateCategory = () => {
+export function useCreateCategory() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: categoriesApi.createCategory,
+    mutationFn: (data: CreateCategoryDto) => categoriesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-      toast.success("Tạo nhóm hàng thành công");
+      toast.success("Tạo nhóm thành công");
     },
     onError: () => {
-      toast.error("Tạo nhóm hàng thất bại");
+      toast.error("Tạo nhóm thất bại");
     },
   });
-};
+}
 
-export const useUpdateCategory = () => {
+export function useUpdateCategory() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
-      categoriesApi.updateCategory(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Partial<CreateCategoryDto>;
+    }) => categoriesApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-      toast.success("Cập nhật nhóm hàng thành công");
+      toast.success("Cập nhật nhóm thành công");
     },
     onError: () => {
-      toast.error("Cập nhật nhóm hàng thất bại");
+      toast.error("Cập nhật nhóm thất bại");
     },
   });
-};
+}
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => categoriesApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      toast.success("Xóa nhóm thành công");
+    },
+    onError: () => {
+      toast.error("Xóa nhóm thất bại");
+    },
+  });
+}

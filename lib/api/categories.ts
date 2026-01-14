@@ -1,40 +1,31 @@
 import { apiClient } from "@/lib/config/api";
 
+export type CategoryType = "parent" | "middle" | "child";
+
 export interface Category {
   id: number;
   name: string;
-  parentId?: number;
-  hasChild: boolean;
-  children?: Category[];
-  _count?: {
-    products: number;
-  };
+  type: CategoryType;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCategoryDto {
+  name: string;
+  type: CategoryType;
 }
 
 export const categoriesApi = {
-  getCategories: (): Promise<Category[]> => {
-    return apiClient.get("/categories");
+  getAll: (type?: CategoryType) => {
+    const params = type ? { type } : {};
+    return apiClient.get<Category[]>("/categories", { params });
   },
 
-  getRootCategories: (): Promise<Category[]> => {
-    return apiClient.get("/categories/roots");
-  },
+  create: (data: CreateCategoryDto) =>
+    apiClient.post<Category>("/categories", data),
 
-  createCategory: (data: {
-    name: string;
-    parentId?: number;
-  }): Promise<Category> => {
-    return apiClient.post("/categories", data);
-  },
+  update: (id: number, data: Partial<CreateCategoryDto>) =>
+    apiClient.put<Category>(`/categories/${id}`, data),
 
-  updateCategory: (
-    id: number,
-    data: { name?: string; parentId?: number }
-  ): Promise<Category> => {
-    return apiClient.put(`/categories/${id}`, data);
-  },
-
-  deleteCategory: (id: number): Promise<void> => {
-    return apiClient.delete(`/categories/${id}`);
-  },
+  delete: (id: number) => apiClient.delete(`/categories/${id}`),
 };

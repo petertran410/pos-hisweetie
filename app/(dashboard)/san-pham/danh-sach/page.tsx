@@ -5,15 +5,25 @@ import { ProductSidebar } from "@/components/products/ProductSidebar";
 import { ProductTable } from "@/components/products/ProductTable";
 
 export default function ProductListPage() {
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [selectedParentNames, setSelectedParentNames] = useState<string[]>([]);
+  const [selectedMiddleNames, setSelectedMiddleNames] = useState<string[]>([]);
+  const [selectedChildNames, setSelectedChildNames] = useState<string[]>([]);
 
   return (
     <div className="flex h-full border-t bg-gray-50 w-screen">
       <ProductSidebar
-        selectedCategoryIds={selectedCategoryIds}
-        onSelectedCategoryIdsChange={setSelectedCategoryIds}
+        selectedParentNames={selectedParentNames}
+        selectedMiddleNames={selectedMiddleNames}
+        selectedChildNames={selectedChildNames}
+        onSelectedParentNamesChange={setSelectedParentNames}
+        onSelectedMiddleNamesChange={setSelectedMiddleNames}
+        onSelectedChildNamesChange={setSelectedChildNames}
       />
-      <ProductTable selectedCategoryIds={selectedCategoryIds} />
+      <ProductTable
+        selectedParentNames={selectedParentNames}
+        selectedMiddleNames={selectedMiddleNames}
+        selectedChildNames={selectedChildNames}
+      />
     </div>
   );
 }

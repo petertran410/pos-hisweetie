@@ -34,7 +34,9 @@ export interface Product {
   description?: string;
   orderTemplate?: string;
   type: number;
-  categoryId?: number;
+  parentName?: string;
+  middleName?: string;
+  childName?: string;
   tradeMarkId?: number;
   variantId?: number;
   basePrice: number;
@@ -47,9 +49,9 @@ export interface Product {
   isActive: boolean;
   isDirectSale: boolean;
   isRewardPoint?: boolean;
+  allowsSale?: boolean;
   createdAt: string;
   updatedAt: string;
-  category?: { id: number; name: string };
   tradeMark?: { id: number; name: string };
   variant?: { id: number; name: string };
   images?: { id: number; image: string }[];

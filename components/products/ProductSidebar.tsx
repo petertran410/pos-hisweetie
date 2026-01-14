@@ -2,24 +2,41 @@
 
 import { useState } from "react";
 import {
-  useRootCategories,
+  useCategories,
   useCreateCategory,
   useUpdateCategory,
 } from "@/lib/hooks/useCategories";
 import { CategoryModal } from "./CategoryModal";
 import { CategorySelectorModal } from "./CategorySelectorModal";
 import type { Category } from "@/lib/api/categories";
+import { CategoryDropdown } from "./CategoryDropdown";
+import { CreateCategoryModal } from "./CreateCategoryModal";
 
 interface ProductSidebarProps {
-  selectedCategoryIds: number[];
-  onSelectedCategoryIdsChange: (ids: number[]) => void;
+  selectedParentNames: string[];
+  selectedMiddleNames: string[];
+  selectedChildNames: string[];
+  onSelectedParentNamesChange: (names: string[]) => void;
+  onSelectedMiddleNamesChange: (names: string[]) => void;
+  onSelectedChildNamesChange: (names: string[]) => void;
 }
 
 export function ProductSidebar({
-  selectedCategoryIds,
-  onSelectedCategoryIdsChange,
+  selectedParentNames,
+  selectedMiddleNames,
+  selectedChildNames,
+  onSelectedParentNamesChange,
+  onSelectedMiddleNamesChange,
+  onSelectedChildNamesChange,
 }: ProductSidebarProps) {
-  const { data: categories } = useRootCategories();
+  const [showCreateParentModal, setShowCreateParentModal] = useState(false);
+  const [showCreateMiddleModal, setShowCreateMiddleModal] = useState(false);
+  const [showCreateChildModal, setShowCreateChildModal] = useState(false);
+
+  const { data: parentCategories } = useCategories("parent");
+  const { data: middleCategories } = useCategories("middle");
+  const { data: childCategories } = useCategories("child");
+
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
 
@@ -54,58 +71,111 @@ export function ProductSidebar({
     }
   };
 
-  const flattenCategories = (cats: Category[]): Category[] => {
-    return cats.reduce((acc, cat) => {
-      acc.push(cat);
-      if (cat.children) {
-        acc.push(...flattenCategories(cat.children));
-      }
-      return acc;
-    }, [] as Category[]);
-  };
+  // const flattenCategories = (cats: Category[]): Category[] => {
+  //   return cats.reduce((acc, cat) => {
+  //     acc.push(cat);
+  //     if (cat.children) {
+  //       acc.push(...flattenCategories(cat.children));
+  //     }
+  //     return acc;
+  //   }, [] as Category[]);
+  // };
 
-  const getSelectedCategoryNames = () => {
-    if (!categories || selectedCategoryIds.length === 0) return "";
-    const allCategories = flattenCategories(categories);
-    const selectedNames = selectedCategoryIds
-      .map((id) => allCategories.find((cat) => cat.id === id)?.name)
-      .filter(Boolean);
-    if (selectedNames.length === 0) return "";
-    if (selectedNames.length === 1) return selectedNames[0];
-    return `${selectedNames.length} nhóm đã chọn`;
-  };
+  // const getSelectedCategoryNames = () => {
+  //   if (!categories || selectedCategoryIds.length === 0) return "";
+  //   const allCategories = flattenCategories(categories);
+  //   const selectedNames = selectedCategoryIds
+  //     .map((id) => allCategories.find((cat) => cat.id === id)?.name)
+  //     .filter(Boolean);
+  //   if (selectedNames.length === 0) return "";
+  //   if (selectedNames.length === 1) return selectedNames[0];
+  //   return `${selectedNames.length} nhóm đã chọn`;
+  // };
 
   return (
     <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold">Nhóm hàng</h3>
+          <h3 className="font-semibold">Loại Hàng</h3>
           <button
-            onClick={handleCreateCategory}
+            onClick={() => setShowCreateParentModal(true)}
             className="text-blue-600 hover:text-blue-700 text-sm">
             Tạo mới
           </button>
         </div>
+        <select
+          multiple
+          value={selectedParentNames}
+          onChange={(e) => {
+            const selected = Array.from(
+              e.target.selectedOptions,
+              (option) => option.value
+            );
+            onSelectedParentNamesChange(selected);
+          }}
+          className="w-full border rounded px-3 py-2 min-h-[100px]">
+          {parentCategories?.map((cat) => (
+            <option key={cat.id} value={cat.name}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        <button
-          onClick={() => setShowCategorySelector(true)}
-          className="w-full border rounded px-3 py-2 text-left flex items-center justify-between hover:bg-gray-50">
-          <span className="text-sm text-gray-600">
-            {getSelectedCategoryNames() || "Chọn nhóm hàng"}
-          </span>
-          <svg
-            className="w-4 h-4 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </button>
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold">Nguồn Gốc</h3>
+          <button
+            onClick={() => setShowCreateMiddleModal(true)}
+            className="text-blue-600 hover:text-blue-700 text-sm">
+            Tạo mới
+          </button>
+        </div>
+        <select
+          multiple
+          value={selectedMiddleNames}
+          onChange={(e) => {
+            const selected = Array.from(
+              e.target.selectedOptions,
+              (option) => option.value
+            );
+            onSelectedMiddleNamesChange(selected);
+          }}
+          className="w-full border rounded px-3 py-2 min-h-[100px]">
+          {middleCategories?.map((cat) => (
+            <option key={cat.id} value={cat.name}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold">Danh Mục</h3>
+          <button
+            onClick={() => setShowCreateChildModal(true)}
+            className="text-blue-600 hover:text-blue-700 text-sm">
+            Tạo mới
+          </button>
+        </div>
+        <select
+          multiple
+          value={selectedChildNames}
+          onChange={(e) => {
+            const selected = Array.from(
+              e.target.selectedOptions,
+              (option) => option.value
+            );
+            onSelectedChildNamesChange(selected);
+          }}
+          className="w-full border rounded px-3 py-2 min-h-[100px]">
+          {childCategories?.map((cat) => (
+            <option key={cat.id} value={cat.name}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>
@@ -201,24 +271,24 @@ export function ProductSidebar({
         </div>
       </div>
 
-      {showCategorySelector && categories && (
-        <CategorySelectorModal
-          categories={categories}
-          selectedIds={selectedCategoryIds}
-          onApply={onSelectedCategoryIdsChange}
-          onClose={() => setShowCategorySelector(false)}
+      {showCreateParentModal && (
+        <CreateCategoryModal
+          type="parent"
+          onClose={() => setShowCreateParentModal(false)}
         />
       )}
 
-      {showCategoryModal && (
-        <CategoryModal
-          category={editingCategory}
-          categories={categories ? flattenCategories(categories) : []}
-          onClose={() => {
-            setShowCategoryModal(false);
-            setEditingCategory(undefined);
-          }}
-          onSubmit={handleSubmitCategory}
+      {showCreateMiddleModal && (
+        <CreateCategoryModal
+          type="middle"
+          onClose={() => setShowCreateMiddleModal(false)}
+        />
+      )}
+
+      {showCreateChildModal && (
+        <CreateCategoryModal
+          type="child"
+          onClose={() => setShowCreateChildModal(false)}
         />
       )}
     </div>
