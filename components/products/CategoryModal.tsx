@@ -1,11 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { CategoryType } from "@/lib/api/categories";
-import { useCreateCategory } from "@/lib/hooks/useCategories";
+import { CategoryType, Category } from "@/lib/api/categories";
+import {
+  useCreateCategory,
+  useUpdateCategory,
+} from "@/lib/hooks/useCategories";
 
-interface CreateCategoryModalProps {
+interface CategoryModalProps {
   type: CategoryType;
+  category?: Category;
   onClose: () => void;
 }
 
@@ -15,30 +20,52 @@ const TYPE_LABELS: Record<CategoryType, string> = {
   child: "Danh Mục",
 };
 
-export function CreateCategoryModal({
-  type,
-  onClose,
-}: CreateCategoryModalProps) {
+export function CategoryModal({ type, category, onClose }: CategoryModalProps) {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm();
+    setValue,
+  } = useForm({
+    defaultValues: {
+      name: category?.name || "",
+    },
+  });
+
   const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+
+  useEffect(() => {
+    if (category) {
+      setValue("name", category.name);
+    }
+  }, [category, setValue]);
 
   const onSubmit = async (data: any) => {
-    await createCategory.mutateAsync({
-      name: data.name,
-      type,
-    });
+    if (category) {
+      await updateCategory.mutateAsync({
+        id: category.id,
+        data: {
+          name: data.name,
+          type,
+        },
+      });
+    } else {
+      await createCategory.mutateAsync({
+        name: data.name,
+        type,
+      });
+    }
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold">Tạo {TYPE_LABELS[type]}</h3>
+          <h3 className="text-lg font-semibold">
+            {category ? "Chỉnh sửa" : "Tạo"} {TYPE_LABELS[type]}
+          </h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600">
@@ -72,8 +99,13 @@ export function CreateCategoryModal({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              Tạo mới
+              disabled={createCategory.isPending || updateCategory.isPending}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+              {createCategory.isPending || updateCategory.isPending
+                ? "Đang lưu..."
+                : category
+                ? "Cập nhật"
+                : "Tạo mới"}
             </button>
           </div>
         </form>

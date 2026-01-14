@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { CategoryType } from "@/lib/api/categories";
+import { CategoryType, Category } from "@/lib/api/categories";
 import { useCategories } from "@/lib/hooks/useCategories";
-import { CreateCategoryModal } from "./CreateCategoryModal";
+import { CategoryModal } from "./CategoryModal";
 
 interface CategoryDropdownProps {
   type: CategoryType;
@@ -22,7 +22,10 @@ export function CategoryDropdown({
 }: CategoryDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<
+    Category | undefined
+  >();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: categories } = useCategories(type);
@@ -56,6 +59,24 @@ export function CategoryDropdown({
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange(undefined);
+  };
+
+  const handleEdit = (e: React.MouseEvent, category: Category) => {
+    e.stopPropagation();
+    setEditingCategory(category);
+    setShowModal(true);
+    setIsOpen(false);
+  };
+
+  const handleCreate = () => {
+    setEditingCategory(undefined);
+    setShowModal(true);
+    setIsOpen(false);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingCategory(undefined);
   };
 
   return (
@@ -121,10 +142,7 @@ export function CategoryDropdown({
           <div className="p-2 border-b">
             <button
               type="button"
-              onClick={() => {
-                setShowCreateModal(true);
-                setIsOpen(false);
-              }}
+              onClick={handleCreate}
               className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded">
               + Tạo mới
             </button>
@@ -133,15 +151,37 @@ export function CategoryDropdown({
           <div className="max-h-60 overflow-y-auto">
             {filteredCategories && filteredCategories.length > 0 ? (
               filteredCategories.map((cat) => (
-                <button
+                <div
                   key={cat.id}
-                  type="button"
-                  onClick={() => handleSelect(cat.name)}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                    value === cat.name ? "bg-blue-50 text-blue-700" : ""
+                  className={`flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-50 group ${
+                    value === cat.name ? "bg-blue-50" : ""
                   }`}>
-                  {cat.name}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(cat.name)}
+                    className={`flex-1 text-left ${
+                      value === cat.name ? "text-blue-700 font-medium" : ""
+                    }`}>
+                    {cat.name}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleEdit(e, cat)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity">
+                    <svg
+                      className="w-4 h-4 text-gray-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      />
+                    </svg>
+                  </button>
+                </div>
               ))
             ) : (
               <div className="px-4 py-2 text-sm text-gray-500">
@@ -152,10 +192,11 @@ export function CategoryDropdown({
         </div>
       )}
 
-      {showCreateModal && (
-        <CreateCategoryModal
+      {showModal && (
+        <CategoryModal
           type={type}
-          onClose={() => setShowCreateModal(false)}
+          category={editingCategory}
+          onClose={handleCloseModal}
         />
       )}
     </div>

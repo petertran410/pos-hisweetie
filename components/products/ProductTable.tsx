@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, SetStateAction } from "react";
+import { useState, useEffect } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { ProductDetail } from "./ProductDetail";
 import { ProductForm } from "./ProductForm";
@@ -9,9 +9,9 @@ import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
 
 interface ProductTableProps {
-  selectedParentNames: string[];
-  selectedMiddleNames: string[];
-  selectedChildNames: string[];
+  selectedParentName?: string;
+  selectedMiddleName?: string;
+  selectedChildName?: string;
 }
 
 type ColumnKey =
@@ -268,9 +268,9 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
 ];
 
 export function ProductTable({
-  selectedParentNames,
-  selectedMiddleNames,
-  selectedChildNames,
+  selectedParentName,
+  selectedMiddleName,
+  selectedChildName,
 }: ProductTableProps) {
   const { selectedBranch } = useBranchStore();
   const [page, setPage] = useState(1);
@@ -288,7 +288,6 @@ export function ProductTable({
     setShowCreateDropdown(false);
   };
 
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
@@ -327,7 +326,7 @@ export function ProductTable({
 
   useEffect(() => {
     setPage(1);
-  }, [selectedParentNames, selectedMiddleNames, selectedChildNames, search]);
+  }, [selectedParentName, selectedMiddleName, selectedChildName, search]);
 
   useEffect(() => {
     localStorage.setItem("productTableColumns", JSON.stringify(columns));
@@ -344,22 +343,13 @@ export function ProductTable({
   const visibleColumns = columns.filter((col) => col.visible);
   const filteredProducts =
     data?.data?.filter((product: Product) => {
-      if (
-        selectedParentNames.length > 0 &&
-        !selectedParentNames.includes(product.parentName || "")
-      ) {
+      if (selectedParentName && product.parentName !== selectedParentName) {
         return false;
       }
-      if (
-        selectedMiddleNames.length > 0 &&
-        !selectedMiddleNames.includes(product.middleName || "")
-      ) {
+      if (selectedMiddleName && product.middleName !== selectedMiddleName) {
         return false;
       }
-      if (
-        selectedChildNames.length > 0 &&
-        !selectedChildNames.includes(product.childName || "")
-      ) {
+      if (selectedChildName && product.childName !== selectedChildName) {
         return false;
       }
       return true;
