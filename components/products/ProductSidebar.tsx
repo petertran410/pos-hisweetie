@@ -8,23 +8,24 @@ import {
 } from "@/lib/hooks/useCategories";
 import type { Category } from "@/lib/api/categories";
 import { CreateCategoryModal } from "./CreateCategoryModal";
+import { CategoryDropdown } from "./CategoryDropdown";
 
 interface ProductSidebarProps {
-  selectedParentNames: string[];
-  selectedMiddleNames: string[];
-  selectedChildNames: string[];
-  onSelectedParentNamesChange: (names: string[]) => void;
-  onSelectedMiddleNamesChange: (names: string[]) => void;
-  onSelectedChildNamesChange: (names: string[]) => void;
+  selectedParentName?: string;
+  selectedMiddleName?: string;
+  selectedChildName?: string;
+  onSelectedParentNameChange: (name: string | undefined) => void;
+  onSelectedMiddleNameChange: (name: string | undefined) => void;
+  onSelectedChildNameChange: (name: string | undefined) => void;
 }
 
 export function ProductSidebar({
-  selectedParentNames,
-  selectedMiddleNames,
-  selectedChildNames,
-  onSelectedParentNamesChange,
-  onSelectedMiddleNamesChange,
-  onSelectedChildNamesChange,
+  selectedParentName,
+  selectedMiddleName,
+  selectedChildName,
+  onSelectedParentNameChange,
+  onSelectedMiddleNameChange,
+  onSelectedChildNameChange,
 }: ProductSidebarProps) {
   const [showCreateParentModal, setShowCreateParentModal] = useState(false);
   const [showCreateMiddleModal, setShowCreateMiddleModal] = useState(false);
@@ -92,87 +93,33 @@ export function ProductSidebar({
   return (
     <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 bg-white shadow-xl">
       <div className="mb-5">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold">Loại Hàng</h3>
-          <button
-            onClick={() => setShowCreateParentModal(true)}
-            className="text-blue-600 hover:text-blue-700 text-sm">
-            Tạo mới
-          </button>
-        </div>
-        <select
-          multiple
-          value={selectedParentNames}
-          onChange={(e) => {
-            const selected = Array.from(
-              e.target.selectedOptions,
-              (option) => option.value
-            );
-            onSelectedParentNamesChange(selected);
-          }}
-          className="w-full border rounded px-3 py-2">
-          {parentCategories?.map((cat) => (
-            <option key={cat.id} value={cat.name}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
+        <CategoryDropdown
+          type="parent"
+          label="Loại Hàng"
+          placeholder="Chọn Loại Hàng"
+          value={selectedParentName}
+          onChange={onSelectedParentNameChange}
+        />
       </div>
 
       <div className="mb-5">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold">Nguồn Gốc</h3>
-          <button
-            onClick={() => setShowCreateMiddleModal(true)}
-            className="text-blue-600 hover:text-blue-700 text-sm">
-            Tạo mới
-          </button>
-        </div>
-        <select
-          multiple
-          value={selectedMiddleNames}
-          onChange={(e) => {
-            const selected = Array.from(
-              e.target.selectedOptions,
-              (option) => option.value
-            );
-            onSelectedMiddleNamesChange(selected);
-          }}
-          className="w-full border rounded px-3 py-2 min-h-[100px]">
-          {middleCategories?.map((cat) => (
-            <option key={cat.id} value={cat.name}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
+        <CategoryDropdown
+          type="middle"
+          label="Nguồn Gốc"
+          placeholder="Chọn Nguồn Gốc"
+          value={selectedMiddleName}
+          onChange={onSelectedMiddleNameChange}
+        />
       </div>
 
       <div className="mb-5">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold">Danh Mục</h3>
-          <button
-            onClick={() => setShowCreateChildModal(true)}
-            className="text-blue-600 hover:text-blue-700 text-sm">
-            Tạo mới
-          </button>
-        </div>
-        <select
-          multiple
-          value={selectedChildNames}
-          onChange={(e) => {
-            const selected = Array.from(
-              e.target.selectedOptions,
-              (option) => option.value
-            );
-            onSelectedChildNamesChange(selected);
-          }}
-          className="w-full border rounded px-3 py-2 min-h-[100px]">
-          {childCategories?.map((cat) => (
-            <option key={cat.id} value={cat.name}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
+        <CategoryDropdown
+          type="child"
+          label="Danh Mục"
+          placeholder="Chọn Danh Mục"
+          value={selectedChildName}
+          onChange={onSelectedChildNameChange}
+        />
       </div>
 
       <div className="mb-5">

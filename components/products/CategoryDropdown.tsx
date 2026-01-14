@@ -41,9 +41,11 @@ export function CategoryDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredCategories = categories?.filter((cat) =>
-    cat.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCategories = categories
+    ?.filter((cat) => cat.type === type)
+    ?.filter((cat) =>
+      cat.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   const handleSelect = (categoryName: string) => {
     onChange(categoryName);
