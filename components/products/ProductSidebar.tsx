@@ -90,8 +90,8 @@ export function ProductSidebar({
   // };
 
   return (
-    <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
-      <div>
+    <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 bg-white shadow-xl">
+      <div className="mb-5">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold">Loại Hàng</h3>
           <button
@@ -110,7 +110,7 @@ export function ProductSidebar({
             );
             onSelectedParentNamesChange(selected);
           }}
-          className="w-full border rounded px-3 py-2 min-h-[100px]">
+          className="w-full border rounded px-3 py-2">
           {parentCategories?.map((cat) => (
             <option key={cat.id} value={cat.name}>
               {cat.name}
@@ -119,7 +119,7 @@ export function ProductSidebar({
         </select>
       </div>
 
-      <div>
+      <div className="mb-5">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold">Nguồn Gốc</h3>
           <button
@@ -147,7 +147,7 @@ export function ProductSidebar({
         </select>
       </div>
 
-      <div>
+      <div className="mb-5">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold">Danh Mục</h3>
           <button
@@ -175,7 +175,7 @@ export function ProductSidebar({
         </select>
       </div>
 
-      <div>
+      <div className="mb-5">
         <h3 className="font-semibold mb-2">Tồn kho</h3>
         <select className="w-full border rounded px-3 py-2">
           <option value="">Tất cả</option>
@@ -185,14 +185,14 @@ export function ProductSidebar({
         </select>
       </div>
 
-      <div>
+      <div className="mb-5">
         <h3 className="font-semibold mb-2">Kho hàng</h3>
         <select className="w-full border rounded px-3 py-2">
           <option value="">Tất cả kho</option>
         </select>
       </div>
 
-      <div>
+      <div className="mb-5">
         <h3 className="font-semibold mb-2">Dự kiến hết hàng</h3>
         <div className="space-y-2">
           <label className="flex items-center gap-2">
@@ -206,7 +206,7 @@ export function ProductSidebar({
         </div>
       </div>
 
-      <div>
+      <div className="mb-5">
         <h3 className="font-semibold mb-2">Thời gian tạo</h3>
         <div className="space-y-2">
           <label className="flex items-center gap-2">
@@ -220,7 +220,7 @@ export function ProductSidebar({
         </div>
       </div>
 
-      <div>
+      <div className="mb-5">
         <h3 className="font-semibold mb-2">Thuộc tính</h3>
         <input
           type="text"
@@ -229,28 +229,28 @@ export function ProductSidebar({
         />
       </div>
 
-      <div>
+      <div className="mb-5">
         <h3 className="font-semibold mb-2">Nhà cung cấp</h3>
         <select className="w-full border rounded px-3 py-2">
           <option value="">Chọn nhà cung cấp</option>
         </select>
       </div>
 
-      <div>
+      <div className="mb-5">
         <h3 className="font-semibold mb-2">Thương hiệu</h3>
         <select className="w-full border rounded px-3 py-2">
           <option value="">Chọn thương hiệu</option>
         </select>
       </div>
 
-      <div>
+      <div className="mb-5">
         <h3 className="font-semibold mb-2">Loại hàng</h3>
         <select className="w-full border rounded px-3 py-2">
           <option value="">Chọn loại hàng</option>
         </select>
       </div>
 
-      <div>
+      <div className="mb-5">
         <h3 className="font-semibold mb-2">Bán trực tiếp</h3>
         <div className="space-y-2">
           <label className="flex items-center gap-2">
