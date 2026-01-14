@@ -170,10 +170,10 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                     {getProductTypeLabel(product.type)}
                   </p>
                 </div>
-                <div>
+                {/* <div>
                   <label className="text-sm text-gray-600">Nhóm hàng</label>
                   <p className="font-medium">{product.category?.name || "-"}</p>
-                </div>
+                </div> */}
 
                 {product.type === 1 ? (
                   <>

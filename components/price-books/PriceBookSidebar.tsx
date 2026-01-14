@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRootCategories } from "@/lib/hooks/useCategories";
-import { CategorySelectorModal } from "@/components/products/CategorySelectorModal";
 import type { PriceBook } from "@/lib/api/price-books";
 import type { Category } from "@/lib/api/categories";
 
@@ -26,8 +24,6 @@ export function PriceBookSidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCategorySelector, setShowCategorySelector] = useState(false);
-
-  const { data: categories } = useRootCategories();
 
   const filteredPriceBooks = priceBooks?.filter((pb) =>
     pb.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -61,27 +57,6 @@ export function PriceBookSidebar({
     }
 
     return `Đã chọn ${realPriceBooks.length} bảng giá`;
-  };
-
-  const flattenCategories = (cats: Category[]): Category[] => {
-    return cats.reduce((acc, cat) => {
-      acc.push(cat);
-      if (cat.children) {
-        acc.push(...flattenCategories(cat.children));
-      }
-      return acc;
-    }, [] as Category[]);
-  };
-
-  const getSelectedCategoryNames = () => {
-    if (!categories || selectedCategoryIds.length === 0) return "";
-    const allCategories = flattenCategories(categories);
-    const selectedNames = selectedCategoryIds
-      .map((id) => allCategories.find((cat) => cat.id === id)?.name)
-      .filter(Boolean);
-    if (selectedNames.length === 0) return "";
-    if (selectedNames.length === 1) return selectedNames[0];
-    return `${selectedNames.length} nhóm đã chọn`;
   };
 
   return (
@@ -168,7 +143,7 @@ export function PriceBookSidebar({
         </div>
       </div>
 
-      <div>
+      {/* <div>
         <label className="block text-md font-medium mb-2">Nhóm hàng</label>
         <button
           onClick={() => setShowCategorySelector(true)}
@@ -189,7 +164,7 @@ export function PriceBookSidebar({
             />
           </svg>
         </button>
-      </div>
+      </div> */}
 
       <div>
         <label className="block text-md font-medium mb-2">Tồn kho</label>
@@ -208,14 +183,14 @@ export function PriceBookSidebar({
         </select>
       </div>
 
-      {showCategorySelector && categories && (
+      {/* {showCategorySelector && categories && (
         <CategorySelectorModal
           categories={categories}
           selectedIds={selectedCategoryIds}
           onApply={onSelectedCategoryIdsChange}
           onClose={() => setShowCategorySelector(false)}
         />
-      )}
+      )} */}
     </div>
   );
 }

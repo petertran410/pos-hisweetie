@@ -7,8 +7,6 @@ import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/useProducts";
 import { useTrademarks } from "@/lib/hooks/useTrademarks";
 import { UnitAttributeModal } from "./UnitAttributeModal";
 import { useAuthStore } from "@/lib/store/auth";
-import { Category } from "@/lib/api/categories";
-import { CategorySelect } from "./CategorySelect";
 import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
 import { CategoryDropdown } from "./CategoryDropdown";

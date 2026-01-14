@@ -9,14 +9,18 @@ import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
 
 interface ProductTableProps {
-  selectedCategoryIds: number[];
+  selectedParentNames: string[];
+  selectedMiddleNames: string[];
+  selectedChildNames: string[];
 }
 
 type ColumnKey =
   | "image"
   | "code"
   | "name"
-  | "category"
+  | "parentName"
+  | "middleName"
+  | "childName"
   | "type"
   | "channelLink"
   | "basePrice"
@@ -109,10 +113,22 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (product) => product.name,
   },
   {
-    key: "category",
-    label: "Nhóm hàng",
+    key: "parentName",
+    label: "Loại Hàng",
     visible: true,
-    render: (product) => product.category?.name || "-",
+    render: (product) => product.parentName || "-",
+  },
+  {
+    key: "middleName",
+    label: "Nguồn Gốc",
+    visible: true,
+    render: (product) => product.middleName || "-",
+  },
+  {
+    key: "childName",
+    label: "Danh Mục",
+    visible: true,
+    render: (product) => product.childName || "-",
   },
   {
     key: "type",
@@ -120,7 +136,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: true,
     render: (product) => getProductTypeLabel(product.type),
   },
-
   {
     key: "channelLink",
     label: "Liên kết kênh bán",
@@ -252,7 +267,11 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   },
 ];
 
-export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
+export function ProductTable({
+  selectedParentNames,
+  selectedMiddleNames,
+  selectedChildNames,
+}: ProductTableProps) {
   const { selectedBranch } = useBranchStore();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
@@ -291,14 +310,10 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
     return DEFAULT_COLUMNS;
   });
 
-  const categoryIds =
-    selectedCategoryIds.length > 0 ? selectedCategoryIds.join(",") : undefined;
-
   const { data, isLoading } = useProducts({
     page,
     limit,
     search: searchDebounced,
-    categoryIds: selectedCategoryIds.join(","),
     branchId: selectedBranch?.id,
   });
 
@@ -312,25 +327,11 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
 
   useEffect(() => {
     setPage(1);
-  }, [selectedCategoryIds, search]);
+  }, [selectedParentNames, selectedMiddleNames, selectedChildNames, search]);
 
   useEffect(() => {
     localStorage.setItem("productTableColumns", JSON.stringify(columns));
   }, [columns]);
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === data?.data.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(data?.data.map((p: { id: any }) => p.id) || []);
-    }
-  };
-
-  const toggleSelect = (id: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
 
   const toggleColumnVisibility = (key: ColumnKey) => {
     setColumns((prev) =>
@@ -341,6 +342,28 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
   };
 
   const visibleColumns = columns.filter((col) => col.visible);
+  const filteredProducts =
+    data?.data?.filter((product: Product) => {
+      if (
+        selectedParentNames.length > 0 &&
+        !selectedParentNames.includes(product.parentName || "")
+      ) {
+        return false;
+      }
+      if (
+        selectedMiddleNames.length > 0 &&
+        !selectedMiddleNames.includes(product.middleName || "")
+      ) {
+        return false;
+      }
+      if (
+        selectedChildNames.length > 0 &&
+        !selectedChildNames.includes(product.childName || "")
+      ) {
+        return false;
+      }
+      return true;
+    }) || [];
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
@@ -456,7 +479,7 @@ export function ProductTable({ selectedCategoryIds }: ProductTableProps) {
               </thead>
               <tbody>
                 {data?.data && data.data.length > 0 ? (
-                  data.data.map((product: Product) => (
+                  filteredProducts.map((product) => (
                     <tr
                       key={product.id}
                       className="border-b hover:bg-gray-50 cursor-pointer"

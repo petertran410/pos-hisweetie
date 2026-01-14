@@ -6,10 +6,7 @@ import {
   useCreateCategory,
   useUpdateCategory,
 } from "@/lib/hooks/useCategories";
-import { CategoryModal } from "./CategoryModal";
-import { CategorySelectorModal } from "./CategorySelectorModal";
 import type { Category } from "@/lib/api/categories";
-import { CategoryDropdown } from "./CategoryDropdown";
 import { CreateCategoryModal } from "./CreateCategoryModal";
 
 interface ProductSidebarProps {

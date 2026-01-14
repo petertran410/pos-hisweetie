@@ -9,7 +9,6 @@ import {
   useProducts,
 } from "@/lib/hooks/useProducts";
 import { useTrademarks } from "@/lib/hooks/useTrademarks";
-import { CategorySelect } from "./CategorySelect";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
