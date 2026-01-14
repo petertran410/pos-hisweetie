@@ -8,7 +8,7 @@ import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
 
 interface ProductDetailProps {
-  product: Product;
+  product?: Product;
   onClose: () => void;
 }
 
@@ -19,8 +19,14 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  console.log(product);
+
   const deleteProduct = useDeleteProduct();
   const { selectedBranch } = useBranchStore();
+
+  if (!product) {
+    throw new Error("Error");
+  }
 
   const handleDelete = () => {
     deleteProduct.mutate(product.id, {
@@ -155,7 +161,7 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-3 gap-6">
                 <div>
                   <label className="text-sm text-gray-600">Mã hàng</label>
                   <p className="font-medium">{product.code}</p>
@@ -165,15 +171,23 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                   <p className="font-medium">{product.name}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">Loại hàng</label>
+                  <label className="text-sm text-gray-600">Loại sản phẩm</label>
                   <p className="font-medium">
                     {getProductTypeLabel(product.type)}
                   </p>
                 </div>
-                {/* <div>
-                  <label className="text-sm text-gray-600">Nhóm hàng</label>
-                  <p className="font-medium">{product.category?.name || "-"}</p>
-                </div> */}
+                <div>
+                  <label className="text-sm text-gray-600">Loại hàng</label>
+                  <p className="font-medium">{product.parentName}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">Nguồn Gốc</label>
+                  <p className="font-medium">{product.middleName}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600">Loại hàng</label>
+                  <p className="font-medium">{product.childName}</p>
+                </div>
 
                 {product.type === 1 ? (
                   <>

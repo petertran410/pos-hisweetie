@@ -10,6 +10,8 @@ import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
 import { CategoryDropdown } from "./CategoryDropdown";
+import { TrademarkDropdown } from "./TrademarkDropdown";
+import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 
 interface ProductFormProps {
   product?: Product;
@@ -45,13 +47,22 @@ export function ProductForm({
       : []
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data: trademarks } = useTrademarks();
   const { selectedBranch } = useBranchStore();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const currentBranchInventory = product?.inventories?.find(
     (inv) => inv.branchId === selectedBranch?.id
   );
+  const purchasePrice = useFormattedNumber(
+    product?.inventories?.find((inv) => inv.branchId === selectedBranch?.id)
+      ? Number(
+          product.inventories.find((inv) => inv.branchId === selectedBranch?.id)
+            ?.cost || 0
+        )
+      : 0
+  );
+  const basePrice = useFormattedNumber(product?.basePrice || 0);
+  const weight = useFormattedNumber(product?.weight || 0);
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
@@ -162,6 +173,20 @@ export function ProductForm({
     }
   };
 
+  useEffect(() => {
+    if (product) {
+      const currentBranchInventory = product.inventories?.find(
+        (inv) => inv.branchId === selectedBranch?.id
+      );
+
+      purchasePrice.reset(
+        currentBranchInventory ? Number(currentBranchInventory.cost) : 0
+      );
+      basePrice.reset(product.basePrice || 0);
+      weight.reset(product.weight || 0);
+    }
+  }, [product, selectedBranch]);
+
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
@@ -182,7 +207,9 @@ export function ProductForm({
         type: product ? product.type : productType || 2,
         description: data.description || undefined,
         orderTemplate: data.orderTemplate || undefined,
-        categoryId: data.categoryId ? Number(data.categoryId) : undefined,
+        parentName: data.parentName,
+        middleName: data.middleName,
+        childName: data.childName,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
         variantId: data.variantId ? Number(data.variantId) : undefined,
         purchasePrice: Number(data.purchasePrice) || 0,
@@ -348,21 +375,12 @@ export function ProductForm({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Thương hiệu
-                </label>
-                <select
-                  {...register("tradeMarkId")}
-                  className="w-full border rounded px-3 py-2">
-                  <option value="">Chọn thương hiệu</option>
-                  {trademarks?.map((tm) => (
-                    <option key={tm.id} value={tm.id}>
-                      {tm.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <TrademarkDropdown
+                label="Thương hiệu"
+                placeholder="Chọn thương hiệu"
+                value={watch("tradeMarkId")}
+                onChange={(value) => setValue("tradeMarkId", value)}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -371,10 +389,10 @@ export function ProductForm({
                   Giá vốn
                 </label>
                 <input
-                  {...register("purchasePrice")}
-                  type="number"
-                  min="0"
-                  step="1"
+                  type="text"
+                  value={purchasePrice.displayValue}
+                  onChange={purchasePrice.handleChange}
+                  onBlur={purchasePrice.handleBlur}
                   className="w-full border rounded px-3 py-2"
                   placeholder="0"
                 />
@@ -384,10 +402,10 @@ export function ProductForm({
                   Giá bán
                 </label>
                 <input
-                  {...register("basePrice")}
-                  type="number"
-                  min="0"
-                  step="1"
+                  type="text"
+                  value={basePrice.displayValue}
+                  onChange={basePrice.handleChange}
+                  onBlur={basePrice.handleBlur}
                   className="w-full border rounded px-3 py-2"
                   placeholder="0"
                 />
@@ -401,15 +419,12 @@ export function ProductForm({
                 </label>
                 <input
                   {...register("stockQuantity")}
-                  type="number"
+                  type="text"
                   min="0"
                   step="1"
                   className="w-full border rounded px-3 py-2"
                   placeholder="0"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Chi nhánh: {selectedBranch?.name || "Chưa chọn"}
-                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -417,7 +432,7 @@ export function ProductForm({
                 </label>
                 <input
                   {...register("minStockAlert")}
-                  type="number"
+                  type="text"
                   min="0"
                   step="1"
                   className="w-full border rounded px-3 py-2"
@@ -430,7 +445,7 @@ export function ProductForm({
                 </label>
                 <input
                   {...register("maxStockAlert")}
-                  type="number"
+                  type="text"
                   min="0"
                   step="1"
                   className="w-full border rounded px-3 py-2"
@@ -439,27 +454,47 @@ export function ProductForm({
               </div>
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-3">Vị trí, Trọng lượng</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Trọng lượng
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      {...register("weight", { valueAsNumber: true })}
-                      type="number"
-                      className="flex-1 border rounded px-3 py-2"
-                      placeholder="550"
-                    />
-                    <select
-                      {...register("weightUnit")}
-                      className="border rounded px-3 py-2">
-                      <option value="g">g</option>
-                      <option value="kg">kg</option>
-                    </select>
-                  </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Trọng lượng
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={weight.displayValue}
+                    onChange={weight.handleChange}
+                    onBlur={weight.handleBlur}
+                    className="flex-1 border rounded px-3 py-2"
+                    placeholder="0"
+                  />
+                  <select
+                    {...register("weightUnit")}
+                    className="border rounded px-3 py-2 w-24">
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Đơn vị tính
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    {...register("unit")}
+                    className="flex-1 border rounded px-3 py-2"
+                    placeholder="Cái, hộp, thùng..."
+                    readOnly
+                    onClick={() => setShowUnitModal(true)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowUnitModal(true)}
+                    className="px-3 py-2 border rounded hover:bg-gray-50">
+                    ...
+                  </button>
                 </div>
               </div>
             </div>
@@ -477,24 +512,24 @@ export function ProductForm({
             </div>
 
             <div>
-              <h3 className="font-semibold mb-3">Hình ảnh</h3>
-              <div className="flex gap-4">
-                {images.map((img, idx) => (
-                  <div key={idx} className="relative w-24 h-24">
+              <label className="block text-sm font-medium mb-1">Hình ảnh</label>
+              <div className="flex gap-2 flex-wrap">
+                {images.map((img, index) => (
+                  <div key={index} className="relative w-20 h-20">
                     <img
                       src={img.preview}
                       alt=""
-                      className="w-full h-full object-cover rounded"
+                      className="w-full h-full object-cover rounded border"
                     />
                     <button
                       type="button"
-                      onClick={() => removeImage(idx)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6">
-                      ✕
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                      ×
                     </button>
                   </div>
                 ))}
-                <label className="w-24 h-24 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-gray-50">
+                <label className="w-20 h-20 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-gray-50">
                   <input
                     type="file"
                     accept="image/*"
