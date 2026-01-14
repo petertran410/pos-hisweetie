@@ -82,7 +82,7 @@ export function ProductForm({
       isDirectSale: product?.isDirectSale || false,
       isActive: product?.isActive ?? true,
       allowsSale: product?.allowsSale ?? true,
-      isRewardPoint: product?.isRewardPoint ?? true,
+      isRewardPoint: product?.isRewardPoint ?? false,
     },
   });
 
@@ -116,19 +116,6 @@ export function ProductForm({
     const result = await res.json();
     return result.url;
   };
-
-  // const flattenCategories = (
-  //   cats: Category[],
-  //   level: number = 0
-  // ): { id: number; name: string; level: number }[] => {
-  //   return cats.reduce((acc, cat) => {
-  //     acc.push({ id: cat.id, name: cat.name, level });
-  //     if (cat.children && cat.children.length > 0) {
-  //       acc.push(...flattenCategories(cat.children, level + 1));
-  //     }
-  //     return acc;
-  //   }, [] as { id: number; name: string; level: number }[]);
-  // };
 
   const getProductTypeLabel = (type: number) => {
     switch (type) {
@@ -313,12 +300,12 @@ export function ProductForm({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Mã hàng <span className="text-red-500">*</span>
+                  Mã hàng
                 </label>
                 <input
-                  {...register("code", { required: true })}
+                  {...register("code")}
                   className="w-full border rounded px-3 py-2"
-                  placeholder="Nhập mã hàng"
+                  placeholder="Tự động"
                 />
               </div>
             </div>

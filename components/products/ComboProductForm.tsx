@@ -77,7 +77,7 @@ export function ComboProductForm({
       isDirectSale: product?.isDirectSale || false,
       isActive: product?.isActive ?? true,
       allowsSale: product?.allowsSale ?? true,
-      isRewardPoint: product?.isRewardPoint ?? true,
+      isRewardPoint: product?.isRewardPoint ?? false,
     },
   });
 
@@ -349,12 +349,12 @@ export function ComboProductForm({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Mã hàng <span className="text-red-500">*</span>
+                  Mã hàng
                 </label>
                 <input
-                  {...register("code", { required: true })}
+                  {...register("code")}
                   className="w-full border rounded px-3 py-2"
-                  placeholder="Nhập mã hàng"
+                  placeholder="Tự động"
                 />
               </div>
             </div>
