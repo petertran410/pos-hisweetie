@@ -92,9 +92,16 @@ export function CategoryDropdown({
         </span>
         <div className="flex items-center gap-2">
           {value && (
-            <button
+            <span
+              role="button"
+              tabIndex={0}
               onClick={handleClear}
-              className="hover:bg-gray-200 rounded p-1">
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  handleClear(e as any);
+                }
+              }}
+              className="hover:bg-gray-200 rounded p-1 cursor-pointer">
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -107,7 +114,7 @@ export function CategoryDropdown({
                   d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
-            </button>
+            </span>
           )}
           <svg
             className={`w-4 h-4 text-gray-400 transition-transform ${
