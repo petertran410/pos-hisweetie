@@ -14,7 +14,7 @@ import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
 import { CategoryDropdown } from "./CategoryDropdown";
 
-interface ComboComponent {
+interface ManufacturingComponent {
   id?: number;
   componentProductId: number;
   componentProduct?: Product;
@@ -27,19 +27,19 @@ interface ImageItem {
   preview: string;
 }
 
-interface ComboProductFormProps {
+interface ManufacturingProductFormProps {
   product?: Product;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function ComboProductForm({
+export function ManufacturingProductForm({
   product,
   onClose,
   onSuccess,
-}: ComboProductFormProps) {
+}: ManufacturingProductFormProps) {
   const [images, setImages] = useState<ImageItem[]>([]);
-  const [components, setComponents] = useState<ComboComponent[]>([]);
+  const [components, setComponents] = useState<ManufacturingComponent[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -168,29 +168,25 @@ export function ComboProductForm({
           quantity: 1,
         },
       ]);
-      // Reset về trang cuối khi thêm sản phẩm mới
-      const newTotalPages = Math.ceil((components.length + 1) / itemsPerPage);
-      setCurrentPage(newTotalPages);
+      setSearchQuery("");
     }
-    setSearchQuery("");
-    setShowSearchResults(false);
   };
 
-  const updateComponentQuantity = (index: number, quantity: number) => {
-    const updated = [...components];
-    updated[index].quantity = Math.max(1, quantity);
-    setComponents(updated);
+  const removeComponent = (componentProductId: number) => {
+    setComponents(
+      components.filter((c) => c.componentProductId !== componentProductId)
+    );
   };
 
-  const removeComponent = (index: number) => {
-    const newComponents = components.filter((_, i) => i !== index);
-    setComponents(newComponents);
-
-    // Adjust current page if needed
-    const newTotalPages = Math.ceil(newComponents.length / itemsPerPage);
-    if (currentPage > newTotalPages && newTotalPages > 0) {
-      setCurrentPage(newTotalPages);
-    }
+  const updateComponentQuantity = (
+    componentProductId: number,
+    quantity: number
+  ) => {
+    setComponents(
+      components.map((c) =>
+        c.componentProductId === componentProductId ? { ...c, quantity } : c
+      )
+    );
   };
 
   const calculateTotalPurchasePrice = () => {
@@ -202,9 +198,7 @@ export function ComboProductForm({
         (inv) => inv.branchId === selectedBranch?.id
       );
       const cost = inventory ? Number(inventory.cost) : 0;
-      const quantity = Number(comp.quantity || 0);
-
-      return sum + cost * quantity;
+      return sum + cost * comp.quantity;
     }, 0);
   };
 
@@ -213,19 +207,12 @@ export function ComboProductForm({
       const componentProduct = comp.componentProduct;
       if (!componentProduct) return sum;
 
-      const price = Number(componentProduct.basePrice || 0);
-      const quantity = Number(comp.quantity || 0);
-
-      return sum + price * quantity;
+      const price = Number(componentProduct.basePrice);
+      return sum + price * comp.quantity;
     }, 0);
   };
 
-  const totalPages = Math.ceil(components.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentComponents = components.slice(startIndex, endIndex);
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -247,6 +234,13 @@ export function ComboProductForm({
   };
 
   const onSubmit = async (data: any) => {
+    if (components.length === 0) {
+      alert(
+        "Hàng thành phần thiếu. Vui lòng thêm ít nhất một hàng thành phần."
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const uploadedUrls: string[] = [];
@@ -260,21 +254,22 @@ export function ComboProductForm({
         }
       }
 
-      const comboCost = calculateTotalPurchasePrice();
-      const comboRetailPrice = calculateTotalRetailPrice();
+      const manufacturingCost = calculateTotalPurchasePrice();
 
-      const finalBasePrice = Number(data.basePrice) || comboRetailPrice || 0;
+      const finalBasePrice = Number(data.basePrice) || 0;
 
       const formData = {
         code: data.code,
         name: data.name,
-        type: 1,
+        type: 4,
         description: data.description || undefined,
         orderTemplate: data.orderTemplate || undefined,
-        categoryId: data.categoryId ? Number(data.categoryId) : undefined,
+        parentName: data.parentName || undefined,
+        middleName: data.middleName || undefined,
+        childName: data.childName || undefined,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
         basePrice: finalBasePrice,
-        purchasePrice: comboCost,
+        purchasePrice: manufacturingCost,
         stockQuantity: 0,
         minStockAlert: Number(data.minStockAlert) || 0,
         maxStockAlert: Number(data.maxStockAlert) || 0,
@@ -322,12 +317,18 @@ export function ComboProductForm({
     await submitProduct(finalData);
   };
 
+  const totalPages = Math.ceil((components.length || 0) / itemsPerPage);
+  const paginatedComponents = components.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
       <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col rounded-lg">
         <div className="border-b p-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            {product ? "Sửa Combo - đóng gói" : "Tạo Combo - đóng gói"}
+            {product ? "Sửa Hàng sản xuất" : "Tạo Hàng sản xuất"}
           </h2>
           <button
             onClick={onClose}
@@ -398,7 +399,9 @@ export function ComboProductForm({
 
             <div className="border-t pt-6">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Hàng thành phần</h3>
+                <h3 className="font-semibold">
+                  Hàng thành phần <span className="text-red-500">*</span>
+                </h3>
                 {components.length > 0 && (
                   <span className="text-sm text-gray-600">
                     Tổng: {components.length} sản phẩm
@@ -424,193 +427,123 @@ export function ComboProductForm({
 
                 {showSearchResults && searchQuery && searchResults?.data && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto z-10">
-                    {searchResults.data
-                      .filter((p) => p.type !== 1)
-                      .map((product) => (
-                        <button
-                          key={product.id}
-                          type="button"
-                          onClick={() => addComponent(product)}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-3">
-                          <span className="text-sm text-gray-500">
-                            {product.code}
-                          </span>
-                          <span className="flex-1">{product.name}</span>
-                          <span className="text-sm text-gray-500">
-                            {Number(product.basePrice).toLocaleString()} đ
-                          </span>
-                        </button>
-                      ))}
+                    {searchResults.data.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => addComponent(p)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0">
+                        <div className="font-medium">{p.name}</div>
+                        <div className="text-sm text-gray-500">{p.code}</div>
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
 
-              <div className="border rounded overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-sm font-medium">
-                        STT
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-medium">
-                        Mã hàng
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-medium">
-                        Tên hàng thành phần
-                      </th>
-                      <th className="px-4 py-2 text-center text-sm font-medium">
-                        Số lượng
-                      </th>
-                      <th className="px-4 py-2 text-right text-sm font-medium">
-                        Giá vốn
-                      </th>
-                      <th className="px-4 py-2 text-right text-sm font-medium">
-                        Tổng giá vốn
-                      </th>
-                      <th className="px-4 py-2 text-right text-sm font-medium">
-                        Giá bán
-                      </th>
-                      <th className="px-4 py-2 text-right text-sm font-medium">
-                        Tổng giá bán
-                      </th>
-                      <th className="px-4 py-2"></th>
-                    </tr>
-                    {components.length > 0 && (
-                      <tr className="bg-gray-100 font-semibold">
-                        <td colSpan={5}></td>
-                        <td className="px-4 py-2 text-right">
-                          {calculateTotalPurchasePrice().toLocaleString()}
-                        </td>
-                        <td></td>
-                        <td className="px-4 py-2 text-right">
-                          {calculateTotalRetailPrice().toLocaleString()}
-                        </td>
-                        <td></td>
-                      </tr>
-                    )}
-                  </thead>
-                  <tbody>
-                    {currentComponents.map((comp, index) => {
-                      const actualIndex = startIndex + index;
-                      const componentProduct = comp.componentProduct;
-
-                      const inventory = componentProduct?.inventories?.find(
-                        (inv) => inv.branchId === selectedBranch?.id
-                      );
-                      const purchasePrice = inventory
-                        ? Number(inventory.cost)
-                        : 0;
-
-                      const retailPrice = Number(
-                        componentProduct?.basePrice || 0
-                      );
-                      const totalPurchase = purchasePrice * comp.quantity;
-                      const totalRetail = retailPrice * comp.quantity;
-
-                      return (
-                        <tr key={actualIndex} className="border-t">
-                          <td className="px-4 py-2">{actualIndex + 1}</td>
-                          <td className="px-4 py-2 text-sm">
-                            {comp.componentProduct?.code}
-                          </td>
-                          <td className="px-4 py-2">
-                            {comp.componentProduct?.name}
-                          </td>
-                          <td className="px-4 py-2">
-                            <input
-                              type="number"
-                              min="1"
-                              value={comp.quantity}
-                              onChange={(e) =>
-                                updateComponentQuantity(
-                                  actualIndex,
-                                  Number(e.target.value)
-                                )
-                              }
-                              className="w-20 border rounded px-2 py-1 text-center"
-                            />
-                          </td>
-                          <td className="px-4 py-2 text-right">
-                            {purchasePrice.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-2 text-right">
-                            {totalPurchase.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-2 text-right">
-                            {retailPrice.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-2 text-right">
-                            {totalRetail.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-2">
-                            <button
-                              type="button"
-                              onClick={() => removeComponent(actualIndex)}
-                              className="text-red-600 hover:text-red-800">
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {components.length === 0 && (
+              {components.length > 0 && (
+                <div className="border rounded">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
                       <tr>
-                        <td
-                          colSpan={9}
-                          className="px-4 py-8 text-center text-gray-500">
-                          Chưa có hàng thành phần. Tìm kiếm và thêm sản phẩm ở
-                          trên.
-                        </td>
+                        <th className="px-3 py-2 text-left text-sm font-medium">
+                          Mã hàng
+                        </th>
+                        <th className="px-3 py-2 text-left text-sm font-medium">
+                          Tên hàng
+                        </th>
+                        <th className="px-3 py-2 text-left text-sm font-medium">
+                          Tồn kho
+                        </th>
+                        <th className="px-3 py-2 text-left text-sm font-medium">
+                          Số lượng
+                        </th>
+                        <th className="px-3 py-2 text-left text-sm font-medium">
+                          Giá vốn
+                        </th>
+                        <th className="px-3 py-2"></th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {paginatedComponents.map((comp) => {
+                        const inventory =
+                          comp.componentProduct?.inventories?.find(
+                            (inv) => inv.branchId === selectedBranch?.id
+                          );
+                        const cost = inventory ? Number(inventory.cost) : 0;
+                        const stock = inventory ? Number(inventory.onHand) : 0;
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="border-t p-3 flex items-center justify-between bg-gray-50">
-                    <div className="text-sm text-gray-600">
-                      Hiển thị {startIndex + 1} -{" "}
-                      {Math.min(endIndex, components.length)} trong tổng{" "}
-                      {components.length} sản phẩm
-                    </div>
-                    <div className="flex items-center gap-2">
+                        return (
+                          <tr
+                            key={comp.componentProductId}
+                            className="border-t">
+                            <td className="px-3 py-2 text-sm">
+                              {comp.componentProduct?.code}
+                            </td>
+                            <td className="px-3 py-2 text-sm">
+                              {comp.componentProduct?.name}
+                            </td>
+                            <td className="px-3 py-2 text-sm">{stock}</td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={comp.quantity}
+                                onChange={(e) =>
+                                  updateComponentQuantity(
+                                    comp.componentProductId,
+                                    Number(e.target.value)
+                                  )
+                                }
+                                className="w-20 border rounded px-2 py-1 text-sm"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-sm">
+                              {cost.toLocaleString()}
+                            </td>
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeComponent(comp.componentProductId)
+                                }
+                                className="text-red-500 hover:text-red-700">
+                                ✕
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 p-3 border-t">
                       <button
                         type="button"
                         onClick={() =>
-                          setCurrentPage(Math.max(1, currentPage - 1))
+                          setCurrentPage((p) => Math.max(1, p - 1))
                         }
                         disabled={currentPage === 1}
                         className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
                         ‹
                       </button>
                       <span className="text-sm">
-                        Trang {currentPage} / {totalPages}
+                        {currentPage} / {totalPages}
                       </span>
                       <button
                         type="button"
                         onClick={() =>
-                          setCurrentPage(Math.min(totalPages, currentPage + 1))
+                          setCurrentPage((p) => Math.min(totalPages, p + 1))
                         }
                         disabled={currentPage === totalPages}
                         className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
                         ›
                       </button>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -642,13 +575,13 @@ export function ComboProductForm({
                       {...register("weight", { valueAsNumber: true })}
                       type="number"
                       className="flex-1 border rounded px-3 py-2"
-                      placeholder="550"
+                      placeholder="0"
                     />
                     <select
                       {...register("weightUnit")}
                       className="border rounded px-3 py-2">
-                      <option value="g">g</option>
                       <option value="kg">kg</option>
+                      <option value="g">g</option>
                     </select>
                   </div>
                 </div>
@@ -657,18 +590,18 @@ export function ComboProductForm({
 
             <div>
               <h3 className="font-semibold mb-3">Hình ảnh</h3>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-3">
                 {images.map((img, idx) => (
                   <div key={idx} className="relative w-24 h-24">
                     <img
                       src={img.preview}
                       alt=""
-                      className="w-full h-full object-cover rounded"
+                      className="w-full h-full object-cover rounded border"
                     />
                     <button
                       type="button"
                       onClick={() => removeImage(idx)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6">
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                       ✕
                     </button>
                   </div>
@@ -677,10 +610,10 @@ export function ComboProductForm({
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={handleImageSelect}
+                    onChange={handleImageUpload}
                     className="hidden"
                   />
-                  <span className="text-3xl text-gray-400">+</span>
+                  <span className="text-2xl text-gray-400">+</span>
                 </label>
               </div>
             </div>

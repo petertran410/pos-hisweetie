@@ -397,6 +397,11 @@ export function ProductTable({
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
                   Combo - đóng gói
                 </button>
+                <button
+                  onClick={() => handleCreateProduct(4)}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                  Hàng sản xuất
+                </button>
               </div>
             )}
           </div>

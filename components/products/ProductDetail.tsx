@@ -6,6 +6,7 @@ import { useDeleteProduct } from "@/lib/hooks/useProducts";
 import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
+import { ManufacturingProductForm } from "./ManufacturingProductForm";
 
 interface ProductDetailProps {
   product?: Product;
@@ -45,6 +46,8 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
         return "Hàng hóa";
       case 3:
         return "Dịch vụ";
+      case 4:
+        return "Hàng sản xuất";
       default:
         return "Hàng hóa";
     }
@@ -99,6 +102,19 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
     if (product.type === 1) {
       return (
         <ComboProductForm
+          product={product}
+          onClose={() => setIsEditing(false)}
+          onSuccess={() => {
+            setIsEditing(false);
+            onClose();
+          }}
+        />
+      );
+    }
+
+    if (product.type === 4) {
+      return (
+        <ManufacturingProductForm
           product={product}
           onClose={() => setIsEditing(false)}
           onSuccess={() => {
