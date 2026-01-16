@@ -7,6 +7,7 @@ import { ProductForm } from "./ProductForm";
 import type { Product } from "@/lib/api/products";
 import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
+import { ManufacturingProductForm } from "./ManufacturingProductForm";
 
 interface ProductTableProps {
   selectedParentName?: string;
@@ -53,6 +54,8 @@ const getProductTypeLabel = (type: number) => {
       return "Hàng hóa";
     case 3:
       return "Dịch vụ";
+    case 4:
+      return "Hàng sản xuất";
     default:
       return "Hàng hóa";
   }
@@ -397,6 +400,11 @@ export function ProductTable({
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
                   Combo - đóng gói
                 </button>
+                <button
+                  onClick={() => handleCreateProduct(4)}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                  Hàng sản xuất
+                </button>
               </div>
             )}
           </div>
@@ -552,9 +560,8 @@ export function ProductTable({
         />
       )}
 
-      {showCreateForm && productType && productType !== 1 && (
-        <ProductForm
-          productType={productType}
+      {showCreateForm && productType === 4 && (
+        <ManufacturingProductForm
           onClose={() => {
             setShowCreateForm(false);
             setProductType(null);
@@ -565,6 +572,23 @@ export function ProductTable({
           }}
         />
       )}
+
+      {showCreateForm &&
+        productType &&
+        productType !== 1 &&
+        productType !== 4 && (
+          <ProductForm
+            productType={productType}
+            onClose={() => {
+              setShowCreateForm(false);
+              setProductType(null);
+            }}
+            onSuccess={() => {
+              setShowCreateForm(false);
+              setProductType(null);
+            }}
+          />
+        )}
     </div>
   );
 }

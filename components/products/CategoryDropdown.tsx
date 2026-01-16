@@ -86,7 +86,7 @@ export function CategoryDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full border rounded px-3 py-2 text-left flex items-center justify-between hover:bg-gray-50">
+        className="w-full border rounded px-3 py-2 text-left flex items-center justify-between hover:bg-gray-50 text-wrap">
         <span className={value ? "text-gray-900" : "text-gray-500"}>
           {value || placeholder}
         </span>

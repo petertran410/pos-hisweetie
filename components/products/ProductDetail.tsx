@@ -6,6 +6,7 @@ import { useDeleteProduct } from "@/lib/hooks/useProducts";
 import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
+import { ManufacturingProductForm } from "./ManufacturingProductForm";
 
 interface ProductDetailProps {
   product?: Product;
@@ -45,6 +46,8 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
         return "Hàng hóa";
       case 3:
         return "Dịch vụ";
+      case 4:
+        return "Hàng sản xuất";
       default:
         return "Hàng hóa";
     }
@@ -99,6 +102,19 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
     if (product.type === 1) {
       return (
         <ComboProductForm
+          product={product}
+          onClose={() => setIsEditing(false)}
+          onSuccess={() => {
+            setIsEditing(false);
+            onClose();
+          }}
+        />
+      );
+    }
+
+    if (product.type === 4) {
+      return (
+        <ManufacturingProductForm
           product={product}
           onClose={() => setIsEditing(false)}
           onSuccess={() => {
@@ -363,132 +379,134 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                 </div>
               )}
 
-              {product.type === 1 && product.comboComponents && (
-                <div className="border-t pt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold">Hàng thành phần</h3>
-                    {components.length > 0 && (
-                      <span className="text-sm text-gray-600">
-                        Tổng: {components.length} sản phẩm
-                      </span>
-                    )}
-                  </div>
-                  <div className="border rounded overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-sm font-medium">
-                            STT
-                          </th>
-                          <th className="px-4 py-2 text-left text-sm font-medium">
-                            Mã hàng
-                          </th>
-                          <th className="px-4 py-2 text-left text-sm font-medium">
-                            Tên hàng thành phần
-                          </th>
-                          <th className="px-4 py-2 text-center text-sm font-medium">
-                            Số lượng
-                          </th>
-                          <th className="px-4 py-2 text-right text-sm font-medium">
-                            Giá vốn
-                          </th>
-                          <th className="px-4 py-2 text-right text-sm font-medium">
-                            Tổng giá vốn
-                          </th>
-                          <th className="px-4 py-2 text-right text-sm font-medium">
-                            Giá bán
-                          </th>
-                          <th className="px-4 py-2 text-right text-sm font-medium">
-                            Tổng giá bán
-                          </th>
-                        </tr>
-                        <tr className="bg-gray-100 font-semibold">
-                          <td colSpan={5}></td>
-                          <td className="px-4 py-2 text-right">
-                            {calculateTotalPurchasePrice().toLocaleString()}
-                          </td>
-                          <td></td>
-                          <td className="px-4 py-2 text-right">
-                            {calculateTotalRetailPrice().toLocaleString()}
-                          </td>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {currentComponents.map((comp, index) => {
-                          const actualIndex = startIndex + index;
-                          const componentProduct = comp.componentProduct;
-
-                          // Lấy giá vốn từ inventory
-                          const inventory = componentProduct?.inventories?.find(
-                            (inv) => inv.branchId === selectedBranch?.id
-                          );
-                          const purchasePrice = inventory
-                            ? Number(inventory.cost)
-                            : 0;
-
-                          const retailPrice = Number(
-                            componentProduct?.basePrice || 0
-                          );
-                          const quantity = Number(comp.quantity);
-                          const totalPurchase = purchasePrice * quantity;
-                          const totalRetail = retailPrice * quantity;
-
-                          return (
-                            <tr key={comp.id} className="border-t">
-                              <td className="px-4 py-2">{actualIndex + 1}</td>
-                              <td className="px-4 py-2 text-sm">
-                                {componentProduct?.code}
-                              </td>
-                              <td className="px-4 py-2">
-                                {componentProduct?.name}
-                              </td>
-                              <td className="px-4 py-2 text-center">
-                                {quantity}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                {purchasePrice.toLocaleString()}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                {totalPurchase.toLocaleString()}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                {retailPrice.toLocaleString()}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                {totalRetail.toLocaleString()}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-
-                    {totalPages > 1 && (
-                      <div className="border-t p-3 flex items-center justify-between">
-                        <button
-                          onClick={() =>
-                            setCurrentPage((p) => Math.max(1, p - 1))
-                          }
-                          disabled={currentPage === 1}
-                          className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
-                          Trước
-                        </button>
-                        <span className="text-sm">
-                          Trang {currentPage} / {totalPages}
+              {(product.type === 1 || product.type === 4) &&
+                product.comboComponents && (
+                  <div className="border-t pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold">Hàng thành phần</h3>
+                      {components.length > 0 && (
+                        <span className="text-sm text-gray-600">
+                          Tổng: {components.length} sản phẩm
                         </span>
-                        <button
-                          onClick={() =>
-                            setCurrentPage((p) => Math.min(totalPages, p + 1))
-                          }
-                          disabled={currentPage === totalPages}
-                          className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
-                          Sau
-                        </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                    <div className="border rounded overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-sm font-medium">
+                              STT
+                            </th>
+                            <th className="px-4 py-2 text-left text-sm font-medium">
+                              Mã hàng
+                            </th>
+                            <th className="px-4 py-2 text-left text-sm font-medium">
+                              Tên hàng thành phần
+                            </th>
+                            <th className="px-4 py-2 text-center text-sm font-medium">
+                              Số lượng
+                            </th>
+                            <th className="px-4 py-2 text-right text-sm font-medium">
+                              Giá vốn
+                            </th>
+                            <th className="px-4 py-2 text-right text-sm font-medium">
+                              Tổng giá vốn
+                            </th>
+                            <th className="px-4 py-2 text-right text-sm font-medium">
+                              Giá bán
+                            </th>
+                            <th className="px-4 py-2 text-right text-sm font-medium">
+                              Tổng giá bán
+                            </th>
+                          </tr>
+                          <tr className="bg-gray-100 font-semibold">
+                            <td colSpan={5}></td>
+                            <td className="px-4 py-2 text-right">
+                              {calculateTotalPurchasePrice().toLocaleString()}
+                            </td>
+                            <td></td>
+                            <td className="px-4 py-2 text-right">
+                              {calculateTotalRetailPrice().toLocaleString()}
+                            </td>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {currentComponents.map((comp, index) => {
+                            const actualIndex = startIndex + index;
+                            const componentProduct = comp.componentProduct;
+
+                            // Lấy giá vốn từ inventory
+                            const inventory =
+                              componentProduct?.inventories?.find(
+                                (inv) => inv.branchId === selectedBranch?.id
+                              );
+                            const purchasePrice = inventory
+                              ? Number(inventory.cost)
+                              : 0;
+
+                            const retailPrice = Number(
+                              componentProduct?.basePrice || 0
+                            );
+                            const quantity = Number(comp.quantity);
+                            const totalPurchase = purchasePrice * quantity;
+                            const totalRetail = retailPrice * quantity;
+
+                            return (
+                              <tr key={comp.id} className="border-t">
+                                <td className="px-4 py-2">{actualIndex + 1}</td>
+                                <td className="px-4 py-2 text-sm">
+                                  {componentProduct?.code}
+                                </td>
+                                <td className="px-4 py-2">
+                                  {componentProduct?.name}
+                                </td>
+                                <td className="px-4 py-2 text-center">
+                                  {quantity}
+                                </td>
+                                <td className="px-4 py-2 text-right">
+                                  {purchasePrice.toLocaleString()}
+                                </td>
+                                <td className="px-4 py-2 text-right">
+                                  {totalPurchase.toLocaleString()}
+                                </td>
+                                <td className="px-4 py-2 text-right">
+                                  {retailPrice.toLocaleString()}
+                                </td>
+                                <td className="px-4 py-2 text-right">
+                                  {totalRetail.toLocaleString()}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+
+                      {totalPages > 1 && (
+                        <div className="border-t p-3 flex items-center justify-between">
+                          <button
+                            onClick={() =>
+                              setCurrentPage((p) => Math.max(1, p - 1))
+                            }
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
+                            Trước
+                          </button>
+                          <span className="text-sm">
+                            Trang {currentPage} / {totalPages}
+                          </span>
+                          <button
+                            onClick={() =>
+                              setCurrentPage((p) => Math.min(totalPages, p + 1))
+                            }
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
+                            Sau
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           )}
         </div>

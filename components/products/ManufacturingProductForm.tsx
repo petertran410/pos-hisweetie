@@ -8,11 +8,13 @@ import {
   useUpdateProduct,
   useProducts,
 } from "@/lib/hooks/useProducts";
-import { useTrademarks } from "@/lib/hooks/useTrademarks";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
 import { CategoryDropdown } from "./CategoryDropdown";
+import { toast } from "sonner";
+import { TrademarkDropdown } from "./TrademarkDropdown";
+import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 
 interface ManufacturingComponent {
   id?: number;
@@ -48,7 +50,6 @@ export function ManufacturingProductForm({
   const [pendingFormData, setPendingFormData] = useState<any>(null);
   const itemsPerPage = 10;
 
-  const { data: trademarks } = useTrademarks();
   const { data: searchResults } = useProducts({
     search: searchQuery,
     limit: 10,
@@ -57,6 +58,19 @@ export function ManufacturingProductForm({
 
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const currentBranchInventory = product?.inventories?.find(
+    (inv) => inv.branchId === selectedBranch?.id
+  );
+  const purchasePrice = useFormattedNumber(
+    product?.inventories?.find((inv) => inv.branchId === selectedBranch?.id)
+      ? Number(
+          product.inventories.find((inv) => inv.branchId === selectedBranch?.id)
+            ?.cost || 0
+        )
+      : 0
+  );
+  const basePrice = useFormattedNumber(product?.basePrice || 0);
+  const weight = useFormattedNumber(product?.weight || 0);
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
@@ -69,8 +83,18 @@ export function ManufacturingProductForm({
       childName: product?.childName || undefined,
       tradeMarkId: product?.tradeMarkId || undefined,
       basePrice: product?.basePrice || 0,
-      minStockAlert: 0,
-      maxStockAlert: 0,
+      purchasePrice: currentBranchInventory
+        ? Number(currentBranchInventory.cost)
+        : 0,
+      stockQuantity: currentBranchInventory
+        ? Number(currentBranchInventory.onHand)
+        : 0,
+      minStockAlert: currentBranchInventory
+        ? Number(currentBranchInventory.minQuality)
+        : 0,
+      maxStockAlert: currentBranchInventory
+        ? Number(currentBranchInventory.maxQuality)
+        : 0,
       weight: product?.weight || undefined,
       weightUnit: product?.weightUnit || "kg",
       unit: product?.unit || "",
@@ -235,9 +259,9 @@ export function ManufacturingProductForm({
 
   const onSubmit = async (data: any) => {
     if (components.length === 0) {
-      alert(
-        "Hàng thành phần thiếu. Vui lòng thêm ít nhất một hàng thành phần."
-      );
+      toast.error("Hàng thành phần thiếu", {
+        description: "Vui lòng thêm ít nhất một hàng thành phần.",
+      });
       return;
     }
 
@@ -358,20 +382,20 @@ export function ManufacturingProductForm({
                   placeholder="Tự động"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Tên hàng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  {...register("name", { required: true })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Nhập tên hàng"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Tên hàng <span className="text-red-500">*</span>
-              </label>
-              <input
-                {...register("name", { required: true })}
-                className="w-full border rounded px-3 py-2"
-                placeholder="Nhập tên hàng"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <CategoryDropdown
                 type="parent"
                 label="Loại Hàng"
@@ -388,12 +412,36 @@ export function ManufacturingProductForm({
                 onChange={(value) => setValue("middleName", value)}
               />
 
+              {/* <CategoryDropdown
+                type="child"
+                label="Danh Mục"
+                placeholder="Chọn danh mục"
+                value={watch("childName")}
+                onChange={(value) => setValue("childName", value)}
+              />
+
+              <TrademarkDropdown
+                label="Thương hiệu"
+                placeholder="Chọn thương hiệu"
+                value={watch("tradeMarkId")}
+                onChange={(value) => setValue("tradeMarkId", value)}
+              /> */}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <CategoryDropdown
                 type="child"
                 label="Danh Mục"
                 placeholder="Chọn danh mục"
                 value={watch("childName")}
                 onChange={(value) => setValue("childName", value)}
+              />
+
+              <TrademarkDropdown
+                label="Thương hiệu"
+                placeholder="Chọn thương hiệu"
+                value={watch("tradeMarkId")}
+                onChange={(value) => setValue("tradeMarkId", value)}
               />
             </div>
 
