@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 
 interface CostConfirmationModalProps {
-  onConfirm: (scope: "all" | "specific", branchId?: number) => void;
+  onConfirm: (scope: "all" | "specific", branchIds?: number[]) => void;
   onCancel: () => void;
 }
 
@@ -13,21 +13,37 @@ export function CostConfirmationModal({
   onCancel,
 }: CostConfirmationModalProps) {
   const [scope, setScope] = useState<"all" | "specific">("all");
-  const [selectedBranchId, setSelectedBranchId] = useState<
-    number | undefined
-  >();
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
 
   const { data: branches } = useBranches();
 
-  const selectedBranch = branches?.find((b) => b.id === selectedBranchId);
+  // const selectedBranch = branches?.find((b) => b.id === selectedBranchIds);
+
+  const handleBranchToggle = (branchId: number) => {
+    setSelectedBranchIds((prev) => {
+      if (prev.includes(branchId)) {
+        return prev.filter((id) => id !== branchId);
+      } else {
+        return [...prev, branchId];
+      }
+    });
+  };
 
   const handleConfirm = () => {
-    if (scope === "specific" && !selectedBranchId) {
-      alert("Vui lòng chọn chi nhánh");
+    if (scope === "specific" && selectedBranchIds.length === 0) {
+      alert("Vui lòng chọn ít nhất một chi nhánh");
       return;
     }
-    onConfirm(scope, selectedBranchId);
+    onConfirm(scope, scope === "specific" ? selectedBranchIds : undefined);
+  };
+
+  const getSelectedBranchesText = () => {
+    if (selectedBranchIds.length === 0) return "Chọn chi nhánh";
+    if (selectedBranchIds.length === 1) {
+      return branches?.find((b) => b.id === selectedBranchIds[0])?.name;
+    }
+    return `${selectedBranchIds.length} chi nhánh được chọn`;
   };
 
   return (
@@ -59,7 +75,7 @@ export function CostConfirmationModal({
                 checked={scope === "all"}
                 onChange={() => {
                   setScope("all");
-                  setSelectedBranchId(undefined);
+                  setSelectedBranchIds([]);
                 }}
                 className="w-4 h-4"
               />
@@ -86,9 +102,7 @@ export function CostConfirmationModal({
                     type="button"
                     onClick={() => setShowBranchDropdown(!showBranchDropdown)}
                     className="w-full border rounded px-3 py-2 text-left flex items-center justify-between hover:bg-gray-50">
-                    <span className="text-sm">
-                      {selectedBranch?.name || "Kho Hà Nội"}
-                    </span>
+                    <span className="text-sm">{getSelectedBranchesText()}</span>
                     <svg
                       className={`w-4 h-4 transition-transform ${
                         showBranchDropdown ? "rotate-180" : ""
@@ -108,22 +122,19 @@ export function CostConfirmationModal({
                   {showBranchDropdown && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
                       {branches?.map((branch) => (
-                        <button
+                        <label
                           key={branch.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedBranchId(branch.id);
-                            setShowBranchDropdown(false);
-                          }}
-                          className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
-                            selectedBranchId === branch.id
-                              ? "bg-blue-50 text-blue-600"
-                              : ""
-                          }`}>
-                          {branch.name}
-                          {selectedBranchId === branch.id && (
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedBranchIds.includes(branch.id)}
+                            onChange={() => handleBranchToggle(branch.id)}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                          <span className="text-sm flex-1">{branch.name}</span>
+                          {selectedBranchIds.includes(branch.id) && (
                             <svg
-                              className="w-5 h-5"
+                              className="w-5 h-5 text-blue-600"
                               fill="currentColor"
                               viewBox="0 0 20 20">
                               <path
@@ -133,7 +144,7 @@ export function CostConfirmationModal({
                               />
                             </svg>
                           )}
-                        </button>
+                        </label>
                       ))}
                     </div>
                   )}

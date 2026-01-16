@@ -212,12 +212,12 @@ export function ProductForm({
         childName: data.childName,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
         variantId: data.variantId ? Number(data.variantId) : undefined,
-        purchasePrice: Number(data.purchasePrice) || 0,
-        basePrice: Number(data.basePrice) || 0,
+        purchasePrice: purchasePrice.value,
+        basePrice: basePrice.value,
         stockQuantity: Number(data.stockQuantity) || 0,
         minStockAlert: Number(data.minStockAlert) || 0,
         maxStockAlert: Number(data.maxStockAlert) || 0,
-        weight: data.weight ? Number(data.weight) : undefined,
+        weight: weight.value || undefined,
         weightUnit: data.weightUnit || undefined,
         unit: data.unit || undefined,
         conversionValue: data.conversionValue
@@ -233,7 +233,7 @@ export function ProductForm({
         branchId: selectedBranch?.id,
       };
 
-      if (hasCostChanged(formData.purchasePrice)) {
+      if (hasCostChanged(purchasePrice.value)) {
         setPendingFormData(formData);
         setShowCostConfirmation(true);
         setIsSubmitting(false);
@@ -249,7 +249,7 @@ export function ProductForm({
 
   const handleCostConfirm = async (
     scope: "all" | "specific",
-    branchId?: number
+    branchIds?: number[]
   ) => {
     setShowCostConfirmation(false);
 
@@ -258,7 +258,7 @@ export function ProductForm({
     const finalData = {
       ...pendingFormData,
       costScope: scope,
-      costBranchId: branchId,
+      costBranchIds: branchIds,
     };
 
     await submitProduct(finalData);
