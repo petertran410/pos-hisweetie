@@ -61,16 +61,18 @@ export function ManufacturingProductForm({
   const currentBranchInventory = product?.inventories?.find(
     (inv) => inv.branchId === selectedBranch?.id
   );
-  const purchasePrice = useFormattedNumber(
-    product?.inventories?.find((inv) => inv.branchId === selectedBranch?.id)
-      ? Number(
-          product.inventories.find((inv) => inv.branchId === selectedBranch?.id)
-            ?.cost || 0
-        )
-      : 0
-  );
+
   const basePrice = useFormattedNumber(product?.basePrice || 0);
   const weight = useFormattedNumber(product?.weight || 0);
+  const stockQuantity = useFormattedNumber(
+    currentBranchInventory ? Number(currentBranchInventory.onHand) : 0
+  );
+  const minStockAlert = useFormattedNumber(
+    currentBranchInventory ? Number(currentBranchInventory.minQuality) : 0
+  );
+  const maxStockAlert = useFormattedNumber(
+    currentBranchInventory ? Number(currentBranchInventory.maxQuality) : 0
+  );
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
@@ -82,20 +84,6 @@ export function ManufacturingProductForm({
       middleName: product?.middleName || undefined,
       childName: product?.childName || undefined,
       tradeMarkId: product?.tradeMarkId || undefined,
-      basePrice: product?.basePrice || 0,
-      purchasePrice: currentBranchInventory
-        ? Number(currentBranchInventory.cost)
-        : 0,
-      stockQuantity: currentBranchInventory
-        ? Number(currentBranchInventory.onHand)
-        : 0,
-      minStockAlert: currentBranchInventory
-        ? Number(currentBranchInventory.minQuality)
-        : 0,
-      maxStockAlert: currentBranchInventory
-        ? Number(currentBranchInventory.maxQuality)
-        : 0,
-      weight: product?.weight || undefined,
       weightUnit: product?.weightUnit || "kg",
       unit: product?.unit || "",
       isDirectSale: product?.isDirectSale || false,
@@ -158,6 +146,22 @@ export function ManufacturingProductForm({
     }
   }, [product]);
 
+  useEffect(() => {
+    if (product) {
+      basePrice.reset(product.basePrice || 0);
+      weight.reset(product.weight || 0);
+      stockQuantity.reset(
+        currentBranchInventory ? Number(currentBranchInventory.onHand) : 0
+      );
+      minStockAlert.reset(
+        currentBranchInventory ? Number(currentBranchInventory.minQuality) : 0
+      );
+      maxStockAlert.reset(
+        currentBranchInventory ? Number(currentBranchInventory.maxQuality) : 0
+      );
+    }
+  }, [product, selectedBranch]);
+
   const uploadFile = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("file", file);
@@ -193,22 +197,20 @@ export function ManufacturingProductForm({
         },
       ]);
       setSearchQuery("");
+      setShowSearchResults(false);
     }
   };
 
-  const removeComponent = (componentProductId: number) => {
-    setComponents(
-      components.filter((c) => c.componentProductId !== componentProductId)
+  const removeComponent = (productId: number) => {
+    setComponents((prev) =>
+      prev.filter((c) => c.componentProductId !== productId)
     );
   };
 
-  const updateComponentQuantity = (
-    componentProductId: number,
-    quantity: number
-  ) => {
-    setComponents(
-      components.map((c) =>
-        c.componentProductId === componentProductId ? { ...c, quantity } : c
+  const updateComponentQuantity = (productId: number, quantity: number) => {
+    setComponents((prev) =>
+      prev.map((c) =>
+        c.componentProductId === productId ? { ...c, quantity } : c
       )
     );
   };
@@ -223,16 +225,6 @@ export function ManufacturingProductForm({
       );
       const cost = inventory ? Number(inventory.cost) : 0;
       return sum + cost * comp.quantity;
-    }, 0);
-  };
-
-  const calculateTotalRetailPrice = () => {
-    return components.reduce((sum, comp) => {
-      const componentProduct = comp.componentProduct;
-      if (!componentProduct) return sum;
-
-      const price = Number(componentProduct.basePrice);
-      return sum + price * comp.quantity;
     }, 0);
   };
 
@@ -280,8 +272,6 @@ export function ManufacturingProductForm({
 
       const manufacturingCost = calculateTotalPurchasePrice();
 
-      const finalBasePrice = Number(data.basePrice) || 0;
-
       const formData = {
         code: data.code,
         name: data.name,
@@ -292,12 +282,12 @@ export function ManufacturingProductForm({
         middleName: data.middleName || undefined,
         childName: data.childName || undefined,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
-        basePrice: finalBasePrice,
+        basePrice: basePrice.value,
         purchasePrice: manufacturingCost,
-        stockQuantity: 0,
-        minStockAlert: Number(data.minStockAlert) || 0,
-        maxStockAlert: Number(data.maxStockAlert) || 0,
-        weight: data.weight ? Number(data.weight) : undefined,
+        stockQuantity: stockQuantity.value,
+        minStockAlert: minStockAlert.value,
+        maxStockAlert: maxStockAlert.value,
+        weight: weight.value || undefined,
         weightUnit: data.weightUnit || "kg",
         unit: data.unit || undefined,
         isDirectSale: data.isDirectSale || false,
@@ -335,7 +325,7 @@ export function ManufacturingProductForm({
     const finalData = {
       ...pendingFormData,
       costScope: scope,
-      costBranchId: branchId,
+      costBranchIds: branchId,
     };
 
     await submitProduct(finalData);
@@ -411,21 +401,6 @@ export function ManufacturingProductForm({
                 value={watch("middleName")}
                 onChange={(value) => setValue("middleName", value)}
               />
-
-              {/* <CategoryDropdown
-                type="child"
-                label="Danh Mục"
-                placeholder="Chọn danh mục"
-                value={watch("childName")}
-                onChange={(value) => setValue("childName", value)}
-              />
-
-              <TrademarkDropdown
-                label="Thương hiệu"
-                placeholder="Chọn thương hiệu"
-                value={watch("tradeMarkId")}
-                onChange={(value) => setValue("tradeMarkId", value)}
-              /> */}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -534,8 +509,7 @@ export function ManufacturingProductForm({
                             <td className="px-3 py-2 text-sm">{stock}</td>
                             <td className="px-3 py-2">
                               <input
-                                type="number"
-                                min="1"
+                                type="text"
                                 value={comp.quantity}
                                 onChange={(e) =>
                                   updateComponentQuantity(
@@ -566,27 +540,27 @@ export function ManufacturingProductForm({
                   </table>
 
                   {totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-2 p-3 border-t">
+                    <div className="flex items-center justify-between px-4 py-3 border-t">
                       <button
                         type="button"
+                        disabled={currentPage === 1}
                         onClick={() =>
                           setCurrentPage((p) => Math.max(1, p - 1))
                         }
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                        ‹
+                        className="px-3 py-1 border rounded disabled:opacity-50">
+                        Trước
                       </button>
                       <span className="text-sm">
-                        {currentPage} / {totalPages}
+                        Trang {currentPage} / {totalPages}
                       </span>
                       <button
                         type="button"
+                        disabled={currentPage === totalPages}
                         onClick={() =>
                           setCurrentPage((p) => Math.min(totalPages, p + 1))
                         }
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                        ›
+                        className="px-3 py-1 border rounded disabled:opacity-50">
+                        Sau
                       </button>
                     </div>
                   )}
@@ -594,45 +568,108 @@ export function ManufacturingProductForm({
               )}
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-3">Giá bán</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Giá bán
-                  </label>
-                  <input
-                    {...register("basePrice", { valueAsNumber: true })}
-                    type="number"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="0"
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Giá vốn (tự động tính)
+                </label>
+                <input
+                  type="text"
+                  value={calculateTotalPurchasePrice().toLocaleString("en-US")}
+                  readOnly
+                  className="w-full border rounded px-3 py-2 bg-gray-50 cursor-not-allowed"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Giá bán
+                </label>
+                <input
+                  type="text"
+                  value={basePrice.displayValue}
+                  onChange={basePrice.handleChange}
+                  onBlur={basePrice.handleBlur}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="0"
+                />
               </div>
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-3">Vị trí, Trọng lượng</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Trọng lượng
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      {...register("weight", { valueAsNumber: true })}
-                      type="number"
-                      className="flex-1 border rounded px-3 py-2"
-                      placeholder="0"
-                    />
-                    <select
-                      {...register("weightUnit")}
-                      className="border rounded px-3 py-2">
-                      <option value="kg">kg</option>
-                      <option value="g">g</option>
-                    </select>
-                  </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Tồn kho
+                </label>
+                <input
+                  type="text"
+                  value={stockQuantity.displayValue}
+                  onChange={stockQuantity.handleChange}
+                  onBlur={stockQuantity.handleBlur}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Định mức tồn thấp nhất
+                </label>
+                <input
+                  type="text"
+                  value={minStockAlert.displayValue}
+                  onChange={minStockAlert.handleChange}
+                  onBlur={minStockAlert.handleBlur}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Định mức tồn cao nhất
+                </label>
+                <input
+                  type="text"
+                  value={maxStockAlert.displayValue}
+                  onChange={maxStockAlert.handleChange}
+                  onBlur={maxStockAlert.handleBlur}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Trọng lượng
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={weight.displayValue}
+                    onChange={weight.handleChange}
+                    onBlur={weight.handleBlur}
+                    className="flex-1 border rounded px-3 py-2"
+                    placeholder="0"
+                  />
+                  <select
+                    {...register("weightUnit")}
+                    className="border rounded px-3 py-2 w-24">
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                  </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Đơn vị tính
+                </label>
+                <input
+                  {...register("unit")}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="cái, chiếc, hộp..."
+                />
               </div>
             </div>
 
