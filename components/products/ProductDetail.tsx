@@ -53,6 +53,33 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
     }
   };
 
+  const calculateComponentCostByQuantity = (
+    comp: any,
+    componentProduct: any
+  ): number => {
+    if (!componentProduct) return 0;
+
+    const inventory = componentProduct.inventories?.find(
+      (inv: any) => inv.branchId === selectedBranch?.id
+    );
+    const cost = inventory ? Number(inventory.cost) : 0;
+    const quantity = Number(comp.quantity || 0);
+
+    if (product.type === 4) {
+      const weight = componentProduct.weight
+        ? Number(componentProduct.weight)
+        : 0;
+      if (weight === 0) return 0;
+
+      const weightInGrams =
+        componentProduct.weightUnit === "kg" ? weight * 1000 : weight;
+
+      return (cost / weightInGrams) * quantity;
+    }
+
+    return cost * quantity;
+  };
+
   const calculateTotalPurchasePrice = () => {
     if (!product.comboComponents || product.comboComponents.length === 0) {
       return 0;
@@ -60,15 +87,38 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
 
     return product.comboComponents.reduce((sum, comp) => {
       const componentProduct = comp.componentProduct;
+      return sum + calculateComponentCostByQuantity(comp, componentProduct);
+    }, 0);
+  };
+
+  const calculateCostByBranch = (branchId: number): number => {
+    if (
+      product.type !== 4 ||
+      !product.comboComponents ||
+      product.comboComponents.length === 0
+    ) {
+      const inv = product.inventories?.find((i) => i.branchId === branchId);
+      return inv ? Number(inv.cost) : 0;
+    }
+
+    return product.comboComponents.reduce((sum, comp) => {
+      const componentProduct = comp.componentProduct;
       if (!componentProduct) return sum;
 
       const inventory = componentProduct.inventories?.find(
-        (inv) => inv.branchId === selectedBranch?.id
+        (inv: any) => inv.branchId === branchId
       );
       const cost = inventory ? Number(inventory.cost) : 0;
       const quantity = Number(comp.quantity || 0);
 
-      return sum + cost * quantity;
+      const weight = componentProduct.weight
+        ? Number(componentProduct.weight)
+        : 0;
+      if (weight === 0) return sum;
+
+      const weightInGrams =
+        componentProduct.weightUnit === "kg" ? weight * 1000 : weight;
+      return sum + (cost / weightInGrams) * quantity;
     }, 0);
   };
 
@@ -239,12 +289,16 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                       <>
                         <div>
                           <label className="text-sm text-gray-600">
-                            Giá vốn ({currentBranchInventory.branchName})
+                            {product.type === 4
+                              ? "Tổng giá vốn"
+                              : `Giá vốn (${currentBranchInventory.branchName})`}
                           </label>
                           <p className="font-medium">
-                            {Number(
-                              currentBranchInventory.cost
-                            ).toLocaleString()}{" "}
+                            {product.type === 4
+                              ? calculateTotalPurchasePrice().toLocaleString()
+                              : Number(
+                                  currentBranchInventory.cost
+                                ).toLocaleString()}{" "}
                             đ
                           </p>
                         </div>
@@ -354,7 +408,10 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                               {inv.branchName}
                             </td>
                             <td className="p-3 text-right">
-                              {Number(inv.cost).toLocaleString()} đ
+                              {calculateCostByBranch(
+                                inv.branchId
+                              ).toLocaleString()}{" "}
+                              đ
                             </td>
                             <td className="p-3 text-right">
                               {Number(inv.onHand).toLocaleString()}
@@ -379,134 +436,267 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                 </div>
               )}
 
-              {(product.type === 1 || product.type === 4) &&
-                product.comboComponents && (
-                  <div className="border-t pt-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-semibold">Hàng thành phần</h3>
-                      {components.length > 0 && (
-                        <span className="text-sm text-gray-600">
-                          Tổng: {components.length} sản phẩm
-                        </span>
-                      )}
-                    </div>
-                    <div className="border rounded overflow-hidden">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-2 text-left text-sm font-medium">
-                              STT
-                            </th>
-                            <th className="px-4 py-2 text-left text-sm font-medium">
-                              Mã hàng
-                            </th>
-                            <th className="px-4 py-2 text-left text-sm font-medium">
-                              Tên hàng thành phần
-                            </th>
-                            <th className="px-4 py-2 text-center text-sm font-medium">
-                              Số lượng
-                            </th>
-                            <th className="px-4 py-2 text-right text-sm font-medium">
-                              Giá vốn
-                            </th>
-                            <th className="px-4 py-2 text-right text-sm font-medium">
-                              Tổng giá vốn
-                            </th>
-                            <th className="px-4 py-2 text-right text-sm font-medium">
-                              Giá bán
-                            </th>
-                            <th className="px-4 py-2 text-right text-sm font-medium">
-                              Tổng giá bán
-                            </th>
-                          </tr>
-                          <tr className="bg-gray-100 font-semibold">
-                            <td colSpan={5}></td>
-                            <td className="px-4 py-2 text-right">
-                              {calculateTotalPurchasePrice().toLocaleString()}
-                            </td>
-                            <td></td>
-                            <td className="px-4 py-2 text-right">
-                              {calculateTotalRetailPrice().toLocaleString()}
-                            </td>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {currentComponents.map((comp, index) => {
-                            const actualIndex = startIndex + index;
-                            const componentProduct = comp.componentProduct;
-
-                            // Lấy giá vốn từ inventory
-                            const inventory =
-                              componentProduct?.inventories?.find(
-                                (inv) => inv.branchId === selectedBranch?.id
-                              );
-                            const purchasePrice = inventory
-                              ? Number(inventory.cost)
-                              : 0;
-
-                            const retailPrice = Number(
-                              componentProduct?.basePrice || 0
-                            );
-                            const quantity = Number(comp.quantity);
-                            const totalPurchase = purchasePrice * quantity;
-                            const totalRetail = retailPrice * quantity;
-
-                            return (
-                              <tr key={comp.id} className="border-t">
-                                <td className="px-4 py-2">{actualIndex + 1}</td>
-                                <td className="px-4 py-2 text-sm">
-                                  {componentProduct?.code}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {componentProduct?.name}
-                                </td>
-                                <td className="px-4 py-2 text-center">
-                                  {quantity}
-                                </td>
-                                <td className="px-4 py-2 text-right">
-                                  {purchasePrice.toLocaleString()}
-                                </td>
-                                <td className="px-4 py-2 text-right">
-                                  {totalPurchase.toLocaleString()}
-                                </td>
-                                <td className="px-4 py-2 text-right">
-                                  {retailPrice.toLocaleString()}
-                                </td>
-                                <td className="px-4 py-2 text-right">
-                                  {totalRetail.toLocaleString()}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-
-                      {totalPages > 1 && (
-                        <div className="border-t p-3 flex items-center justify-between">
-                          <button
-                            onClick={() =>
-                              setCurrentPage((p) => Math.max(1, p - 1))
-                            }
-                            disabled={currentPage === 1}
-                            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
-                            Trước
-                          </button>
-                          <span className="text-sm">
-                            Trang {currentPage} / {totalPages}
-                          </span>
-                          <button
-                            onClick={() =>
-                              setCurrentPage((p) => Math.min(totalPages, p + 1))
-                            }
-                            disabled={currentPage === totalPages}
-                            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
-                            Sau
-                          </button>
-                        </div>
-                      )}
-                    </div>
+              {product.type === 1 && product.comboComponents && (
+                <div className="border-t pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold">Hàng thành phần</h3>
+                    {components.length > 0 && (
+                      <span className="text-sm text-gray-600">
+                        Tổng: {components.length} sản phẩm
+                      </span>
+                    )}
                   </div>
-                )}
+                  <div className="border rounded overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-sm font-medium">
+                            STT
+                          </th>
+                          <th className="px-4 py-2 text-left text-sm font-medium">
+                            Mã hàng
+                          </th>
+                          <th className="px-4 py-2 text-left text-sm font-medium">
+                            Tên hàng thành phần
+                          </th>
+                          <th className="px-4 py-2 text-center text-sm font-medium">
+                            Số lượng
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Giá vốn
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Tổng giá vốn
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Giá bán
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Tổng giá bán
+                          </th>
+                        </tr>
+                        <tr className="bg-gray-100 font-semibold">
+                          <td colSpan={5}></td>
+                          <td className="px-4 py-2 text-right">
+                            {calculateTotalPurchasePrice().toLocaleString()}
+                          </td>
+                          <td></td>
+                          <td className="px-4 py-2 text-right">
+                            {calculateTotalRetailPrice().toLocaleString()}
+                          </td>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentComponents.map((comp, index) => {
+                          const actualIndex = startIndex + index;
+                          const componentProduct = comp.componentProduct;
+
+                          // Lấy giá vốn từ inventory
+                          const inventory = componentProduct?.inventories?.find(
+                            (inv) => inv.branchId === selectedBranch?.id
+                          );
+                          const purchasePrice = inventory
+                            ? Number(inventory.cost)
+                            : 0;
+
+                          const retailPrice = Number(
+                            componentProduct?.basePrice || 0
+                          );
+                          const quantity = Number(comp.quantity);
+                          const totalPurchase =
+                            calculateComponentCostByQuantity(
+                              comp,
+                              componentProduct
+                            );
+                          const totalRetail = retailPrice * comp.quantity;
+
+                          return (
+                            <tr key={comp.id} className="border-t">
+                              <td className="px-4 py-2">{actualIndex + 1}</td>
+                              <td className="px-4 py-2 text-sm">
+                                {componentProduct?.code}
+                              </td>
+                              <td className="px-4 py-2">
+                                {componentProduct?.name}
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                {quantity}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {purchasePrice.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {totalPurchase.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {retailPrice.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {totalRetail.toLocaleString()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+
+                    {totalPages > 1 && (
+                      <div className="border-t p-3 flex items-center justify-between">
+                        <button
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(1, p - 1))
+                          }
+                          disabled={currentPage === 1}
+                          className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
+                          Trước
+                        </button>
+                        <span className="text-sm">
+                          Trang {currentPage} / {totalPages}
+                        </span>
+                        <button
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
+                          Sau
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {product.type === 4 && product.comboComponents && (
+                <div className="border-t pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold">Hàng thành phần</h3>
+                    {components.length > 0 && (
+                      <span className="text-sm text-gray-600">
+                        Tổng: {components.length} sản phẩm
+                      </span>
+                    )}
+                  </div>
+                  <div className="border rounded overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-sm font-medium">
+                            STT
+                          </th>
+                          <th className="px-4 py-2 text-left text-sm font-medium">
+                            Mã hàng
+                          </th>
+                          <th className="px-4 py-2 text-left text-sm font-medium">
+                            Tên hàng thành phần
+                          </th>
+                          <th className="px-4 py-2 text-center text-sm font-medium">
+                            Định lượng
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Giá vốn theo định lượng
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Tổng giá vốn
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Giá bán
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Tổng giá bán
+                          </th>
+                        </tr>
+                        <tr className="bg-gray-100 font-semibold">
+                          <td colSpan={5}></td>
+                          <td className="px-4 py-2 text-right">
+                            {calculateTotalPurchasePrice().toLocaleString()}
+                          </td>
+                          <td></td>
+                          <td className="px-4 py-2 text-right">
+                            {calculateTotalRetailPrice().toLocaleString()}
+                          </td>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentComponents.map((comp, index) => {
+                          const actualIndex = startIndex + index;
+                          const componentProduct = comp.componentProduct;
+
+                          // Lấy giá vốn từ inventory
+                          const inventory = componentProduct?.inventories?.find(
+                            (inv) => inv.branchId === selectedBranch?.id
+                          );
+                          const purchasePrice = inventory
+                            ? Number(inventory.cost)
+                            : 0;
+
+                          const retailPrice = Number(
+                            componentProduct?.basePrice || 0
+                          );
+                          const quantity = Number(comp.quantity);
+                          const totalPurchase =
+                            calculateComponentCostByQuantity(
+                              comp,
+                              componentProduct
+                            );
+                          const totalRetail = retailPrice * comp.quantity;
+
+                          return (
+                            <tr key={comp.id} className="border-t">
+                              <td className="px-4 py-2">{actualIndex + 1}</td>
+                              <td className="px-4 py-2 text-sm">
+                                {componentProduct?.code}
+                              </td>
+                              <td className="px-4 py-2">
+                                {componentProduct?.name}
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                {quantity}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {purchasePrice.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {totalPurchase.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {retailPrice.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {totalRetail.toLocaleString()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+
+                    {totalPages > 1 && (
+                      <div className="border-t p-3 flex items-center justify-between">
+                        <button
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(1, p - 1))
+                          }
+                          disabled={currentPage === 1}
+                          className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
+                          Trước
+                        </button>
+                        <span className="text-sm">
+                          Trang {currentPage} / {totalPages}
+                        </span>
+                        <button
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">
+                          Sau
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
