@@ -247,16 +247,31 @@ export function ManufacturingProductForm({
     );
   };
 
+  const calculateComponentCostByQuantity = (
+    comp: ManufacturingComponent
+  ): number => {
+    const componentProduct = comp.componentProduct;
+    if (!componentProduct) return 0;
+
+    const inventory = componentProduct.inventories?.find(
+      (inv) => inv.branchId === selectedBranch?.id
+    );
+    const cost = inventory ? Number(inventory.cost) : 0;
+    const weight = componentProduct.weight
+      ? Number(componentProduct.weight)
+      : 0;
+
+    if (weight === 0) return 0;
+
+    const weightInGrams =
+      componentProduct.weightUnit === "kg" ? weight * 1000 : weight;
+
+    return (cost / weightInGrams) * comp.quantity;
+  };
+
   const calculateTotalPurchasePrice = () => {
     return components.reduce((sum, comp) => {
-      const componentProduct = comp.componentProduct;
-      if (!componentProduct) return sum;
-
-      const inventory = componentProduct.inventories?.find(
-        (inv) => inv.branchId === selectedBranch?.id
-      );
-      const cost = inventory ? Number(inventory.cost) : 0;
-      return sum + cost * comp.quantity;
+      return sum + calculateComponentCostByQuantity(comp);
     }, 0);
   };
 
@@ -527,6 +542,8 @@ export function ManufacturingProductForm({
                           );
                         const cost = inventory ? Number(inventory.cost) : 0;
                         const stock = inventory ? Number(inventory.onHand) : 0;
+                        const costByQuantity =
+                          calculateComponentCostByQuantity(comp);
 
                         return (
                           <tr
@@ -570,7 +587,7 @@ export function ManufacturingProductForm({
                               />
                             </td>
                             <td className="px-3 py-2 text-sm">
-                              {cost.toLocaleString()}
+                              {costByQuantity.toLocaleString()} đ
                             </td>
                             <td className="px-3 py-2">
                               <button
