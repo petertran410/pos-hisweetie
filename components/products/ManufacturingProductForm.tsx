@@ -511,10 +511,10 @@ export function ManufacturingProductForm({
                           Tồn kho
                         </th>
                         <th className="px-3 py-2 text-left text-sm font-medium">
-                          Số lượng
+                          Định lượng
                         </th>
                         <th className="px-3 py-2 text-left text-sm font-medium">
-                          Giá vốn
+                          Giá vốn theo định lượng
                         </th>
                         <th className="px-3 py-2"></th>
                       </tr>
