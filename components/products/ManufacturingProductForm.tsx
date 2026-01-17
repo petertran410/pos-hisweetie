@@ -62,6 +62,32 @@ export function ManufacturingProductForm({
     (inv) => inv.branchId === selectedBranch?.id
   );
 
+  const [quantityInputs, setQuantityInputs] = useState<{
+    [key: number]: string;
+  }>({});
+
+  const handleQuantityChange = (productId: number, inputValue: string) => {
+    const cleaned = inputValue.replace(/[^\d.]/g, "");
+
+    const dotCount = (cleaned.match(/\./g) || []).length;
+    if (dotCount > 1) return;
+
+    setQuantityInputs((prev) => ({
+      ...prev,
+      [productId]: cleaned,
+    }));
+
+    if (cleaned === "" || cleaned === ".") {
+      updateComponentQuantity(productId, 0);
+      return;
+    }
+
+    const numValue = parseFloat(cleaned);
+    if (!isNaN(numValue)) {
+      updateComponentQuantity(productId, numValue);
+    }
+  };
+
   const basePrice = useFormattedNumber(product?.basePrice || 0);
   const weight = useFormattedNumber(product?.weight || 0);
   const stockQuantity = useFormattedNumber(
@@ -133,6 +159,12 @@ export function ManufacturingProductForm({
         quantity: Number(comp.quantity),
       }));
       setComponents(loadedComponents);
+
+      const initialInputs: { [key: number]: string } = {};
+      loadedComponents.forEach((comp) => {
+        initialInputs[comp.componentProductId] = comp.quantity.toString();
+      });
+      setQuantityInputs(initialInputs);
     }
   }, [product]);
 
@@ -510,14 +542,31 @@ export function ManufacturingProductForm({
                             <td className="px-3 py-2">
                               <input
                                 type="text"
-                                value={comp.quantity}
+                                value={
+                                  quantityInputs[comp.componentProductId] !==
+                                  undefined
+                                    ? quantityInputs[comp.componentProductId]
+                                    : comp.quantity.toString()
+                                }
                                 onChange={(e) =>
-                                  updateComponentQuantity(
+                                  handleQuantityChange(
                                     comp.componentProductId,
-                                    Number(e.target.value)
+                                    e.target.value
                                   )
                                 }
-                                className="w-20 border rounded px-2 py-1 text-sm"
+                                onBlur={() => {
+                                  if (
+                                    comp.quantity === 0 ||
+                                    !quantityInputs[comp.componentProductId]
+                                  ) {
+                                    setQuantityInputs((prev) => ({
+                                      ...prev,
+                                      [comp.componentProductId]: "",
+                                    }));
+                                  }
+                                }}
+                                className="w-24 border rounded px-2 py-1 text-sm"
+                                placeholder="0"
                               />
                             </td>
                             <td className="px-3 py-2 text-sm">
