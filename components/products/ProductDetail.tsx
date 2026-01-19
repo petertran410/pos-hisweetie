@@ -581,38 +581,38 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-2 text-left text-sm font-medium">
+                          <th className="px-4 py-2 text-center text-sm font-medium">
                             STT
                           </th>
-                          <th className="px-4 py-2 text-left text-sm font-medium">
+                          <th className="px-4 py-2 text-center text-sm font-medium">
                             Mã hàng
                           </th>
-                          <th className="px-4 py-2 text-left text-sm font-medium">
+                          <th className="px-4 py-2 text-center text-sm font-medium">
                             Tên hàng thành phần
                           </th>
                           <th className="px-4 py-2 text-center text-sm font-medium">
                             Định lượng
                           </th>
-                          <th className="px-4 py-2 text-right text-sm font-medium">
+                          <th className="px-4 py-2 text-center text-sm font-medium">
+                            Giá vốn hàng thành phần
+                          </th>
+                          <th className="px-4 py-2 text-center text-sm font-medium">
                             Giá vốn theo định lượng
                           </th>
-                          <th className="px-4 py-2 text-right text-sm font-medium">
-                            Tổng giá vốn
+                          <th className="px-4 py-2 text-center text-sm font-medium">
+                            Giá bán hàng thành phần
                           </th>
-                          <th className="px-4 py-2 text-right text-sm font-medium">
-                            Giá bán
-                          </th>
-                          <th className="px-4 py-2 text-right text-sm font-medium">
+                          <th className="px-4 py-2 text-center text-sm font-medium">
                             Tổng giá bán
                           </th>
                         </tr>
                         <tr className="bg-gray-100 font-semibold">
                           <td colSpan={5}></td>
-                          <td className="px-4 py-2 text-right">
+                          <td className="px-4 py-2 text-center">
                             {calculateTotalPurchasePrice().toLocaleString()}
                           </td>
                           <td></td>
-                          <td className="px-4 py-2 text-right">
+                          <td className="px-4 py-2 text-center">
                             {calculateTotalRetailPrice().toLocaleString()}
                           </td>
                         </tr>
@@ -622,7 +622,6 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                           const actualIndex = startIndex + index;
                           const componentProduct = comp.componentProduct;
 
-                          // Lấy giá vốn từ inventory
                           const inventory = componentProduct?.inventories?.find(
                             (inv) => inv.branchId === selectedBranch?.id
                           );
@@ -653,16 +652,16 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                               <td className="px-4 py-2 text-center">
                                 {quantity}
                               </td>
-                              <td className="px-4 py-2 text-right">
+                              <td className="px-4 py-2 text-center">
                                 {purchasePrice.toLocaleString()}
                               </td>
-                              <td className="px-4 py-2 text-right">
+                              <td className="px-4 py-2 text-center">
                                 {totalPurchase.toLocaleString()}
                               </td>
-                              <td className="px-4 py-2 text-right">
+                              <td className="px-4 py-2 text-center">
                                 {retailPrice.toLocaleString()}
                               </td>
-                              <td className="px-4 py-2 text-right">
+                              <td className="px-4 py-2 text-center">
                                 {totalRetail.toLocaleString()}
                               </td>
                             </tr>
