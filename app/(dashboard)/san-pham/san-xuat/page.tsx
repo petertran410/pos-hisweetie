@@ -7,7 +7,6 @@ import {
 } from "@/lib/hooks/useProductions";
 import { ProductionTable } from "@/components/productions/ProductionTable";
 import { ProductionSidebar } from "@/components/productions/ProductionSidebar";
-import { Plus } from "lucide-react";
 import type { ProductionQueryParams } from "@/lib/api/productions";
 
 export default function ProductionsPage() {

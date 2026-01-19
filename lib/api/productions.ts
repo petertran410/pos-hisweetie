@@ -3,8 +3,10 @@ import { apiClient } from "@/lib/config/api";
 export interface Production {
   id: number;
   code: string;
-  branchId: number;
-  branchName: string;
+  sourceBranchId: number;
+  sourceBranchName: string;
+  destinationBranchId: number;
+  destinationBranchName: string;
   productId: number;
   productCode: string;
   productName: string;
@@ -14,6 +16,7 @@ export interface Production {
   status: number;
   createdById: number;
   createdByName: string;
+  autoDeductComponents: boolean;
   manufacturedDate?: string;
   createdAt: string;
   updatedAt: string;
@@ -31,12 +34,14 @@ export interface ProductionQueryParams {
 
 export interface CreateProductionData {
   code?: string;
-  branchId: number;
+  sourceBranchId: number;
+  destinationBranchId: number;
   productId: number;
   quantity: number;
   note?: string;
   status?: number;
   manufacturedDate?: string;
+  autoDeductComponents?: boolean;
 }
 
 export const productionsApi = {

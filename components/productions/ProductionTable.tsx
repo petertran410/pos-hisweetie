@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Pencil, Trash2, Settings2, Plus, Settings } from "lucide-react";
+import { Pencil, Trash2, Settings2, Plus } from "lucide-react";
+import { useDeleteProduction } from "@/lib/hooks/useProductions";
+import { SelectBranchModal } from "./SelectBranchModal";
+import { ProductionForm } from "./ProductionForm";
 import type { Production } from "@/lib/api/productions";
 
 interface ProductionTableProps {
@@ -36,6 +39,18 @@ export function ProductionTable({
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+  const [showBranchModal, setShowBranchModal] = useState(false);
+  const [showProductionForm, setShowProductionForm] = useState(false);
+  const [selectedSourceBranch, setSelectedSourceBranch] = useState<
+    number | null
+  >(null);
+  const [selectedDestinationBranch, setSelectedDestinationBranch] = useState<
+    number | null
+  >(null);
+  const [selectedProduction, setSelectedProduction] =
+    useState<Production | null>(null);
+
+  const { mutate: deleteProduction } = useDeleteProduction();
 
   const allColumns: Column[] = useMemo(
     () => [
@@ -127,6 +142,34 @@ export function ProductionTable({
     );
   };
 
+  const handleCreateProduction = () => {
+    setShowBranchModal(true);
+  };
+
+  const handleBranchConfirm = (
+    sourceBranchId: number,
+    destinationBranchId: number
+  ) => {
+    setSelectedSourceBranch(sourceBranchId);
+    setSelectedDestinationBranch(destinationBranchId);
+    setShowBranchModal(false);
+    setShowProductionForm(true);
+  };
+
+  const handleEditProduction = (production: Production) => {
+    setSelectedProduction(production);
+    setSelectedSourceBranch(production.sourceBranchId);
+    setSelectedDestinationBranch(production.destinationBranchId);
+    setShowProductionForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowProductionForm(false);
+    setSelectedProduction(null);
+    setSelectedSourceBranch(null);
+    setSelectedDestinationBranch(null);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -136,177 +179,200 @@ export function ProductionTable({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
-      <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4 w-[500px]">
-          <h2 className="text-xl font-semibold w-[150px]">Sản Xuất</h2>
-        </div>
+    <>
+      <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
+        <div className="border-b p-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold">Sản xuất</h1>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Tạo Sản Xuất
-          </button>
-          <div className="relative">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowColumnDropdown(!showColumnDropdown)}
-              className="flex items-center gap-2 px-4 py-2 border rounded hover:bg-gray-50">
-              <Settings2 className="w-4 h-4" />
-              Tùy chỉnh cột
+              onClick={handleCreateProduction}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+              <Plus className="w-4 h-4" />
+              Sản xuất
             </button>
 
-            {showColumnDropdown && (
-              <div className="absolute right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
-                <div className="p-2">
-                  {allColumns.map((col) => (
-                    <label
-                      key={col.key}
-                      className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer">
+            <div className="relative">
+              <button
+                onClick={() => setShowColumnDropdown(!showColumnDropdown)}
+                className="flex items-center gap-2 px-4 py-2 border rounded hover:bg-gray-50">
+                <Settings2 className="w-4 h-4" />
+                Tùy chỉnh cột
+              </button>
+
+              {showColumnDropdown && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
+                  <div className="p-2">
+                    {allColumns.map((col) => (
+                      <label
+                        key={col.key}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!hiddenColumns.includes(col.key)}
+                          onChange={() => toggleColumn(col.key)}
+                          className="rounded"
+                        />
+                        <span className="text-sm">{col.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <table
+            className="w-full border-collapse"
+            style={{ minWidth: "max-content" }}>
+            <thead className="bg-gray-50 sticky top-0 z-10">
+              <tr>
+                <th className="px-4 py-3 text-left sticky left-0 bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={
+                      productions.length > 0 &&
+                      selectedIds.length === productions.length
+                    }
+                    onChange={toggleSelectAll}
+                    className="cursor-pointer"
+                  />
+                </th>
+                {visibleColumns.map((col) => (
+                  <th
+                    key={col.key}
+                    className="px-4 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">
+                    {col.label}
+                  </th>
+                ))}
+                <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                  Thao tác
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {productions.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={visibleColumns.length + 2}
+                    className="px-4 py-8 text-center text-gray-500">
+                    Chưa có phiếu sản xuất nào
+                  </td>
+                </tr>
+              ) : (
+                productions.map((production) => (
+                  <tr
+                    key={production.id}
+                    className="border-b hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleEditProduction(production)}>
+                    <td
+                      className="px-4 py-3 sticky left-0 bg-white"
+                      onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
-                        checked={!hiddenColumns.includes(col.key)}
-                        onChange={() => toggleColumn(col.key)}
-                        className="rounded"
+                        checked={selectedIds.includes(production.id)}
+                        onChange={() => toggleSelect(production.id)}
+                        className="cursor-pointer"
                       />
-                      <span className="text-sm">{col.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
+                    </td>
+                    {visibleColumns.map((col) => (
+                      <td
+                        key={col.key}
+                        className="px-4 py-3 text-sm whitespace-nowrap">
+                        {col.render(production)}
+                      </td>
+                    ))}
+                    <td
+                      className="px-4 py-3 text-center"
+                      onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleEditProduction(production)}
+                          className="p-1 hover:bg-gray-200 rounded"
+                          title="Sửa">
+                          <Pencil className="w-4 h-4 text-blue-600" />
+                        </button>
+                        {onDelete && (
+                          <button
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  "Bạn có chắc chắn muốn xóa phiếu sản xuất này?"
+                                )
+                              ) {
+                                onDelete(production.id);
+                              }
+                            }}
+                            className="p-1 hover:bg-gray-200 rounded"
+                            title="Xóa">
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="border-t p-4 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-2">
+            <span>Hiển thị</span>
+            <select
+              className="border rounded px-2 py-1"
+              value={limit}
+              onChange={(e) => onLimitChange(Number(e.target.value))}>
+              <option value={15}>15</option>
+              <option value={20}>20</option>
+              <option value={30}>30</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span>trên tổng {total} phiếu sản xuất</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="px-3 py-1 border rounded disabled:opacity-50"
+              disabled={page === 1}
+              onClick={() => onPageChange(page - 1)}>
+              Trước
+            </button>
+            <span>
+              Trang {page} / {totalPages || 1}
+            </span>
+            <button
+              className="px-3 py-1 border rounded disabled:opacity-50"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(page + 1)}>
+              Sau
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <table
-          className="w-full border-collapse"
-          style={{ minWidth: "max-content" }}>
-          <thead className="bg-gray-50 sticky top-0 z-10">
-            <tr>
-              <th className="px-4 py-3 text-left sticky left-0 bg-gray-50">
-                <input
-                  type="checkbox"
-                  checked={
-                    productions.length > 0 &&
-                    selectedIds.length === productions.length
-                  }
-                  onChange={toggleSelectAll}
-                  className="cursor-pointer"
-                />
-              </th>
-              {visibleColumns.map((col) => (
-                <th
-                  key={col.key}
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">
-                  {col.label}
-                </th>
-              ))}
-              <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
-                Thao tác
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {productions.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length + 2}
-                  className="px-4 py-8 text-center text-gray-500">
-                  Chưa có phiếu sản xuất nào
-                </td>
-              </tr>
-            ) : (
-              productions.map((production) => (
-                <tr
-                  key={production.id}
-                  className="border-b hover:bg-gray-50 cursor-pointer"
-                  onClick={() => onEdit(production)}>
-                  <td
-                    className="px-4 py-3 sticky left-0 bg-white"
-                    onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(production.id)}
-                      onChange={() => toggleSelect(production.id)}
-                      className="cursor-pointer"
-                    />
-                  </td>
-                  {visibleColumns.map((col) => (
-                    <td
-                      key={col.key}
-                      className="px-4 py-3 text-sm whitespace-nowrap">
-                      {col.render(production)}
-                    </td>
-                  ))}
-                  <td
-                    className="px-4 py-3 text-center"
-                    onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => onEdit(production)}
-                        className="p-1 hover:bg-gray-200 rounded"
-                        title="Sửa">
-                        <Pencil className="w-4 h-4 text-blue-600" />
-                      </button>
-                      {onDelete && (
-                        <button
-                          onClick={() => {
-                            if (
-                              confirm(
-                                "Bạn có chắc chắn muốn xóa phiếu sản xuất này?"
-                              )
-                            ) {
-                              onDelete(production.id);
-                            }
-                          }}
-                          className="p-1 hover:bg-gray-200 rounded"
-                          title="Xóa">
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {showBranchModal && (
+        <SelectBranchModal
+          onClose={() => setShowBranchModal(false)}
+          onConfirm={handleBranchConfirm}
+        />
+      )}
 
-      <div className="border-t p-4 flex items-center justify-between bg-white">
-        <div className="flex items-center gap-2">
-          <span>Hiển thị</span>
-          <select
-            className="border rounded px-2 py-1"
-            value={limit}
-            onChange={(e) => onLimitChange(Number(e.target.value))}>
-            <option value={15}>15</option>
-            <option value={20}>20</option>
-            <option value={30}>30</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-          <span>trên tổng {total} phiếu sản xuất</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="px-3 py-1 border rounded disabled:opacity-50"
-            disabled={page === 1}
-            onClick={() => onPageChange(page - 1)}>
-            Trước
-          </button>
-          <span>
-            Trang {page} / {totalPages || 1}
-          </span>
-          <button
-            className="px-3 py-1 border rounded disabled:opacity-50"
-            disabled={page >= totalPages}
-            onClick={() => onPageChange(page + 1)}>
-            Sau
-          </button>
-        </div>
-      </div>
-    </div>
+      {showProductionForm &&
+        selectedSourceBranch &&
+        selectedDestinationBranch && (
+          <ProductionForm
+            sourceBranchId={selectedSourceBranch}
+            destinationBranchId={selectedDestinationBranch}
+            production={selectedProduction}
+            onClose={handleCloseForm}
+          />
+        )}
+    </>
   );
 }

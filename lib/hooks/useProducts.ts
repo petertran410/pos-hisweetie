@@ -1,21 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { productsApi } from "@/lib/api/products";
+import { ProductQueryParams, productsApi } from "@/lib/api/products";
 import { toast } from "sonner";
 
-export const useProducts = (params?: {
-  page?: number;
-  limit?: number;
-  search?: string;
-  categoryIds?: string;
-  isActive?: boolean;
-  branchId?: number;
-  branchIds?: number[];
-}) => {
+export function useProducts(params?: ProductQueryParams) {
   return useQuery({
     queryKey: ["products", params],
-    queryFn: () => productsApi.getProducts(params),
+    queryFn: () => productsApi.getAll(params),
   });
-};
+}
 
 export const useProduct = (id: number) => {
   return useQuery({

@@ -8,6 +8,18 @@ export interface ProductComponent {
   componentProduct: Product;
 }
 
+export interface ProductQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  categoryIds?: string;
+  isActive?: boolean;
+  branchId?: number;
+  branchIds?: number[];
+  type?: number;
+  types?: number[];
+}
+
 export interface Inventory {
   id: number;
   productId: number;
@@ -96,6 +108,9 @@ export const productsApi = {
 
     return apiClient.get(`/products?${queryParams.toString()}`);
   },
+
+  getAll: (params?: ProductQueryParams) =>
+    apiClient.get<{ total: number; data: Product[] }>("/products", params),
 
   getProduct: (id: number): Promise<Product> => {
     return apiClient.get(`/products/${id}`);
