@@ -21,6 +21,7 @@ export interface Inventory {
   onOrder: number;
   minQuality: number;
   maxQuality: number;
+  totalWeight?: number;
   createdAt: string;
   updatedAt: string;
   branch?: { id: number; name: string };

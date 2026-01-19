@@ -457,7 +457,7 @@ export function ProductForm({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Trọng lượng
+                  Trọng lượng đơn vị
                 </label>
                 <div className="flex gap-2">
                   <input

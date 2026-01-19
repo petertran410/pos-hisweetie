@@ -80,6 +80,27 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
     return cost * quantity;
   };
 
+  const calculateTotalWeight = (branchId?: number): string => {
+    if (!product.weight) return "0";
+
+    const weight = Number(product.weight);
+    const weightUnit = product.weightUnit || "kg";
+
+    let inventory;
+    if (branchId) {
+      inventory = product.inventories?.find((inv) => inv.branchId === branchId);
+    } else if (selectedBranch?.id) {
+      inventory = product.inventories?.find(
+        (inv) => inv.branchId === selectedBranch.id
+      );
+    }
+
+    const onHand = inventory ? Number(inventory.onHand) : 0;
+    const totalWeight = weight * onHand;
+
+    return `${totalWeight.toLocaleString()} ${weightUnit}`;
+  };
+
   const calculateTotalPurchasePrice = () => {
     if (!product.comboComponents || product.comboComponents.length === 0) {
       return 0;
@@ -338,12 +359,31 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                 )}
 
                 {product.weight && (
-                  <div>
-                    <label className="text-sm text-gray-600">Trọng lượng</label>
-                    <p className="font-medium">
-                      {product.weight} {product.weightUnit || "kg"}
-                    </p>
-                  </div>
+                  <>
+                    <div>
+                      <label className="text-sm text-gray-600">
+                        Trọng lượng đơn vị
+                      </label>
+                      <p className="font-medium">
+                        {product.weight} {product.weightUnit || "kg"}
+                      </p>
+                    </div>
+                    {currentBranchInventory && (
+                      <div>
+                        <label className="text-sm text-gray-600">
+                          Trọng lượng tổng ({currentBranchInventory.branchName})
+                        </label>
+                        <p className="font-medium">
+                          {currentBranchInventory.totalWeight
+                            ? Number(
+                                currentBranchInventory.totalWeight
+                              ).toLocaleString()
+                            : "0"}{" "}
+                          {product.weightUnit || "kg"}
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
                 {product.unit && (
                   <div>
