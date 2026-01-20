@@ -5,11 +5,7 @@ import { useRouter } from "next/navigation";
 import { useInvoice, useUpdateInvoice } from "@/lib/hooks/useInvoices";
 import { Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import {
-  INVOICE_STATUS,
-  INVOICE_STATUS_NUMBER_TO_STRING,
-  InvoiceDetail,
-} from "@/lib/types/invoice";
+import { INVOICE_STATUS, InvoiceDetail } from "@/lib/types/invoice";
 import Swal from "sweetalert2";
 
 interface InvoiceDetailRowProps {
