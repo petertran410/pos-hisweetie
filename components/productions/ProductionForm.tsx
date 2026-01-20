@@ -45,6 +45,10 @@ export function ProductionForm({
   const { mutate: updateProduction, isPending: isUpdating } =
     useUpdateProduction();
 
+  const isCompleted = production?.status === 2;
+  const isSubmitting = isCreating || isUpdating;
+  const isFormDisabled = isSubmitting || isCompleted;
+
   const manufacturingProducts =
     productsData?.data?.filter((p) => p.type === 4) || [];
 
@@ -65,8 +69,17 @@ export function ProductionForm({
       if (production.manufacturedDate) {
         setManufacturedDate(new Date(production.manufacturedDate));
       }
+
+      if (production.productId && manufacturingProducts.length > 0) {
+        const product = manufacturingProducts.find(
+          (p) => p.id === production.productId
+        );
+        if (product) {
+          setSelectedProduct(product);
+        }
+      }
     }
-  }, [production]);
+  }, [production, manufacturingProducts]);
 
   const calculateComponentRequirements = () => {
     if (!selectedProduct || !selectedProduct.comboComponents) return [];
@@ -138,14 +151,14 @@ export function ProductionForm({
 
     const data = {
       code: code || undefined,
-      sourceBranchId,
-      destinationBranchId,
-      productId: selectedProduct!.id,
-      quantity,
-      note,
-      status,
+      sourceBranchId: Number(sourceBranchId),
+      destinationBranchId: Number(destinationBranchId),
+      productId: Number(selectedProduct!.id),
+      quantity: Number(quantity),
+      note: note || undefined,
+      status: Number(status),
       manufacturedDate: manufacturedDate.toISOString(),
-      autoDeductComponents,
+      autoDeductComponents: Boolean(autoDeductComponents),
     };
 
     if (production) {
@@ -153,11 +166,19 @@ export function ProductionForm({
         { id: production.id, data },
         {
           onSuccess: () => onClose(),
+          onError: (error) => {
+            console.error("Error updating production:", error);
+            alert("Có lỗi xảy ra khi cập nhật phiếu sản xuất");
+          },
         }
       );
     } else {
       createProduction(data, {
         onSuccess: () => onClose(),
+        onError: (error) => {
+          console.error("Error creating production:", error);
+          alert("Có lỗi xảy ra khi tạo phiếu sản xuất");
+        },
       });
     }
   };
@@ -175,14 +196,47 @@ export function ProductionForm({
     handleSubmit(2);
   };
 
-  const isSubmitting = isCreating || isUpdating;
+  const handleCancel = () => {
+    if (!production) return;
+
+    if (production.status === 3) {
+      alert("Phiếu đã bị hủy rồi");
+      return;
+    }
+
+    const confirmMessage =
+      production.status === 2
+        ? "Phiếu đã hoàn thành. Hủy phiếu sẽ không hoàn trả tồn kho. Bạn có chắc chắn?"
+        : "Bạn có chắc chắn muốn hủy phiếu này?";
+
+    if (!confirm(confirmMessage)) return;
+
+    const data = {
+      status: 3,
+    };
+
+    updateProduction(
+      { id: production.id, data },
+      {
+        onSuccess: () => onClose(),
+        onError: (error) => {
+          console.error("Error canceling production:", error);
+          alert("Có lỗi xảy ra khi hủy phiếu sản xuất");
+        },
+      }
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">
-            {production ? "Sửa phiếu sản xuất" : "Tạo phiếu sản xuất"}
+            {production
+              ? isCompleted
+                ? "Xem phiếu sản xuất"
+                : "Sửa phiếu sản xuất"
+              : "Tạo phiếu sản xuất"}
           </h2>
           <button
             onClick={onClose}
@@ -228,8 +282,8 @@ export function ProductionForm({
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="Mã phiếu tự động"
-                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={isSubmitting}
+                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    disabled={isFormDisabled}
                   />
                 </div>
 
@@ -247,15 +301,17 @@ export function ProductionForm({
                         setSearchQuery(e.target.value);
                         setShowProductSearch(true);
                       }}
-                      onFocus={() => setShowProductSearch(true)}
+                      onFocus={() =>
+                        !isFormDisabled && setShowProductSearch(true)
+                      }
                       placeholder="Tìm mặt hàng"
-                      className="w-full px-3 py-2 pr-10 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      disabled={isSubmitting}
+                      className="w-full px-3 py-2 pr-10 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      disabled={isFormDisabled}
                     />
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   </div>
 
-                  {showProductSearch && (
+                  {showProductSearch && !isFormDisabled && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-10 max-h-60 overflow-y-auto">
                       {filteredProducts.length === 0 ? (
                         <div className="px-3 py-2 text-sm text-gray-500">
@@ -295,8 +351,8 @@ export function ProductionForm({
                       onChange={(e) =>
                         setManufacturedDate(new Date(e.target.value))
                       }
-                      className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      disabled={isSubmitting}
+                      className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      disabled={isFormDisabled}
                     />
                     <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
@@ -311,8 +367,8 @@ export function ProductionForm({
                     value={quantity}
                     onChange={(e) => setQuantity(Number(e.target.value))}
                     min="1"
-                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={isSubmitting}
+                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    disabled={isFormDisabled}
                   />
                 </div>
               </div>
@@ -325,8 +381,8 @@ export function ProductionForm({
                   <select
                     value={sourceBranchId}
                     onChange={(e) => setSourceBranchId(Number(e.target.value))}
-                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={isSubmitting}>
+                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    disabled={isFormDisabled}>
                     {branches?.map((branch) => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name}
@@ -344,8 +400,8 @@ export function ProductionForm({
                     onChange={(e) =>
                       setDestinationBranchId(Number(e.target.value))
                     }
-                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={isSubmitting}>
+                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    disabled={isFormDisabled}>
                     {branches?.map((branch) => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name}
@@ -364,8 +420,8 @@ export function ProductionForm({
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
                   placeholder="Ghi chú..."
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={isSubmitting}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  disabled={isFormDisabled}
                 />
               </div>
 
@@ -375,8 +431,8 @@ export function ProductionForm({
                     type="checkbox"
                     checked={autoDeductComponents}
                     onChange={(e) => setAutoDeductComponents(e.target.checked)}
-                    className="rounded"
-                    disabled={isSubmitting}
+                    className="rounded disabled:cursor-not-allowed"
+                    disabled={isFormDisabled}
                   />
                   <span className="text-sm">
                     Tự động trừ thành phần thứ cấp khi sản xuất
@@ -471,25 +527,41 @@ export function ProductionForm({
           )}
         </div>
 
-        <div className="flex justify-end gap-2 p-4 border-t">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border rounded hover:bg-gray-50"
-            disabled={isSubmitting}>
-            Bỏ qua
-          </button>
-          <button
-            onClick={handleSaveDraft}
-            className="px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-50 disabled:opacity-50"
-            disabled={isSubmitting}>
-            {isSubmitting ? "Đang xử lý..." : "Lưu tạm"}
-          </button>
-          <button
-            onClick={handleComplete}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            disabled={isSubmitting}>
-            {isSubmitting ? "Đang xử lý..." : "Hoàn thành"}
-          </button>
+        <div className="flex justify-between items-center p-4 border-t">
+          {production && (
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 border border-red-600 text-red-600 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting || production.status === 3}>
+              {isSubmitting ? "Đang xử lý..." : "Hủy"}
+            </button>
+          )}
+
+          <div className="flex gap-2 ml-auto">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border rounded hover:bg-gray-50"
+              disabled={isSubmitting}>
+              Bỏ qua
+            </button>
+
+            {(!production || production.status === 1) && (
+              <>
+                <button
+                  onClick={handleSaveDraft}
+                  className="px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-50 disabled:opacity-50"
+                  disabled={isSubmitting}>
+                  {isSubmitting ? "Đang xử lý..." : "Lưu tạm"}
+                </button>
+                <button
+                  onClick={handleComplete}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  disabled={isSubmitting}>
+                  {isSubmitting ? "Đang xử lý..." : "Hoàn thành"}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

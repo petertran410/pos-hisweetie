@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Pencil, Trash2, Settings2, Plus } from "lucide-react";
-import { useDeleteProduction } from "@/lib/hooks/useProductions";
+import { Settings2, Plus } from "lucide-react";
 import { SelectBranchModal } from "./SelectBranchModal";
 import { ProductionForm } from "./ProductionForm";
 import type { Production } from "@/lib/api/productions";
@@ -16,7 +15,6 @@ interface ProductionTableProps {
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
   onEdit: (production: Production) => void;
-  onDelete?: (id: number) => void;
 }
 
 interface Column {
@@ -34,7 +32,6 @@ export function ProductionTable({
   onPageChange,
   onLimitChange,
   onEdit,
-  onDelete,
 }: ProductionTableProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
@@ -49,8 +46,6 @@ export function ProductionTable({
   >(null);
   const [selectedProduction, setSelectedProduction] =
     useState<Production | null>(null);
-
-  const { mutate: deleteProduction } = useDeleteProduction();
 
   const allColumns: Column[] = useMemo(
     () => [
@@ -249,16 +244,13 @@ export function ProductionTable({
                     {col.label}
                   </th>
                 ))}
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
-                  Thao tác
-                </th>
               </tr>
             </thead>
             <tbody>
               {productions.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={visibleColumns.length + 2}
+                    colSpan={visibleColumns.length + 1}
                     className="px-4 py-8 text-center text-gray-500">
                     Chưa có phiếu sản xuất nào
                   </td>
@@ -286,28 +278,6 @@ export function ProductionTable({
                         {col.render(production)}
                       </td>
                     ))}
-                    <td
-                      className="px-4 py-3 text-center"
-                      onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-2">
-                        {onDelete && (
-                          <button
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  "Bạn có chắc chắn muốn xóa phiếu sản xuất này?"
-                                )
-                              ) {
-                                onDelete(production.id);
-                              }
-                            }}
-                            className="p-1 hover:bg-gray-200 rounded"
-                            title="Xóa">
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
                   </tr>
                 ))
               )}

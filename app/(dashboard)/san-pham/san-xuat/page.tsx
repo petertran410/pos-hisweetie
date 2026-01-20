@@ -150,7 +150,6 @@ export default function ProductionsPage() {
         onEdit={(production) => {
           console.log("Edit production:", production);
         }}
-        onDelete={(id) => deleteProduction(id)}
       />
     </div>
   );
