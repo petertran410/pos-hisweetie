@@ -237,7 +237,7 @@ export function ProductionForm({
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">
             {production
-              ? isCompleted
+              ? isCompleted || isCancelled
                 ? "Xem phiếu sản xuất"
                 : "Sửa phiếu sản xuất"
               : "Tạo phiếu sản xuất"}
