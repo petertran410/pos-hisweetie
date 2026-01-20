@@ -10,6 +10,7 @@ import {
 } from "@/lib/hooks/useProductions";
 import type { Production } from "@/lib/api/productions";
 import type { Product } from "@/lib/api/products";
+import { CancelConfirmationModal } from "./CancelConfirmationModal";
 
 interface ProductionFormProps {
   sourceBranchId: number;
@@ -37,6 +38,7 @@ export function ProductionForm({
   );
   const [note, setNote] = useState("");
   const [autoDeductComponents, setAutoDeductComponents] = useState(true);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const { data: branches } = useBranches();
   const { data: productsData } = useProducts({ type: 4 });
@@ -47,8 +49,9 @@ export function ProductionForm({
     useUpdateProduction();
 
   const isCompleted = production?.status === 2;
+  const isCancelled = production?.status === 3;
   const isSubmitting = isCreating || isUpdating;
-  const isFormDisabled = isSubmitting || isCompleted;
+  const isFormDisabled = isSubmitting || isCompleted || isCancelled;
 
   const manufacturingProducts =
     productsData?.data?.filter((p) => p.type === 4) || [];
@@ -202,12 +205,11 @@ export function ProductionForm({
       return;
     }
 
-    const confirmMessage =
-      production.status === 2
-        ? "Phiếu đã hoàn thành. Hủy phiếu sẽ không hoàn trả tồn kho. Bạn có chắc chắn?"
-        : "Bạn có chắc chắn muốn hủy phiếu này?";
+    setShowCancelConfirm(true);
+  };
 
-    if (!confirm(confirmMessage)) return;
+  const confirmCancel = () => {
+    if (!production) return;
 
     const data = {
       status: 3,
@@ -216,9 +218,13 @@ export function ProductionForm({
     updateProduction(
       { id: production.id, data },
       {
-        onSuccess: () => onClose(),
+        onSuccess: () => {
+          setShowCancelConfirm(false);
+          onClose();
+        },
         onError: (error) => {
           console.error("Error canceling production:", error);
+          setShowCancelConfirm(false);
           alert("Có lỗi xảy ra khi hủy phiếu sản xuất");
         },
       }
@@ -529,8 +535,8 @@ export function ProductionForm({
           {production && (
             <button
               onClick={handleCancel}
-              className="px-4 py-2 border border-red-600 text-red-600 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isSubmitting || production.status === 3}>
+              className="px-4 py-2 border border-red-600 text-red-600 rounded hover:bg-red-50"
+              hidden={isSubmitting || production.status === 3}>
               {isSubmitting ? "Đang xử lý..." : "Hủy"}
             </button>
           )}
@@ -562,6 +568,15 @@ export function ProductionForm({
           </div>
         </div>
       </div>
+
+      {showCancelConfirm && production && (
+        <CancelConfirmationModal
+          productionCode={production.code}
+          productionStatus={production.status}
+          onConfirm={confirmCancel}
+          onClose={() => setShowCancelConfirm(false)}
+        />
+      )}
     </div>
   );
 }
