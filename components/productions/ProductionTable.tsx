@@ -290,12 +290,6 @@ export function ProductionTable({
                       className="px-4 py-3 text-center"
                       onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleEditProduction(production)}
-                          className="p-1 hover:bg-gray-200 rounded"
-                          title="Sửa">
-                          <Pencil className="w-4 h-4 text-blue-600" />
-                        </button>
                         {onDelete && (
                           <button
                             onClick={() => {

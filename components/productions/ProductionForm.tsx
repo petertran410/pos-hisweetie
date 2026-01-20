@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Search, Calendar, Clock } from "lucide-react";
+import { X, Search, Calendar } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useProducts } from "@/lib/hooks/useProducts";
 import {
@@ -40,8 +40,10 @@ export function ProductionForm({
 
   const { data: branches } = useBranches();
   const { data: productsData } = useProducts({ type: 4 });
-  const { mutate: createProduction } = useCreateProduction();
-  const { mutate: updateProduction } = useUpdateProduction();
+  const { mutate: createProduction, isPending: isCreating } =
+    useCreateProduction();
+  const { mutate: updateProduction, isPending: isUpdating } =
+    useUpdateProduction();
 
   const manufacturingProducts =
     productsData?.data?.filter((p) => p.type === 4) || [];
@@ -108,21 +110,28 @@ export function ProductionForm({
 
   const componentRequirements = calculateComponentRequirements();
 
-  const handleSubmit = () => {
+  const validateForm = () => {
     if (!selectedProduct) {
       alert("Vui lòng chọn sản phẩm cần sản xuất");
-      return;
+      return false;
     }
 
     if (quantity <= 0) {
       alert("Số lượng phải lớn hơn 0");
-      return;
+      return false;
     }
+
+    return true;
+  };
+
+  const handleSubmit = (status: number) => {
+    if (!validateForm()) return;
 
     const hasInsufficientStock = componentRequirements.some(
       (c) => c.isInsufficient
     );
-    if (hasInsufficientStock && autoDeductComponents) {
+
+    if (status === 2 && hasInsufficientStock && autoDeductComponents) {
       alert("Một số thành phần không đủ tồn kho. Vui lòng kiểm tra lại.");
       return;
     }
@@ -131,10 +140,10 @@ export function ProductionForm({
       code: code || undefined,
       sourceBranchId,
       destinationBranchId,
-      productId: selectedProduct.id,
+      productId: selectedProduct!.id,
       quantity,
       note,
-      status: 1,
+      status,
       manufacturedDate: manufacturedDate.toISOString(),
       autoDeductComponents,
     };
@@ -153,6 +162,21 @@ export function ProductionForm({
     }
   };
 
+  const handleSaveDraft = () => {
+    handleSubmit(1);
+  };
+
+  const handleComplete = () => {
+    if (!autoDeductComponents) {
+      const confirmMessage =
+        "Bạn đã tắt tùy chọn 'Tự động trừ thành phần'. Phiếu sẽ được đánh dấu hoàn thành nhưng tồn kho sẽ không thay đổi. Bạn có chắc chắn?";
+      if (!confirm(confirmMessage)) return;
+    }
+    handleSubmit(2);
+  };
+
+  const isSubmitting = isCreating || isUpdating;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -162,7 +186,8 @@ export function ProductionForm({
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600">
+            className="text-gray-400 hover:text-gray-600"
+            disabled={isSubmitting}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -204,6 +229,7 @@ export function ProductionForm({
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="Mã phiếu tự động"
                     className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -224,6 +250,7 @@ export function ProductionForm({
                       onFocus={() => setShowProductSearch(true)}
                       placeholder="Tìm mặt hàng"
                       className="w-full px-3 py-2 pr-10 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={isSubmitting}
                     />
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   </div>
@@ -269,6 +296,7 @@ export function ProductionForm({
                         setManufacturedDate(new Date(e.target.value))
                       }
                       className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={isSubmitting}
                     />
                     <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
@@ -284,6 +312,7 @@ export function ProductionForm({
                     onChange={(e) => setQuantity(Number(e.target.value))}
                     min="1"
                     className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -296,7 +325,8 @@ export function ProductionForm({
                   <select
                     value={sourceBranchId}
                     onChange={(e) => setSourceBranchId(Number(e.target.value))}
-                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isSubmitting}>
                     {branches?.map((branch) => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name}
@@ -314,7 +344,8 @@ export function ProductionForm({
                     onChange={(e) =>
                       setDestinationBranchId(Number(e.target.value))
                     }
-                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isSubmitting}>
                     {branches?.map((branch) => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name}
@@ -334,6 +365,7 @@ export function ProductionForm({
                   rows={3}
                   placeholder="Ghi chú..."
                   className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -344,11 +376,17 @@ export function ProductionForm({
                     checked={autoDeductComponents}
                     onChange={(e) => setAutoDeductComponents(e.target.checked)}
                     className="rounded"
+                    disabled={isSubmitting}
                   />
                   <span className="text-sm">
                     Tự động trừ thành phần thứ cấp khi sản xuất
                   </span>
                 </label>
+                <p className="text-xs text-gray-500 mt-1 ml-6">
+                  {autoDeductComponents
+                    ? "Khi hoàn thành, tồn kho nguyên liệu sẽ tự động trừ và tồn kho thành phẩm sẽ được cộng"
+                    : "Tồn kho sẽ không tự động thay đổi khi hoàn thành phiếu"}
+                </p>
               </div>
             </div>
           ) : (
@@ -436,13 +474,21 @@ export function ProductionForm({
         <div className="flex justify-end gap-2 p-4 border-t">
           <button
             onClick={onClose}
-            className="px-4 py-2 border rounded hover:bg-gray-50">
+            className="px-4 py-2 border rounded hover:bg-gray-50"
+            disabled={isSubmitting}>
             Bỏ qua
           </button>
           <button
-            onClick={handleSubmit}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            {production ? "Hoàn thành" : "Lưu tạm"}
+            onClick={handleSaveDraft}
+            className="px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-50 disabled:opacity-50"
+            disabled={isSubmitting}>
+            {isSubmitting ? "Đang xử lý..." : "Lưu tạm"}
+          </button>
+          <button
+            onClick={handleComplete}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            disabled={isSubmitting}>
+            {isSubmitting ? "Đang xử lý..." : "Hoàn thành"}
           </button>
         </div>
       </div>
