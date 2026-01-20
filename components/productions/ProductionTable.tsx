@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { Settings2, Plus } from "lucide-react";
 import { SelectBranchModal } from "./SelectBranchModal";
 import { ProductionForm } from "./ProductionForm";
+import { ProductionDetailRow } from "./ProductionDetailRow";
 import type { Production } from "@/lib/api/productions";
 
 interface ProductionTableProps {
@@ -46,6 +47,15 @@ export function ProductionTable({
   >(null);
   const [selectedProduction, setSelectedProduction] =
     useState<Production | null>(null);
+  const [expandedProductionId, setExpandedProductionId] = useState<
+    number | null
+  >(null);
+
+  const toggleExpand = (productionId: number) => {
+    setExpandedProductionId(
+      expandedProductionId === productionId ? null : productionId
+    );
+  };
 
   const allColumns: Column[] = useMemo(
     () => [
@@ -257,28 +267,39 @@ export function ProductionTable({
                 </tr>
               ) : (
                 productions.map((production) => (
-                  <tr
-                    key={production.id}
-                    className="border-b hover:bg-gray-50 cursor-pointer"
-                    onClick={() => handleEditProduction(production)}>
-                    <td
-                      className="px-4 py-3 sticky left-0 bg-white"
-                      onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(production.id)}
-                        onChange={() => toggleSelect(production.id)}
-                        className="cursor-pointer"
-                      />
-                    </td>
-                    {visibleColumns.map((col) => (
+                  <Fragment key={production.id}>
+                    <tr
+                      className={`border-b hover:bg-gray-50 cursor-pointer ${
+                        expandedProductionId === production.id
+                          ? "bg-blue-50"
+                          : ""
+                      }`}
+                      onClick={() => toggleExpand(production.id)}>
                       <td
-                        key={col.key}
-                        className="px-4 py-3 text-sm whitespace-nowrap">
-                        {col.render(production)}
+                        className="px-4 py-3 sticky left-0 bg-white"
+                        onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(production.id)}
+                          onChange={() => toggleSelect(production.id)}
+                          className="cursor-pointer"
+                        />
                       </td>
-                    ))}
-                  </tr>
+                      {visibleColumns.map((col) => (
+                        <td
+                          key={col.key}
+                          className="px-4 py-3 text-sm whitespace-nowrap">
+                          {col.render(production)}
+                        </td>
+                      ))}
+                    </tr>
+                    {expandedProductionId === production.id && (
+                      <ProductionDetailRow
+                        productionId={production.id}
+                        colSpan={visibleColumns.length + 1}
+                      />
+                    )}
+                  </Fragment>
                 ))
               )}
             </tbody>
