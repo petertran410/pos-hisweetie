@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Search, Calendar } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { useProducts } from "@/lib/hooks/useProducts";
+import { useProducts, useProduct } from "@/lib/hooks/useProducts";
 import {
   useCreateProduction,
   useUpdateProduction,
@@ -40,6 +40,7 @@ export function ProductionForm({
 
   const { data: branches } = useBranches();
   const { data: productsData } = useProducts({ type: 4 });
+  const { data: productDetail } = useProduct(production?.productId || 0);
   const { mutate: createProduction, isPending: isCreating } =
     useCreateProduction();
   const { mutate: updateProduction, isPending: isUpdating } =
@@ -69,17 +70,14 @@ export function ProductionForm({
       if (production.manufacturedDate) {
         setManufacturedDate(new Date(production.manufacturedDate));
       }
-
-      if (production.productId && manufacturingProducts.length > 0) {
-        const product = manufacturingProducts.find(
-          (p) => p.id === production.productId
-        );
-        if (product) {
-          setSelectedProduct(product);
-        }
-      }
     }
-  }, [production, manufacturingProducts]);
+  }, [production]);
+
+  useEffect(() => {
+    if (production && productDetail && !selectedProduct) {
+      setSelectedProduct(productDetail);
+    }
+  }, [production, productDetail, selectedProduct]);
 
   const calculateComponentRequirements = () => {
     if (!selectedProduct || !selectedProduct.comboComponents) return [];
