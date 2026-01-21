@@ -270,9 +270,7 @@ export function ProductionTable({
                   <Fragment key={production.id}>
                     <tr
                       className={`border-b hover:bg-gray-50 cursor-pointer ${
-                        expandedProductionId === production.id
-                          ? "bg-blue-50"
-                          : ""
+                        expandedProductionId === production.id ? "bg-white" : ""
                       }`}
                       onClick={() => toggleExpand(production.id)}>
                       <td

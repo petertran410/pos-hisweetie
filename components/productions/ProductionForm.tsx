@@ -31,7 +31,7 @@ export function ProductionForm({
   const [searchQuery, setSearchQuery] = useState("");
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [manufacturedDate, setManufacturedDate] = useState<Date>(new Date());
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantity, setQuantity] = useState<number>(0);
   const [sourceBranchId, setSourceBranchId] = useState(initialSourceBranchId);
   const [destinationBranchId, setDestinationBranchId] = useState(
     initialDestinationBranchId
@@ -367,10 +367,10 @@ export function ProductionForm({
                     Số lượng
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     value={quantity}
                     onChange={(e) => setQuantity(Number(e.target.value))}
-                    min="1"
+                    min="0"
                     className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     disabled={isFormDisabled}
                   />

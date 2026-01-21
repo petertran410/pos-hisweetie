@@ -154,16 +154,16 @@ export function ProductionDetailRow({
                     </span>
                   </div>
 
-                  <div>
+                  {/* <div>
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Tổng chi phí:
                     </label>
                     <span className="w-full px-3 py-2 text-md border rounded bg-gray-50 font-semibold text-green-600">
                       {formatMoney(Number(production.totalCost))}
                     </span>
-                  </div>
+                  </div> */}
 
-                  <div>
+                  {/* <div>
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Tự động trừ NVL:
                     </label>
@@ -175,7 +175,7 @@ export function ProductionDetailRow({
                       }`}>
                       {production.autoDeductComponents ? "Có" : "Không"}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
 
                 {production.note && (
@@ -188,15 +188,6 @@ export function ProductionDetailRow({
                     </div>
                   </div>
                 )}
-
-                <div className="border-t pt-4">
-                  <p className="text-sm text-gray-500">
-                    Ngày tạo: {formatDateTime(production.createdAt)}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Cập nhật lần cuối: {formatDateTime(production.updatedAt)}
-                  </p>
-                </div>
               </div>
             </div>
           </div>
