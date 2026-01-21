@@ -1,0 +1,496 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import type { Destruction } from "@/lib/api/destructions";
+import { formatDate, formatCurrency } from "../../lib/utils";
+import { Pencil, Trash2 } from "lucide-react";
+
+interface ColumnConfig {
+  key: string;
+  label: string;
+  visible: boolean;
+  render: (destruction: Destruction) => React.ReactNode;
+}
+
+interface DestructionsTableProps {
+  destructions: Destruction[];
+  isLoading: boolean;
+  total: number;
+  page: number;
+  limit: number;
+  onPageChange: (page: number) => void;
+  onLimitChange: (limit: number) => void;
+  onEdit: (destruction: Destruction) => void;
+  onDelete?: (id: number) => void;
+}
+
+const getStatusText = (status: number) => {
+  switch (status) {
+    case 1:
+      return "Phiếu tạm";
+    case 2:
+      return "Hoàn thành";
+    case 4:
+      return "Đã hủy";
+    default:
+      return "Không xác định";
+  }
+};
+
+const getStatusColor = (status: number) => {
+  switch (status) {
+    case 1:
+      return "text-gray-600 bg-gray-100";
+    case 2:
+      return "text-green-600 bg-green-100";
+    case 4:
+      return "text-red-600 bg-red-100";
+    default:
+      return "text-gray-600 bg-gray-100";
+  }
+};
+
+const DEFAULT_COLUMNS: ColumnConfig[] = [
+  {
+    key: "code",
+    label: "Mã xuất hủy",
+    visible: true,
+    render: (destruction) => (
+      <span className="font-medium text-blue-600">{destruction.code}</span>
+    ),
+  },
+  {
+    key: "totalValue",
+    label: "Tổng giá trị hủy",
+    visible: true,
+    render: (destruction) => formatCurrency(Number(destruction.totalValue)),
+  },
+  {
+    key: "destructionDate",
+    label: "Thời gian",
+    visible: true,
+    render: (destruction) => formatDate(destruction.destructionDate),
+  },
+  {
+    key: "createTime",
+    label: "Thời gian tạo",
+    visible: true,
+    render: (destruction) => formatDate(destruction.createdAt),
+  },
+  {
+    key: "branch",
+    label: "Chi nhánh",
+    visible: true,
+    render: (destruction) => destruction.branchName,
+  },
+  {
+    key: "creator",
+    label: "Người xuất hủy",
+    visible: true,
+    render: (destruction) => destruction.createdByName,
+  },
+  {
+    key: "creatorId",
+    label: "Người tạo",
+    visible: true,
+    render: (destruction) => destruction.createdByName,
+  },
+  {
+    key: "note",
+    label: "Ghi chú",
+    visible: false,
+    render: (destruction) => destruction.note || "-",
+  },
+  {
+    key: "status",
+    label: "Trạng thái",
+    visible: true,
+    render: (destruction) => (
+      <span
+        className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
+          destruction.status
+        )}`}>
+        {getStatusText(destruction.status)}
+      </span>
+    ),
+  },
+];
+
+export function DestructionsTable({
+  destructions,
+  isLoading,
+  total,
+  page,
+  limit,
+  onPageChange,
+  onLimitChange,
+  onEdit,
+  onDelete,
+}: DestructionsTableProps) {
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [expandedDestructionId, setExpandedDestructionId] = useState<
+    number | null
+  >(null);
+  const [showColumnModal, setShowColumnModal] = useState(false);
+
+  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("destructionTableColumns");
+      if (saved) {
+        try {
+          const savedColumns = JSON.parse(saved);
+          return DEFAULT_COLUMNS.map((col) => ({
+            ...col,
+            visible:
+              savedColumns.find((s: any) => s.key === col.key)?.visible ??
+              col.visible,
+          }));
+        } catch {
+          return DEFAULT_COLUMNS;
+        }
+      }
+    }
+    return DEFAULT_COLUMNS;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("destructionTableColumns", JSON.stringify(columns));
+    }
+  }, [columns]);
+
+  const visibleColumns = columns.filter((col) => col.visible);
+
+  const toggleColumnVisibility = (key: string) => {
+    setColumns((prev) =>
+      prev.map((col) =>
+        col.key === key ? { ...col, visible: !col.visible } : col
+      )
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === destructions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(destructions.map((d) => d.id));
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleExpand = (destructionId: number) => {
+    setExpandedDestructionId((prev) =>
+      prev === destructionId ? null : destructionId
+    );
+  };
+
+  const totalPages = Math.ceil(total / limit);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Đang tải...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="p-4 border-b flex justify-between items-center bg-white">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">
+            Tìm thấy {total} phiếu xuất hủy
+          </span>
+        </div>
+        <div className="flex items-center gap-2 relative">
+          <button
+            onClick={() => setShowColumnModal(!showColumnModal)}
+            className="px-3 py-2 border rounded hover:bg-gray-50 text-sm">
+            Cột hiển thị
+          </button>
+          {showColumnModal && (
+            <div className="absolute right-0 top-full mt-2 bg-white border rounded shadow-lg z-50 p-4 w-64 max-h-96 overflow-y-auto">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">Hiển thị cột</h3>
+                <button
+                  onClick={() => setShowColumnModal(false)}
+                  className="text-gray-400 hover:text-gray-600">
+                  ✕
+                </button>
+              </div>
+              <div className="space-y-2">
+                {columns.map((col) => (
+                  <label
+                    key={col.key}
+                    className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={col.visible}
+                      onChange={() => toggleColumnVisibility(col.key)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-sm">{col.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        <table className="w-full" style={{ minWidth: "max-content" }}>
+          <thead className="bg-gray-50 sticky top-0 z-10">
+            <tr>
+              <th className="px-4 py-3 text-left sticky left-0 bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={
+                    destructions.length > 0 &&
+                    selectedIds.length === destructions.length
+                  }
+                  onChange={toggleSelectAll}
+                  className="cursor-pointer"
+                />
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                <button className="hover:text-gray-900">★</button>
+              </th>
+              {visibleColumns.map((col) => (
+                <th
+                  key={col.key}
+                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">
+                  {col.label}
+                </th>
+              ))}
+              <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                Thao tác
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {destructions.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={visibleColumns.length + 3}
+                  className="px-4 py-8 text-center text-gray-500">
+                  Chưa có phiếu xuất hủy nào
+                </td>
+              </tr>
+            ) : (
+              destructions.map((destruction) => (
+                <>
+                  <tr
+                    key={destruction.id}
+                    className="border-b hover:bg-gray-50 cursor-pointer"
+                    onClick={() => toggleExpand(destruction.id)}>
+                    <td
+                      className="px-4 py-3 sticky left-0 bg-white"
+                      onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(destruction.id)}
+                        onChange={() => toggleSelect(destruction.id)}
+                        className="cursor-pointer"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <button className="text-gray-400 hover:text-yellow-500">
+                        ☆
+                      </button>
+                    </td>
+                    {visibleColumns.map((col) => (
+                      <td
+                        key={col.key}
+                        className="px-4 py-3 text-sm whitespace-nowrap">
+                        {col.render(destruction)}
+                      </td>
+                    ))}
+                    <td
+                      className="px-4 py-3 text-center"
+                      onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => onEdit(destruction)}
+                          className="p-1 hover:bg-gray-200 rounded"
+                          title="Sửa">
+                          <Pencil className="w-4 h-4 text-blue-600" />
+                        </button>
+                        {onDelete && destruction.status === 1 && (
+                          <button
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  "Bạn có chắc chắn muốn xóa phiếu xuất hủy này?"
+                                )
+                              ) {
+                                onDelete(destruction.id);
+                              }
+                            }}
+                            className="p-1 hover:bg-gray-200 rounded"
+                            title="Xóa">
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                  {expandedDestructionId === destruction.id && (
+                    <tr>
+                      <td
+                        colSpan={visibleColumns.length + 3}
+                        className="border-b bg-gray-50">
+                        <div className="p-6">
+                          <h3 className="text-lg font-semibold mb-4">
+                            Thông tin chi tiết
+                          </h3>
+
+                          <div className="grid grid-cols-2 gap-6 mb-6">
+                            <div>
+                              <p className="text-sm text-gray-600">Mã phiếu</p>
+                              <p className="text-md font-medium">
+                                {destruction.code}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">Chi nhánh</p>
+                              <p className="text-md">
+                                {destruction.branchName}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">Người tạo</p>
+                              <p className="text-md">
+                                {destruction.createdByName}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">
+                                Trạng thái
+                              </p>
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
+                                  destruction.status
+                                )}`}>
+                                {getStatusText(destruction.status)}
+                              </span>
+                            </div>
+                            {destruction.note && (
+                              <div className="col-span-2">
+                                <p className="text-sm text-gray-600">Ghi chú</p>
+                                <p className="text-md">{destruction.note}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="border rounded-lg overflow-hidden">
+                            <table className="w-full">
+                              <thead className="bg-gray-100 border-b">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                                    Mã hàng
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                                    Tên hàng
+                                  </th>
+                                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                                    SL hủy
+                                  </th>
+                                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                                    Đơn giá
+                                  </th>
+                                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                                    Thành tiền
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {destruction.details.map((detail, index) => (
+                                  <tr key={index}>
+                                    <td className="px-4 py-3 text-sm">
+                                      {detail.productCode}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm">
+                                      {detail.productName}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-sm">
+                                      {Number(detail.quantity).toLocaleString()}
+                                    </td>
+                                    <td className="px-4 py-3 text-right text-sm">
+                                      {formatCurrency(Number(detail.price))}
+                                    </td>
+                                    <td className="px-4 py-3 text-right text-sm font-medium">
+                                      {formatCurrency(
+                                        Number(detail.totalValue)
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot className="bg-gray-50 border-t">
+                                <tr>
+                                  <td
+                                    colSpan={4}
+                                    className="px-4 py-3 text-right text-sm font-semibold">
+                                    Tổng giá trị:
+                                  </td>
+                                  <td className="px-4 py-3 text-right text-sm font-bold">
+                                    {formatCurrency(
+                                      Number(destruction.totalValue)
+                                    )}
+                                  </td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="border-t p-4 flex items-center justify-between bg-white">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Hiện thị</span>
+          <select
+            value={limit}
+            onChange={(e) => onLimitChange(Number(e.target.value))}
+            className="border rounded px-2 py-1 text-sm">
+            <option value={15}>15 dòng</option>
+            <option value={30}>30 dòng</option>
+            <option value={50}>50 dòng</option>
+            <option value={100}>100 dòng</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onPageChange(page - 1)}
+            disabled={page <= 1}
+            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+            Trước
+          </button>
+          <span className="text-sm text-gray-600">
+            Trang {page} / {totalPages}
+          </span>
+          <button
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages}
+            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+            Sau
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
