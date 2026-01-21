@@ -193,8 +193,8 @@ export function DestructionForm({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <div className="flex-1 flex flex-col overflow-hidden bg-white">
+    <div className="flex h-full border-t bg-gray-50 overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] m-4 border rounded-xl">
         <div className="border-b px-6 py-4 flex items-center justify-between bg-gray-50">
           <div>
             <h2 className="text-xl font-semibold">
@@ -382,7 +382,7 @@ export function DestructionForm({
         </div>
       </div>
 
-      <div className="w-96 border-l bg-white overflow-y-auto">
+      <div className="w-96 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
         <div className="p-6 space-y-6">
           <div>
             <label className="block text-sm text-gray-600 mb-1">

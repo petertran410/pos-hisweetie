@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import type { Destruction } from "@/lib/api/destructions";
 import { formatDate, formatCurrency } from "../../lib/utils";
 import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface ColumnConfig {
   key: string;
@@ -130,6 +131,7 @@ export function DestructionsTable({
   onEdit,
   onDelete,
 }: DestructionsTableProps) {
+  const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedDestructionId, setExpandedDestructionId] = useState<
     number | null
@@ -218,7 +220,7 @@ export function DestructionsTable({
 
         <div className="flex items-center gap-2 relative">
           <button
-            // onClick={onCreateClick}
+            onClick={() => router.push("/san-pham/xuat-huy/new")}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Tạo Xuất Hủy
@@ -282,9 +284,6 @@ export function DestructionsTable({
                   {col.label}
                 </th>
               ))}
-              <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
-                Thao tác
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -320,142 +319,126 @@ export function DestructionsTable({
                         {col.render(destruction)}
                       </td>
                     ))}
-                    <td
-                      className="px-4 py-3 text-center"
-                      onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => onEdit(destruction)}
-                          className="p-1 hover:bg-gray-200 rounded"
-                          title="Sửa">
-                          <Pencil className="w-4 h-4 text-blue-600" />
-                        </button>
-                        {onDelete && destruction.status === 1 && (
-                          <button
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  "Bạn có chắc chắn muốn xóa phiếu xuất hủy này?"
-                                )
-                              ) {
-                                onDelete(destruction.id);
-                              }
-                            }}
-                            className="p-1 hover:bg-gray-200 rounded"
-                            title="Xóa">
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
                   </tr>
                   {expandedDestructionId === destruction.id && (
                     <tr>
                       <td
                         colSpan={visibleColumns.length + 3}
-                        className="border-b bg-gray-50">
-                        <div className="p-6">
-                          <h3 className="text-lg font-semibold mb-4">
-                            Thông tin chi tiết
-                          </h3>
+                        className="px-6 py-6 bg-gray-50">
+                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1090px] 2xl:max-w-[1520px]">
+                          <div className="p-6">
+                            <h3 className="text-xl font-semibold mb-4">
+                              Thông tin chi tiết
+                            </h3>
 
-                          <div className="grid grid-cols-2 gap-6 mb-6">
-                            <div>
-                              <p className="text-sm text-gray-600">Mã phiếu</p>
-                              <p className="text-md font-medium">
-                                {destruction.code}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-600">Chi nhánh</p>
-                              <p className="text-md">
-                                {destruction.branchName}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-600">Người tạo</p>
-                              <p className="text-md">
-                                {destruction.createdByName}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-600">
-                                Trạng thái
-                              </p>
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                                  destruction.status
-                                )}`}>
-                                {getStatusText(destruction.status)}
-                              </span>
-                            </div>
-                            {destruction.note && (
-                              <div className="col-span-2">
-                                <p className="text-sm text-gray-600">Ghi chú</p>
-                                <p className="text-md">{destruction.note}</p>
+                            <div className="grid grid-cols-2 gap-6 mb-6">
+                              <div>
+                                <p className="text-md text-gray-600 mb-1">
+                                  Mã phiếu
+                                </p>
+                                <p className="text-md font-medium">
+                                  {destruction.code}
+                                </p>
                               </div>
-                            )}
-                          </div>
+                              <div>
+                                <p className="text-md text-gray-600 mb-1">
+                                  Chi nhánh
+                                </p>
+                                <p className="text-md">
+                                  {destruction.branchName}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-md text-gray-600 mb-1">
+                                  Người tạo
+                                </p>
+                                <p className="text-md">
+                                  {destruction.createdByName}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-md text-gray-600 mb-1">
+                                  Trạng thái
+                                </p>
+                                <span
+                                  className={`px-2 py-1 rounded text-md font-medium ${getStatusColor(
+                                    destruction.status
+                                  )}`}>
+                                  {getStatusText(destruction.status)}
+                                </span>
+                              </div>
+                              {destruction.note && (
+                                <div className="col-span-2">
+                                  <p className="text-md text-gray-600 mb-1">
+                                    Ghi chú
+                                  </p>
+                                  <p className="text-md">{destruction.note}</p>
+                                </div>
+                              )}
+                            </div>
 
-                          <div className="border rounded-lg overflow-hidden">
-                            <table className="w-full">
-                              <thead className="bg-gray-100 border-b">
-                                <tr>
-                                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                                    Mã hàng
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                                    Tên hàng
-                                  </th>
-                                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
-                                    SL hủy
-                                  </th>
-                                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
-                                    Đơn giá
-                                  </th>
-                                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
-                                    Thành tiền
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {destruction.details.map((detail, index) => (
-                                  <tr key={index}>
-                                    <td className="px-4 py-3 text-sm">
-                                      {detail.productCode}
+                            <div className="border rounded-lg overflow-hidden">
+                              <table className="w-full">
+                                <thead className="bg-gray-100 border-b">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                      Mã hàng
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                      Tên hàng
+                                    </th>
+                                    <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
+                                      SL hủy
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                      Đơn giá
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                      Thành tiền
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {destruction.details.map((detail, index) => (
+                                    <tr key={index}>
+                                      <td className="px-4 py-3 text-md">
+                                        {detail.productCode}
+                                      </td>
+                                      <td className="px-4 py-3 text-md">
+                                        {detail.productName}
+                                      </td>
+                                      <td className="px-4 py-3 text-center text-md">
+                                        {Number(
+                                          detail.quantity
+                                        ).toLocaleString()}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-md">
+                                        {formatCurrency(Number(detail.price))}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-md font-medium">
+                                        {formatCurrency(
+                                          Number(detail.totalValue)
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                                <tfoot className="bg-gray-50 border-t">
+                                  <tr>
+                                    <td
+                                      colSpan={4}
+                                      className="px-4 py-3 text-right text-md font-semibold">
+                                      Tổng giá trị:
                                     </td>
-                                    <td className="px-4 py-3 text-sm">
-                                      {detail.productName}
-                                    </td>
-                                    <td className="px-4 py-3 text-center text-sm">
-                                      {Number(detail.quantity).toLocaleString()}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-sm">
-                                      {formatCurrency(Number(detail.price))}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-sm font-medium">
+                                    <td className="px-4 py-3 text-right text-md font-bold">
                                       {formatCurrency(
-                                        Number(detail.totalValue)
+                                        Number(destruction.totalValue)
                                       )}
                                     </td>
                                   </tr>
-                                ))}
-                              </tbody>
-                              <tfoot className="bg-gray-50 border-t">
-                                <tr>
-                                  <td
-                                    colSpan={4}
-                                    className="px-4 py-3 text-right text-sm font-semibold">
-                                    Tổng giá trị:
-                                  </td>
-                                  <td className="px-4 py-3 text-right text-sm font-bold">
-                                    {formatCurrency(
-                                      Number(destruction.totalValue)
-                                    )}
-                                  </td>
-                                </tr>
-                              </tfoot>
-                            </table>
+                                </tfoot>
+                              </table>
+                            </div>
                           </div>
                         </div>
                       </td>

@@ -32,7 +32,7 @@ export default function DestructionsPage() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-full border-t bg-gray-50">
       <DestructionsSidebar onFiltersChange={setFilters} />
 
       <DestructionsTable
