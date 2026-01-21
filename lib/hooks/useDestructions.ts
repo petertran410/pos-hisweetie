@@ -41,8 +41,11 @@ export function useUpdateDestruction() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) =>
       destructionsApi.update(id, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["destructions"] });
+      queryClient.invalidateQueries({
+        queryKey: ["destructions", variables.id],
+      });
       toast.success("Cập nhật phiếu xuất hủy thành công");
     },
     onError: (error: any) => {
@@ -72,8 +75,11 @@ export function useCancelDestruction() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data?: any }) =>
       destructionsApi.cancel(id, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["destructions"] });
+      queryClient.invalidateQueries({
+        queryKey: ["destructions", variables.id],
+      });
       toast.success("Hủy phiếu xuất hủy thành công");
     },
     onError: (error: any) => {

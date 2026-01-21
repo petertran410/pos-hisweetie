@@ -10,7 +10,7 @@ import {
 } from "@/lib/hooks/useDestructions";
 import { useBranchStore } from "@/lib/store/branch";
 import type { Destruction } from "@/lib/api/destructions";
-import type { Product } from "@/lib/api/products";
+import { productsApi, type Product } from "@/lib/api/products";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -62,20 +62,49 @@ export function DestructionForm({
 
   useEffect(() => {
     if (destruction?.details && branchId) {
-      const loadedProducts: ProductItem[] = destruction.details.map(
-        (detail) => ({
-          productId: detail.productId,
-          productCode: detail.productCode,
-          productName: detail.productName,
-          unit: "",
-          quantity: Number(detail.quantity),
-          price: Number(detail.price),
-          totalValue: Number(detail.totalValue),
-          inventory: 0,
-          note: detail.note,
-        })
-      );
-      setProducts(loadedProducts);
+      const loadProductsWithInventory = async () => {
+        const loadedProducts = await Promise.all(
+          destruction.details.map(async (detail) => {
+            try {
+              const product = await productsApi.getProduct(detail.productId);
+              const inventory = product.inventories?.find(
+                (inv: any) => inv.branchId === branchId
+              );
+
+              return {
+                productId: detail.productId,
+                productCode: detail.productCode,
+                productName: detail.productName,
+                unit: product.unit || "",
+                quantity: Number(detail.quantity),
+                price: Number(detail.price),
+                totalValue: Number(detail.totalValue),
+                inventory: Number(inventory?.onHand || 0),
+                note: detail.note,
+              };
+            } catch (error) {
+              console.error(
+                `Error fetching product ${detail.productId}:`,
+                error
+              );
+              return {
+                productId: detail.productId,
+                productCode: detail.productCode,
+                productName: detail.productName,
+                unit: "",
+                quantity: Number(detail.quantity),
+                price: Number(detail.price),
+                totalValue: Number(detail.totalValue),
+                inventory: 0,
+                note: detail.note,
+              };
+            }
+          })
+        );
+        setProducts(loadedProducts);
+      };
+
+      loadProductsWithInventory();
     }
   }, [destruction, branchId]);
 

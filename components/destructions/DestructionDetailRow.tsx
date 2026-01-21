@@ -1,18 +1,18 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Destruction } from "@/lib/api/destructions";
 import { formatCurrency } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
   useCancelDestruction,
   useUpdateDestruction,
+  useDestruction,
 } from "@/lib/hooks/useDestructions";
 import { useUsers } from "@/lib/hooks/useUsers";
 import { toast } from "sonner";
 
 interface DestructionDetailRowProps {
-  destruction: Destruction;
+  destructionId: number;
   onClose: () => void;
 }
 
@@ -43,35 +43,35 @@ const getStatusColor = (status: number) => {
 };
 
 export function DestructionDetailRow({
-  destruction,
+  destructionId,
   onClose,
 }: DestructionDetailRowProps) {
   const router = useRouter();
   const cancelDestruction = useCancelDestruction();
   const updateDestruction = useUpdateDestruction();
   const { data: users } = useUsers();
+  const { data: destruction, isLoading } = useDestruction(destructionId);
 
   const [searchCode, setSearchCode] = useState("");
   const [searchName, setSearchName] = useState("");
-  const [note, setNote] = useState(destruction.note || "");
-  const [createdById, setCreatedById] = useState(destruction.createdById);
-  const [destructionDate, setDestructionDate] = useState(
-    destruction.destructionDate
-      ? new Date(destruction.destructionDate).toISOString().slice(0, 16)
-      : ""
-  );
+  const [note, setNote] = useState("");
+  const [createdById, setCreatedById] = useState(0);
+  const [destructionDate, setDestructionDate] = useState("");
 
   useEffect(() => {
-    setNote(destruction.note || "");
-    setCreatedById(destruction.createdById);
-    setDestructionDate(
-      destruction.destructionDate
-        ? new Date(destruction.destructionDate).toISOString().slice(0, 16)
-        : ""
-    );
+    if (destruction) {
+      setNote(destruction.note || "");
+      setCreatedById(destruction.createdById);
+      setDestructionDate(
+        destruction.destructionDate
+          ? new Date(destruction.destructionDate).toISOString().slice(0, 16)
+          : ""
+      );
+    }
   }, [destruction]);
 
   const filteredDetails = useMemo(() => {
+    if (!destruction) return [];
     return destruction.details.filter((detail) => {
       const matchCode = searchCode
         ? detail.productCode.toLowerCase().includes(searchCode.toLowerCase())
@@ -81,7 +81,7 @@ export function DestructionDetailRow({
         : true;
       return matchCode && matchName;
     });
-  }, [destruction.details, searchCode, searchName]);
+  }, [destruction?.details, searchCode, searchName]);
 
   const handleCancel = async () => {
     if (!confirm("Bạn có chắc chắn muốn hủy phiếu xuất hủy này?")) {
@@ -90,7 +90,7 @@ export function DestructionDetailRow({
 
     try {
       await cancelDestruction.mutateAsync({
-        id: destruction.id,
+        id: destructionId,
         data: {},
       });
       toast.success("Đã hủy phiếu xuất hủy");
@@ -101,7 +101,7 @@ export function DestructionDetailRow({
   };
 
   const handleOpenEdit = () => {
-    router.push(`/san-pham/xuat-huy/${destruction.id}`);
+    router.push(`/san-pham/xuat-huy/${destructionId}`);
   };
 
   const handleSave = async () => {
@@ -116,7 +116,7 @@ export function DestructionDetailRow({
       }
 
       await updateDestruction.mutateAsync({
-        id: destruction.id,
+        id: destructionId,
         data: updateData,
       });
       toast.success("Đã lưu thông tin phiếu xuất hủy");
@@ -125,6 +125,14 @@ export function DestructionDetailRow({
       toast.error(error?.message || "Có lỗi xảy ra khi lưu phiếu");
     }
   };
+
+  if (isLoading || !destruction) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="text-center text-gray-500">Đang tải...</div>
+      </div>
+    );
+  }
 
   const showCancelButton = destruction.status === 1 || destruction.status === 2;
   const showOpenButton = destruction.status === 1;
@@ -189,10 +197,10 @@ export function DestructionDetailRow({
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Mã hàng</label>
+            <label className="block text-sm text-gray-600 mb-1">Mã</label>
             <input
               type="text"
-              placeholder="Tìm mã hàng"
+              placeholder="Tìm theo mã"
               value={searchCode}
               onChange={(e) => setSearchCode(e.target.value)}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -202,7 +210,7 @@ export function DestructionDetailRow({
             <label className="block text-sm text-gray-600 mb-1">Tên hàng</label>
             <input
               type="text"
-              placeholder="Tìm tên hàng"
+              placeholder="Tìm theo tên"
               value={searchName}
               onChange={(e) => setSearchName(e.target.value)}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -210,28 +218,28 @@ export function DestructionDetailRow({
           </div>
         </div>
 
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded overflow-hidden mb-4">
           <table className="w-full">
-            <thead className="bg-gray-100 border-b">
+            <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Mã hàng
                 </th>
-                <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Tên hàng
                 </th>
-                <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
-                  SL hủy
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Số lượng
                 </th>
-                <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Giá vốn
                 </th>
-                <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Giá trị hủy
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {filteredDetails.length === 0 ? (
                 <tr>
                   <td

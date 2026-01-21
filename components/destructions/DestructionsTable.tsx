@@ -357,7 +357,7 @@ export function DestructionsTable({
                         colSpan={visibleColumns.length + 3}
                         className="px-6 py-6 bg-gray-50">
                         <DestructionDetailRow
-                          destruction={destruction}
+                          destructionId={destruction.id}
                           onClose={() => setExpandedDestructionId(null)}
                         />
                       </td>
