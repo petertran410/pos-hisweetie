@@ -7,9 +7,10 @@ import {
   useDestructions,
   useDeleteDestruction,
 } from "@/lib/hooks/useDestructions";
-import { FileUp, FileDown, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function DestructionsPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState({});
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
@@ -43,7 +44,7 @@ export default function DestructionsPage() {
         onPageChange={setPage}
         onLimitChange={setLimit}
         onEdit={(destruction) => {
-          console.log("Edit:", destruction);
+          router.push(`/san-pham/xuat-huy/${destruction.id}`);
         }}
         onDelete={handleDelete}
       />
