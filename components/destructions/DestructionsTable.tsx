@@ -5,6 +5,7 @@ import type { Destruction } from "@/lib/api/destructions";
 import { formatDate, formatCurrency } from "../../lib/utils";
 import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { DestructionDetailRow } from "./DestructionDetailRow";
 
 interface ColumnConfig {
   key: string;
@@ -31,7 +32,7 @@ const getStatusText = (status: number) => {
       return "Phiếu tạm";
     case 2:
       return "Hoàn thành";
-    case 4:
+    case 3:
       return "Đã hủy";
     default:
       return "Không xác định";
@@ -44,7 +45,7 @@ const getStatusColor = (status: number) => {
       return "text-gray-600 bg-gray-100";
     case 2:
       return "text-green-600 bg-green-100";
-    case 4:
+    case 3:
       return "text-red-600 bg-red-100";
     default:
       return "text-gray-600 bg-gray-100";
@@ -221,7 +222,7 @@ export function DestructionsTable({
   };
 
   const toggleExpand = (destructionId: number) => {
-    setExpandedDestructionId((prev) =>
+    setExpandedDestructionId((prev: any) =>
       prev === destructionId ? null : destructionId
     );
   };
@@ -244,8 +245,6 @@ export function DestructionsTable({
           <input
             type="text"
             placeholder="Tìm kiếm đơn hàng..."
-            // value={search}
-            // onChange={(e) => setSearch(e.target.value)}
             className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -357,122 +356,10 @@ export function DestructionsTable({
                       <td
                         colSpan={visibleColumns.length + 3}
                         className="px-6 py-6 bg-gray-50">
-                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1090px] 2xl:max-w-[1520px]">
-                          <div className="p-6">
-                            <h3 className="text-xl font-semibold mb-4">
-                              Thông tin chi tiết
-                            </h3>
-
-                            <div className="grid grid-cols-2 gap-6 mb-6">
-                              <div>
-                                <p className="text-md text-gray-600 mb-1">
-                                  Mã phiếu
-                                </p>
-                                <p className="text-md font-medium">
-                                  {destruction.code}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-md text-gray-600 mb-1">
-                                  Chi nhánh
-                                </p>
-                                <p className="text-md">
-                                  {destruction.branchName}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-md text-gray-600 mb-1">
-                                  Người tạo
-                                </p>
-                                <p className="text-md">
-                                  {destruction.createdByName}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-md text-gray-600 mb-1">
-                                  Trạng thái
-                                </p>
-                                <span
-                                  className={`px-2 py-1 rounded text-md font-medium ${getStatusColor(
-                                    destruction.status
-                                  )}`}>
-                                  {getStatusText(destruction.status)}
-                                </span>
-                              </div>
-                              {destruction.note && (
-                                <div className="col-span-2">
-                                  <p className="text-md text-gray-600 mb-1">
-                                    Ghi chú
-                                  </p>
-                                  <p className="text-md">{destruction.note}</p>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="border rounded-lg overflow-hidden">
-                              <table className="w-full">
-                                <thead className="bg-gray-100 border-b">
-                                  <tr>
-                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
-                                      Mã hàng
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
-                                      Tên hàng
-                                    </th>
-                                    <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
-                                      SL hủy
-                                    </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
-                                      Đơn giá
-                                    </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
-                                      Thành tiền
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                  {destruction.details.map((detail, index) => (
-                                    <tr key={index}>
-                                      <td className="px-4 py-3 text-md">
-                                        {detail.productCode}
-                                      </td>
-                                      <td className="px-4 py-3 text-md">
-                                        {detail.productName}
-                                      </td>
-                                      <td className="px-4 py-3 text-center text-md">
-                                        {Number(
-                                          detail.quantity
-                                        ).toLocaleString()}
-                                      </td>
-                                      <td className="px-4 py-3 text-right text-md">
-                                        {formatCurrency(Number(detail.price))}
-                                      </td>
-                                      <td className="px-4 py-3 text-right text-md font-medium">
-                                        {formatCurrency(
-                                          Number(detail.totalValue)
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                                <tfoot className="bg-gray-50 border-t">
-                                  <tr>
-                                    <td
-                                      colSpan={4}
-                                      className="px-4 py-3 text-right text-md font-semibold">
-                                      Tổng giá trị:
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-md font-bold">
-                                      {formatCurrency(
-                                        Number(destruction.totalValue)
-                                      )}
-                                    </td>
-                                  </tr>
-                                </tfoot>
-                              </table>
-                            </div>
-                          </div>
-                        </div>
+                        <DestructionDetailRow
+                          destruction={destruction}
+                          onClose={() => setExpandedDestructionId(null)}
+                        />
                       </td>
                     </tr>
                   )}
@@ -483,9 +370,9 @@ export function DestructionsTable({
         </table>
       </div>
 
-      <div className="border-t p-4 flex items-center justify-between bg-white">
+      <div className="border-t p-4 flex items-center justify-between bg-gray-50">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Hiện thị</span>
+          <span className="text-sm text-gray-600">Hiển thị</span>
           <select
             value={limit}
             onChange={(e) => onLimitChange(Number(e.target.value))}
@@ -495,22 +382,25 @@ export function DestructionsTable({
             <option value={50}>50 dòng</option>
             <option value={100}>100 dòng</option>
           </select>
+          <span className="text-sm text-gray-600">
+            Tổng cộng: {total} bản ghi
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+            onClick={() => onPageChange(Math.max(1, page - 1))}
+            disabled={page === 1}
+            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
             Trước
           </button>
           <span className="text-sm text-gray-600">
             Trang {page} / {totalPages}
           </span>
           <button
-            onClick={() => onPageChange(page + 1)}
+            onClick={() => onPageChange(Math.min(totalPages, page + 1))}
             disabled={page >= totalPages}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
             Sau
           </button>
         </div>
