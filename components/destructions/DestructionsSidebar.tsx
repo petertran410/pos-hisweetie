@@ -12,7 +12,7 @@ interface DestructionsSidebarProps {
 const STATUS_OPTIONS = [
   { value: 1, label: "Phiếu tạm", color: "bg-gray-100" },
   { value: 2, label: "Hoàn thành", color: "bg-green-100" },
-  { value: 4, label: "Đã hủy", color: "bg-red-100" },
+  { value: 3, label: "Đã hủy", color: "bg-red-100" },
 ];
 
 const TIME_PRESETS = [

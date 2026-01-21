@@ -382,9 +382,6 @@ export function DestructionsTable({
             <option value={50}>50 dòng</option>
             <option value={100}>100 dòng</option>
           </select>
-          <span className="text-sm text-gray-600">
-            Tổng cộng: {total} bản ghi
-          </span>
         </div>
 
         <div className="flex items-center gap-2">
