@@ -263,7 +263,7 @@ export function DestructionsTable({
       </div>
 
       <div className="flex-1 overflow-auto">
-        <table className="w-full" style={{ minWidth: "max-content" }}>
+        <table className="w-full text-md" style={{ minWidth: "max-content" }}>
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-4 py-3 text-left sticky left-0 bg-gray-50">
@@ -280,7 +280,7 @@ export function DestructionsTable({
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">
+                  className="px-4 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
                   {col.label}
                 </th>
               ))}
@@ -315,7 +315,7 @@ export function DestructionsTable({
                     {visibleColumns.map((col) => (
                       <td
                         key={col.key}
-                        className="px-4 py-3 text-sm whitespace-nowrap">
+                        className="px-4 py-3 text-md whitespace-nowrap">
                         {col.render(destruction)}
                       </td>
                     ))}
