@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsers } from "@/lib/hooks/useUsers";
-import { Filter, X, Calendar, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 interface DestructionsSidebarProps {
   onFiltersChange: (filters: any) => void;

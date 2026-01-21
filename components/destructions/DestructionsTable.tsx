@@ -72,14 +72,46 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: true,
     render: (destruction) =>
       destruction.destructionDate
-        ? formatDate(destruction.destructionDate)
+        ? new Date(destruction.destructionDate).toLocaleString("vi-VN", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
+          })
         : "-",
   },
   {
     key: "createTime",
     label: "Thời gian tạo",
     visible: true,
-    render: (destruction) => formatDate(destruction.createdAt),
+    render: (destruction) =>
+      new Date(destruction.createdAt).toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }),
+  },
+  {
+    key: "updateTime",
+    label: "Thời gian cập nhật",
+    visible: true,
+    render: (destruction) =>
+      new Date(destruction.updatedAt).toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }),
   },
   {
     key: "branch",
