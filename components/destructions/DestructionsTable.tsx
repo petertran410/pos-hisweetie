@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Destruction } from "@/lib/api/destructions";
 import { formatDate, formatCurrency } from "../../lib/utils";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
 
 interface ColumnConfig {
   key: string;
@@ -69,7 +69,10 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "destructionDate",
     label: "Thời gian",
     visible: true,
-    render: (destruction) => formatDate(destruction.destructionDate),
+    render: (destruction) =>
+      destruction.destructionDate
+        ? formatDate(destruction.destructionDate)
+        : "-",
   },
   {
     key: "createTime",
@@ -200,17 +203,31 @@ export function DestructionsTable({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="p-4 border-b flex justify-between items-center bg-white">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">
-            Tìm thấy {total} phiếu xuất hủy
-          </span>
+    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
+      <div className="border-b p-4 flex items-center justify-between">
+        <div className="flex items-center gap-4 w-[500px]">
+          <h2 className="text-xl font-semibold w-[150px]">Xuất hủy</h2>
+          <input
+            type="text"
+            placeholder="Tìm kiếm đơn hàng..."
+            // value={search}
+            // onChange={(e) => setSearch(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
+
         <div className="flex items-center gap-2 relative">
           <button
+            // onClick={onCreateClick}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Tạo Xuất Hủy
+          </button>
+
+          <button
             onClick={() => setShowColumnModal(!showColumnModal)}
-            className="px-3 py-2 border rounded hover:bg-gray-50 text-sm">
+            className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
+            <Settings className="w-4 h-4" />
             Cột hiển thị
           </button>
           {showColumnModal && (
@@ -258,9 +275,6 @@ export function DestructionsTable({
                   className="cursor-pointer"
                 />
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                <button className="hover:text-gray-900">★</button>
-              </th>
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
@@ -298,11 +312,6 @@ export function DestructionsTable({
                         onChange={() => toggleSelect(destruction.id)}
                         className="cursor-pointer"
                       />
-                    </td>
-                    <td className="px-4 py-3">
-                      <button className="text-gray-400 hover:text-yellow-500">
-                        ☆
-                      </button>
                     </td>
                     {visibleColumns.map((col) => (
                       <td
