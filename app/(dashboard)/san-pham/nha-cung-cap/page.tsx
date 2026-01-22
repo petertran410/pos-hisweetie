@@ -91,10 +91,10 @@ export default function SuppliersPage() {
   const pageSize = filters.pageSize ?? 15;
 
   return (
-    <div className="h-full flex">
+    <div className="flex h-full border-t bg-gray-50">
       <SuppliersSidebar filters={filters} setFilters={handleFilterChange} />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
         <div className="border-b bg-white p-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-semibold">Nhà cung cấp</h1>

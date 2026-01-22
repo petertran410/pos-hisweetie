@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSupplierGroups } from "@/lib/hooks/useSuppliers";
 import { SupplierFilters } from "@/lib/types/supplier";
 import { SupplierGroupModal } from "./SupplierGroupModal";
@@ -23,6 +23,8 @@ export function SuppliersSidebar({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [showGroupDropdown, setShowGroupDropdown] = useState(false);
 
   const resetFilters = () => {
     setFilters({
@@ -142,20 +144,34 @@ export function SuppliersSidebar({
     }
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowGroupDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div className="w-64 border-r bg-white p-4 space-y-6 overflow-y-auto h-[calc(100vh-64px)]">
+    <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium">Nhóm nhà cung cấp</label>
+          <label className="text-md font-medium">Nhóm nhà cung cấp</label>
           <button
             onClick={resetFilters}
-            className="text-xs text-blue-600 hover:underline">
+            className="text-sm text-blue-600 hover:underline">
             Tạo mới
           </button>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <select
-            className="flex-1 border rounded px-3 py-2 text-sm"
+            className="flex-1 border rounded-md px-3 py-2 text-sm"
             value={filters.groupId || ""}
             onChange={(e) =>
               setFilters({
