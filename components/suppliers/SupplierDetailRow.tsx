@@ -47,7 +47,7 @@ export function SupplierDetailRow({
   return (
     <tr>
       <td colSpan={colSpan} className="px-6 py-4 bg-gray-50">
-        <div className="bg-white rounded-lg shadow-sm">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1090px] 2xl:max-w-[1520px]">
           <div className="border-b p-4 flex items-center justify-between">
             <div className="flex gap-4">
               <button
