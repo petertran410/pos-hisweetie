@@ -241,7 +241,7 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
                 <label className="block text-sm font-medium mb-2">
                   Nhóm nhà cung cấp
                 </label>
-                <div className="border rounded-xl px-3 py-2 min-h-[42px] flex flex-wrap gap-2 items-center cursor-pointer">
+                <div className="border rounded-xl px-3 py-2 min-h-[50px] flex flex-wrap gap-2 items-center cursor-pointer">
                   {selectedGroups.map((group) => (
                     <span
                       key={group.id}

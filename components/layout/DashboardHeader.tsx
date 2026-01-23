@@ -33,21 +33,16 @@ export function DashboardHeader() {
         { label: "Chuyển hàng", href: "/san-pham/chuyen-hang" },
         { label: "Sản xuất", href: "/san-pham/san-xuat" },
         { label: "Xuất hủy", href: "/san-pham/xuat-huy" },
+        { label: "Kiểm kho", href: "/san-pham/kiem-kho" },
       ],
     },
     {
       title: "Nhập hàng",
       items: [
+        { label: "Nhà cung cấp", href: "/san-pham/nha-cung-cap" },
         { label: "Đặt hàng nhập", href: "/san-pham/dat-hang-nhap" },
         { label: "Nhập hàng", href: "/san-pham/nhap-hang" },
         { label: "Trả hàng nhập", href: "/san-pham/tra-hang-nhap" },
-      ],
-    },
-    {
-      title: "Khác",
-      items: [
-        { label: "Nhà cung cấp", href: "/san-pham/nha-cung-cap" },
-        { label: "Kiểm kho", href: "/san-pham/kiem-kho" },
       ],
     },
   ];
