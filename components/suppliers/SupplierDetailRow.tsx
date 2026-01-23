@@ -29,6 +29,7 @@ export function SupplierDetailRow({
   );
   const [showEditModal, setShowEditModal] = useState(false);
   const [showInvoiceInfo, setShowInvoiceInfo] = useState(false);
+  const [showGroupsModal, setShowGroupsModal] = useState(false);
   const deleteSupplier = useDeleteSupplier();
 
   const handleDelete = async () => {
@@ -37,8 +38,6 @@ export function SupplierDetailRow({
       await deleteSupplier.mutateAsync(supplier.id);
     }
   };
-
-  console.log(supplier);
 
   const handleToggleStatus = async () => {};
 
@@ -64,7 +63,7 @@ export function SupplierDetailRow({
             <div className="flex gap-4">
               <button
                 onClick={() => setActiveTab("info")}
-                className={` py-2 text-md font-medium ${
+                className={`py-2 text-md font-medium ${
                   activeTab === "info"
                     ? "text-blue-600 border-b-2 border-blue-600"
                     : "text-gray-600 hover:text-gray-900"
@@ -90,42 +89,24 @@ export function SupplierDetailRow({
                 Nợ cần trả nhà cung cấp
               </button>
             </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowEditModal(true)}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
-                Chỉnh sửa
-              </button>
-              <button
-                onClick={handleToggleStatus}
-                className="px-3 py-1.5 border rounded hover:bg-gray-50 text-sm">
-                {supplier.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
-              </button>
-            </div>
           </div>
 
           <div className="p-4">
             {activeTab === "info" && (
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="text-base font-semibold text-gray-900">
-                      {supplier.name} {" - "}
-                      <span className="text-gray-500 font-normal">
-                        {supplier.code}
-                      </span>
-                    </h4>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {supplier.location || ""}
-                  </div>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-base font-semibold text-gray-900">
+                    {supplier.name}
+                  </h4>
+                  <p className="text-sm text-gray-500">{supplier.code}</p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-gray-600">Người tạo: </span>
-                    <span className="text-gray-900">Admin - DA</span>
+                    <span className="text-gray-900">
+                      {supplier.createdName || "admin"}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-600">Ngày tạo: </span>
@@ -135,42 +116,75 @@ export function SupplierDetailRow({
                   </div>
                   <div>
                     <span className="text-gray-600">Nhóm nhà cung cấp: </span>
-                    <span className="text-gray-900">
-                      {supplier.supplierGroupDetails &&
-                      supplier.supplierGroupDetails.length > 0
-                        ? supplier.supplierGroupDetails
-                            .map((g) => g.supplierGroup.name)
-                            .join(", ")
-                        : "-"}
-                    </span>
+                    {supplier.supplierGroupDetails &&
+                    supplier.supplierGroupDetails.length > 0 ? (
+                      <button
+                        onClick={() => setShowGroupsModal(true)}
+                        className="text-blue-600 hover:underline">
+                        {supplier.supplierGroupDetails.length} nhóm
+                      </button>
+                    ) : (
+                      <span className="text-gray-900">-</span>
+                    )}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-0.5">
-                      Điện thoại
-                    </label>
-                    <div className="text-sm text-gray-900">
-                      {supplier.contactNumber || "Chưa có"}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-0.5">
+                        Điện thoại
+                      </label>
+                      <div className="text-sm text-gray-900">
+                        {supplier.contactNumber || "Chưa có"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-0.5">
+                        Email
+                      </label>
+                      <div className="text-sm text-gray-900">
+                        {supplier.email || "Chưa có"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-0.5">
+                        Địa chỉ
+                      </label>
+                      <div className="text-sm text-gray-900">
+                        {supplier.address || "Chưa có"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-0.5">
+                        Khu vực
+                      </label>
+                      <div className="text-sm text-gray-900">
+                        {supplier.location || "Chưa có"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-0.5">
+                        Phường/Xã
+                      </label>
+                      <div className="text-sm text-gray-900">
+                        {supplier.wardName || "Chưa có"}
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-0.5">
-                      Email
-                    </label>
-                    <div className="text-sm text-gray-900">
-                      {supplier.email || ""}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-0.5">
-                      Địa chỉ
-                    </label>
-                    <div className="text-sm text-gray-900">
-                      {supplier.address || "Chưa có"}
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-0.5">
+                        Ghi chú
+                      </label>
+                      <div className="text-sm text-gray-900">
+                        {supplier.comments || "Chưa có"}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -181,72 +195,68 @@ export function SupplierDetailRow({
                     className="text-sm text-blue-600 hover:underline">
                     {showInvoiceInfo
                       ? "Ẩn thông tin xuất hóa đơn"
-                      : "Thêm thông tin xuất hóa đơn"}
+                      : "Hiển thị thông tin xuất hóa đơn"}
                   </button>
                 </div>
 
                 {showInvoiceInfo && (
-                  <div className="space-y-2 pt-2">
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-0.5">
-                        Mã số thuế
-                      </label>
-                      <div className="text-sm text-gray-900">
-                        {supplier.taxCode || "Chưa có"}
+                  <div className="border-t pt-4 space-y-2">
+                    <h5 className="font-medium text-sm">
+                      Thông tin xuất hóa đơn
+                    </h5>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <label className="block text-gray-600 mb-0.5">
+                          Tên công ty
+                        </label>
+                        <div className="text-gray-900">
+                          {supplier.organization || "Chưa có"}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-gray-600 mb-0.5">
+                          Mã số thuế
+                        </label>
+                        <div className="text-gray-900">
+                          {supplier.taxCode || "Chưa có"}
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div className="flex items-center gap-2 pt-1">
-                  <input
-                    type="checkbox"
-                    id="no-notes"
-                    disabled
-                    checked={!supplier.comments}
-                    className="cursor-not-allowed"
-                  />
-                  <label
-                    htmlFor="no-notes"
-                    className="text-sm text-gray-600 cursor-not-allowed">
-                    Chưa có ghi chú
-                  </label>
-                </div>
-
-                {supplier.comments && (
-                  <div className="pt-2">
-                    <label className="block text-sm text-gray-600 mb-0.5">
-                      Ghi chú
-                    </label>
-                    <div className="text-sm text-gray-900">
-                      {supplier.comments}
-                    </div>
-                  </div>
-                )}
-
-                <div className="pt-2">
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                   <button
                     onClick={handleDelete}
-                    className="px-4 py-1.5 border border-red-300 text-red-600 rounded hover:bg-red-50 text-sm">
+                    className="px-3 py-1.5 text-red-600 border border-red-600 rounded hover:bg-red-50 text-sm">
                     Xóa
                   </button>
+
+                  <div className="flex items-end gap-2">
+                    <button
+                      onClick={() => setShowEditModal(true)}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                      Chỉnh sửa
+                    </button>
+                    <button
+                      onClick={handleToggleStatus}
+                      className="px-3 py-1.5 border rounded hover:bg-gray-50 text-sm">
+                      {supplier.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeTab === "history" && (
-              <div>
-                <p className="text-gray-500 text-sm">
-                  Lịch sử nhập/trả hàng đang được phát triển
-                </p>
+              <div className="text-center text-gray-500 py-8">
+                Chưa có lịch sử nhập/trả hàng
               </div>
             )}
 
             {activeTab === "debt" && (
-              <div>
-                <p className="text-gray-500 text-sm">
-                  Thông tin nợ cần trả đang được phát triển
-                </p>
+              <div className="text-center text-gray-500 py-8">
+                Chưa có thông tin công nợ
               </div>
             )}
           </div>
@@ -257,6 +267,53 @@ export function SupplierDetailRow({
             supplier={supplier}
             onClose={() => setShowEditModal(false)}
           />
+        )}
+
+        {showGroupsModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg w-full max-w-md">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="text-lg font-semibold">Nhóm nhà cung cấp</h3>
+                <button
+                  onClick={() => setShowGroupsModal(false)}
+                  className="text-gray-500 hover:text-gray-700">
+                  ✕
+                </button>
+              </div>
+              <div className="p-4">
+                {supplier.supplierGroupDetails &&
+                supplier.supplierGroupDetails.length > 0 ? (
+                  <div className="space-y-2">
+                    {supplier.supplierGroupDetails.map((detail) => (
+                      <div
+                        key={detail.id}
+                        className="p-3 border rounded hover:bg-gray-50">
+                        <div className="font-medium">
+                          {detail.supplierGroup.name}
+                        </div>
+                        {detail.supplierGroup.description && (
+                          <div className="text-sm text-gray-600">
+                            {detail.supplierGroup.description}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 py-4">
+                    Chưa thuộc nhóm nào
+                  </div>
+                )}
+              </div>
+              <div className="border-t p-4 flex justify-end">
+                <button
+                  onClick={() => setShowGroupsModal(false)}
+                  className="px-4 py-2 border rounded hover:bg-gray-50">
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </td>
     </tr>

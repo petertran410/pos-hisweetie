@@ -27,6 +27,7 @@ export interface Supplier {
     supplierGroup: {
       id: number;
       name: string;
+      description?: string;
     };
   }>;
 }

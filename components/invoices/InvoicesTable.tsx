@@ -409,7 +409,7 @@ export function InvoicesTable({
         <table className="w-full text-md">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
-              <th className="px-6 py-3 text-left sticky left-0 bg-gray-50">
+              <th className="px-6 py-3 text-left sticky left-0">
                 <input
                   type="checkbox"
                   checked={

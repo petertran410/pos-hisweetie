@@ -257,7 +257,7 @@ export function SuppliersTable({
 
       <div className="flex-1 overflow-auto">
         <table className="w-full">
-          <thead className="sticky top-0 z-10">
+          <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left sticky left-0">
                 <input
