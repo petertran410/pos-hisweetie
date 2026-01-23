@@ -5,6 +5,7 @@ import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { Supplier, SupplierFilters } from "@/lib/types/supplier";
 import { SupplierDetailRow } from "./SupplierDetailRow";
 import { SupplierForm } from "./SupplierForm";
+import { Plus, Settings } from "lucide-react";
 
 interface ColumnConfig {
   key: string;
@@ -233,51 +234,31 @@ export function SuppliersTable({
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
-      <div className="border-b p-4 items-center justify-between">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-semibold">Nhà cung cấp</h1>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
-              <span>+</span>
-              <span>Nhà cung cấp</span>
-            </button>
-            <button className="px-4 py-2 border rounded hover:bg-gray-50">
-              Import file
-            </button>
-            <button className="px-4 py-2 border rounded hover:bg-gray-50">
-              Xuất file
-            </button>
-            <button
-              onClick={() => setShowColumnModal(true)}
-              className="px-4 py-2 border rounded hover:bg-gray-50">
-              ⚙️
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSearch} className="relative">
+      <div className="border-b p-4 flex items-center justify-between">
+        <div className="flex items-center gap-4 w-[500px]">
+          <h1 className="text-xl font-semibold w-[200px]">Nhà cung cấp</h1>
           <input
             type="text"
             placeholder="Theo mã, tên, số điện thoại"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full border rounded pl-10 pr-4 py-2"
+            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <svg
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-        </form>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            <span>Tạo nhà cung cấp</span>
+          </button>
+          <button
+            onClick={() => setShowColumnModal(true)}
+            className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            Cột Hiển Thị
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto">
