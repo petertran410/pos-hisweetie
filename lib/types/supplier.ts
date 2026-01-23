@@ -20,6 +20,14 @@ export interface Supplier {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  branch?: {
+    id: number;
+    name: string;
+  };
+  creator?: {
+    id: number;
+    name: string;
+  };
   supplierGroupDetails?: Array<{
     id: number;
     supplierId: number;

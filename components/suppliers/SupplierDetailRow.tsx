@@ -94,97 +94,99 @@ export function SupplierDetailRow({
           <div className="p-4">
             {activeTab === "info" && (
               <div className="space-y-4">
-                <div>
-                  <h4 className="text-base font-semibold text-gray-900">
+                <div className="text-md flex gap-1">
+                  <h4 className="font-semibold text-gray-900">
                     {supplier.name}
                   </h4>
-                  <p className="text-sm text-gray-500">{supplier.code}</p>
+                  {" - "}
+                  <p className="text-gray-500">{supplier.code}</p>
                 </div>
-
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Người tạo: </span>
-                    <span className="text-gray-900">
-                      {supplier.createdName || "admin"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Ngày tạo: </span>
-                    <span className="text-gray-900">
-                      {formatDateTime(supplier.createdAt)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Nhóm nhà cung cấp: </span>
-                    {supplier.supplierGroupDetails &&
-                    supplier.supplierGroupDetails.length > 0 ? (
-                      <button
-                        onClick={() => setShowGroupsModal(true)}
-                        className="text-blue-600 hover:underline">
-                        {supplier.supplierGroupDetails.length} nhóm
-                      </button>
-                    ) : (
-                      <span className="text-gray-900">-</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-2">
+                  <div className="flex gap-2 text-md">
                     <div>
-                      <label className="block text-sm text-gray-600 mb-0.5">
+                      <span className="text-gray-600">Người tạo: </span>
+                      <span className="text-gray-900">
+                        {supplier.createdName || "admin"}
+                      </span>
+                    </div>
+                    |
+                    <div>
+                      <span className="text-gray-600">Ngày tạo: </span>
+                      <span className="text-gray-900">
+                        {formatDateTime(supplier.createdAt)}
+                      </span>
+                    </div>
+                    |
+                    <div>
+                      <span className="text-gray-600">Nhóm nhà cung cấp: </span>
+                      {supplier.supplierGroupDetails &&
+                      supplier.supplierGroupDetails.length > 0 ? (
+                        <button
+                          onClick={() => setShowGroupsModal(true)}
+                          className="text-blue-600 hover:underline">
+                          {supplier.supplierGroupDetails.length} nhóm
+                        </button>
+                      ) : (
+                        <span className="text-gray-900">-</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="justify-self-end-safe">
+                    <span className="text-gray-600">Chi nhánh: </span>
+                    <span className="text-gray-900">
+                      {supplier.branch?.name || "-"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-md">
+                  <div className="grid grid-cols-2 mb-4">
+                    <div>
+                      <label className=" text-gray-600 mb-0.5">
                         Điện thoại
                       </label>
-                      <div className="text-sm text-gray-900">
+                      <div className=" text-gray-900">
                         {supplier.contactNumber || "Chưa có"}
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm text-gray-600 mb-0.5">
-                        Email
-                      </label>
-                      <div className="text-sm text-gray-900">
+                      <label className=" text-gray-600 mb-0.5">Email</label>
+                      <div className=" text-gray-900">
                         {supplier.email || "Chưa có"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-0.5">
-                        Địa chỉ
-                      </label>
-                      <div className="text-sm text-gray-900">
-                        {supplier.address || "Chưa có"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-0.5">
-                        Khu vực
-                      </label>
-                      <div className="text-sm text-gray-900">
-                        {supplier.location || "Chưa có"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-0.5">
-                        Phường/Xã
-                      </label>
-                      <div className="text-sm text-gray-900">
-                        {supplier.wardName || "Chưa có"}
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-0.5">
-                        Ghi chú
-                      </label>
-                      <div className="text-sm text-gray-900">
-                        {supplier.comments || "Chưa có"}
+                  <div className="mb-4">
+                    <div className="mb-2">
+                      <label className=" text-gray-600 mb-0.5">Địa chỉ</label>
+                      <div className=" text-gray-900">
+                        {supplier.address || "Chưa có"}
                       </div>
+                    </div>
+                    <div className="grid grid-cols-2">
+                      <div>
+                        <label className=" text-gray-600 mb-0.5">Khu vực</label>
+                        <div className=" text-gray-900">
+                          {supplier.location || "Chưa có"}
+                        </div>
+                      </div>
+                      <div>
+                        <label className=" text-gray-600 mb-0.5">
+                          Phường/Xã
+                        </label>
+                        <div className=" text-gray-900">
+                          {supplier.wardName || "Chưa có"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className=" text-gray-600 mb-0.5">Ghi chú</label>
+                    <div className=" text-gray-900">
+                      {supplier.comments || "Chưa có"}
                     </div>
                   </div>
                 </div>
@@ -192,7 +194,7 @@ export function SupplierDetailRow({
                 <div>
                   <button
                     onClick={() => setShowInvoiceInfo(!showInvoiceInfo)}
-                    className="text-sm text-blue-600 hover:underline">
+                    className=" text-blue-600 hover:underline">
                     {showInvoiceInfo
                       ? "Ẩn thông tin xuất hóa đơn"
                       : "Hiển thị thông tin xuất hóa đơn"}
@@ -201,12 +203,10 @@ export function SupplierDetailRow({
 
                 {showInvoiceInfo && (
                   <div className="border-t pt-4 space-y-2">
-                    <h5 className="font-medium text-sm">
-                      Thông tin xuất hóa đơn
-                    </h5>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <h5 className="font-medium ">Thông tin xuất hóa đơn</h5>
+                    <div className="grid grid-cols-2 gap-4 ">
                       <div>
-                        <label className="block text-gray-600 mb-0.5">
+                        <label className="text-gray-600 mb-0.5">
                           Tên công ty
                         </label>
                         <div className="text-gray-900">
@@ -214,7 +214,7 @@ export function SupplierDetailRow({
                         </div>
                       </div>
                       <div>
-                        <label className="block text-gray-600 mb-0.5">
+                        <label className="text-gray-600 mb-0.5">
                           Mã số thuế
                         </label>
                         <div className="text-gray-900">
@@ -228,19 +228,19 @@ export function SupplierDetailRow({
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                   <button
                     onClick={handleDelete}
-                    className="px-3 py-1.5 text-red-600 border border-red-600 rounded hover:bg-red-50 text-sm">
+                    className="px-3 py-1.5 text-red-600 border border-red-600 rounded hover:bg-red-50 ">
                     Xóa
                   </button>
 
                   <div className="flex items-end gap-2">
                     <button
                       onClick={() => setShowEditModal(true)}
-                      className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 ">
                       Chỉnh sửa
                     </button>
                     <button
                       onClick={handleToggleStatus}
-                      className="px-3 py-1.5 border rounded hover:bg-gray-50 text-sm">
+                      className="px-3 py-1.5 border rounded hover:bg-gray-50 ">
                       {supplier.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
                     </button>
                   </div>
@@ -292,7 +292,7 @@ export function SupplierDetailRow({
                           {detail.supplierGroup.name}
                         </div>
                         {detail.supplierGroup.description && (
-                          <div className="text-sm text-gray-600">
+                          <div className=" text-gray-600">
                             {detail.supplierGroup.description}
                           </div>
                         )}

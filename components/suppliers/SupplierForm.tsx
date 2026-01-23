@@ -166,8 +166,8 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
               />
               <p className="text-xs text-gray-500 mt-1">
                 {autoGenerateCode
-                  ? "Mã sẽ được tự động tạo"
-                  : "Sử dụng mã tùy chỉnh"}
+                  ? "Mã sẽ được tự động tạo hoặc sử dụng mã tùy chỉnh"
+                  : "Sử dụng mã tùy chỉnh hoặc giữ nguyên mã hiện tại"}
               </p>
             </div>
 
@@ -233,16 +233,16 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
 
           <div className="border-t pt-6 mb-6">
             <h3 className="font-semibold mb-4">Nhóm nhà cung cấp, ghi chú</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="relative" ref={dropdownRef}>
                 <label className="block text-sm font-medium mb-2">
                   Nhóm nhà cung cấp
                 </label>
-                <div className="border rounded px-3 py-2 min-h-[42px] flex flex-wrap gap-2 items-center cursor-pointer">
+                <div className="border rounded-xl px-3 py-2 min-h-[42px] flex flex-wrap gap-2 items-center cursor-pointer">
                   {selectedGroups.map((group) => (
                     <span
                       key={group.id}
-                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm flex items-center gap-1">
+                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm flex items-center gap-1">
                       {group.name}
                       <button
                         type="button"
@@ -313,8 +313,8 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
                 <textarea
                   {...register("comments")}
                   placeholder="Nhập ghi chú"
-                  className="w-full border rounded px-3 py-2"
-                  rows={3}
+                  className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={2}
                 />
               </div>
             </div>
@@ -322,7 +322,7 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
 
           <div className="border-t pt-6 mb-6">
             <h3 className="font-semibold mb-4">Thông tin xuất hóa đơn</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Tên công ty

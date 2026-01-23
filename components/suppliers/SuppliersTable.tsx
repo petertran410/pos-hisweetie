@@ -11,6 +11,7 @@ interface ColumnConfig {
   key: string;
   label: string;
   visible: boolean;
+  width: string;
   render: (supplier: Supplier) => React.ReactNode;
 }
 
@@ -38,95 +39,113 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "code",
     label: "Mã nhà cung cấp",
     visible: true,
+    width: "180px",
     render: (supplier) => supplier.code,
   },
   {
     key: "name",
     label: "Tên nhà cung cấp",
     visible: true,
+    width: "200px",
     render: (supplier) => supplier.name,
   },
   {
     key: "contactNumber",
     label: "Điện thoại",
     visible: true,
+    width: "150px",
     render: (supplier) => supplier.contactNumber || "-",
   },
   {
     key: "groupName",
     label: "Nhóm nhà cung cấp",
     visible: true,
+    width: "220px",
     render: (supplier) =>
-      supplier.supplierGroupDetails && supplier.supplierGroupDetails.length > 0
-        ? supplier.supplierGroupDetails
-            .map((g) => g.supplierGroup.name)
-            .join(", ")
-        : "-",
+      supplier.groups ? supplier.groups.replace(/\|/g, ", ") : "-",
+  },
+  {
+    key: "branch",
+    label: "Chi nhánh",
+    visible: true,
+    width: "180px",
+    render: (supplier) => supplier.branch?.name || "-",
   },
   {
     key: "email",
     label: "Email",
     visible: false,
+    width: "200px",
     render: (supplier) => supplier.email || "-",
   },
   {
     key: "address",
     label: "Địa chỉ",
     visible: false,
+    width: "250px",
     render: (supplier) => supplier.address || "-",
   },
   {
     key: "location",
     label: "Khu vực",
     visible: false,
+    width: "180px",
     render: (supplier) => supplier.location || "-",
   },
   {
     key: "wardName",
     label: "Phường/Xã",
     visible: false,
+    width: "150px",
     render: (supplier) => supplier.wardName || "-",
   },
   {
     key: "debt",
     label: "Nợ hiện tại",
     visible: true,
+    width: "150px",
     render: (supplier) => formatCurrency(supplier.debt),
   },
   {
     key: "totalInvoiced",
     label: "Tổng mua",
     visible: true,
+    width: "150px",
     render: (supplier) => formatCurrency(supplier.totalInvoiced),
   },
   {
     key: "totalInvoicedWithoutReturn",
     label: "Tổng mua trừ trả hàng",
     visible: false,
+    width: "220px",
     render: (supplier) => formatCurrency(supplier.totalInvoicedWithoutReturn),
   },
   {
     key: "taxCode",
     label: "Mã số thuế",
     visible: false,
+    width: "150px",
     render: (supplier) => supplier.taxCode || "-",
   },
   {
     key: "createdAt",
     label: "Ngày tạo",
     visible: false,
+    width: "180px",
     render: (supplier) => formatDateTime(supplier.createdAt),
   },
   {
     key: "updatedAt",
     label: "Ngày cập nhật",
     visible: false,
+    width: "180px",
     render: (supplier) => formatDateTime(supplier.updatedAt),
   },
   {
     key: "isActive",
     label: "Trạng thái",
     visible: true,
+    width: "150px",
     render: (supplier) => (
       <span
         className={`px-2 py-1 rounded text-xs font-medium ${
@@ -191,6 +210,8 @@ export function SuppliersTable({
   const suppliers = data?.data || [];
   const total = data?.total || 0;
   const visibleColumns = columns.filter((col) => col.visible);
+
+  console.log(suppliers);
 
   const currentItem = filters.currentItem ?? 0;
   const pageSize = filters.pageSize ?? 15;
@@ -259,7 +280,9 @@ export function SuppliersTable({
         <table className="w-full">
           <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left sticky left-0">
+              <th
+                className="px-6 py-3 text-left sticky left-0 bg-gray-50"
+                style={{ width: "60px" }}>
                 <input
                   type="checkbox"
                   checked={
@@ -273,7 +296,12 @@ export function SuppliersTable({
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-6 py-3 text-left text-md font-semibold text-gray-700 whitespace-nowrap">
+                  className="px-6 py-3 text-left text-md font-semibold text-gray-700"
+                  style={{
+                    minWidth: col.width,
+                    maxWidth: col.width,
+                    width: col.width,
+                  }}>
                   {col.label}
                 </th>
               ))}
@@ -303,7 +331,8 @@ export function SuppliersTable({
                     className="border-b cursor-pointer hover:bg-gray-50"
                     onClick={() => toggleExpand(supplier.id)}>
                     <td
-                      className="px-6 py-3 sticky left-0"
+                      className="px-6 py-3 sticky left-0 bg-white"
+                      style={{ width: "60px" }}
                       onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
@@ -315,8 +344,15 @@ export function SuppliersTable({
                     {visibleColumns.map((col) => (
                       <td
                         key={col.key}
-                        className="px-6 py-3 text-md whitespace-nowrap">
-                        {col.render(supplier)}
+                        className="px-6 py-3 text-md align-middle"
+                        style={{
+                          minWidth: col.width,
+                          maxWidth: col.width,
+                          width: col.width,
+                        }}>
+                        <div className="break-words">
+                          {col.render(supplier)}
+                        </div>
                       </td>
                     ))}
                   </tr>
@@ -333,14 +369,11 @@ export function SuppliersTable({
         </table>
       </div>
 
-      <div className="border-t p-4 flex items-center justify-between bg-white">
-        <div className="flex items-center gap-2">
-          <span className="text-md text-gray-600">
-            Hiển thị {currentItem + 1} -{" "}
-            {Math.min(currentItem + pageSize, total)} của {total} nhà cung cấp
-          </span>
+      <div className="border-t px-4 py-3 flex items-center justify-between">
+        <div className="text-md text-gray-600">
+          Hiển thị {currentItem + 1} - {Math.min(currentItem + pageSize, total)}{" "}
+          của {total} nhà cung cấp
         </div>
-
         <div className="flex items-center gap-2">
           <button
             onClick={() =>
@@ -349,19 +382,16 @@ export function SuppliersTable({
               })
             }
             disabled={currentItem === 0}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-            ← Trước
+            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50">
+            Trước
           </button>
-
           <button
             onClick={() =>
-              onFiltersChange({
-                currentItem: currentItem + pageSize,
-              })
+              onFiltersChange({ currentItem: currentItem + pageSize })
             }
             disabled={currentItem + pageSize >= total}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-            Sau →
+            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50">
+            Sau
           </button>
         </div>
       </div>
