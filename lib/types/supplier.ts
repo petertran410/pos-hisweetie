@@ -47,6 +47,7 @@ export interface SupplierFilters {
   pageSize?: number;
   currentItem?: number;
   orderBy?: string;
+  organization?: string;
   orderDirection?: "asc" | "desc";
   includeTotal?: boolean;
   includeSupplierGroup?: boolean;

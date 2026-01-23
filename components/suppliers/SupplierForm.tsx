@@ -35,13 +35,12 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
       code: "",
       name: "",
       contactNumber: "",
-      phone: "",
       email: "",
       address: "",
       location: "",
       wardName: "",
       taxCode: "",
-      contactPerson: "",
+      organization: "",
       comments: "",
       isActive: true,
     },
@@ -60,6 +59,7 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
       setValue("wardName", supplier.wardName || "");
       setValue("taxCode", supplier.taxCode || "");
       setValue("comments", supplier.comments || "");
+      setValue("organization", supplier.organization || "");
       setValue("isActive", supplier.isActive);
 
       if (
@@ -328,7 +328,7 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
                   Tên công ty
                 </label>
                 <input
-                  {...register("contactPerson")}
+                  {...register("organization")}
                   placeholder="Nhập tên công ty"
                   className="w-full border rounded px-3 py-2"
                 />
