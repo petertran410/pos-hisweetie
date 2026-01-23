@@ -8,6 +8,7 @@ import {
   useSupplierGroups,
 } from "@/lib/hooks/useSuppliers";
 import { Supplier, SupplierGroup } from "@/lib/types/supplier";
+import { useBranchStore } from "@/lib/store/branch";
 
 interface SupplierFormProps {
   supplier?: Supplier;
@@ -18,6 +19,7 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
   const createSupplier = useCreateSupplier();
   const updateSupplier = useUpdateSupplier();
   const { data: groupsData } = useSupplierGroups();
+  const { selectedBranch } = useBranchStore();
 
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
@@ -115,6 +117,7 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
         ...data,
         groupIds: selectedGroupIds,
         code: autoGenerateCode ? undefined : data.code,
+        branchId: selectedBranch?.id,
       };
 
       if (supplier) {
