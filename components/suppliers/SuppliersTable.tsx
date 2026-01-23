@@ -257,9 +257,9 @@ export function SuppliersTable({
 
       <div className="flex-1 overflow-auto">
         <table className="w-full">
-          <thead className="bg-gray-100 sticky top-0 z-10">
+          <thead className="sticky top-0 z-10">
             <tr>
-              <th className="px-6 py-3 text-left sticky left-0 bg-gray-100">
+              <th className="px-6 py-3 text-left sticky left-0">
                 <input
                   type="checkbox"
                   checked={
@@ -303,7 +303,7 @@ export function SuppliersTable({
                     className="border-b cursor-pointer hover:bg-gray-50"
                     onClick={() => toggleExpand(supplier.id)}>
                     <td
-                      className="px-6 py-3 sticky left-0 bg-white"
+                      className="px-6 py-3 sticky left-0"
                       onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
