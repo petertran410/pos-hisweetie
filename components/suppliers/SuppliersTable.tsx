@@ -50,7 +50,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "contactNumber",
     label: "Điện thoại",
     visible: true,
-    render: (supplier) => supplier.contactNumber || supplier.phone || "-",
+    render: (supplier) => supplier.contactNumber || "-",
   },
   {
     key: "groupName",
@@ -88,10 +88,10 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (supplier) => supplier.wardName || "-",
   },
   {
-    key: "totalDebt",
+    key: "debt",
     label: "Nợ hiện tại",
     visible: true,
-    render: (supplier) => formatCurrency(supplier.totalDebt),
+    render: (supplier) => formatCurrency(supplier.debt),
   },
   {
     key: "totalInvoiced",
@@ -110,12 +110,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã số thuế",
     visible: false,
     render: (supplier) => supplier.taxCode || "-",
-  },
-  {
-    key: "contactPerson",
-    label: "Người liên hệ",
-    visible: false,
-    render: (supplier) => supplier.contactPerson || "-",
   },
   {
     key: "createdAt",

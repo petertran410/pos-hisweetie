@@ -54,13 +54,11 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
       setValue("code", supplier.code || "");
       setValue("name", supplier.name);
       setValue("contactNumber", supplier.contactNumber || "");
-      setValue("phone", supplier.phone || "");
       setValue("email", supplier.email || "");
       setValue("address", supplier.address || "");
       setValue("location", supplier.location || "");
       setValue("wardName", supplier.wardName || "");
       setValue("taxCode", supplier.taxCode || "");
-      setValue("contactPerson", supplier.contactPerson || "");
       setValue("comments", supplier.comments || "");
       setValue("isActive", supplier.isActive);
 
