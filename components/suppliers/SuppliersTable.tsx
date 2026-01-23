@@ -5,7 +5,6 @@ import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { Supplier, SupplierFilters } from "@/lib/types/supplier";
 import { SupplierDetailRow } from "./SupplierDetailRow";
 import { SupplierForm } from "./SupplierForm";
-import { useBranchStore } from "@/lib/store/branch";
 
 interface ColumnConfig {
   key: string;
@@ -155,7 +154,6 @@ export function SuppliersTable({
   filters,
   onFiltersChange,
 }: SuppliersTableProps) {
-  const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedSupplierId, setExpandedSupplierId] = useState<number | null>(
     null
@@ -163,8 +161,6 @@ export function SuppliersTable({
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(15);
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
@@ -189,7 +185,6 @@ export function SuppliersTable({
   const { data, isLoading } = useSuppliers({
     ...filters,
     name: search || undefined,
-    branchId: selectedBranch?.id,
   });
 
   useEffect(() => {
@@ -201,6 +196,9 @@ export function SuppliersTable({
   const suppliers = data?.data || [];
   const total = data?.total || 0;
   const visibleColumns = columns.filter((col) => col.visible);
+
+  const currentItem = filters.currentItem ?? 0;
+  const pageSize = filters.pageSize ?? 15;
 
   const toggleColumnVisibility = (key: string) => {
     setColumns((prev) =>
@@ -230,23 +228,12 @@ export function SuppliersTable({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setPage(1);
+    onFiltersChange({ currentItem: 0 });
   };
-
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-    onFiltersChange({
-      currentItem: (newPage - 1) * limit,
-    });
-  };
-
-  const totalPages = Math.ceil(total / limit);
-  const startItem = (page - 1) * limit + 1;
-  const endItem = Math.min(page * limit, total);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="border-b bg-white p-4">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
+      <div className="border-b p-4 items-center justify-between">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-semibold">Nhà cung cấp</h1>
           <div className="flex gap-2">
@@ -374,49 +361,30 @@ export function SuppliersTable({
       <div className="border-t p-4 flex items-center justify-between bg-white">
         <div className="flex items-center gap-2">
           <span className="text-md text-gray-600">
-            Hiển thị {startItem} - {endItem} của {total} nhà cung cấp
+            Hiển thị {currentItem + 1} -{" "}
+            {Math.min(currentItem + pageSize, total)} của {total} nhà cung cấp
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page === 1}
+            onClick={() =>
+              onFiltersChange({
+                currentItem: Math.max(0, currentItem - pageSize),
+              })
+            }
+            disabled={currentItem === 0}
             className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
             ← Trước
           </button>
 
-          <div className="flex gap-1">
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              let pageNum;
-              if (totalPages <= 5) {
-                pageNum = i + 1;
-              } else if (page <= 3) {
-                pageNum = i + 1;
-              } else if (page >= totalPages - 2) {
-                pageNum = totalPages - 4 + i;
-              } else {
-                pageNum = page - 2 + i;
-              }
-
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => handlePageChange(pageNum)}
-                  className={`px-3 py-1 border rounded ${
-                    page === pageNum
-                      ? "bg-blue-600 text-white"
-                      : "hover:bg-gray-50"
-                  }`}>
-                  {pageNum}
-                </button>
-              );
-            })}
-          </div>
-
           <button
-            onClick={() => handlePageChange(page + 1)}
-            disabled={page === totalPages}
+            onClick={() =>
+              onFiltersChange({
+                currentItem: currentItem + pageSize,
+              })
+            }
+            disabled={currentItem + pageSize >= total}
             className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
             Sau →
           </button>
