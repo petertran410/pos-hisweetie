@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { X, Search, Plus, Minus } from "lucide-react";
+import { X, Search, ChevronDown, Minus, Plus } from "lucide-react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useBranches } from "@/lib/hooks/useBranches";
@@ -39,6 +39,11 @@ const getProductCost = (product: any, branchId: number): number => {
   return inventory ? Number(inventory.cost) : 0;
 };
 
+const STATUS_OPTIONS = [
+  { value: 0, label: "Phiếu tạm" },
+  { value: 1, label: "Đã xác nhận NCC" },
+];
+
 export function OrderSupplierForm({
   orderSupplier,
   onClose,
@@ -63,12 +68,26 @@ export function OrderSupplierForm({
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
 
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showBranchDropdown, setShowBranchDropdown] = useState(false);
+  const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
+
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const branchDropdownRef = useRef<HTMLDivElement>(null);
+  const supplierDropdownRef = useRef<HTMLDivElement>(null);
+
   const { data: searchResults } = useProducts({
     search: searchQuery,
     limit: 20,
   });
 
   const isFormDisabled = orderSupplier && orderSupplier.status !== 0;
+
+  const selectedStatus = STATUS_OPTIONS.find((s) => s.value === status);
+  const selectedBranchData = branches?.find((b) => b.id === branchId);
+  const selectedSupplier = suppliersData?.data?.find(
+    (s) => s.id === supplierId
+  );
 
   useEffect(() => {
     if (orderSupplier?.items) {
@@ -86,6 +105,32 @@ export function OrderSupplierForm({
       setProducts(loadedProducts);
     }
   }, [orderSupplier]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowStatusDropdown(false);
+      }
+      if (
+        branchDropdownRef.current &&
+        !branchDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowBranchDropdown(false);
+      }
+      if (
+        supplierDropdownRef.current &&
+        !supplierDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowSupplierDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleAddProduct = (product: any) => {
     if (isFormDisabled) return;
@@ -185,7 +230,7 @@ export function OrderSupplierForm({
     return products.reduce((sum, p) => sum + p.subTotal, 0);
   };
 
-  const handleSubmit = async (submitStatus: number) => {
+  const handleSubmit = async () => {
     if (!branchId) {
       toast.error("Vui lòng chọn chi nhánh");
       return;
@@ -210,7 +255,7 @@ export function OrderSupplierForm({
     const orderSupplierData = {
       supplierId,
       branchId,
-      status: submitStatus,
+      status: status,
       description: note,
       items: products.map((p) => ({
         productId: p.productId,
@@ -284,9 +329,9 @@ export function OrderSupplierForm({
                   setTimeout(() => setShowSearchResults(false), 200)
                 }
                 disabled={isFormDisabled ? true : false}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2.5 border rounded-lg disabled:bg-gray-100 pr-10"
               />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             </div>
 
             {showSearchResults && searchQuery && searchResults?.data && (
@@ -342,9 +387,6 @@ export function OrderSupplierForm({
                     Tên hàng
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                    ĐVT
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     SL đặt
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
@@ -371,9 +413,6 @@ export function OrderSupplierForm({
                     <td className="px-4 py-3 text-sm text-gray-900 min-w-[200px]">
                       {item.productName}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
-                      -
-                    </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2">
                         <button
@@ -388,7 +427,7 @@ export function OrderSupplierForm({
                           <Minus className="w-4 h-4" />
                         </button>
                         <input
-                          type="number"
+                          type="text"
                           value={item.quantity}
                           onChange={(e) =>
                             handleQuantityChange(index, e.target.value)
@@ -411,7 +450,7 @@ export function OrderSupplierForm({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <input
-                        type="number"
+                        type="text"
                         value={item.price}
                         onChange={(e) =>
                           handlePriceChange(index, e.target.value)
@@ -422,7 +461,7 @@ export function OrderSupplierForm({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <input
-                        type="number"
+                        type="text"
                         value={item.discount}
                         onChange={(e) =>
                           handleDiscountChange(index, e.target.value)
@@ -470,18 +509,40 @@ export function OrderSupplierForm({
             />
           </div>
 
-          <div>
+          <div ref={statusDropdownRef}>
             <label className="block text-sm text-gray-600 mb-1">
-              Trạng thái
+              Trạng thái <span className="text-red-500">*</span>
             </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(Number(e.target.value))}
-              disabled={isFormDisabled ? true : false}
-              className="w-full px-3 py-2 border rounded disabled:bg-gray-100">
-              <option value={0}>Phiếu tạm</option>
-              <option value={1}>Đã xác nhận NCC</option>
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  !isFormDisabled && setShowStatusDropdown(!showStatusDropdown)
+                }
+                disabled={isFormDisabled ? true : false}
+                className="w-full px-3 py-2 border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
+                <span className={!selectedStatus ? "text-gray-400" : ""}>
+                  {selectedStatus ? selectedStatus.label : "Chọn trạng thái"}
+                </span>
+                <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
+              </button>
+
+              {showStatusDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10">
+                  {STATUS_OPTIONS.map((option) => (
+                    <div
+                      key={option.value}
+                      onClick={() => {
+                        setStatus(option.value);
+                        setShowStatusDropdown(false);
+                      }}
+                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      {option.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -504,45 +565,90 @@ export function OrderSupplierForm({
             </div>
           </div>
 
-          <div>
+          <div ref={branchDropdownRef}>
             <label className="block text-sm text-gray-600 mb-1">
               Chi nhánh <span className="text-red-500">*</span>
             </label>
-            <select
-              value={branchId}
-              onChange={(e) => {
-                if (!orderSupplier) {
-                  setBranchId(Number(e.target.value));
-                  setProducts([]);
-                }
-              }}
-              disabled={orderSupplier ? true : false}
-              className="w-full px-3 py-2 border rounded disabled:bg-gray-100">
-              <option value={0}>Chọn chi nhánh</option>
-              {branches?.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!orderSupplier) {
+                    setShowBranchDropdown(!showBranchDropdown);
+                  }
+                }}
+                disabled={orderSupplier ? true : false}
+                className="w-full px-3 py-2 border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
+                <span
+                  className={
+                    !selectedBranchData || branchId === 0 ? "text-gray-400" : ""
+                  }>
+                  {selectedBranchData
+                    ? selectedBranchData.name
+                    : "Chọn chi nhánh"}
+                </span>
+                <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
+              </button>
+
+              {showBranchDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                  {branches?.map((branch) => (
+                    <div
+                      key={branch.id}
+                      onClick={() => {
+                        setBranchId(branch.id);
+                        setProducts([]);
+                        setShowBranchDropdown(false);
+                      }}
+                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      {branch.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div>
+          <div ref={supplierDropdownRef}>
             <label className="block text-sm text-gray-600 mb-1">
               Nhà cung cấp <span className="text-red-500">*</span>
             </label>
-            <select
-              value={supplierId}
-              onChange={(e) => setSupplierId(Number(e.target.value))}
-              disabled={isFormDisabled ? true : false}
-              className="w-full px-3 py-2 border rounded disabled:bg-gray-100">
-              <option value={0}>Chọn nhà cung cấp</option>
-              {suppliersData?.data?.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  !isFormDisabled &&
+                  setShowSupplierDropdown(!showSupplierDropdown)
+                }
+                disabled={isFormDisabled ? true : false}
+                className="w-full px-3 py-2 border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
+                <span
+                  className={
+                    !selectedSupplier || supplierId === 0 ? "text-gray-400" : ""
+                  }>
+                  {selectedSupplier
+                    ? selectedSupplier.name
+                    : "Chọn nhà cung cấp"}
+                </span>
+                <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
+              </button>
+
+              {showSupplierDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                  {suppliersData?.data?.map((supplier) => (
+                    <div
+                      key={supplier.id}
+                      onClick={() => {
+                        setSupplierId(supplier.id);
+                        setShowSupplierDropdown(false);
+                      }}
+                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      {supplier.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -557,28 +663,16 @@ export function OrderSupplierForm({
             />
           </div>
 
-          <div className="pt-4 border-t space-y-3">
+          <div className="pt-4 border-t">
             {!isFormDisabled && (
-              <>
-                <button
-                  onClick={() => handleSubmit(0)}
-                  disabled={
-                    createOrderSupplier.isPending ||
-                    updateOrderSupplier.isPending
-                  }
-                  className="w-full px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium disabled:opacity-50">
-                  Lưu tạm
-                </button>
-                <button
-                  onClick={() => handleSubmit(1)}
-                  disabled={
-                    createOrderSupplier.isPending ||
-                    updateOrderSupplier.isPending
-                  }
-                  className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50">
-                  Xác nhận NCC
-                </button>
-              </>
+              <button
+                onClick={handleSubmit}
+                disabled={
+                  createOrderSupplier.isPending || updateOrderSupplier.isPending
+                }
+                className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50">
+                Tạo đặt hàng nhập
+              </button>
             )}
           </div>
         </div>
