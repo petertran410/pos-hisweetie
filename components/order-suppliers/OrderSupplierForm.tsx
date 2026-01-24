@@ -239,7 +239,7 @@ export function OrderSupplierForm({
 
   return (
     <div className="flex h-full border-t bg-gray-50 overflow-hidden">
-      <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] m-4 border rounded-xl">
+      <div className="flex-1 flex flex-col overflow-y-auto bg-white w-80 m-4 border rounded-xl">
         <div className="border-b px-6 py-4 flex items-center justify-between bg-gray-50">
           <div>
             <h2 className="text-xl font-semibold">
@@ -456,7 +456,7 @@ export function OrderSupplierForm({
         </div>
       </div>
 
-      <div className="w-80 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-6 bg-white shadow-xl">
+      <div className="w-80 border mr-4 mb-4 mt-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-6 bg-white shadow-xl">
         <div className="space-y-6">
           <div>
             <label className="block text-sm text-gray-600 mb-1">
