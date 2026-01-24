@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from "@/lib/config/api";
 import type {
   PurchaseOrder,
   PurchaseOrderFilters,
@@ -11,15 +11,15 @@ export const purchaseOrdersApi = {
       total: number;
       page: number;
       limit: number;
-    }>("/purchase-orders", { params });
-    return response.data;
+    }>("/purchase-orders", params);
+    return response;
   },
 
   getById: async (id: number) => {
     const response = await apiClient.get<PurchaseOrder>(
       `/purchase-orders/${id}`
     );
-    return response.data;
+    return response;
   },
 
   create: async (data: any) => {
@@ -27,7 +27,7 @@ export const purchaseOrdersApi = {
       "/purchase-orders",
       data
     );
-    return response.data;
+    return response;
   },
 
   update: async (id: number, data: any) => {
@@ -35,11 +35,11 @@ export const purchaseOrdersApi = {
       `/purchase-orders/${id}`,
       data
     );
-    return response.data;
+    return response;
   },
 
   delete: async (id: number) => {
     const response = await apiClient.delete(`/purchase-orders/${id}`);
-    return response.data;
+    return response;
   },
 };

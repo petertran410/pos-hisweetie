@@ -7,7 +7,7 @@ import { ChevronDown } from "lucide-react";
 import type { PurchaseOrderFilters } from "@/lib/types/purchase-order";
 import {
   PURCHASE_ORDER_STATUS,
-  PURCHASE_ORDER_STATUS_LABELS,
+  getStatusLabel,
 } from "@/lib/types/purchase-order";
 
 interface PurchaseOrderSidebarProps {
@@ -33,7 +33,6 @@ export function PurchaseOrderSidebar({
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedBranch = branches?.find((b) => b.id === filters.branchId);
-  const selectedStatus = filters.status;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -132,6 +131,29 @@ export function PurchaseOrderSidebar({
     setSelectedTimeOption("this_month");
   };
 
+  const statusOptions = [
+    {
+      value: PURCHASE_ORDER_STATUS.DRAFT,
+      label: getStatusLabel(PURCHASE_ORDER_STATUS.DRAFT),
+    },
+    {
+      value: PURCHASE_ORDER_STATUS.CONFIRMED,
+      label: getStatusLabel(PURCHASE_ORDER_STATUS.CONFIRMED),
+    },
+    {
+      value: PURCHASE_ORDER_STATUS.PARTIAL,
+      label: getStatusLabel(PURCHASE_ORDER_STATUS.PARTIAL),
+    },
+    {
+      value: PURCHASE_ORDER_STATUS.COMPLETED,
+      label: getStatusLabel(PURCHASE_ORDER_STATUS.COMPLETED),
+    },
+    {
+      value: PURCHASE_ORDER_STATUS.CANCELLED,
+      label: getStatusLabel(PURCHASE_ORDER_STATUS.CANCELLED),
+    },
+  ];
+
   return (
     <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
       <div className="flex items-center justify-between">
@@ -188,8 +210,8 @@ export function PurchaseOrderSidebar({
             onClick={() => setShowStatusDropdown(!showStatusDropdown)}
             className="w-full flex items-center justify-between border rounded px-3 py-2 text-sm hover:bg-gray-50">
             <span className="truncate">
-              {selectedStatus
-                ? PURCHASE_ORDER_STATUS_LABELS[selectedStatus]
+              {filters.status
+                ? getStatusLabel(filters.status)
                 : "Chọn trạng thái"}
             </span>
             <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
@@ -205,19 +227,17 @@ export function PurchaseOrderSidebar({
                 className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
                 Tất cả trạng thái
               </div>
-              {Object.entries(PURCHASE_ORDER_STATUS_LABELS).map(
-                ([value, label]) => (
-                  <div
-                    key={value}
-                    onClick={() => {
-                      setFilters({ status: Number(value) });
-                      setShowStatusDropdown(false);
-                    }}
-                    className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
-                    {label}
-                  </div>
-                )
-              )}
+              {statusOptions.map((option) => (
+                <div
+                  key={option.value}
+                  onClick={() => {
+                    setFilters({ status: option.value });
+                    setShowStatusDropdown(false);
+                  }}
+                  className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                  {option.label}
+                </div>
+              ))}
             </div>
           )}
         </div>

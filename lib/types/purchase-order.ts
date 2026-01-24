@@ -75,10 +75,14 @@ export const PURCHASE_ORDER_STATUS = {
   CANCELLED: 5,
 } as const;
 
-export const PURCHASE_ORDER_STATUS_LABELS = {
+export const PURCHASE_ORDER_STATUS_LABELS: Record<number, string> = {
   [PURCHASE_ORDER_STATUS.DRAFT]: "Phiếu tạm",
   [PURCHASE_ORDER_STATUS.CONFIRMED]: "Đã xác nhận NCC",
   [PURCHASE_ORDER_STATUS.PARTIAL]: "Nhập một phần",
   [PURCHASE_ORDER_STATUS.COMPLETED]: "Hoàn thành",
   [PURCHASE_ORDER_STATUS.CANCELLED]: "Đã hủy",
-} as const;
+};
+
+export function getStatusLabel(status: number): string {
+  return PURCHASE_ORDER_STATUS_LABELS[status] || "Không xác định";
+}

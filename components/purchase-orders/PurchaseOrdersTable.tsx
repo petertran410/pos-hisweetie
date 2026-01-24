@@ -2,14 +2,14 @@
 
 import { useState, Fragment, useEffect } from "react";
 import { usePurchaseOrders } from "@/lib/hooks/usePurchaseOrders";
-import type {
-  PurchaseOrder,
-  PurchaseOrderFilters,
+import {
+  getStatusLabel,
+  type PurchaseOrder,
+  type PurchaseOrderFilters,
 } from "@/lib/types/purchase-order";
 import { PurchaseOrderDetailRow } from "./PurchaseOrderDetailRow";
 import { Plus, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/types/purchase-order";
 
 interface ColumnConfig {
   key: string;
@@ -43,14 +43,14 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "code",
     label: "Mã đặt hàng nhập",
     visible: true,
-    width: "180px",
+    width: "200px",
     render: (po) => po.code,
   },
   {
     key: "supplierCode",
     label: "Mã nhập hàng",
     visible: true,
-    width: "150px",
+    width: "180px",
     render: (po) => po.supplier?.code || "-",
   },
   {
@@ -92,14 +92,14 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "expectedDate",
     label: "Ngày nhập dự kiến",
     visible: false,
-    width: "180px",
+    width: "200px",
     render: () => "-",
   },
   {
     key: "totalAmount",
     label: "Tổng số lượng",
     visible: true,
-    width: "150px",
+    width: "180px",
     render: (po) =>
       po.items?.reduce((sum, item) => sum + Number(item.quantity), 0) || 0,
   },
@@ -107,7 +107,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "grandTotal",
     label: "Tổng tiền hàng",
     visible: true,
-    width: "150px",
+    width: "180px",
     render: (po) => formatCurrency(po.grandTotal),
   },
   {
@@ -121,7 +121,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "shippingFee",
     label: "Chi phí nhập trả NCC",
     visible: true,
-    width: "180px",
+    width: "220px",
     render: (po) => formatCurrency(po.shippingFee),
   },
   {
@@ -135,14 +135,14 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "otherFees",
     label: "Tiền đã trả NCC",
     visible: true,
-    width: "150px",
+    width: "180px",
     render: (po) => formatCurrency(po.paidAmount),
   },
   {
     key: "shippingFeeOther",
     label: "Chi phí nhập khác",
     visible: true,
-    width: "150px",
+    width: "200px",
     render: (po) => formatCurrency(po.otherFees),
   },
   {
@@ -170,7 +170,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
             ? "bg-green-100 text-green-800"
             : "bg-red-100 text-red-800"
         }`}>
-        {po.status ? PURCHASE_ORDER_STATUS_LABELS[po.status] : "-"}
+        {po.status ? getStatusLabel(po.status) : "-"}
       </span>
     ),
   },
@@ -273,7 +273,7 @@ export function PurchaseOrdersTable({
     <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
       <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-4 w-[500px]">
-          <h1 className="text-xl font-semibold w-[200px]">Đặt hàng nhập</h1>
+          <h1 className="text-xl font-semibold w-[220px]">Đặt hàng nhập</h1>
           <input
             type="text"
             placeholder="Theo mã phiếu đặt hàng nhập"
