@@ -1,9 +1,9 @@
-export interface PurchaseOrder {
+export interface OrderSupplier {
   id: number;
   code: string;
   supplierId: number;
   branchId?: number;
-  purchaseDate: string;
+  orderDate: string;
   totalAmount: number;
   discount: number;
   discountRatio: number;
@@ -16,7 +16,7 @@ export interface PurchaseOrder {
   status: number;
   statusValue?: string;
   description?: string;
-  purchaseById?: number;
+  userId?: number;
   createdBy: number;
   createdAt: string;
   updatedAt: string;
@@ -30,7 +30,7 @@ export interface PurchaseOrder {
     id: number;
     name: string;
   };
-  purchaseBy?: {
+  user?: {
     id: number;
     name: string;
   };
@@ -38,12 +38,12 @@ export interface PurchaseOrder {
     id: number;
     name: string;
   };
-  items?: PurchaseOrderItem[];
+  items?: OrderSupplierItem[];
 }
 
-export interface PurchaseOrderItem {
+export interface OrderSupplierItem {
   id: number;
-  purchaseOrderId: number;
+  orderSupplierId: number;
   productId: number;
   productCode: string;
   productName: string;
@@ -55,19 +55,19 @@ export interface PurchaseOrderItem {
   description?: string;
 }
 
-export interface PurchaseOrderFilters {
+export interface OrderSupplierFilters {
   branchId?: number;
   supplierId?: number;
   status?: number;
   createdById?: number;
-  purchaseById?: number;
+  userId?: number;
   createdDateFrom?: string;
   createdDateTo?: string;
   pageSize?: number;
   currentItem?: number;
 }
 
-export const PURCHASE_ORDER_STATUS = {
+export const ORDER_SUPPLIER_STATUS = {
   DRAFT: 1,
   CONFIRMED: 2,
   PARTIAL: 3,
@@ -75,14 +75,14 @@ export const PURCHASE_ORDER_STATUS = {
   CANCELLED: 5,
 } as const;
 
-export const PURCHASE_ORDER_STATUS_LABELS: Record<number, string> = {
-  [PURCHASE_ORDER_STATUS.DRAFT]: "Phiếu tạm",
-  [PURCHASE_ORDER_STATUS.CONFIRMED]: "Đã xác nhận NCC",
-  [PURCHASE_ORDER_STATUS.PARTIAL]: "Nhập một phần",
-  [PURCHASE_ORDER_STATUS.COMPLETED]: "Hoàn thành",
-  [PURCHASE_ORDER_STATUS.CANCELLED]: "Đã hủy",
+export const ORDER_SUPPLIER_STATUS_LABELS: Record<number, string> = {
+  [ORDER_SUPPLIER_STATUS.DRAFT]: "Phiếu tạm",
+  [ORDER_SUPPLIER_STATUS.CONFIRMED]: "Đã xác nhận NCC",
+  [ORDER_SUPPLIER_STATUS.PARTIAL]: "Nhập một phần",
+  [ORDER_SUPPLIER_STATUS.COMPLETED]: "Hoàn thành",
+  [ORDER_SUPPLIER_STATUS.CANCELLED]: "Đã hủy",
 };
 
 export function getStatusLabel(status: number): string {
-  return PURCHASE_ORDER_STATUS_LABELS[status] || "Không xác định";
+  return ORDER_SUPPLIER_STATUS_LABELS[status] || "Không xác định";
 }

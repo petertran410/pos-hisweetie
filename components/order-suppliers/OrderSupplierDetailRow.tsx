@@ -1,18 +1,18 @@
 "use client";
 
-import { usePurchaseOrder } from "@/lib/hooks/usePurchaseOrders";
+import { useOrderSupplier } from "@/lib/hooks/useOrderSuppliers";
 import { formatCurrency } from "@/lib/utils";
 
-interface PurchaseOrderDetailRowProps {
-  purchaseOrderId: number;
+interface OrderSupplierDetailRowProps {
+  orderSupplierId: number;
   colSpan: number;
 }
 
-export function PurchaseOrderDetailRow({
-  purchaseOrderId,
+export function OrderSupplierDetailRow({
+  orderSupplierId,
   colSpan,
-}: PurchaseOrderDetailRowProps) {
-  const { data: purchaseOrder, isLoading } = usePurchaseOrder(purchaseOrderId);
+}: OrderSupplierDetailRowProps) {
+  const { data: orderSupplier, isLoading } = useOrderSupplier(orderSupplierId);
 
   if (isLoading) {
     return (
@@ -24,7 +24,7 @@ export function PurchaseOrderDetailRow({
     );
   }
 
-  if (!purchaseOrder) {
+  if (!orderSupplier) {
     return null;
   }
 
@@ -39,20 +39,20 @@ export function PurchaseOrderDetailRow({
           </div>
 
           <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-4">{purchaseOrder.code}</h3>
+            <h3 className="text-lg font-semibold mb-4">{orderSupplier.code}</h3>
 
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <div className="mb-4">
                   <p className="text-md text-gray-600 mb-1">Người tạo:</p>
                   <p className="text-md font-medium">
-                    {purchaseOrder.creator?.name || "-"}
+                    {orderSupplier.creator?.name || "-"}
                   </p>
                 </div>
                 <div className="mb-4">
                   <p className="text-md text-gray-600 mb-1">Nhà cung cấp:</p>
                   <p className="text-md font-medium">
-                    {purchaseOrder.supplier?.name || "-"}
+                    {orderSupplier.supplier?.name || "-"}
                   </p>
                 </div>
               </div>
@@ -61,7 +61,7 @@ export function PurchaseOrderDetailRow({
                 <div className="mb-4">
                   <p className="text-md text-gray-600 mb-1">Ngày đặt:</p>
                   <p className="text-md font-medium">
-                    {new Date(purchaseOrder.purchaseDate).toLocaleDateString(
+                    {new Date(orderSupplier.orderDate).toLocaleDateString(
                       "vi-VN"
                     )}
                   </p>
@@ -117,7 +117,7 @@ export function PurchaseOrderDetailRow({
                 </tr>
               </thead>
               <tbody>
-                {purchaseOrder.items?.map((item: any) => (
+                {orderSupplier.items?.map((item) => (
                   <tr key={item.id}>
                     <td className="px-4 py-2 text-sm border">
                       {item.productCode}
@@ -152,31 +152,31 @@ export function PurchaseOrderDetailRow({
               <div className="flex justify-between">
                 <span>Số lượng mặt hàng:</span>
                 <span className="font-medium">
-                  {purchaseOrder.items?.length || 0}
+                  {orderSupplier.items?.length || 0}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Tổng tiền hàng:</span>
                 <span className="font-medium">
-                  {formatCurrency(purchaseOrder.totalAmount)}
+                  {formatCurrency(orderSupplier.totalAmount)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Giảm giá:</span>
                 <span className="font-medium">
-                  {formatCurrency(purchaseOrder.discount)}
+                  {formatCurrency(orderSupplier.discount)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Cần trả NCC:</span>
                 <span className="font-medium">
-                  {formatCurrency(purchaseOrder.grandTotal)}
+                  {formatCurrency(orderSupplier.subTotal)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Tiền đã trả NCC:</span>
                 <span className="font-medium">
-                  {formatCurrency(purchaseOrder.paidAmount)}
+                  {formatCurrency(orderSupplier.paidAmount)}
                 </span>
               </div>
             </div>

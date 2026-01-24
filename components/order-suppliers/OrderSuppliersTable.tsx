@@ -1,22 +1,22 @@
 "use client";
 
 import { useState, Fragment, useEffect } from "react";
-import { usePurchaseOrders } from "@/lib/hooks/usePurchaseOrders";
-import {
-  getStatusLabel,
-  type PurchaseOrder,
-  type PurchaseOrderFilters,
-} from "@/lib/types/purchase-order";
-import { PurchaseOrderDetailRow } from "./PurchaseOrderDetailRow";
+import { useOrderSuppliers } from "@/lib/hooks/useOrderSuppliers";
+import type {
+  OrderSupplier,
+  OrderSupplierFilters,
+} from "@/lib/types/order-supplier";
+import { OrderSupplierDetailRow } from "./OrderSupplierDetailRow";
 import { Plus, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { getStatusLabel } from "@/lib/types/order-supplier";
 
 interface ColumnConfig {
   key: string;
   label: string;
   visible: boolean;
   width: string;
-  render: (po: PurchaseOrder) => React.ReactNode;
+  render: (os: OrderSupplier) => React.ReactNode;
 }
 
 const formatCurrency = (value: number | string) => {
@@ -43,134 +43,134 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "code",
     label: "Mã đặt hàng nhập",
     visible: true,
-    width: "200px",
-    render: (po) => po.code,
+    width: "180px",
+    render: (os) => os.code,
   },
   {
     key: "supplierCode",
     label: "Mã nhập hàng",
     visible: true,
-    width: "180px",
-    render: (po) => po.supplier?.code || "-",
+    width: "150px",
+    render: (os) => os.supplier?.code || "-",
   },
   {
-    key: "purchaseDate",
+    key: "orderDate",
     label: "Thời gian",
     visible: true,
     width: "180px",
-    render: (po) => formatDateTime(po.purchaseDate),
+    render: (os) => formatDateTime(os.orderDate),
   },
   {
     key: "createdAt",
     label: "Thời gian tạo",
     visible: true,
     width: "180px",
-    render: (po) => formatDateTime(po.createdAt),
+    render: (os) => formatDateTime(os.createdAt),
   },
   {
     key: "updatedAt",
     label: "Ngày cập nhật",
     visible: true,
     width: "180px",
-    render: (po) => formatDateTime(po.updatedAt),
+    render: (os) => formatDateTime(os.updatedAt),
   },
   {
-    key: "branch",
+    key: "supplier",
     label: "Nhà cung cấp",
     visible: true,
     width: "200px",
-    render: (po) => po.supplier?.name || "-",
+    render: (os) => os.supplier?.name || "-",
   },
   {
     key: "branchName",
     label: "Chi nhánh",
     visible: true,
     width: "150px",
-    render: (po) => po.branch?.name || "-",
+    render: (os) => os.branch?.name || "-",
   },
   {
     key: "expectedDate",
     label: "Ngày nhập dự kiến",
     visible: false,
-    width: "200px",
+    width: "180px",
     render: () => "-",
   },
   {
     key: "totalAmount",
     label: "Tổng số lượng",
     visible: true,
-    width: "180px",
-    render: (po) =>
-      po.items?.reduce((sum, item) => sum + Number(item.quantity), 0) || 0,
+    width: "150px",
+    render: (os) =>
+      os.items?.reduce((sum, item) => sum + Number(item.quantity), 0) || 0,
   },
   {
     key: "grandTotal",
     label: "Tổng tiền hàng",
     visible: true,
-    width: "180px",
-    render: (po) => formatCurrency(po.grandTotal),
+    width: "150px",
+    render: (os) => formatCurrency(os.totalAmount),
   },
   {
     key: "discount",
     label: "Giảm giá",
     visible: true,
     width: "120px",
-    render: (po) => formatCurrency(po.discount),
+    render: (os) => formatCurrency(os.discount),
   },
   {
     key: "shippingFee",
     label: "Chi phí nhập trả NCC",
     visible: true,
-    width: "220px",
-    render: (po) => formatCurrency(po.shippingFee),
+    width: "180px",
+    render: (os) => formatCurrency(os.shippingFee),
   },
   {
     key: "debtAmount",
     label: "Cần trả NCC",
     visible: true,
     width: "150px",
-    render: (po) => formatCurrency(po.debtAmount),
+    render: (os) => formatCurrency(os.supplierDebt),
+  },
+  {
+    key: "paidAmount",
+    label: "Tiền đã trả NCC",
+    visible: true,
+    width: "150px",
+    render: (os) => formatCurrency(os.paidAmount),
   },
   {
     key: "otherFees",
-    label: "Tiền đã trả NCC",
-    visible: true,
-    width: "180px",
-    render: (po) => formatCurrency(po.paidAmount),
-  },
-  {
-    key: "shippingFeeOther",
     label: "Chi phí nhập khác",
     visible: true,
-    width: "200px",
-    render: (po) => formatCurrency(po.otherFees),
+    width: "150px",
+    render: (os) => formatCurrency(os.otherFees),
   },
   {
     key: "note",
     label: "Ghi chú",
     visible: true,
     width: "200px",
-    render: (po) => po.description || "-",
+    render: (os) => os.description || "-",
   },
   {
     key: "status",
     label: "Trạng thái",
     visible: true,
     width: "150px",
-    render: (po) => (
+    render: (os) => (
       <span
         className={`px-2 py-1 rounded text-xs ${
-          po.status === 1
+          os.status === 1
             ? "bg-gray-100 text-gray-800"
-            : po.status === 2
+            : os.status === 2
             ? "bg-blue-100 text-blue-800"
-            : po.status === 3
+            : os.status === 3
             ? "bg-yellow-100 text-yellow-800"
-            : po.status === 4
+            : os.status === 4
             ? "bg-green-100 text-green-800"
             : "bg-red-100 text-red-800"
         }`}>
-        {po.status ? getStatusLabel(po.status) : "-"}
+        {os.status ? getStatusLabel(os.status) : "-"}
       </span>
     ),
   },
@@ -179,19 +179,19 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Người tạo",
     visible: true,
     width: "150px",
-    render: (po) => po.creator?.name || "-",
+    render: (os) => os.creator?.name || "-",
   },
 ];
 
-interface PurchaseOrdersTableProps {
-  filters: PurchaseOrderFilters;
-  onFiltersChange: (filters: Partial<PurchaseOrderFilters>) => void;
+interface OrderSuppliersTableProps {
+  filters: OrderSupplierFilters;
+  onFiltersChange: (filters: Partial<OrderSupplierFilters>) => void;
 }
 
-export function PurchaseOrdersTable({
+export function OrderSuppliersTable({
   filters,
   onFiltersChange,
-}: PurchaseOrdersTableProps) {
+}: OrderSuppliersTableProps) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -200,7 +200,7 @@ export function PurchaseOrdersTable({
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("purchaseOrderTableColumns");
+      const saved = localStorage.getItem("orderSupplierTableColumns");
       if (saved) {
         try {
           const savedColumns = JSON.parse(saved);
@@ -218,20 +218,20 @@ export function PurchaseOrdersTable({
     return DEFAULT_COLUMNS;
   });
 
-  const { data, isLoading } = usePurchaseOrders({
+  const { data, isLoading } = useOrderSuppliers({
     ...filters,
   });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem(
-        "purchaseOrderTableColumns",
+        "orderSupplierTableColumns",
         JSON.stringify(columns)
       );
     }
   }, [columns]);
 
-  const purchaseOrders = data?.data || [];
+  const orderSuppliers = data?.data || [];
   const total = data?.total || 0;
   const visibleColumns = columns.filter((col) => col.visible);
 
@@ -247,10 +247,10 @@ export function PurchaseOrdersTable({
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === purchaseOrders.length) {
+    if (selectedIds.length === orderSuppliers.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(purchaseOrders.map((po: any) => po.id));
+      setSelectedIds(orderSuppliers.map((os) => os.id));
     }
   };
 
@@ -264,16 +264,11 @@ export function PurchaseOrdersTable({
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    onFiltersChange({ currentItem: 0 });
-  };
-
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
       <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-4 w-[500px]">
-          <h1 className="text-xl font-semibold w-[220px]">Đặt hàng nhập</h1>
+          <h1 className="text-xl font-semibold w-[200px]">Đặt hàng nhập</h1>
           <input
             type="text"
             placeholder="Theo mã phiếu đặt hàng nhập"
@@ -311,8 +306,8 @@ export function PurchaseOrdersTable({
                 <input
                   type="checkbox"
                   checked={
-                    purchaseOrders.length > 0 &&
-                    selectedIds.length === purchaseOrders.length
+                    orderSuppliers.length > 0 &&
+                    selectedIds.length === orderSuppliers.length
                   }
                   onChange={toggleSelectAll}
                   className="cursor-pointer"
@@ -345,7 +340,7 @@ export function PurchaseOrdersTable({
                   Đang tải...
                 </td>
               </tr>
-            ) : purchaseOrders.length === 0 ? (
+            ) : orderSuppliers.length === 0 ? (
               <tr>
                 <td
                   colSpan={visibleColumns.length + 2}
@@ -354,22 +349,22 @@ export function PurchaseOrdersTable({
                 </td>
               </tr>
             ) : (
-              purchaseOrders.map((po: any) => (
-                <Fragment key={po.id}>
+              orderSuppliers.map((os) => (
+                <Fragment key={os.id}>
                   <tr className="hover:bg-gray-50">
                     <td className="px-6 py-3 sticky left-0 bg-white">
                       <input
                         type="checkbox"
-                        checked={selectedIds.includes(po.id)}
-                        onChange={() => toggleSelect(po.id)}
+                        checked={selectedIds.includes(os.id)}
+                        onChange={() => toggleSelect(os.id)}
                         className="cursor-pointer"
                       />
                     </td>
                     <td className="px-6 py-3 sticky left-[60px] bg-white">
                       <button
-                        onClick={() => toggleExpand(po.id)}
+                        onClick={() => toggleExpand(os.id)}
                         className="text-blue-600 hover:text-blue-800">
-                        {expandedId === po.id ? "▼" : "▶"}
+                        {expandedId === os.id ? "▼" : "▶"}
                       </button>
                     </td>
                     {visibleColumns.map((col) => (
@@ -382,14 +377,14 @@ export function PurchaseOrdersTable({
                           width: col.width,
                         }}>
                         <div className="truncate break-words">
-                          {col.render(po)}
+                          {col.render(os)}
                         </div>
                       </td>
                     ))}
                   </tr>
-                  {expandedId === po.id && (
-                    <PurchaseOrderDetailRow
-                      purchaseOrderId={po.id}
+                  {expandedId === os.id && (
+                    <OrderSupplierDetailRow
+                      orderSupplierId={os.id}
                       colSpan={visibleColumns.length + 2}
                     />
                   )}

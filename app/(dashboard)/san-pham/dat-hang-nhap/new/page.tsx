@@ -1,6 +1,6 @@
 "use client";
 
-export default function NewPurchaseOrderPage() {
+export default function NewOrderSupplierPage() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold">Tạo phiếu đặt hàng nhập</h1>

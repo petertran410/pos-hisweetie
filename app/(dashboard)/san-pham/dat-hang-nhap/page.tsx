@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { PurchaseOrderSidebar } from "@/components/purchase-orders/PurchaseOrderSidebar";
-import { PurchaseOrdersTable } from "@/components/purchase-orders/PurchaseOrdersTable";
-import type { PurchaseOrderFilters } from "@/lib/types/purchase-order";
+import { OrderSupplierSidebar } from "@/components/order-suppliers/OrderSupplierSidebar";
+import { OrderSuppliersTable } from "@/components/order-suppliers/OrderSuppliersTable";
+import type { OrderSupplierFilters } from "@/lib/types/order-supplier";
 
-export default function PurchaseOrdersPage() {
-  const [filters, setFilters] = useState<PurchaseOrderFilters>({
+export default function OrderSuppliersPage() {
+  const [filters, setFilters] = useState<OrderSupplierFilters>({
     pageSize: 15,
     currentItem: 0,
   });
 
   return (
     <div className="flex h-full border-t bg-gray-50">
-      <PurchaseOrderSidebar filters={filters} setFilters={setFilters} />
-      <PurchaseOrdersTable filters={filters} onFiltersChange={setFilters} />
+      <OrderSupplierSidebar filters={filters} setFilters={setFilters} />
+      <OrderSuppliersTable filters={filters} onFiltersChange={setFilters} />
     </div>
   );
 }

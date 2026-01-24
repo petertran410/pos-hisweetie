@@ -4,21 +4,21 @@ import { useState, useEffect, useRef } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsers } from "@/lib/hooks/useUsers";
 import { ChevronDown } from "lucide-react";
-import type { PurchaseOrderFilters } from "@/lib/types/purchase-order";
+import type { OrderSupplierFilters } from "@/lib/types/order-supplier";
 import {
-  PURCHASE_ORDER_STATUS,
+  ORDER_SUPPLIER_STATUS,
   getStatusLabel,
-} from "@/lib/types/purchase-order";
+} from "@/lib/types/order-supplier";
 
-interface PurchaseOrderSidebarProps {
-  filters: PurchaseOrderFilters;
-  setFilters: (filters: Partial<PurchaseOrderFilters>) => void;
+interface OrderSupplierSidebarProps {
+  filters: OrderSupplierFilters;
+  setFilters: (filters: Partial<OrderSupplierFilters>) => void;
 }
 
-export function PurchaseOrderSidebar({
+export function OrderSupplierSidebar({
   filters,
   setFilters,
-}: PurchaseOrderSidebarProps) {
+}: OrderSupplierSidebarProps) {
   const { data: branches } = useBranches();
   const { data: users } = useUsers();
 
@@ -124,7 +124,7 @@ export function PurchaseOrderSidebar({
       branchId: undefined,
       status: undefined,
       createdById: undefined,
-      purchaseById: undefined,
+      userId: undefined,
       createdDateFrom: undefined,
       createdDateTo: undefined,
     });
@@ -133,24 +133,24 @@ export function PurchaseOrderSidebar({
 
   const statusOptions = [
     {
-      value: PURCHASE_ORDER_STATUS.DRAFT,
-      label: getStatusLabel(PURCHASE_ORDER_STATUS.DRAFT),
+      value: ORDER_SUPPLIER_STATUS.DRAFT,
+      label: getStatusLabel(ORDER_SUPPLIER_STATUS.DRAFT),
     },
     {
-      value: PURCHASE_ORDER_STATUS.CONFIRMED,
-      label: getStatusLabel(PURCHASE_ORDER_STATUS.CONFIRMED),
+      value: ORDER_SUPPLIER_STATUS.CONFIRMED,
+      label: getStatusLabel(ORDER_SUPPLIER_STATUS.CONFIRMED),
     },
     {
-      value: PURCHASE_ORDER_STATUS.PARTIAL,
-      label: getStatusLabel(PURCHASE_ORDER_STATUS.PARTIAL),
+      value: ORDER_SUPPLIER_STATUS.PARTIAL,
+      label: getStatusLabel(ORDER_SUPPLIER_STATUS.PARTIAL),
     },
     {
-      value: PURCHASE_ORDER_STATUS.COMPLETED,
-      label: getStatusLabel(PURCHASE_ORDER_STATUS.COMPLETED),
+      value: ORDER_SUPPLIER_STATUS.COMPLETED,
+      label: getStatusLabel(ORDER_SUPPLIER_STATUS.COMPLETED),
     },
     {
-      value: PURCHASE_ORDER_STATUS.CANCELLED,
-      label: getStatusLabel(PURCHASE_ORDER_STATUS.CANCELLED),
+      value: ORDER_SUPPLIER_STATUS.CANCELLED,
+      label: getStatusLabel(ORDER_SUPPLIER_STATUS.CANCELLED),
     },
   ];
 
@@ -316,10 +316,10 @@ export function PurchaseOrderSidebar({
         <label className="text-sm font-medium mb-2 block">Người nhận đặt</label>
         <select
           className="w-full border rounded px-3 py-2 text-sm"
-          value={filters.purchaseById || ""}
+          value={filters.userId || ""}
           onChange={(e) =>
             setFilters({
-              purchaseById: e.target.value ? Number(e.target.value) : undefined,
+              userId: e.target.value ? Number(e.target.value) : undefined,
             })
           }>
           <option value="">Chọn người nhận đặt</option>

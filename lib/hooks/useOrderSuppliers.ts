@@ -1,30 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { purchaseOrdersApi } from "../api/purchase-orders";
-import type { PurchaseOrderFilters } from "../types/purchase-order";
+import { orderSuppliersApi } from "../api/order-suppliers";
+import type { OrderSupplierFilters } from "../types/order-supplier";
 import { toast } from "sonner";
 
-export function usePurchaseOrders(params?: PurchaseOrderFilters) {
+export function useOrderSuppliers(params?: OrderSupplierFilters) {
   return useQuery({
-    queryKey: ["purchase-orders", params],
-    queryFn: () => purchaseOrdersApi.getAll(params),
+    queryKey: ["order-suppliers", params],
+    queryFn: () => orderSuppliersApi.getAll(params),
   });
 }
 
-export function usePurchaseOrder(id: number) {
+export function useOrderSupplier(id: number) {
   return useQuery({
-    queryKey: ["purchase-orders", id],
-    queryFn: () => purchaseOrdersApi.getById(id),
+    queryKey: ["order-suppliers", id],
+    queryFn: () => orderSuppliersApi.getById(id),
     enabled: !!id,
   });
 }
 
-export function useCreatePurchaseOrder() {
+export function useCreateOrderSupplier() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: purchaseOrdersApi.create,
+    mutationFn: orderSuppliersApi.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order-suppliers"] });
       toast.success("Tạo phiếu đặt hàng nhập thành công");
     },
     onError: (error: any) => {
@@ -33,16 +33,16 @@ export function useCreatePurchaseOrder() {
   });
 }
 
-export function useUpdatePurchaseOrder() {
+export function useUpdateOrderSupplier() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) =>
-      purchaseOrdersApi.update(id, data),
+      orderSuppliersApi.update(id, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order-suppliers"] });
       queryClient.invalidateQueries({
-        queryKey: ["purchase-orders", variables.id],
+        queryKey: ["order-suppliers", variables.id],
       });
       toast.success("Cập nhật phiếu đặt hàng nhập thành công");
     },
@@ -52,13 +52,13 @@ export function useUpdatePurchaseOrder() {
   });
 }
 
-export function useDeletePurchaseOrder() {
+export function useDeleteOrderSupplier() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: purchaseOrdersApi.delete,
+    mutationFn: orderSuppliersApi.delete,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order-suppliers"] });
       toast.success("Xóa phiếu đặt hàng nhập thành công");
     },
     onError: (error: any) => {
