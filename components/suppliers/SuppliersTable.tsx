@@ -331,7 +331,7 @@ export function SuppliersTable({
                     className="border-b cursor-pointer hover:bg-gray-50"
                     onClick={() => toggleExpand(supplier.id)}>
                     <td
-                      className="px-6 py-3 sticky left-0 bg-white"
+                      className="px-6 py-3 sticky left-0"
                       style={{ width: "60px" }}
                       onClick={(e) => e.stopPropagation()}>
                       <input
