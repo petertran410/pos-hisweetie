@@ -1,8 +1,20 @@
-export default function PurchaseOrderPage() {
+"use client";
+
+import { useState } from "react";
+import { PurchaseOrderSidebar } from "@/components/purchase-orders/PurchaseOrderSidebar";
+import { PurchaseOrdersTable } from "@/components/purchase-orders/PurchaseOrdersTable";
+import type { PurchaseOrderFilters } from "@/lib/types/purchase-order";
+
+export default function PurchaseOrdersPage() {
+  const [filters, setFilters] = useState<PurchaseOrderFilters>({
+    pageSize: 15,
+    currentItem: 0,
+  });
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold">Đặt hàng nhập</h1>
-      <p className="text-gray-600 mt-2">Trang này đang được phát triển</p>
+    <div className="flex h-full border-t bg-gray-50">
+      <PurchaseOrderSidebar filters={filters} setFilters={setFilters} />
+      <PurchaseOrdersTable filters={filters} onFiltersChange={setFilters} />
     </div>
   );
 }
