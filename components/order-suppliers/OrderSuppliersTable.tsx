@@ -43,14 +43,14 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "code",
     label: "Mã đặt hàng nhập",
     visible: true,
-    width: "180px",
+    width: "200px",
     render: (os) => os.code,
   },
   {
     key: "supplierCode",
     label: "Mã nhập hàng",
     visible: true,
-    width: "150px",
+    width: "180px",
     render: (os) => os.supplier?.code || "-",
   },
   {
@@ -96,19 +96,18 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: () => "-",
   },
   {
-    key: "totalAmount",
+    key: "totalQuantity",
     label: "Tổng số lượng",
     visible: true,
-    width: "150px",
-    render: (os) =>
-      os.items?.reduce((sum, item) => sum + Number(item.quantity), 0) || 0,
+    width: "180px",
+    render: (os) => os.totalQuantity || 0,
   },
   {
-    key: "grandTotal",
+    key: "total",
     label: "Tổng tiền hàng",
     visible: true,
-    width: "150px",
-    render: (os) => formatCurrency(os.totalAmount),
+    width: "180px",
+    render: (os) => formatCurrency(os.total),
   },
   {
     key: "discount",
@@ -118,14 +117,14 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (os) => formatCurrency(os.discount),
   },
   {
-    key: "shippingFee",
+    key: "exReturnSuppliers",
     label: "Chi phí nhập trả NCC",
     visible: true,
-    width: "180px",
-    render: (os) => formatCurrency(os.shippingFee),
+    width: "220px",
+    render: (os) => formatCurrency(os.exReturnSuppliers),
   },
   {
-    key: "debtAmount",
+    key: "supplierDebt",
     label: "Cần trả NCC",
     visible: true,
     width: "150px",
@@ -135,15 +134,15 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "paidAmount",
     label: "Tiền đã trả NCC",
     visible: true,
-    width: "150px",
+    width: "180px",
     render: (os) => formatCurrency(os.paidAmount),
   },
   {
-    key: "otherFees",
+    key: "exReturnThirdParty",
     label: "Chi phí nhập khác",
     visible: true,
-    width: "150px",
-    render: (os) => formatCurrency(os.otherFees),
+    width: "200px",
+    render: (os) => formatCurrency(os.exReturnThirdParty),
   },
   {
     key: "note",
@@ -160,17 +159,17 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (os) => (
       <span
         className={`px-2 py-1 rounded text-xs ${
-          os.status === 1
+          os.status === 0
             ? "bg-gray-100 text-gray-800"
-            : os.status === 2
+            : os.status === 1
             ? "bg-blue-100 text-blue-800"
-            : os.status === 3
+            : os.status === 2
             ? "bg-yellow-100 text-yellow-800"
-            : os.status === 4
+            : os.status === 3
             ? "bg-green-100 text-green-800"
             : "bg-red-100 text-red-800"
         }`}>
-        {os.status ? getStatusLabel(os.status) : "-"}
+        {getStatusLabel(os.status)}
       </span>
     ),
   },

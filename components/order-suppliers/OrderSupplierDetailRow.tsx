@@ -137,9 +137,6 @@ export function OrderSupplierDetailRow({
                     <td className="px-4 py-2 text-sm text-right border">
                       {formatCurrency(item.price)}
                     </td>
-                    <td className="px-4 py-2 text-sm text-right border">
-                      {formatCurrency(item.totalPrice)}
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -156,9 +153,15 @@ export function OrderSupplierDetailRow({
                 </span>
               </div>
               <div className="flex justify-between">
+                <span>Tổng số lượng:</span>
+                <span className="font-medium">
+                  {orderSupplier.totalQuantity}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span>Tổng tiền hàng:</span>
                 <span className="font-medium">
-                  {formatCurrency(orderSupplier.totalAmount)}
+                  {formatCurrency(orderSupplier.total)}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -168,9 +171,27 @@ export function OrderSupplierDetailRow({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Cần trả NCC:</span>
+                <span>Thành tiền:</span>
                 <span className="font-medium">
                   {formatCurrency(orderSupplier.subTotal)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Chi phí nhập trả NCC:</span>
+                <span className="font-medium">
+                  {formatCurrency(orderSupplier.exReturnSuppliers)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Chi phí nhập khác:</span>
+                <span className="font-medium">
+                  {formatCurrency(orderSupplier.exReturnThirdParty)}
+                </span>
+              </div>
+              <div className="flex justify-between font-semibold text-base border-t pt-2">
+                <span>Cần trả NCC:</span>
+                <span className="text-blue-600">
+                  {formatCurrency(orderSupplier.supplierDebt)}
                 </span>
               </div>
               <div className="flex justify-between">

@@ -1,22 +1,30 @@
 export interface OrderSupplier {
   id: number;
   code: string;
-  supplierId: number;
-  branchId?: number;
+  invoiceId?: number;
   orderDate: string;
-  totalAmount: number;
-  discount: number;
-  discountRatio: number;
-  shippingFee: number;
-  otherFees: number;
-  grandTotal: number;
-  paidAmount: number;
-  debtAmount: number;
-  paymentStatus: string;
+  branchId?: number;
+  supplierId: number;
+  userId?: number;
+  description?: string;
   status: number;
   statusValue?: string;
-  description?: string;
-  userId?: number;
+  discount: number;
+  discountRatio: number;
+  productQty: number;
+  total: number;
+  subTotal: number;
+  totalAmt: number;
+  totalQty: number;
+  totalQuantity: number;
+  paidAmount: number;
+  exReturnSuppliers: number;
+  exReturnThirdParty: number;
+  toComplete: boolean;
+  viewPrice: boolean;
+  supplierDebt: number;
+  supplierOldDebt: number;
+  purchaseOrderCodes?: string;
   createdBy: number;
   createdAt: string;
   updatedAt: string;
@@ -39,6 +47,7 @@ export interface OrderSupplier {
     name: string;
   };
   items?: OrderSupplierItem[];
+  expensesOthers?: OrderSupplierExpensesOther[];
 }
 
 export interface OrderSupplierItem {
@@ -50,9 +59,26 @@ export interface OrderSupplierItem {
   quantity: number;
   price: number;
   discount: number;
-  discountRatio: number;
-  totalPrice: number;
+  allocation: number;
+  allocationSuppliers: number;
+  allocationThirdParty: number;
+  orderQuantity: number;
+  subTotal: number;
   description?: string;
+  orderByNumber?: number;
+}
+
+export interface OrderSupplierExpensesOther {
+  id: number;
+  orderSupplierId: number;
+  expensesOtherId?: number;
+  expensesOtherCode: string;
+  expensesOtherName: string;
+  form?: number;
+  expensesOtherOrder?: number;
+  price: number;
+  exValue?: number;
+  isReturnAuto: boolean;
 }
 
 export interface OrderSupplierFilters {
@@ -68,11 +94,11 @@ export interface OrderSupplierFilters {
 }
 
 export const ORDER_SUPPLIER_STATUS = {
-  DRAFT: 1,
-  CONFIRMED: 2,
-  PARTIAL: 3,
-  COMPLETED: 4,
-  CANCELLED: 5,
+  DRAFT: 0,
+  CONFIRMED: 1,
+  PARTIAL: 2,
+  COMPLETED: 3,
+  CANCELLED: 4,
 } as const;
 
 export const ORDER_SUPPLIER_STATUS_LABELS: Record<number, string> = {
