@@ -29,50 +29,16 @@ const formatCurrency = (value: number | string) => {
 
 const formatDateTime = (date?: string) => {
   if (!date) return "-";
-  return new Intl.DateTimeFormat("vi-VN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date));
+  return new Date(date).toLocaleString("vi-VN");
 };
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "code",
-    label: "Mã đặt hàng nhập",
+    label: "Mã phiếu",
     visible: true,
-    width: "200px",
+    width: "150px",
     render: (os) => os.code,
-  },
-  {
-    key: "supplierCode",
-    label: "Mã nhập hàng",
-    visible: true,
-    width: "180px",
-    render: (os) => os.supplier?.code || "-",
-  },
-  {
-    key: "orderDate",
-    label: "Thời gian",
-    visible: true,
-    width: "180px",
-    render: (os) => formatDateTime(os.orderDate),
-  },
-  {
-    key: "createdAt",
-    label: "Thời gian tạo",
-    visible: true,
-    width: "180px",
-    render: (os) => formatDateTime(os.createdAt),
-  },
-  {
-    key: "updatedAt",
-    label: "Ngày cập nhật",
-    visible: true,
-    width: "180px",
-    render: (os) => formatDateTime(os.updatedAt),
   },
   {
     key: "supplier",
@@ -82,49 +48,42 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (os) => os.supplier?.name || "-",
   },
   {
-    key: "branchName",
+    key: "orderDate",
+    label: "Ngày đặt",
+    visible: true,
+    width: "150px",
+    render: (os) => formatDateTime(os.orderDate),
+  },
+  {
+    key: "expectedDate",
+    label: "Dự kiến nhập",
+    visible: false,
+    width: "150px",
+    render: () => "-",
+  },
+  {
+    key: "branch",
     label: "Chi nhánh",
     visible: true,
     width: "150px",
     render: (os) => os.branch?.name || "-",
   },
   {
-    key: "expectedDate",
-    label: "Ngày nhập dự kiến",
-    visible: false,
-    width: "180px",
-    render: () => "-",
-  },
-  {
-    key: "totalQuantity",
-    label: "Tổng số lượng",
-    visible: true,
-    width: "180px",
-    render: (os) => os.totalQuantity || 0,
-  },
-  {
     key: "total",
     label: "Tổng tiền hàng",
     visible: true,
-    width: "180px",
+    width: "150px",
     render: (os) => formatCurrency(os.total),
   },
   {
     key: "discount",
     label: "Giảm giá",
-    visible: true,
+    visible: false,
     width: "120px",
     render: (os) => formatCurrency(os.discount),
   },
   {
-    key: "exReturnSuppliers",
-    label: "Chi phí nhập trả NCC",
-    visible: true,
-    width: "220px",
-    render: (os) => formatCurrency(os.exReturnSuppliers),
-  },
-  {
-    key: "supplierDebt",
+    key: "subTotal",
     label: "Cần trả NCC",
     visible: true,
     width: "150px",
@@ -132,33 +91,19 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   },
   {
     key: "paidAmount",
-    label: "Tiền đã trả NCC",
+    label: "Đã trả NCC",
     visible: true,
-    width: "180px",
+    width: "150px",
     render: (os) => formatCurrency(os.paidAmount),
-  },
-  {
-    key: "exReturnThirdParty",
-    label: "Chi phí nhập khác",
-    visible: true,
-    width: "200px",
-    render: (os) => formatCurrency(os.exReturnThirdParty),
-  },
-  {
-    key: "note",
-    label: "Ghi chú",
-    visible: true,
-    width: "200px",
-    render: (os) => os.description || "-",
   },
   {
     key: "status",
     label: "Trạng thái",
     visible: true,
-    width: "150px",
+    width: "120px",
     render: (os) => (
       <span
-        className={`px-2 py-1 rounded text-xs ${
+        className={`px-2 py-1 rounded text-xs font-medium ${
           os.status === 0
             ? "bg-gray-100 text-gray-800"
             : os.status === 1
@@ -296,12 +241,10 @@ export function OrderSuppliersTable({
       </div>
 
       <div className="flex-1 overflow-auto">
-        <table className="w-full">
+        <table className="w-full text-md">
           <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
-              <th
-                className="px-6 py-3 text-left sticky left-0 bg-gray-50"
-                style={{ width: "60px" }}>
+              <th className="px-6 py-3 text-left sticky left-0 bg-gray-50">
                 <input
                   type="checkbox"
                   checked={
@@ -312,14 +255,10 @@ export function OrderSuppliersTable({
                   className="cursor-pointer"
                 />
               </th>
-              <th
-                className="px-6 py-3 text-left sticky left-[60px] bg-gray-50"
-                style={{ width: "60px" }}
-              />
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-6 py-3 text-left text-md font-semibold text-gray-700"
+                  className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap"
                   style={{
                     minWidth: col.width,
                     maxWidth: col.width,
@@ -334,7 +273,7 @@ export function OrderSuppliersTable({
             {isLoading ? (
               <tr>
                 <td
-                  colSpan={visibleColumns.length + 2}
+                  colSpan={visibleColumns.length + 1}
                   className="p-8 text-center text-gray-500">
                   Đang tải...
                 </td>
@@ -342,7 +281,7 @@ export function OrderSuppliersTable({
             ) : orderSuppliers.length === 0 ? (
               <tr>
                 <td
-                  colSpan={visibleColumns.length + 2}
+                  colSpan={visibleColumns.length + 1}
                   className="p-8 text-center text-gray-500">
                   Không có phiếu đặt hàng nhập nào
                 </td>
@@ -350,8 +289,14 @@ export function OrderSuppliersTable({
             ) : (
               orderSuppliers.map((os) => (
                 <Fragment key={os.id}>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-3 sticky left-0 bg-white">
+                  <tr
+                    className={`border-b cursor-pointer ${
+                      expandedId === os.id ? "" : ""
+                    }`}
+                    onClick={() => toggleExpand(os.id)}>
+                    <td
+                      className="px-6 py-3 sticky left-0 bg-white"
+                      onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(os.id)}
@@ -359,17 +304,10 @@ export function OrderSuppliersTable({
                         className="cursor-pointer"
                       />
                     </td>
-                    <td className="px-6 py-3 sticky left-[60px] bg-white">
-                      <button
-                        onClick={() => toggleExpand(os.id)}
-                        className="text-blue-600 hover:text-blue-800">
-                        {expandedId === os.id ? "▼" : "▶"}
-                      </button>
-                    </td>
                     {visibleColumns.map((col) => (
                       <td
                         key={col.key}
-                        className="px-6 py-3 text-md"
+                        className="px-6 py-3 text-md whitespace-nowrap"
                         style={{
                           minWidth: col.width,
                           maxWidth: col.width,
@@ -384,7 +322,7 @@ export function OrderSuppliersTable({
                   {expandedId === os.id && (
                     <OrderSupplierDetailRow
                       orderSupplierId={os.id}
-                      colSpan={visibleColumns.length + 2}
+                      colSpan={visibleColumns.length + 1}
                     />
                   )}
                 </Fragment>
@@ -394,28 +332,33 @@ export function OrderSuppliersTable({
         </table>
       </div>
 
-      <div className="border-t px-4 py-3 flex items-center justify-between">
-        <div className="text-md text-gray-600">
-          Hiển thị {currentItem + 1} - {Math.min(currentItem + pageSize, total)}{" "}
-          của {total} phiếu
+      <div className="border-t px-4 py-3 flex items-center justify-between bg-white">
+        <div className="flex items-center gap-2">
+          <span className="text-md text-gray-600">
+            Hiển thị {currentItem + 1} -{" "}
+            {Math.min(currentItem + pageSize, total)} của {total}
+          </span>
         </div>
+
         <div className="flex items-center gap-2">
           <button
-            onClick={() =>
-              onFiltersChange({
-                currentItem: Math.max(0, currentItem - pageSize),
-              })
-            }
+            onClick={() => {
+              if (currentItem > 0) {
+                onFiltersChange({ currentItem: currentItem - pageSize });
+              }
+            }}
             disabled={currentItem === 0}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50">
+            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-md">
             Trước
           </button>
           <button
-            onClick={() =>
-              onFiltersChange({ currentItem: currentItem + pageSize })
-            }
+            onClick={() => {
+              if (currentItem + pageSize < total) {
+                onFiltersChange({ currentItem: currentItem + pageSize });
+              }
+            }}
             disabled={currentItem + pageSize >= total}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50">
+            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-md">
             Sau
           </button>
         </div>
@@ -436,14 +379,14 @@ export function OrderSuppliersTable({
               {columns.map((col) => (
                 <label
                   key={col.key}
-                  className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded">
+                  className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
                   <input
                     type="checkbox"
                     checked={col.visible}
                     onChange={() => toggleColumnVisibility(col.key)}
                     className="cursor-pointer"
                   />
-                  <span className="text-sm">{col.label}</span>
+                  <span className="text-md">{col.label}</span>
                 </label>
               ))}
             </div>
