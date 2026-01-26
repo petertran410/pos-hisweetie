@@ -1,7 +1,7 @@
 import { apiClient } from "@/lib/config/api";
 
 export const purchaseOrdersApi = {
-  getAll: (params?: any) => apiClient.get("/purchase-orders", { params }),
+  getAll: (params?: any) => apiClient.get("/purchase-orders", params),
   getById: (id: number) => apiClient.get(`/purchase-orders/${id}`),
   create: (data: any) => apiClient.post("/purchase-orders", data),
   createFromOrderSupplier: (
