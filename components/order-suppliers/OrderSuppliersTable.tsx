@@ -35,31 +35,45 @@ const formatDateTime = (date?: string) => {
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "code",
-    label: "Mã phiếu",
+    label: "Mã đặt hàng nhập",
     visible: true,
-    width: "150px",
+    width: "180px",
     render: (os) => os.code,
   },
   {
-    key: "supplier",
-    label: "Nhà cung cấp",
+    key: "purchaseOrderCode",
+    label: "Mã nhập hàng",
     visible: true,
-    width: "200px",
-    render: (os) => os.supplier?.name || "-",
+    width: "150px",
+    render: (os) => os.purchaseOrderCodes,
   },
   {
     key: "orderDate",
     label: "Ngày đặt",
     visible: true,
-    width: "150px",
+    width: "180px",
     render: (os) => formatDateTime(os.orderDate),
   },
   {
-    key: "expectedDate",
-    label: "Dự kiến nhập",
-    visible: false,
-    width: "150px",
-    render: () => "-",
+    key: "createdDate",
+    label: "Ngày tạo",
+    visible: true,
+    width: "180px",
+    render: (os) => formatDateTime(os.createdAt),
+  },
+  {
+    key: "upadatedDate",
+    label: "Ngày cập nhật",
+    visible: true,
+    width: "180px",
+    render: (os) => formatDateTime(os.updatedAt),
+  },
+  {
+    key: "supplier",
+    label: "Nhà cung cấp",
+    visible: true,
+    width: "180px",
+    render: (os) => os.supplier?.name || "-",
   },
   {
     key: "branch",
@@ -76,11 +90,46 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (os) => formatCurrency(os.total),
   },
   {
+    key: "orderBy",
+    label: "Người đặt",
+    visible: false,
+    width: "150px",
+    render: (os) => os.user?.name,
+  },
+  {
+    key: "creator",
+    label: "Người tạo",
+    visible: true,
+    width: "150px",
+    render: (os) => os.creator?.name || "-",
+  },
+  {
+    key: "totalQuantity",
+    label: "Tổng số lượng",
+    visible: false,
+    width: "180px",
+    render: (os) => os.totalQty || "-",
+  },
+  {
+    key: "productQuantitt",
+    label: "Số lượng mặt hàng",
+    visible: false,
+    width: "180px",
+    render: (os) => os.productQty || "-",
+  },
+  {
     key: "discount",
     label: "Giảm giá",
     visible: false,
     width: "120px",
     render: (os) => formatCurrency(os.discount),
+  },
+  {
+    key: "total",
+    label: "Chi phí nhập trả NCC",
+    visible: false,
+    width: "220px",
+    render: (os) => formatCurrency(os.total),
   },
   {
     key: "subTotal",
@@ -117,13 +166,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
         {getStatusLabel(os.status)}
       </span>
     ),
-  },
-  {
-    key: "creator",
-    label: "Người tạo",
-    visible: true,
-    width: "150px",
-    render: (os) => os.creator?.name || "-",
   },
 ];
 
@@ -313,9 +355,7 @@ export function OrderSuppliersTable({
                           maxWidth: col.width,
                           width: col.width,
                         }}>
-                        <div className="truncate break-words">
-                          {col.render(os)}
-                        </div>
+                        <div className="break-words">{col.render(os)}</div>
                       </td>
                     ))}
                   </tr>
