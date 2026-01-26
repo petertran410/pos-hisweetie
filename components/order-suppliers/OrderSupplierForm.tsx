@@ -81,7 +81,7 @@ export function OrderSupplierForm({
     limit: 20,
   });
 
-  const isFormDisabled = orderSupplier && orderSupplier.status !== 0;
+  const isFormDisabled = orderSupplier && orderSupplier.status === 3;
 
   const selectedStatus = STATUS_OPTIONS.find((s) => s.value === status);
   const selectedBranchData = branches?.find((b) => b.id === branchId);
