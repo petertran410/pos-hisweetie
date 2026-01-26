@@ -2,32 +2,42 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { X, ChevronDown, Trash2 } from "lucide-react";
+import { X, ChevronDown, Minus, Plus } from "lucide-react";
+import { useProducts } from "@/lib/hooks/useProducts";
+import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import { useBranches } from "@/lib/hooks/useBranches";
 import {
   useCreatePurchaseOrder,
   useUpdatePurchaseOrder,
 } from "@/lib/hooks/usePurchaseOrders";
-import { useBranches } from "@/lib/hooks/useBranches";
-import { useSuppliers } from "@/lib/hooks/useSuppliers";
-import { useProducts } from "@/lib/hooks/useProducts";
-import type { PurchaseOrder } from "@/lib/types/purchase-order";
 import { toast } from "sonner";
+import type { PurchaseOrder } from "@/lib/types/purchase-order";
+import { formatCurrency } from "@/lib/utils";
 import { useBranchStore } from "@/lib/store/branch";
 
-interface PurchaseOrderFormProps {
-  purchaseOrder?: PurchaseOrder | null;
-  onClose?: () => void;
-}
-
-interface ProductInForm {
+interface ProductItem {
   productId: number;
   productCode: string;
   productName: string;
   quantity: number;
   price: number;
   discount: number;
-  note: string;
+  subTotal: number;
+  inventory: number;
+  note?: string;
 }
+
+interface PurchaseOrderFormProps {
+  purchaseOrder?: PurchaseOrder | null;
+  onClose?: () => void;
+}
+
+const getProductCost = (product: any, branchId: number): number => {
+  const inventory = product.inventories?.find(
+    (inv: any) => inv.branchId === branchId
+  );
+  return inventory ? Number(inventory.cost) : 0;
+};
 
 const STATUS_OPTIONS = [
   { value: 0, label: "Phiếu tạm" },
@@ -40,11 +50,10 @@ export function PurchaseOrderForm({
 }: PurchaseOrderFormProps) {
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
-  const createPurchaseOrder = useCreatePurchaseOrder();
-  const updatePurchaseOrder = useUpdatePurchaseOrder();
-
   const { data: branches } = useBranches();
   const { data: suppliersData } = useSuppliers({});
+  const createPurchaseOrder = useCreatePurchaseOrder();
+  const updatePurchaseOrder = useUpdatePurchaseOrder();
 
   const [branchId, setBranchId] = useState<number>(
     purchaseOrder?.branchId || selectedBranch?.id || 0
@@ -53,11 +62,12 @@ export function PurchaseOrderForm({
     purchaseOrder?.supplierId || 0
   );
   const [status, setStatus] = useState<number>(purchaseOrder?.status || 0);
-  const [note, setNote] = useState("");
-  const [products, setProducts] = useState<ProductInForm[]>([]);
+  const [note, setNote] = useState<string>(purchaseOrder?.description || "");
+  const [products, setProducts] = useState<ProductItem[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
+
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
@@ -72,7 +82,7 @@ export function PurchaseOrderForm({
   });
 
   const isFormDisabled =
-    purchaseOrder?.status === 1 || purchaseOrder?.status === 2;
+    purchaseOrder && (purchaseOrder.status === 1 || purchaseOrder.status === 2);
 
   const selectedStatus = STATUS_OPTIONS.find((s) => s.value === status);
   const selectedBranchData = branches?.find((b) => b.id === branchId);
@@ -81,22 +91,19 @@ export function PurchaseOrderForm({
   );
 
   useEffect(() => {
-    if (purchaseOrder) {
-      setNote(purchaseOrder.description || "");
-
-      if (purchaseOrder.items) {
-        setProducts(
-          purchaseOrder.items.map((item) => ({
-            productId: item.productId,
-            productCode: item.productCode,
-            productName: item.productName,
-            quantity: Number(item.quantity),
-            price: Number(item.price),
-            discount: Number(item.discount),
-            note: item.description || "",
-          }))
-        );
-      }
+    if (purchaseOrder?.items) {
+      const loadedProducts: ProductItem[] = purchaseOrder.items.map((item) => ({
+        productId: item.productId,
+        productCode: item.productCode,
+        productName: item.productName,
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+        discount: Number(item.discount),
+        subTotal: Number(item.totalPrice),
+        inventory: 0,
+        note: item.description,
+      }));
+      setProducts(loadedProducts);
     }
   }, [purchaseOrder]);
 
@@ -141,50 +148,60 @@ export function PurchaseOrderForm({
 
     const cost = inventory ? Number(inventory.cost) : 0;
 
-    setProducts([
-      ...products,
-      {
-        productId: product.id,
-        productCode: product.code,
-        productName: product.name,
-        quantity: 1,
-        price: cost || Number(product.basePrice) || 0,
-        discount: 0,
-        note: "",
-      },
-    ]);
+    const newProduct: ProductItem = {
+      productId: product.id,
+      productCode: product.code,
+      productName: product.name,
+      quantity: 1,
+      price: cost || Number(product.basePrice) || 0,
+      discount: 0,
+      subTotal: cost || Number(product.basePrice) || 0,
+      inventory: inventory ? Number(inventory.onHand) : 0,
+    };
+
+    setProducts([...products, newProduct]);
     setSearchQuery("");
   };
 
-  const removeProduct = (productId: number) => {
-    setProducts(products.filter((p) => p.productId !== productId));
+  const handleRemoveProduct = (index: number) => {
+    setProducts(products.filter((_, i) => i !== index));
   };
 
-  const updateProduct = (
-    productId: number,
-    field: keyof ProductInForm,
-    value: any
-  ) => {
-    setProducts(
-      products.map((p) =>
-        p.productId === productId ? { ...p, [field]: value } : p
-      )
-    );
+  const handleQuantityChange = (index: number, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    if (numValue < 0) return;
+
+    const newProducts = [...products];
+    newProducts[index].quantity = numValue;
+    newProducts[index].subTotal =
+      numValue * newProducts[index].price - newProducts[index].discount;
+    setProducts(newProducts);
   };
 
-  const calculateSubTotal = (item: ProductInForm) => {
-    return item.quantity * item.price - item.discount;
+  const handlePriceChange = (index: number, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    if (numValue < 0) return;
+
+    const newProducts = [...products];
+    newProducts[index].price = numValue;
+    newProducts[index].subTotal =
+      newProducts[index].quantity * numValue - newProducts[index].discount;
+    setProducts(newProducts);
+  };
+
+  const handleDiscountChange = (index: number, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    if (numValue < 0) return;
+
+    const newProducts = [...products];
+    newProducts[index].discount = numValue;
+    newProducts[index].subTotal =
+      newProducts[index].quantity * newProducts[index].price - numValue;
+    setProducts(newProducts);
   };
 
   const calculateTotal = () => {
-    return products.reduce((sum, p) => sum + calculateSubTotal(p), 0);
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(value);
+    return products.reduce((sum, p) => sum + p.subTotal, 0);
   };
 
   const handleSubmit = async () => {
@@ -213,12 +230,15 @@ export function PurchaseOrderForm({
       supplierId,
       branchId,
       purchaseDate: new Date().toISOString(),
+      isDraft: status === 0,
+      description: note,
       items: products.map((p) => ({
         productId: p.productId,
         quantity: p.quantity,
-        unitPrice: p.price,
+        price: p.price,
+        discount: p.discount,
+        description: p.note,
       })),
-      notes: note,
     };
 
     try {
@@ -239,7 +259,7 @@ export function PurchaseOrderForm({
 
   return (
     <div className="flex h-full border-t bg-gray-50 overflow-hidden">
-      <div className="flex-1 flex flex-col overflow-y-auto bg-white w-80 m-4 border rounded-xl">
+      <div className="flex-1 flex flex-col overflow-y-auto bg-white m-4 border rounded-xl">
         <div className="border-b px-6 py-4 flex items-center justify-between bg-gray-50">
           <div>
             <h2 className="text-xl font-semibold">
@@ -260,155 +280,200 @@ export function PurchaseOrderForm({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tìm hàng hóa theo mã hoặc tên
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder={
-                  isFormDisabled
-                    ? "Không thể thêm sản phẩm ở trạng thái này"
-                    : "Tìm kiếm sản phẩm..."
-                }
-                value={searchQuery}
-                onChange={(e) => {
-                  if (isFormDisabled) return;
-                  setSearchQuery(e.target.value);
-                  setShowSearchResults(true);
-                }}
-                onFocus={() => !isFormDisabled && setShowSearchResults(true)}
-                onBlur={() =>
-                  setTimeout(() => setShowSearchResults(false), 200)
-                }
-                disabled={isFormDisabled ? true : false}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-              />
+        <div className="p-6">
+          <div className="relative mb-6">
+            <input
+              type="text"
+              placeholder={
+                isFormDisabled
+                  ? "Không thể thêm sản phẩm ở trạng thái này"
+                  : "Tìm kiếm theo tên hàng, mã hàng"
+              }
+              value={searchQuery}
+              onChange={(e) => {
+                if (isFormDisabled) return;
+                setSearchQuery(e.target.value);
+                setShowSearchResults(true);
+              }}
+              onFocus={() => !isFormDisabled && setShowSearchResults(true)}
+              onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+              disabled={isFormDisabled ? true : false}
+              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 text-base"
+            />
 
-              {showSearchResults &&
-                searchQuery &&
-                !isFormDisabled &&
-                searchResults?.data && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                    {searchResults.data.length > 0 ? (
-                      searchResults.data.map((product) => (
-                        <div
-                          key={product.id}
-                          onClick={() => handleAddProduct(product)}
-                          className="px-4 py-2 hover:bg-gray-50 cursor-pointer">
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {product.code}
-                          </div>
+            {showSearchResults &&
+              searchQuery &&
+              !isFormDisabled &&
+              searchResults?.data && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                  {searchResults.data.length > 0 ? (
+                    searchResults.data.map((product) => (
+                      <div
+                        key={product.id}
+                        onClick={() => handleAddProduct(product)}
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0">
+                        <div className="font-medium text-sm">
+                          {product.name}
                         </div>
-                      ))
-                    ) : (
-                      <div className="px-4 py-2 text-gray-500">
-                        Không tìm thấy sản phẩm
+                        <div className="text-xs text-gray-500 mt-1">
+                          Mã: {product.code}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
-            </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-gray-500 text-sm">
+                      Không tìm thấy sản phẩm
+                    </div>
+                  )}
+                </div>
+              )}
           </div>
 
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full">
+          <div className="border rounded-lg overflow-hidden shadow-sm">
+            <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                    STT
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                    Mã hàng
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     Tên hàng
                   </th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
-                    SL
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                    SL nhập
                   </th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
-                    Giá
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                    Giá nhập
                   </th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                    Giảm giá
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     Thành tiền
                   </th>
-                  <th className="px-4 py-2"></th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap"></th>
                 </tr>
               </thead>
-              <tbody>
-                {products.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-4 py-8 text-center text-gray-500">
-                      Chưa có sản phẩm nào
+              <tbody className="bg-white divide-y divide-gray-200">
+                {products.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {index + 1}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600 font-medium">
+                      {item.productCode}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 min-w-[200px]">
+                      {item.productName}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() =>
+                            handleQuantityChange(
+                              index,
+                              String(item.quantity - 1)
+                            )
+                          }
+                          disabled={isFormDisabled ? true : false}
+                          className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <input
+                          type="text"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            handleQuantityChange(index, e.target.value)
+                          }
+                          disabled={isFormDisabled ? true : false}
+                          className="w-20 text-center border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                        />
+                        <button
+                          onClick={() =>
+                            handleQuantityChange(
+                              index,
+                              String(item.quantity + 1)
+                            )
+                          }
+                          disabled={isFormDisabled ? true : false}
+                          className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <input
+                        type="text"
+                        value={item.price}
+                        onChange={(e) =>
+                          handlePriceChange(index, e.target.value)
+                        }
+                        disabled={isFormDisabled ? true : false}
+                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <input
+                        type="text"
+                        value={item.discount}
+                        onChange={(e) =>
+                          handleDiscountChange(index, e.target.value)
+                        }
+                        disabled={isFormDisabled ? true : false}
+                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                      {formatCurrency(item.subTotal)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => handleRemoveProduct(index)}
+                        disabled={isFormDisabled ? true : false}
+                        className="text-red-600 hover:text-red-800 disabled:opacity-50">
+                        <X className="w-5 h-5" />
+                      </button>
                     </td>
                   </tr>
-                ) : (
-                  products.map((product) => (
-                    <tr key={product.productId} className="border-t">
-                      <td className="px-4 py-2">
-                        <div className="font-medium">{product.productName}</div>
-                        <div className="text-sm text-gray-500">
-                          {product.productCode}
-                        </div>
-                      </td>
-                      <td className="px-4 py-2">
-                        <input
-                          type="number"
-                          value={product.quantity}
-                          onChange={(e) =>
-                            updateProduct(
-                              product.productId,
-                              "quantity",
-                              Number(e.target.value)
-                            )
-                          }
-                          disabled={isFormDisabled ? true : false}
-                          className="w-20 px-2 py-1 border rounded disabled:bg-gray-100"
-                          min="1"
-                        />
-                      </td>
-                      <td className="px-4 py-2">
-                        <input
-                          type="number"
-                          value={product.price}
-                          onChange={(e) =>
-                            updateProduct(
-                              product.productId,
-                              "price",
-                              Number(e.target.value)
-                            )
-                          }
-                          disabled={isFormDisabled ? true : false}
-                          className="w-24 px-2 py-1 border rounded disabled:bg-gray-100"
-                          min="0"
-                        />
-                      </td>
-                      <td className="px-4 py-2">
-                        {formatCurrency(calculateSubTotal(product))}
-                      </td>
-                      <td className="px-4 py-2">
-                        {!isFormDisabled && (
-                          <button
-                            onClick={() => removeProduct(product.productId)}
-                            className="text-red-500 hover:text-red-700">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
-          </div>
 
-          <div className="border-t pt-4">
-            <div className="flex justify-between items-center text-lg font-semibold">
-              <span>Tổng tiền:</span>
-              <span className="text-blue-600">
+            {products.length === 0 && (
+              <div className="p-8 text-center text-gray-500">
+                Chưa có sản phẩm nào. Vui lòng thêm sản phẩm.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-auto border-t bg-gray-50 px-6 py-4">
+          <div className="flex justify-end items-center">
+            <div className="text-right">
+              <div className="text-sm text-gray-600 mb-1">Tổng tiền hàng</div>
+              <div className="text-2xl font-bold text-blue-600">
                 {formatCurrency(calculateTotal())}
-              </span>
+              </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-80 border mr-4 mb-4 mt-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-6 bg-white shadow-xl">
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">
+              Mã phiếu nhập hàng
+            </label>
+            <input
+              type="text"
+              value={purchaseOrder?.code || "Mã phiếu tự động"}
+              disabled
+              className="w-full px-3 py-2 border rounded bg-gray-50 text-gray-600"
+            />
           </div>
 
           <div ref={statusDropdownRef}>
