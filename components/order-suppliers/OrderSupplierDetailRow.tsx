@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useOrderSupplier } from "@/lib/hooks/useOrderSuppliers";
-import { Loader2, MoreHorizontal } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  useOrderSupplier,
+  useUpdateOrderSupplier,
+} from "@/lib/hooks/useOrderSuppliers";
+import { Loader2, MoreHorizontal, FileText, Save } from "lucide-react";
 import { toast } from "sonner";
 
 interface OrderSupplierDetailRowProps {
@@ -58,10 +62,68 @@ export function OrderSupplierDetailRow({
   orderSupplierId,
   colSpan,
 }: OrderSupplierDetailRowProps) {
+  const router = useRouter();
   const { data: orderSupplier, isLoading } = useOrderSupplier(orderSupplierId);
+  const updateOrderSupplier = useUpdateOrderSupplier();
   const [activeTab, setActiveTab] = useState("info");
   const [productCodeSearch, setProductCodeSearch] = useState("");
   const [productNameSearch, setProductNameSearch] = useState("");
+  const [notes, setNotes] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useState(() => {
+    if (orderSupplier?.description) {
+      setNotes(orderSupplier.description);
+    }
+  });
+
+  const handleCancel = async () => {
+    if (!orderSupplier) return;
+
+    if (confirm("Bạn có chắc chắn muốn hủy phiếu đặt hàng nhập này?")) {
+      try {
+        setIsSaving(true);
+        await updateOrderSupplier.mutateAsync({
+          id: orderSupplierId,
+          data: {
+            status: 4,
+          },
+        });
+        toast.success("Hủy phiếu thành công");
+      } catch (error: any) {
+        toast.error(error.message || "Không thể hủy phiếu");
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+
+  const handleOpenForm = () => {
+    router.push(`/san-pham/dat-hang-nhap/${orderSupplierId}`);
+  };
+
+  const handleSave = async () => {
+    if (!orderSupplier) return;
+
+    try {
+      setIsSaving(true);
+      await updateOrderSupplier.mutateAsync({
+        id: orderSupplierId,
+        data: {
+          description: notes,
+        },
+      });
+      toast.success("Lưu ghi chú thành công");
+    } catch (error: any) {
+      toast.error(error.message || "Không thể lưu ghi chú");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCreatePurchaseOrder = () => {
+    toast.info("Chức năng đang phát triển");
+  };
 
   if (isLoading) {
     return (
@@ -93,6 +155,8 @@ export function OrderSupplierDetailRow({
       : true;
     return matchCode && matchName;
   });
+
+  const canCancel = orderSupplier.status === 0 || orderSupplier.status === 1;
 
   return (
     <tr>
@@ -333,8 +397,7 @@ export function OrderSupplierDetailRow({
 
                         <div className="flex justify-between items-center text-md">
                           <span className="text-gray-600">
-                            Tổng tiền hàng ({orderSupplier.totalQuantity || 0}
-                            ):
+                            Tổng tiền hàng ({orderSupplier.totalQuantity || 0}):
                           </span>
                           <span className="font-semibold text-gray-900">
                             {formatMoney(Number(orderSupplier.total))}
@@ -375,34 +438,59 @@ export function OrderSupplierDetailRow({
                     <label className="block text-md font-medium text-gray-500 mb-2">
                       Ghi chú:
                     </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                      <p className="text-md text-gray-900">
-                        {orderSupplier.description || "Chưa có ghi chú"}
-                      </p>
-                    </div>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Ghi chú..."
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-md"
+                      rows={4}
+                    />
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => toast.info("Sao chép")}
-                        className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                        Sao chép
-                      </button>
-                      <button
-                        onClick={() => toast.info("Xuất file")}
-                        className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                        Xuất file
-                      </button>
-                      <button
-                        onClick={() => toast.info("Gửi Email")}
-                        className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                        Gửi Email
-                      </button>
+                  <div className="border-t pt-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {canCancel && (
+                          <button
+                            onClick={handleCancel}
+                            disabled={isSaving}
+                            className="px-4 py-2 text-md font-medium text-red-600 bg-white border border-red-300 rounded hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            Hủy
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleCreatePurchaseOrder}
+                          disabled={isSaving}
+                          className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                          <FileText className="w-4 h-4" />
+                          Tạo phiếu nhập
+                        </button>
+                        <button
+                          onClick={handleOpenForm}
+                          disabled={isSaving}
+                          className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                          Mở phiếu
+                        </button>
+                        <button
+                          onClick={handleSave}
+                          disabled={isSaving}
+                          className="px-4 py-2 text-md font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                          {isSaving ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Đang lưu...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4" />
+                              Lưu
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <button className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded transition-colors">
-                      <MoreHorizontal className="w-5 h-5" />
-                    </button>
                   </div>
                 </div>
               </div>

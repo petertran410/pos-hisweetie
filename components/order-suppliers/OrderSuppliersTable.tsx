@@ -125,7 +125,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (os) => formatCurrency(os.discount),
   },
   {
-    key: "total",
+    key: "totalPayForSupplier",
     label: "Chi phí nhập trả NCC",
     visible: false,
     width: "220px",

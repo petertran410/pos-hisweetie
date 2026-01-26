@@ -671,7 +671,7 @@ export function OrderSupplierForm({
                   createOrderSupplier.isPending || updateOrderSupplier.isPending
                 }
                 className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50">
-                Tạo đặt hàng nhập
+                {orderSupplier ? "Lưu" : "Tạo đặt hàng nhập"}
               </button>
             )}
           </div>
