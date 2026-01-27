@@ -42,8 +42,8 @@ const getProductCost = (product: any, branchId: number): number => {
 };
 
 const STATUS_OPTIONS = [
-  { value: 0, label: "Phiếu tạm" },
-  { value: 1, label: "Đã nhập hàng" },
+  { value: true, label: "Phiếu tạm" },
+  { value: false, label: "Đã nhập hàng" },
 ];
 
 export function PurchaseOrderForm({
@@ -70,7 +70,9 @@ export function PurchaseOrderForm({
   const [note, setNote] = useState<string>(
     purchaseOrder?.description || orderSupplier?.description || ""
   );
-  const [status, setStatus] = useState<number>(purchaseOrder?.status || 0);
+  const [isDraft, setIsDraft] = useState<boolean>(
+    purchaseOrder?.isDraft !== undefined ? purchaseOrder.isDraft : true
+  );
   const [products, setProducts] = useState<ProductItem[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -89,10 +91,9 @@ export function PurchaseOrderForm({
     limit: 20,
   });
 
-  const isFormDisabled =
-    purchaseOrder && (purchaseOrder.status === 1 || purchaseOrder.status === 2);
+  const isFormDisabled = purchaseOrder && !purchaseOrder.isDraft;
 
-  const selectedStatus = STATUS_OPTIONS.find((s) => s.value === status);
+  const selectedStatus = STATUS_OPTIONS.find((s) => s.value === isDraft);
   const selectedBranchData = branches?.find((b) => b.id === branchId);
   const selectedSupplier = suppliersData?.data?.find(
     (s) => s.id === supplierId
@@ -252,7 +253,7 @@ export function PurchaseOrderForm({
       supplierId,
       branchId,
       purchaseDate: new Date().toISOString(),
-      isDraft: status === 0,
+      isDraft: isDraft,
       description: note,
       items: products.map((p) => ({
         productId: p.productId,
@@ -281,7 +282,9 @@ export function PurchaseOrderForm({
 
   return (
     <div className="flex h-full border-t bg-gray-50 overflow-hidden">
+      {/* Phần bên trái - Danh sách sản phẩm */}
       <div className="flex-1 flex flex-col overflow-y-auto bg-white m-4 border rounded-xl">
+        {/* Header giữ nguyên */}
         <div className="border-b px-6 py-4 flex items-center justify-between bg-gray-50">
           <div>
             <h2 className="text-xl font-semibold">
@@ -307,6 +310,7 @@ export function PurchaseOrderForm({
           </button>
         </div>
 
+        {/* Phần search và bảng sản phẩm giữ nguyên như cũ */}
         <div className="p-6">
           <div className="relative mb-6">
             <input
@@ -338,17 +342,15 @@ export function PurchaseOrderForm({
                       <div
                         key={product.id}
                         onClick={() => handleAddProduct(product)}
-                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0">
-                        <div className="font-medium text-sm">
-                          {product.name}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b last:border-0">
+                        <div className="font-medium">{product.name}</div>
+                        <div className="text-sm text-gray-500">
                           Mã: {product.code}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="px-4 py-3 text-gray-500 text-sm">
+                    <div className="px-4 py-3 text-gray-500">
                       Không tìm thấy sản phẩm
                     </div>
                   )}
@@ -356,107 +358,86 @@ export function PurchaseOrderForm({
               )}
           </div>
 
-          <div className="border rounded-lg overflow-hidden shadow-sm">
-            <table className="min-w-full divide-y divide-gray-200">
+          {/* Bảng sản phẩm */}
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
                     STT
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
                     Mã hàng
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
                     Tên hàng
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                    SL nhập
+                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                    Số lượng
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                    Giá nhập
+                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                    Giá
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
                     Giảm giá
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
                     Thành tiền
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap"></th>
+                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                    Thao tác
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                {products.map((product, index) => (
+                  <tr key={index}>
+                    <td className="px-4 py-3 text-sm text-center">
                       {index + 1}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600 font-medium">
-                      {item.productCode}
+                    <td className="px-4 py-3 text-sm text-center">
+                      {product.productCode}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 min-w-[200px]">
-                      {item.productName}
+                    <td className="px-4 py-3 text-sm text-center">
+                      {product.productName}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() =>
-                            handleQuantityChange(
-                              index,
-                              String(item.quantity - 1)
-                            )
-                          }
-                          disabled={isFormDisabled ? true : false}
-                          className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <input
-                          type="text"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            handleQuantityChange(index, e.target.value)
-                          }
-                          disabled={isFormDisabled ? true : false}
-                          className="w-20 text-center border rounded px-2 py-1 text-sm disabled:bg-gray-100"
-                        />
-                        <button
-                          onClick={() =>
-                            handleQuantityChange(
-                              index,
-                              String(item.quantity + 1)
-                            )
-                          }
-                          disabled={isFormDisabled ? true : false}
-                          className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 text-center">
                       <input
                         type="text"
-                        value={item.price}
+                        value={product.quantity}
+                        onChange={(e) =>
+                          handleQuantityChange(index, e.target.value)
+                        }
+                        disabled={isFormDisabled ? true : false}
+                        className="w-24 px-2 py-1 border rounded text-center disabled:bg-gray-100"
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <input
+                        type="text"
+                        value={product.price}
                         onChange={(e) =>
                           handlePriceChange(index, e.target.value)
                         }
                         disabled={isFormDisabled ? true : false}
-                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                        className="w-32 px-2 py-1 border rounded text-center disabled:bg-gray-100"
                       />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 text-center">
                       <input
                         type="text"
-                        value={item.discount}
+                        value={product.discount}
                         onChange={(e) =>
                           handleDiscountChange(index, e.target.value)
                         }
                         disabled={isFormDisabled ? true : false}
-                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                        className="w-24 px-2 py-1 border rounded text-center disabled:bg-gray-100"
                       />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
-                      {formatCurrency(item.subTotal)}
+                    <td className="px-4 py-3 text-center font-medium">
+                      {formatCurrency(product.subTotal)}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <td className="px-4 py-3 text-center">
                       <button
                         onClick={() => handleRemoveProduct(index)}
                         disabled={isFormDisabled ? true : false}
@@ -477,6 +458,7 @@ export function PurchaseOrderForm({
           </div>
         </div>
 
+        {/* Footer tổng tiền */}
         <div className="mt-auto border-t bg-gray-50 px-6 py-4">
           <div className="flex justify-end items-center">
             <div className="text-right">
@@ -489,6 +471,7 @@ export function PurchaseOrderForm({
         </div>
       </div>
 
+      {/* Phần sidebar bên phải */}
       <div className="w-80 border mr-4 mb-4 mt-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-6 bg-white shadow-xl">
         <div className="space-y-6">
           <div>
@@ -525,9 +508,9 @@ export function PurchaseOrderForm({
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10">
                   {STATUS_OPTIONS.map((statusOption) => (
                     <div
-                      key={statusOption.value}
+                      key={String(statusOption.value)}
                       onClick={() => {
-                        setStatus(statusOption.value);
+                        setIsDraft(statusOption.value);
                         setShowStatusDropdown(false);
                       }}
                       className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
@@ -569,7 +552,6 @@ export function PurchaseOrderForm({
                       key={branch.id}
                       onClick={() => {
                         setBranchId(branch.id);
-                        setProducts([]);
                         setShowBranchDropdown(false);
                       }}
                       className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
