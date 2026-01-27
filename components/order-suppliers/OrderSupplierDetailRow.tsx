@@ -66,8 +66,6 @@ export function OrderSupplierDetailRow({
   const router = useRouter();
   const { data: orderSupplier, isLoading } = useOrderSupplier(orderSupplierId);
   const updateOrderSupplier = useUpdateOrderSupplier();
-  const { mutateAsync: createFromOrderSupplier } =
-    useCreatePurchaseOrderFromOrderSupplier();
   const [activeTab, setActiveTab] = useState("info");
   const [productCodeSearch, setProductCodeSearch] = useState("");
   const [productNameSearch, setProductNameSearch] = useState("");

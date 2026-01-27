@@ -259,7 +259,7 @@ export function PurchaseOrderForm({
         productId: p.productId,
         quantity: p.quantity,
         price: p.price,
-        discount: p.discount,
+        discount: p.discount || 0,
         description: p.note,
       })),
     };
@@ -401,16 +401,40 @@ export function PurchaseOrderForm({
                     <td className="px-4 py-3 text-sm text-center">
                       {product.productName}
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <input
-                        type="text"
-                        value={product.quantity}
-                        onChange={(e) =>
-                          handleQuantityChange(index, e.target.value)
-                        }
-                        disabled={isFormDisabled ? true : false}
-                        className="w-24 px-2 py-1 border rounded text-center disabled:bg-gray-100"
-                      />
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() =>
+                            handleQuantityChange(
+                              index,
+                              String(product.quantity - 1)
+                            )
+                          }
+                          disabled={isFormDisabled ? true : false}
+                          className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <input
+                          type="text"
+                          value={product.quantity}
+                          onChange={(e) =>
+                            handleQuantityChange(index, e.target.value)
+                          }
+                          disabled={isFormDisabled ? true : false}
+                          className="w-20 text-center border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                        />
+                        <button
+                          onClick={() =>
+                            handleQuantityChange(
+                              index,
+                              String(product.quantity + 1)
+                            )
+                          }
+                          disabled={isFormDisabled ? true : false}
+                          className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <input
