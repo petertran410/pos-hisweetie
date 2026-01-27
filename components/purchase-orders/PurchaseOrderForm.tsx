@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import type { PurchaseOrder } from "@/lib/types/purchase-order";
 import { formatCurrency } from "@/lib/utils";
 import { useBranchStore } from "@/lib/store/branch";
+import type { OrderSupplier } from "@/lib/types/order-supplier";
 
 interface ProductItem {
   productId: number;
@@ -29,6 +30,7 @@ interface ProductItem {
 
 interface PurchaseOrderFormProps {
   purchaseOrder?: PurchaseOrder | null;
+  orderSupplier?: OrderSupplier | null;
   onClose?: () => void;
 }
 
@@ -46,6 +48,7 @@ const STATUS_OPTIONS = [
 
 export function PurchaseOrderForm({
   purchaseOrder,
+  orderSupplier,
   onClose,
 }: PurchaseOrderFormProps) {
   const router = useRouter();
@@ -56,13 +59,18 @@ export function PurchaseOrderForm({
   const updatePurchaseOrder = useUpdatePurchaseOrder();
 
   const [branchId, setBranchId] = useState<number>(
-    purchaseOrder?.branchId || selectedBranch?.id || 0
+    purchaseOrder?.branchId ||
+      orderSupplier?.branchId ||
+      selectedBranch?.id ||
+      0
   );
   const [supplierId, setSupplierId] = useState<number>(
-    purchaseOrder?.supplierId || 0
+    purchaseOrder?.supplierId || orderSupplier?.supplierId || 0
+  );
+  const [note, setNote] = useState<string>(
+    purchaseOrder?.description || orderSupplier?.description || ""
   );
   const [status, setStatus] = useState<number>(purchaseOrder?.status || 0);
-  const [note, setNote] = useState<string>(purchaseOrder?.description || "");
   const [products, setProducts] = useState<ProductItem[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -104,8 +112,21 @@ export function PurchaseOrderForm({
         note: item.description,
       }));
       setProducts(loadedProducts);
+    } else if (orderSupplier?.items) {
+      const loadedProducts: ProductItem[] = orderSupplier.items.map((item) => ({
+        productId: item.productId,
+        productCode: item.productCode,
+        productName: item.productName,
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+        discount: Number(item.discount),
+        subTotal: Number(item.subTotal),
+        inventory: 0,
+        note: item.description,
+      }));
+      setProducts(loadedProducts);
     }
-  }, [purchaseOrder]);
+  }, [purchaseOrder, orderSupplier]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -270,6 +291,11 @@ export function PurchaseOrderForm({
             {purchaseOrder && (
               <p className="text-sm text-gray-600 mt-1">
                 Mã phiếu: {purchaseOrder.code}
+              </p>
+            )}
+            {orderSupplier && !purchaseOrder && (
+              <p className="text-sm text-gray-600 mt-1">
+                Từ đặt hàng nhập: {orderSupplier.code}
               </p>
             )}
           </div>

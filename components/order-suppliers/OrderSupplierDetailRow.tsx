@@ -122,7 +122,7 @@ export function OrderSupplierDetailRow({
   };
 
   const handleCreatePurchaseOrder = () => {
-    toast.info("Chức năng đang phát triển");
+    router.push(`/san-pham/nhap-hang/new?orderSupplierId=${orderSupplierId}`);
   };
 
   if (isLoading) {

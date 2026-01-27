@@ -149,7 +149,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "status",
     label: "Trạng thái",
     visible: true,
-    width: "120px",
+    width: "200px",
     render: (os) => (
       <span
         className={`px-2 py-1 rounded text-xs font-medium ${
@@ -254,7 +254,7 @@ export function OrderSuppliersTable({
     <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
       <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-4 w-[500px]">
-          <h1 className="text-xl font-semibold w-[200px]">Đặt hàng nhập</h1>
+          <h1 className="text-xl font-semibold w-[250px]">Đặt hàng nhập</h1>
           <input
             type="text"
             placeholder="Theo mã phiếu đặt hàng nhập"

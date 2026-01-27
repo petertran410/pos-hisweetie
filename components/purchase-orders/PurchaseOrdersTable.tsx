@@ -139,7 +139,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "status",
     label: "Trạng thái",
     visible: true,
-    width: "120px",
+    width: "200px",
     render: (po) => (
       <span
         className={`px-2 py-1 rounded text-xs font-medium ${
