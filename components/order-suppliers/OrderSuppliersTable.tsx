@@ -45,7 +45,12 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã nhập hàng",
     visible: true,
     width: "150px",
-    render: (os) => os.purchaseOrderCodes,
+    render: (os) => {
+      if (!os.purchaseOrders || os.purchaseOrders.length === 0) {
+        return "-";
+      }
+      return os.purchaseOrders.map((po) => po.code).join(" | ");
+    },
   },
   {
     key: "orderDate",
