@@ -1,31 +1,29 @@
 export interface PurchaseOrder {
   id: number;
   code: string;
+  orderSupplierId?: number;
   supplierId: number;
   branchId?: number;
   purchaseDate: string;
-  totalAmount: number;
+  total: number;
   discount: number;
   discountRatio: number;
-  grandTotal: number;
   paidAmount: number;
-  debtAmount: number;
-  paymentStatus: string;
-  status: number;
-  statusValue?: string;
-  partnerType?: string;
   isDraft: boolean;
+  partnerType?: string;
   description?: string;
   purchaseById?: number;
   createdBy: number;
-  supplierDebtSnapshot?: number;
   createdAt: string;
   updatedAt: string;
+  orderSupplier?: {
+    id: number;
+    code: string;
+  };
   supplier?: {
     id: number;
     code: string;
     name: string;
-    contactNumber?: string;
   };
   branch?: {
     id: number;
@@ -41,6 +39,7 @@ export interface PurchaseOrder {
   };
   items?: PurchaseOrderItem[];
   payments?: PurchaseOrderPayment[];
+  surcharges?: PurchaseOrderSurcharge[];
 }
 
 export interface PurchaseOrderItem {
@@ -74,6 +73,19 @@ export interface PurchaseOrderPayment {
   description?: string;
   status: number;
   statusValue?: string;
+}
+
+export interface PurchaseOrderSurcharge {
+  id: number;
+  purchaseOrderId: number;
+  code: string;
+  name: string;
+  value?: number;
+  valueRatio?: number;
+  isSupplierExpense: boolean;
+  type: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PurchaseOrderFilters {

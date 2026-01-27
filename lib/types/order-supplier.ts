@@ -1,7 +1,8 @@
+import { PurchaseOrder } from "./purchase-order";
+
 export interface OrderSupplier {
   id: number;
   code: string;
-  invoiceId?: number;
   orderDate: string;
   branchId?: number;
   supplierId: number;
@@ -24,7 +25,6 @@ export interface OrderSupplier {
   viewPrice: boolean;
   supplierDebt: number;
   supplierOldDebt: number;
-  purchaseOrderCodes?: string;
   createdBy: number;
   createdAt: string;
   updatedAt: string;
@@ -48,6 +48,7 @@ export interface OrderSupplier {
   };
   items?: OrderSupplierItem[];
   expensesOthers?: OrderSupplierExpensesOther[];
+  purchaseOrders?: PurchaseOrder[];
 }
 
 export interface OrderSupplierItem {

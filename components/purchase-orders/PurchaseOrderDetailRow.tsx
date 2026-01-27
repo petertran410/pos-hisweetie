@@ -93,7 +93,7 @@ export function PurchaseOrderDetailRow({
                 Mã đặt hàng nhập:
               </label>
               <span className="w-full px-3 py-2 text-md border rounded bg-white block">
-                -
+                {purchaseOrder.orderSupplier?.code || "-"}
               </span>
             </div>
           </div>

@@ -6,7 +6,8 @@ import {
   useOrderSupplier,
   useUpdateOrderSupplier,
 } from "@/lib/hooks/useOrderSuppliers";
-import { Loader2, MoreHorizontal, FileText, Save } from "lucide-react";
+import { useCreatePurchaseOrderFromOrderSupplier } from "@/lib/hooks/usePurchaseOrders";
+import { Loader2, FileText, Save } from "lucide-react";
 import { toast } from "sonner";
 
 interface OrderSupplierDetailRowProps {
@@ -65,6 +66,8 @@ export function OrderSupplierDetailRow({
   const router = useRouter();
   const { data: orderSupplier, isLoading } = useOrderSupplier(orderSupplierId);
   const updateOrderSupplier = useUpdateOrderSupplier();
+  const { mutateAsync: createFromOrderSupplier } =
+    useCreatePurchaseOrderFromOrderSupplier();
   const [activeTab, setActiveTab] = useState("info");
   const [productCodeSearch, setProductCodeSearch] = useState("");
   const [productNameSearch, setProductNameSearch] = useState("");
@@ -121,8 +124,19 @@ export function OrderSupplierDetailRow({
     }
   };
 
-  const handleCreatePurchaseOrder = () => {
-    router.push(`/san-pham/nhap-hang/new?orderSupplierId=${orderSupplierId}`);
+  const handleCreatePurchaseOrder = async () => {
+    try {
+      setIsSaving(true);
+      await createFromOrderSupplier({
+        orderSupplierId: orderSupplierId,
+        additionalPayment: 0,
+      });
+      toast.success("Tạo phiếu nhập hàng thành công");
+    } catch (error: any) {
+      toast.error(error.message || "Không thể tạo phiếu nhập hàng");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {
@@ -262,8 +276,9 @@ export function OrderSupplierDetailRow({
                         Mã nhập hàng:
                       </label>
                       <span className="w-full px-3 py-2 text-md border rounded bg-white">
-                        {orderSupplier.purchaseOrderCodes
-                          ? `${orderSupplier.purchaseOrderCodes.length} mã. Xem chi tiết`
+                        {orderSupplier.purchaseOrders &&
+                        orderSupplier.purchaseOrders.length > 0
+                          ? `${orderSupplier.purchaseOrders.length} phiếu. Xem chi tiết`
                           : "-"}
                       </span>
                     </div>
@@ -498,9 +513,34 @@ export function OrderSupplierDetailRow({
 
             {activeTab === "history" && (
               <div className="py-6">
-                <p className="text-center text-gray-500">
-                  Chưa có lịch sử nhập hàng
-                </p>
+                {orderSupplier.purchaseOrders &&
+                orderSupplier.purchaseOrders.length > 0 ? (
+                  <div className="space-y-4">
+                    {orderSupplier.purchaseOrders.map((po) => (
+                      <div key={po.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{po.code}</p>
+                            <p className="text-sm text-gray-500">
+                              Ngày nhập: {formatDateTime(po.purchaseDate)}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() =>
+                              router.push(`/san-pham/nhap-hang/${po.id}`)
+                            }
+                            className="text-blue-600 hover:underline">
+                            Xem chi tiết
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-500">
+                    Chưa có lịch sử nhập hàng
+                  </p>
+                )}
               </div>
             )}
 
