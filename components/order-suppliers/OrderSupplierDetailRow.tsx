@@ -124,19 +124,8 @@ export function OrderSupplierDetailRow({
     }
   };
 
-  const handleCreatePurchaseOrder = async () => {
-    try {
-      setIsSaving(true);
-      await createFromOrderSupplier({
-        orderSupplierId: orderSupplierId,
-        additionalPayment: 0,
-      });
-      toast.success("Tạo phiếu nhập hàng thành công");
-    } catch (error: any) {
-      toast.error(error.message || "Không thể tạo phiếu nhập hàng");
-    } finally {
-      setIsSaving(false);
-    }
+  const handleCreatePurchaseOrder = () => {
+    router.push(`/san-pham/nhap-hang/new?orderSupplierId=${orderSupplierId}`);
   };
 
   if (isLoading) {

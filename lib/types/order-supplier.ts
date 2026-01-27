@@ -48,7 +48,12 @@ export interface OrderSupplier {
   };
   items?: OrderSupplierItem[];
   expensesOthers?: OrderSupplierExpensesOther[];
-  purchaseOrders?: PurchaseOrder[];
+  purchaseOrders?: Array<{
+    id: number;
+    code: string;
+    purchaseDate: string;
+    total: number;
+  }>;
 }
 
 export interface OrderSupplierItem {

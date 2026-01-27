@@ -248,6 +248,7 @@ export function PurchaseOrderForm({
     }
 
     const purchaseOrderData = {
+      orderSupplierId: orderSupplier?.id || null,
       supplierId,
       branchId,
       purchaseDate: new Date().toISOString(),
