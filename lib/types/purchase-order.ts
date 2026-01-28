@@ -6,9 +6,16 @@ export interface PurchaseOrder {
   branchId?: number;
   purchaseDate: string;
   total: number;
+  totalAmount: number;
   discount: number;
   discountRatio: number;
+  subTotal: number;
   paidAmount: number;
+  debtAmount: number;
+  status: number;
+  statusValue?: string;
+  supplierDebt: number;
+  supplierOldDebt: number;
   isDraft: boolean;
   partnerType?: string;
   description?: string;
