@@ -54,6 +54,7 @@ export interface OrderSupplier {
     purchaseDate: string;
     total: number;
   }>;
+  payments?: OrderSupplierPayment[];
 }
 
 export interface OrderSupplierItem {
@@ -97,6 +98,19 @@ export interface OrderSupplierFilters {
   createdDateTo?: string;
   pageSize?: number;
   currentItem?: number;
+}
+
+export interface OrderSupplierPayment {
+  id: number;
+  code: string;
+  orderSupplierId: number;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  accountId?: number;
+  description?: string;
+  status: number;
+  statusValue?: string;
 }
 
 export const ORDER_SUPPLIER_STATUS = {

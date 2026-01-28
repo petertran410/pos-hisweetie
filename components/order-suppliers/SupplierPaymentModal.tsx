@@ -12,6 +12,7 @@ interface SupplierPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   totalAmount: number;
+  previouslyPaid?: number;
   onConfirm: (amount: number, method: "cash" | "transfer" | "card") => void;
 }
 
@@ -19,11 +20,11 @@ export function SupplierPaymentModal({
   isOpen,
   onClose,
   totalAmount,
+  previouslyPaid = 0,
   onConfirm,
 }: SupplierPaymentModalProps) {
-  const [amount, setAmount] = useState(
-    formatNumberInput(totalAmount.toString())
-  );
+  const needToPay = totalAmount - previouslyPaid;
+  const [amount, setAmount] = useState(formatNumberInput(needToPay.toString()));
   const [method, setMethod] = useState<"cash" | "transfer" | "card">("cash");
 
   if (!isOpen) return null;
@@ -44,7 +45,7 @@ export function SupplierPaymentModal({
   };
 
   const numericAmount = parseNumberInput(amount);
-  const remaining = totalAmount - numericAmount;
+  const remaining = needToPay - numericAmount;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
@@ -57,7 +58,6 @@ export function SupplierPaymentModal({
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Số tiền thanh toán */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Thanh toán
@@ -70,7 +70,6 @@ export function SupplierPaymentModal({
             />
           </div>
 
-          {/* Phương thức thanh toán */}
           <div className="flex gap-2">
             <button
               onClick={() => setMethod("cash")}
@@ -101,18 +100,17 @@ export function SupplierPaymentModal({
             </button>
           </div>
 
-          {/* Thông tin thanh toán */}
           <div className="space-y-2 pt-4 border-t">
             <div className="flex justify-between text-base">
               <span className="text-gray-600">Cần trả nhà cung cấp</span>
               <span className="font-semibold text-blue-600">
-                {formatCurrency(totalAmount)}
+                {formatCurrency(needToPay)}
               </span>
             </div>
             <div className="flex justify-between text-base">
-              <span className="text-gray-600">Tiền nhà cung cấp trả lại</span>
-              <span className="font-semibold">
-                {remaining <= 0 ? formatCurrency(remaining * -1) : 0}
+              <span className="text-gray-600">Còn nợ</span>
+              <span className="font-semibold text-red-600">
+                {formatCurrency(Math.max(0, remaining))}
               </span>
             </div>
           </div>

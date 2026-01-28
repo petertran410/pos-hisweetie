@@ -64,6 +64,7 @@ export function OrderSupplierForm({
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<Date | null>(
     null
   );
+  const [previouslyPaid, setPreviouslyPaid] = useState<number>(0);
 
   const handlePaymentConfirm = (
     amount: number,
@@ -121,6 +122,18 @@ export function OrderSupplierForm({
         note: item.description,
       }));
       setProducts(loadedProducts);
+
+      const previousPaid = Number(orderSupplier.paidAmount || 0);
+      setPreviouslyPaid(previousPaid);
+
+      setPaymentAmount(0);
+
+      if (orderSupplier.payments && orderSupplier.payments.length > 0) {
+        const firstPayment = orderSupplier.payments[0];
+        setPaymentMethod(
+          firstPayment.paymentMethod as "cash" | "transfer" | "card"
+        );
+      }
     }
   }, [orderSupplier]);
 
@@ -626,13 +639,11 @@ export function OrderSupplierForm({
             </div>
           </div>
 
-          {/* Divider */}
           <div className="border-t my-3"></div>
 
-          {/* Thông tin tiền - Grid 2 cột */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-md text-gray-600 mb-1">
+              <label className="block text-xs text-gray-600 mb-1">
                 Tổng tiền hàng
               </label>
               <div className="text-sm font-semibold text-right px-2 py-1.5 bg-gray-50 rounded">
@@ -640,33 +651,32 @@ export function OrderSupplierForm({
               </div>
             </div>
             <div>
-              <label className="block text-md text-gray-600 mb-1">
+              <label className="block text-xs text-gray-600 mb-1">
                 Giảm giá
               </label>
               <input
                 type="text"
                 value="0"
                 readOnly
-                disabled={isFormDisabled ? true : false}
-                className="w-full text-right text-sm px-2 py-1.5 border rounded disabled:bg-gray-100"
+                className="w-full text-right text-sm px-2 py-1.5 border rounded bg-gray-100"
               />
             </div>
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded p-2">
             <div className="flex justify-between items-center">
-              <span className="text-md font-medium text-gray-700">
+              <span className="text-xs font-medium text-gray-700">
                 Cần trả nhà cung cấp
               </span>
               <span className="text-lg font-bold text-blue-600">
-                {formatCurrency(calculateTotalValue())}
+                {formatCurrency(calculateTotalValue() - previouslyPaid)}
               </span>
             </div>
           </div>
 
           <div>
-            <label className="block text-md text-gray-600 mb-1">
-              Tiền trả nhà cung cấp
+            <label className="block text-xs text-gray-600 mb-1">
+              {orderSupplier ? "Trả thêm cho NCC" : "Tiền trả nhà cung cấp"}
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -683,7 +693,7 @@ export function OrderSupplierForm({
               </button>
             </div>
             {paymentAmount > 0 && (
-              <div className="mt-1 text-md text-gray-500">
+              <div className="mt-1 text-xs text-gray-500">
                 {paymentMethod === "cash" && "Tiền mặt"}
                 {paymentMethod === "card" && "Thẻ"}
                 {paymentMethod === "transfer" && "Chuyển khoản"}
@@ -691,19 +701,35 @@ export function OrderSupplierForm({
             )}
           </div>
 
+          {orderSupplier && (previouslyPaid > 0 || paymentAmount > 0) && (
+            <div className="bg-green-50 border border-green-200 rounded p-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-medium text-gray-700">
+                  Tổng đã trả
+                </span>
+                <span className="text-base font-bold text-green-600">
+                  {formatCurrency(previouslyPaid + paymentAmount)}
+                </span>
+              </div>
+            </div>
+          )}
+
           <div>
-            <label className="block text-md text-gray-600 mb-1">
+            <label className="block text-xs text-gray-600 mb-1">
               Tiền nhà cung cấp trả lại
             </label>
             <div className="text-sm font-semibold text-right px-2 py-1.5 bg-red-50 text-red-600 rounded">
               {formatCurrency(
-                Math.max(0, paymentAmount - calculateTotalValue())
+                Math.max(
+                  0,
+                  previouslyPaid + paymentAmount - calculateTotalValue()
+                )
               )}
             </div>
           </div>
 
           <div>
-            <label className="block text-md text-gray-600 mb-1">
+            <label className="block text-xs text-gray-600 mb-1">
               Dự kiến ngày nhập hàng
             </label>
             <div className="relative">
@@ -716,15 +742,21 @@ export function OrderSupplierForm({
                   )
                 }
                 disabled={isFormDisabled ? true : false}
-                className="w-full text-sm px-2 py-1.5 border rounded disabled:bg-gray-100"
+                className="w-full text-sm px-2 py-1.5 border rounded disabled:bg-gray-100 
+                 focus:outline-none focus:ring-2 focus:ring-blue-500
+                 [&::-webkit-calendar-picker-indicator]:opacity-0
+                 [&::-webkit-calendar-picker-indicator]:absolute
+                 [&::-webkit-calendar-picker-indicator]:right-0
+                 [&::-webkit-calendar-picker-indicator]:w-full
+                 [&::-webkit-calendar-picker-indicator]:h-full
+                 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
               />
               <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
           </div>
 
-          {/* Ghi chú */}
           <div>
-            <label className="block text-md text-gray-600 mb-1">Ghi chú</label>
+            <label className="block text-xs text-gray-600 mb-1">Ghi chú</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -754,11 +786,11 @@ export function OrderSupplierForm({
         </div>
       </div>
 
-      {/* Payment Modal */}
       <SupplierPaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         totalAmount={calculateTotalValue()}
+        previouslyPaid={previouslyPaid}
         onConfirm={handlePaymentConfirm}
       />
     </div>
