@@ -12,7 +12,7 @@ import {
 } from "@/lib/hooks/useOrderSuppliers";
 import { toast } from "sonner";
 import type { OrderSupplier } from "@/lib/types/order-supplier";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, parseNumberInput } from "@/lib/utils";
 import { useBranchStore } from "@/lib/store/branch";
 import { CreditCard, Calendar } from "lucide-react";
 import { SupplierPaymentModal } from "./SupplierPaymentModal";
@@ -465,10 +465,11 @@ export function OrderSupplierForm({
                     <td className="px-3 py-2">
                       <input
                         type="text"
-                        value={item.price}
-                        onChange={(e) =>
-                          handlePriceChange(index, e.target.value)
-                        }
+                        value={formatCurrency(item.price)}
+                        onChange={(e) => {
+                          const numericValue = parseNumberInput(e.target.value);
+                          handlePriceChange(index, numericValue.toString());
+                        }}
                         disabled={isFormDisabled ? true : false}
                         className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />
@@ -476,10 +477,11 @@ export function OrderSupplierForm({
                     <td className="px-3 py-2">
                       <input
                         type="text"
-                        value={item.discount}
-                        onChange={(e) =>
-                          handleDiscountChange(index, e.target.value)
-                        }
+                        value={formatCurrency(item.discount)}
+                        onChange={(e) => {
+                          const numericValue = parseNumberInput(e.target.value);
+                          handleDiscountChange(index, numericValue.toString());
+                        }}
                         disabled={isFormDisabled ? true : false}
                         className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />

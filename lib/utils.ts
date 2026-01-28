@@ -10,7 +10,8 @@ export function formatDate(date: string | Date): string {
 
 export function formatNumberInput(value: string): string {
   const number = value.replace(/\D/g, "");
-  return new Intl.NumberFormat("en-US").format(Number(number) || 0);
+  if (number === "") return "";
+  return new Intl.NumberFormat("en-US").format(Number(number));
 }
 
 export function parseNumberInput(value: string): number {

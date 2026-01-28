@@ -24,7 +24,7 @@ export function SupplierPaymentModal({
   onConfirm,
 }: SupplierPaymentModalProps) {
   const needToPay = totalAmount - previouslyPaid;
-  const [amount, setAmount] = useState(formatNumberInput(needToPay.toString()));
+  const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<"cash" | "transfer" | "card">("cash");
 
   if (!isOpen) return null;
@@ -66,6 +66,7 @@ export function SupplierPaymentModal({
               type="text"
               value={amount}
               onChange={(e) => handleAmountChange(e.target.value)}
+              placeholder="Nhập số tiền"
               className="w-full text-right text-2xl font-semibold border-2 border-blue-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
