@@ -307,137 +307,115 @@ export function OrderSupplierForm({
 
   return (
     <div className="flex h-full border-t bg-gray-50 overflow-hidden">
-      <div className="flex-1 flex flex-col overflow-y-auto bg-white w-80 m-4 border rounded-xl">
-        <div className="border-b px-6 py-4 flex items-center justify-between bg-gray-50">
-          <div>
+      {/* Main content - Bên trái */}
+      <div className="flex-1 flex flex-col overflow-hidden m-4 border rounded-xl">
+        {/* Header */}
+        <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push("/san-pham/dat-hang-nhap")}
+              className="p-2 hover:bg-gray-100 rounded-lg">
+              <X className="w-5 h-5" />
+            </button>
             <h2 className="text-xl font-semibold">
-              {orderSupplier
-                ? "Chi tiết phiếu đặt hàng nhập"
-                : "Tạo phiếu đặt hàng nhập"}
+              {orderSupplier ? "Cập nhật đặt hàng nhập" : "Tạo đặt hàng nhập"}
             </h2>
-            {orderSupplier && (
-              <p className="text-sm text-gray-600 mt-1">
-                Mã phiếu: {orderSupplier.code}
-              </p>
-            )}
           </div>
-          <button
-            onClick={() => (onClose ? onClose() : router.back())}
-            className="text-gray-400 hover:text-gray-600 transition">
-            <X className="w-6 h-6" />
-          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tìm hàng hóa theo mã hoặc tên
-            </label>
+        {/* Search & Products */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="mb-4 relative">
             <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder={
-                  isFormDisabled
-                    ? "Không thể thêm sản phẩm ở trạng thái này"
-                    : "Tìm kiếm sản phẩm..."
-                }
                 value={searchQuery}
                 onChange={(e) => {
-                  if (isFormDisabled) return;
                   setSearchQuery(e.target.value);
                   setShowSearchResults(true);
                 }}
-                onFocus={() => !isFormDisabled && setShowSearchResults(true)}
-                onBlur={() =>
-                  setTimeout(() => setShowSearchResults(false), 200)
-                }
+                onFocus={() => setShowSearchResults(true)}
+                placeholder="Tìm kiếm sản phẩm theo mã hoặc tên..."
                 disabled={isFormDisabled ? true : false}
-                className="w-full px-4 py-2.5 border rounded-lg disabled:bg-gray-100 pr-10"
+                className="w-full pl-10 pr-4 py-2.5 border rounded-lg disabled:bg-gray-100"
               />
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             </div>
 
-            {showSearchResults && searchQuery && searchResults?.data && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto z-50">
-                {searchResults.data.length === 0 ? (
-                  <div className="p-4 text-center text-gray-500">
-                    Không tìm thấy sản phẩm
-                  </div>
-                ) : (
-                  searchResults.data.map((product) => (
-                    <div
-                      key={product.id}
-                      onClick={() => handleAddProduct(product)}
-                      className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gray-200 rounded flex-shrink-0">
-                          {product.images?.[0]?.image && (
-                            <img
-                              src={product.images[0].image}
-                              alt={product.name}
-                              className="w-full h-full object-cover rounded"
-                            />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {product.code} - {product.name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Giá:{" "}
-                            {formatCurrency(getProductCost(product, branchId))}
-                          </p>
-                        </div>
+            {showSearchResults && searchQuery && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto">
+                {searchResults?.data?.map((product: any) => (
+                  <div
+                    key={product.id}
+                    onClick={() => handleAddProduct(product)}
+                    className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gray-100 rounded flex-shrink-0">
+                        {product.images?.[0]?.image && (
+                          <img
+                            src={product.images[0].image}
+                            alt={product.name}
+                            className="w-full h-full object-cover rounded"
+                          />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {product.code} - {product.name}
+                        </p>
+                        <p className="text-md text-gray-500">
+                          Giá:{" "}
+                          {formatCurrency(getProductCost(product, branchId))}
+                        </p>
                       </div>
                     </div>
-                  ))
-                )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
 
-          <div className="border rounded-lg overflow-hidden">
+          {/* Products Table */}
+          <div className="border rounded-lg overflow-hidden bg-white">
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-3 py-2 text-left text-md font-medium text-gray-700">
                     STT
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-3 py-2 text-left text-md font-medium text-gray-700">
                     Mã hàng
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-3 py-2 text-left text-md font-medium text-gray-700">
                     Tên hàng
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-3 py-2 text-center text-md font-medium text-gray-700">
                     SL đặt
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
                     Giá nhập
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
                     Giảm giá
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                  <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
                     Thành tiền
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap"></th>
+                  <th className="px-3 py-2 text-center text-md font-medium text-gray-700">
+                    Xóa
+                  </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y">
                 {products.map((item, index) => (
                   <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {index + 1}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600 font-medium">
+                    <td className="px-3 py-2 text-sm">{index + 1}</td>
+                    <td className="px-3 py-2 text-sm text-blue-600">
                       {item.productCode}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 min-w-[200px]">
-                      {item.productName}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="px-3 py-2 text-sm">{item.productName}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() =>
                             handleQuantityChange(
@@ -447,7 +425,7 @@ export function OrderSupplierForm({
                           }
                           disabled={isFormDisabled ? true : false}
                           className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
-                          <Minus className="w-4 h-4" />
+                          <Minus className="w-3 h-3" />
                         </button>
                         <input
                           type="text"
@@ -456,7 +434,7 @@ export function OrderSupplierForm({
                             handleQuantityChange(index, e.target.value)
                           }
                           disabled={isFormDisabled ? true : false}
-                          className="w-20 text-center border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                          className="w-16 text-center border rounded px-1 py-1 text-sm disabled:bg-gray-100"
                         />
                         <button
                           onClick={() =>
@@ -467,11 +445,11 @@ export function OrderSupplierForm({
                           }
                           disabled={isFormDisabled ? true : false}
                           className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
-                          <Plus className="w-4 h-4" />
+                          <Plus className="w-3 h-3" />
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2">
                       <input
                         type="text"
                         value={item.price}
@@ -482,7 +460,7 @@ export function OrderSupplierForm({
                         className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2">
                       <input
                         type="text"
                         value={item.discount}
@@ -493,15 +471,15 @@ export function OrderSupplierForm({
                         className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                    <td className="px-3 py-2 text-sm text-right font-medium">
                       {formatCurrency(item.subTotal)}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <td className="px-3 py-2 text-center">
                       <button
                         onClick={() => handleRemoveProduct(index)}
                         disabled={isFormDisabled ? true : false}
                         className="text-red-600 hover:text-red-800 disabled:opacity-50">
-                        <X className="w-5 h-5" />
+                        <X className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
@@ -518,22 +496,30 @@ export function OrderSupplierForm({
         </div>
       </div>
 
-      <div className="w-80 border mr-4 mb-4 mt-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-6 bg-white shadow-xl">
-        <div className="space-y-6">
+      {/* Sidebar - Bên phải */}
+      <div className="w-[420px] border mr-4 mt-4 mb-4 rounded-xl overflow-y-auto bg-white border-l flex flex-col custom-sidebar-scroll">
+        <div className="px-4 py-3 border-b bg-gray-50">
+          <h3 className="font-semibold text-gray-900">Thông tin đơn hàng</h3>
+        </div>
+
+        {/* Sidebar Content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* Mã đặt hàng */}
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-md text-gray-600 mb-1">
               Mã đặt hàng nhập
             </label>
             <input
               type="text"
               value={orderSupplier?.code || "Mã phiếu tự động"}
               disabled
-              className="w-full px-3 py-2 border rounded bg-gray-50 text-gray-600"
+              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-gray-600"
             />
           </div>
 
+          {/* Trạng thái */}
           <div ref={statusDropdownRef}>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-md text-gray-600 mb-1">
               Trạng thái <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -543,13 +529,12 @@ export function OrderSupplierForm({
                   !isFormDisabled && setShowStatusDropdown(!showStatusDropdown)
                 }
                 disabled={isFormDisabled ? true : false}
-                className="w-full px-3 py-2 border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
-                <span className={!selectedStatus ? "text-gray-400" : ""}>
+                className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
+                <span>
                   {selectedStatus ? selectedStatus.label : "Chọn trạng thái"}
                 </span>
-                <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
+                <ChevronDown className="w-4 h-4" />
               </button>
-
               {showStatusDropdown && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10">
                   {STATUS_OPTIONS.map((option) => (
@@ -559,7 +544,7 @@ export function OrderSupplierForm({
                         setStatus(option.value);
                         setShowStatusDropdown(false);
                       }}
-                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
                       {option.label}
                     </div>
                   ))}
@@ -568,62 +553,32 @@ export function OrderSupplierForm({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm text-gray-600 mb-2">
-              Tổng số lượng / Tổng giá trị
-            </label>
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={calculateTotalQuantity()}
-                disabled
-                className="w-full px-3 py-2 border rounded bg-gray-50 text-right"
-              />
-              <input
-                type="text"
-                value={formatCurrency(calculateTotalValue())}
-                disabled
-                className="w-full px-3 py-2 border rounded bg-blue-50 text-right text-blue-600 font-semibold"
-              />
-            </div>
-          </div>
-
+          {/* Chi nhánh */}
           <div ref={branchDropdownRef}>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-md text-gray-600 mb-1">
               Chi nhánh <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <button
                 type="button"
-                onClick={() => {
-                  if (!orderSupplier) {
-                    setShowBranchDropdown(!showBranchDropdown);
-                  }
-                }}
-                disabled={orderSupplier ? true : false}
-                className="w-full px-3 py-2 border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
-                <span
-                  className={
-                    !selectedBranchData || branchId === 0 ? "text-gray-400" : ""
-                  }>
-                  {selectedBranchData
-                    ? selectedBranchData.name
-                    : "Chọn chi nhánh"}
-                </span>
-                <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
+                onClick={() =>
+                  !isFormDisabled && setShowBranchDropdown(!showBranchDropdown)
+                }
+                disabled={isFormDisabled ? true : false}
+                className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100">
+                <span>{selectedBranchData?.name || "Chọn chi nhánh"}</span>
+                <ChevronDown className="w-4 h-4" />
               </button>
-
               {showBranchDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
                   {branches?.map((branch) => (
                     <div
                       key={branch.id}
                       onClick={() => {
                         setBranchId(branch.id);
-                        setProducts([]);
                         setShowBranchDropdown(false);
                       }}
-                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
                       {branch.name}
                     </div>
                   ))}
@@ -632,8 +587,9 @@ export function OrderSupplierForm({
             </div>
           </div>
 
+          {/* Nhà cung cấp */}
           <div ref={supplierDropdownRef}>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-md text-gray-600 mb-1">
               Nhà cung cấp <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -644,20 +600,16 @@ export function OrderSupplierForm({
                   setShowSupplierDropdown(!showSupplierDropdown)
                 }
                 disabled={isFormDisabled ? true : false}
-                className="w-full px-3 py-2 border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
-                <span
-                  className={
-                    !selectedSupplier || supplierId === 0 ? "text-gray-400" : ""
-                  }>
+                className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100">
+                <span className={!selectedSupplier ? "text-gray-400" : ""}>
                   {selectedSupplier
                     ? selectedSupplier.name
                     : "Chọn nhà cung cấp"}
                 </span>
-                <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
+                <ChevronDown className="w-4 h-4" />
               </button>
-
               {showSupplierDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
                   {suppliersData?.data?.map((supplier) => (
                     <div
                       key={supplier.id}
@@ -665,7 +617,7 @@ export function OrderSupplierForm({
                         setSupplierId(supplier.id);
                         setShowSupplierDropdown(false);
                       }}
-                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
                       {supplier.name}
                     </div>
                   ))}
@@ -674,129 +626,141 @@ export function OrderSupplierForm({
             </div>
           </div>
 
-          {/* Tổng tiền và thanh toán */}
-          <div className="bg-white border rounded-lg p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tổng tiền hàng
-                </label>
-                <div className="text-lg font-semibold text-right">
-                  {formatCurrency(calculateTotalValue())}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Giảm giá
-                </label>
-                <input
-                  type="text"
-                  value="0"
-                  disabled={isFormDisabled ? true : false}
-                  className="w-full text-right text-lg font-semibold border rounded px-3 py-2 disabled:bg-gray-100"
-                />
+          {/* Divider */}
+          <div className="border-t my-3"></div>
+
+          {/* Thông tin tiền - Grid 2 cột */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-md text-gray-600 mb-1">
+                Tổng tiền hàng
+              </label>
+              <div className="text-sm font-semibold text-right px-2 py-1.5 bg-gray-50 rounded">
+                {formatCurrency(calculateTotalValue())}
               </div>
             </div>
-
-            {/* Tiền trả nhà cung cấp */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tiền trả nhà cung cấp
+              <label className="block text-md text-gray-600 mb-1">
+                Giảm giá
               </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={formatCurrency(paymentAmount)}
-                  readOnly
-                  className="flex-1 text-right text-lg font-semibold border rounded px-3 py-2 bg-gray-50"
-                />
-                <button
-                  onClick={() => setShowPaymentModal(true)}
-                  disabled={isFormDisabled ? true : false}
-                  className="p-2 border rounded hover:bg-gray-50 disabled:opacity-50">
-                  <CreditCard className="w-5 h-5 text-blue-600" />
-                </button>
-              </div>
-              <div className="mt-1 text-sm text-gray-500">
-                {paymentMethod === "cash" && "Tiền mặt"}
-                {paymentMethod === "card" && "Thẻ"}
-                {paymentMethod === "transfer" && "Chuyển khoản"}
-              </div>
-            </div>
-
-            {/* Tiền nhà cung cấp trả lại */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tiền nhà cung cấp trả lại
-              </label>
-              <div className="text-lg font-semibold text-right text-red-600">
-                {formatCurrency(
-                  Math.max(0, paymentAmount - calculateTotalValue())
-                )}
-              </div>
-            </div>
-
-            {/* Dự kiến ngày nhập hàng */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dự kiến ngày nhập hàng
-              </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={
-                    expectedDeliveryDate?.toISOString().split("T")[0] || ""
-                  }
-                  onChange={(e) =>
-                    setExpectedDeliveryDate(
-                      e.target.value ? new Date(e.target.value) : null
-                    )
-                  }
-                  disabled={isFormDisabled ? true : false}
-                  className="w-full border rounded px-3 py-2 pr-10 disabled:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Ghi chú */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <span className="flex items-center gap-2">Ghi chú</span>
-              </label>
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
+              <input
+                type="text"
+                value="0"
+                readOnly
                 disabled={isFormDisabled ? true : false}
-                placeholder="Nhập ghi chú..."
-                rows={3}
-                className="w-full border rounded px-3 py-2 text-sm disabled:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full text-right text-sm px-2 py-1.5 border rounded disabled:bg-gray-100"
               />
             </div>
           </div>
 
-          {/* Payment Modal */}
-          <SupplierPaymentModal
-            isOpen={showPaymentModal}
-            onClose={() => setShowPaymentModal(false)}
-            totalAmount={calculateTotalValue()}
-            onConfirm={handlePaymentConfirm}
-          />
+          <div className="bg-blue-50 border border-blue-200 rounded p-2">
+            <div className="flex justify-between items-center">
+              <span className="text-md font-medium text-gray-700">
+                Cần trả nhà cung cấp
+              </span>
+              <span className="text-lg font-bold text-blue-600">
+                {formatCurrency(calculateTotalValue())}
+              </span>
+            </div>
+          </div>
 
-          <div className="pt-4 border-t">
-            {!isFormDisabled && (
+          <div>
+            <label className="block text-md text-gray-600 mb-1">
+              Tiền trả nhà cung cấp
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={formatCurrency(paymentAmount)}
+                readOnly
+                className="flex-1 text-right text-sm px-2 py-1.5 border rounded bg-gray-50"
+              />
               <button
-                onClick={handleSubmit}
-                disabled={
-                  createOrderSupplier.isPending || updateOrderSupplier.isPending
-                }
-                className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50">
-                {orderSupplier ? "Lưu" : "Tạo đặt hàng nhập"}
+                onClick={() => setShowPaymentModal(true)}
+                disabled={isFormDisabled ? true : false}
+                className="p-1.5 border rounded hover:bg-gray-50 disabled:opacity-50">
+                <CreditCard className="w-4 h-4 text-blue-600" />
               </button>
+            </div>
+            {paymentAmount > 0 && (
+              <div className="mt-1 text-md text-gray-500">
+                {paymentMethod === "cash" && "Tiền mặt"}
+                {paymentMethod === "card" && "Thẻ"}
+                {paymentMethod === "transfer" && "Chuyển khoản"}
+              </div>
             )}
           </div>
+
+          <div>
+            <label className="block text-md text-gray-600 mb-1">
+              Tiền nhà cung cấp trả lại
+            </label>
+            <div className="text-sm font-semibold text-right px-2 py-1.5 bg-red-50 text-red-600 rounded">
+              {formatCurrency(
+                Math.max(0, paymentAmount - calculateTotalValue())
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-md text-gray-600 mb-1">
+              Dự kiến ngày nhập hàng
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={expectedDeliveryDate?.toISOString().split("T")[0] || ""}
+                onChange={(e) =>
+                  setExpectedDeliveryDate(
+                    e.target.value ? new Date(e.target.value) : null
+                  )
+                }
+                disabled={isFormDisabled ? true : false}
+                className="w-full text-sm px-2 py-1.5 border rounded disabled:bg-gray-100"
+              />
+              <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Ghi chú */}
+          <div>
+            <label className="block text-md text-gray-600 mb-1">Ghi chú</label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              disabled={isFormDisabled ? true : false}
+              placeholder="Nhập ghi chú..."
+              rows={2}
+              className="w-full text-sm px-2 py-1.5 border rounded disabled:bg-gray-100 resize-none"
+            />
+          </div>
+        </div>
+
+        {/* Sidebar Footer - Buttons */}
+        <div className="p-4 border-t bg-gray-50 flex gap-2">
+          <button
+            onClick={handleSubmit}
+            disabled={isFormDisabled ? true : false}
+            className="w-full bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm flex items-center justify-center gap-2">
+            <Plus className="w-4 h-4" />
+            {orderSupplier ? "Cập nhật" : "Đặt hàng nhập"}
+          </button>
+
+          <button
+            onClick={() => router.push("/san-pham/dat-hang-nhap")}
+            className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 font-medium text-sm">
+            Hủy
+          </button>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      <SupplierPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        totalAmount={calculateTotalValue()}
+        onConfirm={handlePaymentConfirm}
+      />
     </div>
   );
 }

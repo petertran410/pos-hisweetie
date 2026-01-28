@@ -116,7 +116,8 @@ export function CashFlowDetailRow({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <h3 className="text-xl font-extrabold text-gray-800">
-                    {cashFlow.isReceipt ? "Phiếu thu" : "Phiếu chi"}{" "}
+                    {cashFlow.isReceipt ? "Phiếu thu" : "Phiếu chi"}
+                    {" - "}
                     <span className="text-lg font-thin">{cashFlow.code}</span>
                   </h3>
                   <span

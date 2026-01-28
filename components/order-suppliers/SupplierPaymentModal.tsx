@@ -110,7 +110,7 @@ export function SupplierPaymentModal({
               </span>
             </div>
             <div className="flex justify-between text-base">
-              <span className="text-gray-600">Tiền trả nhà cung cấp</span>
+              <span className="text-gray-600">Tiền nhà cung cấp trả lại</span>
               <span className="font-semibold">
                 {remaining <= 0 ? formatCurrency(remaining * -1) : 0}
               </span>
