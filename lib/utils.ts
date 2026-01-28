@@ -7,3 +7,12 @@ export function formatDate(date: string | Date): string {
   const d = new Date(date);
   return d.toLocaleDateString("vi-VN");
 }
+
+export function formatNumberInput(value: string): string {
+  const number = value.replace(/\D/g, "");
+  return new Intl.NumberFormat("en-US").format(Number(number) || 0);
+}
+
+export function parseNumberInput(value: string): number {
+  return Number(value.replace(/,/g, "")) || 0;
+}

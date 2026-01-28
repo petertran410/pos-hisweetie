@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import type { OrderSupplier } from "@/lib/types/order-supplier";
 import { formatCurrency } from "@/lib/utils";
 import { useBranchStore } from "@/lib/store/branch";
+import { CreditCard, Calendar } from "lucide-react";
+import { SupplierPaymentModal } from "./SupplierPaymentModal";
 
 interface ProductItem {
   productId: number;
@@ -54,6 +56,22 @@ export function OrderSupplierForm({
   const { data: suppliersData } = useSuppliers({});
   const createOrderSupplier = useCreateOrderSupplier();
   const updateOrderSupplier = useUpdateOrderSupplier();
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<
+    "cash" | "transfer" | "card"
+  >("cash");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<Date | null>(
+    null
+  );
+
+  const handlePaymentConfirm = (
+    amount: number,
+    method: "cash" | "transfer" | "card"
+  ) => {
+    setPaymentAmount(amount);
+    setPaymentMethod(method);
+  };
 
   const [branchId, setBranchId] = useState<number>(
     orderSupplier?.branchId || selectedBranch?.id || 0
@@ -264,6 +282,9 @@ export function OrderSupplierForm({
         discount: p.discount,
         description: p.note,
       })),
+      paymentAmount: paymentAmount > 0 ? paymentAmount : undefined,
+      paymentMethod: paymentAmount > 0 ? paymentMethod : undefined,
+      expectedDeliveryDate: expectedDeliveryDate?.toISOString(),
     };
 
     try {
@@ -272,8 +293,10 @@ export function OrderSupplierForm({
           id: orderSupplier.id,
           data: orderSupplierData,
         });
+        toast.success("Cập nhật đặt hàng nhập thành công");
       } else {
         await createOrderSupplier.mutateAsync(orderSupplierData);
+        toast.success("Tạo đặt hàng nhập thành công");
       }
 
       router.push("/san-pham/dat-hang-nhap");
@@ -651,17 +674,114 @@ export function OrderSupplierForm({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Ghi chú</label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              disabled={isFormDisabled ? true : false}
-              rows={4}
-              className="w-full px-3 py-2 border rounded resize-none disabled:bg-gray-100"
-              placeholder="Nhập ghi chú..."
-            />
+          {/* Tổng tiền và thanh toán */}
+          <div className="bg-white border rounded-lg p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tổng tiền hàng
+                </label>
+                <div className="text-lg font-semibold text-right">
+                  {formatCurrency(calculateTotalValue())}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Giảm giá
+                </label>
+                <input
+                  type="text"
+                  value="0"
+                  disabled={isFormDisabled ? true : false}
+                  className="w-full text-right text-lg font-semibold border rounded px-3 py-2 disabled:bg-gray-100"
+                />
+              </div>
+            </div>
+
+            {/* Tiền trả nhà cung cấp */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tiền trả nhà cung cấp
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={formatCurrency(paymentAmount)}
+                  readOnly
+                  className="flex-1 text-right text-lg font-semibold border rounded px-3 py-2 bg-gray-50"
+                />
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  disabled={isFormDisabled ? true : false}
+                  className="p-2 border rounded hover:bg-gray-50 disabled:opacity-50">
+                  <CreditCard className="w-5 h-5 text-blue-600" />
+                </button>
+              </div>
+              <div className="mt-1 text-sm text-gray-500">
+                {paymentMethod === "cash" && "Tiền mặt"}
+                {paymentMethod === "card" && "Thẻ"}
+                {paymentMethod === "transfer" && "Chuyển khoản"}
+              </div>
+            </div>
+
+            {/* Tiền nhà cung cấp trả lại */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tiền nhà cung cấp trả lại
+              </label>
+              <div className="text-lg font-semibold text-right text-red-600">
+                {formatCurrency(
+                  Math.max(0, paymentAmount - calculateTotalValue())
+                )}
+              </div>
+            </div>
+
+            {/* Dự kiến ngày nhập hàng */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dự kiến ngày nhập hàng
+              </label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={
+                    expectedDeliveryDate?.toISOString().split("T")[0] || ""
+                  }
+                  onChange={(e) =>
+                    setExpectedDeliveryDate(
+                      e.target.value ? new Date(e.target.value) : null
+                    )
+                  }
+                  disabled={isFormDisabled ? true : false}
+                  className="w-full border rounded px-3 py-2 pr-10 disabled:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Ghi chú */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <span className="flex items-center gap-2">Ghi chú</span>
+              </label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                disabled={isFormDisabled ? true : false}
+                placeholder="Nhập ghi chú..."
+                rows={3}
+                className="w-full border rounded px-3 py-2 text-sm disabled:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
+
+          {/* Payment Modal */}
+          <SupplierPaymentModal
+            isOpen={showPaymentModal}
+            onClose={() => setShowPaymentModal(false)}
+            totalAmount={calculateTotalValue()}
+            onConfirm={handlePaymentConfirm}
+          />
 
           <div className="pt-4 border-t">
             {!isFormDisabled && (
