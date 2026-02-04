@@ -674,15 +674,103 @@ export default function BanHangPage() {
       return;
     }
 
-    const additionalPayment = activeTab.paymentAmount || 0;
+    if (!selectedBranch) {
+      toast.error("Vui lòng chọn chi nhánh");
+      return;
+    }
+
+    if (!activeTab.selectedCustomer) {
+      toast.error("Vui lòng chọn khách hàng");
+      return;
+    }
+
+    if (activeTab.cartItems.length === 0) {
+      toast.error("Vui lòng thêm sản phẩm vào hóa đơn");
+      return;
+    }
+
+    const actualPayment = activeTab.paymentAmount || 0;
+
+    const hasCartChanges =
+      JSON.stringify(activeTab.cartItems) !==
+      JSON.stringify(
+        existingOrder?.items?.map((item: any) => ({
+          product: item.product,
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+          discount: Number(item.discount) || 0,
+          note: item.note || "",
+        })) || []
+      );
 
     try {
-      await createInvoiceFromOrder.mutateAsync({
-        orderId: activeTab.sourceOrderId,
-        additionalPayment: additionalPayment,
-      });
-      toast.success("Tạo hóa đơn thành công");
-      router.push(`/don-hang/hoa-don`);
+      if (hasCartChanges) {
+        const documentData: any = {
+          customerId: activeTab.selectedCustomer.id,
+          branchId: selectedBranch?.id,
+          discountAmount: Number(activeTab.discount) || 0,
+          discountRatio: Number(activeTab.discountRatio) || 0,
+          purchaseDate: new Date().toISOString(),
+          description: activeTab.orderNote,
+          paidAmount: Number(actualPayment) || 0,
+          items: activeTab.cartItems.map((item) => {
+            const price = Number(item.price);
+            const quantity = Number(item.quantity);
+            const discount = Number(item.discount) || 0;
+            return {
+              productId: Number(item.product.id),
+              productCode: item.product.code,
+              productName: item.product.name,
+              quantity: quantity,
+              price: price,
+              discount: discount,
+              discountRatio: 0,
+              totalPrice: quantity * price - discount,
+              note: item.note || "",
+            };
+          }),
+        };
+
+        if (activeTab.deliveryInfo.receiver) {
+          documentData.delivery = {
+            receiver: activeTab.deliveryInfo.receiver,
+            contactNumber: activeTab.deliveryInfo.contactNumber,
+            address: activeTab.deliveryInfo.detailAddress,
+            locationName: activeTab.deliveryInfo.locationName,
+            wardName: activeTab.deliveryInfo.wardName,
+            weight: Number(activeTab.deliveryInfo.weight) || 0,
+            length: Number(activeTab.deliveryInfo.length) || 10,
+            width: Number(activeTab.deliveryInfo.width) || 10,
+            height: Number(activeTab.deliveryInfo.height) || 10,
+          };
+        }
+
+        const result = await createInvoice.mutateAsync(documentData);
+
+        if (result && activeTab.sourceOrderId) {
+          await updateOrder.mutateAsync({
+            id: activeTab.sourceOrderId,
+            data: {
+              orderStatus: "completed",
+              invoiceId: result.id,
+              invoiceCode: result.code,
+            },
+          });
+        }
+
+        handleCloseTab(activeTabId);
+        toast.success("Tạo hóa đơn thành công");
+        router.push(`/don-hang/hoa-don`);
+      } else {
+        await createInvoiceFromOrder.mutateAsync({
+          orderId: activeTab.sourceOrderId,
+          additionalPayment: actualPayment,
+        });
+
+        handleCloseTab(activeTabId);
+        toast.success("Tạo hóa đơn thành công");
+        router.push(`/don-hang/hoa-don`);
+      }
     } catch (error: any) {
       console.error("Create invoice from order error:", error);
       toast.error(error.message || "Không thể tạo hóa đơn");

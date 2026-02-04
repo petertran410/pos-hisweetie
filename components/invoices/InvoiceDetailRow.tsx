@@ -307,8 +307,8 @@ export function InvoiceDetailRow({
 
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="w-full">
-                      <thead>
-                        <tr className="bg-gray-100 border-b border-gray-200">
+                      <thead className="bg-gray-100">
+                        <tr>
                           <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
                             Mã hàng
                           </th>
@@ -319,13 +319,10 @@ export function InvoiceDetailRow({
                             Số lượng
                           </th>
                           <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Đơn giá
+                            Giá bán
                           </th>
                           <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
                             Giảm giá
-                          </th>
-                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Giá bán
                           </th>
                           <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
                             Thành tiền
@@ -365,18 +362,10 @@ export function InvoiceDetailRow({
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <span className="text-md text-gray-900">
-                                {item.discount
-                                  ? formatMoney(Number(item.discount))
+                              <span className="text-md text-red-600">
+                                {item.discount && Number(item.discount) > 0
+                                  ? `- ${formatMoney(Number(item.discount))}`
                                   : "-"}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <span className="text-md font-semibold text-gray-900">
-                                {formatMoney(
-                                  Number(item.price) -
-                                    Number(item.discount || 0)
-                                )}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
