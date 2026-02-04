@@ -24,6 +24,7 @@ import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
 import { priceBooksApi } from "@/lib/api";
+import { invoicesApi } from "@/lib/api/invoices";
 
 export interface CartItem {
   product: any;
@@ -691,19 +692,29 @@ export default function BanHangPage() {
 
     const actualPayment = activeTab.paymentAmount || 0;
 
+    // Kiểm tra xem có thay đổi cartItems không (so với order gốc)
+    const originalItems =
+      existingOrder?.items?.map((item: any) => ({
+        productId: item.product.id,
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+        discount: Number(item.discount) || 0,
+        note: item.note || "",
+      })) || [];
+
+    const currentItems = activeTab.cartItems.map((item) => ({
+      productId: item.product.id,
+      quantity: item.quantity,
+      price: item.price,
+      discount: item.discount,
+      note: item.note || "",
+    }));
+
     const hasCartChanges =
-      JSON.stringify(activeTab.cartItems) !==
-      JSON.stringify(
-        existingOrder?.items?.map((item: any) => ({
-          product: item.product,
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-          discount: Number(item.discount) || 0,
-          note: item.note || "",
-        })) || []
-      );
+      JSON.stringify(currentItems) !== JSON.stringify(originalItems);
 
     try {
+      // Nếu có thay đổi cartItems, tạo hóa đơn mới với data từ cartItems
       if (hasCartChanges) {
         const documentData: any = {
           customerId: activeTab.selectedCustomer.id,
@@ -747,21 +758,19 @@ export default function BanHangPage() {
 
         const result = await createInvoice.mutateAsync(documentData);
 
-        if (result && activeTab.sourceOrderId) {
-          await updateOrder.mutateAsync({
-            id: activeTab.sourceOrderId,
-            data: {
-              orderStatus: "completed",
-              invoiceId: result.id,
-              invoiceCode: result.code,
-            },
-          });
+        // Link order với invoice
+        if (result?.id) {
+          await invoicesApi.linkOrderToInvoice(
+            result.id,
+            activeTab.sourceOrderId
+          );
         }
 
         handleCloseTab(activeTabId);
         toast.success("Tạo hóa đơn thành công");
         router.push(`/don-hang/hoa-don`);
       } else {
+        // Nếu không thay đổi, dùng API tạo từ order như cũ
         await createInvoiceFromOrder.mutateAsync({
           orderId: activeTab.sourceOrderId,
           additionalPayment: actualPayment,

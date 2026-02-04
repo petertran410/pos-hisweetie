@@ -66,4 +66,8 @@ export const invoicesApi = {
       additionalPayment: additionalPayment || 0,
     });
   },
+
+  linkOrderToInvoice: (invoiceId: number, orderId: number): Promise<any> => {
+    return apiClient.post(`/invoices/link-order/${invoiceId}/${orderId}`, {});
+  },
 };
