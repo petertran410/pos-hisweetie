@@ -3,6 +3,16 @@
 import { useEffect, useState } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
+import { NoteTemplate } from "@/lib/api/note-templates";
+import {
+  useNoteTemplates,
+  useCreateNoteTemplate,
+  useUpdateNoteTemplate,
+  useDeleteNoteTemplate,
+} from "@/lib/hooks/useNoteTemplates";
+import { NoteDropdown } from "./NoteDropdown";
+import { NoteTemplateModal } from "./NoteTemplateModal";
+import { ItemDiscountModal } from "./ItemDiscountModal";
 
 interface InvoiceItemsListProps {
   cartItems: CartItem[];
@@ -34,6 +44,58 @@ export function InvoiceItemsList({
   );
   const [discountValue, setDiscountValue] = useState(0);
   const [displayValue, setDisplayValue] = useState("");
+  const { data: noteTemplates = [] } = useNoteTemplates();
+  const createNoteTemplate = useCreateNoteTemplate();
+  const updateNoteTemplate = useUpdateNoteTemplate();
+  const deleteNoteTemplate = useDeleteNoteTemplate();
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [selectedItemForDiscount, setSelectedItemForDiscount] =
+    useState<CartItem | null>(null);
+
+  const handleOpenDiscountModal = (item: CartItem) => {
+    setSelectedItemForDiscount(item);
+    setShowDiscountModal(true);
+  };
+
+  const handleSaveItemDiscount = (discount: number) => {
+    if (selectedItemForDiscount) {
+      onUpdateItem(selectedItemForDiscount.product.id, { discount });
+    }
+  };
+
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [noteModalMode, setNoteModalMode] = useState<"create" | "edit">(
+    "create"
+  );
+  const [editingTemplate, setEditingTemplate] = useState<NoteTemplate | null>(
+    null
+  );
+
+  const handleCreateTemplate = () => {
+    setNoteModalMode("create");
+    setEditingTemplate(null);
+    setShowNoteModal(true);
+  };
+
+  const handleEditTemplate = (template: NoteTemplate) => {
+    setNoteModalMode("edit");
+    setEditingTemplate(template);
+    setShowNoteModal(true);
+  };
+
+  const handleSaveTemplate = (content: string) => {
+    if (noteModalMode === "create") {
+      createNoteTemplate.mutate({ content });
+    } else if (editingTemplate) {
+      updateNoteTemplate.mutate({ id: editingTemplate.id, data: { content } });
+    }
+  };
+
+  const handleDeleteTemplate = () => {
+    if (editingTemplate) {
+      deleteNoteTemplate.mutate(editingTemplate.id);
+    }
+  };
 
   useEffect(() => {
     if (discountRatio > 0) {
@@ -152,25 +214,13 @@ export function InvoiceItemsList({
                     </span>
                   </div>
 
-                  {!editingNoteId || editingNoteId !== item.product.id ? (
-                    <div
-                      onClick={() => setEditingNoteId(item.product.id)}
-                      className="text-md text-gray-500 cursor-pointer hover:text-gray-700 min-h-[20px]">
-                      {item.note || "Nhấn để thêm ghi chú..."}
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      value={item.note || ""}
-                      onChange={(e) =>
-                        onUpdateItem(item.product.id, { note: e.target.value })
-                      }
-                      onBlur={() => setEditingNoteId(null)}
-                      autoFocus
-                      placeholder="Nhập ghi chú cho sản phẩm"
-                      className="text-md text-gray-700 border-b border-blue-500 focus:outline-none w-full"
-                    />
-                  )}
+                  <NoteDropdown
+                    value={item.note || ""}
+                    onChange={(note) => onUpdateItem(item.product.id, { note })}
+                    templates={noteTemplates}
+                    onCreateTemplate={handleCreateTemplate}
+                    onEditTemplate={handleEditTemplate}
+                  />
                 </div>
 
                 {hoveredItemId === item.product.id && (
@@ -190,7 +240,7 @@ export function InvoiceItemsList({
                         quantity: Math.max(1, item.quantity - 1),
                       })
                     }
-                    className="w-7 h-7 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                    className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Minus className="w-3 h-3" />
                   </button>
                   <input
@@ -201,7 +251,7 @@ export function InvoiceItemsList({
                         quantity: Math.max(1, parseInt(e.target.value) || 1),
                       })
                     }
-                    className="w-12 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-9 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                   />
                   <button
@@ -210,12 +260,17 @@ export function InvoiceItemsList({
                         quantity: item.quantity + 1,
                       })
                     }
-                    className="w-7 h-7 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                    className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
 
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleOpenDiscountModal(item)}
+                    className="text-blue-600 hover:text-blue-700 text-md font-medium">
+                    Giảm giá
+                  </button>
                   <div className="text-md text-gray-500">
                     {item.price.toLocaleString()}
                   </div>
@@ -303,6 +358,27 @@ export function InvoiceItemsList({
           </span>
         </div>
       </div>
+      <NoteTemplateModal
+        isOpen={showNoteModal}
+        onClose={() => setShowNoteModal(false)}
+        onSave={handleSaveTemplate}
+        onDelete={noteModalMode === "edit" ? handleDeleteTemplate : undefined}
+        initialValue={editingTemplate?.content || ""}
+        mode={noteModalMode}
+      />
+      {selectedItemForDiscount && (
+        <ItemDiscountModal
+          isOpen={showDiscountModal}
+          onClose={() => setShowDiscountModal(false)}
+          item={{
+            productName: selectedItemForDiscount.product.name,
+            quantity: selectedItemForDiscount.quantity,
+            price: selectedItemForDiscount.price,
+            discount: selectedItemForDiscount.discount,
+          }}
+          onSave={handleSaveItemDiscount}
+        />
+      )}
     </div>
   );
 }
