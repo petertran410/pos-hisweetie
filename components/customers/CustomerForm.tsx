@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Customer } from "@/lib/types/customer";
 import { useRouter } from "next/navigation";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { useBranchStore } from "@/lib/store/branch";
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -61,7 +62,6 @@ export function CustomerForm({
   onClose,
   onSuccess,
 }: CustomerFormProps) {
-  const router = useRouter();
   const {
     register,
     handleSubmit,
@@ -71,6 +71,7 @@ export function CustomerForm({
   } = useForm();
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
+  const { selectedBranch } = useBranchStore();
 
   const [cities, setCities] = useState<City[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
@@ -455,6 +456,7 @@ export function CustomerForm({
 
     const formattedData = {
       ...data,
+      branchId: selectedBranch?.id,
       groupIds: selectedGroupIds.length > 0 ? selectedGroupIds : undefined,
       code: data.code || undefined,
       cityCode: data.cityCode ? String(data.cityCode) : undefined,
@@ -972,8 +974,8 @@ export function CustomerForm({
                 <textarea
                   {...register("comments")}
                   placeholder="Nhập ghi chú"
-                  className="w-full border rounded px-3 py-2"
-                  rows={3}
+                  className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={2}
                 />
               </div>
             </div>
