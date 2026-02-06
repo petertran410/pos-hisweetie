@@ -7,7 +7,7 @@ import {
   useCustomerGroups,
   useUpdateCustomer,
 } from "@/lib/hooks/useCustomers";
-import { X } from "lucide-react";
+import { X, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { Customer } from "@/lib/types/customer";
 import { useRouter } from "next/navigation";
@@ -89,6 +89,11 @@ export function CustomerForm({
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [groupSearchTerm, setGroupSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [showBirthDatePicker, setShowBirthDatePicker] = useState(false);
+  const birthDatePickerRef = useRef<HTMLDivElement>(null);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
 
   const customerType = watch("type", "0");
   const selectedCityCode = watch("cityCode");
@@ -231,6 +236,12 @@ export function CustomerForm({
         setShowGroupDropdown(false);
         setGroupSearchTerm("");
       }
+      if (
+        birthDatePickerRef.current &&
+        !birthDatePickerRef.current.contains(event.target as Node)
+      ) {
+        setShowBirthDatePicker(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -294,10 +305,11 @@ export function CustomerForm({
       setValue("name", customer.name);
       setValue("contactNumber", customer.contactNumber || "");
       setValue("phone", customer.phone || "");
-      setValue(
-        "birthDate",
-        customer.birthDate ? customer.birthDate.split("T")[0] : ""
-      );
+
+      if (customer.birthDate) {
+        setBirthDate(new Date(customer.birthDate));
+      }
+
       setValue(
         "gender",
         customer.gender === null ? "" : customer.gender ? "true" : "false"
@@ -409,6 +421,19 @@ export function CustomerForm({
       selectedGroupIds.includes(group.id)
     ) || [];
 
+  const formatDateDisplay = (date: Date | null) => {
+    if (!date) return "";
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const handleBirthDateSelect = (date: Date) => {
+    setBirthDate(date);
+    setShowBirthDatePicker(false);
+  };
+
   const onSubmit = async (data: any) => {
     const cityName = cities.find(
       (c) => String(c.code) === String(data.cityCode)
@@ -455,7 +480,7 @@ export function CustomerForm({
       organization: data.organization || undefined,
       taxCode: data.taxCode || undefined,
       type: parseInt(data.type),
-      birthDate: data.birthDate || undefined,
+      birthDate: birthDate ? birthDate.toISOString() : undefined,
       gender: data.gender === "" ? undefined : data.gender === "true",
     };
 
@@ -545,11 +570,227 @@ export function CustomerForm({
               <label className="block text-sm font-medium mb-2">
                 Sinh nhật
               </label>
-              <input
-                type="date"
-                {...register("birthDate")}
-                className="w-full border rounded px-3 py-2"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  readOnly
+                  value={formatDateDisplay(birthDate)}
+                  onClick={() => setShowBirthDatePicker(!showBirthDatePicker)}
+                  placeholder="DD/MM/YYYY"
+                  className="w-full border rounded px-3 py-2 pr-10 cursor-pointer"
+                />
+                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                {showBirthDatePicker && (
+                  <div
+                    ref={birthDatePickerRef}
+                    className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg p-4 z-50 w-[320px]">
+                    <div className="flex items-center justify-between mb-3 pb-3 border-b">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newDate = birthDate
+                            ? new Date(birthDate)
+                            : new Date();
+                          newDate.setMonth(newDate.getMonth() - 1);
+                          setBirthDate(newDate);
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      <div className="flex items-center gap-2 relative">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMonthPicker(!showMonthPicker);
+                            setShowYearPicker(false);
+                          }}
+                          className="px-3 py-1 hover:bg-gray-100 rounded font-medium">
+                          Tháng{" "}
+                          {(birthDate?.getMonth() ?? new Date().getMonth()) + 1}
+                        </button>
+                        <span className="text-gray-400">/</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowYearPicker(!showYearPicker);
+                            setShowMonthPicker(false);
+                          }}
+                          className="px-3 py-1 hover:bg-gray-100 rounded font-medium">
+                          {birthDate?.getFullYear() ?? new Date().getFullYear()}
+                        </button>
+
+                        {showMonthPicker && (
+                          <div className="absolute top-full mt-2 bg-white border rounded-lg shadow-lg p-3 z-50 left-0">
+                            <div className="grid grid-cols-3 gap-2">
+                              {Array.from({ length: 12 }, (_, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => {
+                                    const newDate = birthDate
+                                      ? new Date(birthDate)
+                                      : new Date();
+                                    newDate.setMonth(i);
+                                    setBirthDate(newDate);
+                                    setShowMonthPicker(false);
+                                  }}
+                                  className={`px-3 py-2 text-sm rounded hover:bg-gray-100 ${
+                                    (birthDate?.getMonth() ??
+                                      new Date().getMonth()) === i
+                                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                                      : ""
+                                  }`}>
+                                  T{i + 1}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {showYearPicker && (
+                          <div className="absolute top-full mt-2 bg-white border rounded-lg shadow-lg p-3 z-50 right-0 max-h-[240px] overflow-y-auto w-[200px]">
+                            <div className="grid grid-cols-3 gap-2">
+                              {Array.from({ length: 100 }, (_, i) => {
+                                const year = new Date().getFullYear() - i;
+                                return (
+                                  <button
+                                    key={year}
+                                    type="button"
+                                    onClick={() => {
+                                      const newDate = birthDate
+                                        ? new Date(birthDate)
+                                        : new Date();
+                                      newDate.setFullYear(year);
+                                      setBirthDate(newDate);
+                                      setShowYearPicker(false);
+                                    }}
+                                    className={`px-3 py-2 text-sm rounded hover:bg-gray-100 ${
+                                      (birthDate?.getFullYear() ??
+                                        new Date().getFullYear()) === year
+                                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                                        : ""
+                                    }`}>
+                                    {year}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newDate = birthDate
+                            ? new Date(birthDate)
+                            : new Date();
+                          newDate.setMonth(newDate.getMonth() + 1);
+                          setBirthDate(newDate);
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-1 mb-2">
+                      {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map((day) => (
+                        <div
+                          key={day}
+                          className="text-center text-xs font-medium text-gray-500 py-1">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-1">
+                      {Array.from({ length: 42 }, (_, i) => {
+                        const currentDate = birthDate ?? new Date();
+                        const firstDay = new Date(
+                          currentDate.getFullYear(),
+                          currentDate.getMonth(),
+                          1
+                        );
+                        const startDay = firstDay.getDay();
+                        const dayNumber = i - startDay + 1;
+                        const daysInMonth = new Date(
+                          currentDate.getFullYear(),
+                          currentDate.getMonth() + 1,
+                          0
+                        ).getDate();
+
+                        if (dayNumber < 1 || dayNumber > daysInMonth) {
+                          return <div key={i} className="w-8 h-8" />;
+                        }
+
+                        const isToday =
+                          dayNumber === new Date().getDate() &&
+                          currentDate.getMonth() === new Date().getMonth() &&
+                          currentDate.getFullYear() ===
+                            new Date().getFullYear();
+
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => {
+                              const newDate = new Date(
+                                currentDate.getFullYear(),
+                                currentDate.getMonth(),
+                                dayNumber
+                              );
+                              handleBirthDateSelect(newDate);
+                            }}
+                            className={`w-8 h-8 rounded text-sm transition-colors ${
+                              dayNumber === currentDate.getDate()
+                                ? "bg-blue-600 text-white font-medium"
+                                : isToday
+                                ? "border border-blue-600 text-blue-600"
+                                : "hover:bg-gray-100"
+                            }`}>
+                            {dayNumber}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBirthDate(new Date());
+                          setShowBirthDatePicker(false);
+                        }}
+                        className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded">
+                        Hôm nay
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>
