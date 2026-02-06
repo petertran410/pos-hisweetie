@@ -24,7 +24,11 @@ export function CustomersSidebar({
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [editingGroup, setEditingGroup] = useState<any>(null);
 
+  const [showBranchDropdown, setShowBranchDropdown] = useState(false);
+  const [branchSearchTerm, setBranchSearchTerm] = useState("");
+
   const groupDropdownRef = useRef<HTMLDivElement>(null);
+  const branchDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -34,6 +38,13 @@ export function CustomersSidebar({
       ) {
         setShowGroupDropdown(false);
         setGroupSearchTerm("");
+      }
+      if (
+        branchDropdownRef.current &&
+        !branchDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowBranchDropdown(false);
+        setBranchSearchTerm("");
       }
     };
 
@@ -45,8 +56,16 @@ export function CustomersSidebar({
     (group) => group.id === filters.groupId
   );
 
+  const selectedBranch = branchesData?.find(
+    (branch) => branch.id === filters.branchId
+  );
+
   const filteredGroups = groupsData?.data?.filter((group) =>
     group.name.toLowerCase().includes(groupSearchTerm.toLowerCase())
+  );
+
+  const filteredBranches = branchesData?.filter((branch) =>
+    branch.name.toLowerCase().includes(branchSearchTerm.toLowerCase())
   );
 
   const handleEditGroup = (
@@ -193,21 +212,83 @@ export function CustomersSidebar({
 
         <div>
           <label className="text-sm font-medium mb-2 block">Chi nhánh</label>
-          <select
-            className="w-full border rounded px-3 py-2 text-sm"
-            value={filters.branchId || ""}
-            onChange={(e) =>
-              setFilters({
-                branchId: e.target.value ? Number(e.target.value) : undefined,
-              })
-            }>
-            <option value="">Tất cả chi nhánh</option>
-            {branchesData?.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
+
+          <div ref={branchDropdownRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setShowBranchDropdown(!showBranchDropdown)}
+              className={`w-full border rounded px-3 py-2 text-left flex items-center justify-between bg-white cursor-pointer text-sm ${
+                showBranchDropdown ? "border-blue-500" : "border-gray-300"
+              }`}>
+              <span
+                className={selectedBranch ? "text-gray-900" : "text-gray-400"}>
+                {selectedBranch ? selectedBranch.name : "Tất cả chi nhánh"}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${
+                  showBranchDropdown ? "transform rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {showBranchDropdown && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-[300px] overflow-hidden">
+                <div className="p-2 border-b border-gray-200">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={branchSearchTerm}
+                      onChange={(e) => setBranchSearchTerm(e.target.value)}
+                      placeholder="Tìm kiếm..."
+                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-y-auto max-h-[240px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilters({ branchId: undefined });
+                      setShowBranchDropdown(false);
+                      setBranchSearchTerm("");
+                    }}
+                    className={`w-full px-3 py-2 text-left hover:bg-blue-50 text-sm ${
+                      !filters.branchId
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-900"
+                    }`}>
+                    Tất cả chi nhánh
+                  </button>
+
+                  {filteredBranches && filteredBranches.length > 0 ? (
+                    filteredBranches.map((branch) => (
+                      <button
+                        key={branch.id}
+                        type="button"
+                        onClick={() => {
+                          setFilters({ branchId: branch.id });
+                          setShowBranchDropdown(false);
+                          setBranchSearchTerm("");
+                        }}
+                        className={`w-full px-3 py-2 text-left hover:bg-blue-50 text-sm ${
+                          filters.branchId === branch.id
+                            ? "bg-blue-100 text-blue-700"
+                            : "text-gray-900"
+                        }`}>
+                        {branch.name}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2 text-gray-500 text-center text-sm">
+                      Không tìm thấy kết quả
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div>
