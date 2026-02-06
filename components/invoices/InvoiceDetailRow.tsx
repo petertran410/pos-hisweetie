@@ -393,7 +393,15 @@ export function InvoiceDetailRow({
                       <div className="flex justify-between items-center text-md">
                         <span className="text-gray-600">Giảm giá hóa đơn:</span>
                         <span className="font-semibold text-red-600">
-                          - {formatMoney(Number(invoice.discount))}
+                          -{" "}
+                          {formatMoney(
+                            Number(invoice.discount) +
+                              (Number(invoice.totalAmount) *
+                                Number(invoice.discountRatio || 0)) /
+                                100
+                          )}
+                          {Number(invoice.discountRatio) > 0 &&
+                            ` (${invoice.discountRatio}%)`}
                         </span>
                       </div>
 

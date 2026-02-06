@@ -338,7 +338,15 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           Giảm giá đơn hàng:
                         </span>
                         <span className="font-semibold text-red-600">
-                          - {formatMoney(Number(order.discount))}
+                          -{" "}
+                          {formatMoney(
+                            Number(order.discount) +
+                              (Number(order.totalAmount) *
+                                Number(order.discountRatio || 0)) /
+                                100
+                          )}
+                          {Number(order.discountRatio) > 0 &&
+                            ` (${order.discountRatio}%)`}
                         </span>
                       </div>
 
