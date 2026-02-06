@@ -86,12 +86,18 @@ export function PriceBookForm({
         isGlobal: data.branchScope === "all",
         forAllCusGroup: data.customerGroupScope === "all",
         forAllUser: data.userScope === "all",
-        branches: data.branchScope === "specific" ? data.selectedBranches : [],
+        branches:
+          data.branchScope === "specific"
+            ? data.selectedBranches.map((id: any) => Number(id))
+            : [],
         customerGroups:
           data.customerGroupScope === "specific"
-            ? data.selectedCustomerGroups
+            ? data.selectedCustomerGroups.map((id: any) => Number(id))
             : [],
-        users: data.userScope === "specific" ? data.selectedUsers : [],
+        users:
+          data.userScope === "specific"
+            ? data.selectedUsers.map((id: any) => Number(id))
+            : [],
       };
 
       if (priceBook) {
@@ -316,20 +322,23 @@ export function PriceBookForm({
                   </label>
                 </div>
 
-                {customerGroupScope === "specific" && customerGroupsData && (
-                  <div className="mt-3 space-y-2 ml-6">
-                    {customerGroupsData.map((group) => (
-                      <label key={group.id} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          value={group.id}
-                          {...register("selectedCustomerGroups")}
-                        />
-                        <span className="text-sm">{group.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
+                {customerGroupScope === "specific" &&
+                  customerGroupsData?.data && (
+                    <div className="mt-3 space-y-2 ml-6">
+                      {customerGroupsData.data.map((group) => (
+                        <label
+                          key={group.id}
+                          className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            value={group.id}
+                            {...register("selectedCustomerGroups")}
+                          />
+                          <span className="text-sm">{group.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
               </div>
 
               <div>
