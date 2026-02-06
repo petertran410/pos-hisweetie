@@ -19,20 +19,15 @@ export default function CustomersPage() {
   });
 
   return (
-    <div className="flex h-full border-t">
-      <aside className="w-64 border-r shrink-0 overflow-hidden">
-        <div className="h-full overflow-y-auto">
-          <CustomersSidebar filters={filters} setFilters={setFilters} />
-        </div>
-      </aside>
-
-      <main className="flex-1 flex flex-col overflow-hidden">
+    <>
+      <div className="flex h-full border-t bg-gray-50">
+        <CustomersSidebar filters={filters} setFilters={setFilters} />
         <CustomersTable
           filters={filters}
           onCreateClick={() => setShowCreateForm(true)}
           onEditClick={(customer) => setEditingCustomer(customer)}
         />
-      </main>
+      </div>
 
       {showCreateForm && (
         <CustomerForm
@@ -48,6 +43,6 @@ export default function CustomersPage() {
           onSuccess={() => setEditingCustomer(null)}
         />
       )}
-    </div>
+    </>
   );
 }

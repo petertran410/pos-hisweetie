@@ -173,7 +173,7 @@ export function InvoiceDetailRow({
 
   return (
     <tr>
-      <td colSpan={colSpan} className="px-4 py-4 bg-gray-50">
+      <td colSpan={colSpan} className="py-2 bg-gray-50">
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1090px] 2xl:max-w-[1520px]">
           <div className="p-6">
             <div className="border-b border-gray-200 pb-4 mb-6 ">

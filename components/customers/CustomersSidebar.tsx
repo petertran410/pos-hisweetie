@@ -44,7 +44,7 @@ export function CustomersSidebar({
   };
 
   return (
-    <div className="w-64 border-r bg-white p-4 space-y-6 overflow-y-auto h-[calc(100vh-64px)]">
+    <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
       {/* Nhóm khách hàng */}
       <div>
         <div className="flex items-center justify-between mb-2">

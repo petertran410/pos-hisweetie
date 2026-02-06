@@ -56,7 +56,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "code",
     label: "Mã khách hàng",
     visible: true,
-    width: "150px",
+    width: "160px",
     render: (customer) => customer.code,
   },
   {
@@ -291,26 +291,24 @@ export function CustomersTable({
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
       <div className="border-b p-4 flex items-center justify-between">
+        <div className="flex items-center gap-4 w-[500px]">
+          <h2 className="text-xl font-semibold w-[180px]">Khách hàng</h2>
+          <input
+            type="text"
+            placeholder="Theo mã, tên, số điện thoại"
+            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={onCreateClick}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Khách hàng
-          </button>
-          <input
-            type="text"
-            placeholder="Theo mã, tên, số điện thoại"
-            className="border rounded px-3 py-2 w-64"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="px-3 py-2 border rounded hover:bg-gray-50">
-            Import file
           </button>
           <button
             onClick={() => setShowColumnModal(!showColumnModal)}

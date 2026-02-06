@@ -11,6 +11,7 @@ import { X, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { Customer } from "@/lib/types/customer";
 import { useRouter } from "next/navigation";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -835,50 +836,47 @@ export function CustomerForm({
                 <label className="block text-sm font-medium mb-2">
                   Tỉnh/Thành phố
                 </label>
-                <select
-                  {...register("cityCode")}
-                  className="w-full border rounded px-3 py-2">
-                  <option value="">Chọn Tỉnh/Thành phố</option>
-                  {cities.map((city) => (
-                    <option key={city.code} value={city.code}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  options={cities.map((city) => ({
+                    value: city.code,
+                    label: city.name,
+                  }))}
+                  value={selectedCityCode || ""}
+                  onChange={(value) => setValue("cityCode", value)}
+                  placeholder="Chọn Tỉnh/Thành phố"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Quận/Huyện
                 </label>
-                <select
-                  {...register("districtCode")}
-                  className="w-full border rounded px-3 py-2"
-                  disabled={!selectedCityCode}>
-                  <option value="">Chọn Quận/Huyện</option>
-                  {districts.map((district) => (
-                    <option key={district.code} value={district.code}>
-                      {district.name}
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  options={districts.map((district) => ({
+                    value: district.code,
+                    label: district.name,
+                  }))}
+                  value={selectedDistrictCode || ""}
+                  onChange={(value) => setValue("districtCode", value)}
+                  placeholder="Chọn Quận/Huyện"
+                  disabled={!selectedCityCode}
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Phường/Xã
                 </label>
-                <select
-                  {...register("wardCode")}
-                  className="w-full border rounded px-3 py-2"
-                  disabled={!selectedDistrictCode}>
-                  <option value="">Chọn Phường/Xã</option>
-                  {wards.map((ward) => (
-                    <option key={ward.code} value={ward.code}>
-                      {ward.name}
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  options={wards.map((ward) => ({
+                    value: ward.code,
+                    label: ward.name,
+                  }))}
+                  value={watch("wardCode") || ""}
+                  onChange={(value) => setValue("wardCode", value)}
+                  placeholder="Chọn Phường/Xã"
+                  disabled={!selectedDistrictCode}
+                />
               </div>
             </div>
           </div>
@@ -1033,34 +1031,31 @@ export function CustomerForm({
                   <label className="block text-sm font-medium mb-2">
                     Tỉnh/Thành phố
                   </label>
-                  <select
-                    {...register("invoiceCityCode")}
-                    className="w-full border rounded px-3 py-2">
-                    <option value="">Tìm Tỉnh/Thành phố</option>
-                    {Array.isArray(invoiceProvinces) &&
-                      invoiceProvinces.map((province) => (
-                        <option key={province.code} value={province.code}>
-                          {province.name}
-                        </option>
-                      ))}
-                  </select>
+                  <SearchableSelect
+                    options={(invoiceProvinces || []).map((province) => ({
+                      value: province.code,
+                      label: province.name,
+                    }))}
+                    value={selectedInvoiceCityCode || ""}
+                    onChange={(value) => setValue("invoiceCityCode", value)}
+                    placeholder="Tìm Tỉnh/Thành phố"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Phường/Xã
                   </label>
-                  <select
-                    {...register("invoiceWardCode")}
-                    className="w-full border rounded px-3 py-2"
-                    disabled={!selectedInvoiceCityCode}>
-                    <option value="">Tìm Phường/Xã</option>
-                    {filteredInvoiceCommunes.map((commune) => (
-                      <option key={commune.code} value={commune.code}>
-                        {commune.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    options={filteredInvoiceCommunes.map((commune) => ({
+                      value: commune.code,
+                      label: commune.name,
+                    }))}
+                    value={watch("invoiceWardCode") || ""}
+                    onChange={(value) => setValue("invoiceWardCode", value)}
+                    placeholder="Tìm Phường/Xã"
+                    disabled={!selectedInvoiceCityCode}
+                  />
                 </div>
 
                 <div>
@@ -1149,34 +1144,31 @@ export function CustomerForm({
                   <label className="block text-sm font-medium mb-2">
                     Tỉnh/Thành phố
                   </label>
-                  <select
-                    {...register("invoiceCityCode")}
-                    className="w-full border rounded px-3 py-2">
-                    <option value="">Tìm Tỉnh/Thành phố</option>
-                    {Array.isArray(invoiceProvinces) &&
-                      invoiceProvinces.map((province) => (
-                        <option key={province.code} value={province.code}>
-                          {province.name}
-                        </option>
-                      ))}
-                  </select>
+                  <SearchableSelect
+                    options={(invoiceProvinces || []).map((province) => ({
+                      value: province.code,
+                      label: province.name,
+                    }))}
+                    value={selectedInvoiceCityCode || ""}
+                    onChange={(value) => setValue("invoiceCityCode", value)}
+                    placeholder="Tìm Tỉnh/Thành phố"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Phường/Xã
                   </label>
-                  <select
-                    {...register("invoiceWardCode")}
-                    className="w-full border rounded px-3 py-2"
-                    disabled={!selectedInvoiceCityCode}>
-                    <option value="">Tìm Phường/Xã</option>
-                    {filteredInvoiceCommunes.map((commune) => (
-                      <option key={commune.code} value={commune.code}>
-                        {commune.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    options={filteredInvoiceCommunes.map((commune) => ({
+                      value: commune.code,
+                      label: commune.name,
+                    }))}
+                    value={watch("invoiceWardCode") || ""}
+                    onChange={(value) => setValue("invoiceWardCode", value)}
+                    placeholder="Tìm Phường/Xã"
+                    disabled={!selectedInvoiceCityCode}
+                  />
                 </div>
 
                 <div>
