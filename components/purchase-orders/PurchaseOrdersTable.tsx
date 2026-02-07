@@ -45,7 +45,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã đặt hàng nhập",
     visible: true,
     width: "180px",
-    render: (po) => "-",
+    render: (po) => po.orderSupplier?.code || "-",
   },
   {
     key: "purchaseDate",
