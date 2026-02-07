@@ -67,8 +67,8 @@ export function PurchaseOrderSidebar({
   }, []);
 
   return (
-    <div className="w-80 bg-white border-r p-4 overflow-y-auto ml-4 mt-4 mb-4 rounded-xl">
-      <div className="mb-6" ref={branchDropdownRef}>
+    <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
+      <div ref={branchDropdownRef}>
         <label className="text-sm font-medium mb-2 block">Chi nhánh</label>
         <div className="relative">
           {selectedBranch ? (
@@ -115,13 +115,6 @@ export function PurchaseOrderSidebar({
             </>
           )}
         </div>
-      </div>
-
-      <div className="mb-6">
-        <label className="text-sm font-medium mb-2 block">Kho hàng</label>
-        <select className="w-full border rounded px-3 py-2 text-sm">
-          <option value="">Chọn kho hàng</option>
-        </select>
       </div>
 
       <div className="mb-6" ref={statusDropdownRef}>
