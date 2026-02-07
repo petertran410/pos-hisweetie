@@ -203,7 +203,7 @@ export function PurchaseOrderDetailRow({
                       Cần trả NCC:
                     </span>
                     <span className="font-bold text-blue-600">
-                      {formatCurrency(purchaseOrder.grandTotal)}
+                      {formatCurrency(purchaseOrder.supplierDebt)}
                     </span>
                   </div>
                   <div className="flex justify-between text-md">

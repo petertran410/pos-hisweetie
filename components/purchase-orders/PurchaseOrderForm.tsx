@@ -318,12 +318,11 @@ export function PurchaseOrderForm({
         productId: p.productId,
         quantity: p.quantity,
         price: p.price,
-        discount: p.discount,
+        discount: p.discount || 0,
         description: p.note,
       })),
       orderSupplierId: orderSupplier?.id,
-      paymentAmount: paymentAmount > 0 ? paymentAmount : undefined,
-      paymentMethod: paymentAmount > 0 ? paymentMethod : undefined,
+      paidAmount: paymentAmount > 0 ? paymentAmount : undefined,
     };
 
     try {

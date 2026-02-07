@@ -207,6 +207,8 @@ export function PurchaseOrdersTable({
   const total = data?.total || 0;
   const visibleColumns = columns.filter((col) => col.visible);
 
+  console.log(purchaseOrders);
+
   const currentItem = filters.currentItem ?? 0;
   const pageSize = filters.pageSize ?? 15;
 
