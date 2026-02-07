@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/config/api";
 import type {
   OrderSupplier,
   OrderSupplierFilters,
+  OrderSupplierPayment,
 } from "../types/order-supplier";
 
 export const orderSuppliersApi = {
@@ -40,6 +41,13 @@ export const orderSuppliersApi = {
 
   delete: async (id: number) => {
     const response = await apiClient.delete(`/order-suppliers/${id}`);
+    return response;
+  },
+
+  getPayments: async (orderSupplierId: number) => {
+    const response = await apiClient.get<OrderSupplierPayment[]>(
+      `/order-suppliers/${orderSupplierId}/payments`
+    );
     return response;
   },
 };

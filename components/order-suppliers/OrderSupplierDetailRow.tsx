@@ -6,7 +6,7 @@ import {
   useOrderSupplier,
   useUpdateOrderSupplier,
 } from "@/lib/hooks/useOrderSuppliers";
-import { useCreatePurchaseOrderFromOrderSupplier } from "@/lib/hooks/usePurchaseOrders";
+import { useOrderSupplierPayments } from "@/lib/hooks/useOrderSuppliers";
 import { Loader2, FileText, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,13 +16,19 @@ interface OrderSupplierDetailRowProps {
 }
 
 const formatMoney = (value: number) => {
-  return new Intl.NumberFormat("en-US").format(value);
+  return new Intl.NumberFormat("vi-VN").format(value);
 };
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return "-";
   const date = new Date(dateString);
-  return date.toLocaleString("vi-VN");
+  return date.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 };
 
 const getStatusLabel = (status: number) => {
@@ -59,6 +65,19 @@ const getStatusColor = (status: number) => {
   }
 };
 
+const getPaymentMethodLabel = (method: string) => {
+  switch (method) {
+    case "cash":
+      return "Tiền mặt";
+    case "transfer":
+      return "Chuyển khoản";
+    case "card":
+      return "Thẻ";
+    default:
+      return method;
+  }
+};
+
 export function OrderSupplierDetailRow({
   orderSupplierId,
   colSpan,
@@ -71,6 +90,7 @@ export function OrderSupplierDetailRow({
   const [productNameSearch, setProductNameSearch] = useState("");
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const { data: payments } = useOrderSupplierPayments(orderSupplierId);
 
   useState(() => {
     if (orderSupplier?.description) {
@@ -272,7 +292,7 @@ export function OrderSupplierDetailRow({
                   </div>
 
                   <div>
-                    <div className="flex items-center gap-4 mb-3">
+                    <div className="grid grid-cols-4 gap-4 mb-3">
                       <div className="flex-1">
                         <label className="block text-md font-medium text-gray-700 mb-1.5">
                           Mã hàng
@@ -437,15 +457,12 @@ export function OrderSupplierDetailRow({
                   </div>
 
                   <div>
-                    <label className="block text-md font-medium text-gray-500 mb-2">
-                      Ghi chú:
-                    </label>
                     <textarea
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Ghi chú..."
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-md"
-                      rows={4}
+                      className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      rows={2}
                     />
                   </div>
 
@@ -532,10 +549,67 @@ export function OrderSupplierDetailRow({
             )}
 
             {activeTab === "payment" && (
-              <div className="py-6">
-                <p className="text-center text-gray-500">
-                  Chưa có lịch sử thanh toán
-                </p>
+              <div className="">
+                {payments && payments.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-md">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">
+                            Mã phiếu
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">
+                            Thời gian
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">
+                            Người tạo
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">
+                            Phương thức
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">
+                            Trạng thái
+                          </th>
+                          <th className="px-4 py-3 text-right font-medium text-gray-700">
+                            Tiền chi
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {payments.map((payment) => (
+                          <tr key={payment.id}>
+                            <td className="px-4 py-3">
+                              <a
+                                href="#"
+                                className="text-blue-600 hover:underline">
+                                {payment.code}
+                              </a>
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">
+                              {formatDateTime(payment.paymentDate)}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">admin</td>
+                            <td className="px-4 py-3 text-gray-600">
+                              {getPaymentMethodLabel(payment.paymentMethod)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">
+                                {payment.statusValue || "Đã thanh toán"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right text-gray-900">
+                              {formatMoney(payment.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-500">
+                    Chưa có lịch sử thanh toán
+                  </p>
+                )}
               </div>
             )}
           </div>

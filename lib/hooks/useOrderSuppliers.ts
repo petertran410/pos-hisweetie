@@ -66,3 +66,11 @@ export function useDeleteOrderSupplier() {
     },
   });
 }
+
+export function useOrderSupplierPayments(orderSupplierId: number) {
+  return useQuery({
+    queryKey: ["order-supplier-payments", orderSupplierId],
+    queryFn: () => orderSuppliersApi.getPayments(orderSupplierId),
+    enabled: !!orderSupplierId,
+  });
+}
