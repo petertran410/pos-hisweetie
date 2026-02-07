@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { X, ChevronDown, Minus, Plus } from "lucide-react";
+import { X, Search, ChevronDown, Minus, Plus } from "lucide-react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useBranches } from "@/lib/hooks/useBranches";
@@ -12,7 +12,7 @@ import {
 } from "@/lib/hooks/usePurchaseOrders";
 import { toast } from "sonner";
 import type { PurchaseOrder } from "@/lib/types/purchase-order";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, parseNumberInput } from "@/lib/utils";
 import { useBranchStore } from "@/lib/store/branch";
 import type { OrderSupplier } from "@/lib/types/order-supplier";
 
@@ -43,7 +43,7 @@ const getProductCost = (product: any, branchId: number): number => {
 
 const STATUS_OPTIONS = [
   { value: true, label: "Phiếu tạm" },
-  { value: false, label: "Đã nhập hàng" },
+  { value: false, label: "Hoàn thành" },
 ];
 
 export function PurchaseOrderForm({
@@ -175,51 +175,78 @@ export function PurchaseOrderForm({
       productCode: product.code,
       productName: product.name,
       quantity: 1,
-      price: cost || Number(product.basePrice) || 0,
+      price: cost,
       discount: 0,
-      subTotal: cost || Number(product.basePrice) || 0,
-      inventory: inventory ? Number(inventory.onHand) : 0,
+      subTotal: cost,
+      inventory: Number(inventory?.onHand || 0),
     };
 
-    setProducts([...products, newProduct]);
+    setProducts((prev) => [...prev, newProduct]);
     setSearchQuery("");
+    setShowSearchResults(false);
   };
 
   const handleRemoveProduct = (index: number) => {
-    setProducts(products.filter((_, i) => i !== index));
+    if (isFormDisabled) return;
+    setProducts((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleQuantityChange = (index: number, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    if (numValue < 0) return;
+    if (isFormDisabled) return;
+    const quantity = parseFloat(value) || 0;
 
-    const newProducts = [...products];
-    newProducts[index].quantity = numValue;
-    newProducts[index].subTotal =
-      numValue * newProducts[index].price - newProducts[index].discount;
-    setProducts(newProducts);
+    if (quantity < 0) {
+      toast.error("Số lượng không được nhỏ hơn 0");
+      return;
+    }
+
+    setProducts((prev) => {
+      const updated = [...prev];
+      updated[index].quantity = quantity;
+      updated[index].subTotal =
+        quantity * updated[index].price - updated[index].discount;
+      return updated;
+    });
   };
 
   const handlePriceChange = (index: number, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    if (numValue < 0) return;
+    if (isFormDisabled) return;
+    const price = parseFloat(value) || 0;
 
-    const newProducts = [...products];
-    newProducts[index].price = numValue;
-    newProducts[index].subTotal =
-      newProducts[index].quantity * numValue - newProducts[index].discount;
-    setProducts(newProducts);
+    if (price < 0) {
+      toast.error("Giá không được nhỏ hơn 0");
+      return;
+    }
+
+    setProducts((prev) => {
+      const updated = [...prev];
+      updated[index].price = price;
+      updated[index].subTotal =
+        updated[index].quantity * price - updated[index].discount;
+      return updated;
+    });
   };
 
   const handleDiscountChange = (index: number, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    if (numValue < 0) return;
+    if (isFormDisabled) return;
+    const discount = parseFloat(value) || 0;
 
-    const newProducts = [...products];
-    newProducts[index].discount = numValue;
-    newProducts[index].subTotal =
-      newProducts[index].quantity * newProducts[index].price - numValue;
-    setProducts(newProducts);
+    if (discount < 0) {
+      toast.error("Giảm giá không được nhỏ hơn 0");
+      return;
+    }
+
+    setProducts((prev) => {
+      const updated = [...prev];
+      updated[index].discount = discount;
+      updated[index].subTotal =
+        updated[index].quantity * updated[index].price - discount;
+      return updated;
+    });
+  };
+
+  const calculateTotalQuantity = () => {
+    return products.reduce((sum, p) => sum + p.quantity, 0);
   };
 
   const calculateTotal = () => {
@@ -227,12 +254,12 @@ export function PurchaseOrderForm({
   };
 
   const handleSubmit = async () => {
-    if (branchId === 0) {
+    if (!branchId) {
       toast.error("Vui lòng chọn chi nhánh");
       return;
     }
 
-    if (supplierId === 0) {
+    if (!supplierId) {
       toast.error("Vui lòng chọn nhà cung cấp");
       return;
     }
@@ -249,19 +276,18 @@ export function PurchaseOrderForm({
     }
 
     const purchaseOrderData = {
-      orderSupplierId: orderSupplier?.id || null,
       supplierId,
       branchId,
-      purchaseDate: new Date().toISOString(),
-      isDraft: isDraft,
+      isDraft,
       description: note,
       items: products.map((p) => ({
         productId: p.productId,
         quantity: p.quantity,
         price: p.price,
-        discount: p.discount || 0,
+        discount: p.discount,
         description: p.note,
       })),
+      orderSupplierId: orderSupplier?.id,
     };
 
     try {
@@ -270,8 +296,10 @@ export function PurchaseOrderForm({
           id: purchaseOrder.id,
           data: purchaseOrderData,
         });
+        toast.success("Cập nhật phiếu nhập hàng thành công");
       } else {
         await createPurchaseOrder.mutateAsync(purchaseOrderData);
+        toast.success("Tạo phiếu nhập hàng thành công");
       }
 
       router.push("/san-pham/nhap-hang");
@@ -282,132 +310,116 @@ export function PurchaseOrderForm({
 
   return (
     <div className="flex h-full border-t bg-gray-50 overflow-hidden">
-      {/* Phần bên trái - Danh sách sản phẩm */}
-      <div className="flex-1 flex flex-col overflow-y-auto bg-white m-4 border rounded-xl">
-        {/* Header giữ nguyên */}
-        <div className="border-b px-6 py-4 flex items-center justify-between bg-gray-50">
-          <div>
+      <div className="flex-1 flex flex-col overflow-hidden m-4 border rounded-xl">
+        <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push("/san-pham/nhap-hang")}
+              className="p-2 hover:bg-gray-100 rounded-lg">
+              <X className="w-5 h-5" />
+            </button>
             <h2 className="text-xl font-semibold">
-              {purchaseOrder
-                ? "Chi tiết phiếu nhập hàng"
-                : "Tạo phiếu nhập hàng"}
+              {purchaseOrder ? "Cập nhật nhập hàng" : "Tạo nhập hàng"}
             </h2>
-            {purchaseOrder && (
-              <p className="text-sm text-gray-600 mt-1">
-                Mã phiếu: {purchaseOrder.code}
-              </p>
-            )}
-            {orderSupplier && !purchaseOrder && (
-              <p className="text-sm text-gray-600 mt-1">
-                Từ đặt hàng nhập: {orderSupplier.code}
-              </p>
-            )}
           </div>
-          <button
-            onClick={() => (onClose ? onClose() : router.back())}
-            className="text-gray-400 hover:text-gray-600 transition">
-            <X className="w-6 h-6" />
-          </button>
         </div>
 
-        {/* Phần search và bảng sản phẩm giữ nguyên như cũ */}
-        <div className="p-6">
-          <div className="relative mb-6">
-            <input
-              type="text"
-              placeholder={
-                isFormDisabled
-                  ? "Không thể thêm sản phẩm ở trạng thái này"
-                  : "Tìm kiếm theo tên hàng, mã hàng"
-              }
-              value={searchQuery}
-              onChange={(e) => {
-                if (isFormDisabled) return;
-                setSearchQuery(e.target.value);
-                setShowSearchResults(true);
-              }}
-              onFocus={() => !isFormDisabled && setShowSearchResults(true)}
-              onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
-              disabled={isFormDisabled ? true : false}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 text-base"
-            />
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="mb-4 relative">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSearchResults(true);
+                }}
+                onFocus={() => setShowSearchResults(true)}
+                placeholder="Tìm kiếm sản phẩm theo mã hoặc tên..."
+                disabled={isFormDisabled ? true : false}
+                className="w-full pl-10 pr-4 py-2.5 border rounded-lg disabled:bg-gray-100"
+              />
+            </div>
 
-            {showSearchResults &&
-              searchQuery &&
-              !isFormDisabled &&
-              searchResults?.data && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                  {searchResults.data.length > 0 ? (
-                    searchResults.data.map((product) => (
-                      <div
-                        key={product.id}
-                        onClick={() => handleAddProduct(product)}
-                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b last:border-0">
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-gray-500">
-                          Mã: {product.code}
-                        </div>
+            {showSearchResults && searchQuery && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto">
+                {searchResults?.data?.map((product: any) => (
+                  <div
+                    key={product.id}
+                    onClick={() => handleAddProduct(product)}
+                    className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gray-100 rounded flex-shrink-0">
+                        {product.images?.[0]?.image && (
+                          <img
+                            src={product.images[0].image}
+                            alt={product.name}
+                            className="w-full h-full object-cover rounded"
+                          />
+                        )}
                       </div>
-                    ))
-                  ) : (
-                    <div className="px-4 py-3 text-gray-500">
-                      Không tìm thấy sản phẩm
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {product.code} - {product.name}
+                        </p>
+                        <p className="text-md text-gray-500">
+                          Giá:{" "}
+                          {formatCurrency(getProductCost(product, branchId))}
+                        </p>
+                      </div>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Bảng sản phẩm */}
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border rounded-lg overflow-hidden bg-white">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                  <th className="px-3 py-3 text-left text-md font-medium text-gray-700">
                     STT
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                  <th className="px-3 py-3 text-left text-md font-medium text-gray-700">
                     Mã hàng
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                  <th className="px-3 py-3 text-left text-md font-medium text-gray-700">
                     Tên hàng
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
-                    Số lượng
+                  <th className="px-3 py-3 text-center text-md font-medium text-gray-700">
+                    SL
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
-                    Giá
+                  <th className="px-3 py-3 text-right text-md font-medium text-gray-700">
+                    Đơn giá
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                  <th className="px-3 py-3 text-right text-md font-medium text-gray-700">
                     Giảm giá
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                  <th className="px-3 py-3 text-right text-md font-medium text-gray-700">
                     Thành tiền
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
-                    Thao tác
+                  <th className="px-3 py-3 text-center text-md font-medium text-gray-700">
+                    Xóa
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((product, index) => (
+                {products.map((item, index) => (
                   <tr key={index}>
-                    <td className="px-4 py-3 text-sm text-center">
+                    <td className="px-3 py-2 text-md text-center">
                       {index + 1}
                     </td>
-                    <td className="px-4 py-3 text-sm text-center">
-                      {product.productCode}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-center">
-                      {product.productName}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2 text-md">{item.productCode}</td>
+                    <td className="px-3 py-2 text-md">{item.productName}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() =>
                             handleQuantityChange(
                               index,
-                              String(product.quantity - 1)
+                              String(item.quantity - 1)
                             )
                           }
                           disabled={isFormDisabled ? true : false}
@@ -416,7 +428,7 @@ export function PurchaseOrderForm({
                         </button>
                         <input
                           type="text"
-                          value={product.quantity}
+                          value={item.quantity}
                           onChange={(e) =>
                             handleQuantityChange(index, e.target.value)
                           }
@@ -427,7 +439,7 @@ export function PurchaseOrderForm({
                           onClick={() =>
                             handleQuantityChange(
                               index,
-                              String(product.quantity + 1)
+                              String(item.quantity + 1)
                             )
                           }
                           disabled={isFormDisabled ? true : false}
@@ -436,37 +448,37 @@ export function PurchaseOrderForm({
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-3 py-2 text-center">
                       <input
                         type="text"
-                        value={product.price}
+                        value={item.price}
                         onChange={(e) =>
                           handlePriceChange(index, e.target.value)
                         }
                         disabled={isFormDisabled ? true : false}
-                        className="w-32 px-2 py-1 border rounded text-center disabled:bg-gray-100"
+                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-3 py-2 text-center">
                       <input
                         type="text"
-                        value={product.discount}
+                        value={item.discount}
                         onChange={(e) =>
                           handleDiscountChange(index, e.target.value)
                         }
                         disabled={isFormDisabled ? true : false}
-                        className="w-24 px-2 py-1 border rounded text-center disabled:bg-gray-100"
+                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />
                     </td>
-                    <td className="px-4 py-3 text-center font-medium">
-                      {formatCurrency(product.subTotal)}
+                    <td className="px-3 py-2 text-sm text-right font-medium">
+                      {formatCurrency(item.subTotal)}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-3 py-2 text-center">
                       <button
                         onClick={() => handleRemoveProduct(index)}
                         disabled={isFormDisabled ? true : false}
                         className="text-red-600 hover:text-red-800 disabled:opacity-50">
-                        <X className="w-5 h-5" />
+                        <X className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
@@ -481,37 +493,42 @@ export function PurchaseOrderForm({
             )}
           </div>
         </div>
-
-        {/* Footer tổng tiền */}
-        <div className="mt-auto border-t bg-gray-50 px-6 py-4">
-          <div className="flex justify-end items-center">
-            <div className="text-right">
-              <div className="text-sm text-gray-600 mb-1">Tổng tiền hàng</div>
-              <div className="text-2xl font-bold text-blue-600">
-                {formatCurrency(calculateTotal())}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Phần sidebar bên phải */}
-      <div className="w-80 border mr-4 mb-4 mt-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-6 bg-white shadow-xl">
-        <div className="space-y-6">
+      <div className="w-[420px] border mr-4 mt-4 mb-4 rounded-xl overflow-y-auto bg-white border-l flex flex-col custom-sidebar-scroll">
+        <div className="px-4 py-3 border-b bg-gray-50">
+          <h3 className="font-semibold text-gray-900">Thông tin nhập hàng</h3>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              Mã phiếu nhập hàng
+            <label className="block text-md text-gray-600 mb-1">
+              Mã phiếu nhập
             </label>
             <input
               type="text"
               value={purchaseOrder?.code || "Mã phiếu tự động"}
               disabled
-              className="w-full px-3 py-2 border rounded bg-gray-50 text-gray-600"
+              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-gray-600"
             />
           </div>
 
+          {orderSupplier && (
+            <div>
+              <label className="block text-md text-gray-600 mb-1">
+                Mã đặt hàng nhập
+              </label>
+              <input
+                type="text"
+                value={orderSupplier.code}
+                disabled
+                className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-gray-600"
+              />
+            </div>
+          )}
+
           <div ref={statusDropdownRef}>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-md text-gray-600 mb-1">
               Trạng thái <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -521,25 +538,26 @@ export function PurchaseOrderForm({
                   !isFormDisabled && setShowStatusDropdown(!showStatusDropdown)
                 }
                 disabled={isFormDisabled ? true : false}
-                className="w-full px-3 py-2 border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
-                <span className={!selectedStatus ? "text-gray-400" : ""}>
+                className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
+                <span>
                   {selectedStatus ? selectedStatus.label : "Chọn trạng thái"}
                 </span>
-                <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
+                <ChevronDown className="w-4 h-4" />
               </button>
 
-              {showStatusDropdown && (
+              {showStatusDropdown && !isFormDisabled && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10">
-                  {STATUS_OPTIONS.map((statusOption) => (
-                    <div
-                      key={String(statusOption.value)}
+                  {STATUS_OPTIONS.map((option) => (
+                    <button
+                      key={option.label}
+                      type="button"
                       onClick={() => {
-                        setIsDraft(statusOption.value);
+                        setIsDraft(option.value);
                         setShowStatusDropdown(false);
                       }}
-                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
-                      {statusOption.label}
-                    </div>
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
+                      {option.label}
+                    </button>
                   ))}
                 </div>
               )}
@@ -547,8 +565,8 @@ export function PurchaseOrderForm({
           </div>
 
           <div ref={branchDropdownRef}>
-            <label className="block text-sm text-gray-600 mb-1">
-              Chi nhánh <span className="text-red-500">*</span>
+            <label className="block text-md text-gray-600 mb-1">
+              Kho <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <button
@@ -557,30 +575,26 @@ export function PurchaseOrderForm({
                   !isFormDisabled && setShowBranchDropdown(!showBranchDropdown)
                 }
                 disabled={isFormDisabled ? true : false}
-                className="w-full px-3 py-2 border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
-                <span
-                  className={
-                    !selectedBranchData || branchId === 0 ? "text-gray-400" : ""
-                  }>
-                  {selectedBranchData
-                    ? selectedBranchData.name
-                    : "Chọn chi nhánh"}
+                className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
+                <span>
+                  {selectedBranchData ? selectedBranchData.name : "Chọn kho"}
                 </span>
-                <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
+                <ChevronDown className="w-4 h-4" />
               </button>
 
-              {showBranchDropdown && (
+              {showBranchDropdown && !isFormDisabled && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
                   {branches?.map((branch) => (
-                    <div
+                    <button
                       key={branch.id}
+                      type="button"
                       onClick={() => {
                         setBranchId(branch.id);
                         setShowBranchDropdown(false);
                       }}
-                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
                       {branch.name}
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -588,7 +602,7 @@ export function PurchaseOrderForm({
           </div>
 
           <div ref={supplierDropdownRef}>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-md text-gray-600 mb-1">
               Nhà cung cấp <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -599,30 +613,28 @@ export function PurchaseOrderForm({
                   setShowSupplierDropdown(!showSupplierDropdown)
                 }
                 disabled={isFormDisabled ? true : false}
-                className="w-full px-3 py-2 border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
-                <span
-                  className={
-                    !selectedSupplier || supplierId === 0 ? "text-gray-400" : ""
-                  }>
+                className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
+                <span>
                   {selectedSupplier
                     ? selectedSupplier.name
                     : "Chọn nhà cung cấp"}
                 </span>
-                <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
+                <ChevronDown className="w-4 h-4" />
               </button>
 
-              {showSupplierDropdown && (
+              {showSupplierDropdown && !isFormDisabled && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
                   {suppliersData?.data?.map((supplier) => (
-                    <div
+                    <button
                       key={supplier.id}
+                      type="button"
                       onClick={() => {
                         setSupplierId(supplier.id);
                         setShowSupplierDropdown(false);
                       }}
-                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
                       {supplier.name}
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -630,29 +642,89 @@ export function PurchaseOrderForm({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Ghi chú</label>
+            <label className="block text-md text-gray-600 mb-1">
+              Tổng tiền hàng
+            </label>
+            <input
+              type="text"
+              value={formatCurrency(calculateTotal())}
+              disabled
+              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-gray-900 font-medium text-right"
+            />
+          </div>
+
+          <div>
+            <label className="block text-md text-gray-600 mb-1">Giảm giá</label>
+            <input
+              type="text"
+              value="0"
+              disabled
+              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-right"
+            />
+          </div>
+
+          <div>
+            <label className="block text-md text-gray-600 mb-1">
+              Chi phí nhập trả NCC
+            </label>
+            <input
+              type="text"
+              value="0"
+              disabled
+              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-right"
+            />
+          </div>
+
+          <div>
+            <label className="block text-md text-gray-600 mb-1">
+              Cần trả nhà cung cấp
+            </label>
+            <input
+              type="text"
+              value={formatCurrency(calculateTotal())}
+              disabled
+              className="w-full px-2 py-1.5 text-sm border rounded bg-blue-50 text-blue-600 font-semibold text-right"
+            />
+          </div>
+
+          <div>
+            <label className="block text-md text-gray-600 mb-1">
+              Chi phí nhập khác
+            </label>
+            <input
+              type="text"
+              value="0"
+              disabled
+              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-right"
+            />
+          </div>
+
+          <div>
+            <label className="block text-md text-gray-600 mb-1">Ghi chú</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               disabled={isFormDisabled ? true : false}
-              rows={4}
-              className="w-full px-3 py-2 border rounded resize-none disabled:bg-gray-100"
+              className="w-full px-2 py-1.5 text-sm border rounded disabled:bg-gray-100 resize-none"
+              rows={3}
               placeholder="Nhập ghi chú..."
             />
           </div>
+        </div>
 
-          <div className="pt-4 border-t">
-            {!isFormDisabled && (
-              <button
-                onClick={handleSubmit}
-                disabled={
-                  createPurchaseOrder.isPending || updatePurchaseOrder.isPending
-                }
-                className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50">
-                {purchaseOrder ? "Lưu" : "Tạo phiếu nhập hàng"}
-              </button>
-            )}
-          </div>
+        <div className="p-4 border-t bg-gray-50 space-y-2">
+          <button
+            onClick={handleSubmit}
+            disabled={isFormDisabled ? true : false}
+            className="w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium">
+            Hoàn thành
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isFormDisabled ? true : false}
+            className="w-full py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
+            Lưu tạm
+          </button>
         </div>
       </div>
     </div>
