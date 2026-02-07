@@ -12,9 +12,11 @@ import {
 } from "@/lib/hooks/usePurchaseOrders";
 import { toast } from "sonner";
 import type { PurchaseOrder } from "@/lib/types/purchase-order";
-import { formatCurrency, parseNumberInput } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { useBranchStore } from "@/lib/store/branch";
 import type { OrderSupplier } from "@/lib/types/order-supplier";
+import { CreditCard } from "lucide-react";
+import { SupplierPaymentModal } from "../order-suppliers/SupplierPaymentModal";
 
 interface ProductItem {
   productId: number;
@@ -57,6 +59,19 @@ export function PurchaseOrderForm({
   const { data: suppliersData } = useSuppliers({});
   const createPurchaseOrder = useCreatePurchaseOrder();
   const updatePurchaseOrder = useUpdatePurchaseOrder();
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<
+    "cash" | "transfer" | "card"
+  >("cash");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  const handlePaymentConfirm = (
+    amount: number,
+    method: "cash" | "transfer" | "card"
+  ) => {
+    setPaymentAmount(amount);
+    setPaymentMethod(method);
+  };
 
   const [branchId, setBranchId] = useState<number>(
     purchaseOrder?.branchId ||
@@ -288,6 +303,8 @@ export function PurchaseOrderForm({
         description: p.note,
       })),
       orderSupplierId: orderSupplier?.id,
+      paymentAmount: paymentAmount > 0 ? paymentAmount : undefined,
+      paymentMethod: paymentAmount > 0 ? paymentMethod : undefined,
     };
 
     try {
@@ -689,6 +706,42 @@ export function PurchaseOrderForm({
 
           <div>
             <label className="block text-md text-gray-600 mb-1">
+              Tiền trả nhà cung cấp
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={formatCurrency(paymentAmount)}
+                readOnly
+                className="flex-1 text-right text-sm px-2 py-1.5 border rounded bg-gray-50"
+              />
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                disabled={isFormDisabled ? true : false}
+                className="p-1.5 border rounded hover:bg-gray-50 disabled:opacity-50">
+                <CreditCard className="w-4 h-4 text-blue-600" />
+              </button>
+            </div>
+            {paymentAmount > 0 && (
+              <div className="mt-1 text-xs text-gray-500">
+                {paymentMethod === "cash" && "Tiền mặt"}
+                {paymentMethod === "card" && "Thẻ"}
+                {paymentMethod === "transfer" && "Chuyển khoản"}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-md text-gray-600 mb-1">
+              Tiền nhà cung cấp trả lại
+            </label>
+            <div className="text-sm font-semibold text-right px-2 py-1.5 bg-red-50 text-red-600 rounded">
+              {formatCurrency(Math.max(0, paymentAmount - calculateTotal()))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-md text-gray-600 mb-1">
               Chi phí nhập khác
             </label>
             <input
@@ -727,6 +780,14 @@ export function PurchaseOrderForm({
           </button>
         </div>
       </div>
+
+      <SupplierPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        totalAmount={calculateTotal()}
+        previouslyPaid={0}
+        onConfirm={handlePaymentConfirm}
+      />
     </div>
   );
 }
