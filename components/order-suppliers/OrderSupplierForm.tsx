@@ -82,6 +82,23 @@ export function OrderSupplierForm({
   );
   const [status, setStatus] = useState<number>(orderSupplier?.status || 0);
   const [note, setNote] = useState<string>(orderSupplier?.description || "");
+  const [discount, setDiscount] = useState<number>(
+    orderSupplier?.discount || 0
+  );
+  const [discountRatio, setDiscountRatio] = useState<number>(
+    orderSupplier?.discountRatio || 0
+  );
+  const [discountType, setDiscountType] = useState<"amount" | "ratio">(
+    "amount"
+  );
+  const formatNumber = (value: number): string => {
+    if (!value) return "";
+    return value.toLocaleString("en-US");
+  };
+
+  const parseFormattedNumber = (value: string): number => {
+    return parseFloat(value.replace(/,/g, "")) || 0;
+  };
   const [products, setProducts] = useState<ProductItem[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -253,12 +270,11 @@ export function OrderSupplierForm({
     });
   };
 
-  const calculateTotalQuantity = () => {
-    return products.reduce((sum, p) => sum + p.quantity, 0);
-  };
-
   const calculateTotalValue = () => {
-    return products.reduce((sum, p) => sum + p.subTotal, 0);
+    const subtotal = products.reduce((sum, p) => sum + p.subTotal, 0);
+    const discountAmount =
+      discountType === "amount" ? discount : (subtotal * discountRatio) / 100;
+    return subtotal - discountAmount;
   };
 
   const handleSubmit = async () => {
@@ -288,6 +304,8 @@ export function OrderSupplierForm({
       branchId,
       status: status,
       description: note,
+      discount: discountType === "amount" ? discount : undefined,
+      discountRatio: discountType === "ratio" ? discountRatio : undefined,
       items: products.map((p) => ({
         productId: p.productId,
         quantity: p.quantity,
@@ -465,9 +483,11 @@ export function OrderSupplierForm({
                     <td className="px-3 py-2">
                       <input
                         type="text"
-                        value={formatCurrency(item.price)}
+                        value={formatNumber(item.price)}
                         onChange={(e) => {
-                          const numericValue = parseNumberInput(e.target.value);
+                          const numericValue = parseFormattedNumber(
+                            e.target.value
+                          );
                           handlePriceChange(index, numericValue.toString());
                         }}
                         disabled={isFormDisabled ? true : false}
@@ -643,25 +663,55 @@ export function OrderSupplierForm({
 
           <div className="border-t my-3"></div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             <div>
               <label className="block text-xs text-gray-600 mb-1">
                 Tổng tiền hàng
               </label>
               <div className="text-sm font-semibold text-right px-2 py-1.5 bg-gray-50 rounded">
-                {formatCurrency(calculateTotalValue())}
+                {formatCurrency(
+                  products.reduce((sum, p) => sum + p.subTotal, 0)
+                )}
               </div>
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-1">
                 Giảm giá
               </label>
-              <input
-                type="text"
-                value="0"
-                readOnly
-                className="w-full text-right text-sm px-2 py-1.5 border rounded bg-gray-100"
-              />
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  value={
+                    discountType === "amount"
+                      ? formatNumber(discount)
+                      : discountRatio
+                  }
+                  onChange={(e) => {
+                    if (discountType === "amount") {
+                      const value = parseFormattedNumber(e.target.value);
+                      setDiscount(value);
+                    } else {
+                      const value = parseFloat(e.target.value) || 0;
+                      setDiscountRatio(value);
+                    }
+                  }}
+                  disabled={isFormDisabled ? true : false}
+                  placeholder="0"
+                  className="flex-1 text-right text-sm px-2 py-1.5 border rounded disabled:bg-gray-100"
+                />
+                <select
+                  value={discountType}
+                  onChange={(e) => {
+                    setDiscountType(e.target.value as "amount" | "ratio");
+                    setDiscount(0);
+                    setDiscountRatio(0);
+                  }}
+                  disabled={isFormDisabled ? true : false}
+                  className="w-16 text-sm border rounded disabled:bg-gray-100">
+                  <option value="amount">₫</option>
+                  <option value="ratio">%</option>
+                </select>
+              </div>
             </div>
           </div>
 

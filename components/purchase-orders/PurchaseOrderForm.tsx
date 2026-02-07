@@ -85,10 +85,28 @@ export function PurchaseOrderForm({
   const [note, setNote] = useState<string>(
     purchaseOrder?.description || orderSupplier?.description || ""
   );
+  const [discount, setDiscount] = useState<number>(
+    purchaseOrder?.discount || 0
+  );
+  const [discountRatio, setDiscountRatio] = useState<number>(
+    purchaseOrder?.discountRatio || 0
+  );
+  const [discountType, setDiscountType] = useState<"amount" | "ratio">(
+    "amount"
+  );
   const [isDraft, setIsDraft] = useState<boolean>(
     purchaseOrder?.isDraft !== undefined ? purchaseOrder.isDraft : true
   );
   const [products, setProducts] = useState<ProductItem[]>([]);
+
+  const formatNumber = (value: number): string => {
+    if (!value) return "";
+    return value.toLocaleString("en-US");
+  };
+
+  const parseFormattedNumber = (value: string): number => {
+    return parseFloat(value.replace(/,/g, "")) || 0;
+  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -260,12 +278,11 @@ export function PurchaseOrderForm({
     });
   };
 
-  const calculateTotalQuantity = () => {
-    return products.reduce((sum, p) => sum + p.quantity, 0);
-  };
-
   const calculateTotal = () => {
-    return products.reduce((sum, p) => sum + p.subTotal, 0);
+    const subtotal = products.reduce((sum, p) => sum + p.subTotal, 0);
+    const discountAmount =
+      discountType === "amount" ? discount : (subtotal * discountRatio) / 100;
+    return subtotal - discountAmount;
   };
 
   const handleSubmit = async () => {
@@ -295,6 +312,8 @@ export function PurchaseOrderForm({
       branchId,
       isDraft,
       description: note,
+      discount: discountType === "amount" ? discount : undefined,
+      discountRatio: discountType === "ratio" ? discountRatio : undefined,
       items: products.map((p) => ({
         productId: p.productId,
         quantity: p.quantity,
@@ -465,13 +484,16 @@ export function PurchaseOrderForm({
                         </button>
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-center">
+                    <td className="px-3 py-2">
                       <input
                         type="text"
-                        value={item.price}
-                        onChange={(e) =>
-                          handlePriceChange(index, e.target.value)
-                        }
+                        value={formatNumber(item.price)}
+                        onChange={(e) => {
+                          const numericValue = parseFormattedNumber(
+                            e.target.value
+                          );
+                          handlePriceChange(index, numericValue.toString());
+                        }}
                         disabled={isFormDisabled ? true : false}
                         className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />
@@ -658,38 +680,58 @@ export function PurchaseOrderForm({
             </div>
           </div>
 
-          <div>
-            <label className="block text-md text-gray-600 mb-1">
-              Tổng tiền hàng
-            </label>
-            <input
-              type="text"
-              value={formatCurrency(calculateTotal())}
-              disabled
-              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-gray-900 font-medium text-right"
-            />
-          </div>
+          <div className="border-t my-3"></div>
 
-          <div>
-            <label className="block text-md text-gray-600 mb-1">Giảm giá</label>
-            <input
-              type="text"
-              value="0"
-              disabled
-              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-right"
-            />
-          </div>
-
-          <div>
-            <label className="block text-md text-gray-600 mb-1">
-              Chi phí nhập trả NCC
-            </label>
-            <input
-              type="text"
-              value="0"
-              disabled
-              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-right"
-            />
+          <div className="flex flex-col gap-2">
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">
+                Tổng tiền hàng
+              </label>
+              <div className="text-sm font-semibold text-right px-2 py-1.5 bg-gray-50 rounded">
+                {formatCurrency(
+                  products.reduce((sum, p) => sum + p.subTotal, 0)
+                )}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">
+                Giảm giá
+              </label>
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  value={
+                    discountType === "amount"
+                      ? formatNumber(discount)
+                      : discountRatio
+                  }
+                  onChange={(e) => {
+                    if (discountType === "amount") {
+                      const value = parseFormattedNumber(e.target.value);
+                      setDiscount(value);
+                    } else {
+                      const value = parseFloat(e.target.value) || 0;
+                      setDiscountRatio(value);
+                    }
+                  }}
+                  disabled={isFormDisabled ? true : false}
+                  placeholder="0"
+                  className="flex-1 text-right text-sm px-2 py-1.5 border rounded disabled:bg-gray-100"
+                />
+                <select
+                  value={discountType}
+                  onChange={(e) => {
+                    setDiscountType(e.target.value as "amount" | "ratio");
+                    setDiscount(0);
+                    setDiscountRatio(0);
+                  }}
+                  disabled={isFormDisabled ? true : false}
+                  className="w-16 text-sm border rounded disabled:bg-gray-100">
+                  <option value="amount">₫</option>
+                  <option value="ratio">%</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <div>
