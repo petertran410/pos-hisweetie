@@ -9,6 +9,7 @@ import {
 import { useOrderSupplierPayments } from "@/lib/hooks/useOrderSuppliers";
 import { Loader2, FileText, Save } from "lucide-react";
 import { toast } from "sonner";
+import { tr } from "date-fns/locale";
 
 interface OrderSupplierDetailRowProps {
   orderSupplierId: number;
@@ -516,29 +517,50 @@ export function OrderSupplierDetailRow({
             )}
 
             {activeTab === "history" && (
-              <div className="py-6">
+              <div>
                 {orderSupplier.purchaseOrders &&
                 orderSupplier.purchaseOrders.length > 0 ? (
-                  <div className="space-y-4">
-                    {orderSupplier.purchaseOrders.map((po) => (
-                      <div key={po.id} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-medium">{po.code}</p>
-                            <p className="text-sm text-gray-500">
-                              Ngày nhập: {formatDateTime(po.purchaseDate)}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() =>
-                              router.push(`/san-pham/nhap-hang/${po.id}`)
-                            }
-                            className="text-blue-600 hover:underline">
-                            Xem chi tiết
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-md">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">
+                            Mã phiếu
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">
+                            Thời gian
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">
+                            Người tạo
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">
+                            Trạng thái
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {orderSupplier.purchaseOrders.map((po) => (
+                          <tr key={po.id}>
+                            <td className="px-4 py-3">
+                              <a
+                                href={`/san-pham/nhap-hang/${po.id}`}
+                                className="text-blue-600 hover:underline">
+                                {po.code}
+                              </a>
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">
+                              {formatDateTime(po.purchaseDate)}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">admin</td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">
+                                Hoàn thành
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <p className="text-center text-gray-500">
