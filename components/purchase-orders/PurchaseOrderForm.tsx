@@ -317,13 +317,13 @@ export function PurchaseOrderForm({
       return;
     }
 
-    const purchaseOrderData = {
+    const purchaseOrderData: any = {
       supplierId,
       branchId,
       isDraft,
       description: note,
-      discount: discountType === "amount" ? discount : undefined,
-      discountRatio: discountType === "ratio" ? discountRatio : undefined,
+      discount: discountType === "amount" ? Number(discount) || 0 : 0,
+      discountRatio: discountType === "ratio" ? Number(discountRatio) || 0 : 0,
       items: products.map((p) => ({
         productId: Number(p.productId),
         quantity: Number(p.quantity),
@@ -331,9 +331,12 @@ export function PurchaseOrderForm({
         discount: Number(p.discount) || 0,
         description: p.note,
       })),
-      orderSupplierId: orderSupplier?.id,
-      paidAmount: paymentAmount > 0 ? paymentAmount : undefined,
+      paidAmount: paymentAmount > 0 ? Number(paymentAmount) : 0,
     };
+
+    if (!purchaseOrder?.id) {
+      purchaseOrderData.orderSupplierId = orderSupplier?.id;
+    }
 
     try {
       if (purchaseOrder?.id) {

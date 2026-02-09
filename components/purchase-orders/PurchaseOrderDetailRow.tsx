@@ -169,11 +169,11 @@ export function PurchaseOrderDetailRow({
                     : "Đã hủy"}
                 </span>
                 <span className="text-sm text-gray-500 ml-auto">
-                  Kho: {purchaseOrder.branch?.name || "-"}
+                  {purchaseOrder.branch?.name || "-"}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-4 gap-4 mb-4">
                 <div>
                   <label className="block text-sm text-gray-500 mb-1.5">
                     Người tạo:
@@ -204,7 +204,8 @@ export function PurchaseOrderDetailRow({
                     ))}
                   </select>
                 </div>
-
+              </div>
+              <div className="grid grid-cols-4 gap-4 mb-4">
                 <div>
                   <label className="block text-sm text-gray-500 mb-1.5">
                     Ngày nhập:
@@ -242,31 +243,30 @@ export function PurchaseOrderDetailRow({
                   </select>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Tìm mã hàng"
-                    value={productCodeSearch}
-                    onChange={(e) => setProductCodeSearch(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Tìm tên hàng"
-                    value={productNameSearch}
-                    onChange={(e) => setProductNameSearch(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
             </div>
 
             <div className="border rounded-lg overflow-hidden mb-4">
               <table className="w-full">
+                <div className="grid grid-cols-2 gap-4 mb-3 mt-3 ml-3">
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Tìm mã hàng"
+                      value={productCodeSearch}
+                      onChange={(e) => setProductCodeSearch(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Tìm tên hàng"
+                      value={productNameSearch}
+                      onChange={(e) => setProductNameSearch(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
                 <thead>
                   <tr className="bg-gray-50 border-b">
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
@@ -295,7 +295,7 @@ export function PurchaseOrderDetailRow({
                 <tbody className="bg-white">
                   {filteredItems && filteredItems.length > 0 ? (
                     filteredItems.map((item: any) => (
-                      <tr key={item.id} className="border-b">
+                      <tr key={item.id} className="border-b border-t">
                         <td className="px-4 py-3 text-sm">
                           {item.productCode}
                         </td>
