@@ -318,8 +318,6 @@ export function PurchaseOrderForm({
     const purchaseOrderData: any = {
       supplierId,
       branchId,
-      status: 0,
-      statusValue: "Phiếu tạm",
       isDraft: true,
       description: note,
       discount: discountType === "amount" ? Number(discount) || 0 : 0,
@@ -381,8 +379,6 @@ export function PurchaseOrderForm({
     const purchaseOrderData: any = {
       supplierId,
       branchId,
-      status: 1,
-      statusValue: "Hoàn thành",
       isDraft: false,
       description: note,
       discount: discountType === "amount" ? Number(discount) || 0 : 0,
@@ -644,41 +640,9 @@ export function PurchaseOrderForm({
             </div>
           )}
 
-          <div ref={statusDropdownRef}>
-            <label className="block text-md text-gray-600 mb-1">
-              Trạng thái <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() =>
-                  !isFormDisabled && setShowStatusDropdown(!showStatusDropdown)
-                }
-                disabled={isFormDisabled ? true : false}
-                className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
-                <span>
-                  {selectedStatus ? selectedStatus.label : "Chọn trạng thái"}
-                </span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-
-              {showStatusDropdown && !isFormDisabled && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10">
-                  {STATUS_OPTIONS.map((option) => (
-                    <button
-                      key={option.label}
-                      type="button"
-                      onClick={() => {
-                        setIsDraft(option.value);
-                        setShowStatusDropdown(false);
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div ref={statusDropdownRef} className="flex gap-2">
+            <div className="text-md text-gray-600 mb-1">Trạng thái:</div>
+            <span>{selectedStatus ? selectedStatus.label : "Phiếu tạm"}</span>
           </div>
 
           <div ref={branchDropdownRef}>
