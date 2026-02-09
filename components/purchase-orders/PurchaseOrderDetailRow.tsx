@@ -71,15 +71,6 @@ export function PurchaseOrderDetailRow({
 
               <div>
                 <label className="block text-md font-medium text-gray-500 mb-1.5">
-                  Dự kiến nhập:
-                </label>
-                <span className="w-full px-3 py-2 text-md border rounded bg-white block">
-                  -
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-md font-medium text-gray-500 mb-1.5">
                   Tên NCC:
                 </label>
                 <span className="w-full px-3 py-2 text-md border rounded bg-gray-50 block">
