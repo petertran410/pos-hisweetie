@@ -286,13 +286,11 @@ export function PurchaseOrderForm({
   };
 
   const handleSubmit = async () => {
-    setIsDraft(true);
     handleFormSubmit();
   };
 
   const handleComplete = async () => {
-    setIsDraft(false);
-    handleFormSubmit();
+    handleFormComplete();
   };
 
   const handleFormSubmit = async () => {
@@ -320,7 +318,72 @@ export function PurchaseOrderForm({
     const purchaseOrderData: any = {
       supplierId,
       branchId,
-      isDraft,
+      status: 0,
+      statusValue: "Phiếu tạm",
+      isDraft: true,
+      description: note,
+      discount: discountType === "amount" ? Number(discount) || 0 : 0,
+      discountRatio: discountType === "ratio" ? Number(discountRatio) || 0 : 0,
+      items: products.map((p) => ({
+        productId: Number(p.productId),
+        quantity: Number(p.quantity),
+        price: Number(p.price),
+        discount: Number(p.discount) || 0,
+        description: p.note,
+      })),
+      paidAmount: paymentAmount > 0 ? Number(paymentAmount) : 0,
+    };
+
+    if (!purchaseOrder?.id) {
+      purchaseOrderData.orderSupplierId = orderSupplier?.id;
+    }
+
+    try {
+      if (purchaseOrder?.id) {
+        await updatePurchaseOrder.mutateAsync({
+          id: purchaseOrder.id,
+          data: purchaseOrderData,
+        });
+        toast.success("Cập nhật phiếu nhập hàng thành công");
+      } else {
+        await createPurchaseOrder.mutateAsync(purchaseOrderData);
+        toast.success("Tạo phiếu nhập hàng thành công");
+      }
+
+      router.push("/san-pham/nhap-hang");
+    } catch (error: any) {
+      toast.error(error?.message || "Có lỗi xảy ra");
+    }
+  };
+
+  const handleFormComplete = async () => {
+    if (!branchId) {
+      toast.error("Vui lòng chọn chi nhánh");
+      return;
+    }
+
+    if (!supplierId) {
+      toast.error("Vui lòng chọn nhà cung cấp");
+      return;
+    }
+
+    if (products.length === 0) {
+      toast.error("Vui lòng thêm ít nhất một sản phẩm");
+      return;
+    }
+
+    const hasInvalidQuantity = products.some((p) => p.quantity <= 0);
+    if (hasInvalidQuantity) {
+      toast.error("Vui lòng nhập số lượng hợp lệ cho tất cả sản phẩm");
+      return;
+    }
+
+    const purchaseOrderData: any = {
+      supplierId,
+      branchId,
+      status: 1,
+      statusValue: "Hoàn thành",
+      isDraft: false,
       description: note,
       discount: discountType === "amount" ? Number(discount) || 0 : 0,
       discountRatio: discountType === "ratio" ? Number(discountRatio) || 0 : 0,
@@ -513,10 +576,13 @@ export function PurchaseOrderForm({
                     <td className="px-3 py-2 text-center">
                       <input
                         type="text"
-                        value={item.discount}
-                        onChange={(e) =>
-                          handleDiscountChange(index, e.target.value)
-                        }
+                        value={formatCurrency(item.discount)}
+                        onChange={(e) => {
+                          const numericValue = parseFormattedNumber(
+                            e.target.value
+                          );
+                          handleDiscountChange(index, numericValue.toString());
+                        }}
                         disabled={isFormDisabled ? true : false}
                         className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />
