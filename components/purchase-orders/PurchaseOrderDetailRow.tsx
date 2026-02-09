@@ -6,10 +6,11 @@ import {
 } from "@/lib/hooks/usePurchaseOrders";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useUsers } from "@/lib/hooks/useUsers";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import { ChevronDown } from "lucide-react";
 
 interface PurchaseOrderDetailRowProps {
   purchaseOrderId: number;
@@ -33,14 +34,45 @@ export function PurchaseOrderDetailRow({
   const [editedPurchaseDate, setEditedPurchaseDate] = useState<string>("");
   const [editedDescription, setEditedDescription] = useState<string>("");
 
-  useState(() => {
+  const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
+  const [showPurchaseByDropdown, setShowPurchaseByDropdown] = useState(false);
+
+  const supplierDropdownRef = useRef<HTMLDivElement>(null);
+  const purchaseByDropdownRef = useRef<HTMLDivElement>(null);
+
+  const selectedSupplier = suppliersData?.data?.find(
+    (s) => s.id === editedSupplierId
+  );
+  const selectedUser = users?.find((u) => u.id === editedPurchaseById);
+
+  useEffect(() => {
     if (purchaseOrder) {
       setEditedSupplierId(purchaseOrder.supplierId);
       setEditedPurchaseById(purchaseOrder.purchaseById || 0);
       setEditedPurchaseDate(purchaseOrder.purchaseDate);
       setEditedDescription(purchaseOrder.description || "");
     }
-  });
+  }, [purchaseOrder]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        supplierDropdownRef.current &&
+        !supplierDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowSupplierDropdown(false);
+      }
+      if (
+        purchaseByDropdownRef.current &&
+        !purchaseByDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowPurchaseByDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   if (isLoading) {
     return (
@@ -182,25 +214,52 @@ export function PurchaseOrderDetailRow({
                   />
                 </div>
 
-                <div>
+                <div ref={purchaseByDropdownRef}>
                   <label className="block text-sm text-gray-500 mb-1.5">
                     Người nhập:
                   </label>
-                  <select
-                    value={editedPurchaseById}
-                    onChange={(e) =>
-                      setEditedPurchaseById(Number(e.target.value))
-                    }
-                    className="w-full px-3 py-2 text-sm border rounded bg-white">
-                    <option value={0}>Chọn người nhập</option>
-                    {users?.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPurchaseByDropdown(!showPurchaseByDropdown)
+                      }
+                      className="w-full px-3 py-2 text-sm border rounded bg-white flex items-center justify-between hover:bg-gray-50">
+                      <span>
+                        {selectedUser ? selectedUser.name : "Chọn người nhập"}
+                      </span>
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+
+                    {showPurchaseByDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditedPurchaseById(0);
+                            setShowPurchaseByDropdown(false);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
+                          Chọn người nhập
+                        </button>
+                        {users?.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => {
+                              setEditedPurchaseById(user.id);
+                              setShowPurchaseByDropdown(false);
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
+                            {user.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+
               <div className="grid grid-cols-4 gap-4 mb-4">
                 <div>
                   <label className="block text-sm text-gray-500 mb-1.5">
@@ -220,23 +279,42 @@ export function PurchaseOrderDetailRow({
                   />
                 </div>
 
-                <div>
+                <div ref={supplierDropdownRef}>
                   <label className="block text-sm text-gray-500 mb-1.5">
                     Tên NCC:
                   </label>
-                  <select
-                    value={editedSupplierId}
-                    onChange={(e) =>
-                      setEditedSupplierId(Number(e.target.value))
-                    }
-                    className="w-full px-3 py-2 text-sm border rounded bg-white">
-                    <option value={0}>Chọn nhà cung cấp</option>
-                    {suppliersData?.data?.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowSupplierDropdown(!showSupplierDropdown)
+                      }
+                      className="w-full px-3 py-2 text-sm border rounded bg-white flex items-center justify-between hover:bg-gray-50">
+                      <span>
+                        {selectedSupplier
+                          ? selectedSupplier.name
+                          : "Chọn nhà cung cấp"}
+                      </span>
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+
+                    {showSupplierDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                        {suppliersData?.data?.map((supplier) => (
+                          <button
+                            key={supplier.id}
+                            type="button"
+                            onClick={() => {
+                              setEditedSupplierId(supplier.id);
+                              setShowSupplierDropdown(false);
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
+                            {supplier.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
