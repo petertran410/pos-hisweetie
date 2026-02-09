@@ -242,27 +242,27 @@ export function PurchaseOrderDetailRow({
             </div>
 
             <div className="border rounded-lg overflow-hidden mb-4">
-              <table className="w-full">
-                <div className="grid grid-cols-2 gap-4 mb-3 mt-3 ml-3">
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Tìm mã hàng"
-                      value={productCodeSearch}
-                      onChange={(e) => setProductCodeSearch(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Tìm tên hàng"
-                      value={productNameSearch}
-                      onChange={(e) => setProductNameSearch(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+              <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 border-b">
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Tìm mã hàng"
+                    value={productCodeSearch}
+                    onChange={(e) => setProductCodeSearch(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Tìm tên hàng"
+                    value={productNameSearch}
+                    onChange={(e) => setProductNameSearch(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b">
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
