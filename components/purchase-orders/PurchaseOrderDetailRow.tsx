@@ -9,6 +9,7 @@ import { useUsers } from "@/lib/hooks/useUsers";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils";
 
 interface PurchaseOrderDetailRowProps {
   purchaseOrderId: number;
@@ -72,11 +73,6 @@ export function PurchaseOrderDetailRow({
       : true;
     return matchCode && matchName;
   });
-
-  const formatCurrency = (value: number | string) => {
-    const num = typeof value === "string" ? parseFloat(value) : value;
-    return new Intl.NumberFormat("vi-VN").format(num);
-  };
 
   const handleOpenPurchaseOrder = () => {
     router.push(`/san-pham/nhap-hang/${purchaseOrder.id}`);
@@ -295,7 +291,7 @@ export function PurchaseOrderDetailRow({
                 <tbody className="bg-white">
                   {filteredItems && filteredItems.length > 0 ? (
                     filteredItems.map((item: any) => (
-                      <tr key={item.id} className="border-b border-t">
+                      <tr key={item.id} className="border-t">
                         <td className="px-4 py-3 text-sm">
                           {item.productCode}
                         </td>
@@ -372,18 +368,16 @@ export function PurchaseOrderDetailRow({
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm text-gray-500 mb-1.5">
-                Ghi chú:
-              </label>
               <textarea
                 value={editedDescription}
                 onChange={(e) => setEditedDescription(e.target.value)}
-                className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                className="w-full px-2 py-1.5 text-sm border rounded-md disabled:bg-gray-100 resize-none"
+                rows={3}
                 placeholder="Nhập ghi chú"
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 justify-between">
               {purchaseOrder.status !== 2 && (
                 <button
                   onClick={handleCancelPurchaseOrder}
@@ -391,18 +385,20 @@ export function PurchaseOrderDetailRow({
                   Hủy
                 </button>
               )}
-              <button
-                onClick={handleOpenPurchaseOrder}
-                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
-                Mở phiếu
-              </button>
-              {purchaseOrder.status !== 2 && (
+              <div className="space-x-2">
                 <button
-                  onClick={handleSave}
-                  className="px-4 py-2 text-sm border rounded hover:bg-gray-50">
-                  Lưu
+                  onClick={handleOpenPurchaseOrder}
+                  className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
+                  Mở phiếu
                 </button>
-              )}
+                {purchaseOrder.status !== 2 && (
+                  <button
+                    onClick={handleSave}
+                    className="px-4 py-2 text-sm border rounded hover:bg-gray-50">
+                    Lưu
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
