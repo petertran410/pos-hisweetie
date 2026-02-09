@@ -286,6 +286,16 @@ export function PurchaseOrderForm({
   };
 
   const handleSubmit = async () => {
+    setIsDraft(true);
+    handleFormSubmit();
+  };
+
+  const handleComplete = async () => {
+    setIsDraft(false);
+    handleFormSubmit();
+  };
+
+  const handleFormSubmit = async () => {
     if (!branchId) {
       toast.error("Vui lòng chọn chi nhánh");
       return;
@@ -808,7 +818,7 @@ export function PurchaseOrderForm({
 
         <div className="p-4 border-t bg-gray-50 space-y-2">
           <button
-            onClick={handleSubmit}
+            onClick={handleComplete}
             disabled={isFormDisabled ? true : false}
             className="w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium">
             Hoàn thành
