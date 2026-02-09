@@ -4,6 +4,8 @@ import {
   usePurchaseOrder,
   useUpdatePurchaseOrder,
 } from "@/lib/hooks/usePurchaseOrders";
+import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import { useUsers } from "@/lib/hooks/useUsers";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -19,9 +21,25 @@ export function PurchaseOrderDetailRow({
 }: PurchaseOrderDetailRowProps) {
   const router = useRouter();
   const { data: purchaseOrder, isLoading } = usePurchaseOrder(purchaseOrderId);
+  const { data: suppliersData } = useSuppliers({});
+  const { data: users } = useUsers();
   const updatePurchaseOrder = useUpdatePurchaseOrder();
+
   const [productCodeSearch, setProductCodeSearch] = useState("");
   const [productNameSearch, setProductNameSearch] = useState("");
+  const [editedSupplierId, setEditedSupplierId] = useState<number>(0);
+  const [editedPurchaseById, setEditedPurchaseById] = useState<number>(0);
+  const [editedPurchaseDate, setEditedPurchaseDate] = useState<string>("");
+  const [editedDescription, setEditedDescription] = useState<string>("");
+
+  useState(() => {
+    if (purchaseOrder) {
+      setEditedSupplierId(purchaseOrder.supplierId);
+      setEditedPurchaseById(purchaseOrder.purchaseById || 0);
+      setEditedPurchaseDate(purchaseOrder.purchaseDate);
+      setEditedDescription(purchaseOrder.description || "");
+    }
+  });
 
   if (isLoading) {
     return (
@@ -69,12 +87,54 @@ export function PurchaseOrderDetailRow({
       try {
         await updatePurchaseOrder.mutateAsync({
           id: purchaseOrder.id,
+          data: {
+            supplierId: purchaseOrder.supplierId,
+            items: purchaseOrder.items?.map(
+              (item: {
+                productId: any;
+                quantity: any;
+                price: any;
+                discount: any;
+                description: any;
+              }) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price,
+                discount: item.discount || 0,
+                description: item.description,
+              })
+            ),
+            isDraft: false,
+            purchaseDate: purchaseOrder.purchaseDate,
+          },
+        });
+
+        await updatePurchaseOrder.mutateAsync({
+          id: purchaseOrder.id,
           data: { status: 2 },
         });
+
         toast.success("Đã hủy phiếu nhập hàng");
-      } catch (error) {
-        toast.error("Không thể hủy phiếu nhập hàng");
+      } catch (error: any) {
+        toast.error(error.message || "Không thể hủy phiếu nhập hàng");
       }
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await updatePurchaseOrder.mutateAsync({
+        id: purchaseOrder.id,
+        data: {
+          supplierId: editedSupplierId,
+          purchaseById: editedPurchaseById || undefined,
+          purchaseDate: editedPurchaseDate,
+          description: editedDescription,
+        },
+      });
+      toast.success("Lưu thông tin thành công");
+    } catch (error: any) {
+      toast.error(error.message || "Không thể lưu thông tin");
     }
   };
 
@@ -109,11 +169,11 @@ export function PurchaseOrderDetailRow({
                     : "Đã hủy"}
                 </span>
                 <span className="text-sm text-gray-500 ml-auto">
-                  {purchaseOrder.branch?.name || "-"}
+                  Kho: {purchaseOrder.branch?.name || "-"}
                 </span>
               </div>
 
-              <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm text-gray-500 mb-1.5">
                     Người tạo:
@@ -130,33 +190,35 @@ export function PurchaseOrderDetailRow({
                   <label className="block text-sm text-gray-500 mb-1.5">
                     Người nhập:
                   </label>
-                  <input
-                    type="text"
-                    value={purchaseOrder.purchaseBy?.name || "admin"}
-                    disabled
-                    className="w-full px-3 py-2 text-sm border rounded bg-white"
-                  />
+                  <select
+                    value={editedPurchaseById}
+                    onChange={(e) =>
+                      setEditedPurchaseById(Number(e.target.value))
+                    }
+                    className="w-full px-3 py-2 text-sm border rounded bg-white">
+                    <option value={0}>Chọn người nhập</option>
+                    {users?.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-4 gap-4 mb-4">
                 <div>
                   <label className="block text-sm text-gray-500 mb-1.5">
                     Ngày nhập:
                   </label>
                   <input
-                    type="text"
-                    value={new Date(purchaseOrder.purchaseDate).toLocaleString(
-                      "vi-VN",
-                      {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }
-                    )}
-                    disabled
+                    type="datetime-local"
+                    value={
+                      editedPurchaseDate
+                        ? new Date(editedPurchaseDate)
+                            .toISOString()
+                            .slice(0, 16)
+                        : ""
+                    }
+                    onChange={(e) => setEditedPurchaseDate(e.target.value)}
                     className="w-full px-3 py-2 text-sm border rounded bg-white"
                   />
                 </div>
@@ -165,11 +227,39 @@ export function PurchaseOrderDetailRow({
                   <label className="block text-sm text-gray-500 mb-1.5">
                     Tên NCC:
                   </label>
+                  <select
+                    value={editedSupplierId}
+                    onChange={(e) =>
+                      setEditedSupplierId(Number(e.target.value))
+                    }
+                    className="w-full px-3 py-2 text-sm border rounded bg-white">
+                    <option value={0}>Chọn nhà cung cấp</option>
+                    {suppliersData?.data?.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
                   <input
                     type="text"
-                    value={purchaseOrder.supplier?.name || "Chưa có"}
-                    disabled
-                    className="w-full px-3 py-2 text-sm border rounded bg-gray-50"
+                    placeholder="Tìm mã hàng"
+                    value={productCodeSearch}
+                    onChange={(e) => setProductCodeSearch(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Tìm tên hàng"
+                    value={productNameSearch}
+                    onChange={(e) => setProductNameSearch(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -177,26 +267,6 @@ export function PurchaseOrderDetailRow({
 
             <div className="border rounded-lg overflow-hidden mb-4">
               <table className="w-full">
-                <div className="grid grid-cols-2 gap-4 mb-2 mt-2 ml-3">
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Tìm mã hàng"
-                      value={productCodeSearch}
-                      onChange={(e) => setProductCodeSearch(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Tìm tên hàng"
-                      value={productNameSearch}
-                      onChange={(e) => setProductNameSearch(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
                 <thead>
                   <tr className="bg-gray-50 border-b">
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
@@ -225,7 +295,7 @@ export function PurchaseOrderDetailRow({
                 <tbody className="bg-white">
                   {filteredItems && filteredItems.length > 0 ? (
                     filteredItems.map((item: any) => (
-                      <tr key={item.id} className="border-b border-t">
+                      <tr key={item.id} className="border-b">
                         <td className="px-4 py-3 text-sm">
                           {item.productCode}
                         </td>
@@ -305,9 +375,12 @@ export function PurchaseOrderDetailRow({
               <label className="block text-sm text-gray-500 mb-1.5">
                 Ghi chú:
               </label>
-              <div className="w-full px-3 py-2 text-sm border rounded bg-gray-50 min-h-[80px]">
-                {purchaseOrder.description || "Đây là test"}
-              </div>
+              <textarea
+                value={editedDescription}
+                onChange={(e) => setEditedDescription(e.target.value)}
+                className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                placeholder="Nhập ghi chú"
+              />
             </div>
 
             <div className="flex items-center gap-3">
@@ -324,7 +397,9 @@ export function PurchaseOrderDetailRow({
                 Mở phiếu
               </button>
               {purchaseOrder.status !== 2 && (
-                <button className="px-4 py-2 text-sm border rounded hover:bg-gray-50">
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 text-sm border rounded hover:bg-gray-50">
                   Lưu
                 </button>
               )}
