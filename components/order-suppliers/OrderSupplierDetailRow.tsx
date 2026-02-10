@@ -10,15 +10,12 @@ import { useOrderSupplierPayments } from "@/lib/hooks/useOrderSuppliers";
 import { Loader2, FileText, Save } from "lucide-react";
 import { toast } from "sonner";
 import { tr } from "date-fns/locale";
+import { formatCurrency } from "@/lib/utils";
 
 interface OrderSupplierDetailRowProps {
   orderSupplierId: number;
   colSpan: number;
 }
-
-const formatMoney = (value: number) => {
-  return new Intl.NumberFormat("vi-VN").format(value);
-};
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return "-";
@@ -37,11 +34,11 @@ const getStatusLabel = (status: number) => {
     case 0:
       return "Phiếu tạm";
     case 1:
-      return "Đã đặt hàng";
+      return "Đã xác nhận NCC";
     case 2:
       return "Đã nhập một phần";
     case 3:
-      return "Đã nhập hàng";
+      return "Hoàn thành";
     case 4:
       return "Đã hủy";
     default:
@@ -290,18 +287,6 @@ export function OrderSupplierDetailRow({
                         {orderSupplier.supplier?.name || "-"}
                       </span>
                     </div>
-
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Mã nhập hàng:
-                      </label>
-                      <span className="w-full px-3 py-2 text-md border rounded bg-white">
-                        {orderSupplier.purchaseOrders &&
-                        orderSupplier.purchaseOrders.length > 0
-                          ? `${orderSupplier.purchaseOrders.length} phiếu. Xem chi tiết`
-                          : "-"}
-                      </span>
-                    </div>
                   </div>
 
                   <div className="border rounded-lg overflow-hidden mb-4">
@@ -339,10 +324,10 @@ export function OrderSupplierDetailRow({
                             Đơn giá
                           </th>
                           <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Giảm giá
+                            Giá nhập
                           </th>
                           <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Giá nhập
+                            Giảm giá
                           </th>
                           <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
                             Thành tiền
@@ -379,26 +364,30 @@ export function OrderSupplierDetailRow({
                             </td>
                             <td className="px-4 py-3 text-right">
                               <span className="text-md text-gray-900">
-                                {formatMoney(Number(item.price))}
+                                {formatCurrency(Number(item.price))}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-md font-medium text-gray-900">
+                                {formatCurrency(
+                                  Number(item.price) -
+                                    Number(item.discount || 0)
+                                )}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
                               <span className="text-md text-gray-900">
                                 {item.discount
-                                  ? formatMoney(Number(item.discount))
+                                  ? formatCurrency(Number(item.discount))
                                   : "-"}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <span className="text-md font-medium text-gray-900">
-                                {formatMoney(Number(item.price))}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
                               <span className="text-md font-semibold text-blue-600">
-                                {formatMoney(
-                                  Number(item.quantity) * Number(item.price) -
-                                    Number(item.discount || 0)
+                                {formatCurrency(
+                                  Number(item.quantity) *
+                                    (Number(item.price) -
+                                      Number(item.discount || 0))
                                 )}
                               </span>
                             </td>
@@ -425,14 +414,14 @@ export function OrderSupplierDetailRow({
                             Tổng tiền hàng ({orderSupplier.totalQuantity || 0}):
                           </span>
                           <span className="font-semibold text-gray-900">
-                            {formatMoney(Number(orderSupplier.total))}
+                            {formatCurrency(Number(orderSupplier.total))}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center text-md">
                           <span className="text-gray-600">Giảm giá:</span>
                           <span className="font-semibold text-red-600">
-                            {formatMoney(Number(orderSupplier.discount))}
+                            {formatCurrency(Number(orderSupplier.discount))}
                           </span>
                         </div>
 
@@ -442,7 +431,9 @@ export function OrderSupplierDetailRow({
                               Cần trả NCC:
                             </span>
                             <span className="text-md font-bold text-blue-600">
-                              {formatMoney(Number(orderSupplier.supplierDebt))}
+                              {formatCurrency(
+                                Number(orderSupplier.supplierDebt)
+                              )}
                             </span>
                           </div>
                         </div>
@@ -452,7 +443,7 @@ export function OrderSupplierDetailRow({
                             Tiền đã trả NCC:
                           </span>
                           <span className="font-semibold text-green-600">
-                            {formatMoney(Number(orderSupplier.paidAmount))}
+                            {formatCurrency(Number(orderSupplier.paidAmount))}
                           </span>
                         </div>
                       </div>
@@ -622,7 +613,7 @@ export function OrderSupplierDetailRow({
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right text-gray-900">
-                              {formatMoney(payment.amount)}
+                              {formatCurrency(payment.amount)}
                             </td>
                           </tr>
                         ))}

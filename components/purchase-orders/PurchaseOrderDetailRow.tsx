@@ -187,14 +187,14 @@ export function PurchaseOrderDetailRow({
                     purchaseOrder.status === 0
                       ? "bg-orange-100 text-orange-600"
                       : purchaseOrder.status === 1
-                      ? "bg-green-100 text-green-600"
-                      : "bg-gray-100 text-gray-600"
+                        ? "bg-green-100 text-green-600"
+                        : "bg-gray-100 text-gray-600"
                   }`}>
                   {purchaseOrder.status === 0
                     ? "Phiếu tạm"
                     : purchaseOrder.status === 1
-                    ? "Đã nhập hàng"
-                    : "Đã hủy"}
+                      ? "Đã nhập hàng"
+                      : "Đã hủy"}
                 </span>
                 <span className="text-sm text-gray-500 ml-auto">
                   {purchaseOrder.branch?.name || "-"}
@@ -356,10 +356,10 @@ export function PurchaseOrderDetailRow({
                       Đơn giá
                     </th>
                     <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                      Giảm giá
+                      Giá nhập
                     </th>
                     <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                      Giá nhập
+                      Giảm giá
                     </th>
                     <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
                       Thành tiền
@@ -383,13 +383,15 @@ export function PurchaseOrderDetailRow({
                           {formatCurrency(item.price)}
                         </td>
                         <td className="px-4 py-3 text-sm text-right">
-                          {formatCurrency(item.discount)}
+                          {formatCurrency(item.price - item.discount)}
                         </td>
                         <td className="px-4 py-3 text-sm text-right">
-                          {formatCurrency(item.price)}
+                          {formatCurrency(item.discount)}
                         </td>
                         <td className="px-4 py-3 text-sm text-right font-medium">
-                          {formatCurrency(item.totalPrice)}
+                          {formatCurrency(
+                            item.quantity * (item.price - (item.discount || 0))
+                          )}
                         </td>
                       </tr>
                     ))
