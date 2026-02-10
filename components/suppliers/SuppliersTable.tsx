@@ -6,6 +6,7 @@ import { Supplier, SupplierFilters } from "@/lib/types/supplier";
 import { SupplierDetailRow } from "./SupplierDetailRow";
 import { SupplierForm } from "./SupplierForm";
 import { Plus, Settings } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface ColumnConfig {
   key: string;
@@ -14,14 +15,6 @@ interface ColumnConfig {
   width: string;
   render: (supplier: Supplier) => React.ReactNode;
 }
-
-const formatCurrency = (value: number | string) => {
-  const num = typeof value === "string" ? parseFloat(value) : value;
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(num);
-};
 
 const formatDateTime = (date?: string) => {
   if (!date) return "-";

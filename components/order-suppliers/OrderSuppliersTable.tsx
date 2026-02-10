@@ -10,7 +10,7 @@ import { OrderSupplierDetailRow } from "./OrderSupplierDetailRow";
 import { Plus, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getStatusLabel } from "@/lib/types/order-supplier";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumberInput } from "@/lib/utils";
 
 interface ColumnConfig {
   key: string;
@@ -106,7 +106,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Tổng số lượng",
     visible: false,
     width: "180px",
-    render: (os) => os.totalQty || "-",
+    render: (os) => formatCurrency(os.totalQty) || "-",
   },
   {
     key: "productQuantitt",
@@ -154,12 +154,12 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
           os.status === 0
             ? "bg-gray-100 text-gray-800"
             : os.status === 1
-            ? "bg-blue-100 text-blue-800"
-            : os.status === 2
-            ? "bg-yellow-100 text-yellow-800"
-            : os.status === 3
-            ? "bg-green-100 text-green-800"
-            : "bg-red-100 text-red-800"
+              ? "bg-blue-100 text-blue-800"
+              : os.status === 2
+                ? "bg-yellow-100 text-yellow-800"
+                : os.status === 3
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
         }`}>
         {getStatusLabel(os.status)}
       </span>

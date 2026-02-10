@@ -776,14 +776,14 @@ export function OrderSupplierForm({
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Ghi chú</label>
+            <label className="block text-md text-gray-600 mb-1">Ghi chú</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               disabled={isFormDisabled ? true : false}
               placeholder="Nhập ghi chú..."
               rows={2}
-              className="w-full text-sm px-2 py-1.5 border rounded disabled:bg-gray-100 resize-none"
+              className="w-full text-md px-2 py-1.5 border rounded disabled:bg-gray-100 resize-none"
             />
           </div>
         </div>
