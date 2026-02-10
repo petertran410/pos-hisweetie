@@ -629,9 +629,7 @@ export function PurchaseOrderForm({
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           <div className="flex gap-2">
             <div className="text-md text-gray-600">Mã phiếu nhập:</div>
-            <span className="">
-              {purchaseOrder?.code || "Mã phiếu tự động"}
-            </span>
+            <span>{purchaseOrder?.code || "Mã phiếu tự động"}</span>
           </div>
 
           {purchaseOrder?.orderSupplier?.code && (

@@ -427,7 +427,7 @@ export function OrderSupplierForm({
                     Giá nhập
                   </th>
                   <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
-                    Giảm giá
+                    Tổng giảm giá
                   </th>
                   <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
                     Thành tiền
@@ -460,10 +460,16 @@ export function OrderSupplierForm({
                         </button>
                         <input
                           type="text"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            handleQuantityChange(index, e.target.value)
-                          }
+                          value={formatNumber(item.quantity)}
+                          onChange={(e) => {
+                            const numericValue = parseFormattedNumber(
+                              e.target.value
+                            );
+                            handleQuantityChange(
+                              index,
+                              numericValue.toString()
+                            );
+                          }}
                           disabled={isFormDisabled ? true : false}
                           className="w-16 text-center border rounded px-1 py-1 text-sm disabled:bg-gray-100"
                         />
@@ -531,33 +537,22 @@ export function OrderSupplierForm({
         </div>
       </div>
 
-      {/* Sidebar - Bên phải */}
       <div className="w-[420px] border mr-4 mt-4 mb-4 rounded-xl overflow-y-auto bg-white border-l flex flex-col custom-sidebar-scroll">
         <div className="px-4 py-3 border-b bg-gray-50">
           <h3 className="font-semibold text-gray-900">Thông tin đơn hàng</h3>
         </div>
 
-        {/* Sidebar Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {/* Mã đặt hàng */}
-          <div>
-            <label className="block text-md text-gray-600 mb-1">
-              Mã đặt hàng nhập
+          <div className="flex gap-2">
+            <label className="text-md text-gray-600 mb-1">
+              Mã đặt hàng nhập:
             </label>
-            <input
-              type="text"
-              value={orderSupplier?.code || "Mã phiếu tự động"}
-              disabled
-              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-gray-600"
-            />
+            <div>{orderSupplier?.code || "Mã phiếu tự động"}</div>
           </div>
 
-          {/* Trạng thái */}
-          <div ref={statusDropdownRef}>
-            <label className="block text-md text-gray-600 mb-1">
-              Trạng thái <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
+          <div ref={statusDropdownRef} className="flex gap-2 items-center">
+            <div className="text-md text-gray-600">Trạng thái:</div>
+            <div className="relative w-40">
               <button
                 type="button"
                 onClick={() =>
@@ -588,12 +583,9 @@ export function OrderSupplierForm({
             </div>
           </div>
 
-          {/* Chi nhánh */}
-          <div ref={branchDropdownRef}>
-            <label className="block text-md text-gray-600 mb-1">
-              Chi nhánh <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
+          <div ref={branchDropdownRef} className="flex gap-2 items-center">
+            <div className="text-md text-gray-600">Chi nhánh:</div>
+            <div className="relative w-40">
               <button
                 type="button"
                 onClick={() =>
@@ -622,12 +614,9 @@ export function OrderSupplierForm({
             </div>
           </div>
 
-          {/* Nhà cung cấp */}
-          <div ref={supplierDropdownRef}>
-            <label className="block text-md text-gray-600 mb-1">
-              Nhà cung cấp <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
+          <div ref={supplierDropdownRef} className="flex gap-2 items-center">
+            <div className="text-md text-gray-600">Nhà cung cấp:</div>
+            <div className="relative w-40">
               <button
                 type="button"
                 onClick={() =>
@@ -664,20 +653,16 @@ export function OrderSupplierForm({
           <div className="border-t my-3"></div>
 
           <div className="flex flex-col gap-2">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">
-                Tổng tiền hàng
-              </label>
-              <div className="text-sm font-semibold text-right px-2 py-1.5 bg-gray-50 rounded">
+            <div className="flex gap-2">
+              <div className="block text-md text-gray-600">Tổng tiền hàng:</div>
+              <div>
                 {formatCurrency(
                   products.reduce((sum, p) => sum + p.subTotal, 0)
                 )}
               </div>
             </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">
-                Giảm giá
-              </label>
+            <div className="flex gap-2 items-center">
+              <div className="block text-md text-gray-600">Giảm giá:</div>
               <div className="flex gap-1">
                 <input
                   type="text"
@@ -715,28 +700,17 @@ export function OrderSupplierForm({
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded p-2">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-medium text-gray-700">
-                Cần trả nhà cung cấp
-              </span>
-              <span className="text-lg font-bold text-blue-600">
-                {formatCurrency(calculateTotalValue() - previouslyPaid)}
-              </span>
-            </div>
+          <div className="flex gap-2">
+            <div className="text-md text-gray-600">Cần trả nhà cung cấp:</div>
+            <div>{formatCurrency(calculateTotalValue() - previouslyPaid)}</div>
           </div>
 
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              {orderSupplier ? "Trả thêm cho NCC" : "Tiền trả nhà cung cấp"}
-            </label>
+          <div className="flex gap-2 items-center">
+            <div className="text-md text-gray-600">
+              {orderSupplier ? "Trả thêm cho NCC:" : "Tiền trả nhà cung cấp:"}
+            </div>
             <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={formatCurrency(paymentAmount)}
-                readOnly
-                className="flex-1 text-right text-sm px-2 py-1.5 border rounded bg-gray-50"
-              />
+              <div>{formatCurrency(paymentAmount)}</div>
               <button
                 onClick={() => setShowPaymentModal(true)}
                 disabled={isFormDisabled ? true : false}
@@ -754,23 +728,17 @@ export function OrderSupplierForm({
           </div>
 
           {orderSupplier && (previouslyPaid > 0 || paymentAmount > 0) && (
-            <div className="bg-green-50 border border-green-200 rounded p-2">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-medium text-gray-700">
-                  Tổng đã trả
-                </span>
-                <span className="text-base font-bold text-green-600">
-                  {formatCurrency(previouslyPaid + paymentAmount)}
-                </span>
-              </div>
+            <div className="flex gap-2">
+              <div className="text-md text-gray-600">Tổng đã trả:</div>
+              <div>{formatCurrency(previouslyPaid + paymentAmount)}</div>
             </div>
           )}
 
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Tiền nhà cung cấp trả lại
-            </label>
-            <div className="text-sm font-semibold text-right px-2 py-1.5 bg-red-50 text-red-600 rounded">
+          <div className="flex gap-2">
+            <div className="text-md text-gray-600">
+              Tiền nhà cung cấp trả lại:
+            </div>
+            <div>
               {formatCurrency(
                 Math.max(
                   0,
@@ -781,7 +749,7 @@ export function OrderSupplierForm({
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600 mb-1">
+            <label className="text-md text-gray-600">
               Dự kiến ngày nhập hàng
             </label>
             <div className="relative">
