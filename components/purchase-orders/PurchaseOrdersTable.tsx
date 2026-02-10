@@ -146,8 +146,8 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
           po.status === 0
             ? "bg-gray-100 text-gray-800"
             : po.status === 1
-            ? "bg-green-100 text-green-800"
-            : "bg-red-100 text-red-800"
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
         }`}>
         {getStatusLabel(po.status)}
       </span>

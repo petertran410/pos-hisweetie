@@ -413,7 +413,7 @@ export function PurchaseOrderForm({
     const purchaseOrderData: any = {
       supplierId,
       branchId,
-      isDraft: true,
+      isDraft: false,
       description: note,
       discount: discountType === "amount" ? Number(discount) || 0 : 0,
       discountRatio: discountType === "ratio" ? Number(discountRatio) || 0 : 0,

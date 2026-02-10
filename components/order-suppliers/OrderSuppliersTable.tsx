@@ -347,7 +347,7 @@ export function OrderSuppliersTable({
                     {visibleColumns.map((col) => (
                       <td
                         key={col.key}
-                        className="px-6 py-3 text-md whitespace-nowrap"
+                        className="px-6 py-3 text-md"
                         style={{
                           minWidth: col.width,
                           maxWidth: col.width,
