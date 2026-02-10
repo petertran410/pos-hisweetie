@@ -10,6 +10,7 @@ import { OrderSupplierDetailRow } from "./OrderSupplierDetailRow";
 import { Plus, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getStatusLabel } from "@/lib/types/order-supplier";
+import { formatCurrency } from "@/lib/utils";
 
 interface ColumnConfig {
   key: string;
@@ -18,14 +19,6 @@ interface ColumnConfig {
   width: string;
   render: (os: OrderSupplier) => React.ReactNode;
 }
-
-const formatCurrency = (value: number | string) => {
-  const num = typeof value === "string" ? parseFloat(value) : value;
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(num);
-};
 
 const formatDateTime = (date?: string) => {
   if (!date) return "-";
