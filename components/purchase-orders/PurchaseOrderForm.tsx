@@ -17,6 +17,8 @@ import { useBranchStore } from "@/lib/store/branch";
 import type { OrderSupplier } from "@/lib/types/order-supplier";
 import { CreditCard } from "lucide-react";
 import { SupplierPaymentModal } from "../order-suppliers/SupplierPaymentModal";
+import { useUsers } from "@/lib/hooks/useUsers";
+import { useAuthStore } from "@/lib/store/auth";
 
 interface ProductItem {
   productId: number;
@@ -97,11 +99,14 @@ export function PurchaseOrderForm({
     purchaseOrder?.isDraft !== undefined ? purchaseOrder.isDraft : true
   );
   const [products, setProducts] = useState<ProductItem[]>([]);
-
-  const formatNumber = (value: number): string => {
-    if (!value) return "";
-    return value.toLocaleString("en-US");
-  };
+  const { user: currentUser } = useAuthStore();
+  const { data: users } = useUsers();
+  const [purchaseById, setPurchaseById] = useState<number>(
+    purchaseOrder?.purchaseById || orderSupplier?.userId || currentUser?.id || 0
+  );
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+  const selectedUser = users?.find((u: any) => u.id === purchaseById);
 
   const parseFormattedNumber = (value: string): number => {
     return parseFloat(value.replace(/,/g, "")) || 0;
@@ -188,6 +193,12 @@ export function PurchaseOrderForm({
         !discountDropdownRef.current.contains(event.target as Node)
       ) {
         setShowDiscountDropdown(false);
+      }
+      if (
+        userDropdownRef.current &&
+        !userDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowUserDropdown(false);
       }
     };
 
@@ -337,6 +348,7 @@ export function PurchaseOrderForm({
         description: p.note,
       })),
       paidAmount: paymentAmount > 0 ? Number(paymentAmount) : 0,
+      purchaseById: purchaseById || undefined,
     };
 
     if (!purchaseOrder?.id) {
@@ -386,7 +398,7 @@ export function PurchaseOrderForm({
     const purchaseOrderData: any = {
       supplierId,
       branchId,
-      isDraft: false,
+      isDraft: true,
       description: note,
       discount: discountType === "amount" ? Number(discount) || 0 : 0,
       discountRatio: discountType === "ratio" ? Number(discountRatio) || 0 : 0,
@@ -398,6 +410,7 @@ export function PurchaseOrderForm({
         description: p.note,
       })),
       paidAmount: paymentAmount > 0 ? Number(paymentAmount) : 0,
+      purchaseById: purchaseById || undefined,
     };
 
     if (!purchaseOrder?.id) {
@@ -542,7 +555,7 @@ export function PurchaseOrderForm({
                         </button>
                         <input
                           type="text"
-                          value={formatNumber(item.quantity)}
+                          value={formatCurrency(item.quantity)}
                           onChange={(e) => {
                             const numericValue = parseFormattedNumber(
                               e.target.value
@@ -571,7 +584,7 @@ export function PurchaseOrderForm({
                     <td className="px-3 py-2">
                       <input
                         type="text"
-                        value={formatNumber(item.price)}
+                        value={formatCurrency(item.price)}
                         onChange={(e) => {
                           const numericValue = parseFormattedNumber(
                             e.target.value
@@ -640,6 +653,47 @@ export function PurchaseOrderForm({
               <span>{purchaseOrder?.orderSupplier?.code}</span>
             </div>
           )}
+
+          <div ref={userDropdownRef} className="flex gap-2 items-center">
+            <div className="text-md text-gray-600">Người nhập hàng:</div>
+            <div className="relative w-40">
+              <button
+                type="button"
+                onClick={() =>
+                  !isFormDisabled && setShowUserDropdown(!showUserDropdown)
+                }
+                disabled={isFormDisabled ? true : false}
+                className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100">
+                <span className={!selectedUser ? "text-gray-400" : ""}>
+                  {selectedUser ? selectedUser.name : "Chọn người nhập"}
+                </span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              {showUserDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                  <div
+                    onClick={() => {
+                      setPurchaseById(0);
+                      setShowUserDropdown(false);
+                    }}
+                    className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-400">
+                    Không chọn
+                  </div>
+                  {users?.map((user: any) => (
+                    <div
+                      key={user.id}
+                      onClick={() => {
+                        setPurchaseById(user.id);
+                        setShowUserDropdown(false);
+                      }}
+                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      {user.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           <div ref={statusDropdownRef} className="flex gap-2">
             <div className="text-md text-gray-600">Trạng thái:</div>
@@ -737,7 +791,7 @@ export function PurchaseOrderForm({
                   type="text"
                   value={
                     discountType === "amount"
-                      ? formatNumber(discount)
+                      ? formatCurrency(discount)
                       : discountRatio
                   }
                   onChange={(e) => {

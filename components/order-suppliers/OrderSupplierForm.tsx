@@ -563,7 +563,7 @@ export function OrderSupplierForm({
           </div>
 
           <div ref={userDropdownRef} className="flex gap-2 items-center">
-            <div className="text-md text-gray-600">Người nhập hàng:</div>
+            <div className="text-md text-gray-600">Người đặt hàng:</div>
             <div className="relative w-40">
               <button
                 type="button"
