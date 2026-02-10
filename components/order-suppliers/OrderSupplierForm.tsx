@@ -46,6 +46,9 @@ const getProductCost = (product: any, branchId: number): number => {
 const STATUS_OPTIONS = [
   { value: 0, label: "Phiếu tạm" },
   { value: 1, label: "Đã xác nhận NCC" },
+  { value: 2, label: "Nhập một phần" },
+  { value: 3, label: "Hoàn thành" },
+  { value: 4, label: "Đã hủy" },
 ];
 
 export function OrderSupplierForm({
@@ -64,7 +67,9 @@ export function OrderSupplierForm({
   >("cash");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<Date | null>(
-    null
+    orderSupplier?.expectedDeliveryDate
+      ? new Date(orderSupplier.expectedDeliveryDate)
+      : null
   );
   const [previouslyPaid, setPreviouslyPaid] = useState<number>(0);
   const { user: currentUser } = useAuthStore();
@@ -241,7 +246,7 @@ export function OrderSupplierForm({
       const updated = [...prev];
       updated[index].quantity = quantity;
       updated[index].subTotal =
-        quantity * updated[index].price - updated[index].discount;
+        (updated[index].price - updated[index].discount) * quantity;
       return updated;
     });
   };
@@ -259,7 +264,7 @@ export function OrderSupplierForm({
       const updated = [...prev];
       updated[index].price = price;
       updated[index].subTotal =
-        updated[index].quantity * price - updated[index].discount;
+        (price - updated[index].discount) * updated[index].quantity;
       return updated;
     });
   };
@@ -277,7 +282,7 @@ export function OrderSupplierForm({
       const updated = [...prev];
       updated[index].discount = discount;
       updated[index].subTotal =
-        updated[index].quantity * updated[index].price - discount;
+        (updated[index].price - discount) * updated[index].quantity;
       return updated;
     });
   };
@@ -436,7 +441,7 @@ export function OrderSupplierForm({
                     Giá nhập
                   </th>
                   <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
-                    Tổng giảm giá
+                    Giảm giá
                   </th>
                   <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
                     Thành tiền

@@ -244,7 +244,7 @@ export function PurchaseOrderForm({
       const updated = [...prev];
       updated[index].quantity = quantity;
       updated[index].subTotal =
-        quantity * updated[index].price - updated[index].discount;
+        (updated[index].price - updated[index].discount) * quantity;
       return updated;
     });
   };
@@ -262,7 +262,7 @@ export function PurchaseOrderForm({
       const updated = [...prev];
       updated[index].price = price;
       updated[index].subTotal =
-        updated[index].quantity * price - updated[index].discount;
+        (price - updated[index].discount) * updated[index].quantity;
       return updated;
     });
   };
@@ -280,7 +280,7 @@ export function PurchaseOrderForm({
       const updated = [...prev];
       updated[index].discount = discount;
       updated[index].subTotal =
-        updated[index].quantity * updated[index].price - discount;
+        (updated[index].price - discount) * updated[index].quantity;
       return updated;
     });
   };

@@ -23,6 +23,7 @@ export interface OrderSupplier {
   viewPrice: boolean;
   supplierDebt: number;
   supplierOldDebt: number;
+  expectedDeliveryDate?: string;
   createdBy: number;
   createdAt: string;
   updatedAt: string;

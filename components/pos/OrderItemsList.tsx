@@ -156,7 +156,7 @@ export function OrderItemsList({
 
   const calculateSubtotal = () => {
     return cartItems.reduce(
-      (sum, item) => sum + item.quantity * item.price - item.discount,
+      (sum, item) => sum + (item.price - item.discount) * item.quantity,
       0
     );
   };
@@ -276,8 +276,8 @@ export function OrderItemsList({
                   </div>
                   <div className="text-md font-medium">
                     {(
-                      item.quantity * item.price -
-                      item.discount
+                      (item.price - item.discount) *
+                      item.quantity
                     ).toLocaleString()}
                   </div>
                 </div>

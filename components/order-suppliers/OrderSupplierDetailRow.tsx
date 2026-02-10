@@ -266,7 +266,11 @@ export function OrderSupplierDetailRow({
                         Dự kiến nhập:
                       </label>
                       <span className="w-full px-3 py-2 text-md border rounded bg-white">
-                        -
+                        {orderSupplier.expectedDeliveryDate
+                          ? new Date(
+                              orderSupplier.expectedDeliveryDate
+                            ).toLocaleDateString("vi-VN")
+                          : "-"}
                       </span>
                     </div>
 
