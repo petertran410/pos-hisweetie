@@ -66,10 +66,8 @@ export function OrderSupplierForm({
     "cash" | "transfer" | "card"
   >("cash");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<Date | null>(
-    orderSupplier?.expectedDeliveryDate
-      ? new Date(orderSupplier.expectedDeliveryDate)
-      : null
+  const [orderDate, setOrderDate] = useState<Date | null>(
+    orderSupplier?.orderDate ? new Date(orderSupplier.orderDate) : null
   );
   const [previouslyPaid, setPreviouslyPaid] = useState<number>(0);
   const { user: currentUser } = useAuthStore();
@@ -333,7 +331,7 @@ export function OrderSupplierForm({
       })),
       paymentAmount: paymentAmount > 0 ? paymentAmount : undefined,
       paymentMethod: paymentAmount > 0 ? paymentMethod : undefined,
-      expectedDeliveryDate: expectedDeliveryDate?.toISOString(),
+      orderDate: orderDate?.toISOString(),
     };
 
     try {
@@ -810,21 +808,19 @@ export function OrderSupplierForm({
             <div className="relative">
               <input
                 type="date"
-                value={expectedDeliveryDate?.toISOString().split("T")[0] || ""}
+                value={orderDate?.toISOString().split("T")[0] || ""}
                 onChange={(e) =>
-                  setExpectedDeliveryDate(
-                    e.target.value ? new Date(e.target.value) : null
-                  )
+                  setOrderDate(e.target.value ? new Date(e.target.value) : null)
                 }
                 disabled={isFormDisabled ? true : false}
                 className="w-full text-sm px-2 py-1.5 border rounded disabled:bg-gray-100 
-                 focus:outline-none focus:ring-2 focus:ring-blue-500
-                 [&::-webkit-calendar-picker-indicator]:opacity-0
-                 [&::-webkit-calendar-picker-indicator]:absolute
-                 [&::-webkit-calendar-picker-indicator]:right-0
-                 [&::-webkit-calendar-picker-indicator]:w-full
-                 [&::-webkit-calendar-picker-indicator]:h-full
-                 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+   focus:outline-none focus:ring-2 focus:ring-blue-500
+   [&::-webkit-calendar-picker-indicator]:opacity-0
+   [&::-webkit-calendar-picker-indicator]:absolute
+   [&::-webkit-calendar-picker-indicator]:right-0
+   [&::-webkit-calendar-picker-indicator]:w-full
+   [&::-webkit-calendar-picker-indicator]:h-full
+   [&::-webkit-calendar-picker-indicator]:cursor-pointer"
               />
               <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
