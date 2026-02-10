@@ -51,7 +51,6 @@ const STATUS_OPTIONS = [
 export function PurchaseOrderForm({
   purchaseOrder,
   orderSupplier,
-  onClose,
 }: PurchaseOrderFormProps) {
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
@@ -114,10 +113,12 @@ export function PurchaseOrderForm({
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
+  const [showDiscountDropdown, setShowDiscountDropdown] = useState(false);
 
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const branchDropdownRef = useRef<HTMLDivElement>(null);
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
+  const discountDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: searchResults } = useProducts({
     search: searchQuery,
@@ -181,6 +182,12 @@ export function PurchaseOrderForm({
         !supplierDropdownRef.current.contains(event.target as Node)
       ) {
         setShowSupplierDropdown(false);
+      }
+      if (
+        discountDropdownRef.current &&
+        !discountDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowDiscountDropdown(false);
       }
     };
 
@@ -535,10 +542,16 @@ export function PurchaseOrderForm({
                         </button>
                         <input
                           type="text"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            handleQuantityChange(index, e.target.value)
-                          }
+                          value={formatNumber(item.quantity)}
+                          onChange={(e) => {
+                            const numericValue = parseFormattedNumber(
+                              e.target.value
+                            );
+                            handleQuantityChange(
+                              index,
+                              numericValue.toString()
+                            );
+                          }}
                           disabled={isFormDisabled ? true : false}
                           className="w-20 text-center border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                         />
@@ -614,42 +627,30 @@ export function PurchaseOrderForm({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <div>
-            <label className="block text-md text-gray-600 mb-1">
-              Mã phiếu nhập
-            </label>
-            <input
-              type="text"
-              value={purchaseOrder?.code || "Mã phiếu tự động"}
-              disabled
-              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-gray-600"
-            />
+          <div className="flex gap-2">
+            <div className="text-md text-gray-600">Mã phiếu nhập:</div>
+            <span className="">
+              {purchaseOrder?.code || "Mã phiếu tự động"}
+            </span>
           </div>
 
-          {orderSupplier && (
-            <div>
-              <label className="block text-md text-gray-600 mb-1">
-                Mã đặt hàng nhập
-              </label>
-              <input
-                type="text"
-                value={orderSupplier.code}
-                disabled
-                className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-gray-600"
-              />
+          {purchaseOrder?.orderSupplier?.code && (
+            <div className="flex gap-2">
+              <div className="block text-md text-gray-600">
+                Mã đặt hàng nhập:
+              </div>
+              <span>{purchaseOrder?.orderSupplier?.code}</span>
             </div>
           )}
 
           <div ref={statusDropdownRef} className="flex gap-2">
-            <div className="text-md text-gray-600 mb-1">Trạng thái:</div>
+            <div className="text-md text-gray-600">Trạng thái:</div>
             <span>{selectedStatus ? selectedStatus.label : "Phiếu tạm"}</span>
           </div>
 
-          <div ref={branchDropdownRef}>
-            <label className="block text-md text-gray-600 mb-1">
-              Kho <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
+          <div ref={branchDropdownRef} className="flex gap-2 items-center">
+            <div className="text-md text-gray-600">Kho: </div>
+            <div className="relative w-40">
               <button
                 type="button"
                 onClick={() =>
@@ -682,11 +683,9 @@ export function PurchaseOrderForm({
             </div>
           </div>
 
-          <div ref={supplierDropdownRef}>
-            <label className="block text-md text-gray-600 mb-1">
-              Nhà cung cấp <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
+          <div ref={supplierDropdownRef} className="flex gap-2 items-center">
+            <div className="block text-md text-gray-600">Nhà cung cấp:</div>
+            <div className="relative w-40">
               <button
                 type="button"
                 onClick={() =>
@@ -725,20 +724,16 @@ export function PurchaseOrderForm({
           <div className="border-t my-3"></div>
 
           <div className="flex flex-col gap-2">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">
-                Tổng tiền hàng
-              </label>
-              <div className="text-sm font-semibold text-right px-2 py-1.5 bg-gray-50 rounded">
+            <div className="flex gap-2">
+              <div className="text-md text-gray-600">Tổng tiền hàng:</div>
+              <div className="text-md">
                 {formatCurrency(
                   products.reduce((sum, p) => sum + p.subTotal, 0)
                 )}
               </div>
             </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">
-                Giảm giá
-              </label>
+            <div ref={discountDropdownRef} className="flex gap-2 items-center">
+              <div className="text-md text-gray-600">Giảm giá:</div>
               <div className="flex gap-1">
                 <input
                   type="text"
@@ -769,36 +764,24 @@ export function PurchaseOrderForm({
                   }}
                   disabled={isFormDisabled ? true : false}
                   className="w-16 text-sm border rounded disabled:bg-gray-100">
-                  <option value="amount">₫</option>
+                  <option value="amount">VND</option>
                   <option value="ratio">%</option>
                 </select>
               </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-md text-gray-600 mb-1">
-              Cần trả nhà cung cấp
-            </label>
-            <input
-              type="text"
-              value={formatCurrency(calculateTotal())}
-              disabled
-              className="w-full px-2 py-1.5 text-sm border rounded bg-blue-50 text-blue-600 font-semibold text-right"
-            />
+          <div className="flex gap-2">
+            <div className="block text-md text-gray-600 mb-1">
+              Cần trả nhà cung cấp:
+            </div>
+            <div className="text-md">{formatCurrency(calculateTotal())}</div>
           </div>
 
-          <div>
-            <label className="block text-md text-gray-600 mb-1">
-              Tiền trả nhà cung cấp
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={formatCurrency(paymentAmount)}
-                readOnly
-                className="flex-1 text-right text-sm px-2 py-1.5 border rounded bg-gray-50"
-              />
+          <div className="flex gap-2 items-center">
+            <div className="text-md text-gray-600">Tiền trả nhà cung cấp:</div>
+            <div className="flex gap-2 items-center">
+              <div>{formatCurrency(paymentAmount)}</div>
               <button
                 onClick={() => setShowPaymentModal(true)}
                 disabled={isFormDisabled ? true : false}
@@ -815,29 +798,17 @@ export function PurchaseOrderForm({
             )}
           </div>
 
-          <div>
-            <label className="block text-md text-gray-600 mb-1">
-              Tiền nhà cung cấp trả lại
+          <div className="flex gap-2">
+            <label className="text-md text-gray-600">
+              Tiền nhà cung cấp trả lại:
             </label>
-            <div className="text-sm font-semibold text-right px-2 py-1.5 bg-red-50 text-red-600 rounded">
+            <div className="">
               {formatCurrency(Math.max(0, paymentAmount - calculateTotal()))}
             </div>
           </div>
 
           <div>
-            <label className="block text-md text-gray-600 mb-1">
-              Chi phí nhập khác
-            </label>
-            <input
-              type="text"
-              value="0"
-              disabled
-              className="w-full px-2 py-1.5 text-sm border rounded bg-gray-50 text-right"
-            />
-          </div>
-
-          <div>
-            <label className="block text-md text-gray-600 mb-1">Ghi chú</label>
+            <label className="block text-md text-gray-600 mb-1">Ghi chú:</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}

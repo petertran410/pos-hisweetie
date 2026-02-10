@@ -1,5 +1,3 @@
-import { PurchaseOrder } from "./purchase-order";
-
 export interface OrderSupplier {
   id: number;
   code: string;
