@@ -10,6 +10,8 @@ import {
   useCreateOrderSupplier,
   useUpdateOrderSupplier,
 } from "@/lib/hooks/useOrderSuppliers";
+import { useUsers } from "@/lib/hooks/useUsers";
+import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
 import type { OrderSupplier } from "@/lib/types/order-supplier";
 import { formatCurrency, parseNumberInput } from "@/lib/utils";
@@ -65,6 +67,7 @@ export function OrderSupplierForm({
     null
   );
   const [previouslyPaid, setPreviouslyPaid] = useState<number>(0);
+  const { user: currentUser } = useAuthStore();
 
   const handlePaymentConfirm = (
     amount: number,
@@ -91,10 +94,6 @@ export function OrderSupplierForm({
   const [discountType, setDiscountType] = useState<"amount" | "ratio">(
     "amount"
   );
-  const formatNumber = (value: number): string => {
-    if (!value) return "";
-    return value.toLocaleString("en-US");
-  };
 
   const parseFormattedNumber = (value: string): number => {
     return parseFloat(value.replace(/,/g, "")) || 0;
@@ -107,10 +106,17 @@ export function OrderSupplierForm({
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
+  const [userId, setUserId] = useState<number>(
+    orderSupplier?.userId || currentUser?.id || 0
+  );
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const { data: users } = useUsers();
+  const selectedUser = users?.find((u: any) => u.id === userId);
 
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const branchDropdownRef = useRef<HTMLDivElement>(null);
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: searchResults } = useProducts({
     search: searchQuery,
@@ -173,6 +179,12 @@ export function OrderSupplierForm({
         !supplierDropdownRef.current.contains(event.target as Node)
       ) {
         setShowSupplierDropdown(false);
+      }
+      if (
+        userDropdownRef.current &&
+        !userDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowUserDropdown(false);
       }
     };
 
@@ -302,6 +314,7 @@ export function OrderSupplierForm({
     const orderSupplierData = {
       supplierId,
       branchId,
+      userId: userId || undefined,
       status: status,
       description: note,
       discount: discountType === "amount" ? discount : undefined,
@@ -338,9 +351,7 @@ export function OrderSupplierForm({
 
   return (
     <div className="flex h-full border-t bg-gray-50 overflow-hidden">
-      {/* Main content - Bên trái */}
       <div className="flex-1 flex flex-col overflow-hidden m-4 border rounded-xl">
-        {/* Header */}
         <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -354,7 +365,6 @@ export function OrderSupplierForm({
           </div>
         </div>
 
-        {/* Search & Products */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="mb-4 relative">
             <div className="relative">
@@ -406,7 +416,6 @@ export function OrderSupplierForm({
             )}
           </div>
 
-          {/* Products Table */}
           <div className="border rounded-lg overflow-hidden bg-white">
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
@@ -460,7 +469,7 @@ export function OrderSupplierForm({
                         </button>
                         <input
                           type="text"
-                          value={formatNumber(item.quantity)}
+                          value={formatCurrency(item.quantity)}
                           onChange={(e) => {
                             const numericValue = parseFormattedNumber(
                               e.target.value
@@ -489,7 +498,7 @@ export function OrderSupplierForm({
                     <td className="px-3 py-2">
                       <input
                         type="text"
-                        value={formatNumber(item.price)}
+                        value={formatCurrency(item.price)}
                         onChange={(e) => {
                           const numericValue = parseFormattedNumber(
                             e.target.value
@@ -548,6 +557,47 @@ export function OrderSupplierForm({
               Mã đặt hàng nhập:
             </label>
             <div>{orderSupplier?.code || "Mã phiếu tự động"}</div>
+          </div>
+
+          <div ref={userDropdownRef} className="flex gap-2 items-center">
+            <div className="text-md text-gray-600">Người nhập hàng:</div>
+            <div className="relative w-40">
+              <button
+                type="button"
+                onClick={() =>
+                  !isFormDisabled && setShowUserDropdown(!showUserDropdown)
+                }
+                disabled={isFormDisabled ? true : false}
+                className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100">
+                <span className={!selectedUser ? "text-gray-400" : ""}>
+                  {selectedUser ? selectedUser.name : "Chọn người nhập"}
+                </span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              {showUserDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                  <div
+                    onClick={() => {
+                      setUserId(0);
+                      setShowUserDropdown(false);
+                    }}
+                    className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-400">
+                    Không chọn
+                  </div>
+                  {users?.map((user: any) => (
+                    <div
+                      key={user.id}
+                      onClick={() => {
+                        setUserId(user.id);
+                        setShowUserDropdown(false);
+                      }}
+                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      {user.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div ref={statusDropdownRef} className="flex gap-2 items-center">
@@ -668,7 +718,7 @@ export function OrderSupplierForm({
                   type="text"
                   value={
                     discountType === "amount"
-                      ? formatNumber(discount)
+                      ? formatCurrency(discount)
                       : discountRatio
                   }
                   onChange={(e) => {
