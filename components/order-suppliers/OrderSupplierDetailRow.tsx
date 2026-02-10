@@ -180,6 +180,14 @@ export function OrderSupplierDetailRow({
 
   const canCancel = orderSupplier.status === 0 || orderSupplier.status === 1;
 
+  const receivedQuantities: Record<number, number> = {};
+  orderSupplier.purchaseOrders?.forEach((po) => {
+    po.items?.forEach((item: any) => {
+      receivedQuantities[item.productId] =
+        (receivedQuantities[item.productId] || 0) + Number(item.quantity);
+    });
+  });
+
   return (
     <tr>
       <td colSpan={colSpan} className="py-2 bg-gray-50">
@@ -296,118 +304,108 @@ export function OrderSupplierDetailRow({
                     </div>
                   </div>
 
-                  <div>
-                    <div className="grid grid-cols-4 gap-4 mb-3">
-                      <div className="flex-1">
-                        <label className="block text-md font-medium text-gray-700 mb-1.5">
-                          Mã hàng
-                        </label>
+                  <div className="border rounded-lg overflow-hidden mb-4">
+                    <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 border-b">
+                      <div>
                         <input
                           type="text"
                           placeholder="Tìm mã hàng"
                           value={productCodeSearch}
                           onChange={(e) => setProductCodeSearch(e.target.value)}
-                          className="w-full border rounded px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
-                      <div className="flex-1">
-                        <label className="block text-md font-medium text-gray-700 mb-1.5">
-                          Tên hàng
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Tìm tên hàng"
-                          value={productNameSearch}
-                          onChange={(e) => setProductNameSearch(e.target.value)}
-                          className="w-full border rounded px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
+                      <input
+                        type="text"
+                        placeholder="Tìm tên hàng"
+                        value={productNameSearch}
+                        onChange={(e) => setProductNameSearch(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
-
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="bg-gray-100 border-b border-gray-200">
-                            <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
-                              Mã hàng
-                            </th>
-                            <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
-                              Tên hàng
-                            </th>
-                            <th className="px-4 py-3 text-center text-md font-semibold text-gray-700 uppercase tracking-wider">
-                              Số lượng
-                            </th>
-                            <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                              Đơn giá
-                            </th>
-                            <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                              Giảm giá
-                            </th>
-                            <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                              Giá nhập
-                            </th>
-                            <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                              Thành tiền
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {filteredItems?.map((item: any, index: number) => (
-                            <tr
-                              key={index}
-                              className="hover:bg-gray-50 transition-colors">
-                              <td className="px-4 py-3">
-                                <span className="text-md font-medium text-blue-600">
-                                  {item.productCode}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div>
-                                  <p className="text-md font-medium text-gray-900">
-                                    {item.productName}
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-100 border-b border-gray-200">
+                          <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            Mã hàng
+                          </th>
+                          <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            Tên hàng
+                          </th>
+                          <th className="px-4 py-3 text-center text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            Số lượng
+                          </th>
+                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            Đơn giá
+                          </th>
+                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            Giảm giá
+                          </th>
+                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            Giá nhập
+                          </th>
+                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            Thành tiền
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {filteredItems?.map((item: any, index: number) => (
+                          <tr
+                            key={index}
+                            className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3">
+                              <span className="text-md font-medium text-blue-600">
+                                {item.productCode}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div>
+                                <p className="text-md font-medium text-gray-900">
+                                  {item.productName}
+                                </p>
+                                {item.note && (
+                                  <p className="text-md text-gray-500 mt-1 italic">
+                                    {item.note}
                                   </p>
-                                  {item.note && (
-                                    <p className="text-md text-gray-500 mt-1 italic">
-                                      {item.note}
-                                    </p>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span className="text-md font-medium text-gray-900">
-                                  {item.quantity}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-md text-gray-900">
-                                  {formatMoney(Number(item.price))}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-md text-gray-900">
-                                  {item.discount
-                                    ? formatMoney(Number(item.discount))
-                                    : "-"}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-md font-medium text-gray-900">
-                                  {formatMoney(Number(item.price))}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-md font-semibold text-blue-600">
-                                  {formatMoney(
-                                    Number(item.quantity) * Number(item.price) -
-                                      Number(item.discount || 0)
-                                  )}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="text-md font-medium text-gray-900">
+                                {item.quantity} |{" "}
+                                {receivedQuantities[item.productId] || 0}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-md text-gray-900">
+                                {formatMoney(Number(item.price))}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-md text-gray-900">
+                                {item.discount
+                                  ? formatMoney(Number(item.discount))
+                                  : "-"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-md font-medium text-gray-900">
+                                {formatMoney(Number(item.price))}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-md font-semibold text-blue-600">
+                                {formatMoney(
+                                  Number(item.quantity) * Number(item.price) -
+                                    Number(item.discount || 0)
+                                )}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
 
                   <div className="flex justify-end gap-6">

@@ -52,6 +52,10 @@ export interface OrderSupplier {
     code: string;
     purchaseDate: string;
     total: number;
+    items?: Array<{
+      productId: number;
+      quantity: number;
+    }>;
   }>;
   payments?: OrderSupplierPayment[];
 }

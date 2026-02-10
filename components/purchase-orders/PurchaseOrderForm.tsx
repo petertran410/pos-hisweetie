@@ -153,17 +153,32 @@ export function PurchaseOrderForm({
       }));
       setProducts(loadedProducts);
     } else if (orderSupplier?.items) {
-      const loadedProducts: ProductItem[] = orderSupplier.items.map((item) => ({
-        productId: item.productId,
-        productCode: item.productCode,
-        productName: item.productName,
-        quantity: Number(item.quantity),
-        price: Number(item.price),
-        discount: Number(item.discount),
-        subTotal: Number(item.subTotal),
-        inventory: 0,
-        note: item.description,
-      }));
+      const receivedQuantities: Record<number, number> = {};
+      orderSupplier.purchaseOrders?.forEach((po) => {
+        po.items?.forEach((item) => {
+          receivedQuantities[item.productId] =
+            (receivedQuantities[item.productId] || 0) + Number(item.quantity);
+        });
+      });
+
+      const loadedProducts: ProductItem[] = orderSupplier.items
+        .map((item) => {
+          const received = receivedQuantities[item.productId] || 0;
+          const remaining = Number(item.quantity) - received;
+          return {
+            productId: item.productId,
+            productCode: item.productCode,
+            productName: item.productName,
+            quantity: remaining,
+            price: Number(item.price),
+            discount: Number(item.discount),
+            subTotal: (Number(item.price) - Number(item.discount)) * remaining,
+            inventory: 0,
+            note: item.description,
+          };
+        })
+        .filter((item) => item.quantity > 0);
+
       setProducts(loadedProducts);
     }
   }, [purchaseOrder, orderSupplier]);
