@@ -56,14 +56,14 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "createdDate",
     label: "Ngày tạo",
     visible: true,
-    width: "180px",
+    width: "190px",
     render: (os) => formatDateTime(os.createdAt),
   },
   {
     key: "upadatedDate",
     label: "Ngày cập nhật",
     visible: true,
-    width: "180px",
+    width: "190px",
     render: (os) => formatDateTime(os.updatedAt),
   },
   {

@@ -180,6 +180,21 @@ export function PurchaseOrderForm({
         .filter((item) => item.quantity > 0);
 
       setProducts(loadedProducts);
+
+      const orderSupplierTotal = Number(orderSupplier.total);
+      const orderSupplierDiscount = Number(orderSupplier.discount);
+      if (orderSupplierTotal > 0 && orderSupplierDiscount > 0) {
+        const remainingTotal = loadedProducts.reduce(
+          (sum, p) => sum + p.subTotal,
+          0
+        );
+        const proportion = remainingTotal / orderSupplierTotal;
+        const proportionalDiscount = Math.round(
+          orderSupplierDiscount * proportion
+        );
+        setDiscount(proportionalDiscount);
+        setDiscountType("amount");
+      }
     }
   }, [purchaseOrder, orderSupplier]);
 

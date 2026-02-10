@@ -98,9 +98,6 @@ export function OrderSupplierForm({
     "amount"
   );
 
-  const parseFormattedNumber = (value: string): number => {
-    return parseFloat(value.replace(/,/g, "")) || 0;
-  };
   const [products, setProducts] = useState<ProductItem[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -474,7 +471,7 @@ export function OrderSupplierForm({
                           type="text"
                           value={formatCurrency(item.quantity)}
                           onChange={(e) => {
-                            const numericValue = parseFormattedNumber(
+                            const numericValue = parseNumberInput(
                               e.target.value
                             );
                             handleQuantityChange(
@@ -503,9 +500,7 @@ export function OrderSupplierForm({
                         type="text"
                         value={formatCurrency(item.price)}
                         onChange={(e) => {
-                          const numericValue = parseFormattedNumber(
-                            e.target.value
-                          );
+                          const numericValue = parseNumberInput(e.target.value);
                           handlePriceChange(index, numericValue.toString());
                         }}
                         disabled={isFormDisabled ? true : false}
@@ -726,7 +721,7 @@ export function OrderSupplierForm({
                   }
                   onChange={(e) => {
                     if (discountType === "amount") {
-                      const value = parseFormattedNumber(e.target.value);
+                      const value = parseNumberInput(e.target.value);
                       setDiscount(value);
                     } else {
                       const value = parseFloat(e.target.value) || 0;
@@ -746,7 +741,7 @@ export function OrderSupplierForm({
                   }}
                   disabled={isFormDisabled ? true : false}
                   className="w-16 text-sm border rounded disabled:bg-gray-100">
-                  <option value="amount">₫</option>
+                  <option value="amount">VND</option>
                   <option value="ratio">%</option>
                 </select>
               </div>
