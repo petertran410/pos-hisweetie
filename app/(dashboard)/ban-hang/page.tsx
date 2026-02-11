@@ -176,6 +176,31 @@ export default function BanHangPage() {
     }
   };
 
+  const loadOrderItemsForInvoice = (order: any) => {
+    const invoicedQuantities: Record<number, number> = {};
+    (order.invoices || []).forEach((inv: any) => {
+      if (inv.status !== 5) {
+        (inv.details || []).forEach((d: any) => {
+          invoicedQuantities[d.productId] =
+            (invoicedQuantities[d.productId] || 0) + Number(d.quantity);
+        });
+      }
+    });
+
+    return order.items
+      .map((item: any) => {
+        const invoiced = invoicedQuantities[item.productId] || 0;
+        const remaining = Number(item.quantity) - invoiced;
+        return {
+          product: item.product,
+          quantity: remaining,
+          price: Number(item.price),
+          discount: Number(item.discount),
+        };
+      })
+      .filter((item: any) => item.quantity > 0);
+  };
+
   const loadAllEditTabsFromStorage = () => {
     const editTabs: Tab[] = [];
 
