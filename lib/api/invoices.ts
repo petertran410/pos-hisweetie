@@ -55,10 +55,12 @@ export const invoicesApi = {
   },
   createInvoiceFromOrder: (
     orderId: number,
-    additionalPayment?: number
+    additionalPayment?: number,
+    items?: any[]
   ): Promise<Invoice> => {
     return apiClient.post(`/invoices/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
+      items: items || [],
     });
   },
 };

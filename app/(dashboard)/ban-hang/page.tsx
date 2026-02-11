@@ -737,6 +737,22 @@ export default function BanHangPage() {
       await createInvoiceFromOrder.mutateAsync({
         orderId: activeTab.sourceOrderId,
         additionalPayment: actualPayment,
+        items: activeTab.cartItems.map((item) => {
+          const price = Number(item.price);
+          const quantity = Number(item.quantity);
+          const discount = Number(item.discount) || 0;
+          return {
+            productId: Number(item.product.id),
+            productCode: item.product.code,
+            productName: item.product.name,
+            quantity,
+            price,
+            discount,
+            discountRatio: 0,
+            totalPrice: (price - discount) * quantity,
+            note: item.note || "",
+          };
+        }),
       });
 
       handleCloseTab(activeTabId);

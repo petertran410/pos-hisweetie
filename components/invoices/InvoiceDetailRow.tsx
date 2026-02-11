@@ -319,10 +319,13 @@ export function InvoiceDetailRow({
                             Số lượng
                           </th>
                           <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Giá bán
+                            Đơn giá
                           </th>
                           <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
                             Giảm giá
+                          </th>
+                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            Giá bán
                           </th>
                           <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
                             Thành tiền
@@ -366,6 +369,17 @@ export function InvoiceDetailRow({
                                 {item.discount && Number(item.discount) > 0
                                   ? `- ${formatMoney(Number(item.discount))}`
                                   : "-"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-md text-gray-900">
+                                {formatMoney(
+                                  Number(item.price) -
+                                    Number(item.discount) -
+                                    (Number(item.price) *
+                                      Number(item.discountRatio)) /
+                                      100
+                                )}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">

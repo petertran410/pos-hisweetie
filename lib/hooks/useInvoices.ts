@@ -66,10 +66,12 @@ export function useCreateInvoiceFromOrder() {
     mutationFn: ({
       orderId,
       additionalPayment,
+      items,
     }: {
       orderId: number;
       additionalPayment?: number;
-    }) => invoicesApi.createInvoiceFromOrder(orderId, additionalPayment),
+      items?: any[];
+    }) => invoicesApi.createInvoiceFromOrder(orderId, additionalPayment, items),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
