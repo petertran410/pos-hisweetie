@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { X, Search, ChevronDown, Minus, Plus } from "lucide-react";
 import { useProducts } from "@/lib/hooks/useProducts";
@@ -138,6 +138,18 @@ export function PurchaseOrderForm({
     (s) => s.id === supplierId
   );
 
+  const availableDiscount = useMemo(() => {
+    if (!orderSupplier) return null;
+    const orderLevelDiscount = Number(orderSupplier.discount || 0);
+    if (orderLevelDiscount === 0) return null;
+    const usedDiscount =
+      orderSupplier.purchaseOrders?.reduce((sum, po) => {
+        if (purchaseOrder && po.id === purchaseOrder.id) return sum;
+        return sum + Number(po.discount || 0);
+      }, 0) ?? 0;
+    return orderLevelDiscount - usedDiscount;
+  }, [orderSupplier, purchaseOrder]);
+
   useEffect(() => {
     if (purchaseOrder?.items) {
       const loadedProducts: ProductItem[] = purchaseOrder.items.map((item) => ({
@@ -180,21 +192,8 @@ export function PurchaseOrderForm({
         .filter((item) => item.quantity > 0);
 
       setProducts(loadedProducts);
-
-      const orderSupplierTotal = Number(orderSupplier.total);
-      const orderSupplierDiscount = Number(orderSupplier.discount);
-      if (orderSupplierTotal > 0 && orderSupplierDiscount > 0) {
-        const remainingTotal = loadedProducts.reduce(
-          (sum, p) => sum + p.subTotal,
-          0
-        );
-        const proportion = remainingTotal / orderSupplierTotal;
-        const proportionalDiscount = Math.round(
-          orderSupplierDiscount * proportion
-        );
-        setDiscount(proportionalDiscount);
-        setDiscountType("amount");
-      }
+      setDiscount(0);
+      setDiscountType("amount");
     }
   }, [purchaseOrder, orderSupplier]);
 
@@ -385,6 +384,13 @@ export function PurchaseOrderForm({
       purchaseOrderData.orderSupplierId = orderSupplier?.id;
     }
 
+    if (availableDiscount !== null && discount > availableDiscount) {
+      toast.error(
+        `Giảm giá không được vượt quá ${formatCurrency(availableDiscount)}`
+      );
+      return;
+    }
+
     try {
       if (purchaseOrder?.id) {
         await updatePurchaseOrder.mutateAsync({
@@ -445,6 +451,13 @@ export function PurchaseOrderForm({
 
     if (!purchaseOrder?.id) {
       purchaseOrderData.orderSupplierId = orderSupplier?.id;
+    }
+
+    if (availableDiscount !== null && discount > availableDiscount) {
+      toast.error(
+        `Giảm giá không được vượt quá ${formatCurrency(availableDiscount)}`
+      );
+      return;
     }
 
     try {
@@ -827,9 +840,32 @@ export function PurchaseOrderForm({
                   onChange={(e) => {
                     if (discountType === "amount") {
                       const value = parseFormattedNumber(e.target.value);
+                      if (
+                        availableDiscount !== null &&
+                        value > availableDiscount
+                      ) {
+                        toast.error(
+                          `Giảm giá không được vượt quá ${formatCurrency(availableDiscount)}`
+                        );
+                        setDiscount(availableDiscount);
+                        return;
+                      }
                       setDiscount(value);
                     } else {
                       const value = parseFloat(e.target.value) || 0;
+                      if (availableDiscount !== null) {
+                        const subtotal = products.reduce(
+                          (sum, p) => sum + p.subTotal,
+                          0
+                        );
+                        const discountByRatio = (subtotal * value) / 100;
+                        if (discountByRatio > availableDiscount) {
+                          toast.error(
+                            `Giảm giá không được vượt quá ${formatCurrency(availableDiscount)}`
+                          );
+                          return;
+                        }
+                      }
                       setDiscountRatio(value);
                     }
                   }}
@@ -851,6 +887,12 @@ export function PurchaseOrderForm({
                 </select>
               </div>
             </div>
+            {availableDiscount !== null && (
+              <div className="text-xs text-blue-600">
+                Còn có thể dùng từ phiếu đặt hàng:{" "}
+                {formatCurrency(availableDiscount)}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2">
