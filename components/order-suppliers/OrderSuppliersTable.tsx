@@ -37,7 +37,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "purchaseOrderCode",
     label: "Mã nhập hàng",
     visible: true,
-    width: "150px",
+    width: "250px",
     render: (os) => {
       if (!os.purchaseOrders || os.purchaseOrders.length === 0) {
         return "-";
@@ -49,21 +49,21 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "orderDate",
     label: "Ngày đặt",
     visible: true,
-    width: "180px",
+    width: "200px",
     render: (os) => formatDateTime(os.orderDate),
   },
   {
     key: "createdDate",
     label: "Ngày tạo",
     visible: true,
-    width: "190px",
+    width: "200px",
     render: (os) => formatDateTime(os.createdAt),
   },
   {
     key: "upadatedDate",
     label: "Ngày cập nhật",
     visible: true,
-    width: "190px",
+    width: "200px",
     render: (os) => formatDateTime(os.updatedAt),
   },
   {

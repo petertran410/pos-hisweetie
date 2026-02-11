@@ -192,8 +192,15 @@ export function PurchaseOrderForm({
         .filter((item) => item.quantity > 0);
 
       setProducts(loadedProducts);
-      setDiscount(0);
       setDiscountType("amount");
+
+      const orderLevelDiscount = Number(orderSupplier.discount || 0);
+      const usedDiscount =
+        orderSupplier.purchaseOrders?.reduce((sum, po) => {
+          return sum + Number(po.discount || 0);
+        }, 0) ?? 0;
+      const remainingDiscount = orderLevelDiscount - usedDiscount;
+      setDiscount(remainingDiscount > 0 ? remainingDiscount : 0);
     }
   }, [purchaseOrder, orderSupplier]);
 
@@ -887,12 +894,6 @@ export function PurchaseOrderForm({
                 </select>
               </div>
             </div>
-            {availableDiscount !== null && (
-              <div className="text-xs text-blue-600">
-                Còn có thể dùng từ phiếu đặt hàng:{" "}
-                {formatCurrency(availableDiscount)}
-              </div>
-            )}
           </div>
 
           <div className="flex gap-2">
