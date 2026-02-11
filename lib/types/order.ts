@@ -4,6 +4,7 @@ export const ORDER_STATUS = {
   PROCESSING: 2,
   COMPLETED: 3,
   CANCELLED: 4,
+  PARTIALLY_INVOICED: 6,
 } as const;
 
 export const ORDER_STATUS_LABELS = {
@@ -12,6 +13,7 @@ export const ORDER_STATUS_LABELS = {
   [ORDER_STATUS.PROCESSING]: "Đang giao hàng",
   [ORDER_STATUS.COMPLETED]: "Hoàn thành",
   [ORDER_STATUS.CANCELLED]: "Đã hủy",
+  [ORDER_STATUS.PARTIALLY_INVOICED]: "Đã ra 1 phần hóa đơn",
 } as const;
 
 export const ORDER_STATUS_NUMBER_TO_STRING: Record<number, string> = {
@@ -20,13 +22,12 @@ export const ORDER_STATUS_NUMBER_TO_STRING: Record<number, string> = {
   [ORDER_STATUS.PROCESSING]: "processing",
   [ORDER_STATUS.COMPLETED]: "completed",
   [ORDER_STATUS.CANCELLED]: "cancelled",
+  [ORDER_STATUS.PARTIALLY_INVOICED]: "partial_invoiced",
 };
 
 export interface Order {
   id: number;
   code: string;
-  invoiceCode: string;
-  invoiceId: number;
   customerId?: number;
   branchId?: number;
   soldById?: number;
@@ -96,43 +97,15 @@ export interface Order {
       name: string;
     };
   };
-  invoice?: {
+  invoices?: {
     id: number;
     code: string;
     status: number;
     statusValue?: string;
-  };
-}
-
-export interface CreateOrderDto {
-  customerId?: number;
-  branchId?: number;
-  saleChannelId?: number;
-  orderDate?: string;
-  discountAmount?: number;
-  discountRatio?: number;
-  depositAmount?: number;
-  notes?: string;
-  orderStatus?: string;
-  items: {
-    productId: number;
-    quantity: number;
-    unitPrice: number;
     discount?: number;
-    discountRatio?: number;
-    note?: string;
-    serialNumbers?: string;
+    details?: {
+      productId: number;
+      quantity: number;
+    }[];
   }[];
-  delivery?: {
-    receiver?: string;
-    contactNumber?: string;
-    address?: string;
-    locationName?: string;
-    wardName?: string;
-    weight?: number;
-    length?: number;
-    width?: number;
-    height?: number;
-    noteForDriver?: string;
-  };
 }

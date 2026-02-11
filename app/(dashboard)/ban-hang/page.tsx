@@ -650,6 +650,43 @@ export default function BanHangPage() {
       return;
     }
 
+    const order = existingOrder;
+    if (!order) return;
+
+    const invoicedQuantities: Record<number, number> = {};
+    (order.invoices || []).forEach((inv: any) => {
+      if (inv.status !== 5) {
+        (inv.details || []).forEach((d: any) => {
+          invoicedQuantities[d.productId] =
+            (invoicedQuantities[d.productId] || 0) + Number(d.quantity);
+        });
+      }
+    });
+
+    const remainingCartItems: CartItem[] = (order.items || [])
+      .map((item: any) => {
+        const invoiced = invoicedQuantities[item.productId] || 0;
+        const remaining = Number(item.quantity) - invoiced;
+        return {
+          product: item.product,
+          quantity: remaining,
+          price: Number(item.price),
+          discount: Number(item.discount) || 0,
+          note: item.note || "",
+        };
+      })
+      .filter((item: CartItem) => item.quantity > 0);
+
+    if (remainingCartItems.length === 0) {
+      toast.error("Tất cả sản phẩm trong đơn hàng đã được xuất hóa đơn");
+      return;
+    }
+
+    const usedDiscount = (order.invoices || [])
+      .filter((inv: any) => inv.status !== 5)
+      .reduce((sum: number, inv: any) => sum + Number(inv.discount || 0), 0);
+    const remainingDiscount = Number(order.discount || 0) - usedDiscount;
+
     setTabs(
       tabs.map((tab) =>
         tab.id === activeTabId
@@ -658,8 +695,12 @@ export default function BanHangPage() {
               type: "invoice",
               label: "Tạo hóa đơn",
               sourceOrderId: tab.documentId,
-              sourceOrder: existingOrder,
+              sourceOrder: order,
               documentId: undefined,
+              cartItems: remainingCartItems,
+              selectedCustomer: order.customer || tab.selectedCustomer,
+              discount: remainingDiscount > 0 ? remainingDiscount : 0,
+              discountRatio: 0,
               paymentAmount: 0,
             }
           : tab
@@ -692,96 +733,16 @@ export default function BanHangPage() {
 
     const actualPayment = activeTab.paymentAmount || 0;
 
-    // Kiểm tra xem có thay đổi cartItems không (so với order gốc)
-    const originalItems =
-      existingOrder?.items?.map((item: any) => ({
-        productId: item.product.id,
-        quantity: Number(item.quantity),
-        price: Number(item.price),
-        discount: Number(item.discount) || 0,
-        note: item.note || "",
-      })) || [];
-
-    const currentItems = activeTab.cartItems.map((item) => ({
-      productId: item.product.id,
-      quantity: item.quantity,
-      price: item.price,
-      discount: item.discount,
-      note: item.note || "",
-    }));
-
-    const hasCartChanges =
-      JSON.stringify(currentItems) !== JSON.stringify(originalItems);
-
     try {
-      // Nếu có thay đổi cartItems, tạo hóa đơn mới với data từ cartItems
-      if (hasCartChanges) {
-        const documentData: any = {
-          customerId: activeTab.selectedCustomer.id,
-          branchId: selectedBranch?.id,
-          discountAmount: Number(activeTab.discount) || 0,
-          discountRatio: Number(activeTab.discountRatio) || 0,
-          purchaseDate: new Date().toISOString(),
-          description: activeTab.orderNote,
-          paidAmount: Number(actualPayment) || 0,
-          items: activeTab.cartItems.map((item) => {
-            const price = Number(item.price);
-            const quantity = Number(item.quantity);
-            const discount = Number(item.discount) || 0;
-            return {
-              productId: Number(item.product.id),
-              productCode: item.product.code,
-              productName: item.product.name,
-              quantity: quantity,
-              price: price,
-              discount: discount,
-              discountRatio: 0,
-              totalPrice: quantity * price - discount,
-              note: item.note || "",
-            };
-          }),
-        };
+      await createInvoiceFromOrder.mutateAsync({
+        orderId: activeTab.sourceOrderId,
+        additionalPayment: actualPayment,
+      });
 
-        if (activeTab.deliveryInfo.receiver) {
-          documentData.delivery = {
-            receiver: activeTab.deliveryInfo.receiver,
-            contactNumber: activeTab.deliveryInfo.contactNumber,
-            address: activeTab.deliveryInfo.detailAddress,
-            locationName: activeTab.deliveryInfo.locationName,
-            wardName: activeTab.deliveryInfo.wardName,
-            weight: Number(activeTab.deliveryInfo.weight) || 0,
-            length: Number(activeTab.deliveryInfo.length) || 10,
-            width: Number(activeTab.deliveryInfo.width) || 10,
-            height: Number(activeTab.deliveryInfo.height) || 10,
-          };
-        }
-
-        const result = await createInvoice.mutateAsync(documentData);
-
-        // Link order với invoice
-        if (result?.id) {
-          await invoicesApi.linkOrderToInvoice(
-            result.id,
-            activeTab.sourceOrderId
-          );
-        }
-
-        handleCloseTab(activeTabId);
-        toast.success("Tạo hóa đơn thành công");
-        router.push(`/don-hang/hoa-don`);
-      } else {
-        // Nếu không thay đổi, dùng API tạo từ order như cũ
-        await createInvoiceFromOrder.mutateAsync({
-          orderId: activeTab.sourceOrderId,
-          additionalPayment: actualPayment,
-        });
-
-        handleCloseTab(activeTabId);
-        toast.success("Tạo hóa đơn thành công");
-        router.push(`/don-hang/hoa-don`);
-      }
+      handleCloseTab(activeTabId);
+      toast.success("Tạo hóa đơn thành công");
+      router.push(`/don-hang/hoa-don`);
     } catch (error: any) {
-      console.error("Create invoice from order error:", error);
       toast.error(error.message || "Không thể tạo hóa đơn");
     }
   };

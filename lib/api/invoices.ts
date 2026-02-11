@@ -41,23 +41,18 @@ export const invoicesApi = {
   getInvoices: (params?: any): Promise<InvoicesResponse> => {
     return apiClient.get("/invoices", params);
   },
-
   getInvoice: (id: number): Promise<Invoice> => {
     return apiClient.get(`/invoices/${id}`);
   },
-
   createInvoice: (data: any): Promise<Invoice> => {
     return apiClient.post("/invoices", data);
   },
-
   updateInvoice: (id: number, data: any): Promise<Invoice> => {
     return apiClient.put(`/invoices/${id}`, data);
   },
-
   deleteInvoice: (id: number): Promise<void> => {
     return apiClient.delete(`/invoices/${id}`);
   },
-
   createInvoiceFromOrder: (
     orderId: number,
     additionalPayment?: number
@@ -65,9 +60,5 @@ export const invoicesApi = {
     return apiClient.post(`/invoices/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
     });
-  },
-
-  linkOrderToInvoice: (invoiceId: number, orderId: number): Promise<any> => {
-    return apiClient.post(`/invoices/link-order/${invoiceId}/${orderId}`, {});
   },
 };
