@@ -115,6 +115,12 @@ export default function BanHangPage() {
   const [activeTabId, setActiveTabId] = useState("tab-1");
   const [isInitialized, setIsInitialized] = useState(false);
 
+  const [lastInvoiceModal, setLastInvoiceModal] = useState<{
+    show: boolean;
+    discountAmount: number;
+    orderCode: string;
+  } | null>(null);
+
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
 
   const initialEditDataRef = useRef<{
@@ -302,6 +308,47 @@ export default function BanHangPage() {
     productName: string;
     onConfirm: (confirmed: boolean) => void;
   } | null>(null);
+
+  const checkIsLastInvoice = () => {
+    if (!existingOrder) return { isLast: false, discountAmount: 0 };
+
+    const invoicedQtyMap: Record<number, number> = {};
+    existingOrder.invoices
+      ?.filter((inv: any) => inv.status !== 2)
+      .forEach((inv: any) => {
+        inv.details?.forEach((detail: any) => {
+          invoicedQtyMap[detail.productId] =
+            (invoicedQtyMap[detail.productId] || 0) + Number(detail.quantity);
+        });
+      });
+
+    const currentQtyMap: Record<number, number> = {};
+    activeTab.cartItems.forEach((item) => {
+      currentQtyMap[item.product.id] =
+        (currentQtyMap[item.product.id] || 0) + item.quantity;
+    });
+
+    const isLast = existingOrder.items?.every((item: any) => {
+      const alreadyInvoiced = invoicedQtyMap[item.product.id] || 0;
+      const inCurrentInvoice = currentQtyMap[item.product.id] || 0;
+      return alreadyInvoiced + inCurrentInvoice >= Number(item.quantity);
+    });
+
+    const usedDiscount =
+      existingOrder.invoices
+        ?.filter((inv: any) => inv.status !== 2)
+        .reduce(
+          (sum: number, inv: any) => sum + Number(inv.discount || 0),
+          0
+        ) ?? 0;
+
+    const discountAmount = Math.max(
+      0,
+      Number(existingOrder.discount || 0) - usedDiscount
+    );
+
+    return { isLast: !!isLast, discountAmount };
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -578,30 +625,30 @@ export default function BanHangPage() {
       deliveryInfo: restoredState
         ? restoredState.deliveryInfo
         : existingInvoice.delivery
-        ? {
-            receiver: existingInvoice.delivery.receiver || "",
-            contactNumber: existingInvoice.delivery.contactNumber || "",
-            detailAddress: existingInvoice.delivery.address || "",
-            locationName: existingInvoice.delivery.locationName || "",
-            wardName: existingInvoice.delivery.wardName || "",
-            weight: Number(existingInvoice.delivery.weight) || 0,
-            length: Number(existingInvoice.delivery.length) || 10,
-            width: Number(existingInvoice.delivery.width) || 10,
-            height: Number(existingInvoice.delivery.height) || 10,
-            noteForDriver: existingInvoice.delivery.noteForDriver,
-          }
-        : {
-            receiver: "",
-            contactNumber: "",
-            detailAddress: "",
-            locationName: "",
-            wardName: "",
-            weight: 0,
-            length: 10,
-            width: 10,
-            height: 10,
-            noteForDriver: "",
-          },
+          ? {
+              receiver: existingInvoice.delivery.receiver || "",
+              contactNumber: existingInvoice.delivery.contactNumber || "",
+              detailAddress: existingInvoice.delivery.address || "",
+              locationName: existingInvoice.delivery.locationName || "",
+              wardName: existingInvoice.delivery.wardName || "",
+              weight: Number(existingInvoice.delivery.weight) || 0,
+              length: Number(existingInvoice.delivery.length) || 10,
+              width: Number(existingInvoice.delivery.width) || 10,
+              height: Number(existingInvoice.delivery.height) || 10,
+              noteForDriver: existingInvoice.delivery.noteForDriver,
+            }
+          : {
+              receiver: "",
+              contactNumber: "",
+              detailAddress: "",
+              locationName: "",
+              wardName: "",
+              weight: 0,
+              length: 10,
+              width: 10,
+              height: 10,
+              noteForDriver: "",
+            },
       documentId: existingInvoice.id,
       isEditMode: true,
     };
@@ -669,30 +716,9 @@ export default function BanHangPage() {
     toast.success("Chuyển sang giao diện tạo hóa đơn");
   };
 
-  const handlePayment = async () => {
-    if (!activeTab.sourceOrderId) {
-      toast.error("Không tìm thấy thông tin đơn hàng gốc");
-      return;
-    }
-
-    if (!selectedBranch) {
-      toast.error("Vui lòng chọn chi nhánh");
-      return;
-    }
-
-    if (!activeTab.selectedCustomer) {
-      toast.error("Vui lòng chọn khách hàng");
-      return;
-    }
-
-    if (activeTab.cartItems.length === 0) {
-      toast.error("Vui lòng thêm sản phẩm vào hóa đơn");
-      return;
-    }
-
+  const doCreateInvoice = async () => {
     const actualPayment = activeTab.paymentAmount || 0;
 
-    // Kiểm tra xem có thay đổi cartItems không (so với order gốc)
     const originalItems =
       existingOrder?.items?.map((item: any) => ({
         productId: item.product.id,
@@ -714,7 +740,6 @@ export default function BanHangPage() {
       JSON.stringify(currentItems) !== JSON.stringify(originalItems);
 
     try {
-      // Nếu có thay đổi cartItems, tạo hóa đơn mới với data từ cartItems
       if (hasCartChanges) {
         const documentData: any = {
           customerId: activeTab.selectedCustomer.id,
@@ -732,11 +757,11 @@ export default function BanHangPage() {
               productId: Number(item.product.id),
               productCode: item.product.code,
               productName: item.product.name,
-              quantity: quantity,
-              price: price,
-              discount: discount,
+              quantity,
+              price,
+              discount,
               discountRatio: 0,
-              totalPrice: quantity * price - discount,
+              totalPrice: (price - discount) * quantity,
               note: item.note || "",
             };
           }),
@@ -758,32 +783,61 @@ export default function BanHangPage() {
 
         const result = await createInvoice.mutateAsync(documentData);
 
-        // Link order với invoice
         if (result?.id) {
           await invoicesApi.linkOrderToInvoice(
             result.id,
             activeTab.sourceOrderId
           );
         }
-
-        handleCloseTab(activeTabId);
-        toast.success("Tạo hóa đơn thành công");
-        router.push(`/don-hang/hoa-don`);
       } else {
-        // Nếu không thay đổi, dùng API tạo từ order như cũ
         await createInvoiceFromOrder.mutateAsync({
           orderId: activeTab.sourceOrderId,
           additionalPayment: actualPayment,
         });
-
-        handleCloseTab(activeTabId);
-        toast.success("Tạo hóa đơn thành công");
-        router.push(`/don-hang/hoa-don`);
       }
+
+      setLastInvoiceModal(null);
+      handleCloseTab(activeTabId);
+      toast.success("Tạo hóa đơn thành công");
+      router.push("/don-hang/hoa-don");
     } catch (error: any) {
-      console.error("Create invoice from order error:", error);
       toast.error(error.message || "Không thể tạo hóa đơn");
     }
+  };
+
+  const handlePayment = async () => {
+    if (!activeTab.sourceOrderId) {
+      toast.error("Không tìm thấy thông tin đơn hàng gốc");
+      return;
+    }
+
+    if (!selectedBranch) {
+      toast.error("Vui lòng chọn chi nhánh");
+      return;
+    }
+
+    if (!activeTab.selectedCustomer) {
+      toast.error("Vui lòng chọn khách hàng");
+      return;
+    }
+
+    if (activeTab.cartItems.length === 0) {
+      toast.error("Vui lòng thêm sản phẩm vào hóa đơn");
+      return;
+    }
+
+    const { isLast, discountAmount } = checkIsLastInvoice();
+
+    if (isLast && discountAmount > 0 && !lastInvoiceModal) {
+      setLastInvoiceModal({
+        show: true,
+        discountAmount,
+        orderCode: existingOrder?.code || "",
+      });
+      return;
+    }
+
+    await doCreateInvoice();
   };
 
   const handleAddTab = () => {
@@ -1524,6 +1578,44 @@ export default function BanHangPage() {
                 onClick={() => showPriceWarning.onConfirm(true)}
                 className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
                 Có
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {lastInvoiceModal?.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Xác nhận hóa đơn cuối
+            </h3>
+            <p className="text-gray-700 mb-2">
+              Đây là hóa đơn cuối của đơn hàng{" "}
+              <span className="font-semibold">
+                {lastInvoiceModal.orderCode}
+              </span>
+              .
+            </p>
+            <p className="text-gray-700 mb-6">
+              Hóa đơn sẽ được áp giảm giá với số tiền{" "}
+              <span className="font-semibold text-green-600">
+                {new Intl.NumberFormat("vi-VN").format(
+                  lastInvoiceModal.discountAmount
+                )}
+                đ
+              </span>
+              .
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setLastInvoiceModal(null)}
+                className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50">
+                Không
+              </button>
+              <button
+                onClick={doCreateInvoice}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                Đồng ý
               </button>
             </div>
           </div>
