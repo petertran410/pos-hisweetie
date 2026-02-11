@@ -6,21 +6,12 @@ import { useOrder, useUpdateOrder } from "@/lib/hooks/useOrders";
 import { Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { ORDER_STATUS, ORDER_STATUS_NUMBER_TO_STRING } from "@/lib/types/order";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface OrderDetailRowProps {
   orderId: number;
   colSpan: number;
 }
-
-const formatMoney = (value: number) => {
-  return new Intl.NumberFormat("en-US").format(value);
-};
-
-const formatDateTime = (dateString: string) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleString("vi-VN");
-};
 
 export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const router = useRouter();
@@ -157,7 +148,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                       Ngày đặt:
                     </label>
                     <span className="w-full px-3 py-2 text-md border rounded bg-gray-50">
-                      {formatDateTime(order.orderDate)}
+                      {formatDate(order.orderDate)}
                     </span>
                   </div>
 
@@ -294,24 +285,24 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                             </td>
                             <td className="px-4 py-3 text-right">
                               <span className="text-md text-gray-900">
-                                {formatMoney(Number(item.price))}
+                                {formatCurrency(Number(item.price))}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
                               <span className="text-md text-gray-900">
                                 {item.discount
-                                  ? formatMoney(Number(item.discount))
+                                  ? formatCurrency(Number(item.discount))
                                   : "-"}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
                               <span className="text-md font-medium text-gray-900">
-                                {formatMoney(Number(item.appliedPrice))}
+                                {formatCurrency(Number(item.appliedPrice))}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
                               <span className="text-md font-semibold text-blue-600">
-                                {formatMoney(Number(item.totalPrice))}
+                                {formatCurrency(Number(item.totalPrice))}
                               </span>
                             </td>
                           </tr>
@@ -329,7 +320,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           Tổng tiền hàng ({order.items?.length || 0}):
                         </span>
                         <span className="font-semibold text-gray-900">
-                          {formatMoney(Number(order.totalAmount))}
+                          {formatCurrency(Number(order.totalAmount))}
                         </span>
                       </div>
 
@@ -339,7 +330,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         </span>
                         <span className="font-semibold text-red-600">
                           -{" "}
-                          {formatMoney(
+                          {formatCurrency(
                             Number(order.discount) +
                               (Number(order.totalAmount) *
                                 Number(order.discountRatio || 0)) /
@@ -361,7 +352,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                             Tổng cộng:
                           </span>
                           <span className="text-md font-bold text-blue-600">
-                            {formatMoney(Number(order.grandTotal))}
+                            {formatCurrency(Number(order.grandTotal))}
                           </span>
                         </div>
                       </div>
@@ -369,7 +360,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                       <div className="flex justify-between items-center text-md pt-2 border-t border-gray-200">
                         <span className="text-gray-600">Khách đã trả:</span>
                         <span className="font-semibold text-green-600">
-                          {formatMoney(Number(order.paidAmount))}
+                          {formatCurrency(Number(order.paidAmount))}
                         </span>
                       </div>
 
@@ -378,7 +369,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           Khách cần trả:
                         </span>
                         <span className="text-lg font-bold text-red-600">
-                          {formatMoney(Number(order.debtAmount))}
+                          {formatCurrency(Number(order.debtAmount))}
                         </span>
                       </div>
                     </div>
