@@ -79,7 +79,13 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "invoiceCode",
     label: "Mã hóa đơn",
     visible: true,
-    render: (order) => order.invoiceCode || "-",
+    render: (order) => {
+      const invoiceCode = order.invoices?.map((invoice) => {
+        return invoice.code || "-";
+      });
+
+      return invoiceCode;
+    },
   },
   {
     key: "orderDate",
@@ -377,7 +383,6 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
               </tr>
             ) : (
               orders.map((order) => {
-                console.log(order);
                 return (
                   <Fragment key={order.id}>
                     <tr

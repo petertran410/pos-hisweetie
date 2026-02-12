@@ -100,12 +100,25 @@ export interface Order {
   invoices?: {
     id: number;
     code: string;
+    orderId: number;
+    customerId: number;
+    branchId: number;
+    soldById: null;
+    saleChannelId: null;
+    purchaseDate: string;
+    totalAmount: string;
+    discount: string;
+    discountRatio: string;
+    grandTotal: string;
+    paidAmount: string;
+    debtAmount: string;
+    customerDebtSnapshot: string;
     status: number;
-    statusValue?: string;
-    discount?: number;
-    details?: {
-      productId: number;
-      quantity: number;
-    }[];
+    statusValue: string;
+    usingCod: boolean;
+    description: "";
+    createdBy: number;
+    createdAt: string;
+    updatedAt: string;
   }[];
 }
