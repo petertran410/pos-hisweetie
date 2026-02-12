@@ -314,16 +314,27 @@ export function InvoiceCart({
           </span>
         </div>
 
-        {(isEditMode || isCreatingFromOrder) && existingOrder && (
-          <div className="flex items-center justify-between text-md">
-            <span>Tổng khách đã trả:</span>
-            <span className="font-semibold">
-              {(
-                Number(existingOrder.paidAmount || 0) + paymentAmount
-              ).toLocaleString()}
-            </span>
-          </div>
-        )}
+        {(isEditMode || isCreatingFromOrder) &&
+          existingOrder &&
+          (() => {
+            const hasExistingInvoices = (existingOrder.invoices || []).some(
+              (inv: any) => inv.status !== 5
+            );
+            const isFirstInvoice = !hasExistingInvoices;
+
+            return (
+              isFirstInvoice && (
+                <div className="flex items-center justify-between text-md">
+                  <span>Tổng khách đã trả:</span>
+                  <span className="font-semibold">
+                    {(
+                      Number(existingOrder.paidAmount || 0) + paymentAmount
+                    ).toLocaleString()}
+                  </span>
+                </div>
+              )
+            );
+          })()}
 
         {calculateDebt() > 0 && (
           <div className="flex items-center justify-between text-md">

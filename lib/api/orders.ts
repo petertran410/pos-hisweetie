@@ -1,5 +1,5 @@
 import { apiClient } from "../config/api";
-import { Order, CreateOrderDto } from "../types/order";
+import { Order } from "../types/order";
 
 export const ordersApi = {
   getOrders: (params?: {
@@ -36,13 +36,11 @@ export const ordersApi = {
     return apiClient.get(`/orders/${id}`);
   },
 
-  createOrder: (
-    data: CreateOrderDto
-  ): Promise<{ order: Order; warnings: any[] }> => {
+  createOrder: (data: Order): Promise<{ order: Order; warnings: any[] }> => {
     return apiClient.post("/orders", data);
   },
 
-  updateOrder: (id: number, data: Partial<CreateOrderDto>): Promise<Order> => {
+  updateOrder: (id: number, data: Partial<Order>): Promise<Order> => {
     return apiClient.put(`/orders/${id}`, data);
   },
 
