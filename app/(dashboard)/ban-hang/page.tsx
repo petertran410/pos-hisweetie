@@ -784,7 +784,11 @@ export default function BanHangPage() {
   const handleCloseTab = (tabId: string) => {
     const closingTab = tabs.find((t) => t.id === tabId);
 
-    if (closingTab?.isEditMode && closingTab.documentId) {
+    if (!closingTab) {
+      return;
+    }
+
+    if (closingTab.isEditMode && closingTab.documentId) {
       const key = getEditStorageKey(closingTab.documentId, closingTab.type);
       localStorage.removeItem(key);
     }

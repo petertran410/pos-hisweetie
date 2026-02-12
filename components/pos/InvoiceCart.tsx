@@ -103,10 +103,20 @@ export function InvoiceCart({
     if (useCOD) return calculateTotal();
 
     if (isCreatingFromOrder && existingOrder) {
-      const currentPaidAmount = Number(existingOrder.paidAmount || 0);
-      const totalPaid = currentPaidAmount + paymentAmount;
-      const newDebt = calculateTotal() - totalPaid;
-      return Math.max(0, newDebt);
+      const hasExistingInvoices = (existingOrder.invoices || []).some(
+        (inv: any) => inv.status !== 5
+      );
+      const isFirstInvoice = !hasExistingInvoices;
+
+      if (isFirstInvoice) {
+        const currentPaidAmount = Number(existingOrder.paidAmount || 0);
+        const totalPaid = currentPaidAmount + paymentAmount;
+        const newDebt = calculateTotal() - totalPaid;
+        return Math.max(0, newDebt);
+      } else {
+        const newDebt = calculateTotal() - paymentAmount;
+        return Math.max(0, newDebt);
+      }
     }
 
     if (isEditMode && existingOrder) {

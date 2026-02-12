@@ -9,8 +9,6 @@ export default function EditPurchaseOrderPage() {
   const id = Number(params.id);
   const { data: purchaseOrder, isLoading } = usePurchaseOrder(id);
 
-  console.log(purchaseOrder);
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
