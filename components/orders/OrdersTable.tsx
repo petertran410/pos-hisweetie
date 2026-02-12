@@ -80,11 +80,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã hóa đơn",
     visible: true,
     render: (order) => {
-      const invoiceCode = order.invoices?.map((invoice) => {
-        return invoice.code || "-";
-      });
-
-      return invoiceCode;
+      return order.invoices?.map((invoice) => invoice.code).join(" | ") || "-";
     },
   },
   {
