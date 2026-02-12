@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import { formatCurrency, parseNumberInput } from "@/lib/utils";
 
 interface ItemDiscountModalProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ export function ItemDiscountModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const maxAmount = item.quantity * item.price;
+  const maxAmount = item.price - item.discount;
 
   useEffect(() => {
     if (isOpen) {
@@ -72,14 +73,6 @@ export function ItemDiscountModal({
 
   if (!isOpen) return null;
 
-  const formatNumber = (value: number): string => {
-    return value.toLocaleString("en-US");
-  };
-
-  const parseNumber = (value: string): number => {
-    return parseInt(value.replace(/[^\d]/g, ""), 10) || 0;
-  };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const onlyNumbers = value.replace(/[^\d]/g, "");
@@ -92,19 +85,19 @@ export function ItemDiscountModal({
     const numericValue = parseInt(onlyNumbers, 10);
 
     if (discountType === "amount") {
-      const currentDisplayed = parseNumber(inputValue);
+      const currentDisplayed = parseNumberInput(inputValue);
 
       if (currentDisplayed >= maxAmount && numericValue > currentDisplayed) {
         return;
       }
 
       if (numericValue >= maxAmount) {
-        setInputValue(formatNumber(maxAmount));
+        setInputValue(formatCurrency(maxAmount));
       } else {
-        setInputValue(formatNumber(numericValue));
+        setInputValue(formatCurrency(numericValue));
       }
     } else {
-      const currentDisplayed = parseNumber(inputValue);
+      const currentDisplayed = parseNumberInput(inputValue);
 
       if (currentDisplayed >= 100 && numericValue > currentDisplayed) {
         return;
@@ -127,7 +120,7 @@ export function ItemDiscountModal({
       setInputValue("");
     } else {
       if (type === "amount") {
-        setInputValue(formatNumber(currentDiscount));
+        setInputValue(formatCurrency(currentDiscount));
       } else {
         const percent = Math.floor((currentDiscount / maxAmount) * 100);
         setInputValue(percent.toString());
@@ -138,7 +131,7 @@ export function ItemDiscountModal({
   const calculateDiscount = (): number => {
     if (!inputValue) return 0;
 
-    const value = parseNumber(inputValue);
+    const value = parseNumberInput(inputValue);
 
     if (discountType === "amount") {
       return Math.min(value, maxAmount);
@@ -177,7 +170,7 @@ export function ItemDiscountModal({
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Đơn giá</span>
             <span className="text-md font-medium text-gray-900">
-              {formatNumber(maxAmount)}
+              {formatCurrency(maxAmount)}
             </span>
           </div>
 
@@ -218,7 +211,7 @@ export function ItemDiscountModal({
           <div className="flex justify-between items-center pt-2 border-t">
             <span className="text-sm text-gray-600">Giá bán</span>
             <span className="text-md font-semibold text-blue-600">
-              {formatNumber(finalPrice)}
+              {formatCurrency(finalPrice)}
             </span>
           </div>
         </div>
