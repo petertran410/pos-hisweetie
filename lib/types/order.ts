@@ -120,5 +120,18 @@ export interface Order {
     createdBy: number;
     createdAt: string;
     updatedAt: string;
+    details?: Array<{
+      id: number;
+      invoiceId: number;
+      productId: number;
+      productCode: string;
+      productName: string;
+      quantity: number;
+      price: number;
+      discount: number;
+      discountRatio: number;
+      totalPrice: number;
+      note?: string;
+    }>;
   }[];
 }

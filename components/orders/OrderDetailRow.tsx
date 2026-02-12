@@ -111,6 +111,18 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const isCancelled = order.status === ORDER_STATUS.CANCELLED;
   const canEdit = !isCompleted && !isCancelled;
 
+  const invoicedQuantities: Record<number, number> = {};
+  order.invoices?.forEach((inv) => {
+    if (inv.status !== 5) {
+      inv.details?.forEach((detail: any) => {
+        invoicedQuantities[detail.productId] =
+          (invoicedQuantities[detail.productId] || 0) + Number(detail.quantity);
+      });
+    }
+  });
+
+  console.log(order.invoices);
+
   return (
     <tr>
       <td colSpan={colSpan} className="py-2 bg-gray-50">
@@ -284,6 +296,12 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                             <td className="px-4 py-3 text-center">
                               <span className="text-md font-medium text-gray-900">
                                 {item.quantity}
+                                {invoicedQuantities[item.productId] > 0 && (
+                                  <span className="text-blue-600">
+                                    {" "}
+                                    | {invoicedQuantities[item.productId]}
+                                  </span>
+                                )}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
