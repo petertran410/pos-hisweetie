@@ -42,6 +42,8 @@ const getStatusColor = (status: number) => {
       return "bg-red-100 text-red-700";
     case 5:
       return "bg-teal-100 text-teal-700";
+    case 6:
+      return "bg-teal-100 text-teal-700";
     default:
       return "bg-gray-100 text-gray-700";
   }
@@ -59,6 +61,8 @@ const getStatusText = (status: number) => {
       return "Hủy";
     case 5:
       return "Đã xác nhận";
+    case 6:
+      return "Đã ra 1 phần hóa đơn";
     default:
       return status;
   }
@@ -372,39 +376,42 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
                 </td>
               </tr>
             ) : (
-              orders.map((order) => (
-                <Fragment key={order.id}>
-                  <tr
-                    className={`border-b cursor-pointer ${
-                      expandedOrderId === order.id ? "" : ""
-                    }`}
-                    onClick={() => toggleExpand(order.id)}>
-                    <td
-                      className="px-6 py-3 sticky left-0 bg-white"
-                      onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(order.id)}
-                        onChange={() => toggleSelect(order.id)}
-                        className="cursor-pointer"
-                      />
-                    </td>
-                    {visibleColumns.map((col) => (
+              orders.map((order) => {
+                console.log(order);
+                return (
+                  <Fragment key={order.id}>
+                    <tr
+                      className={`border-b cursor-pointer ${
+                        expandedOrderId === order.id ? "" : ""
+                      }`}
+                      onClick={() => toggleExpand(order.id)}>
                       <td
-                        key={col.key}
-                        className="px-6 py-3 text-md whitespace-nowrap">
-                        {col.render(order)}
+                        className="px-6 py-3 sticky left-0 bg-white"
+                        onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(order.id)}
+                          onChange={() => toggleSelect(order.id)}
+                          className="cursor-pointer"
+                        />
                       </td>
-                    ))}
-                  </tr>
-                  {expandedOrderId === order.id && (
-                    <OrderDetailRow
-                      orderId={order.id}
-                      colSpan={visibleColumns.length + 1}
-                    />
-                  )}
-                </Fragment>
-              ))
+                      {visibleColumns.map((col) => (
+                        <td
+                          key={col.key}
+                          className="px-6 py-3 text-md whitespace-nowrap">
+                          {col.render(order)}
+                        </td>
+                      ))}
+                    </tr>
+                    {expandedOrderId === order.id && (
+                      <OrderDetailRow
+                        orderId={order.id}
+                        colSpan={visibleColumns.length + 1}
+                      />
+                    )}
+                  </Fragment>
+                );
+              })
             )}
           </tbody>
         </table>

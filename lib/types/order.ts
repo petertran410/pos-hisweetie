@@ -22,7 +22,7 @@ export const ORDER_STATUS_NUMBER_TO_STRING: Record<number, string> = {
   [ORDER_STATUS.PROCESSING]: "processing",
   [ORDER_STATUS.COMPLETED]: "completed",
   [ORDER_STATUS.CANCELLED]: "cancelled",
-  [ORDER_STATUS.PARTIALLY_INVOICED]: "partial_invoiced",
+  [ORDER_STATUS.PARTIALLY_INVOICED]: "partially_invoiced",
 };
 
 export interface Order {

@@ -185,6 +185,9 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                       <option value={ORDER_STATUS.CONFIRMED}>
                         Đã xác nhận
                       </option>
+                      <option value={ORDER_STATUS.PARTIALLY_INVOICED}>
+                        Đã ra 1 phần hóa đơn
+                      </option>
                       {isCompleted && (
                         <option value={ORDER_STATUS.COMPLETED}>
                           Hoàn thành
