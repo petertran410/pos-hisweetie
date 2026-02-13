@@ -27,6 +27,8 @@ export default function BaoDonPage() {
     currentItem: (page - 1) * limit,
   });
 
+  console.log(data);
+
   const createPackingSlip = useCreatePackingSlip();
   const updatePackingSlip = useUpdatePackingSlip();
   const deletePackingSlip = useDeletePackingSlip();
