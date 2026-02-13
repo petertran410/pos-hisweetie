@@ -51,6 +51,7 @@ export function DashboardHeader() {
     { label: "Đặt hàng", href: "/don-hang/dat-hang" },
     { label: "Hóa đơn", href: "/don-hang/hoa-don" },
     { label: "Trả hàng", href: "/don-hang/tra-hang" },
+    { label: "Báo đơn", href: "/don-hang/bao-don" },
   ];
 
   return (
