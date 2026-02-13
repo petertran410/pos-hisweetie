@@ -112,10 +112,9 @@ export function useDeletePackingSlip() {
 export async function uploadPackingSlipImage(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("subfolder", "bao-don");
 
   const token = useAuthStore.getState().token;
-  const res = await fetch(`${API_URL}/upload/image`, {
+  const res = await fetch(`${API_URL}/upload/image?subfolder=bao-don`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

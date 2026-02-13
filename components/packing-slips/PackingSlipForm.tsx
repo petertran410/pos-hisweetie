@@ -8,6 +8,7 @@ import { uploadPackingSlipImage } from "@/lib/hooks/usePackingSlips";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import { toast } from "sonner";
+import { type } from "os";
 
 interface PackingSlipFormProps {
   packingSlip?: PackingSlip;
@@ -46,6 +47,10 @@ export function PackingSlipForm({
     packingSlip?.hasCuocGuiHang || false
   );
   const [cuocGuiHang, setCuocGuiHang] = useState(packingSlip?.cuocGuiHang || 0);
+
+  const parseFormattedNumber = (value: string): number => {
+    return parseFloat(value.replace(/,/g, "")) || 0;
+  };
 
   const [images, setImages] = useState<string[]>(
     packingSlip?.images?.map((img) => img.imageUrl) || []
@@ -344,9 +349,12 @@ export function PackingSlipForm({
                 Số kiện <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                value={numberOfPackages}
-                onChange={(e) => setNumberOfPackages(Number(e.target.value))}
+                type="text"
+                value={formatCurrency(numberOfPackages)}
+                onChange={(e) => {
+                  const value = parseFormattedNumber(e.target.value);
+                  setNumberOfPackages(value);
+                }}
                 className="w-full border rounded px-3 py-2"
                 min="1"
                 required
@@ -432,9 +440,12 @@ export function PackingSlipForm({
                     Số tiền
                   </label>
                   <input
-                    type="number"
-                    value={cashAmount}
-                    onChange={(e) => setCashAmount(Number(e.target.value))}
+                    type="text"
+                    value={formatCurrency(cashAmount)}
+                    onChange={(e) => {
+                      const value = parseFormattedNumber(e.target.value);
+                      setCashAmount(value);
+                    }}
                     className="w-full border rounded px-3 py-2"
                     min="0"
                   />
@@ -447,7 +458,7 @@ export function PackingSlipForm({
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className="w-full border rounded px-3 py-2 h-24"
+                className="w-full text-md px-2 py-1.5 border rounded disabled:bg-gray-100 resize-none"
                 placeholder="Nhập ghi chú..."
               />
             </div>
@@ -466,10 +477,13 @@ export function PackingSlipForm({
                 </label>
                 {hasFeeGuiBen && (
                   <input
-                    type="number"
-                    value={feeGuiBen}
-                    onChange={(e) => setFeeGuiBen(Number(e.target.value))}
-                    className="w-full border rounded px-3 py-2 ml-6"
+                    type="text"
+                    value={formatCurrency(feeGuiBen)}
+                    onChange={(e) => {
+                      const value = parseFormattedNumber(e.target.value);
+                      setFeeGuiBen(value);
+                    }}
+                    className="w-full border rounded px-3 py-2"
                     placeholder="Nhập số tiền phí gửi bến"
                     min="0"
                   />
@@ -479,17 +493,22 @@ export function PackingSlipForm({
                   <input
                     type="checkbox"
                     checked={hasFeeGrab}
-                    onChange={(e) => setHasFeeGrab(e.target.checked)}
+                    onChange={(e) => {
+                      setHasFeeGrab(e.target.checked);
+                    }}
                     className="cursor-pointer"
                   />
                   <span>Phí Grab</span>
                 </label>
                 {hasFeeGrab && (
                   <input
-                    type="number"
-                    value={feeGrab}
-                    onChange={(e) => setFeeGrab(Number(e.target.value))}
-                    className="w-full border rounded px-3 py-2 ml-6"
+                    type="text"
+                    value={formatCurrency(feeGrab)}
+                    onChange={(e) => {
+                      const value = parseFormattedNumber(e.target.value);
+                      setFeeGrab(value);
+                    }}
+                    className="w-full border rounded px-3 py-2"
                     placeholder="Nhập số tiền phí Grab"
                     min="0"
                   />
@@ -506,10 +525,13 @@ export function PackingSlipForm({
                 </label>
                 {hasCuocGuiHang && (
                   <input
-                    type="number"
-                    value={cuocGuiHang}
-                    onChange={(e) => setCuocGuiHang(Number(e.target.value))}
-                    className="w-full border rounded px-3 py-2 ml-6"
+                    type="text"
+                    value={formatCurrency(cuocGuiHang)}
+                    onChange={(e) => {
+                      const value = parseFormattedNumber(e.target.value);
+                      setCuocGuiHang(value);
+                    }}
+                    className="w-full border rounded px-3 py-2"
                     placeholder="Nhập cước gửi hàng"
                     min="0"
                   />
