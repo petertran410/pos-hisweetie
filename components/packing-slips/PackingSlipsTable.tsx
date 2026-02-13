@@ -1,9 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import { X, Plus, Settings } from "lucide-react";
+
+interface ColumnConfig {
+  key: string;
+  label: string;
+  visible: boolean;
+  width?: string;
+  render: (slip: PackingSlip) => React.ReactNode;
+}
 
 interface PackingSlipsTableProps {
   packingSlips: PackingSlip[];
@@ -17,6 +25,106 @@ interface PackingSlipsTableProps {
   onEditClick: (packingSlip: PackingSlip) => void;
   onDeleteClick: (id: number) => void;
 }
+
+const DEFAULT_COLUMNS: ColumnConfig[] = [
+  {
+    key: "code",
+    label: "Mã báo đơn",
+    visible: true,
+    width: "150px",
+    render: (slip) => (
+      <span className="text-blue-600 font-medium">{slip.code}</span>
+    ),
+  },
+  {
+    key: "branch",
+    label: "Chi nhánh",
+    visible: true,
+    width: "150px",
+    render: (slip) => slip.branch?.name || "-",
+  },
+  {
+    key: "numberOfPackages",
+    label: "Số kiện",
+    visible: true,
+    width: "90px",
+    render: (slip) => slip.numberOfPackages,
+  },
+  {
+    key: "invoices",
+    label: "Hóa đơn",
+    visible: true,
+    width: "180px",
+    render: (slip) => {
+      return (
+        slip.invoices?.map((invoice) => invoice.invoice?.code).join(" | ") ||
+        "-"
+      );
+    },
+  },
+  {
+    key: "paymentMethod",
+    label: "Thanh toán",
+    visible: true,
+    width: "180px",
+    render: (slip) =>
+      slip.paymentMethod === "cash" ? (
+        <span>Tiền mặt - {formatCurrency(slip.cashAmount)}</span>
+      ) : (
+        <span>Chuyển khoản</span>
+      ),
+  },
+  {
+    key: "feeGuiBen",
+    label: "Phí gửi bến",
+    visible: true,
+    width: "180px",
+    render: (slip) =>
+      slip.hasFeeGuiBen ? formatCurrency(slip.feeGuiBen) : "-",
+  },
+  {
+    key: "feeGrab",
+    label: "Phí Grab",
+    visible: true,
+    width: "180px",
+    render: (slip) => (slip.hasFeeGrab ? formatCurrency(slip.feeGrab) : "-"),
+  },
+  {
+    key: "cuocGuiHang",
+    label: "Cước gửi hàng",
+    visible: true,
+    width: "180px",
+    render: (slip) =>
+      slip.hasCuocGuiHang ? formatCurrency(slip.cuocGuiHang) : "-",
+  },
+  {
+    key: "images",
+    label: "Hình ảnh",
+    visible: true,
+    render: (slip) => slip.images?.length || 0,
+  },
+  {
+    key: "note",
+    label: "Ghi chú",
+    visible: false,
+    width: "180px",
+    render: (slip) => slip.note || "-",
+  },
+  {
+    key: "creator",
+    label: "Người tạo",
+    visible: true,
+    width: "180px",
+    render: (slip) => slip.creator?.name || "-",
+  },
+  {
+    key: "createdAt",
+    label: "Ngày tạo",
+    visible: false,
+    width: "220px",
+    render: (slip) => new Date(slip.createdAt).toLocaleString("vi-VN"),
+  },
+];
 
 export function PackingSlipsTable({
   packingSlips,
@@ -32,10 +140,46 @@ export function PackingSlipsTable({
 }: PackingSlipsTableProps) {
   const [search, setSearch] = useState("");
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [showColumnModal, setShowColumnModal] = useState(false);
+  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("packingSlipTableColumns");
+      if (saved) {
+        try {
+          const savedColumns = JSON.parse(saved);
+          return DEFAULT_COLUMNS.map((col) => ({
+            ...col,
+            visible:
+              savedColumns.find((s: any) => s.key === col.key)?.visible ??
+              col.visible,
+          }));
+        } catch {
+          return DEFAULT_COLUMNS;
+        }
+      }
+    }
+    return DEFAULT_COLUMNS;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("packingSlipTableColumns", JSON.stringify(columns));
+    }
+  }, [columns]);
 
   const filteredSlips = packingSlips.filter((slip) =>
     slip.code.toLowerCase().includes(search.toLowerCase())
   );
+
+  const visibleColumns = columns.filter((col) => col.visible);
+
+  const toggleColumnVisibility = (key: string) => {
+    setColumns((prev) =>
+      prev.map((col) =>
+        col.key === key ? { ...col, visible: !col.visible } : col
+      )
+    );
+  };
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
@@ -58,6 +202,12 @@ export function PackingSlipsTable({
             <Plus className="w-4 h-4" />
             Tạo báo đơn
           </button>
+          <button
+            onClick={() => setShowColumnModal(true)}
+            className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            Cột Hiển Thị
+          </button>
         </div>
       </div>
 
@@ -65,36 +215,21 @@ export function PackingSlipsTable({
         <table className="w-full text-md">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
-              <th className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
-                Mã báo đơn
-              </th>
-              <th className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
-                Chi nhánh
-              </th>
-              <th className="px-6 py-3 text-center font-medium text-gray-700 whitespace-nowrap">
-                Số kiện
-              </th>
-              <th className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
-                Hóa đơn
-              </th>
-              <th className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
-                Thanh toán
-              </th>
-              <th className="px-6 py-3 text-right font-medium text-gray-700 whitespace-nowrap">
-                Phí gửi bến
-              </th>
-              <th className="px-6 py-3 text-right font-medium text-gray-700 whitespace-nowrap">
-                Phí Grab
-              </th>
-              <th className="px-6 py-3 text-right font-medium text-gray-700 whitespace-nowrap">
-                Cước gửi hàng
-              </th>
-              <th className="px-6 py-3 text-center font-medium text-gray-700 whitespace-nowrap">
-                Hình ảnh
-              </th>
-              <th className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
-                Người tạo
-              </th>
+              {visibleColumns.map((col) => (
+                <th
+                  key={col.key}
+                  className={`px-6 py-3 font-medium text-gray-700 whitespace-nowrap ${
+                    col.key === "numberOfPackages" || col.key === "images"
+                      ? "text-center"
+                      : col.key === "feeGuiBen" ||
+                          col.key === "feeGrab" ||
+                          col.key === "cuocGuiHang"
+                        ? "text-right"
+                        : "text-left"
+                  }`}>
+                  {col.label}
+                </th>
+              ))}
               <th className="px-6 py-3 text-center font-medium text-gray-700 whitespace-nowrap">
                 Thao tác
               </th>
@@ -104,7 +239,7 @@ export function PackingSlipsTable({
             {isLoading ? (
               <tr>
                 <td
-                  colSpan={11}
+                  colSpan={visibleColumns.length + 1}
                   className="px-6 py-8 text-center text-gray-500">
                   Đang tải...
                 </td>
@@ -112,7 +247,7 @@ export function PackingSlipsTable({
             ) : filteredSlips.length === 0 ? (
               <tr>
                 <td
-                  colSpan={11}
+                  colSpan={visibleColumns.length + 1}
                   className="px-6 py-8 text-center text-gray-500">
                   Không có báo đơn nào
                 </td>
@@ -120,68 +255,52 @@ export function PackingSlipsTable({
             ) : (
               filteredSlips.map((slip) => (
                 <tr key={slip.id} className="border-b hover:bg-gray-50">
-                  <td className="px-6 py-3 text-md whitespace-nowrap">
-                    <span className="text-blue-600 font-medium">
-                      {slip.code}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3 text-md whitespace-nowrap">
-                    {slip.branch?.name || "-"}
-                  </td>
-                  <td className="px-6 py-3 text-md text-center whitespace-nowrap">
-                    {slip.numberOfPackages}
-                  </td>
-                  <td className="px-6 py-3 text-md break-words w-[150px]">
-                    {slip.invoices
-                      ?.map((invoice) => invoice.invoice?.code)
-                      .join(" | ") || "-"}
-                  </td>
-                  <td className="px-6 py-3 text-md">
-                    {slip.paymentMethod === "cash" ? (
-                      <span>Tiền mặt - {formatCurrency(slip.cashAmount)}</span>
-                    ) : (
-                      <span>Chuyển khoản</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3 text-md text-right whitespace-nowrap">
-                    {slip.hasFeeGuiBen ? formatCurrency(slip.feeGuiBen) : "-"}
-                  </td>
-                  <td className="px-6 py-3 text-md text-right whitespace-nowrap">
-                    {slip.hasFeeGrab ? formatCurrency(slip.feeGrab) : "-"}
-                  </td>
-                  <td className="px-6 py-3 text-md text-right whitespace-nowrap">
-                    {slip.hasCuocGuiHang
-                      ? formatCurrency(slip.cuocGuiHang)
-                      : "-"}
-                  </td>
-                  <td className="px-6 py-3 text-md text-center whitespace-nowrap">
-                    {slip.images && slip.images.length > 0 ? (
-                      <div className="flex items-center justify-center gap-1">
-                        {slip.images.slice(0, 3).map((img, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setViewingImage(img.imageUrl)}
-                            className="w-10 h-10 rounded border overflow-hidden hover:ring-2 hover:ring-blue-500">
-                            <img
-                              src={img.imageUrl}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          </button>
-                        ))}
-                        {slip.images.length > 3 && (
-                          <span className="text-xs text-gray-500">
-                            +{slip.images.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3 text-md whitespace-nowrap">
-                    {slip.creator?.name || "-"}
-                  </td>
+                  {visibleColumns.map((col) => (
+                    <td
+                      key={col.key}
+                      className={`px-6 py-3 text-md break-words ${
+                        col.key === "numberOfPackages" || col.key === "images"
+                          ? "text-center"
+                          : col.key === "feeGuiBen" ||
+                              col.key === "feeGrab" ||
+                              col.key === "cuocGuiHang"
+                            ? "text-right"
+                            : "text-left"
+                      }`}
+                      style={{
+                        width: col.width,
+                        minWidth: col.width,
+                        maxWidth: col.width,
+                        wordWrap: "break-word",
+                        whiteSpace: "normal",
+                      }}>
+                      {col.key === "images" &&
+                      slip.images &&
+                      slip.images.length > 0 ? (
+                        <div className="flex items-center justify-center gap-1">
+                          {slip.images.slice(0, 3).map((img, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setViewingImage(img.imageUrl)}
+                              className="w-10 h-10 rounded border overflow-hidden hover:ring-2 hover:ring-blue-500">
+                              <img
+                                src={img.imageUrl}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            </button>
+                          ))}
+                          {slip.images.length > 3 && (
+                            <span className="text-xs text-gray-500">
+                              +{slip.images.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        col.render(slip)
+                      )}
+                    </td>
+                  ))}
                   <td className="px-6 py-3 text-md text-center whitespace-nowrap">
                     <div className="flex items-center justify-center gap-2">
                       <button
@@ -247,6 +366,45 @@ export function PackingSlipsTable({
           </button>
         </div>
       </div>
+
+      {showColumnModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto custom-sidebar-scroll">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Tùy chỉnh cột hiển thị</h3>
+              <button
+                onClick={() => setShowColumnModal(false)}
+                className="text-gray-400 hover:text-gray-600">
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+              {columns.map((col) => (
+                <label
+                  key={col.key}
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                  <input
+                    type="checkbox"
+                    checked={col.visible}
+                    onChange={() => toggleColumnVisibility(col.key)}
+                    className="cursor-pointer"
+                  />
+                  <span className="text-md">{col.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={() => setShowColumnModal(false)}
+                className="px-4 py-2 border rounded hover:bg-gray-50">
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {viewingImage && (
         <div
