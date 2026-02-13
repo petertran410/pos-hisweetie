@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Camera, Upload } from "lucide-react";
+import { X, Camera, Upload, ChevronDown } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useInvoices } from "@/lib/hooks/useInvoices";
 import { uploadPackingSlipImage } from "@/lib/hooks/usePackingSlips";
@@ -52,8 +52,10 @@ export function PackingSlipForm({
   );
   const [isUploading, setIsUploading] = useState(false);
 
+  const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
   const [invoiceSearch, setInvoiceSearch] = useState("");
+  const branchDropdownRef = useRef<HTMLDivElement>(null);
   const invoiceDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: invoicesData } = useInvoices({
@@ -62,9 +64,16 @@ export function PackingSlipForm({
   });
 
   const availableInvoices = invoicesData?.data || [];
+  const selectedBranch = branches?.find((b) => b.id === branchId);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      if (
+        branchDropdownRef.current &&
+        !branchDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowBranchDropdown(false);
+      }
       if (
         invoiceDropdownRef.current &&
         !invoiceDropdownRef.current.contains(event.target as Node)
@@ -223,29 +232,44 @@ export function PackingSlipForm({
                 />
               </div>
 
-              <div>
+              <div ref={branchDropdownRef}>
                 <label className="block text-sm font-medium mb-2">
                   Chi nhánh <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={branchId}
-                  onChange={(e) => {
-                    setBranchId(Number(e.target.value));
-                    setSelectedInvoiceIds([]);
-                  }}
-                  className="w-full border rounded px-3 py-2"
-                  required>
-                  <option value={0}>Chọn chi nhánh</option>
-                  {branches?.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowBranchDropdown(!showBranchDropdown)}
+                    className="w-full border rounded px-3 py-2 text-left flex items-center justify-between hover:bg-gray-50">
+                    <span className={!selectedBranch ? "text-gray-400" : ""}>
+                      {selectedBranch ? selectedBranch.name : "Chọn chi nhánh"}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  </button>
+
+                  {showBranchDropdown && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {branches?.map((branch) => (
+                        <div
+                          key={branch.id}
+                          onClick={() => {
+                            setBranchId(branch.id);
+                            setSelectedInvoiceIds([]);
+                            setShowBranchDropdown(false);
+                          }}
+                          className={`px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${
+                            branchId === branch.id ? "bg-blue-50" : ""
+                          }`}>
+                          {branch.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div ref={invoiceDropdownRef}>
+            <div ref={invoiceDropdownRef} className="relative">
               <label className="block text-sm font-medium mb-2">
                 Hóa đơn <span className="text-red-500">*</span>
               </label>
@@ -281,7 +305,7 @@ export function PackingSlipForm({
               </div>
 
               {showInvoiceDropdown && (
-                <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-[300px] overflow-y-auto">
+                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-[300px] overflow-y-auto">
                   {filteredInvoices.length > 0 ? (
                     <div className="p-2">
                       {filteredInvoices.map((invoice) => (
@@ -294,11 +318,11 @@ export function PackingSlipForm({
                             onChange={() => toggleInvoice(invoice.id)}
                             className="cursor-pointer"
                           />
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm">
                               {invoice.code}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-gray-500 truncate">
                               {invoice.customer?.name} -{" "}
                               {formatCurrency(invoice.grandTotal)}
                             </div>
