@@ -6,11 +6,13 @@ import { useBranchStore } from "@/lib/store/branch";
 import { Plus, Settings } from "lucide-react";
 import type { Order } from "@/lib/types/order";
 import { OrderDetailRow } from "./OrderDetailRow";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface ColumnConfig {
   key: string;
   label: string;
   visible: boolean;
+  width?: string;
   render: (order: Order) => React.ReactNode;
 }
 
@@ -19,16 +21,6 @@ interface OrdersTableProps {
   onCreateClick: () => void;
   onEditClick: (order: Order) => void;
 }
-
-const formatMoney = (value: number) => {
-  return new Intl.NumberFormat("en-US").format(value);
-};
-
-const formatDateTime = (dateString: string) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleString("vi-VN");
-};
 
 const getStatusColor = (status: number) => {
   switch (status) {
@@ -73,12 +65,14 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "code",
     label: "Mã đặt hàng",
     visible: true,
+    width: "150px",
     render: (order) => order.code,
   },
   {
     key: "invoiceCode",
     label: "Mã hóa đơn",
     visible: true,
+    width: "200px",
     render: (order) => {
       return order.invoices?.map((invoice) => invoice.code).join(" | ") || "-";
     },
@@ -87,72 +81,85 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "orderDate",
     label: "Thời gian",
     visible: true,
-    render: (order) => formatDateTime(order.orderDate),
+    width: "200px",
+    render: (order) => formatDate(order.orderDate),
   },
   {
     key: "createTime",
     label: "Thời gian tạo",
     visible: true,
-    render: (order) => formatDateTime(order.createdAt),
+    width: "200px",
+    render: (order) => formatDate(order.createdAt),
   },
   {
     key: "updateDate",
     label: "Ngày cập nhật",
     visible: false,
-    render: (order) => formatDateTime(order.updatedAt),
+    width: "200px",
+    render: (order) => formatDate(order.updatedAt),
   },
   {
     key: "customer",
     label: "Khách hàng",
     visible: true,
+    width: "200px",
     render: (order) => order.customer?.name || "Khách vãng lai",
   },
   {
     key: "totalAmount",
     label: "Tổng tiền hàng",
     visible: false,
-    render: (order) => formatMoney(Number(order.totalAmount)),
+    width: "200px",
+    render: (order) => formatCurrency(Number(order.totalAmount)),
   },
   {
     key: "discount",
     label: "Giảm giá",
     visible: false,
-    render: (order) => formatMoney(Number(order.discount)),
+    render: (order) => formatCurrency(Number(order.discount)),
   },
   {
     key: "discountRatio",
     label: "Phần trăm giảm giá",
     visible: false,
-    render: (order) => <span>{formatMoney(Number(order.discountRatio))}%</span>,
+    width: "200px",
+    render: (order) => (
+      <span>{formatCurrency(Number(order.discountRatio))}%</span>
+    ),
   },
   {
     key: "grandTotal",
     label: "Tổng sau giảm giá",
     visible: false,
-    render: (order) => formatMoney(Number(order.grandTotal)),
+    width: "200px",
+    render: (order) => formatCurrency(Number(order.grandTotal)),
   },
   {
     key: "otherFees",
     label: "Thu khác",
     visible: false,
+    width: "200px",
     render: () => "-",
   },
   {
     key: "customerDebt",
     label: "Khách cần trả",
     visible: true,
-    render: (order) => formatMoney(Number(order.grandTotal)),
+    width: "200px",
+    render: (order) => formatCurrency(Number(order.grandTotal)),
   },
   {
     key: "customerPaid",
     label: "Khách đã trả",
     visible: true,
-    render: (order) => formatMoney(Number(order.paidAmount)),
+    width: "200px",
+    render: (order) => formatCurrency(Number(order.paidAmount)),
   },
   {
     key: "phone",
     label: "Điện thoại",
     visible: false,
+    width: "200px",
     render: (order) =>
       order.customer?.contactNumber || order.customer?.phone || "-",
   },
@@ -160,12 +167,14 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "address",
     label: "Địa chỉ",
     visible: false,
+    width: "200px",
     render: (order) => order.customer?.address || "-",
   },
   {
     key: "area",
     label: "Khu vực",
     visible: false,
+    width: "200px",
     render: (order) =>
       order.delivery?.locationName || order.customer?.cityName || "-",
   },
@@ -173,6 +182,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "ward",
     label: "Phường/Xã",
     visible: false,
+    width: "200px",
     render: (order) =>
       order.delivery?.wardName || order.customer?.wardName || "-",
   },
@@ -180,36 +190,42 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "deliveryPartner",
     label: "Đối tác giao hàng",
     visible: false,
+    width: "200px",
     render: (order) => order.delivery?.partnerDelivery?.name || "-",
   },
   {
     key: "receiver",
     label: "Người nhận đặt",
     visible: false,
+    width: "200px",
     render: (order) => order.delivery?.receiver || "-",
   },
   {
     key: "creator",
     label: "Người tạo",
     visible: false,
+    width: "200px",
     render: (order) => order.soldBy?.name || order.creator?.name || "-",
   },
   {
     key: "salesChannel",
     label: "Kênh bán",
     visible: false,
+    width: "200px",
     render: (order) => order.saleChannel?.name || "Khác",
   },
   {
     key: "notes",
     label: "Ghi chú",
     visible: false,
+    width: "250px",
     render: (order) => order.description || "-",
   },
   {
     key: "waitingDays",
     label: "Số ngày chờ",
     visible: false,
+    width: "200px",
     render: (order) => {
       if (!order.orderDate) return "-";
       const orderDate = new Date(order.orderDate);
@@ -223,6 +239,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "status",
     label: "Trạng thái",
     visible: true,
+    width: "250px",
     render: (order) => (
       <span
         className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
@@ -387,7 +404,7 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
                       }`}
                       onClick={() => toggleExpand(order.id)}>
                       <td
-                        className="px-6 py-3 sticky left-0 bg-white"
+                        className="px-6 py-3 sticky left-0 bg-white z-10"
                         onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
@@ -399,7 +416,14 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
                       {visibleColumns.map((col) => (
                         <td
                           key={col.key}
-                          className="px-6 py-3 text-md whitespace-nowrap">
+                          className="px-6 py-3"
+                          style={{
+                            width: col.width,
+                            minWidth: col.width,
+                            maxWidth: col.width,
+                            wordWrap: "break-word",
+                            whiteSpace: "normal",
+                          }}>
                           {col.render(order)}
                         </td>
                       ))}

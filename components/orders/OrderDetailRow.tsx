@@ -121,8 +121,6 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     }
   });
 
-  console.log(order.invoices);
-
   return (
     <tr>
       <td colSpan={colSpan} className="py-2 bg-gray-50">

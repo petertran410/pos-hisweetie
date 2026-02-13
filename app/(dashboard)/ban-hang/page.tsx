@@ -414,6 +414,12 @@ export default function BanHangPage() {
   useEffect(() => {
     if (!existingOrder || !orderId) return;
 
+    const editTabId = `edit-order-${orderId}`;
+    const existingTab = tabs.find((t) => t.id === editTabId);
+    if (existingTab) {
+      return;
+    }
+
     const key = getEditStorageKey(Number(orderId), "order");
     const savedEditState = localStorage.getItem(key);
 
@@ -446,7 +452,7 @@ export default function BanHangPage() {
         })) || [];
 
     const editTab: Tab = {
-      id: `edit-order-${orderId}`,
+      id: editTabId,
       type: "order",
       label: `Sửa ĐH #${existingOrder.code}`,
       code: existingOrder.code,
@@ -499,25 +505,29 @@ export default function BanHangPage() {
     };
 
     setTabs((prevTabs) => {
-      const existingEditIndex = prevTabs.findIndex(
-        (t) => t.documentId === existingOrder.id && t.isEditMode
-      );
+      const existingEditIndex = prevTabs.findIndex((t) => t.id === editTabId);
 
       if (existingEditIndex >= 0) {
-        const updated = [...prevTabs];
-        updated[existingEditIndex] = editTab;
-        return updated;
+        return prevTabs;
       } else {
-        const nonEditTabs = prevTabs.filter((t) => !t.isEditMode);
+        const nonEditTabs = prevTabs.filter(
+          (t) => !t.isEditMode || t.id !== editTabId
+        );
         return [...nonEditTabs, editTab];
       }
     });
 
-    setActiveTabId(`edit-order-${orderId}`);
-  }, [existingOrder, orderId]);
+    setActiveTabId(editTabId);
+  }, [existingOrder?.id, orderId]);
 
   useEffect(() => {
     if (!existingInvoice || !invoiceId) return;
+
+    const editTabId = `edit-invoice-${invoiceId}`;
+    const existingTab = tabs.find((t) => t.id === editTabId);
+    if (existingTab) {
+      return;
+    }
 
     const key = getEditStorageKey(Number(invoiceId), "invoice");
     const savedEditState = localStorage.getItem(key);
@@ -551,7 +561,7 @@ export default function BanHangPage() {
         })) || [];
 
     const editTab: Tab = {
-      id: `edit-invoice-${invoiceId}`,
+      id: editTabId,
       type: "invoice",
       label: `Sửa HĐ #${existingInvoice.code}`,
       code: existingInvoice.code,
@@ -588,7 +598,7 @@ export default function BanHangPage() {
               length: Number(existingInvoice.delivery.length) || 10,
               width: Number(existingInvoice.delivery.width) || 10,
               height: Number(existingInvoice.delivery.height) || 10,
-              noteForDriver: existingInvoice.delivery.noteForDriver,
+              noteForDriver: existingInvoice.delivery.noteForDriver || "",
             }
           : {
               receiver: "",
@@ -619,22 +629,20 @@ export default function BanHangPage() {
     };
 
     setTabs((prevTabs) => {
-      const existingEditIndex = prevTabs.findIndex(
-        (t) => t.documentId === existingInvoice.id && t.isEditMode
-      );
+      const existingEditIndex = prevTabs.findIndex((t) => t.id === editTabId);
 
       if (existingEditIndex >= 0) {
-        const updated = [...prevTabs];
-        updated[existingEditIndex] = editTab;
-        return updated;
+        return prevTabs;
       } else {
-        const nonEditTabs = prevTabs.filter((t) => !t.isEditMode);
+        const nonEditTabs = prevTabs.filter(
+          (t) => !t.isEditMode || t.id !== editTabId
+        );
         return [...nonEditTabs, editTab];
       }
     });
 
-    setActiveTabId(`edit-invoice-${invoiceId}`);
-  }, [existingInvoice, invoiceId]);
+    setActiveTabId(editTabId);
+  }, [existingInvoice?.id, invoiceId]);
 
   const updateActiveTab = (updates: Partial<Tab>) => {
     setTabs((prevTabs) =>
@@ -785,21 +793,23 @@ export default function BanHangPage() {
     const closingTab = tabs.find((t) => t.id === tabId);
 
     if (!closingTab) {
+      console.warn("Tab not found:", tabId);
       return;
     }
 
     if (closingTab.isEditMode && closingTab.documentId) {
       const key = getEditStorageKey(closingTab.documentId, closingTab.type);
       localStorage.removeItem(key);
+      delete initialEditDataRef.current[key];
     }
 
     if (tabs.length === 1) {
       const lastTab = tabs[0];
-      if (lastTab.cartItems.length === 0 && !lastTab.documentId) {
+      if (lastTab && lastTab.cartItems.length === 0 && !lastTab.documentId) {
         router.push("/ban-hang");
         return;
       }
-      const newTab = getDefaultTab(lastTab.type);
+      const newTab = getDefaultTab(lastTab?.type || "order");
       setTabs([newTab]);
       setActiveTabId(newTab.id);
       return;
@@ -808,9 +818,19 @@ export default function BanHangPage() {
     const tabIndex = tabs.findIndex((t) => t.id === tabId);
     const newTabs = tabs.filter((t) => t.id !== tabId);
 
+    if (newTabs.length === 0) {
+      const newTab = getDefaultTab("order");
+      setTabs([newTab]);
+      setActiveTabId(newTab.id);
+      return;
+    }
+
     if (tabId === activeTabId) {
-      const newActiveTab = newTabs[Math.max(0, tabIndex - 1)];
-      setActiveTabId(newActiveTab.id);
+      const newActiveIndex = Math.max(0, tabIndex - 1);
+      const newActiveTab = newTabs[newActiveIndex];
+      if (newActiveTab) {
+        setActiveTabId(newActiveTab.id);
+      }
     }
 
     setTabs(newTabs);

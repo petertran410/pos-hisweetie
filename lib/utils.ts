@@ -4,8 +4,8 @@ export function formatCurrency(amount: number | string): string {
 }
 
 export function formatDate(date: string | Date): string {
-  const d = new Date(date);
-  return d.toLocaleDateString("vi-VN");
+  if (!date) return "-";
+  return new Date(date).toLocaleString("vi-VN");
 }
 
 export function formatNumberInput(value: string): string {
