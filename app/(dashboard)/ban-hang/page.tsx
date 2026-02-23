@@ -62,6 +62,7 @@ export interface Tab {
   discountRatio: number;
   useCOD: boolean;
   paymentAmount: number;
+  paymentMethods: Array<{ method: string; amount: number }>;
   deliveryInfo: DeliveryInfo;
   documentId?: number;
   sourceOrderId?: number;
@@ -89,6 +90,7 @@ const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   discountRatio: 0,
   useCOD: false,
   paymentAmount: 0,
+  paymentMethods: [],
   deliveryInfo: {
     receiver: "",
     contactNumber: "",
@@ -1121,12 +1123,19 @@ export default function BanHangPage() {
 
       try {
         if (actualPayment > 0) {
-          await createOrderPayment.mutateAsync({
-            orderId: activeTab.documentId,
-            amount: actualPayment,
-            paymentMethod: "cash",
-            notes: "Thanh toán bổ sung",
-          });
+          const payments =
+            activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+              ? activeTab.paymentMethods
+              : [{ method: "cash", amount: actualPayment }];
+
+          for (const payment of payments) {
+            await createOrderPayment.mutateAsync({
+              orderId: activeTab.documentId,
+              amount: payment.amount,
+              paymentMethod: payment.method,
+              notes: `Thanh toán bổ sung - ${payment.method}`,
+            });
+          }
         }
 
         await updateOrder.mutateAsync({
@@ -1192,12 +1201,19 @@ export default function BanHangPage() {
 
       try {
         if (actualPayment > 0) {
-          await createInvoicePayment.mutateAsync({
-            invoiceId: activeTab.documentId,
-            amount: actualPayment,
-            paymentMethod: "cash",
-            notes: "Thanh toán bổ sung",
-          });
+          const payments =
+            activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+              ? activeTab.paymentMethods
+              : [{ method: "cash", amount: actualPayment }];
+
+          for (const payment of payments) {
+            await createInvoicePayment.mutateAsync({
+              invoiceId: activeTab.documentId,
+              amount: payment.amount,
+              paymentMethod: payment.method,
+              notes: `Thanh toán bổ sung - ${payment.method}`,
+            });
+          }
         }
 
         await updateInvoice.mutateAsync({
@@ -1319,12 +1335,19 @@ export default function BanHangPage() {
         const result = await createOrder.mutateAsync(documentData);
 
         if (actualPayment > 0 && result?.order?.id) {
-          await createOrderPayment.mutateAsync({
-            orderId: result.order.id,
-            amount: actualPayment,
-            paymentMethod: "cash",
-            notes: "Thanh toán khi tạo đơn",
-          });
+          const payments =
+            activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+              ? activeTab.paymentMethods
+              : [{ method: "cash", amount: actualPayment }];
+
+          for (const payment of payments) {
+            await createOrderPayment.mutateAsync({
+              orderId: result.order.id,
+              amount: payment.amount,
+              paymentMethod: payment.method,
+              notes: `Thanh toán khi tạo đơn - ${payment.method}`,
+            });
+          }
         }
       } else {
         await createInvoice.mutateAsync(documentData);
@@ -1436,6 +1459,9 @@ export default function BanHangPage() {
               onPaymentAmountChange={(paymentAmount) =>
                 updateActiveTab({ paymentAmount })
               }
+              onPaymentMethodsChange={(paymentMethods) =>
+                updateActiveTab({ paymentMethods })
+              }
               onCreateOrder={handleCreateDocument}
               onSaveOrder={handleSaveOrder}
               onCreateInvoice={handleConvertToInvoice}
@@ -1445,8 +1471,8 @@ export default function BanHangPage() {
                 updateActiveTab({ deliveryInfo })
               }
               deliveryInfo={activeTab.deliveryInfo}
-              isEditMode={!!activeTab.documentId && !activeTab.sourceOrderId}
-              existingOrder={existingOrder}
+              isEditMode={!!activeTab.documentId}
+              existingOrder={activeTab.sourceOrder || existingOrder}
               documentType={activeTab.type}
             />
           </>
@@ -1469,16 +1495,19 @@ export default function BanHangPage() {
               cartItems={activeTab.cartItems}
               selectedCustomer={activeTab.selectedCustomer}
               onSelectCustomer={handleCustomerSelect}
+              useCOD={activeTab.useCOD}
               selectedPriceBookId={activeTab.selectedPriceBookId}
               onSelectPriceBook={handlePriceBookSelect}
-              useCOD={activeTab.useCOD}
               onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
               paymentAmount={activeTab.paymentAmount}
               onPaymentAmountChange={(paymentAmount) =>
                 updateActiveTab({ paymentAmount })
               }
+              onPaymentMethodsChange={(paymentMethods) =>
+                updateActiveTab({ paymentMethods })
+              }
               onCreateOrder={handleCreateDocument}
-              onSaveOrder={handleSaveOrder}
+              onSaveOrder={handleSaveInvoice}
               onPayment={handlePayment}
               discount={activeTab.discount}
               discountRatio={activeTab.discountRatio}

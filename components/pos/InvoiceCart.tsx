@@ -4,8 +4,9 @@ import { CustomerSearch } from "./CustomerSearch";
 import { CartItem, DeliveryInfo } from "@/app/(dashboard)/ban-hang/page";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
-import { MapPin, User, Phone, House } from "lucide-react";
+import { MapPin, User, Phone, House, MoreVertical } from "lucide-react";
 import { useEffect, useState } from "react";
+import { MultiPaymentModal } from "./MultiPaymentModal";
 
 interface InvoiceCartProps {
   cartItems: CartItem[];
@@ -17,8 +18,8 @@ interface InvoiceCartProps {
   onUseCODChange: (useCOD: boolean) => void;
   paymentAmount: number;
   onPaymentAmountChange: (amount: number) => void;
-  onCreateOrder: () => void;
-  onSaveOrder?: () => void;
+  onCreateOrder: (payments?: Array<{ method: string; amount: number }>) => void;
+  onSaveOrder: (payments?: Array<{ method: string; amount: number }>) => void;
   onPayment?: () => void;
   discount: number;
   discountRatio: number;
@@ -55,6 +56,14 @@ export function InvoiceCart({
   const { user } = useAuthStore();
   const { selectedBranch } = useBranchStore();
   const [paymentDisplayValue, setPaymentDisplayValue] = useState("");
+  const [showMultiPaymentModal, setShowMultiPaymentModal] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<
+    Array<{
+      method: string;
+      amount: number;
+    }>
+  >([]);
+
   useEffect(() => {
     if (isEditMode && existingOrder && paymentAmount > 0) {
       setPaymentDisplayValue(formatNumber(paymentAmount));
@@ -64,6 +73,18 @@ export function InvoiceCart({
   const formatNumber = (value: number): string => {
     if (!value) return "";
     return value.toLocaleString("en-US");
+  };
+
+  const handleMultiPaymentConfirm = (
+    payments: Array<{
+      method: string;
+      amount: number;
+    }>
+  ) => {
+    const total = payments.reduce((sum, p) => sum + p.amount, 0);
+    setPaymentMethods(payments);
+    onPaymentAmountChange(total);
+    setPaymentDisplayValue(total.toLocaleString());
   };
 
   const handlePaymentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -303,20 +324,23 @@ export function InvoiceCart({
         </div>
 
         <div className="flex items-center justify-between text-md">
-          <div>
-            <span className="mr-1">
-              {isEditMode || isCreatingFromOrder
-                ? "Khách trả thêm:"
-                : "Khách đã trả:"}
-            </span>
-            <input
-              type="text"
-              value={paymentDisplayValue}
-              onChange={handlePaymentInputChange}
-              onBlur={handlePaymentInputBlur}
-              placeholder="Nhập số tiền"
-              className="border rounded-xl px-3 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="flex items-center gap-2">
+            <span>{isEditMode ? "Khách trả thêm:" : "Khách đã trả:"}</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={paymentDisplayValue}
+                onChange={handlePaymentInputChange}
+                onBlur={handlePaymentInputBlur}
+                placeholder="Nhập số tiền"
+                className="border rounded-xl px-3 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32"
+              />
+              <button
+                onClick={() => setShowMultiPaymentModal(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg">
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <span className="font-semibold">
@@ -375,20 +399,35 @@ export function InvoiceCart({
           </button>
         ) : isEditMode ? (
           <button
-            onClick={onSaveOrder}
+            onClick={() =>
+              onSaveOrder(
+                paymentMethods.length > 0 ? paymentMethods : undefined
+              )
+            }
             disabled={cartItems.length === 0}
             className="w-full bg-orange-400 text-white py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
             LƯU
           </button>
         ) : (
           <button
-            onClick={onCreateOrder}
+            onClick={() =>
+              onCreateOrder(
+                paymentMethods.length > 0 ? paymentMethods : undefined
+              )
+            }
             disabled={cartItems.length === 0}
             className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
             {documentType === "invoice" ? "Tạo hóa đơn" : "Tạo đơn hàng"}
           </button>
         )}
       </div>
+
+      <MultiPaymentModal
+        isOpen={showMultiPaymentModal}
+        onClose={() => setShowMultiPaymentModal(false)}
+        totalAmount={calculateTotal()}
+        onConfirm={handleMultiPaymentConfirm}
+      />
     </div>
   );
 }
