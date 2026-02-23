@@ -22,7 +22,6 @@ export function TrademarkModal({ trademark, onClose }: TrademarkModalProps) {
   } = useForm({
     defaultValues: {
       name: trademark?.name || "",
-      description: trademark?.description || "",
     },
   });
 
@@ -104,8 +103,8 @@ export function TrademarkModal({ trademark, onClose }: TrademarkModalProps) {
               {createTrademark.isPending || updateTrademark.isPending
                 ? "Đang lưu..."
                 : trademark
-                ? "Cập nhật"
-                : "Tạo mới"}
+                  ? "Cập nhật"
+                  : "Tạo mới"}
             </button>
           </div>
         </div>
