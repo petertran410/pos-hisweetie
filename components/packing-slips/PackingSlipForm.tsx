@@ -32,21 +32,27 @@ export function PackingSlipForm({
   const [paymentMethod, setPaymentMethod] = useState(
     packingSlip?.paymentMethod || "transfer"
   );
-  const [cashAmount, setCashAmount] = useState(packingSlip?.cashAmount || 0);
+  const [cashAmount, setCashAmount] = useState(
+    Number(packingSlip?.cashAmount) || 0
+  );
   const [note, setNote] = useState(packingSlip?.note || "");
 
   const [hasFeeGuiBen, setHasFeeGuiBen] = useState(
     packingSlip?.hasFeeGuiBen || false
   );
-  const [feeGuiBen, setFeeGuiBen] = useState(packingSlip?.feeGuiBen || 0);
+  const [feeGuiBen, setFeeGuiBen] = useState(
+    Number(packingSlip?.feeGuiBen) || 0
+  );
   const [hasFeeGrab, setHasFeeGrab] = useState(
     packingSlip?.hasFeeGrab || false
   );
-  const [feeGrab, setFeeGrab] = useState(packingSlip?.feeGrab || 0);
+  const [feeGrab, setFeeGrab] = useState(Number(packingSlip?.feeGrab) || 0);
   const [hasCuocGuiHang, setHasCuocGuiHang] = useState(
     packingSlip?.hasCuocGuiHang || false
   );
-  const [cuocGuiHang, setCuocGuiHang] = useState(packingSlip?.cuocGuiHang || 0);
+  const [cuocGuiHang, setCuocGuiHang] = useState(
+    Number(packingSlip?.cuocGuiHang) || 0
+  );
 
   const parseFormattedNumber = (value: string): number => {
     return parseFloat(value.replace(/,/g, "")) || 0;
