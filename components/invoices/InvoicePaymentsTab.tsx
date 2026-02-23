@@ -83,9 +83,8 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
         <thead>
           <tr className="border-b bg-gray-50">
             <th className="px-4 py-3 text-left text-sm font-medium">
-              Mã TTHD/TTTUHD
+              Mã phiếu
             </th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Mã TT</th>
             <th className="px-4 py-3 text-left text-sm font-medium">
               Thời gian
             </th>
@@ -112,15 +111,6 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
                   }>
                   {row.code}
                 </span>
-              </td>
-              <td className="px-4 py-3">
-                {row.cashFlow ? (
-                  <span className="text-green-600 font-medium">
-                    {row.cashFlow.code}
-                  </span>
-                ) : (
-                  <span className="text-gray-400">-</span>
-                )}
               </td>
               <td className="px-4 py-3 text-sm">
                 {new Date(row.paymentDate).toLocaleString("vi-VN")}

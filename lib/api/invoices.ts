@@ -48,7 +48,7 @@ export const invoicesApi = {
     const response = await apiClient.get(
       `/invoices/${invoiceId}/payment-history`
     );
-    return response.data;
+    return response;
   },
   createInvoice: (data: any): Promise<Invoice> => {
     return apiClient.post("/invoices", data);
