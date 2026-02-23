@@ -18,6 +18,9 @@ interface InvoiceCartProps {
   onUseCODChange: (useCOD: boolean) => void;
   paymentAmount: number;
   onPaymentAmountChange: (amount: number) => void;
+  onPaymentMethodsChange?: (
+    methods: Array<{ method: string; amount: number }>
+  ) => void;
   onCreateOrder: (payments?: Array<{ method: string; amount: number }>) => void;
   onSaveOrder: (payments?: Array<{ method: string; amount: number }>) => void;
   onPayment?: () => void;
@@ -41,6 +44,7 @@ export function InvoiceCart({
   onUseCODChange,
   paymentAmount,
   onPaymentAmountChange,
+  onPaymentMethodsChange,
   onCreateOrder,
   onSaveOrder,
   onPayment,
@@ -85,6 +89,10 @@ export function InvoiceCart({
     setPaymentMethods(payments);
     onPaymentAmountChange(total);
     setPaymentDisplayValue(total.toLocaleString());
+
+    if (onPaymentMethodsChange) {
+      onPaymentMethodsChange(payments);
+    }
   };
 
   const handlePaymentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

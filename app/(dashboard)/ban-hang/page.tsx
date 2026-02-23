@@ -199,6 +199,7 @@ export default function BanHangPage() {
               discountRatio: editState.discountRatio || 0,
               useCOD: editState.useCOD || false,
               paymentAmount: editState.paymentAmount || 0,
+              paymentMethods: [],
               deliveryInfo: editState.deliveryInfo || {
                 receiver: "",
                 contactNumber: "",
@@ -477,6 +478,7 @@ export default function BanHangPage() {
         : Number(existingOrder.discountRatio) || 0,
       useCOD: restoredState ? restoredState.useCOD : false,
       paymentAmount: restoredState ? restoredState.paymentAmount : 0,
+      paymentMethods: [],
       deliveryInfo: restoredState
         ? restoredState.deliveryInfo
         : {
@@ -588,6 +590,7 @@ export default function BanHangPage() {
         ? restoredState.useCOD
         : existingInvoice.usingCod || false,
       paymentAmount: restoredState ? restoredState.paymentAmount : 0,
+      paymentMethods: [],
       deliveryInfo: restoredState
         ? restoredState.deliveryInfo
         : existingInvoice.delivery
