@@ -25,6 +25,7 @@ import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
 import { priceBooksApi } from "@/lib/api";
 import { invoicesApi } from "@/lib/api/invoices";
+import router from "next/router";
 
 export interface CartItem {
   product: any;
@@ -1155,6 +1156,124 @@ export default function BanHangPage() {
         toast.error(error.message || "Không thể lưu đơn hàng");
       }
     } else {
+      if (!existingInvoice) {
+        toast.error("Không tìm thấy thông tin hóa đơn");
+        return;
+      }
+
+      const actualPayment = activeTab.paymentAmount || 0;
+
+      const invoiceData = {
+        customerId: activeTab.selectedCustomer.id,
+        branchId: selectedBranch?.id,
+        purchaseDate: new Date().toISOString(),
+        description: activeTab.orderNote,
+        paidAmount: actualPayment,
+        discountAmount: Number(activeTab.discount) || 0,
+        discountRatio: Number(activeTab.discountRatio) || 0,
+        items: activeTab.cartItems.map((item) => {
+          const price = Number(item.price);
+          const quantity = Number(item.quantity);
+          const discount = Number(item.discount) || 0;
+          return {
+            productId: Number(item.product.id),
+            productCode: item.product.code,
+            productName: item.product.name,
+            quantity: quantity,
+            price: price,
+            discount: discount,
+            discountRatio: 0,
+            totalPrice: quantity * price - discount,
+            note: item.note || "",
+          };
+        }),
+        delivery: {
+          receiver: activeTab.deliveryInfo.receiver,
+          contactNumber: activeTab.deliveryInfo.contactNumber,
+          address: activeTab.deliveryInfo.detailAddress,
+          locationName: activeTab.deliveryInfo.locationName,
+          wardName: activeTab.deliveryInfo.wardName,
+          weight: Number(activeTab.deliveryInfo.weight) || 0,
+          length: Number(activeTab.deliveryInfo.length) || 10,
+          width: Number(activeTab.deliveryInfo.width) || 10,
+          height: Number(activeTab.deliveryInfo.height) || 10,
+        },
+      };
+
+      try {
+        if (actualPayment > 0) {
+          const payments =
+            activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+              ? activeTab.paymentMethods
+              : [{ method: "cash", amount: actualPayment }];
+
+          for (const payment of payments) {
+            await createInvoicePayment.mutateAsync({
+              invoiceId: activeTab.documentId,
+              amount: payment.amount,
+              paymentMethod: payment.method,
+              notes: `Thanh toán bổ sung - ${payment.method}`,
+            });
+          }
+        }
+
+        await updateInvoice.mutateAsync({
+          id: activeTab.documentId,
+          data: invoiceData,
+        });
+
+        const key = getEditStorageKey(activeTab.documentId, "invoice");
+        localStorage.removeItem(key);
+
+        setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
+
+        toast.success("Lưu hóa đơn thành công");
+        router.push("/don-hang/hoa-don");
+      } catch (error: any) {
+        console.error("Save invoice error:", error);
+        toast.error(error.message || "Không thể lưu hóa đơn");
+      }
+    }
+  };
+
+  const handleSaveInvoice = async () => {
+    if (!selectedBranch) {
+      toast.error(
+        `Vui lòng chọn chi nhánh trước khi lưu ${
+          activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+        }`
+      );
+      return;
+    }
+
+    if (!activeTab.selectedCustomer) {
+      toast.error(
+        `Vui lòng chọn khách hàng trước khi lưu ${
+          activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+        }`
+      );
+      return;
+    }
+
+    if (activeTab.cartItems.length === 0) {
+      toast.error(
+        `Vui lòng thêm sản phẩm vào ${
+          activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+        }`
+      );
+      return;
+    }
+
+    if (!activeTab.documentId) {
+      toast.error(
+        `Không tìm thấy thông tin ${
+          activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+        }`
+      );
+      return;
+    }
+
+    if (activeTab.type === "order") {
       if (!existingInvoice) {
         toast.error("Không tìm thấy thông tin hóa đơn");
         return;
