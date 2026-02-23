@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { cashflowsApi } from "@/lib/api/cashflows";
+import { invoicesApi } from "@/lib/api/invoices";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
@@ -12,11 +12,7 @@ interface InvoicePaymentsTabProps {
 export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["invoice-payments", invoiceId],
-    queryFn: () =>
-      cashflowsApi.getCashFlows({
-        invoiceId,
-        limit: 100,
-      }),
+    queryFn: () => invoicesApi.getInvoicePayments(invoiceId),
   });
 
   if (isLoading) {
@@ -27,37 +23,48 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
     );
   }
 
-  const payments = data?.data || [];
+  const payments = data || [];
 
   if (payments.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        Chưa có phiếu thu/chi nào
+        Chưa có thanh toán nào
       </div>
     );
   }
 
-  const getStatusColor = (status: number) => {
-    switch (status) {
-      case 0:
-        return "bg-green-100 text-green-700";
-      case 2:
-        return "bg-red-100 text-red-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
+  const tttuhd = payments.filter((p: any) => p.code.startsWith("TTTUHD"));
+  const tthd = payments.filter((p: any) => p.code.startsWith("TTHD"));
 
-  const getStatusText = (status: number) => {
-    switch (status) {
-      case 0:
-        return "Đã thanh toán";
-      case 2:
-        return "Đã hủy";
-      default:
-        return "Đang xử lý";
-    }
-  };
+  const totalTTTUHD = tttuhd.reduce(
+    (sum: number, p: any) => sum + Number(p.amount),
+    0
+  );
+
+  const displayRows = [];
+
+  if (totalTTTUHD > 0) {
+    displayRows.push({
+      code: "(Chuyển tạm ứng)",
+      paymentDate: tttuhd[0]?.paymentDate,
+      amount: totalTTTUHD,
+      paymentMethod: null,
+      status: 1,
+      isTTTUHD: true,
+    });
+  }
+
+  displayRows.push(
+    ...tthd.map((p: any) => ({
+      code: p.code,
+      paymentDate: p.paymentDate,
+      amount: Number(p.amount),
+      paymentMethod: p.paymentMethod,
+      status: p.status,
+      cashFlow: p.cashFlow,
+      isTTTUHD: false,
+    }))
+  );
 
   const getMethodText = (method: string) => {
     const methodMap: { [key: string]: string } = {
@@ -65,6 +72,7 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
       transfer: "Chuyển khoản",
       ewallet: "Ví điện tử",
       card: "Thẻ",
+      voucher: "Voucher",
     };
     return methodMap[method] || method;
   };
@@ -75,9 +83,9 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
         <thead>
           <tr className="border-b bg-gray-50">
             <th className="px-4 py-3 text-left text-sm font-medium">
-              Mã phiếu
+              Mã TTHD/TTTUHD
             </th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Loại</th>
+            <th className="px-4 py-3 text-left text-sm font-medium">Mã TT</th>
             <th className="px-4 py-3 text-left text-sm font-medium">
               Thời gian
             </th>
@@ -90,45 +98,43 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
             <th className="px-4 py-3 text-center text-sm font-medium">
               Trạng thái
             </th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Ghi chú</th>
           </tr>
         </thead>
         <tbody>
-          {payments.map((payment) => (
-            <tr key={payment.id} className="border-b hover:bg-gray-50">
+          {displayRows.map((row, index) => (
+            <tr key={index} className="border-b hover:bg-gray-50">
               <td className="px-4 py-3">
-                <span className="text-blue-600 font-medium">
-                  {payment.code}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-sm">
-                {payment.isReceipt ? "Phiếu thu" : "Phiếu chi"}
-              </td>
-              <td className="px-4 py-3 text-sm">
-                {new Date(payment.transDate).toLocaleString("vi-VN")}
-              </td>
-              <td className="px-4 py-3 text-sm text-right">
                 <span
                   className={
-                    payment.isReceipt ? "text-green-600" : "text-red-600"
+                    row.isTTTUHD
+                      ? "text-gray-600 font-medium"
+                      : "text-blue-600 font-medium"
                   }>
-                  {payment.isReceipt ? "+" : "-"}
-                  {formatCurrency(payment.amount)}
+                  {row.code}
                 </span>
               </td>
+              <td className="px-4 py-3">
+                {row.cashFlow ? (
+                  <span className="text-green-600 font-medium">
+                    {row.cashFlow.code}
+                  </span>
+                ) : (
+                  <span className="text-gray-400">-</span>
+                )}
+              </td>
               <td className="px-4 py-3 text-sm">
-                {getMethodText(payment.method)}
+                {new Date(row.paymentDate).toLocaleString("vi-VN")}
+              </td>
+              <td className="px-4 py-3 text-sm text-right text-green-600">
+                +{formatCurrency(row.amount)}
+              </td>
+              <td className="px-4 py-3 text-sm">
+                {row.paymentMethod ? getMethodText(row.paymentMethod) : "-"}
               </td>
               <td className="px-4 py-3 text-center">
-                <span
-                  className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                    payment.status
-                  )}`}>
-                  {getStatusText(payment.status)}
+                <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">
+                  Đã thanh toán
                 </span>
-              </td>
-              <td className="px-4 py-3 text-sm">
-                {payment.description || "-"}
               </td>
             </tr>
           ))}

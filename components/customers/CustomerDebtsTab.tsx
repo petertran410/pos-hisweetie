@@ -29,7 +29,7 @@ export function CustomerDebtsTab({
 
   const getPaymentType = (code: string) => {
     if (code.startsWith("TTDH")) return "Thanh toán đơn hàng";
-    if (code.includes("-")) return "Thanh toán hóa đơn";
+    if (code.startsWith("TTHD")) return "Thanh toán hóa đơn";
     if (code.startsWith("TT")) return "Thu tiền khách";
     return "Thanh toán";
   };

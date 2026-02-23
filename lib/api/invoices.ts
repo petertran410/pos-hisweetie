@@ -44,6 +44,12 @@ export const invoicesApi = {
   getInvoice: (id: number): Promise<Invoice> => {
     return apiClient.get(`/invoices/${id}`);
   },
+  getInvoicePayments: async (invoiceId: number) => {
+    const response = await apiClient.get(
+      `/invoices/${invoiceId}/payment-history`
+    );
+    return response.data;
+  },
   createInvoice: (data: any): Promise<Invoice> => {
     return apiClient.post("/invoices", data);
   },
