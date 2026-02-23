@@ -748,9 +748,17 @@ export default function BanHangPage() {
     const actualPayment = activeTab.paymentAmount || 0;
 
     try {
+      const payments =
+        activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+          ? activeTab.paymentMethods
+          : actualPayment > 0
+            ? [{ method: "cash", amount: actualPayment }]
+            : [];
+
       await createInvoiceFromOrder.mutateAsync({
         orderId: activeTab.sourceOrderId,
         additionalPayment: actualPayment,
+        payments: payments,
         items: activeTab.cartItems.map((item) => {
           const price = Number(item.price);
           const quantity = Number(item.quantity);
