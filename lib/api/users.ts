@@ -16,7 +16,7 @@ export interface UsersResponse {
 
 export const usersApi = {
   getUsers: (): Promise<User[]> => {
-    return apiClient.get("/users");
+    return apiClient.get("/users/all");
   },
 
   getUser: (id: number): Promise<User> => {

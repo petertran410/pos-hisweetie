@@ -15,7 +15,7 @@ export interface BranchesResponse {
 
 export const branchesApi = {
   getBranches: (): Promise<Branch[]> => {
-    return apiClient.get("/branches");
+    return apiClient.get("/branches/all");
   },
 
   getMyBranches: (): Promise<Branch[]> => {
