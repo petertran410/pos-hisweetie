@@ -33,138 +33,6 @@ interface PackingSlipsTableProps {
   onCreatePackingLoadingClick: () => void;
 }
 
-const DEFAULT_COLUMNS: ColumnConfig[] = [
-  {
-    key: "type",
-    label: "Loại",
-    visible: true,
-    width: "150px",
-    render: (slip: any) => {
-      const typeMap: Record<string, string> = {
-        "giao-hang": "Giao hàng",
-        "dong-hang": "Đóng hàng",
-        loading: "Loading",
-      };
-
-      if (!slip.type) return "-";
-
-      return (
-        <span
-          className={`px-2 py-1 rounded text-xs font-medium ${
-            slip.type === "giao-hang"
-              ? "bg-green-100 text-green-800"
-              : slip.type === "dong-hang"
-                ? "bg-blue-100 text-blue-800"
-                : "bg-purple-100 text-purple-800"
-          }`}>
-          {typeMap[slip.type] || "-"}
-        </span>
-      );
-    },
-  },
-  {
-    key: "code",
-    label: "Mã báo đơn",
-    visible: true,
-    width: "150px",
-    render: (slip) => (
-      <span className="text-blue-600 font-medium">{slip.code}</span>
-    ),
-  },
-  {
-    key: "branch",
-    label: "Chi nhánh",
-    visible: true,
-    width: "150px",
-    render: (slip) => slip.branch?.name || "-",
-  },
-  {
-    key: "numberOfPackages",
-    label: "Số kiện",
-    visible: true,
-    width: "90px",
-    render: (slip) => slip.numberOfPackages,
-  },
-  {
-    key: "invoices",
-    label: "Hóa đơn",
-    visible: true,
-    width: "180px",
-    render: (slip) => {
-      return (
-        slip.invoices?.map((invoice) => invoice.invoice?.code).join(" | ") ||
-        "-"
-      );
-    },
-  },
-  {
-    key: "paymentMethod",
-    label: "Thanh toán",
-    visible: true,
-    width: "180px",
-    render: (slip) =>
-      slip.type === "giao-hang" ? (
-        slip.paymentMethod === "cash" ? (
-          <span>Tiền mặt - {formatCurrency(slip.cashAmount)}</span>
-        ) : (
-          <span>Chuyển khoản</span>
-        )
-      ) : (
-        "-"
-      ),
-  },
-  {
-    key: "feeGuiBen",
-    label: "Phí gửi bến",
-    visible: true,
-    width: "180px",
-    render: (slip) =>
-      slip.hasFeeGuiBen ? formatCurrency(slip.feeGuiBen) : "-",
-  },
-  {
-    key: "feeGrab",
-    label: "Phí Grab",
-    visible: true,
-    width: "180px",
-    render: (slip) => (slip.hasFeeGrab ? formatCurrency(slip.feeGrab) : "-"),
-  },
-  {
-    key: "cuocGuiHang",
-    label: "Cước gửi hàng",
-    visible: true,
-    width: "180px",
-    render: (slip) =>
-      slip.hasCuocGuiHang ? formatCurrency(slip.cuocGuiHang) : "-",
-  },
-  {
-    key: "images",
-    label: "Hình ảnh",
-    visible: true,
-    render: (slip) => slip.images?.length || 0,
-  },
-  {
-    key: "note",
-    label: "Ghi chú",
-    visible: false,
-    width: "180px",
-    render: (slip) => slip.note || "-",
-  },
-  {
-    key: "creator",
-    label: "Người tạo",
-    visible: true,
-    width: "180px",
-    render: (slip) => slip.creator?.name || "-",
-  },
-  {
-    key: "createdAt",
-    label: "Ngày tạo",
-    visible: false,
-    width: "220px",
-    render: (slip) => new Date(slip.createdAt).toLocaleString("vi-VN"),
-  },
-];
-
 export function PackingSlipsTable({
   packingSlips,
   isLoading,
@@ -183,6 +51,177 @@ export function PackingSlipsTable({
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
+
+  const DEFAULT_COLUMNS: ColumnConfig[] = [
+    {
+      key: "type",
+      label: "Loại",
+      visible: true,
+      width: "150px",
+      render: (slip: any) => {
+        const typeMap: Record<string, string> = {
+          "giao-hang": "Giao hàng",
+          "dong-hang": "Đóng hàng",
+          loading: "Loading",
+        };
+
+        if (!slip.type) return "-";
+
+        return (
+          <span
+            className={`px-2 py-1 rounded text-xs font-medium ${
+              slip.type === "giao-hang"
+                ? "bg-green-100 text-green-800"
+                : slip.type === "dong-hang"
+                  ? "bg-blue-100 text-blue-800"
+                  : "bg-purple-100 text-purple-800"
+            }`}>
+            {typeMap[slip.type] || "-"}
+          </span>
+        );
+      },
+    },
+    {
+      key: "code",
+      label: "Mã báo đơn",
+      visible: true,
+      width: "150px",
+      render: (slip) => (
+        <span className="text-blue-600 font-medium">{slip.code}</span>
+      ),
+    },
+    {
+      key: "branch",
+      label: "Chi nhánh",
+      visible: true,
+      width: "150px",
+      render: (slip) => slip.branch?.name || "-",
+    },
+    {
+      key: "numberOfPackages",
+      label: "Số kiện",
+      visible: true,
+      width: "90px",
+      render: (slip) => slip.numberOfPackages,
+    },
+    {
+      key: "invoices",
+      label: "Hóa đơn",
+      visible: true,
+      width: "200px",
+      render: (slip) => {
+        const invoices = slip.invoices || [];
+        if (invoices.length === 0) return "-";
+
+        if (invoices.length <= 2) {
+          return invoices.map((inv: any) => inv.invoice?.code).join(", ");
+        }
+
+        const firstTwo = invoices
+          .slice(0, 2)
+          .map((inv: any) => inv.invoice?.code)
+          .join(", ");
+        return (
+          <div className="flex items-center gap-2">
+            <span className="truncate">{firstTwo}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setViewingInvoices(slip);
+              }}
+              className="text-blue-600 hover:text-blue-800 text-xs whitespace-nowrap">
+              +{invoices.length - 2} khác
+            </button>
+          </div>
+        );
+      },
+    },
+    {
+      key: "paymentMethod",
+      label: "Thanh toán",
+      visible: true,
+      width: "180px",
+      render: (slip) =>
+        slip.type === "giao-hang" ? (
+          slip.paymentMethod === "cash" ? (
+            <span>Tiền mặt - {formatCurrency(slip.cashAmount)}</span>
+          ) : (
+            <span>Chuyển khoản</span>
+          )
+        ) : (
+          "-"
+        ),
+    },
+    {
+      key: "feeGuiBen",
+      label: "Phí gửi bến",
+      visible: true,
+      width: "180px",
+      render: (slip) =>
+        slip.hasFeeGuiBen ? formatCurrency(slip.feeGuiBen) : "-",
+    },
+    {
+      key: "feeGrab",
+      label: "Phí Grab",
+      visible: true,
+      width: "180px",
+      render: (slip) => (slip.hasFeeGrab ? formatCurrency(slip.feeGrab) : "-"),
+    },
+    {
+      key: "cuocGuiHang",
+      label: "Cước gửi hàng",
+      visible: true,
+      width: "180px",
+      render: (slip) =>
+        slip.hasCuocGuiHang ? formatCurrency(slip.cuocGuiHang) : "-",
+    },
+    {
+      key: "images",
+      label: "Hình ảnh",
+      visible: true,
+      width: "120px",
+      render: (slip) => {
+        const imageCount = slip.images?.length || 0;
+        if (imageCount === 0) return "0";
+
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (slip.images && slip.images.length > 0) {
+                setViewingImage(slip.images[0].imageUrl);
+              }
+            }}
+            className="text-blue-600 hover:text-blue-800">
+            {imageCount} hình
+          </button>
+        );
+      },
+    },
+    {
+      key: "note",
+      label: "Ghi chú",
+      visible: false,
+      width: "180px",
+      render: (slip) => slip.note || "-",
+    },
+    {
+      key: "creator",
+      label: "Người tạo",
+      visible: true,
+      width: "180px",
+      render: (slip) => slip.creator?.name || "-",
+    },
+    {
+      key: "createdAt",
+      label: "Ngày tạo",
+      visible: false,
+      width: "220px",
+      render: (slip) => new Date(slip.createdAt).toLocaleString("vi-VN"),
+    },
+  ];
+
+  const [viewingInvoices, setViewingInvoices] = useState<any>(null);
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("packingSlipTableColumns");
@@ -352,31 +391,7 @@ export function PackingSlipsTable({
                         wordWrap: "break-word",
                         whiteSpace: "normal",
                       }}>
-                      {col.key === "images" &&
-                      slip.images &&
-                      slip.images.length > 0 ? (
-                        <div className="flex items-center justify-center gap-1">
-                          {slip.images.slice(0, 3).map((img, index) => (
-                            <button
-                              key={index}
-                              onClick={() => setViewingImage(img.imageUrl)}
-                              className="w-10 h-10 rounded border overflow-hidden hover:ring-2 hover:ring-blue-500">
-                              <img
-                                src={img.imageUrl}
-                                alt=""
-                                className="w-full h-full object-cover"
-                              />
-                            </button>
-                          ))}
-                          {slip.images.length > 3 && (
-                            <span className="text-xs text-gray-500">
-                              +{slip.images.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        col.render(slip)
-                      )}
+                      {col.render(slip)}
                     </td>
                   ))}
                   <td className="px-6 py-3 text-md text-center whitespace-nowrap">
@@ -484,22 +499,133 @@ export function PackingSlipsTable({
         </div>
       )}
 
+      {viewingInvoices && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setViewingInvoices(null)}>
+          <div
+            className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Danh sách hóa đơn - {viewingInvoices.code}
+              </h3>
+              <button
+                onClick={() => setViewingInvoices(null)}
+                className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {viewingInvoices.invoices?.map((inv: any, index: number) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
+                  <div>
+                    <div className="font-medium">{inv.invoice?.code}</div>
+                    <div className="text-sm text-gray-500">
+                      {inv.invoice?.customer?.name || "-"}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium">
+                      {formatCurrency(inv.invoice?.grandTotal || 0)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {viewingImage && (
         <div
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
           onClick={() => setViewingImage(null)}>
-          <div className="relative max-w-4xl max-h-[90vh]">
+          <div className="relative max-w-6xl w-full max-h-[90vh]">
             <button
               onClick={() => setViewingImage(null)}
-              className="absolute -top-10 right-0 text-white hover:text-gray-300">
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 z-10">
               <X className="w-8 h-8" />
             </button>
-            <img
-              src={viewingImage}
-              alt=""
-              className="max-w-full max-h-[90vh] object-contain rounded"
-              onClick={(e) => e.stopPropagation()}
-            />
+
+            {(() => {
+              const currentSlip = filteredSlips.find((slip) =>
+                slip.images?.some((img: any) => img.imageUrl === viewingImage)
+              );
+              const images = currentSlip?.images || [];
+              const currentIndex = images.findIndex(
+                (img: any) => img.imageUrl === viewingImage
+              );
+
+              return (
+                <div className="flex flex-col items-center gap-4">
+                  <img
+                    src={viewingImage}
+                    alt=""
+                    className="max-w-full max-h-[75vh] object-contain rounded"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+
+                  {images.length > 1 && (
+                    <div className="flex items-center gap-2 bg-white/90 rounded-lg p-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const prevIndex =
+                            currentIndex > 0
+                              ? currentIndex - 1
+                              : images.length - 1;
+                          setViewingImage(images[prevIndex].imageUrl);
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded">
+                        ←
+                      </button>
+
+                      <div className="flex gap-2 overflow-x-auto max-w-md">
+                        {images.map((img: any, index: number) => (
+                          <button
+                            key={index}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingImage(img.imageUrl);
+                            }}
+                            className={`w-16 h-16 rounded border-2 overflow-hidden flex-shrink-0 ${
+                              img.imageUrl === viewingImage
+                                ? "border-blue-500"
+                                : "border-gray-300"
+                            }`}>
+                            <img
+                              src={img.imageUrl}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const nextIndex =
+                            currentIndex < images.length - 1
+                              ? currentIndex + 1
+                              : 0;
+                          setViewingImage(images[nextIndex].imageUrl);
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded">
+                        →
+                      </button>
+
+                      <span className="text-sm text-gray-700 ml-2">
+                        {currentIndex + 1} / {images.length}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

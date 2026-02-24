@@ -74,9 +74,17 @@ export default function BaoDonPage() {
     setFormType("loading");
   };
 
-  const handleEditClick = (packingSlip: PackingSlip) => {
-    setEditingPackingSlip(packingSlip);
-    setFormType("giao-hang");
+  const handleEditClick = (item: any) => {
+    if (item.type === "dong-hang") {
+      setEditingPackingHang(item);
+      setFormType("dong-hang");
+    } else if (item.type === "loading") {
+      setEditingPackingLoading(item);
+      setFormType("loading");
+    } else {
+      setEditingPackingSlip(item);
+      setFormType("giao-hang");
+    }
   };
 
   const handleGiaoHangSubmit = async (formData: any) => {
