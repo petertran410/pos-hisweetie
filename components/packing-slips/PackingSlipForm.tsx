@@ -8,23 +8,28 @@ import { uploadPackingSlipImage } from "@/lib/hooks/usePackingSlips";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import { toast } from "sonner";
-import { type } from "os";
 
 interface PackingSlipFormProps {
   packingSlip?: PackingSlip;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  preselectedInvoiceIds?: number[];
+  preselectedBranchId?: number | null;
 }
 
 export function PackingSlipForm({
   packingSlip,
   onClose,
   onSubmit,
+  preselectedInvoiceIds = [],
+  preselectedBranchId = null,
 }: PackingSlipFormProps) {
   const { data: branches } = useBranches();
-  const [branchId, setBranchId] = useState(packingSlip?.branchId || 0);
+  const [branchId, setBranchId] = useState(
+    packingSlip?.branchId || preselectedBranchId || 0
+  );
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>(
-    packingSlip?.invoices?.map((i) => i.invoiceId) || []
+    packingSlip?.invoices?.map((i) => i.invoiceId) || preselectedInvoiceIds
   );
   const [numberOfPackages, setNumberOfPackages] = useState(
     packingSlip?.numberOfPackages || 0

@@ -13,17 +13,23 @@ interface PackingHangFormProps {
   packingHang?: PackingHang;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  preselectedInvoiceIds?: number[];
+  preselectedBranchId?: number | null;
 }
 
 export function PackingHangForm({
   packingHang,
   onClose,
   onSubmit,
+  preselectedInvoiceIds = [],
+  preselectedBranchId = null,
 }: PackingHangFormProps) {
   const { data: branches } = useBranches();
-  const [branchId, setBranchId] = useState(packingHang?.branchId || 0);
+  const [branchId, setBranchId] = useState(
+    packingHang?.branchId || preselectedBranchId || 0
+  );
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>(
-    packingHang?.invoices?.map((i) => i.invoiceId) || []
+    packingHang?.invoices?.map((i) => i.invoiceId) || preselectedInvoiceIds
   );
   const [numberOfPackages, setNumberOfPackages] = useState(
     packingHang?.numberOfPackages || 0

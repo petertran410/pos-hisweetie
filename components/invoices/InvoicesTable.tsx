@@ -18,6 +18,9 @@ interface InvoicesTableProps {
   filters: any;
   onCreateClick: () => void;
   onEditClick: (invoice: Invoice) => void;
+  onCreateGiaoHang: (selectedIds: number[], branchId: number | null) => void;
+  onCreateDongHang: (selectedIds: number[], branchId: number | null) => void;
+  onCreateLoading: (selectedIds: number[], branchId: number | null) => void;
 }
 
 const formatMoney = (value: number) => {
@@ -298,7 +301,12 @@ export function InvoicesTable({
   filters,
   onCreateClick,
   onEditClick,
+  onCreateGiaoHang,
+  onCreateDongHang,
+  onCreateLoading,
 }: InvoicesTableProps) {
+  const [showCreateBaoDonDropdown, setShowCreateBaoDonDropdown] =
+    useState(false);
   const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
@@ -308,6 +316,22 @@ export function InvoicesTable({
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
+
+  const handleCreateBaoDonClick = (
+    type: "giao-hang" | "dong-hang" | "loading"
+  ) => {
+    const branchId = selectedBranch?.id || null;
+
+    if (type === "giao-hang") {
+      onCreateGiaoHang(selectedIds, branchId);
+    } else if (type === "dong-hang") {
+      onCreateDongHang(selectedIds, branchId);
+    } else {
+      onCreateLoading(selectedIds, branchId);
+    }
+
+    setShowCreateBaoDonDropdown(false);
+  };
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
@@ -394,8 +418,41 @@ export function InvoicesTable({
             onClick={onCreateClick}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
             <Plus className="w-4 h-4" />
-            Tạo Hóa Đơn
+            Tạo hóa đơn
           </button>
+
+          <div className="relative">
+            <button
+              onMouseEnter={() => setShowCreateBaoDonDropdown(true)}
+              onMouseLeave={() => setShowCreateBaoDonDropdown(false)}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-md flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Tạo báo đơn
+            </button>
+            {showCreateBaoDonDropdown && (
+              <div
+                onMouseEnter={() => setShowCreateBaoDonDropdown(true)}
+                onMouseLeave={() => setShowCreateBaoDonDropdown(false)}
+                className="absolute top-full left-0 bg-white border rounded-lg shadow-lg z-50 min-w-[150px]">
+                <button
+                  onClick={() => handleCreateBaoDonClick("dong-hang")}
+                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50 first:rounded-t-lg">
+                  Đóng hàng
+                </button>
+                <button
+                  onClick={() => handleCreateBaoDonClick("loading")}
+                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50">
+                  Loading
+                </button>
+                <button
+                  onClick={() => handleCreateBaoDonClick("giao-hang")}
+                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50 last:rounded-b-lg">
+                  Giao hàng
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => setShowColumnModal(true)}
             className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">

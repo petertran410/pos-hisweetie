@@ -14,22 +14,29 @@ interface PackingLoadingFormProps {
   packingLoading?: PackingLoading;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  preselectedInvoiceIds?: number[];
+  preselectedBranchId?: number | null;
 }
 
 export function PackingLoadingForm({
   packingLoading,
   onClose,
   onSubmit,
+  preselectedInvoiceIds = [],
+  preselectedBranchId = null,
 }: PackingLoadingFormProps) {
   const { data: branches } = useBranches();
   const { data: users } = useUsers();
-  const [branchId, setBranchId] = useState(packingLoading?.branchId || 0);
+  const [branchId, setBranchId] = useState(
+    packingLoading?.branchId || preselectedBranchId || 0
+  );
   const [loadingById, setLoadingById] = useState(
     packingLoading?.loadingById || 0
   );
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>(
-    packingLoading?.invoices?.map((i) => i.invoiceId) || []
+    packingLoading?.invoices?.map((i) => i.invoiceId) || preselectedInvoiceIds
   );
+
   const [numberOfPackages, setNumberOfPackages] = useState(
     packingLoading?.numberOfPackages || 0
   );
