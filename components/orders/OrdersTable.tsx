@@ -7,6 +7,8 @@ import { Plus, Settings } from "lucide-react";
 import type { Order } from "@/lib/types/order";
 import { OrderDetailRow } from "./OrderDetailRow";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface ColumnConfig {
   key: string;
@@ -106,56 +108,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (order) => order.customer?.name || "Khách vãng lai",
   },
   {
-    key: "totalAmount",
-    label: "Tổng tiền hàng",
-    visible: false,
-    width: "200px",
-    render: (order) => formatCurrency(Number(order.totalAmount)),
-  },
-  {
-    key: "discount",
-    label: "Giảm giá",
-    visible: false,
-    render: (order) => formatCurrency(Number(order.discount)),
-  },
-  {
-    key: "discountRatio",
-    label: "Phần trăm giảm giá",
-    visible: false,
-    width: "200px",
-    render: (order) => (
-      <span>{formatCurrency(Number(order.discountRatio))}%</span>
-    ),
-  },
-  {
-    key: "grandTotal",
-    label: "Tổng sau giảm giá",
-    visible: false,
-    width: "200px",
-    render: (order) => formatCurrency(Number(order.grandTotal)),
-  },
-  {
-    key: "otherFees",
-    label: "Thu khác",
-    visible: false,
-    width: "200px",
-    render: () => "-",
-  },
-  {
-    key: "customerDebt",
-    label: "Khách cần trả",
-    visible: true,
-    width: "200px",
-    render: (order) => formatCurrency(Number(order.grandTotal)),
-  },
-  {
-    key: "customerPaid",
-    label: "Khách đã trả",
-    visible: true,
-    width: "200px",
-    render: (order) => formatCurrency(Number(order.paidAmount)),
-  },
-  {
     key: "phone",
     label: "Điện thoại",
     visible: false,
@@ -222,6 +174,64 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (order) => order.description || "-",
   },
   {
+    key: "totalAmount",
+    label: "Tổng tiền hàng",
+    visible: false,
+    width: "200px",
+    render: (order) => formatCurrency(Number(order.totalAmount)),
+  },
+  {
+    key: "discount",
+    label: "Giảm giá",
+    visible: false,
+    render: (order) => formatCurrency(Number(order.discount)),
+  },
+  {
+    key: "discountRatio",
+    label: "Phần trăm giảm giá",
+    visible: false,
+    width: "200px",
+    render: (order) => (
+      <span>{formatCurrency(Number(order.discountRatio))}%</span>
+    ),
+  },
+  {
+    key: "grandTotal",
+    label: "Tổng sau giảm giá",
+    visible: false,
+    width: "200px",
+    render: (order) => formatCurrency(Number(order.grandTotal)),
+  },
+  {
+    key: "otherFees",
+    label: "Thu khác",
+    visible: false,
+    width: "200px",
+    render: () => "-",
+  },
+  {
+    key: "customerDebt",
+    label: "Khách cần trả",
+    visible: true,
+    width: "200px",
+    render: (order) => formatCurrency(Number(order.grandTotal)),
+  },
+  {
+    key: "customerPaid",
+    label: "Khách đã trả",
+    visible: true,
+    width: "200px",
+    render: (order) => formatCurrency(Number(order.paidAmount)),
+  },
+  {
+    key: "customerOwes",
+    label: "Còn nợ",
+    visible: true,
+    width: "200px",
+    render: (order) =>
+      formatCurrency(Number(order.grandTotal) - Number(order.paidAmount)),
+  },
+  {
     key: "waitingDays",
     label: "Số ngày chờ",
     visible: false,
@@ -260,6 +270,9 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
 
+  const canViewDiscount = usePermission("orders", "view", "discount");
+  const canCreate = usePermission("orders", "create");
+
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("orderTableColumns");
@@ -296,7 +309,15 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
 
   const orders = data?.data || [];
   const total = data?.total || 0;
-  const visibleColumns = columns.filter((col) => col.visible);
+  const visibleColumns = columns.filter((col) => {
+    if (
+      (col.key === "discount" || col.key === "discountRatio") &&
+      !canViewDiscount
+    ) {
+      return false;
+    }
+    return col.visible;
+  });
 
   const toggleColumnVisibility = (key: string) => {
     setColumns((prev) =>
@@ -339,12 +360,14 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={onCreateClick}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Tạo Đơn Hàng
-          </button>
+          <PermissionGate resource="orders" action="create">
+            <button
+              onClick={onCreateClick}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Tạo Đơn Hàng
+            </button>
+          </PermissionGate>
           <button
             onClick={() => setShowColumnModal(true)}
             className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
@@ -442,45 +465,6 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
         </table>
       </div>
 
-      <div className="border-t p-4 flex items-center justify-between bg-white">
-        <div className="flex items-center gap-2">
-          <span className="text-md text-gray-600">
-            Hiển thị {(page - 1) * limit + 1} - {Math.min(page * limit, total)}{" "}
-            / {total} đơn
-          </span>
-          <select
-            value={limit}
-            onChange={(e) => {
-              setLimit(Number(e.target.value));
-              setPage(1);
-            }}
-            className="border rounded px-2 py-1 text-md">
-            <option value={15}>15</option>
-            <option value={30}>30</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
-            ←
-          </button>
-          <span className="text-md">
-            Trang {page} / {Math.ceil(total / limit) || 1}
-          </span>
-          <button
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page >= Math.ceil(total / limit)}
-            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
-            →
-          </button>
-        </div>
-      </div>
-
       {showColumnModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto custom-sidebar-scroll">
@@ -494,19 +478,28 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
             </div>
 
             <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-              {columns.map((col) => (
-                <label
-                  key={col.key}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                  <input
-                    type="checkbox"
-                    checked={col.visible}
-                    onChange={() => toggleColumnVisibility(col.key)}
-                    className="cursor-pointer"
-                  />
-                  <span className="text-md">{col.label}</span>
-                </label>
-              ))}
+              {columns.map((col) => {
+                if (
+                  (col.key === "discount" || col.key === "discountRatio") &&
+                  !canViewDiscount
+                ) {
+                  return null;
+                }
+
+                return (
+                  <label
+                    key={col.key}
+                    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={col.visible}
+                      onChange={() => toggleColumnVisibility(col.key)}
+                      className="cursor-pointer"
+                    />
+                    <span className="text-md">{col.label}</span>
+                  </label>
+                );
+              })}
             </div>
 
             <div className="mt-6 flex justify-end gap-2">
