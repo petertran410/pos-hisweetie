@@ -22,8 +22,15 @@ interface PackingSlipsTableProps {
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
   onCreateClick: () => void;
+  onCreatePackingHangClick: () => void;
+  onCreatePackingLoadingClick: () => void;
   onEditClick: (packingSlip: PackingSlip) => void;
   onDeleteClick: (id: number) => void;
+}
+
+interface PackingSlipsTableProps {
+  onCreatePackingHangClick: () => void;
+  onCreatePackingLoadingClick: () => void;
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
@@ -135,12 +142,15 @@ export function PackingSlipsTable({
   onPageChange,
   onLimitChange,
   onCreateClick,
+  onCreatePackingHangClick,
+  onCreatePackingLoadingClick,
   onEditClick,
   onDeleteClick,
 }: PackingSlipsTableProps) {
   const [search, setSearch] = useState("");
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [showColumnModal, setShowColumnModal] = useState(false);
+  const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("packingSlipTableColumns");
@@ -196,12 +206,37 @@ export function PackingSlipsTable({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={onCreateClick}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Tạo báo đơn
-          </button>
+          <div className="relative">
+            <button
+              onMouseEnter={() => setShowCreateDropdown(true)}
+              onMouseLeave={() => setShowCreateDropdown(false)}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Tạo báo đơn
+            </button>
+            {showCreateDropdown && (
+              <div
+                onMouseEnter={() => setShowCreateDropdown(true)}
+                onMouseLeave={() => setShowCreateDropdown(false)}
+                className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg z-50 min-w-[150px]">
+                <button
+                  onClick={onCreatePackingHangClick}
+                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50 first:rounded-t-lg">
+                  Đóng hàng
+                </button>
+                <button
+                  onClick={onCreatePackingLoadingClick}
+                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50">
+                  Loading
+                </button>
+                <button
+                  onClick={onCreateClick}
+                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50 last:rounded-b-lg">
+                  Giao hàng
+                </button>
+              </div>
+            )}
+          </div>
           <button
             onClick={() => setShowColumnModal(true)}
             className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">

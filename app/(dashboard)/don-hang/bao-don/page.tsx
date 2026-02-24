@@ -4,22 +4,42 @@ import { useState } from "react";
 import { PackingSlipsTable } from "@/components/packing-slips/PackingSlipsTable";
 import { PackingSlipsSidebar } from "@/components/packing-slips/PackingSlipsSidebar";
 import { PackingSlipForm } from "@/components/packing-slips/PackingSlipForm";
+import { PackingHangForm } from "@/components/packing-hangs/PackingHangForm";
+import { PackingLoadingForm } from "@/components/packing-loadings/PackingLoadingForm";
 import {
   usePackingSlips,
   useCreatePackingSlip,
   useUpdatePackingSlip,
   useDeletePackingSlip,
 } from "@/lib/hooks/usePackingSlips";
+import {
+  useCreatePackingHang,
+  useUpdatePackingHang,
+  useDeletePackingHang,
+} from "@/lib/hooks/usePackingHangs";
+import {
+  useCreatePackingLoading,
+  useUpdatePackingLoading,
+  useDeletePackingLoading,
+} from "@/lib/hooks/usePackingLoadings";
 import type { PackingSlip } from "@/lib/types/packing-slip";
+import type { PackingHang } from "@/lib/types/packing-hang";
+import type { PackingLoading } from "@/lib/types/packing-loading";
 import { toast } from "sonner";
+
+type FormType = "giao-hang" | "dong-hang" | "loading" | null;
 
 export default function BaoDonPage() {
   const [filters, setFilters] = useState({});
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
-  const [showForm, setShowForm] = useState(false);
+  const [formType, setFormType] = useState<FormType>(null);
   const [editingPackingSlip, setEditingPackingSlip] =
     useState<PackingSlip | null>(null);
+  const [editingPackingHang, setEditingPackingHang] =
+    useState<PackingHang | null>(null);
+  const [editingPackingLoading, setEditingPackingLoading] =
+    useState<PackingLoading | null>(null);
 
   const { data, isLoading } = usePackingSlips({
     ...filters,
@@ -27,41 +47,103 @@ export default function BaoDonPage() {
     currentItem: (page - 1) * limit,
   });
 
-  console.log(data);
-
   const createPackingSlip = useCreatePackingSlip();
   const updatePackingSlip = useUpdatePackingSlip();
   const deletePackingSlip = useDeletePackingSlip();
 
-  const handleCreateClick = () => {
+  const createPackingHang = useCreatePackingHang();
+  const updatePackingHang = useUpdatePackingHang();
+  const deletePackingHang = useDeletePackingHang();
+
+  const createPackingLoading = useCreatePackingLoading();
+  const updatePackingLoading = useUpdatePackingLoading();
+  const deletePackingLoading = useDeletePackingLoading();
+
+  const handleCreateGiaoHangClick = () => {
     setEditingPackingSlip(null);
-    setShowForm(true);
+    setFormType("giao-hang");
+  };
+
+  const handleCreateDongHangClick = () => {
+    setEditingPackingHang(null);
+    setFormType("dong-hang");
+  };
+
+  const handleCreateLoadingClick = () => {
+    setEditingPackingLoading(null);
+    setFormType("loading");
   };
 
   const handleEditClick = (packingSlip: PackingSlip) => {
     setEditingPackingSlip(packingSlip);
-    setShowForm(true);
+    setFormType("giao-hang");
   };
 
-  const handleFormSubmit = async (formData: any) => {
+  const handleGiaoHangSubmit = async (formData: any) => {
     try {
       if (editingPackingSlip) {
         await updatePackingSlip.mutateAsync({
           id: editingPackingSlip.id,
           data: formData,
         });
-        toast.success("Cập nhật báo đơn thành công");
+        toast.success("Cập nhật giao hàng thành công");
       } else {
         await createPackingSlip.mutateAsync(formData);
-        toast.success("Tạo báo đơn thành công");
+        toast.success("Tạo giao hàng thành công");
       }
-      setShowForm(false);
+      setFormType(null);
       setEditingPackingSlip(null);
     } catch (error) {
       toast.error(
         editingPackingSlip
-          ? "Cập nhật báo đơn thất bại"
-          : "Tạo báo đơn thất bại"
+          ? "Cập nhật giao hàng thất bại"
+          : "Tạo giao hàng thất bại"
+      );
+    }
+  };
+
+  const handleDongHangSubmit = async (formData: any) => {
+    try {
+      if (editingPackingHang) {
+        await updatePackingHang.mutateAsync({
+          id: editingPackingHang.id,
+          data: formData,
+        });
+        toast.success("Cập nhật đóng hàng thành công");
+      } else {
+        await createPackingHang.mutateAsync(formData);
+        toast.success("Tạo đóng hàng thành công");
+      }
+      setFormType(null);
+      setEditingPackingHang(null);
+    } catch (error) {
+      toast.error(
+        editingPackingHang
+          ? "Cập nhật đóng hàng thất bại"
+          : "Tạo đóng hàng thất bại"
+      );
+    }
+  };
+
+  const handleLoadingSubmit = async (formData: any) => {
+    try {
+      if (editingPackingLoading) {
+        await updatePackingLoading.mutateAsync({
+          id: editingPackingLoading.id,
+          data: formData,
+        });
+        toast.success("Cập nhật loading thành công");
+      } else {
+        await createPackingLoading.mutateAsync(formData);
+        toast.success("Tạo loading thành công");
+      }
+      setFormType(null);
+      setEditingPackingLoading(null);
+    } catch (error) {
+      toast.error(
+        editingPackingLoading
+          ? "Cập nhật loading thất bại"
+          : "Tạo loading thất bại"
       );
     }
   };
@@ -75,6 +157,13 @@ export default function BaoDonPage() {
     }
   };
 
+  const handleCloseForm = () => {
+    setFormType(null);
+    setEditingPackingSlip(null);
+    setEditingPackingHang(null);
+    setEditingPackingLoading(null);
+  };
+
   return (
     <div className="flex h-full border-t bg-gray-50">
       <PackingSlipsSidebar onFiltersChange={setFilters} />
@@ -86,19 +175,34 @@ export default function BaoDonPage() {
         limit={limit}
         onPageChange={setPage}
         onLimitChange={setLimit}
-        onCreateClick={handleCreateClick}
+        onCreateClick={handleCreateGiaoHangClick}
+        onCreatePackingHangClick={handleCreateDongHangClick}
+        onCreatePackingLoadingClick={handleCreateLoadingClick}
         onEditClick={handleEditClick}
         onDeleteClick={handleDelete}
       />
 
-      {showForm && (
+      {formType === "giao-hang" && (
         <PackingSlipForm
           packingSlip={editingPackingSlip || undefined}
-          onClose={() => {
-            setShowForm(false);
-            setEditingPackingSlip(null);
-          }}
-          onSubmit={handleFormSubmit}
+          onClose={handleCloseForm}
+          onSubmit={handleGiaoHangSubmit}
+        />
+      )}
+
+      {formType === "dong-hang" && (
+        <PackingHangForm
+          packingHang={editingPackingHang || undefined}
+          onClose={handleCloseForm}
+          onSubmit={handleDongHangSubmit}
+        />
+      )}
+
+      {formType === "loading" && (
+        <PackingLoadingForm
+          packingLoading={editingPackingLoading || undefined}
+          onClose={handleCloseForm}
+          onSubmit={handleLoadingSubmit}
         />
       )}
     </div>
