@@ -1,0 +1,234 @@
+"use client";
+
+import {
+  createContext,
+  useContext,
+  ReactNode,
+  useEffect,
+  useState,
+} from "react";
+import { useAuthStore } from "@/lib/store/auth";
+import { permissionsApi } from "@/lib/api/permissions";
+
+interface PermissionScope {
+  [scope: string]: boolean;
+}
+
+interface FieldPermission {
+  canView: boolean;
+  canEdit: boolean;
+  isRequired: boolean;
+}
+
+interface ColumnPermission {
+  canView: boolean;
+  canExport: boolean;
+}
+
+interface ResourcePermissions {
+  actions: {
+    [action: string]: PermissionScope | boolean;
+  };
+  fields: {
+    [fieldName: string]: FieldPermission;
+  };
+  columns: {
+    [columnName: string]: ColumnPermission;
+  };
+  buttons: {
+    [buttonName: string]: boolean;
+  };
+}
+
+interface PermissionsMap {
+  [resource: string]: ResourcePermissions;
+}
+
+interface PermissionContextValue {
+  permissions: PermissionsMap;
+  isLoading: boolean;
+  checkPermission: (
+    resource: string,
+    action: string,
+    scope?: string
+  ) => boolean;
+  checkFieldPermission: (
+    resource: string,
+    field: string,
+    type: "view" | "edit"
+  ) => boolean;
+  checkColumnPermission: (
+    resource: string,
+    column: string,
+    type: "view" | "export"
+  ) => boolean;
+  checkButtonPermission: (resource: string, button: string) => boolean;
+  refreshPermissions: () => Promise<void>;
+}
+
+const PermissionContext = createContext<PermissionContextValue | undefined>(
+  undefined
+);
+
+export function PermissionProvider({ children }: { children: ReactNode }) {
+  const { user, isAuthenticated } = useAuthStore();
+  const [permissions, setPermissions] = useState<PermissionsMap>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadPermissions = async () => {
+    if (!user || !isAuthenticated) {
+      setPermissions({});
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const data = await permissionsApi.getMyPermissions();
+      const permMap = parsePermissions(data);
+      setPermissions(permMap);
+    } catch (error) {
+      console.error("Failed to load permissions:", error);
+      setPermissions({});
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPermissions();
+  }, [user, isAuthenticated]);
+
+  const parsePermissions = (data: any[]): PermissionsMap => {
+    const permMap: PermissionsMap = {};
+
+    data.forEach((perm) => {
+      const { resource, action, scopes, fields, conditions } = perm;
+
+      if (!permMap[resource]) {
+        permMap[resource] = {
+          actions: {},
+          fields: {},
+          columns: {},
+          buttons: {},
+        };
+      }
+
+      if (scopes && scopes.length > 0) {
+        const scopeMap: PermissionScope = {};
+        scopes.forEach((scope: string) => {
+          scopeMap[scope] = true;
+        });
+        permMap[resource].actions[action] = scopeMap;
+      } else {
+        permMap[resource].actions[action] = true;
+      }
+
+      if (fields && fields.length > 0) {
+        fields.forEach((field: string) => {
+          if (!permMap[resource].fields[field]) {
+            permMap[resource].fields[field] = {
+              canView: false,
+              canEdit: false,
+              isRequired: false,
+            };
+          }
+          if (action === "view") {
+            permMap[resource].fields[field].canView = true;
+          } else if (action === "edit") {
+            permMap[resource].fields[field].canEdit = true;
+          }
+        });
+      }
+    });
+
+    return permMap;
+  };
+
+  const checkPermission = (
+    resource: string,
+    action: string,
+    scope?: string
+  ): boolean => {
+    const resourcePerms = permissions[resource];
+    if (!resourcePerms) return false;
+
+    const actionPerm = resourcePerms.actions[action];
+    if (!actionPerm) return false;
+
+    if (typeof actionPerm === "boolean") {
+      return actionPerm;
+    }
+
+    if (scope) {
+      return actionPerm[scope] === true || actionPerm["all"] === true;
+    }
+
+    return (
+      actionPerm["own"] === true ||
+      actionPerm["branch"] === true ||
+      actionPerm["all"] === true
+    );
+  };
+
+  const checkFieldPermission = (
+    resource: string,
+    field: string,
+    type: "view" | "edit"
+  ): boolean => {
+    const resourcePerms = permissions[resource];
+    if (!resourcePerms || !resourcePerms.fields) return false;
+
+    const fieldPerm = resourcePerms.fields[field];
+    if (!fieldPerm) return false;
+
+    return type === "view" ? fieldPerm.canView : fieldPerm.canEdit;
+  };
+
+  const checkColumnPermission = (
+    resource: string,
+    column: string,
+    type: "view" | "export"
+  ): boolean => {
+    const resourcePerms = permissions[resource];
+    if (!resourcePerms || !resourcePerms.columns) return true;
+
+    const columnPerm = resourcePerms.columns[column];
+    if (!columnPerm) return true;
+
+    return type === "view" ? columnPerm.canView : columnPerm.canExport;
+  };
+
+  const checkButtonPermission = (resource: string, button: string): boolean => {
+    const resourcePerms = permissions[resource];
+    if (!resourcePerms || !resourcePerms.buttons) return true;
+
+    return resourcePerms.buttons[button] !== false;
+  };
+
+  const value: PermissionContextValue = {
+    permissions,
+    isLoading,
+    checkPermission,
+    checkFieldPermission,
+    checkColumnPermission,
+    checkButtonPermission,
+    refreshPermissions: loadPermissions,
+  };
+
+  return (
+    <PermissionContext.Provider value={value}>
+      {children}
+    </PermissionContext.Provider>
+  );
+}
+
+export function usePermissionContext() {
+  const context = useContext(PermissionContext);
+  if (!context) {
+    throw new Error(
+      "usePermissionContext must be used within PermissionProvider"
+    );
+  }
+  return context;
+}

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-interface User {
+export interface User {
   id: number;
   name: string;
   email: string;
@@ -19,7 +19,7 @@ interface AuthState {
   _hasHydrated: boolean;
   setAuth: (user: User, token: string) => void;
   clearAuth: () => void;
-  setHasHydrated: (state: boolean) => void;
+  setHasHydrated: (hasHydrated: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -41,11 +41,10 @@ export const useAuthStore = create<AuthState>()(
           token: null,
           isAuthenticated: false,
         }),
-      setHasHydrated: (state) => {
+      setHasHydrated: (hasHydrated) =>
         set({
-          _hasHydrated: state,
-        });
-      },
+          _hasHydrated: hasHydrated,
+        }),
     }),
     {
       name: "auth-storage",
