@@ -65,7 +65,7 @@ export function DashboardHeader() {
           <nav className="flex items-center gap-1">
             <Link
               href="/"
-              className="px-4 py-3 hover:bg-gray-300 rounded transition-colors">
+              className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
               Tổng quan
             </Link>
 
@@ -73,7 +73,7 @@ export function DashboardHeader() {
               className="relative"
               onMouseEnter={() => setHoveredMenu("products")}
               onMouseLeave={() => setHoveredMenu(null)}>
-              <button className="px-4 py-3 hover:bg-gray-300 rounded transition-colors">
+              <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
                 Hàng hóa
               </button>
 
@@ -107,7 +107,7 @@ export function DashboardHeader() {
               className="relative"
               onMouseEnter={() => setHoveredMenu("orders")}
               onMouseLeave={() => setHoveredMenu(null)}>
-              <button className="px-4 py-3 hover:bg-gray-300 rounded transition-colors">
+              <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
                 Đơn hàng
               </button>
 
@@ -130,13 +130,13 @@ export function DashboardHeader() {
 
             <Link
               href="/khach-hang"
-              className="px-4 py-3 hover:bg-gray-300 rounded transition-colors">
+              className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
               Khách hàng
             </Link>
 
             <Link
               href="/so-quy"
-              className="px-4 py-3 hover:bg-gray-300 rounded transition-colors">
+              className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
               Sổ quỹ
             </Link>
           </nav>

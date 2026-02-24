@@ -14,7 +14,7 @@ interface ColumnConfig {
 }
 
 interface PackingSlipsTableProps {
-  packingSlips: PackingSlip[];
+  packingSlips: (PackingSlip & { type?: string })[];
   isLoading: boolean;
   total: number;
   page: number;
@@ -34,6 +34,34 @@ interface PackingSlipsTableProps {
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
+  {
+    key: "type",
+    label: "Loại",
+    visible: true,
+    width: "120px",
+    render: (slip: any) => {
+      const typeMap: Record<string, string> = {
+        "giao-hang": "Giao hàng",
+        "dong-hang": "Đóng hàng",
+        loading: "Loading",
+      };
+
+      if (!slip.type) return "-";
+
+      return (
+        <span
+          className={`px-2 py-1 rounded text-xs font-medium ${
+            slip.type === "giao-hang"
+              ? "bg-green-100 text-green-800"
+              : slip.type === "dong-hang"
+                ? "bg-blue-100 text-blue-800"
+                : "bg-purple-100 text-purple-800"
+          }`}>
+          {typeMap[slip.type] || "-"}
+        </span>
+      );
+    },
+  },
   {
     key: "code",
     label: "Mã báo đơn",
@@ -218,19 +246,28 @@ export function PackingSlipsTable({
               <div
                 onMouseEnter={() => setShowCreateDropdown(true)}
                 onMouseLeave={() => setShowCreateDropdown(false)}
-                className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg z-50 min-w-[150px]">
+                className="absolute top-full left-0 bg-white border rounded-lg shadow-lg z-50 min-w-[150px]">
                 <button
-                  onClick={onCreatePackingHangClick}
+                  onClick={() => {
+                    onCreatePackingHangClick();
+                    setShowCreateDropdown(false);
+                  }}
                   className="w-full px-4 py-2 text-left text-md hover:bg-gray-50 first:rounded-t-lg">
                   Đóng hàng
                 </button>
                 <button
-                  onClick={onCreatePackingLoadingClick}
+                  onClick={() => {
+                    onCreatePackingLoadingClick();
+                    setShowCreateDropdown(false);
+                  }}
                   className="w-full px-4 py-2 text-left text-md hover:bg-gray-50">
                   Loading
                 </button>
                 <button
-                  onClick={onCreateClick}
+                  onClick={() => {
+                    onCreateClick();
+                    setShowCreateDropdown(false);
+                  }}
                   className="w-full px-4 py-2 text-left text-md hover:bg-gray-50 last:rounded-b-lg">
                   Giao hàng
                 </button>

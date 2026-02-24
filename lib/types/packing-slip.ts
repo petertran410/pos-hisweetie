@@ -15,6 +15,7 @@ export interface PackingSlip {
   createdBy: number;
   createdAt: string;
   updatedAt: string;
+  type?: string;
   branch?: {
     id: number;
     name: string;

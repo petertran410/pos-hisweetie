@@ -6,8 +6,8 @@ import { PackingSlipsSidebar } from "@/components/packing-slips/PackingSlipsSide
 import { PackingSlipForm } from "@/components/packing-slips/PackingSlipForm";
 import { PackingHangForm } from "@/components/packing-hangs/PackingHangForm";
 import { PackingLoadingForm } from "@/components/packing-loadings/PackingLoadingForm";
+import { useAllPacking } from "@/lib/hooks/useAllPacking";
 import {
-  usePackingSlips,
   useCreatePackingSlip,
   useUpdatePackingSlip,
   useDeletePackingSlip,
@@ -41,7 +41,7 @@ export default function BaoDonPage() {
   const [editingPackingLoading, setEditingPackingLoading] =
     useState<PackingLoading | null>(null);
 
-  const { data, isLoading } = usePackingSlips({
+  const { data, isLoading } = useAllPacking({
     ...filters,
     pageSize: limit,
     currentItem: (page - 1) * limit,
