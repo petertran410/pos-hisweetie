@@ -6,6 +6,8 @@ import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useUsers } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 import { ChevronDown, X } from "lucide-react";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface OrdersSidebarProps {
   filters: any;
@@ -114,6 +116,9 @@ export function OrdersSidebar({
   filters,
   onFiltersChange,
 }: OrdersSidebarProps) {
+  const canViewOwn = usePermission("orders", "view", "own");
+  const canViewBranch = usePermission("orders", "view", "branch");
+  const canViewAll = usePermission("orders", "view", "all");
   const { data: branches } = useBranches();
   const { data: customersData } = useCustomers({ pageSize: 1000 });
   const { data: users } = useUsers();
@@ -126,8 +131,6 @@ export function OrdersSidebar({
     string[]
   >([]);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [showPaymentStatusDropdown, setShowPaymentStatusDropdown] =
-    useState(false);
 
   const [enableOrderDate, setEnableOrderDate] = useState(true);
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
