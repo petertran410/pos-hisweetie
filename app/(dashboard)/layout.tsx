@@ -21,7 +21,7 @@ export default function DashboardLayout({
     <QueryClientProvider client={queryClient}>
       <ProtectedRoute>
         <PermissionProvider>
-          <div className={`${inter.className} flex flex-col min-h-screen`}>
+          <div className={`${inter.className} flex flex-col h-screen`}>
             <DashboardHeader />
             <main className="flex-1 overflow-hidden">{children}</main>
             <Toaster position="top-right" richColors />
