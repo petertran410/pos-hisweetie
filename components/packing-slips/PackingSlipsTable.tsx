@@ -38,7 +38,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "type",
     label: "Loại",
     visible: true,
-    width: "120px",
+    width: "150px",
     render: (slip: any) => {
       const typeMap: Record<string, string> = {
         "giao-hang": "Giao hàng",
@@ -103,10 +103,14 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: true,
     width: "180px",
     render: (slip) =>
-      slip.paymentMethod === "cash" ? (
-        <span>Tiền mặt - {formatCurrency(slip.cashAmount)}</span>
+      slip.type === "giao-hang" ? (
+        slip.paymentMethod === "cash" ? (
+          <span>Tiền mặt - {formatCurrency(slip.cashAmount)}</span>
+        ) : (
+          <span>Chuyển khoản</span>
+        )
       ) : (
-        <span>Chuyển khoản</span>
+        "-"
       ),
   },
   {
@@ -326,7 +330,9 @@ export function PackingSlipsTable({
               </tr>
             ) : (
               filteredSlips.map((slip) => (
-                <tr key={slip.id} className="border-b hover:bg-gray-50">
+                <tr
+                  key={slip.type ? `${slip.type}-${slip.id}` : slip.id}
+                  className="border-b hover:bg-gray-50">
                   {visibleColumns.map((col) => (
                     <td
                       key={col.key}
