@@ -147,12 +147,12 @@ export function DashboardHeader() {
             className="relative"
             onMouseEnter={() => setHoveredMenu("pos")}
             onMouseLeave={() => setHoveredMenu(null)}>
-            <button className="px-4 py-2 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
+            <button className="px-4 py-4 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
               🛒 Bán hàng
             </button>
 
             {hoveredMenu === "pos" && (
-              <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border mt-1">
+              <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
                 <ul className="px-2 py-2">
                   <li>
                     <Link
