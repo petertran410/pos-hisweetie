@@ -9,7 +9,13 @@ export function useUsers(params?: any) {
   });
 }
 
-export function useAllUsers(params?: any) {
+export function useAllUsers(params?: {
+  search?: string;
+  branchId?: number;
+  isActive?: boolean;
+  page?: number;
+  limit?: number;
+}) {
   return useQuery({
     queryKey: ["users", params],
     queryFn: () => usersApi.getAll(params),
@@ -66,6 +72,27 @@ export function useDeleteUser() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Xóa người dùng thất bại");
+    },
+  });
+}
+
+export function useAssignUserPermissions() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      permissionIds,
+    }: {
+      id: number;
+      permissionIds: number[];
+    }) => usersApi.assignPermissions(id, permissionIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Cập nhật quyền thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Cập nhật quyền thất bại");
     },
   });
 }

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { useCreateUser, useUpdateUser } from "@/lib/hooks/useUsers";
 import { useRoles } from "@/lib/hooks/useRoles";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { UserPermissionMatrix } from "./UserPermissionMatrix";
 
 interface UserFormModalProps {
   user?: any;
@@ -19,8 +20,10 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
     phone: "",
     branchId: 0,
     roleIds: [] as number[],
+    permissionIds: [] as number[],
     isActive: true,
   });
+  const [showPermissions, setShowPermissions] = useState(false);
 
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
@@ -36,6 +39,7 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
         phone: user.phone || "",
         branchId: user.branchId || 0,
         roleIds: user.roles?.map((r: any) => r.id) || [],
+        permissionIds: user.individualPermissions?.map((p: any) => p.id) || [],
         isActive: user.isActive ?? true,
       });
     }
@@ -53,6 +57,7 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
           branchId: formData.branchId || undefined,
           isActive: formData.isActive,
           roleIds: formData.roleIds,
+          permissionIds: formData.permissionIds,
         };
 
         if (formData.password) {
@@ -78,9 +83,20 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
     }));
   };
 
+  const handlePermissionsChange = (permissionIds: number[]) => {
+    setFormData((prev) => ({
+      ...prev,
+      permissionIds,
+    }));
+  };
+
+  const rolePermissions = user?.rolePermissions || [];
+  const totalRolePermissions = rolePermissions.length;
+  const totalIndividualPermissions = formData.permissionIds.length;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-bold">
             {user ? "Sửa người dùng" : "Thêm người dùng mới"}
@@ -95,7 +111,7 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
         <form
           onSubmit={handleSubmit}
           className="overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -144,7 +160,7 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
                   }
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder={
-                    user ? "Để trống nếu không đổi" : "Nhập mật khẩu"
+                    user ? "Để trống nếu không đổi mật khẩu" : "Nhập mật khẩu"
                   }
                 />
               </div>
@@ -175,7 +191,7 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
                   setFormData({ ...formData, branchId: Number(e.target.value) })
                 }
                 className="w-full px-3 py-2 border rounded-lg">
-                <option value={0}>Không chọn</option>
+                <option value={0}>Chọn chi nhánh</option>
                 {branches?.map((branch: any) => (
                   <option key={branch.id} value={branch.id}>
                     {branch.name}
@@ -184,11 +200,18 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Vai trò <span className="text-red-500">*</span>
-              </label>
-              <div className="border rounded-lg p-4 space-y-2 max-h-48 overflow-y-auto">
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium">
+                  Vai trò ({formData.roleIds.length} vai trò)
+                </label>
+                {user && totalRolePermissions > 0 && (
+                  <span className="text-xs text-gray-600">
+                    {totalRolePermissions} quyền từ vai trò
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                 {roles?.map((role: any) => (
                   <label
                     key={role.id}
@@ -200,9 +223,9 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
                       className="w-4 h-4"
                     />
                     <div className="flex-1">
-                      <div className="font-medium">{role.name}</div>
+                      <div className="font-medium text-sm">{role.name}</div>
                       {role.description && (
-                        <div className="text-sm text-gray-600">
+                        <div className="text-xs text-gray-600">
                           {role.description}
                         </div>
                       )}
@@ -210,6 +233,37 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
                   </label>
                 ))}
               </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowPermissions(!showPermissions)}
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    Quyền riêng ({totalIndividualPermissions} quyền)
+                  </span>
+                  <span className="text-xs text-gray-600">
+                    Tùy chỉnh quyền ngoài vai trò
+                  </span>
+                </div>
+                {showPermissions ? (
+                  <ChevronUp className="w-5 h-5" />
+                ) : (
+                  <ChevronDown className="w-5 h-5" />
+                )}
+              </button>
+
+              {showPermissions && (
+                <div className="border-t">
+                  <UserPermissionMatrix
+                    selectedPermissions={formData.permissionIds}
+                    rolePermissions={rolePermissions}
+                    onChange={handlePermissionsChange}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2">

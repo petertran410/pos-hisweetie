@@ -21,7 +21,7 @@ export const usersApi = {
     page?: number;
     limit?: number;
   }) => {
-    return apiClient.get("/users", params);
+    return apiClient.get("/users", { params });
   },
 
   getUsers: (): Promise<User[]> => {
@@ -38,7 +38,9 @@ export const usersApi = {
     password: string;
     phone?: string;
     branchId?: number;
-    roleIds: number[];
+    roleIds?: number[];
+    permissionIds?: number[];
+    isActive?: boolean;
   }) => {
     return apiClient.post("/users", data);
   },
@@ -53,6 +55,7 @@ export const usersApi = {
       branchId?: number;
       isActive?: boolean;
       roleIds?: number[];
+      permissionIds?: number[];
     }
   ) => {
     return apiClient.put(`/users/${id}`, data);
@@ -60,5 +63,9 @@ export const usersApi = {
 
   delete: (id: number) => {
     return apiClient.delete(`/users/${id}`);
+  },
+
+  assignPermissions: (id: number, permissionIds: number[]) => {
+    return apiClient.put(`/users/${id}/permissions`, { permissionIds });
   },
 };

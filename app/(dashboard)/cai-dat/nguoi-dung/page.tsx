@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { UserFormModal } from "@/components/admin/UserFormModal";
-import { useAllUsers, useUsers } from "@/lib/hooks/useUsers";
+import { useAllUsers } from "@/lib/hooks/useUsers";
 import { Plus, Search } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 
