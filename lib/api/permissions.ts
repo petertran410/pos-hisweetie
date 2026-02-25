@@ -1,35 +1,33 @@
 import { apiClient } from "@/lib/config/api";
 
 export const permissionsApi = {
-  getAll: async (params?: { category?: string; resource?: string }) => {
-    return apiClient.get("/permissions", { params });
+  getAll: (params?: { category?: string; resource?: string }) => {
+    return apiClient.get("/permissions", params);
   },
 
-  getMyPermissions: async () => {
+  getMyPermissions: () => {
     return apiClient.get("/permissions/my-permissions");
   },
 
-  getFieldPermissions: async (resource: string) => {
-    return apiClient.get("/permissions/field-permissions", {
-      params: { resource },
-    });
+  getFieldPermissions: (resource: string) => {
+    return apiClient.get("/permissions/field-permissions", { resource });
   },
 
-  getColumnPermissions: async (resource: string) => {
-    return apiClient.get("/permissions/column-permissions", {
-      params: { resource },
-    });
+  getColumnPermissions: (resource: string) => {
+    return apiClient.get("/permissions/column-permissions", { resource });
   },
 
-  checkPermission: async (
+  checkPermission: (
     resource: string,
     action: string,
     scope?: string,
     field?: string
   ) => {
-    const response = await apiClient.get("/permissions/check", {
-      params: { resource, action, scope, field },
+    return apiClient.get("/permissions/check", {
+      resource,
+      action,
+      scope,
+      field,
     });
-    return response.hasPermission;
   },
 };

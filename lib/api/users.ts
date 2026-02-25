@@ -8,18 +8,57 @@ export interface User {
   avatar?: string;
   branchId?: number;
   isActive: boolean;
-}
-
-export interface UsersResponse {
-  data?: User[];
+  roles: Array<{ id: number; name: string }>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const usersApi = {
+  getAll: (params?: {
+    search?: string;
+    branchId?: number;
+    isActive?: boolean;
+    page?: number;
+    limit?: number;
+  }) => {
+    return apiClient.get("/users", params);
+  },
+
   getUsers: (): Promise<User[]> => {
     return apiClient.get("/users/all");
   },
 
-  getUser: (id: number): Promise<User> => {
+  getOne: (id: number) => {
     return apiClient.get(`/users/${id}`);
+  },
+
+  create: (data: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    branchId?: number;
+    roleIds: number[];
+  }) => {
+    return apiClient.post("/users", data);
+  },
+
+  update: (
+    id: number,
+    data: {
+      name?: string;
+      email?: string;
+      password?: string;
+      phone?: string;
+      branchId?: number;
+      isActive?: boolean;
+      roleIds?: number[];
+    }
+  ) => {
+    return apiClient.put(`/users/${id}`, data);
+  },
+
+  delete: (id: number) => {
+    return apiClient.delete(`/users/${id}`);
   },
 };

@@ -6,7 +6,6 @@ import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useUsers } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 import { ChevronDown, X } from "lucide-react";
-import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface OrdersSidebarProps {
@@ -432,7 +431,7 @@ export function OrdersSidebar({
           onChange={(e) => setCreatorId(e.target.value)}
           className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Chọn người tạo</option>
-          {users?.map((user) => (
+          {users?.map((user: any) => (
             <option key={user.id} value={user.id}>
               {user.name}
             </option>

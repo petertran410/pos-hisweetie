@@ -274,11 +274,20 @@ export function DashboardHeader() {
                   </p>
                   <p className="text-xs text-gray-500">{user?.email}</p>
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
-                  Đăng xuất
-                </button>
+                <div className="flex flex-col">
+                  <PermissionGate resource="users" action="create">
+                    <Link
+                      href="/cai-dat"
+                      className="px-4 py-2 text-sm hover:bg-gray-100">
+                      Cài Đặt
+                    </Link>
+                  </PermissionGate>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                    Đăng xuất
+                  </button>
+                </div>
               </div>
             )}
           </div>
