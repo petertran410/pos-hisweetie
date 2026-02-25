@@ -1485,9 +1485,9 @@ export default function BanHangPage() {
 
       handleCloseTab(activeTabId);
 
-      toast.success(
-        `Tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"} thành công`
-      );
+      // toast.success(
+      //   `Tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"} thành công`
+      // );
       router.push(
         activeTab.type === "order" ? "/don-hang/dat-hang" : "/don-hang/hoa-don"
       );

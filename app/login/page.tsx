@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { authApi } from "@/lib/api/auth";
@@ -12,7 +12,7 @@ interface LoginForm {
   password: string;
 }
 
-function LoginContent() {
+export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuth, isAuthenticated, _hasHydrated } = useAuthStore();
@@ -84,7 +84,7 @@ function LoginContent() {
                 })}
                 type="email"
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="dieptra.sg@gmail.com"
+                placeholder="email@example.com"
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">
@@ -102,10 +102,6 @@ function LoginContent() {
               <input
                 {...register("password", {
                   required: "Mật khẩu là bắt buộc",
-                  minLength: {
-                    value: 6,
-                    message: "Mật khẩu phải có ít nhất 6 ký tự",
-                  },
                 })}
                 type="password"
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -126,24 +122,7 @@ function LoginContent() {
             {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
         </form>
-
-        <div className="mt-4 text-center">
-          <p className="text-sm text-gray-600">
-            Tài khoản demo:{" "}
-            <span className="font-medium">dieptra.sg@gmail.com</span>
-            <br />
-            Mật khẩu: <span className="font-medium">Dieptra@123</span>
-          </p>
-        </div>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <LoginContent />
-    </Suspense>
   );
 }
