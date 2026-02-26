@@ -12,23 +12,23 @@ export default function UsersPage() {
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
 
   const { data, isLoading } = useAllUsers({ search, page, limit });
 
   const handleCreate = () => {
-    setEditingUser(null);
+    setEditingUserId(null);
     setIsModalOpen(true);
   };
 
   const handleEdit = (user: any) => {
-    setEditingUser(user);
+    setEditingUserId(user.id);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setEditingUser(null);
+    setEditingUserId(null);
   };
 
   return (
@@ -37,13 +37,6 @@ export default function UsersPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold">Quản lý người dùng</h1>
-            {/* <p className="text-gray-600 mt-1">
-              Tổng số:{" "}
-              {data.map((item) => {
-                item.length;
-              }) || 0}{" "}
-              người dùng
-            </p> */}
           </div>
           <PermissionGate resource="users" action="create">
             <button
@@ -81,7 +74,7 @@ export default function UsersPage() {
       </div>
 
       {isModalOpen && (
-        <UserFormModal user={editingUser} onClose={handleCloseModal} />
+        <UserFormModal userId={editingUserId} onClose={handleCloseModal} />
       )}
     </div>
   );

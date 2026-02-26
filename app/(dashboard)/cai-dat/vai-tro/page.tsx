@@ -4,16 +4,19 @@ import { useState } from "react";
 import { RolesTable } from "@/components/admin/RolesTable";
 import { RoleFormModal } from "@/components/admin/RoleFormModal";
 import { PermissionMatrix } from "@/components/admin/PermissionMatrix";
-import { useRoles } from "@/lib/hooks/useRoles";
+import { useRoles, useRole } from "@/lib/hooks/useRoles";
 import { Plus, Shield } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export default function RolesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<any>(null);
-  const [selectedRole, setSelectedRole] = useState<any>(null);
+  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
 
   const { data: roles, isLoading } = useRoles();
+  const { data: selectedRole, isLoading: isLoadingRole } = useRole(
+    selectedRoleId || 0
+  );
 
   const handleCreate = () => {
     setEditingRole(null);
@@ -31,7 +34,7 @@ export default function RolesPage() {
   };
 
   const handleSelectRole = (role: any) => {
-    setSelectedRole(role);
+    setSelectedRoleId(role.id);
   };
 
   return (
@@ -68,8 +71,14 @@ export default function RolesPage() {
       </div>
 
       <div className="flex-1 overflow-auto">
-        {selectedRole ? (
-          <PermissionMatrix role={selectedRole} />
+        {selectedRoleId ? (
+          isLoadingRole ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : selectedRole ? (
+            <PermissionMatrix role={selectedRole} />
+          ) : null
         ) : (
           <div className="flex items-center justify-center h-full text-gray-500">
             <div className="text-center">

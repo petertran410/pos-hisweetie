@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
-import { useCreateUser, useUpdateUser } from "@/lib/hooks/useUsers";
+import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
 import { useRoles } from "@/lib/hooks/useRoles";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { UserPermissionMatrix } from "./UserPermissionMatrix";
 
 interface UserFormModalProps {
-  user?: any;
+  userId: number | null;
   onClose: () => void;
 }
 
-export function UserFormModal({ user, onClose }: UserFormModalProps) {
+export function UserFormModal({ userId, onClose }: UserFormModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -25,6 +25,7 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
   });
   const [showPermissions, setShowPermissions] = useState(false);
 
+  const { data: user, isLoading: isLoadingUser } = useUser(userId || 0);
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const { data: roles } = useRoles();
@@ -49,7 +50,7 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
     e.preventDefault();
 
     try {
-      if (user) {
+      if (userId) {
         const updateData: any = {
           name: formData.name,
           email: formData.email,
@@ -64,7 +65,7 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
           updateData.password = formData.password;
         }
 
-        await updateUser.mutateAsync({ id: user.id, data: updateData });
+        await updateUser.mutateAsync({ id: userId, data: updateData });
       } else {
         await createUser.mutateAsync(formData);
       }
@@ -94,24 +95,32 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
   const totalRolePermissions = rolePermissions.length;
   const totalIndividualPermissions = formData.permissionIds.length;
 
+  if (userId && isLoadingUser) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl p-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-bold">
-            {user ? "Sửa người dùng" : "Thêm người dùng mới"}
+            {userId ? "Sửa người dùng" : "Thêm người dùng"}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full">
+            className="p-2 hover:bg-gray-100 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -125,7 +134,7 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
                     setFormData({ ...formData, name: e.target.value })
                   }
                   className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Nhập tên người dùng"
+                  placeholder="Nhập tên"
                 />
               </div>
 
@@ -149,18 +158,18 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Mật khẩu {!user && <span className="text-red-500">*</span>}
+                  Mật khẩu {!userId && <span className="text-red-500">*</span>}
                 </label>
                 <input
                   type="password"
-                  required={!user}
+                  required={!userId}
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder={
-                    user ? "Để trống nếu không đổi mật khẩu" : "Nhập mật khẩu"
+                    userId ? "Để trống nếu không đổi mật khẩu" : "Nhập mật khẩu"
                   }
                 />
               </div>
@@ -205,7 +214,7 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
                 <label className="block text-sm font-medium">
                   Vai trò ({formData.roleIds.length} vai trò)
                 </label>
-                {user && totalRolePermissions > 0 && (
+                {userId && totalRolePermissions > 0 && (
                   <span className="text-xs text-gray-600">
                     {totalRolePermissions} quyền từ vai trò
                   </span>
@@ -293,7 +302,7 @@ export function UserFormModal({ user, onClose }: UserFormModalProps) {
               type="submit"
               disabled={createUser.isPending || updateUser.isPending}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-              {user ? "Cập nhật" : "Tạo mới"}
+              {userId ? "Cập nhật" : "Tạo mới"}
             </button>
           </div>
         </form>
