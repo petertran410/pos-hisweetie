@@ -71,38 +71,7 @@ const PermissionContext = createContext<PermissionContextValue | undefined>(
 );
 
 const getDefaultPermissions = (): PermissionsMap => {
-  return {
-    products: {
-      actions: { view: true, create: true, update: true },
-      fields: {},
-      columns: {},
-      buttons: {},
-    },
-    orders: {
-      actions: { view: { all: true }, create: true, update: { all: true } },
-      fields: {},
-      columns: {},
-      buttons: {},
-    },
-    invoices: {
-      actions: { view: { all: true }, create: true },
-      fields: {},
-      columns: {},
-      buttons: {},
-    },
-    customers: {
-      actions: { view: true, create: true },
-      fields: {},
-      columns: {},
-      buttons: {},
-    },
-    reports: {
-      actions: { view: true },
-      fields: {},
-      columns: {},
-      buttons: {},
-    },
-  };
+  return {};
 };
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
