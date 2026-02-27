@@ -8,6 +8,7 @@ import type { Product } from "@/lib/api/products";
 import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 interface ProductTableProps {
   selectedParentName?: string;
@@ -362,52 +363,54 @@ export function ProductTable({
     <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
       <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <button
-              onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
-              + Tạo mới
-              <svg
-                className={`w-4 h-4 transition-transform ${
-                  showCreateDropdown ? "rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
+          <PermissionGate resource="products" action="create">
+            <div className="relative">
+              <button
+                onClick={() => setShowCreateDropdown(!showCreateDropdown)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
+                + Tạo mới
+                <svg
+                  className={`w-4 h-4 transition-transform ${
+                    showCreateDropdown ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
 
-            {showCreateDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white border rounded shadow-lg z-50 w-48">
-                <button
-                  onClick={() => handleCreateProduct(2)}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
-                  Hàng hóa
-                </button>
-                <button
-                  onClick={() => handleCreateProduct(3)}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
-                  Dịch vụ
-                </button>
-                <button
-                  onClick={() => handleCreateProduct(1)}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
-                  Combo - đóng gói
-                </button>
-                <button
-                  onClick={() => handleCreateProduct(4)}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
-                  Hàng sản xuất
-                </button>
-              </div>
-            )}
-          </div>
+              {showCreateDropdown && (
+                <div className="absolute top-full left-0 mt-1 bg-white border rounded shadow-lg z-50 w-48">
+                  <button
+                    onClick={() => handleCreateProduct(2)}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                    Hàng hóa
+                  </button>
+                  <button
+                    onClick={() => handleCreateProduct(3)}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                    Dịch vụ
+                  </button>
+                  <button
+                    onClick={() => handleCreateProduct(1)}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                    Combo - đóng gói
+                  </button>
+                  <button
+                    onClick={() => handleCreateProduct(4)}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                    Hàng sản xuất
+                  </button>
+                </div>
+              )}
+            </div>
+          </PermissionGate>
           <input
             type="text"
             placeholder="Theo mã, tên hàng"
