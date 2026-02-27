@@ -26,6 +26,7 @@ import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
 import { priceBooksApi } from "@/lib/api";
 import { invoicesApi } from "@/lib/api/invoices";
 import router from "next/router";
+import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export interface CartItem {
   product: any;
@@ -1517,178 +1518,184 @@ export default function BanHangPage() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-blue-600">
-      <div className="px-4 py-3 flex items-center gap-4 flex-shrink-0">
-        <div className="flex-1 max-w-md">
-          <ProductSearchDropdown onAddProduct={addToCart} />
+    <PagePermissionGuard resource="orders" action="create">
+      <div className="h-full flex flex-col bg-blue-600">
+        <div className="px-4 py-3 flex items-center gap-4 flex-shrink-0">
+          <div className="flex-1 max-w-md">
+            <ProductSearchDropdown onAddProduct={addToCart} />
+          </div>
+
+          <div className="flex items-center gap-2">
+            {tabs.map((tab) => (
+              <div
+                key={tab.id}
+                onClick={() => setActiveTabId(tab.id)}
+                className={`flex items-center gap-2 px-3 py-2 cursor-pointer rounded-md ${
+                  tab.id === activeTabId ? "bg-white/30" : "hover:bg-white/20"
+                }`}>
+                <span className="text-white font-medium">{tab.label}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCloseTab(tab.id);
+                  }}
+                  className="hover:bg-white/20 p-1 rounded">
+                  <X className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            ))}
+
+            {!activeTab?.documentId && (
+              <>
+                <button
+                  onClick={handleAddTab}
+                  className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium">
+                  <Plus className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={handleToggleType}
+                  className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium">
+                  <ArrowLeftRight className="w-5 h-5" />
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {tabs.map((tab) => (
-            <div
-              key={tab.id}
-              onClick={() => setActiveTabId(tab.id)}
-              className={`flex items-center gap-2 px-3 py-2 cursor-pointer rounded-md ${
-                tab.id === activeTabId ? "bg-white/30" : "hover:bg-white/20"
-              }`}>
-              <span className="text-white font-medium">{tab.label}</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCloseTab(tab.id);
-                }}
-                className="hover:bg-white/20 p-1 rounded">
-                <X className="w-4 h-4 text-white" />
-              </button>
-            </div>
-          ))}
-
-          {!activeTab?.documentId && (
+        <div className="flex-1 flex min-h-0">
+          {activeTab.type === "order" ? (
             <>
-              <button
-                onClick={handleAddTab}
-                className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium">
-                <Plus className="w-5 h-5" />
-              </button>
-
-              <button
-                onClick={handleToggleType}
-                className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium">
-                <ArrowLeftRight className="w-5 h-5" />
-              </button>
+              <OrderItemsList
+                cartItems={activeTab.cartItems}
+                onUpdateItem={updateCartItem}
+                onRemoveItem={removeFromCart}
+                discount={activeTab.discount}
+                onDiscountChange={(discount) => updateActiveTab({ discount })}
+                discountRatio={activeTab.discountRatio}
+                onDiscountRatioChange={(discountRatio) =>
+                  updateActiveTab({ discountRatio })
+                }
+                orderNote={activeTab.orderNote}
+                onOrderNoteChange={(orderNote) =>
+                  updateActiveTab({ orderNote })
+                }
+              />
+              <OrderCart
+                cartItems={activeTab.cartItems}
+                selectedCustomer={activeTab.selectedCustomer}
+                onSelectCustomer={handleCustomerSelect}
+                selectedPriceBookId={activeTab.selectedPriceBookId}
+                onSelectPriceBook={handlePriceBookSelect}
+                useCOD={activeTab.useCOD}
+                onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
+                paymentAmount={activeTab.paymentAmount}
+                onPaymentAmountChange={(paymentAmount) =>
+                  updateActiveTab({ paymentAmount })
+                }
+                onPaymentMethodsChange={(paymentMethods) =>
+                  updateActiveTab({ paymentMethods })
+                }
+                onCreateOrder={handleCreateDocument}
+                onSaveOrder={handleSaveOrder}
+                onCreateInvoice={handleConvertToInvoice}
+                discount={activeTab.discount}
+                discountRatio={activeTab.discountRatio}
+                onDeliveryInfoChange={(deliveryInfo) =>
+                  updateActiveTab({ deliveryInfo })
+                }
+                deliveryInfo={activeTab.deliveryInfo}
+                isEditMode={!!activeTab.documentId}
+                existingOrder={activeTab.sourceOrder || existingOrder}
+                documentType={activeTab.type}
+              />
+            </>
+          ) : (
+            <>
+              <InvoiceItemsList
+                cartItems={activeTab.cartItems}
+                onUpdateItem={updateCartItem}
+                onRemoveItem={removeFromCart}
+                discount={activeTab.discount}
+                onDiscountChange={(discount) => updateActiveTab({ discount })}
+                discountRatio={activeTab.discountRatio}
+                onDiscountRatioChange={(discountRatio) =>
+                  updateActiveTab({ discountRatio })
+                }
+                orderNote={activeTab.orderNote}
+                onOrderNoteChange={(orderNote) =>
+                  updateActiveTab({ orderNote })
+                }
+              />
+              <InvoiceCart
+                cartItems={activeTab.cartItems}
+                selectedCustomer={activeTab.selectedCustomer}
+                onSelectCustomer={handleCustomerSelect}
+                useCOD={activeTab.useCOD}
+                selectedPriceBookId={activeTab.selectedPriceBookId}
+                onSelectPriceBook={handlePriceBookSelect}
+                onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
+                paymentAmount={activeTab.paymentAmount}
+                onPaymentAmountChange={(paymentAmount) =>
+                  updateActiveTab({ paymentAmount })
+                }
+                onPaymentMethodsChange={(paymentMethods) =>
+                  updateActiveTab({ paymentMethods })
+                }
+                onCreateOrder={handleCreateDocument}
+                onSaveOrder={handleSaveInvoice}
+                onPayment={handlePayment}
+                discount={activeTab.discount}
+                discountRatio={activeTab.discountRatio}
+                onDeliveryInfoChange={(deliveryInfo) =>
+                  updateActiveTab({ deliveryInfo })
+                }
+                deliveryInfo={activeTab.deliveryInfo}
+                isEditMode={!!activeTab.documentId}
+                isCreatingFromOrder={!!activeTab.sourceOrderId}
+                existingOrder={activeTab.sourceOrder || existingInvoice}
+                documentType={activeTab.type}
+              />
             </>
           )}
         </div>
-      </div>
-
-      <div className="flex-1 flex min-h-0">
-        {activeTab.type === "order" ? (
-          <>
-            <OrderItemsList
-              cartItems={activeTab.cartItems}
-              onUpdateItem={updateCartItem}
-              onRemoveItem={removeFromCart}
-              discount={activeTab.discount}
-              onDiscountChange={(discount) => updateActiveTab({ discount })}
-              discountRatio={activeTab.discountRatio}
-              onDiscountRatioChange={(discountRatio) =>
-                updateActiveTab({ discountRatio })
-              }
-              orderNote={activeTab.orderNote}
-              onOrderNoteChange={(orderNote) => updateActiveTab({ orderNote })}
-            />
-            <OrderCart
-              cartItems={activeTab.cartItems}
-              selectedCustomer={activeTab.selectedCustomer}
-              onSelectCustomer={handleCustomerSelect}
-              selectedPriceBookId={activeTab.selectedPriceBookId}
-              onSelectPriceBook={handlePriceBookSelect}
-              useCOD={activeTab.useCOD}
-              onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
-              paymentAmount={activeTab.paymentAmount}
-              onPaymentAmountChange={(paymentAmount) =>
-                updateActiveTab({ paymentAmount })
-              }
-              onPaymentMethodsChange={(paymentMethods) =>
-                updateActiveTab({ paymentMethods })
-              }
-              onCreateOrder={handleCreateDocument}
-              onSaveOrder={handleSaveOrder}
-              onCreateInvoice={handleConvertToInvoice}
-              discount={activeTab.discount}
-              discountRatio={activeTab.discountRatio}
-              onDeliveryInfoChange={(deliveryInfo) =>
-                updateActiveTab({ deliveryInfo })
-              }
-              deliveryInfo={activeTab.deliveryInfo}
-              isEditMode={!!activeTab.documentId}
-              existingOrder={activeTab.sourceOrder || existingOrder}
-              documentType={activeTab.type}
-            />
-          </>
-        ) : (
-          <>
-            <InvoiceItemsList
-              cartItems={activeTab.cartItems}
-              onUpdateItem={updateCartItem}
-              onRemoveItem={removeFromCart}
-              discount={activeTab.discount}
-              onDiscountChange={(discount) => updateActiveTab({ discount })}
-              discountRatio={activeTab.discountRatio}
-              onDiscountRatioChange={(discountRatio) =>
-                updateActiveTab({ discountRatio })
-              }
-              orderNote={activeTab.orderNote}
-              onOrderNoteChange={(orderNote) => updateActiveTab({ orderNote })}
-            />
-            <InvoiceCart
-              cartItems={activeTab.cartItems}
-              selectedCustomer={activeTab.selectedCustomer}
-              onSelectCustomer={handleCustomerSelect}
-              useCOD={activeTab.useCOD}
-              selectedPriceBookId={activeTab.selectedPriceBookId}
-              onSelectPriceBook={handlePriceBookSelect}
-              onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
-              paymentAmount={activeTab.paymentAmount}
-              onPaymentAmountChange={(paymentAmount) =>
-                updateActiveTab({ paymentAmount })
-              }
-              onPaymentMethodsChange={(paymentMethods) =>
-                updateActiveTab({ paymentMethods })
-              }
-              onCreateOrder={handleCreateDocument}
-              onSaveOrder={handleSaveInvoice}
-              onPayment={handlePayment}
-              discount={activeTab.discount}
-              discountRatio={activeTab.discountRatio}
-              onDeliveryInfoChange={(deliveryInfo) =>
-                updateActiveTab({ deliveryInfo })
-              }
-              deliveryInfo={activeTab.deliveryInfo}
-              isEditMode={!!activeTab.documentId}
-              isCreatingFromOrder={!!activeTab.sourceOrderId}
-              existingOrder={activeTab.sourceOrder || existingInvoice}
-              documentType={activeTab.type}
-            />
-          </>
-        )}
-      </div>
-      {showPriceWarning && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-red-600 mb-4">
-              Cảnh báo
-            </h3>
-            <p className="text-gray-700 mb-6">
-              Sản phẩm{" "}
-              <span className="font-semibold">
-                {showPriceWarning.productCode}
-              </span>{" "}
-              Hàng{" "}
-              <span className="font-semibold">
-                {showPriceWarning.productName}
-              </span>{" "}
-              vừa lựa chọn{" "}
-              <span className="text-red-600 font-semibold">
-                không thuộc bảng giá Bảng Giá Chuỗi Đào Matcha.
-              </span>{" "}
-              Bạn có muốn thêm vào đơn hàng?
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => showPriceWarning.onConfirm(false)}
-                className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                Không
-              </button>
-              <button
-                onClick={() => showPriceWarning.onConfirm(true)}
-                className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
-                Có
-              </button>
+        {showPriceWarning && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-red-600 mb-4">
+                Cảnh báo
+              </h3>
+              <p className="text-gray-700 mb-6">
+                Sản phẩm{" "}
+                <span className="font-semibold">
+                  {showPriceWarning.productCode}
+                </span>{" "}
+                Hàng{" "}
+                <span className="font-semibold">
+                  {showPriceWarning.productName}
+                </span>{" "}
+                vừa lựa chọn{" "}
+                <span className="text-red-600 font-semibold">
+                  không thuộc bảng giá Bảng Giá Chuỗi Đào Matcha.
+                </span>{" "}
+                Bạn có muốn thêm vào đơn hàng?
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => showPriceWarning.onConfirm(false)}
+                  className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                  Không
+                </button>
+                <button
+                  onClick={() => showPriceWarning.onConfirm(true)}
+                  className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                  Có
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </PagePermissionGuard>
   );
 }
