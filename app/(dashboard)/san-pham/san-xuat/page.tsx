@@ -148,7 +148,7 @@ export default function ProductionsPage() {
         onPageChange={setPage}
         onLimitChange={setLimit}
         onEdit={(production) => {
-          console.log("Edit production:", production);
+          return production;
         }}
       />
     </div>

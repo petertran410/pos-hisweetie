@@ -19,7 +19,7 @@ export function DashboardHeader() {
   const canViewProducts = usePermission("products", "view");
   const canViewOrders = usePermission("orders", "view");
   const canViewCustomers = usePermission("customers", "view");
-  const canViewReports = usePermission("reports", "view");
+  const canViewCashflows = usePermission("cashflows", "view");
 
   const { isLoading } = usePermissionContext();
 
@@ -220,7 +220,7 @@ export function DashboardHeader() {
               </Link>
             )}
 
-            {canViewReports && (
+            {canViewCashflows && (
               <Link
                 href="/so-quy"
                 className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">

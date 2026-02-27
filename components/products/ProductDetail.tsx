@@ -20,8 +20,6 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  console.log(product);
-
   const deleteProduct = useDeleteProduct();
   const { selectedBranch } = useBranchStore();
 

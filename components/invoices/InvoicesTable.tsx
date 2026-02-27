@@ -371,8 +371,6 @@ export function InvoicesTable({
   const total = data?.total || 0;
   const visibleColumns = columns.filter((col) => col.visible);
 
-  console.log(invoices);
-
   const toggleColumnVisibility = (key: string) => {
     setColumns((prev) =>
       prev.map((col) =>

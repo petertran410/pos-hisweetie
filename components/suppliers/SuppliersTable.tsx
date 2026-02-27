@@ -204,8 +204,6 @@ export function SuppliersTable({
   const total = data?.total || 0;
   const visibleColumns = columns.filter((col) => col.visible);
 
-  console.log(suppliers);
-
   const currentItem = filters.currentItem ?? 0;
   const pageSize = filters.pageSize ?? 15;
 

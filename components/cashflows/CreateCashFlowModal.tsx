@@ -89,8 +89,6 @@ export function CreateCashFlowModal({
   const [selectedPartner, setSelectedPartner] = useState<any>(null);
   const [collectorUserId, setCollectorUserId] = useState<string>("");
 
-  console.log(selectedPartner);
-
   const [showCollectorDropdown, setShowCollectorDropdown] = useState(false);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");

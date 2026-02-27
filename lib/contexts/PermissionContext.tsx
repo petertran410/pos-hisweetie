@@ -120,7 +120,6 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
 
   const parsePermissions = (data: any[]): PermissionsMap => {
     if (!data || !Array.isArray(data)) {
-      console.warn("parsePermissions: data is not an array");
       return {};
     }
 
@@ -180,24 +179,29 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     scope?: string
   ): boolean => {
     const resourcePerms = permissions[resource];
-    if (!resourcePerms || !resourcePerms.actions) return true;
+    if (!resourcePerms || !resourcePerms.actions) {
+      return false;
+    }
 
     const actionPerm = resourcePerms.actions[action];
-    if (!actionPerm) return true;
+    if (!actionPerm) {
+      return false;
+    }
 
     if (typeof actionPerm === "boolean") {
       return actionPerm;
     }
 
     if (scope) {
-      return actionPerm[scope] === true || actionPerm["all"] === true;
+      const result = actionPerm[scope] === true || actionPerm["all"] === true;
+      return result;
     }
 
-    return (
+    const result =
       actionPerm["own"] === true ||
       actionPerm["branch"] === true ||
-      actionPerm["all"] === true
-    );
+      actionPerm["all"] === true;
+    return result;
   };
 
   const checkFieldPermission = (
@@ -206,10 +210,10 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     type: "view" | "edit"
   ): boolean => {
     const resourcePerms = permissions[resource];
-    if (!resourcePerms || !resourcePerms.fields) return true;
+    if (!resourcePerms || !resourcePerms.fields) return false;
 
     const fieldPerm = resourcePerms.fields[field];
-    if (!fieldPerm) return true;
+    if (!fieldPerm) return false;
 
     return type === "view" ? fieldPerm.canView : fieldPerm.canEdit;
   };
@@ -220,19 +224,19 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     type: "view" | "export"
   ): boolean => {
     const resourcePerms = permissions[resource];
-    if (!resourcePerms || !resourcePerms.columns) return true;
+    if (!resourcePerms || !resourcePerms.columns) return false;
 
     const columnPerm = resourcePerms.columns[column];
-    if (!columnPerm) return true;
+    if (!columnPerm) return false;
 
     return type === "view" ? columnPerm.canView : columnPerm.canExport;
   };
 
   const checkButtonPermission = (resource: string, button: string): boolean => {
     const resourcePerms = permissions[resource];
-    if (!resourcePerms || !resourcePerms.buttons) return true;
+    if (!resourcePerms || !resourcePerms.buttons) return false;
 
-    return resourcePerms.buttons[button] !== false;
+    return resourcePerms.buttons[button] === true;
   };
 
   const value: PermissionContextValue = {

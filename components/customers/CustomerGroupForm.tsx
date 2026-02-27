@@ -30,8 +30,6 @@ export function CustomerGroupForm({
   const [description, setDescription] = useState("");
   const { selectedBranch } = useBranchStore();
 
-  console.log(selectedBranch);
-
   const createGroup = useCreateCustomerGroup();
   const updateGroup = useUpdateCustomerGroup();
   const deleteGroup = useDeleteCustomerGroup();

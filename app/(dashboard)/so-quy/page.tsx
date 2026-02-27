@@ -7,13 +7,9 @@ import { CashFlowsSidebar } from "@/components/cashflows/CashFlowsSidebar";
 export default function SoQuyPage() {
   const [filters, setFilters] = useState({});
 
-  const handleCreateReceiptClick = () => {
-    console.log("Create receipt");
-  };
+  const handleCreateReceiptClick = () => {};
 
-  const handleCreatePaymentClick = () => {
-    console.log("Create payment");
-  };
+  const handleCreatePaymentClick = () => {};
 
   return (
     <div className="flex h-full border-t bg-gray-50">
