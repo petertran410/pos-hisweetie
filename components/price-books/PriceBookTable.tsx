@@ -14,7 +14,7 @@ import type { PriceBook } from "@/lib/api/price-books";
 import type { Inventory, Product } from "@/lib/api/products";
 import { toast } from "react-hot-toast";
 import { useBranchStore } from "@/lib/store/branch";
-import { Book } from "lucide-react";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 interface TableProduct {
   id: number;
@@ -237,19 +237,21 @@ export function PriceBookTable({
             className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onCreateNew}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            + Bảng giá
-          </button>
-          <button className="px-4 py-2 border rounded hover:bg-gray-50">
-            Import
-          </button>
-          <button className="px-4 py-2 border rounded hover:bg-gray-50">
-            Xuất file
-          </button>
-        </div>
+        <PermissionGate resource="price_books" action="create">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onCreateNew}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+              + Bảng giá
+            </button>
+            <button className="px-4 py-2 border rounded hover:bg-gray-50">
+              Import
+            </button>
+            <button className="px-4 py-2 border rounded hover:bg-gray-50">
+              Xuất file
+            </button>
+          </div>
+        </PermissionGate>
       </div>
 
       {selectedProductIds.length > 0 && (
@@ -307,6 +309,7 @@ export function PriceBookTable({
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {products.map((product) => {
                 const selectedBranchId =
@@ -356,23 +359,35 @@ export function PriceBookTable({
                             }
                           }}>
                           {isEditing ? (
-                            <input
-                              type="number"
-                              value={editingCell.value}
-                              onChange={(e) =>
-                                handlePriceChange(e, product.id, pb.id)
-                              }
-                              onBlur={handleBlur}
-                              onKeyDown={handleKeyDown}
-                              autoFocus
-                              className="w-full border rounded px-2 py-1 text-right"
-                            />
+                            <PermissionGate
+                              resource="price_books"
+                              action="update">
+                              <input
+                                type="number"
+                                value={editingCell.value}
+                                onChange={(e) =>
+                                  handlePriceChange(e, product.id, pb.id)
+                                }
+                                onBlur={handleBlur}
+                                onKeyDown={handleKeyDown}
+                                autoFocus
+                                className="w-full border rounded px-2 py-1 text-right"
+                              />
+                            </PermissionGate>
                           ) : pb.id !== 0 && !priceExists ? (
-                            <button className="text-blue-600 hover:text-blue-800 text-xl font-bold">
-                              +
-                            </button>
+                            <PermissionGate
+                              resource="price_books"
+                              action="create">
+                              <button className="text-blue-600 hover:text-blue-800 text-xl font-bold">
+                                +
+                              </button>
+                            </PermissionGate>
                           ) : (
-                            <span>{displayPrice.toLocaleString()}</span>
+                            <PermissionGate
+                              resource="price_books"
+                              action="view">
+                              <span>{displayPrice.toLocaleString()}</span>
+                            </PermissionGate>
                           )}
                         </td>
                       );

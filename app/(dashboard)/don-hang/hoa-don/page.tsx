@@ -21,6 +21,7 @@ import {
 import type { Invoice } from "@/lib/types/invoice";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 type FormType = "giao-hang" | "dong-hang" | "loading" | null;
 
@@ -112,43 +113,45 @@ export default function HoaDonPage() {
   };
 
   return (
-    <div className="flex h-full border-t bg-gray-50">
-      <InvoicesSidebar filters={filters} onFiltersChange={setFilters} />
-      <InvoicesTable
-        filters={filters}
-        onCreateClick={handleCreateClick}
-        onEditClick={handleEditClick}
-        onCreateGiaoHang={handleCreateGiaoHang}
-        onCreateDongHang={handleCreateDongHang}
-        onCreateLoading={handleCreateLoading}
-      />
-
-      {formType === "giao-hang" && (
-        <PackingSlipForm
-          onClose={handleCloseForm}
-          onSubmit={handleGiaoHangSubmit}
-          preselectedInvoiceIds={preselectedInvoiceIds}
-          preselectedBranchId={preselectedBranchId}
+    <PagePermissionGuard resource="invoices" action="view">
+      <div className="flex h-full border-t bg-gray-50">
+        <InvoicesSidebar filters={filters} onFiltersChange={setFilters} />
+        <InvoicesTable
+          filters={filters}
+          onCreateClick={handleCreateClick}
+          onEditClick={handleEditClick}
+          onCreateGiaoHang={handleCreateGiaoHang}
+          onCreateDongHang={handleCreateDongHang}
+          onCreateLoading={handleCreateLoading}
         />
-      )}
 
-      {formType === "dong-hang" && (
-        <PackingHangForm
-          onClose={handleCloseForm}
-          onSubmit={handleDongHangSubmit}
-          preselectedInvoiceIds={preselectedInvoiceIds}
-          preselectedBranchId={preselectedBranchId}
-        />
-      )}
+        {formType === "giao-hang" && (
+          <PackingSlipForm
+            onClose={handleCloseForm}
+            onSubmit={handleGiaoHangSubmit}
+            preselectedInvoiceIds={preselectedInvoiceIds}
+            preselectedBranchId={preselectedBranchId}
+          />
+        )}
 
-      {formType === "loading" && (
-        <PackingLoadingForm
-          onClose={handleCloseForm}
-          onSubmit={handleLoadingSubmit}
-          preselectedInvoiceIds={preselectedInvoiceIds}
-          preselectedBranchId={preselectedBranchId}
-        />
-      )}
-    </div>
+        {formType === "dong-hang" && (
+          <PackingHangForm
+            onClose={handleCloseForm}
+            onSubmit={handleDongHangSubmit}
+            preselectedInvoiceIds={preselectedInvoiceIds}
+            preselectedBranchId={preselectedBranchId}
+          />
+        )}
+
+        {formType === "loading" && (
+          <PackingLoadingForm
+            onClose={handleCloseForm}
+            onSubmit={handleLoadingSubmit}
+            preselectedInvoiceIds={preselectedInvoiceIds}
+            preselectedBranchId={preselectedBranchId}
+          />
+        )}
+      </div>
+    </PagePermissionGuard>
   );
 }

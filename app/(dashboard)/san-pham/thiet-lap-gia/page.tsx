@@ -7,6 +7,7 @@ import { PriceBookTable } from "@/components/price-books/PriceBookTable";
 import { PriceBookForm } from "@/components/price-books/PriceBookForm";
 import { PriceBookProductSelector } from "@/components/price-books/PriceBookProductSelector";
 import { useBranchStore } from "@/lib/store/branch";
+import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function PriceBooksPage() {
   const [selectedPriceBookIds, setSelectedPriceBookIds] = useState<number[]>([
@@ -31,40 +32,42 @@ export default function PriceBooksPage() {
   );
 
   return (
-    <div className="flex h-full border-t bg-gray-50">
-      <div className="flex-1 flex overflow-hidden">
-        <PriceBookSidebar
-          priceBooks={priceBooksData?.data}
-          selectedIds={selectedPriceBookIds}
-          onSelectedIdsChange={setSelectedPriceBookIds}
-          onCreateNew={() => setShowForm(true)}
-          selectedCategoryIds={selectedCategoryIds}
-          onSelectedCategoryIdsChange={setSelectedCategoryIds}
-        />
+    <PagePermissionGuard resource="price_books" action="view">
+      <div className="flex h-full border-t bg-gray-50">
+        <div className="flex-1 flex overflow-hidden">
+          <PriceBookSidebar
+            priceBooks={priceBooksData?.data}
+            selectedIds={selectedPriceBookIds}
+            onSelectedIdsChange={setSelectedPriceBookIds}
+            onCreateNew={() => setShowForm(true)}
+            selectedCategoryIds={selectedCategoryIds}
+            onSelectedCategoryIdsChange={setSelectedCategoryIds}
+          />
 
-        <PriceBookTable
-          selectedPriceBooks={selectedPriceBooks}
-          onAddProducts={() => setShowProductSelector(true)}
-          onCreateNew={() => setShowForm(true)}
-          selectedCategoryIds={selectedCategoryIds}
-          branchId={selectedBranch?.id}
-        />
+          <PriceBookTable
+            selectedPriceBooks={selectedPriceBooks}
+            onAddProducts={() => setShowProductSelector(true)}
+            onCreateNew={() => setShowForm(true)}
+            selectedCategoryIds={selectedCategoryIds}
+            branchId={selectedBranch?.id}
+          />
+        </div>
+
+        {showForm && (
+          <PriceBookForm
+            priceBook={null}
+            onClose={() => setShowForm(false)}
+            onSuccess={() => setShowForm(false)}
+          />
+        )}
+
+        {showProductSelector && selectedPriceBooks.length > 0 && (
+          <PriceBookProductSelector
+            priceBookId={selectedPriceBooks[0].id}
+            onClose={() => setShowProductSelector(false)}
+          />
+        )}
       </div>
-
-      {showForm && (
-        <PriceBookForm
-          priceBook={null}
-          onClose={() => setShowForm(false)}
-          onSuccess={() => setShowForm(false)}
-        />
-      )}
-
-      {showProductSelector && selectedPriceBooks.length > 0 && (
-        <PriceBookProductSelector
-          priceBookId={selectedPriceBooks[0].id}
-          onClose={() => setShowProductSelector(false)}
-        />
-      )}
-    </div>
+    </PagePermissionGuard>
   );
 }

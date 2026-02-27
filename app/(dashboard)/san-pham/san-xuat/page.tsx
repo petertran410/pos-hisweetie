@@ -8,6 +8,7 @@ import {
 import { ProductionTable } from "@/components/productions/ProductionTable";
 import { ProductionSidebar } from "@/components/productions/ProductionSidebar";
 import type { ProductionQueryParams } from "@/lib/api/productions";
+import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function ProductionsPage() {
   const [page, setPage] = useState(1);
@@ -18,8 +19,6 @@ export default function ProductionsPage() {
   const [selectedPreset, setSelectedPreset] = useState<string>("this_month");
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
-
-  const { mutate: deleteProduction } = useDeleteProduction();
 
   const buildQueryParams = (): ProductionQueryParams => {
     const params: ProductionQueryParams = {};
@@ -120,37 +119,39 @@ export default function ProductionsPage() {
   }, [selectedBranches, selectedStatuses, fromDate, toDate, limit]);
 
   return (
-    <div className="flex h-full border-t bg-gray-50 w-screen">
-      <ProductionSidebar
-        selectedBranches={selectedBranches}
-        selectedStatuses={selectedStatuses}
-        timeMode={timeMode}
-        selectedPreset={selectedPreset}
-        fromDate={fromDate}
-        toDate={toDate}
-        onBranchesChange={setSelectedBranches}
-        onStatusesChange={setSelectedStatuses}
-        onTimeModeChange={setTimeMode}
-        onPresetChange={setSelectedPreset}
-        onDateRangeChange={(from, to) => {
-          setFromDate(from);
-          setToDate(to);
-        }}
-        onClearAll={clearAllFilters}
-      />
+    <PagePermissionGuard resource="inventory" action="adjust">
+      <div className="flex h-full border-t bg-gray-50 w-screen">
+        <ProductionSidebar
+          selectedBranches={selectedBranches}
+          selectedStatuses={selectedStatuses}
+          timeMode={timeMode}
+          selectedPreset={selectedPreset}
+          fromDate={fromDate}
+          toDate={toDate}
+          onBranchesChange={setSelectedBranches}
+          onStatusesChange={setSelectedStatuses}
+          onTimeModeChange={setTimeMode}
+          onPresetChange={setSelectedPreset}
+          onDateRangeChange={(from, to) => {
+            setFromDate(from);
+            setToDate(to);
+          }}
+          onClearAll={clearAllFilters}
+        />
 
-      <ProductionTable
-        productions={data?.data || []}
-        isLoading={isLoading}
-        total={data?.total || 0}
-        page={page}
-        limit={limit}
-        onPageChange={setPage}
-        onLimitChange={setLimit}
-        onEdit={(production) => {
-          return production;
-        }}
-      />
-    </div>
+        <ProductionTable
+          productions={data?.data || []}
+          isLoading={isLoading}
+          total={data?.total || 0}
+          page={page}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+          onEdit={(production) => {
+            return production;
+          }}
+        />
+      </div>
+    </PagePermissionGuard>
   );
 }

@@ -7,6 +7,7 @@ import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
+import { ActionGuard } from "../permissions/ActionGuard";
 
 interface ProductDetailProps {
   product?: Product;
@@ -739,22 +740,34 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
         </div>
 
         <div className="border-t p-4 flex justify-between">
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="px-4 py-2 text-red-600 border border-red-600 rounded hover:bg-red-50">
-            Xóa
-          </button>
+          <ActionGuard
+            resource="products"
+            itemData={product}
+            actionType="delete">
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 text-red-600 border border-red-600 rounded hover:bg-red-50">
+              Xóa
+            </button>
+          </ActionGuard>
+
           <div className="flex gap-2">
             <button
               onClick={onClose}
               className="px-4 py-2 border rounded hover:bg-gray-50">
               Đóng
             </button>
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              Sửa
-            </button>
+
+            <ActionGuard
+              resource="products"
+              itemData={product}
+              actionType="edit">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                Sửa
+              </button>
+            </ActionGuard>
           </div>
         </div>
       </div>

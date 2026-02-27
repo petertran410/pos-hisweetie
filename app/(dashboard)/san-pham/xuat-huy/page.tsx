@@ -8,6 +8,7 @@ import {
   useDeleteDestruction,
 } from "@/lib/hooks/useDestructions";
 import { useRouter } from "next/navigation";
+import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function DestructionsPage() {
   const router = useRouter();
@@ -32,22 +33,24 @@ export default function DestructionsPage() {
   };
 
   return (
-    <div className="flex h-full border-t bg-gray-50">
-      <DestructionsSidebar onFiltersChange={setFilters} />
+    <PagePermissionGuard resource="inventory" action="adjust">
+      <div className="flex h-full border-t bg-gray-50">
+        <DestructionsSidebar onFiltersChange={setFilters} />
 
-      <DestructionsTable
-        destructions={data?.data || []}
-        isLoading={isLoading}
-        total={data?.total || 0}
-        page={page}
-        limit={limit}
-        onPageChange={setPage}
-        onLimitChange={setLimit}
-        onEdit={(destruction) => {
-          router.push(`/san-pham/xuat-huy/${destruction.id}`);
-        }}
-        onDelete={handleDelete}
-      />
-    </div>
+        <DestructionsTable
+          destructions={data?.data || []}
+          isLoading={isLoading}
+          total={data?.total || 0}
+          page={page}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+          onEdit={(destruction) => {
+            router.push(`/san-pham/xuat-huy/${destruction.id}`);
+          }}
+          onDelete={handleDelete}
+        />
+      </div>
+    </PagePermissionGuard>
   );
 }
