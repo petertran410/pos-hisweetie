@@ -15,6 +15,8 @@ import type { Inventory, Product } from "@/lib/api/products";
 import { toast } from "react-hot-toast";
 import { useBranchStore } from "@/lib/store/branch";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { FieldGuard } from "../permissions/FieldGuard";
+import { useFieldPermissions } from "@/lib/hooks/usePermissions";
 
 interface TableProduct {
   id: number;
@@ -49,6 +51,7 @@ export function PriceBookTable({
     priceBookId: number;
     value: string;
   } | null>(null);
+  const priceFieldPerms = useFieldPermissions("products", ["price"]);
 
   const updateRetailPrice = useUpdateProductRetailPrice();
   const updateProductPrice = useUpdateProductPrice();
@@ -105,6 +108,11 @@ export function PriceBookTable({
   const isLoading = isDefaultOnly ? isLoadingAll : isLoadingPrices;
 
   const handleCellClick = (productId: number, priceBookId: number) => {
+    if (!priceFieldPerms.price?.canEdit) {
+      toast.error("Bạn không có quyền chỉnh sửa giá bán");
+      return;
+    }
+
     const product = products?.find((p) => p.id === productId);
     if (!product) return;
 
@@ -144,14 +152,12 @@ export function PriceBookTable({
 
     try {
       if (editingCell.priceBookId === 0) {
-        // Cập nhật giá bán cơ bản
         await updateRetailPrice.mutateAsync({
           id: editingCell.productId,
           basePrice: newPrice,
         });
         toast.success("Cập nhật giá bán cơ bản thành công");
       } else {
-        // Cập nhật giá trong bảng giá
         await updateProductPrice.mutateAsync({
           priceBookId: editingCell.priceBookId,
           productId: editingCell.productId,
@@ -359,9 +365,10 @@ export function PriceBookTable({
                             }
                           }}>
                           {isEditing ? (
-                            <PermissionGate
-                              resource="price_books"
-                              action="update">
+                            <FieldGuard
+                              resource="products"
+                              field="price"
+                              mode="edit">
                               <input
                                 type="number"
                                 value={editingCell.value}
@@ -373,7 +380,7 @@ export function PriceBookTable({
                                 autoFocus
                                 className="w-full border rounded px-2 py-1 text-right"
                               />
-                            </PermissionGate>
+                            </FieldGuard>
                           ) : pb.id !== 0 && !priceExists ? (
                             <PermissionGate
                               resource="price_books"
@@ -383,11 +390,17 @@ export function PriceBookTable({
                               </button>
                             </PermissionGate>
                           ) : (
-                            <PermissionGate
-                              resource="price_books"
-                              action="view">
-                              <span>{displayPrice.toLocaleString()}</span>
-                            </PermissionGate>
+                            <FieldGuard
+                              resource="products"
+                              field="price"
+                              mode="view">
+                              <span
+                                onClick={() =>
+                                  handleCellClick(product.id, pb.id)
+                                }>
+                                {displayPrice.toLocaleString()}
+                              </span>
+                            </FieldGuard>
                           )}
                         </td>
                       );
