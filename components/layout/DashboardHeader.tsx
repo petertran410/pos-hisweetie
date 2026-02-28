@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
@@ -26,82 +26,92 @@ export function DashboardHeader() {
     router.push("/login");
   };
 
-  const productSubmenu = [
-    {
-      title: "Hàng hóa",
-      items: [
-        {
-          label: "Danh sách hàng hóa",
-          href: "/san-pham/danh-sach",
-          permission: "products.view",
-        },
-        {
-          label: "Thiết lập giá",
-          href: "/san-pham/thiet-lap-gia",
-          permission: "price_books.view",
-        },
-      ],
-    },
-    {
-      title: "Kho hàng",
-      items: [
-        {
-          label: "Chuyển hàng",
-          href: "/san-pham/chuyen-hang",
-          permission: "inventory.view",
-        },
-        {
-          label: "Sản xuất",
-          href: "/san-pham/san-xuat",
-          permission: "inventory.adjust",
-        },
-        {
-          label: "Xuất hủy",
-          href: "/san-pham/xuat-huy",
-          permission: "inventory.adjust",
-        },
-      ],
-    },
-    {
-      title: "Nhập hàng",
-      items: [
-        {
-          label: "Nhà cung cấp",
-          href: "/san-pham/nha-cung-cap",
-          permission: "suppliers.view",
-        },
-        {
-          label: "Đặt hàng nhập",
-          href: "/san-pham/dat-hang-nhap",
-          permission: "suppliers.view",
-        },
-        {
-          label: "Nhập hàng",
-          href: "/san-pham/nhap-hang",
-          permission: "suppliers.view",
-        },
-      ],
-    },
-  ];
+  const productSubmenu = useMemo(
+    () => [
+      {
+        title: "Hàng hóa",
+        items: [
+          {
+            label: "Danh sách hàng hóa",
+            href: "/san-pham/danh-sach",
+            permission: "products:view",
+          },
+          {
+            label: "Thiết lập giá",
+            href: "/san-pham/thiet-lap-gia",
+            permission: "price_books:view",
+          },
+        ],
+      },
+      {
+        title: "Kho hàng",
+        items: [
+          {
+            label: "Chuyển hàng",
+            href: "/san-pham/chuyen-hang",
+            permission: "transfers:view",
+          },
+          {
+            label: "Sản xuất",
+            href: "/san-pham/san-xuat",
+            permission: "productions:view",
+          },
+          {
+            label: "Xuất hủy",
+            href: "/san-pham/xuat-huy",
+            permission: "destructions:view",
+          },
+        ],
+      },
+      {
+        title: "Nhập hàng",
+        items: [
+          {
+            label: "Nhà cung cấp",
+            href: "/san-pham/nha-cung-cap",
+            permission: "suppliers:view",
+          },
+          {
+            label: "Đặt hàng nhập",
+            href: "/san-pham/dat-hang-nhap",
+            permission: "order_suppliers:view",
+          },
+          {
+            label: "Nhập hàng",
+            href: "/san-pham/nhap-hang",
+            permission: "purchase_orders:view",
+          },
+        ],
+      },
+    ],
+    []
+  );
 
-  const orderSubmenu = [
-    {
-      label: "Đặt hàng",
-      href: "/don-hang/dat-hang",
-      permission: "orders.view",
-    },
-    {
-      label: "Hóa đơn",
-      href: "/don-hang/hoa-don",
-      permission: "invoices.view",
-    },
-    {
-      label: "Trả hàng",
-      href: "/don-hang/tra-hang",
-      permission: "orders.view",
-    },
-    { label: "Báo đơn", href: "/don-hang/bao-don", permission: "orders.view" },
-  ];
+  const orderSubmenu = useMemo(
+    () => [
+      {
+        label: "Đặt hàng",
+        href: "/don-hang/dat-hang",
+        permission: "orders:view",
+      },
+      {
+        label: "Hóa đơn",
+        href: "/don-hang/hoa-don",
+        permission: "invoices:view",
+      },
+      {
+        label: "Trả hàng",
+        href: "/don-hang/tra-hang",
+        permission: "orders:view",
+      },
+      {
+        label: "Báo đơn",
+        href: "/don-hang/bao-don",
+        permission: "packing_slips:view",
+      },
+    ],
+    []
+  );
 
   return (
     <header className="text-black">
@@ -131,20 +141,20 @@ export function DashboardHeader() {
                   <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
                     <div className="flex gap-6 p-6">
                       {productSubmenu.map((section) => (
-                        <div key={section.title} className="min-w-[150px]">
-                          <h3 className="font-semibold text-md px-3 mb-3 text-gray-600">
+                        <div key={section.title}>
+                          <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
                             {section.title}
-                          </h3>
-                          <ul className="space-y-2">
+                          </div>
+                          <ul>
                             {section.items.map((item) => (
                               <PermissionGate
                                 key={item.href}
-                                resource={item.permission.split(".")[0]}
-                                action={item.permission.split(".")[1]}>
+                                resource={item.permission.split(":")[0]}
+                                action={item.permission.split(":")[1]}>
                                 <li>
                                   <Link
                                     href={item.href}
-                                    className="block px-3 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                                    className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
                                     {item.label}
                                   </Link>
                                 </li>
