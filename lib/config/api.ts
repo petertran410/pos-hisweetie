@@ -25,6 +25,24 @@ const handleApiError = async (res: Response) => {
     throw new Error("Phiên đăng nhập đã hết hạn");
   }
 
+  if (res.status === 403) {
+    const errorText = await res.text();
+    let errorMessage = "Bạn không có quyền thực hiện thao tác này";
+
+    try {
+      const errorJson = JSON.parse(errorText);
+      if (typeof errorJson.message === "string") {
+        errorMessage = errorJson.message;
+      }
+    } catch {}
+
+    if (typeof window !== "undefined") {
+      const { toast } = await import("sonner");
+      toast.error(errorMessage);
+    }
+    throw new Error(errorMessage);
+  }
+
   const errorText = await res.text();
   let errorMessage = "Có lỗi xảy ra";
 
@@ -37,7 +55,7 @@ const handleApiError = async (res: Response) => {
     } else if (Array.isArray(errorJson.message)) {
       errorMessage = errorJson.message.join(", ");
     }
-  } catch (e) {
+  } catch {
     errorMessage = errorText || "Có lỗi xảy ra";
   }
 

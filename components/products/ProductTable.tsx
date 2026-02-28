@@ -9,6 +9,7 @@ import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface ProductTableProps {
   selectedParentName?: string;
@@ -286,6 +287,10 @@ export function ProductTable({
   const [productType, setProductType] = useState<number | null>(null);
   const [searchDebounced, setSearchDebounced] = useState(search);
 
+  const canCreate = usePermission("products", "create");
+  const canUpdate = usePermission("products", "update");
+  const canDelete = usePermission("products", "delete");
+
   const handleCreateProduct = (type: number) => {
     setProductType(type);
     setShowCreateForm(true);
@@ -363,54 +368,41 @@ export function ProductTable({
     <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
       <div className="border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <PermissionGate resource="products" action="create">
+          {canCreate && (
             <div className="relative">
               <button
                 onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
-                + Tạo mới
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showCreateDropdown ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
+                <span>➕</span>
+                <span>Tạo mới</span>
               </button>
 
               {showCreateDropdown && (
-                <div className="absolute top-full left-0 mt-1 bg-white border rounded shadow-lg z-50 w-48">
+                <div className="absolute right-0 top-full mt-1 bg-white border rounded shadow-lg min-w-[200px] z-50">
                   <button
                     onClick={() => handleCreateProduct(2)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50">
                     Hàng hóa
                   </button>
                   <button
                     onClick={() => handleCreateProduct(3)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50">
                     Dịch vụ
                   </button>
                   <button
                     onClick={() => handleCreateProduct(1)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50">
                     Combo - đóng gói
                   </button>
                   <button
                     onClick={() => handleCreateProduct(4)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50">
                     Hàng sản xuất
                   </button>
                 </div>
               )}
             </div>
-          </PermissionGate>
+          )}
           <input
             type="text"
             placeholder="Theo mã, tên hàng"
@@ -543,14 +535,14 @@ export function ProductTable({
         </div>
       </div>
 
-      {selectedProduct && (
+      {selectedProduct && canUpdate && (
         <ProductDetail
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
         />
       )}
 
-      {showCreateForm && productType === 1 && (
+      {showCreateForm && canCreate && productType === 1 && (
         <ComboProductForm
           onClose={() => {
             setShowCreateForm(false);
@@ -563,7 +555,7 @@ export function ProductTable({
         />
       )}
 
-      {showCreateForm && productType === 4 && (
+      {showCreateForm && canCreate && productType === 4 && (
         <ManufacturingProductForm
           onClose={() => {
             setShowCreateForm(false);
@@ -577,6 +569,7 @@ export function ProductTable({
       )}
 
       {showCreateForm &&
+        canCreate &&
         productType &&
         productType !== 1 &&
         productType !== 4 && (

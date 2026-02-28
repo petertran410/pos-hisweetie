@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { BranchSelector } from "./BranchSelector";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { usePermission } from "@/lib/hooks/usePermissions";
-import { usePermissionContext } from "@/lib/contexts/PermissionContext";
 
 export function DashboardHeader() {
   const router = useRouter();
@@ -20,26 +19,6 @@ export function DashboardHeader() {
   const canViewOrders = usePermission("orders", "view");
   const canViewCustomers = usePermission("customers", "view");
   const canViewCashflows = usePermission("cashflows", "view");
-
-  const { isLoading } = usePermissionContext();
-
-  if (isLoading) {
-    return (
-      <header className="bg-gray-200 h-14">
-        <div className="flex items-center justify-between h-full px-4">
-          <div className="flex items-center gap-8">
-            <div className="font-bold text-lg">Hisweetie</div>
-            <div className="flex gap-2">
-              <div className="w-20 h-8 bg-gray-300 animate-pulse rounded"></div>
-              <div className="w-20 h-8 bg-gray-300 animate-pulse rounded"></div>
-              <div className="w-20 h-8 bg-gray-300 animate-pulse rounded"></div>
-            </div>
-          </div>
-          <div className="w-32 h-8 bg-gray-300 animate-pulse rounded"></div>
-        </div>
-      </header>
-    );
-  }
 
   const handleLogout = () => {
     clearAuth();
