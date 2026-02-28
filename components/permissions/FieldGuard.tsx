@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, cloneElement, isValidElement } from "react";
-import { useFieldPermissions } from "@/lib/hooks/usePermissions";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface FieldGuardProps {
   resource: string;
@@ -15,26 +15,17 @@ export function FieldGuard({
   resource,
   field,
   mode = "edit",
-  hideWhenNoPermission = true,
+  hideWhenNoPermission = false,
   children,
 }: FieldGuardProps) {
-  const fieldPerms = useFieldPermissions(resource, [field]);
-  const fieldPerm = fieldPerms[field];
+  const canUpdate = usePermission(resource, "update");
 
-  if (!fieldPerm) {
-    return hideWhenNoPermission ? null : <>{children}</>;
-  }
-
-  if (mode === "view" && !fieldPerm.canView) {
-    return hideWhenNoPermission ? null : <>{children}</>;
-  }
-
-  if (mode === "edit") {
-    if (!fieldPerm.canView) {
-      return hideWhenNoPermission ? null : <>{children}</>;
+  if (mode === "edit" && !canUpdate) {
+    if (hideWhenNoPermission) {
+      return null;
     }
 
-    if (!fieldPerm.canEdit && isValidElement(children)) {
+    if (isValidElement(children)) {
       return cloneElement(children as React.ReactElement<any>, {
         disabled: true,
         readOnly: true,

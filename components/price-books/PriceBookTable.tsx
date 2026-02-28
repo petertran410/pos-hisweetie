@@ -16,7 +16,7 @@ import { toast } from "react-hot-toast";
 import { useBranchStore } from "@/lib/store/branch";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { FieldGuard } from "../permissions/FieldGuard";
-import { useFieldPermissions } from "@/lib/hooks/usePermissions";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface TableProduct {
   id: number;
@@ -51,7 +51,13 @@ export function PriceBookTable({
     priceBookId: number;
     value: string;
   } | null>(null);
-  const priceFieldPerms = useFieldPermissions("products", ["price"]);
+
+  const canCreate = usePermission("price_books", "create");
+  const canUpdate = usePermission("price_books", "update");
+  const canDelete = usePermission("price_books", "delete");
+  const canCreateProduct = usePermission("products", "create");
+  const canViewProduct = usePermission("products", "view");
+  const canUpdatePrice = usePermission("products", "update");
 
   const updateRetailPrice = useUpdateProductRetailPrice();
   const updateProductPrice = useUpdateProductPrice();
@@ -108,7 +114,7 @@ export function PriceBookTable({
   const isLoading = isDefaultOnly ? isLoadingAll : isLoadingPrices;
 
   const handleCellClick = (productId: number, priceBookId: number) => {
-    if (!priceFieldPerms.price?.canEdit) {
+    if (!canUpdatePrice) {
       toast.error("Bạn không có quyền chỉnh sửa giá bán");
       return;
     }
@@ -118,13 +124,13 @@ export function PriceBookTable({
 
     const currentPrice =
       priceBookId === 0
-        ? product.basePrice
-        : product.prices[priceBookId] || product.basePrice;
+        ? product.basePrice.toString()
+        : (product.prices[priceBookId] || 0).toString();
 
     setEditingCell({
       productId,
       priceBookId,
-      value: currentPrice.toString(),
+      value: currentPrice,
     });
   };
 
@@ -245,11 +251,13 @@ export function PriceBookTable({
         </div>
         <PermissionGate resource="price_books" action="create">
           <div className="flex items-center gap-2">
-            <button
-              onClick={onCreateNew}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              + Bảng giá
-            </button>
+            {canCreate && (
+              <button
+                onClick={onCreateNew}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                + Bảng giá
+              </button>
+            )}
             <button className="px-4 py-2 border rounded hover:bg-gray-50">
               Import
             </button>
@@ -265,9 +273,11 @@ export function PriceBookTable({
           <span className="text-sm">
             Đã chọn {selectedProductIds.length} sản phẩm
           </span>
-          <button className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
-            Xóa khỏi bảng giá
-          </button>
+          {canDelete && (
+            <button className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
+              Xóa khỏi bảng giá
+            </button>
+          )}
         </div>
       )}
 
@@ -280,7 +290,7 @@ export function PriceBookTable({
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <p className="text-gray-500 mb-2">Không có sản phẩm nào</p>
-              {!isDefaultOnly && onAddProducts && (
+              {canCreateProduct && !isDefaultOnly && onAddProducts && (
                 <button
                   onClick={onAddProducts}
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
@@ -364,43 +374,31 @@ export function PriceBookTable({
                               handleCellClick(product.id, pb.id);
                             }
                           }}>
-                          {isEditing ? (
-                            <FieldGuard
-                              resource="products"
-                              field="price"
-                              mode="edit">
-                              <input
-                                type="number"
-                                value={editingCell.value}
-                                onChange={(e) =>
-                                  handlePriceChange(e, product.id, pb.id)
-                                }
-                                onBlur={handleBlur}
-                                onKeyDown={handleKeyDown}
-                                autoFocus
-                                className="w-full border rounded px-2 py-1 text-right"
-                              />
-                            </FieldGuard>
-                          ) : pb.id !== 0 && !priceExists ? (
-                            <PermissionGate
-                              resource="price_books"
-                              action="create">
-                              <button className="text-blue-600 hover:text-blue-800 text-xl font-bold">
-                                +
-                              </button>
-                            </PermissionGate>
+                          {isEditing && canUpdate ? (
+                            <input
+                              type="number"
+                              value={editingCell.value}
+                              onChange={(e) =>
+                                handlePriceChange(e, product.id, pb.id)
+                              }
+                              onBlur={handleBlur}
+                              onKeyDown={handleKeyDown}
+                              autoFocus
+                              className="w-full border rounded px-2 py-1 text-right"
+                            />
+                          ) : pb.id !== 0 && !priceExists && canCreate ? (
+                            <button className="text-blue-600 hover:text-blue-800 text-xl font-bold">
+                              +
+                            </button>
+                          ) : canViewProduct ? (
+                            <span
+                              onClick={() =>
+                                handleCellClick(product.id, pb.id)
+                              }>
+                              {displayPrice.toLocaleString()}
+                            </span>
                           ) : (
-                            <FieldGuard
-                              resource="products"
-                              field="price"
-                              mode="view">
-                              <span
-                                onClick={() =>
-                                  handleCellClick(product.id, pb.id)
-                                }>
-                                {displayPrice.toLocaleString()}
-                              </span>
-                            </FieldGuard>
+                            <span>Không có quyền xem giá</span>
                           )}
                         </td>
                       );

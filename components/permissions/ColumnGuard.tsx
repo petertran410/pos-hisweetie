@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { useColumnPermissions } from "@/lib/hooks/usePermissions";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface ColumnGuardProps {
   resource: string;
@@ -10,10 +10,9 @@ interface ColumnGuardProps {
 }
 
 export function ColumnGuard({ resource, column, children }: ColumnGuardProps) {
-  const columnPerms = useColumnPermissions(resource, [column]);
-  const columnPerm = columnPerms[column];
+  const canView = usePermission(resource, "view");
 
-  if (!columnPerm || !columnPerm.canView) {
+  if (!canView) {
     return null;
   }
 

@@ -8,7 +8,6 @@ import type { Product } from "@/lib/api/products";
 import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
-import { PermissionGate } from "../permissions/PermissionGate";
 import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface ProductTableProps {
