@@ -8,6 +8,7 @@ import { usersApi } from "@/lib/api/users";
 import { toast } from "sonner";
 
 interface CustomerGroupFormProps {
+  isOpen: boolean;
   group?: any;
   onClose: () => void;
 }
@@ -29,7 +30,11 @@ const OPERATORS = [
   { value: "<=", label: "<=" },
 ];
 
-export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
+export function CustomerGroupForm({
+  isOpen,
+  group,
+  onClose,
+}: CustomerGroupFormProps) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"info" | "advanced">("info");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -60,6 +65,29 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
     queryKey: ["users"],
     queryFn: () => usersApi.getUsers(),
   });
+
+  // Reset form when group changes
+  useEffect(() => {
+    if (group) {
+      setName(group.name || "");
+      setDiscount(group.discount?.toString() || "");
+      setDescription(group.description || "");
+      setConditions(group.autoAddConditions || []);
+      setAutoUpdateMode(group.autoUpdateMode || "add_by_condition");
+      setAutoExecute(group.autoExecute || false);
+      setSelectedUserIds(group.allowedUserIds || []);
+    } else {
+      // Reset to default when creating new
+      setName("");
+      setDiscount("");
+      setDescription("");
+      setConditions([]);
+      setAutoUpdateMode("add_by_condition");
+      setAutoExecute(false);
+      setSelectedUserIds([]);
+    }
+    setActiveTab("info");
+  }, [group, isOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -105,6 +133,7 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customer-groups"] });
       toast.success("Xóa nhóm khách hàng thành công");
+      onClose();
     },
     onError: (error: any) => {
       toast.error(error.message || "Không thể xóa nhóm khách hàng");
@@ -142,11 +171,7 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
         "Bạn có chắc chắn muốn xóa nhóm khách hàng này? Hành động này không thể hoàn tác!"
       )
     ) {
-      deleteGroup.mutate(group.id, {
-        onSuccess: () => {
-          onClose();
-        },
-      });
+      deleteGroup.mutate(group.id);
     }
   };
 
@@ -174,6 +199,18 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
         : [...prev, userId]
     );
   };
+
+  const removeUser = (userId: number) => {
+    setSelectedUserIds((prev) => prev.filter((id) => id !== userId));
+  };
+
+  // Get selected users data
+  const selectedUsers = usersData?.filter((user: any) =>
+    selectedUserIds.includes(user.id)
+  );
+
+  // Không render gì nếu isOpen = false
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -283,30 +320,38 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
                   Chỉ những user được chọn mới có thể xem và thao tác với khách
                   hàng thuộc nhóm này
                 </p>
-                <div className="relative" ref={dropdownRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowUserDropdown(!showUserDropdown)}
-                    className="w-full border rounded px-3 py-2 text-left flex items-center justify-between">
-                    <span className="text-sm">
-                      {selectedUserIds.length === 0
-                        ? "Tất cả user (không giới hạn)"
-                        : `${selectedUserIds.length} user được chọn`}
-                    </span>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
 
+                <div className="relative" ref={dropdownRef}>
+                  {/* Dropdown button với tags bên trong */}
+                  <div
+                    className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
+                    onClick={() => setShowUserDropdown(true)}>
+                    {/* Tags hiển thị user đã chọn */}
+                    {selectedUsers && selectedUsers.length > 0 ? (
+                      selectedUsers.map((user: any) => (
+                        <span
+                          key={user.id}
+                          className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                          {user.name}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeUser(user.id);
+                            }}
+                            className="hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center">
+                            ×
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-gray-400 text-sm">
+                        Tất cả user (không giới hạn)
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Dropdown danh sách user */}
                   {showUserDropdown && (
                     <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       <div className="p-2 space-y-1">
@@ -473,7 +518,7 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
                 type="button"
                 onClick={handleDelete}
                 disabled={deleteGroup.isPending}
-                className="px-4 py-2 border border-red-300 text-red-600 rounded hover:bg-red-50">
+                className="px-4 py-2 border border-red-300 text-red-600 rounded hover:bg-red-50 disabled:opacity-50">
                 {deleteGroup.isPending ? "Đang xóa..." : "Xóa"}
               </button>
               <div className="flex gap-2">
@@ -487,7 +532,7 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
                   type="submit"
                   onClick={handleSubmit}
                   disabled={updateGroup.isPending}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
                   {updateGroup.isPending ? "Đang lưu..." : "Cập nhật"}
                 </button>
               </div>
@@ -504,7 +549,7 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
                 type="submit"
                 onClick={handleSubmit}
                 disabled={createGroup.isPending}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
                 {createGroup.isPending ? "Đang tạo..." : "Lưu"}
               </button>
             </div>
