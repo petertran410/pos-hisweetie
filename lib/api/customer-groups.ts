@@ -36,6 +36,14 @@ export interface UpdateCustomerGroupDto {
   name?: string;
   discount?: number;
   description?: string;
+  allowedUserIds?: number[];
+  autoAddConditions?: Array<{
+    field: string;
+    operator: string;
+    value: string | number;
+  }>;
+  autoUpdateMode?: string;
+  autoExecute?: boolean;
 }
 
 export const customerGroupsApi = {
