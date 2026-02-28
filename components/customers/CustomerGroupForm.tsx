@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { customerGroupsApi } from "@/lib/api/customer-groups";
@@ -32,6 +32,7 @@ const OPERATORS = [
 export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"info" | "advanced">("info");
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [name, setName] = useState(group?.name || "");
   const [discount, setDiscount] = useState(group?.discount?.toString() || "");
@@ -50,7 +51,6 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
   );
   const [autoExecute, setAutoExecute] = useState(group?.autoExecute || false);
 
-  // User permissions
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>(
     group?.allowedUserIds || []
   );
@@ -60,6 +60,21 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
     queryKey: ["users"],
     queryFn: () => usersApi.getUsers(),
   });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowUserDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const createGroup = useMutation({
     mutationFn: customerGroupsApi.create,
@@ -169,6 +184,7 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
             {group ? "Chỉnh sửa nhóm khách hàng" : "Thêm nhóm khách hàng"}
           </h2>
           <button
+            type="button"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600">
             <X className="w-6 h-6" />
@@ -179,6 +195,7 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
         <div className="border-b flex-shrink-0">
           <div className="flex px-6">
             <button
+              type="button"
               onClick={() => setActiveTab("info")}
               className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "info"
@@ -188,6 +205,7 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
               Thông tin
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab("advanced")}
               className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "advanced"
@@ -265,7 +283,7 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
                   Chỉ những user được chọn mới có thể xem và thao tác với khách
                   hàng thuộc nhóm này
                 </p>
-                <div className="relative">
+                <div className="relative" ref={dropdownRef}>
                   <button
                     type="button"
                     onClick={() => setShowUserDropdown(!showUserDropdown)}
@@ -376,74 +394,72 @@ export function CustomerGroupForm({ group, onClose }: CustomerGroupFormProps) {
                 </div>
               </div>
 
-              {/* Radio options - chỉ hiển thị khi có điều kiện */}
-              {conditions.length > 0 && (
-                <>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="autoUpdateMode"
-                        value="add_by_condition"
-                        checked={autoUpdateMode === "add_by_condition"}
-                        onChange={(e) => setAutoUpdateMode(e.target.value)}
-                      />
-                      <span className="text-sm">
-                        Thêm khách hàng vào nhóm theo điều kiện
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="autoUpdateMode"
-                        value="refresh_by_condition"
-                        checked={autoUpdateMode === "refresh_by_condition"}
-                        onChange={(e) => setAutoUpdateMode(e.target.value)}
-                      />
-                      <span className="text-sm">
-                        Cập nhật lại danh sách theo điều kiện
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="autoUpdateMode"
-                        value="no_update"
-                        checked={autoUpdateMode === "no_update"}
-                        onChange={(e) => setAutoUpdateMode(e.target.value)}
-                      />
-                      <span className="text-sm">
-                        Không cập nhật danh sách khách hàng
-                      </span>
-                    </label>
-                  </div>
+              {/* Radio options - LUÔN HIỂN THỊ */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="autoUpdateMode"
+                    value="add_by_condition"
+                    checked={autoUpdateMode === "add_by_condition"}
+                    onChange={(e) => setAutoUpdateMode(e.target.value)}
+                  />
+                  <span className="text-sm">
+                    Thêm khách hàng vào nhóm theo điều kiện
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="autoUpdateMode"
+                    value="refresh_by_condition"
+                    checked={autoUpdateMode === "refresh_by_condition"}
+                    onChange={(e) => setAutoUpdateMode(e.target.value)}
+                  />
+                  <span className="text-sm">
+                    Cập nhật lại danh sách theo điều kiện
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="autoUpdateMode"
+                    value="no_update"
+                    checked={autoUpdateMode === "no_update"}
+                    onChange={(e) => setAutoUpdateMode(e.target.value)}
+                  />
+                  <span className="text-sm">
+                    Không cập nhật danh sách khách hàng
+                  </span>
+                </label>
+              </div>
 
-                  {/* Checkbox tự động thực hiện */}
-                  <div>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={autoExecute}
-                        onChange={(e) => setAutoExecute(e.target.checked)}
-                      />
-                      <span className="text-sm flex items-center gap-1">
-                        Hệ thống thực hiện tự động
-                        <svg
-                          className="w-4 h-4 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      </span>
-                    </label>
-                  </div>
-                </>
+              {/* Checkbox tự động thực hiện - CHỈ HIỂN THỊ KHI CÓ ĐIỀU KIỆN */}
+              {conditions.length > 0 && (
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={autoExecute}
+                      onChange={(e) => setAutoExecute(e.target.checked)}
+                    />
+                    <span className="text-sm flex items-center gap-1">
+                      Hệ thống thực hiện tự động
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </span>
+                  </label>
+                </div>
               )}
             </div>
           )}
