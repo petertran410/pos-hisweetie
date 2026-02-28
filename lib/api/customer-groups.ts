@@ -5,6 +5,14 @@ export interface CustomerGroup {
   name: string;
   description?: string;
   discount?: number;
+  allowedUserIds?: number[];
+  autoAddConditions?: Array<{
+    field: string;
+    operator: string;
+    value: string | number;
+  }>;
+  autoUpdateMode?: string;
+  autoExecute?: boolean;
   _count?: {
     customerGroupDetails: number;
   };
@@ -14,6 +22,14 @@ export interface CreateCustomerGroupDto {
   name: string;
   discount?: number;
   description?: string;
+  allowedUserIds?: number[];
+  autoAddConditions?: Array<{
+    field: string;
+    operator: string;
+    value: string | number;
+  }>;
+  autoUpdateMode?: string;
+  autoExecute?: boolean;
 }
 
 export interface UpdateCustomerGroupDto {
