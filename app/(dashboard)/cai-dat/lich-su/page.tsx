@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AuditLogsTable } from "@/components/admin/AuditLogsTable";
 import { useQuery } from "@tanstack/react-query";
 import { auditLogsApi } from "@/lib/api/audit-logs";
-import { Search, Calendar } from "lucide-react";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 export default function AuditLogsPage() {
   const [page, setPage] = useState(1);
@@ -16,6 +16,8 @@ export default function AuditLogsPage() {
     startDate: "",
     endDate: "",
   });
+
+  const canView = usePermission("audit_logs", "view");
 
   const { data, isLoading } = useQuery({
     queryKey: ["audit-logs", filters, page, limit],

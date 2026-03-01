@@ -35,7 +35,7 @@ export default function SettingsLayout({
       href: "/cai-dat/lich-su",
       label: "Lịch sử thao tác",
       icon: Clock,
-      permission: { resource: "audit-logs", action: "view" },
+      permission: { resource: "audit_logs", action: "view" },
     },
   ];
 
