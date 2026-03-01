@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { useState } from "react";
 import { useAuthStore } from "@/lib/store/auth";
-import { usePageTracking } from "@/lib/hooks/usePageTracking";
+import { PageTrackingProvider } from "@/components/providers/PageTrackingProvider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -29,12 +29,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
     );
   }
 
-  usePageTracking();
-
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster position="top-right" />
-      {children}
+      <PageTrackingProvider>
+        <Toaster position="top-right" />
+        {children}
+      </PageTrackingProvider>
     </QueryClientProvider>
   );
 }
