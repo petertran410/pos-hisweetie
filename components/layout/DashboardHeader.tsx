@@ -6,19 +6,12 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
 import { BranchSelector } from "./BranchSelector";
-import { PermissionGate } from "@/components/permissions/PermissionGate";
-import { usePermission } from "@/lib/hooks/usePermissions";
 
 export function DashboardHeader() {
   const router = useRouter();
   const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, clearAuth } = useAuthStore();
-
-  const canViewProducts = usePermission("products", "view");
-  const canViewOrders = usePermission("orders", "view");
-  const canViewCustomers = usePermission("customers", "view");
-  const canViewCashflows = usePermission("cashflows", "view");
 
   const handleLogout = () => {
     clearAuth();
@@ -34,12 +27,10 @@ export function DashboardHeader() {
           {
             label: "Danh sách hàng hóa",
             href: "/san-pham/danh-sach",
-            permission: "products:view",
           },
           {
             label: "Thiết lập giá",
             href: "/san-pham/thiet-lap-gia",
-            permission: "price_books:view",
           },
         ],
       },
@@ -49,17 +40,14 @@ export function DashboardHeader() {
           {
             label: "Chuyển hàng",
             href: "/san-pham/chuyen-hang",
-            permission: "transfers:view",
           },
           {
             label: "Sản xuất",
             href: "/san-pham/san-xuat",
-            permission: "productions:view",
           },
           {
             label: "Xuất hủy",
             href: "/san-pham/xuat-huy",
-            permission: "destructions:view",
           },
         ],
       },
@@ -69,17 +57,14 @@ export function DashboardHeader() {
           {
             label: "Nhà cung cấp",
             href: "/san-pham/nha-cung-cap",
-            permission: "suppliers:view",
           },
           {
             label: "Đặt hàng nhập",
             href: "/san-pham/dat-hang-nhap",
-            permission: "order_suppliers:view",
           },
           {
             label: "Nhập hàng",
             href: "/san-pham/nhap-hang",
-            permission: "purchase_orders:view",
           },
         ],
       },
@@ -92,22 +77,18 @@ export function DashboardHeader() {
       {
         label: "Đặt hàng",
         href: "/don-hang/dat-hang",
-        permission: "orders:view",
       },
       {
         label: "Hóa đơn",
         href: "/don-hang/hoa-don",
-        permission: "invoices:view",
       },
       {
         label: "Trả hàng",
         href: "/don-hang/tra-hang",
-        permission: "orders:view",
       },
       {
         label: "Báo đơn",
         href: "/don-hang/bao-don",
-        permission: "packing_slips:view",
       },
     ],
     []
@@ -128,131 +109,109 @@ export function DashboardHeader() {
               Tổng quan
             </Link>
 
-            {canViewProducts && (
-              <div
-                className="relative"
-                onMouseEnter={() => setHoveredMenu("products")}
-                onMouseLeave={() => setHoveredMenu(null)}>
-                <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
-                  Hàng hóa
-                </button>
-
-                {hoveredMenu === "products" && (
-                  <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
-                    <div className="flex gap-6 p-6">
-                      {productSubmenu.map((section) => (
-                        <div key={section.title}>
-                          <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
-                            {section.title}
-                          </div>
-                          <ul>
-                            {section.items.map((item) => (
-                              <PermissionGate
-                                key={item.href}
-                                resource={item.permission.split(":")[0]}
-                                action={item.permission.split(":")[1]}>
-                                <li>
-                                  <Link
-                                    href={item.href}
-                                    className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
-                                    {item.label}
-                                  </Link>
-                                </li>
-                              </PermissionGate>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {canViewOrders && (
-              <div
-                className="relative"
-                onMouseEnter={() => setHoveredMenu("orders")}
-                onMouseLeave={() => setHoveredMenu(null)}>
-                <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
-                  Đơn hàng
-                </button>
-
-                {hoveredMenu === "orders" && (
-                  <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
-                    <ul className="px-2 py-2">
-                      {orderSubmenu.map((item) => (
-                        <PermissionGate
-                          key={item.href}
-                          resource={item.permission.split(".")[0]}
-                          action={item.permission.split(".")[1]}>
-                          <li>
-                            <Link
-                              href={item.href}
-                              className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
-                              {item.label}
-                            </Link>
-                          </li>
-                        </PermissionGate>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {canViewCustomers && (
-              <Link
-                href="/khach-hang"
-                className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
-                Khách hàng
-              </Link>
-            )}
-
-            {canViewCashflows && (
-              <Link
-                href="/so-quy"
-                className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
-                Sổ quỹ
-              </Link>
-            )}
-          </nav>
-        </div>
-
-        <div className="ml-auto px-4 flex items-center gap-4">
-          <PermissionGate resource="orders" action="create">
             <div
               className="relative"
-              onMouseEnter={() => setHoveredMenu("pos")}
+              onMouseEnter={() => setHoveredMenu("products")}
               onMouseLeave={() => setHoveredMenu(null)}>
-              <button className="px-4 py-4 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
-                🛒 Bán hàng
+              <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                Hàng hóa
               </button>
 
-              {hoveredMenu === "pos" && (
+              {hoveredMenu === "products" && (
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
+                  <div className="flex gap-6 p-6">
+                    {productSubmenu.map((section) => (
+                      <div key={section.title}>
+                        <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
+                          {section.title}
+                        </div>
+                        <ul>
+                          {section.items.map((item) => (
+                            <li key={item.href}>
+                              <Link
+                                href={item.href}
+                                className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                                {item.label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div
+              className="relative"
+              onMouseEnter={() => setHoveredMenu("orders")}
+              onMouseLeave={() => setHoveredMenu(null)}>
+              <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                Đơn hàng
+              </button>
+
+              {hoveredMenu === "orders" && (
                 <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
                   <ul className="px-2 py-2">
-                    <li>
-                      <Link
-                        href="/ban-hang?type=order"
-                        className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
-                        Tạo đơn hàng
-                      </Link>
-                    </li>
-                    <PermissionGate resource="invoices" action="create">
-                      <li>
+                    {orderSubmenu.map((item) => (
+                      <li key={item.href}>
                         <Link
-                          href="/ban-hang?type=invoice"
+                          href={item.href}
                           className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
-                          Tạo hóa đơn
+                          {item.label}
                         </Link>
                       </li>
-                    </PermissionGate>
+                    ))}
                   </ul>
                 </div>
               )}
             </div>
-          </PermissionGate>
+
+            <Link
+              href="/khach-hang"
+              className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+              Khách hàng
+            </Link>
+
+            <Link
+              href="/so-quy"
+              className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+              Sổ quỹ
+            </Link>
+          </nav>
+        </div>
+
+        <div className="ml-auto px-4 flex items-center gap-4">
+          <div
+            className="relative"
+            onMouseEnter={() => setHoveredMenu("pos")}
+            onMouseLeave={() => setHoveredMenu(null)}>
+            <button className="px-4 py-4 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
+              🛒 Bán hàng
+            </button>
+
+            {hoveredMenu === "pos" && (
+              <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
+                <ul className="px-2 py-2">
+                  <li>
+                    <Link
+                      href="/ban-hang?type=order"
+                      className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                      Tạo đơn hàng
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/ban-hang?type=invoice"
+                      className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                      Tạo hóa đơn
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
 
           <BranchSelector />
 
@@ -285,13 +244,11 @@ export function DashboardHeader() {
                   <p className="text-xs text-gray-500">{user?.email}</p>
                 </div>
                 <div className="flex flex-col">
-                  <PermissionGate resource="users" action="create">
-                    <Link
-                      href="/cai-dat"
-                      className="px-4 py-2 text-sm hover:bg-gray-100">
-                      Cài Đặt
-                    </Link>
-                  </PermissionGate>
+                  <Link
+                    href="/cai-dat"
+                    className="px-4 py-2 text-sm hover:bg-gray-100">
+                    Cài Đặt
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">

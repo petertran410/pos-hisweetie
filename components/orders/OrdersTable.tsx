@@ -270,7 +270,8 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
 
-  const canViewDiscount = usePermission("orders", "view", "discount");
+  const canViewDiscount = usePermission("orders", "view");
+  const canViewOrder = usePermission("orders", "view");
   const canCreate = usePermission("orders", "create");
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
@@ -360,14 +361,14 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <PermissionGate resource="orders" action="create">
+          {canCreate && (
             <button
               onClick={onCreateClick}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Tạo Đơn Hàng
             </button>
-          </PermissionGate>
+          )}
           <button
             onClick={() => setShowColumnModal(true)}
             className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
@@ -451,7 +452,7 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
                         </td>
                       ))}
                     </tr>
-                    {expandedOrderId === order.id && (
+                    {canViewOrder && expandedOrderId === order.id && (
                       <OrderDetailRow
                         orderId={order.id}
                         colSpan={visibleColumns.length + 1}
