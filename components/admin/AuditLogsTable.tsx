@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface AuditLogsTableProps {
   logs: any[];
@@ -13,6 +15,36 @@ interface AuditLogsTableProps {
   onLimitChange: (limit: number) => void;
 }
 
+const resourceNames: Record<string, string> = {
+  products: "Sản phẩm",
+  orders: "Đơn đặt hàng",
+  invoices: "Hóa đơn",
+  customers: "Khách hàng",
+  suppliers: "Nhà cung cấp",
+  inventories: "Tồn kho",
+  users: "Người dùng",
+  branches: "Chi nhánh",
+  transfers: "Chuyển kho",
+  purchase_orders: "Đơn mua hàng",
+  order_suppliers: "Đặt hàng NCC",
+  packing_slips: "Thu khác",
+  packing_hangs: "Hóa đơn",
+  packing_loadings: "Đặt hàng",
+  cashflows: "Thu chi",
+  productions: "Sản xuất",
+  destructions: "Hủy hàng",
+  navigation: "Điều hướng",
+};
+
+const actionNames: Record<string, string> = {
+  create: "Tạo",
+  update: "Cập nhật",
+  delete: "Xóa",
+  view: "Xem",
+  list: "Danh sách",
+  page_view: "Xem trang",
+};
+
 export function AuditLogsTable({
   logs,
   isLoading,
@@ -22,6 +54,7 @@ export function AuditLogsTable({
   onPageChange,
   onLimitChange,
 }: AuditLogsTableProps) {
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const totalPages = Math.ceil(total / limit);
 
   if (isLoading) {
@@ -32,15 +65,70 @@ export function AuditLogsTable({
     );
   }
 
-  const getActionBadge = (action: string) => {
-    const colors: Record<string, string> = {
-      create: "bg-green-100 text-green-800",
-      update: "bg-blue-100 text-blue-800",
-      delete: "bg-red-100 text-red-800",
-      view: "bg-gray-100 text-gray-800",
-    };
+  const formatDetail = (log: any) => {
+    const parts: string[] = [];
 
-    return colors[action] || "bg-gray-100 text-gray-800";
+    if (log.resource === "packing_slips") {
+      if (log.action === "create" && log.newData) {
+        const data = log.newData;
+        parts.push(`Thông tin thu khác cho hóa đơn: ${data.code || "N/A"}`);
+        if (data.invoices?.length > 0) {
+          data.invoices.forEach((inv: any) => {
+            parts.push(`, khách hàng ${inv.customerCode}`);
+          });
+        }
+        parts.push(`, với giá trị ${log.newData.cashAmount || 0}`);
+        parts.push(
+          `, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}`
+        );
+      }
+    } else if (log.resource === "invoices") {
+      if (log.action === "create" && log.newData) {
+        parts.push(`Tạo hóa đơn: ${log.newData.code}`);
+        parts.push(`( cho đơn đặt hàng: ${log.newData.orderCode || "N/A"} )`);
+        parts.push(`, khách hàng ${log.newData.customerName || "N/A"}`);
+      }
+    } else if (log.resource === "orders") {
+      if (log.action === "delete" && log.oldData) {
+        parts.push(`Hủy đơn đặt hàng: ${log.oldData.code || log.resourceId}`);
+      } else if (log.action === "create" && log.newData) {
+        parts.push(`Tạo đơn đặt hàng: ${log.newData.code}`);
+        parts.push(`, khách hàng: ${log.newData.customerName || "N/A"}`);
+      }
+    } else if (log.resource === "customers") {
+      if (log.action === "update" && log.newData) {
+        parts.push(`Cập nhật thông tin khách hàng mã KH: ${log.newData.code}`);
+        parts.push(`, tên KH: ${log.newData.name}`);
+      } else if (log.action === "create" && log.newData) {
+        parts.push(
+          `Cập nhật thông tin xuất hóa đơn điện tử khách hàng ${log.newData.name}`
+        );
+        parts.push(`: Loại khách hàng: ${log.newData.customerType || "N/A"}`);
+      }
+    } else {
+      parts.push(
+        `${actionNames[log.action] || log.action} ${resourceNames[log.resource] || log.resource}`
+      );
+      if (log.resourceId) {
+        parts.push(`: ID ${log.resourceId}`);
+      }
+    }
+
+    return parts.join("");
+  };
+
+  const formatExpandedDetail = (log: any) => {
+    const details: string[] = [];
+
+    if (log.newData) {
+      details.push(JSON.stringify(log.newData, null, 2));
+    }
+
+    if (log.metadata) {
+      details.push(`Metadata: ${JSON.stringify(log.metadata, null, 2)}`);
+    }
+
+    return details.join("\n");
   };
 
   return (
@@ -48,51 +136,65 @@ export function AuditLogsTable({
       <table className="w-full">
         <thead className="bg-gray-50 border-b">
           <tr>
+            <th className="w-8"></th>
+            <th className="px-6 py-3 text-left text-sm font-semibold">
+              Nhân viên
+            </th>
+            <th className="px-6 py-3 text-left text-sm font-semibold">
+              Tính năng
+            </th>
             <th className="px-6 py-3 text-left text-sm font-semibold">
               Thời gian
             </th>
             <th className="px-6 py-3 text-left text-sm font-semibold">
-              Người dùng
+              Chi tiết
             </th>
-            <th className="px-6 py-3 text-left text-sm font-semibold">
-              Hành động
-            </th>
-            <th className="px-6 py-3 text-left text-sm font-semibold">
-              Tài nguyên
-            </th>
-            <th className="px-6 py-3 text-left text-sm font-semibold">IP</th>
           </tr>
         </thead>
-        <tbody className="divide-y">
+        <tbody>
           {logs.map((log) => (
-            <tr key={log.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 text-sm">
-                {format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", {
-                  locale: vi,
-                })}
-              </td>
-              <td className="px-6 py-4">
-                <div className="font-medium">{log.userName}</div>
-                <div className="text-sm text-gray-600">{log.user?.email}</div>
-              </td>
-              <td className="px-6 py-4">
-                <span
-                  className={`px-2 py-1 text-xs rounded-full ${getActionBadge(log.action)}`}>
-                  {log.action}
-                </span>
-              </td>
-              <td className="px-6 py-4 text-sm">
-                <div className="font-medium">{log.resource}</div>
-                {log.resourceId && (
-                  <div className="text-xs text-gray-600">
-                    ID: {log.resourceId}
-                  </div>
-                )}
-              </td>
-              <td className="px-6 py-4 text-sm text-gray-600">
-                {log.ipAddress || "-"}
-              </td>
-            </tr>
+            <>
+              <tr
+                key={log.id}
+                onClick={() =>
+                  setExpandedId(expandedId === log.id ? null : log.id)
+                }
+                className="hover:bg-gray-50 cursor-pointer border-b">
+                <td className="px-4 py-4">
+                  {expandedId === log.id ? (
+                    <ChevronDown className="w-4 h-4 text-gray-600" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-gray-600" />
+                  )}
+                </td>
+                <td className="px-6 py-4 text-sm">{log.userName}</td>
+                <td className="px-6 py-4 text-sm">
+                  {resourceNames[log.resource] || log.resource}
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  {format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", {
+                    locale: vi,
+                  })}
+                </td>
+                <td className="px-6 py-4 text-sm">{formatDetail(log)}</td>
+              </tr>
+              {expandedId === log.id && (
+                <tr className="bg-blue-50">
+                  <td colSpan={5} className="px-6 py-4">
+                    <div className="border-l-4 border-blue-500 pl-4">
+                      <div className="mb-2">
+                        <span className="font-semibold text-blue-600 border-b-2 border-blue-600 pb-1">
+                          Chi tiết
+                        </span>
+                      </div>
+                      <div className="text-sm whitespace-pre-wrap">
+                        {formatDetail(log)}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </>
           ))}
         </tbody>
       </table>
@@ -121,7 +223,7 @@ export function AuditLogsTable({
           <button
             onClick={() => onPageChange(page - 1)}
             disabled={page === 1}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50">
             Trước
           </button>
           <span className="text-sm">
@@ -130,7 +232,7 @@ export function AuditLogsTable({
           <button
             onClick={() => onPageChange(page + 1)}
             disabled={page === totalPages}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50">
             Sau
           </button>
         </div>
