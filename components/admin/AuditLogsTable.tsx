@@ -83,7 +83,7 @@ export function AuditLogsTable({
       const order = log.newValues.order;
 
       lines.push(
-        `Tạo đơn đặt hàng: ${order.code} (${order.statusValue || "Phiếu tạm"}), khách hàng: ${order.customer?.code || "N/A"}, Thuê: ${order.customer?.name || "N/A"}, thời gian ${format(new Date(order.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, bảng giá: ${order.priceBook?.name || "Mặc định"}, Người tạo: ${log.userName}, Người nhận đặt: ${order.soldBy?.name || log.userName}, bao gồm:`
+        `Tạo đơn đặt hàng: ${order.code} (${order.statusValue || "Phiếu tạm"}), khách hàng: ${order.customer?.name || "N/A"}, Thuế: ${"Tắt thuế"}, thời gian ${format(new Date(order.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, bảng giá: ${order.priceBook?.name || "Mặc định"}, Người tạo: ${log.userName}, Người nhận đặt: ${order.soldBy?.name || log.userName}, bao gồm:`
       );
 
       if (order.items?.length > 0) {
@@ -127,7 +127,7 @@ export function AuditLogsTable({
       const newVal = log.newValues || {};
 
       lines.push(
-        `Cập nhật thông tin đơn đặt hàng: ${newVal.code || log.entityCode} (${newVal.statusValue || "Phiếu tạm"}), Thuế: ${"Tắt thuế"}, bảng giá: ${newVal.priceBook?.name || "Mặc định"}, Người tạo: ${log.userName}, Người nhận đặt: ${newVal.soldBy?.name || log.userName}, bao gồm:`
+        `Cập nhật thông tin đơn đặt hàng: ${newVal.code || log.entityCode} (${newVal.statusValue || "Phiếu tạm"}), khách hàng: ${newVal.customer?.name || "N/A"}, Thuế: ${"Tắt thuế"}, bảng giá: ${newVal.priceBook?.name || "Mặc định"}, Người tạo: ${log.userName}, Người nhận đặt: ${newVal.soldBy?.name || log.userName}, bao gồm:`
       );
 
       // Hiển thị items mới
