@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -118,17 +118,60 @@ export function AuditLogsTable({
   };
 
   const formatExpandedDetail = (log: any) => {
-    const details: string[] = [];
+    const lines: string[] = [];
 
-    if (log.newData) {
-      details.push(JSON.stringify(log.newData, null, 2));
+    if (log.resource === "orders") {
+      if (log.action === "create" && log.newData?.order) {
+        const order = log.newData.order;
+        lines.push(
+          `Tạo đơn đặt hàng: ${order.code}, khách hàng: ${order.customer?.name || "N/A"}`
+        );
+        lines.push(`- Mã: ${order.customer?.code || "N/A"}`);
+        lines.push(
+          `- Loại thu: phi ship, với giá trị: ${order.grandTotal || 0}`
+        );
+        lines.push(
+          `- Thời gian: ${format(new Date(order.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}`
+        );
+        if (order.delivery) {
+          lines.push(
+            `- Giao đến: ${order.delivery.receiver}, SĐT: ${order.delivery.contactNumber}`
+          );
+        }
+      }
+    } else if (log.resource === "invoices") {
+      if (log.action === "create" && log.newData) {
+        const invoice = log.newData;
+        lines.push(
+          `Tạo hóa đơn: ${invoice.code}( cho đơn đặt hàng: ${invoice.orderCode || "N/A"} ), khách hàng ${invoice.customerName || "N/A"}`
+        );
+      }
+    } else if (log.resource === "packing_slips") {
+      if (log.action === "create" && log.newData) {
+        const data = log.newData;
+        lines.push(
+          `Thông tin thu khác cho hóa đơn: ${data.code || "N/A"}, khách hàng ${data.customerCode || "N/A"}, với giá trị ${data.cashAmount || 0}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}`
+        );
+      }
+    } else if (log.resource === "customers") {
+      if (log.action === "update" && log.newData) {
+        lines.push(
+          `Cập nhật thông tin khách hàng mã KH: ${log.newData.code}, tên KH: ${log.newData.name}`
+        );
+      } else if (log.action === "create" && log.newData) {
+        lines.push(
+          `Cập nhật thông tin xuất hóa đơn điện tử khách hàng ${log.newData.name}: Loại khách hàng: ${log.newData.customerType || "N/A"}`
+        );
+      }
+    } else {
+      lines.push(
+        `${actionNames[log.action] || log.action} ${resourceNames[log.resource] || log.resource}`
+      );
+      if (log.resourceId) lines.push(`ID: ${log.resourceId}`);
+      if (log.path) lines.push(`Đường dẫn: ${log.path}`);
     }
 
-    if (log.metadata) {
-      details.push(`Metadata: ${JSON.stringify(log.metadata, null, 2)}`);
-    }
-
-    return details.join("\n");
+    return lines.join("\n");
   };
 
   return (
@@ -153,9 +196,8 @@ export function AuditLogsTable({
         </thead>
         <tbody>
           {logs.map((log) => (
-            <>
+            <Fragment key={log.id}>
               <tr
-                key={log.id}
                 onClick={() =>
                   setExpandedId(expandedId === log.id ? null : log.id)
                 }
@@ -187,14 +229,14 @@ export function AuditLogsTable({
                           Chi tiết
                         </span>
                       </div>
-                      <div className="text-sm whitespace-pre-wrap">
-                        {formatDetail(log)}
+                      <div className="text-sm whitespace-pre-wrap font-mono">
+                        {formatExpandedDetail(log)}
                       </div>
                     </div>
                   </td>
                 </tr>
               )}
-            </>
+            </Fragment>
           ))}
         </tbody>
       </table>
