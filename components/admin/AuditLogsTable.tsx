@@ -123,9 +123,9 @@ export function AuditLogsTable({
 
       lines.push(`Cập nhật đơn đặt hàng: ${newVal.code || log.entityCode}`);
 
-      // Detect changes từ data có sẵn
       const changes: string[] = [];
 
+      // So sánh statusValue
       if (
         old.statusValue &&
         newVal.statusValue &&
@@ -134,54 +134,56 @@ export function AuditLogsTable({
         changes.push(`Trạng thái: ${old.statusValue} → ${newVal.statusValue}`);
       }
 
-      if (
-        old.grandTotal !== undefined &&
-        newVal.grandTotal !== undefined &&
-        old.grandTotal !== newVal.grandTotal
-      ) {
-        changes.push(
-          `Tổng tiền: ${new Intl.NumberFormat("vi-VN").format(old.grandTotal)}đ → ${new Intl.NumberFormat("vi-VN").format(newVal.grandTotal)}đ`
-        );
-      }
+      // So sánh grandTotal (convert to number)
+      const oldTotal =
+        typeof old.grandTotal === "number"
+          ? old.grandTotal
+          : Number(old.grandTotal);
+      const newTotal =
+        typeof newVal.grandTotal === "number"
+          ? newVal.grandTotal
+          : Number(newVal.grandTotal);
 
-      if (
-        old.itemCount !== undefined &&
-        newVal.itemCount !== undefined &&
-        old.itemCount !== newVal.itemCount
-      ) {
-        changes.push(`Số sản phẩm: ${old.itemCount} → ${newVal.itemCount}`);
+      if (oldTotal !== newTotal) {
+        changes.push(
+          `Tổng tiền: ${new Intl.NumberFormat("vi-VN").format(oldTotal)}đ → ${new Intl.NumberFormat("vi-VN").format(newTotal)}đ`
+        );
       }
 
       // So sánh items
       if (old.items && newVal.items) {
-        const oldItemIds = new Set(old.items.map((i: any) => i.productId));
-        const newItemIds = new Set(newVal.items.map((i: any) => i.productId));
-
-        const added = newVal.items.filter(
-          (i: any) => !oldItemIds.has(i.productId)
-        );
-        const removed = old.items.filter(
-          (i: any) => !newItemIds.has(i.productId)
+        const oldItemMap = new Map(old.items.map((i: any) => [i.productId, i]));
+        const newItemMap = new Map(
+          newVal.items.map((i: any) => [i.productId, i])
         );
 
-        if (added.length > 0) {
-          changes.push(
-            `Thêm sản phẩm: ${added.map((i: any) => i.productName).join(", ")}`
-          );
-        }
+        // Check thêm mới và cập nhật
+        newVal.items.forEach((newItem: any) => {
+          const oldItem: any = oldItemMap.get(newItem.productId);
+          if (!oldItem) {
+            changes.push(`Thêm sản phẩm: ${newItem.productName}`);
+          } else {
+            if (Number(oldItem.quantity) !== Number(newItem.quantity)) {
+              changes.push(
+                `${newItem.productName}: SL ${Number(oldItem.quantity)} → ${Number(newItem.quantity)}`
+              );
+            }
+          }
+        });
 
-        if (removed.length > 0) {
-          changes.push(
-            `Xóa sản phẩm: ${removed.map((i: any) => i.productName).join(", ")}`
-          );
-        }
+        // Check xóa
+        old.items.forEach((oldItem: any) => {
+          if (!newItemMap.has(oldItem.productId)) {
+            changes.push(`Xóa sản phẩm: ${oldItem.productName}`);
+          }
+        });
       }
 
       if (changes.length > 0) {
         lines.push(`Các thay đổi:`);
         changes.forEach((c) => lines.push(`- ${c}`));
       } else {
-        lines.push(`(Không có thông tin chi tiết về thay đổi)`);
+        lines.push(`(Không phát hiện thay đổi)`);
       }
 
       return lines.join("\n");
