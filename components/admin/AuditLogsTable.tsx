@@ -66,112 +66,41 @@ export function AuditLogsTable({
   }
 
   const formatDetail = (log: any) => {
-    const parts: string[] = [];
-
-    if (log.resource === "packing_slips") {
-      if (log.action === "create" && log.newData) {
-        const data = log.newData;
-        parts.push(`Thông tin thu khác cho hóa đơn: ${data.code || "N/A"}`);
-        if (data.invoices?.length > 0) {
-          data.invoices.forEach((inv: any) => {
-            parts.push(`, khách hàng ${inv.customerCode}`);
-          });
-        }
-        parts.push(`, với giá trị ${log.newData.cashAmount || 0}`);
-        parts.push(
-          `, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}`
-        );
-      }
-    } else if (log.resource === "invoices") {
-      if (log.action === "create" && log.newData) {
-        parts.push(`Tạo hóa đơn: ${log.newData.code}`);
-        parts.push(`( cho đơn đặt hàng: ${log.newData.orderCode || "N/A"} )`);
-        parts.push(`, khách hàng ${log.newData.customerName || "N/A"}`);
-      }
-    } else if (log.resource === "orders") {
-      if (log.action === "delete" && log.oldData) {
-        parts.push(`Hủy đơn đặt hàng: ${log.oldData.code || log.resourceId}`);
-      } else if (log.action === "create" && log.newData) {
-        parts.push(`Tạo đơn đặt hàng: ${log.newData.code}`);
-        parts.push(`, khách hàng: ${log.newData.customerName || "N/A"}`);
-      }
-    } else if (log.resource === "customers") {
-      if (log.action === "update" && log.newData) {
-        parts.push(`Cập nhật thông tin khách hàng mã KH: ${log.newData.code}`);
-        parts.push(`, tên KH: ${log.newData.name}`);
-      } else if (log.action === "create" && log.newData) {
-        parts.push(
-          `Cập nhật thông tin xuất hóa đơn điện tử khách hàng ${log.newData.name}`
-        );
-        parts.push(`: Loại khách hàng: ${log.newData.customerType || "N/A"}`);
-      }
-    } else {
-      parts.push(
-        `${actionNames[log.action] || log.action} ${resourceNames[log.resource] || log.resource}`
-      );
-      if (log.resourceId) {
-        parts.push(`: ID ${log.resourceId}`);
-      }
+    // Sử dụng message đã render sẵn từ backend
+    if (log.message) {
+      return log.message;
     }
 
-    return parts.join("");
+    // Fallback nếu không có message
+    return `${actionNames[log.actionType] || log.actionType} ${resourceNames[log.entityType] || log.entityType}`;
   };
 
   const formatExpandedDetail = (log: any) => {
-    const lines: string[] = [];
+    const sections: string[] = [];
 
-    if (log.resource === "orders") {
-      if (log.action === "create" && log.newData?.order) {
-        const order = log.newData.order;
-        lines.push(
-          `Tạo đơn đặt hàng: ${order.code}, khách hàng: ${order.customer?.name || "N/A"}`
-        );
-        lines.push(`- Mã: ${order.customer?.code || "N/A"}`);
-        lines.push(
-          `- Loại thu: phi ship, với giá trị: ${order.grandTotal || 0}`
-        );
-        lines.push(
-          `- Thời gian: ${format(new Date(order.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}`
-        );
-        if (order.delivery) {
-          lines.push(
-            `- Giao đến: ${order.delivery.receiver}, SĐT: ${order.delivery.contactNumber}`
-          );
-        }
-      }
-    } else if (log.resource === "invoices") {
-      if (log.action === "create" && log.newData) {
-        const invoice = log.newData;
-        lines.push(
-          `Tạo hóa đơn: ${invoice.code}( cho đơn đặt hàng: ${invoice.orderCode || "N/A"} ), khách hàng ${invoice.customerName || "N/A"}`
-        );
-      }
-    } else if (log.resource === "packing_slips") {
-      if (log.action === "create" && log.newData) {
-        const data = log.newData;
-        lines.push(
-          `Thông tin thu khác cho hóa đơn: ${data.code || "N/A"}, khách hàng ${data.customerCode || "N/A"}, với giá trị ${data.cashAmount || 0}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}`
-        );
-      }
-    } else if (log.resource === "customers") {
-      if (log.action === "update" && log.newData) {
-        lines.push(
-          `Cập nhật thông tin khách hàng mã KH: ${log.newData.code}, tên KH: ${log.newData.name}`
-        );
-      } else if (log.action === "create" && log.newData) {
-        lines.push(
-          `Cập nhật thông tin xuất hóa đơn điện tử khách hàng ${log.newData.name}: Loại khách hàng: ${log.newData.customerType || "N/A"}`
-        );
-      }
-    } else {
-      lines.push(
-        `${actionNames[log.action] || log.action} ${resourceNames[log.resource] || log.resource}`
-      );
-      if (log.resourceId) lines.push(`ID: ${log.resourceId}`);
-      if (log.path) lines.push(`Đường dẫn: ${log.path}`);
+    sections.push(`Người dùng: ${log.userName}`);
+    sections.push(`Hành động: ${log.actionCode}`);
+    sections.push(
+      `Tài nguyên: ${resourceNames[log.entityType] || log.entityType}`
+    );
+
+    if (log.entityCode) {
+      sections.push(`Mã: ${log.entityCode}`);
     }
 
-    return lines.join("\n");
+    if (log.branchName) {
+      sections.push(`Chi nhánh: ${log.branchName}`);
+    }
+
+    if (log.ipAddress) {
+      sections.push(`IP: ${log.ipAddress}`);
+    }
+
+    if (log.metadata?.duration) {
+      sections.push(`Thời gian xử lý: ${log.metadata.duration}ms`);
+    }
+
+    return sections.join("\n");
   };
 
   return (
@@ -210,9 +139,7 @@ export function AuditLogsTable({
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm">{log.userName}</td>
-                <td className="px-6 py-4 text-sm">
-                  {resourceNames[log.resource] || log.resource}
-                </td>
+                <td className="px-6 py-4 text-sm">{log.message}</td>
                 <td className="px-6 py-4 text-sm">
                   {format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", {
                     locale: vi,
@@ -223,15 +150,39 @@ export function AuditLogsTable({
               {expandedId === log.id && (
                 <tr className="bg-blue-50">
                   <td colSpan={5} className="px-6 py-4">
-                    <div className="border-l-4 border-blue-500 pl-4">
-                      <div className="mb-2">
-                        <span className="font-semibold text-blue-600 border-b-2 border-blue-600 pb-1">
-                          Chi tiết
-                        </span>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="font-semibold">Mã:</span>{" "}
+                          {log.entityCode || "N/A"}
+                        </div>
+                        <div>
+                          <span className="font-semibold">IP:</span>{" "}
+                          {log.ipAddress || "N/A"}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Chi nhánh:</span>{" "}
+                          {log.branchName || "N/A"}
+                        </div>
                       </div>
-                      <div className="text-sm whitespace-pre-wrap font-mono">
-                        {formatExpandedDetail(log)}
-                      </div>
+
+                      {log.newValues && (
+                        <div>
+                          <div className="font-semibold mb-2">Dữ liệu mới:</div>
+                          <pre className="text-xs bg-white p-3 rounded border overflow-auto max-h-96">
+                            {JSON.stringify(log.newValues, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+
+                      {log.oldValues && (
+                        <div>
+                          <div className="font-semibold mb-2">Dữ liệu cũ:</div>
+                          <pre className="text-xs bg-white p-3 rounded border overflow-auto max-h-96">
+                            {JSON.stringify(log.oldValues, null, 2)}
+                          </pre>
+                        </div>
+                      )}
                     </div>
                   </td>
                 </tr>
