@@ -76,31 +76,357 @@ export function AuditLogsTable({
   };
 
   const formatExpandedDetail = (log: any) => {
-    const sections: string[] = [];
+    const lines: string[] = [];
 
-    sections.push(`Người dùng: ${log.userName}`);
-    sections.push(`Hành động: ${log.actionCode}`);
-    sections.push(
-      `Tài nguyên: ${resourceNames[log.entityType] || log.entityType}`
-    );
+    // ORDER_CREATE
+    if (log.actionCode === "ORDER_CREATE" && log.newValues?.order) {
+      const order = log.newValues.order;
 
-    if (log.entityCode) {
-      sections.push(`Mã: ${log.entityCode}`);
+      lines.push(
+        `Cập nhật thông tin đơn đặt hàng: ${order.code} (${order.statusValue || "Phiếu tạm"}), Thuê: ${order.customer?.name || "N/A"}, Bảng giá: ${order.priceBook?.name || "Mặc định"}, Người tạo: ${log.userName}, Người nhận đặt: ${order.soldBy?.name || "N/A"}, bao gồm:`
+      );
+
+      if (order.items?.length > 0) {
+        order.items.forEach((item: any) => {
+          const discount = item.discount
+            ? ` (Giảm giá: ${new Intl.NumberFormat("vi-VN").format(item.discount)})`
+            : "";
+          lines.push(
+            `- ${item.productCode} : ${new Intl.NumberFormat("vi-VN").format(item.quantity)}×${new Intl.NumberFormat("vi-VN").format(item.price)}${discount}`
+          );
+        });
+      }
+
+      lines.push(`\nThông tin giao hàng:`);
+      if (order.delivery) {
+        lines.push(`- Người nhận: ${order.delivery.receiver || "N/A"}`);
+        lines.push(`- Địa chỉ: ${order.delivery.address || "N/A"}`);
+        if (order.delivery.wardName)
+          lines.push(`- Phường/Xã: ${order.delivery.wardName}`);
+        lines.push(`- Trọng lượng: ${order.delivery.weight || 0}`);
+        if (order.delivery.length)
+          lines.push(
+            `- Kích thước: ${order.delivery.length} - ${order.delivery.width} - ${order.delivery.height}`
+          );
+        lines.push(`- Loại dịch vụ: ${order.delivery.type || "Giao thường"}`);
+        if (order.delivery.noteForDriver)
+          lines.push(`- Thu hộ tiền hàng: ${order.delivery.noteForDriver}`);
+      }
+
+      return lines.join("\n");
     }
 
-    if (log.branchName) {
-      sections.push(`Chi nhánh: ${log.branchName}`);
+    // ORDER_UPDATE
+    if (log.actionCode === "ORDER_UPDATE") {
+      const old = log.oldValues || {};
+      const newVal = log.newValues || {};
+
+      lines.push(`Cập nhật đơn đặt hàng: ${newVal.code || log.entityCode}`);
+
+      // Detect changes từ data có sẵn
+      const changes: string[] = [];
+
+      if (
+        old.statusValue &&
+        newVal.statusValue &&
+        old.statusValue !== newVal.statusValue
+      ) {
+        changes.push(`Trạng thái: ${old.statusValue} → ${newVal.statusValue}`);
+      }
+
+      if (
+        old.grandTotal !== undefined &&
+        newVal.grandTotal !== undefined &&
+        old.grandTotal !== newVal.grandTotal
+      ) {
+        changes.push(
+          `Tổng tiền: ${new Intl.NumberFormat("vi-VN").format(old.grandTotal)}đ → ${new Intl.NumberFormat("vi-VN").format(newVal.grandTotal)}đ`
+        );
+      }
+
+      if (
+        old.itemCount !== undefined &&
+        newVal.itemCount !== undefined &&
+        old.itemCount !== newVal.itemCount
+      ) {
+        changes.push(`Số sản phẩm: ${old.itemCount} → ${newVal.itemCount}`);
+      }
+
+      // So sánh items
+      if (old.items && newVal.items) {
+        const oldItemIds = new Set(old.items.map((i: any) => i.productId));
+        const newItemIds = new Set(newVal.items.map((i: any) => i.productId));
+
+        const added = newVal.items.filter(
+          (i: any) => !oldItemIds.has(i.productId)
+        );
+        const removed = old.items.filter(
+          (i: any) => !newItemIds.has(i.productId)
+        );
+
+        if (added.length > 0) {
+          changes.push(
+            `Thêm sản phẩm: ${added.map((i: any) => i.productName).join(", ")}`
+          );
+        }
+
+        if (removed.length > 0) {
+          changes.push(
+            `Xóa sản phẩm: ${removed.map((i: any) => i.productName).join(", ")}`
+          );
+        }
+      }
+
+      if (changes.length > 0) {
+        lines.push(`Các thay đổi:`);
+        changes.forEach((c) => lines.push(`- ${c}`));
+      } else {
+        lines.push(`(Không có thông tin chi tiết về thay đổi)`);
+      }
+
+      return lines.join("\n");
     }
 
-    if (log.ipAddress) {
-      sections.push(`IP: ${log.ipAddress}`);
+    // ORDER_DELETE
+    if (log.actionCode === "ORDER_DELETE" && log.oldValues) {
+      const order = log.oldValues;
+
+      lines.push(`Hủy đơn đặt hàng: ${order.code}`);
+      lines.push(`- Khách hàng: ${order.customerName || "N/A"}`);
+      lines.push(
+        `- Tổng tiền: ${new Intl.NumberFormat("vi-VN").format(order.grandTotal || 0)}đ`
+      );
+      lines.push(`- Trạng thái trước khi hủy: ${order.statusValue || "N/A"}`);
+
+      return lines.join("\n");
     }
 
-    if (log.metadata?.duration) {
-      sections.push(`Thời gian xử lý: ${log.metadata.duration}ms`);
+    // INVOICE_CREATE
+    if (log.actionCode === "INVOICE_CREATE" && log.newValues) {
+      const invoice = log.newValues;
+
+      lines.push(
+        `Tạo hóa đơn: ${invoice.code} (cho đơn đặt hàng: ${invoice.orderCode || "N/A"}), khách hàng ${invoice.customerName || "N/A"}`
+      );
+      lines.push(
+        `- Tổng tiền: ${new Intl.NumberFormat("vi-VN").format(invoice.totalAmount || 0)}đ`
+      );
+      lines.push(
+        `- Đã thanh toán: ${new Intl.NumberFormat("vi-VN").format(invoice.paidAmount || 0)}đ`
+      );
+      lines.push(
+        `- Còn nợ: ${new Intl.NumberFormat("vi-VN").format(invoice.debtAmount || 0)}đ`
+      );
+
+      return lines.join("\n");
     }
 
-    return sections.join("\n");
+    // INVOICE_UPDATE
+    if (log.actionCode === "INVOICE_UPDATE" && log.oldValues && log.newValues) {
+      const old = log.oldValues;
+      const newVal = log.newValues;
+
+      lines.push(`Cập nhật hóa đơn: ${newVal.code || old.code}`);
+      lines.push(`Các thay đổi:`);
+
+      if (old.paidAmount !== newVal.paidAmount) {
+        lines.push(
+          `- Đã thanh toán: ${new Intl.NumberFormat("vi-VN").format(old.paidAmount)}đ → ${new Intl.NumberFormat("vi-VN").format(newVal.paidAmount)}đ`
+        );
+      }
+      if (old.statusValue !== newVal.statusValue) {
+        lines.push(`- Trạng thái: ${old.statusValue} → ${newVal.statusValue}`);
+      }
+
+      return lines.join("\n");
+    }
+
+    // INVOICE_DELETE
+    if (log.actionCode === "INVOICE_DELETE" && log.oldValues) {
+      const invoice = log.oldValues;
+
+      lines.push(`Xóa hóa đơn: ${invoice.code}`);
+      lines.push(
+        `- Tổng tiền: ${new Intl.NumberFormat("vi-VN").format(invoice.totalAmount || 0)}đ`
+      );
+
+      return lines.join("\n");
+    }
+
+    // PRODUCT_CREATE
+    if (log.actionCode === "PRODUCT_CREATE" && log.newValues) {
+      const product = log.newValues;
+
+      lines.push(`Thêm sản phẩm: ${product.name} (${product.code})`);
+      lines.push(
+        `- Giá bán: ${new Intl.NumberFormat("vi-VN").format(product.basePrice || 0)}đ`
+      );
+      if (product.unit) lines.push(`- Đơn vị: ${product.unit}`);
+      if (product.weight)
+        lines.push(
+          `- Trọng lượng: ${product.weight}${product.weightUnit || "g"}`
+        );
+      if (product.description) lines.push(`- Mô tả: ${product.description}`);
+
+      return lines.join("\n");
+    }
+
+    // PRODUCT_UPDATE
+    if (log.actionCode === "PRODUCT_UPDATE" && log.oldValues && log.newValues) {
+      const old = log.oldValues;
+      const newVal = log.newValues;
+
+      lines.push(
+        `Cập nhật sản phẩm: ${newVal.name || old.name} (${newVal.code || old.code})`
+      );
+      lines.push(`Các thay đổi:`);
+
+      if (old.basePrice !== newVal.basePrice) {
+        lines.push(
+          `- Giá: ${new Intl.NumberFormat("vi-VN").format(old.basePrice)}đ → ${new Intl.NumberFormat("vi-VN").format(newVal.basePrice)}đ`
+        );
+      }
+      if (old.name !== newVal.name) {
+        lines.push(`- Tên: ${old.name} → ${newVal.name}`);
+      }
+      if (old.weight !== newVal.weight) {
+        lines.push(
+          `- Trọng lượng: ${old.weight}${old.weightUnit} → ${newVal.weight}${newVal.weightUnit}`
+        );
+      }
+
+      return lines.join("\n");
+    }
+
+    // PRODUCT_DELETE
+    if (log.actionCode === "PRODUCT_DELETE" && log.oldValues) {
+      const product = log.oldValues;
+
+      lines.push(`Xóa sản phẩm: ${product.name} (${product.code})`);
+      lines.push(
+        `- Giá bán: ${new Intl.NumberFormat("vi-VN").format(product.basePrice || 0)}đ`
+      );
+
+      return lines.join("\n");
+    }
+
+    // CUSTOMER_CREATE
+    if (log.actionCode === "CUSTOMER_CREATE" && log.newValues) {
+      const customer = log.newValues;
+
+      lines.push(`Thêm khách hàng: ${customer.name} (${customer.code})`);
+      lines.push(`- SĐT: ${customer.contactNumber || "N/A"}`);
+      if (customer.email) lines.push(`- Email: ${customer.email}`);
+      if (customer.address) lines.push(`- Địa chỉ: ${customer.address}`);
+      if (customer.groups) lines.push(`- Nhóm: ${customer.groups}`);
+
+      return lines.join("\n");
+    }
+
+    // CUSTOMER_UPDATE
+    if (
+      log.actionCode === "CUSTOMER_UPDATE" &&
+      log.oldValues &&
+      log.newValues
+    ) {
+      const old = log.oldValues;
+      const newVal = log.newValues;
+
+      lines.push(
+        `Cập nhật khách hàng: ${newVal.name || old.name} (${newVal.code || old.code})`
+      );
+      lines.push(`Các thay đổi:`);
+
+      if (old.name !== newVal.name) {
+        lines.push(`- Tên: ${old.name} → ${newVal.name}`);
+      }
+      if (old.contactNumber !== newVal.contactNumber) {
+        lines.push(`- SĐT: ${old.contactNumber} → ${newVal.contactNumber}`);
+      }
+      if (old.address !== newVal.address) {
+        lines.push(
+          `- Địa chỉ: ${old.address || "(trống)"} → ${newVal.address || "(trống)"}`
+        );
+      }
+
+      return lines.join("\n");
+    }
+
+    // CUSTOMER_DELETE
+    if (log.actionCode === "CUSTOMER_DELETE" && log.oldValues) {
+      const customer = log.oldValues;
+
+      lines.push(`Xóa khách hàng: ${customer.name} (${customer.code})`);
+      lines.push(`- SĐT: ${customer.contactNumber || "N/A"}`);
+
+      return lines.join("\n");
+    }
+
+    // SUPPLIER_CREATE, UPDATE, DELETE tương tự CUSTOMER
+    if (log.actionCode === "SUPPLIER_CREATE" && log.newValues) {
+      const supplier = log.newValues;
+
+      lines.push(`Thêm nhà cung cấp: ${supplier.name} (${supplier.code})`);
+      lines.push(`- SĐT: ${supplier.contactNumber || "N/A"}`);
+      if (supplier.email) lines.push(`- Email: ${supplier.email}`);
+      if (supplier.address) lines.push(`- Địa chỉ: ${supplier.address}`);
+
+      return lines.join("\n");
+    }
+
+    if (
+      log.actionCode === "SUPPLIER_UPDATE" &&
+      log.oldValues &&
+      log.newValues
+    ) {
+      const old = log.oldValues;
+      const newVal = log.newValues;
+
+      lines.push(
+        `Cập nhật nhà cung cấp: ${newVal.name || old.name} (${newVal.code || old.code})`
+      );
+      lines.push(`Các thay đổi:`);
+
+      if (old.name !== newVal.name) {
+        lines.push(`- Tên: ${old.name} → ${newVal.name}`);
+      }
+      if (old.contactNumber !== newVal.contactNumber) {
+        lines.push(`- SĐT: ${old.contactNumber} → ${newVal.contactNumber}`);
+      }
+
+      return lines.join("\n");
+    }
+
+    if (log.actionCode === "SUPPLIER_DELETE" && log.oldValues) {
+      const supplier = log.oldValues;
+
+      lines.push(`Xóa nhà cung cấp: ${supplier.name} (${supplier.code})`);
+
+      return lines.join("\n");
+    }
+
+    // CASHFLOW
+    if (log.actionCode === "CASHFLOW_CREATE" && log.newValues) {
+      const cf = log.newValues;
+      const type = cf.isReceipt ? "Thu" : "Chi";
+
+      lines.push(
+        `${type} tiền: ${new Intl.NumberFormat("vi-VN").format(cf.amount || 0)}đ`
+      );
+      lines.push(`- Mô tả: ${cf.description || "N/A"}`);
+      if (cf.accountName) lines.push(`- Tài khoản: ${cf.accountName}`);
+
+      return lines.join("\n");
+    }
+
+    // Fallback
+    lines.push(`Người dùng: ${log.userName}`);
+    lines.push(`Hành động: ${log.actionCode}`);
+    lines.push(`Mã: ${log.entityCode || "N/A"}`);
+    lines.push(`Chi nhánh: ${log.branchName || "N/A"}`);
+    lines.push(`IP: ${log.ipAddress || "N/A"}`);
+
+    return lines.join("\n");
   };
 
   return (
@@ -150,39 +476,15 @@ export function AuditLogsTable({
               {expandedId === log.id && (
                 <tr className="bg-blue-50">
                   <td colSpan={5} className="px-6 py-4">
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <span className="font-semibold">Mã:</span>{" "}
-                          {log.entityCode || "N/A"}
-                        </div>
-                        <div>
-                          <span className="font-semibold">IP:</span>{" "}
-                          {log.ipAddress || "N/A"}
-                        </div>
-                        <div>
-                          <span className="font-semibold">Chi nhánh:</span>{" "}
-                          {log.branchName || "N/A"}
-                        </div>
+                    <div className="border-l-4 border-blue-500 pl-4">
+                      <div className="mb-2">
+                        <span className="font-semibold text-blue-600 border-b-2 border-blue-600 pb-1">
+                          Chi tiết
+                        </span>
                       </div>
-
-                      {log.newValues && (
-                        <div>
-                          <div className="font-semibold mb-2">Dữ liệu mới:</div>
-                          <pre className="text-xs bg-white p-3 rounded border overflow-auto max-h-96">
-                            {JSON.stringify(log.newValues, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-
-                      {log.oldValues && (
-                        <div>
-                          <div className="font-semibold mb-2">Dữ liệu cũ:</div>
-                          <pre className="text-xs bg-white p-3 rounded border overflow-auto max-h-96">
-                            {JSON.stringify(log.oldValues, null, 2)}
-                          </pre>
-                        </div>
-                      )}
+                      <div className="text-sm whitespace-pre-line">
+                        {formatExpandedDetail(log)}
+                      </div>
                     </div>
                   </td>
                 </tr>
