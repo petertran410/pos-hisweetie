@@ -83,34 +83,39 @@ export function AuditLogsTable({
       const order = log.newValues.order;
 
       lines.push(
-        `Cập nhật thông tin đơn đặt hàng: ${order.code} (${order.statusValue || "Phiếu tạm"}), Thuê: ${order.customer?.name || "N/A"}, Bảng giá: ${order.priceBook?.name || "Mặc định"}, Người tạo: ${log.userName}, Người nhận đặt: ${order.soldBy?.name || "N/A"}, bao gồm:`
+        `Tạo đơn đặt hàng: ${order.code} (${order.statusValue || "Phiếu tạm"}), khách hàng: ${order.customer?.code || "N/A"}, Thuê: ${order.customer?.name || "N/A"}, thời gian ${format(new Date(order.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, bảng giá: ${order.priceBook?.name || "Mặc định"}, Người tạo: ${log.userName}, Người nhận đặt: ${order.soldBy?.name || log.userName}, bao gồm:`
       );
 
       if (order.items?.length > 0) {
         order.items.forEach((item: any) => {
-          const discount = item.discount
-            ? ` (Giảm giá: ${new Intl.NumberFormat("vi-VN").format(item.discount)})`
-            : "";
           lines.push(
-            `- ${item.productCode} : ${new Intl.NumberFormat("vi-VN").format(item.quantity)}×${new Intl.NumberFormat("vi-VN").format(item.price)}${discount}`
+            `- ${item.productCode} : ${item.quantity}×${new Intl.NumberFormat("vi-VN").format(item.price)}`
           );
         });
+      }
+
+      if (order.description) {
+        lines.push(`- Ghi chú: ${order.description}`);
       }
 
       lines.push(`\nThông tin giao hàng:`);
       if (order.delivery) {
         lines.push(`- Người nhận: ${order.delivery.receiver || "N/A"}`);
+        lines.push(`- Số điện thoại: ${order.delivery.contactNumber || "N/A"}`);
         lines.push(`- Địa chỉ: ${order.delivery.address || "N/A"}`);
-        if (order.delivery.wardName)
-          lines.push(`- Phường/Xã: ${order.delivery.wardName}`);
+        if (order.delivery.wardName) {
+          lines.push(`- Phường Xã: ${order.delivery.wardName}`);
+        }
         lines.push(`- Trọng lượng: ${order.delivery.weight || 0}`);
-        if (order.delivery.length)
-          lines.push(
-            `- Kích thước: ${order.delivery.length} - ${order.delivery.width} - ${order.delivery.height}`
-          );
-        lines.push(`- Loại dịch vụ: ${order.delivery.type || "Giao thường"}`);
-        if (order.delivery.noteForDriver)
+        lines.push(
+          `- Kích thước: ${order.delivery.length || 0} - ${order.delivery.width || 0} - ${order.delivery.height || 0}`
+        );
+        if (order.delivery.noteForDriver) {
           lines.push(`- Thu hộ tiền hàng: ${order.delivery.noteForDriver}`);
+        }
+        lines.push(
+          `- Trạng thái giao: ${order.delivery.statusValue || "Chờ xử lý"}`
+        );
       }
 
       return lines.join("\n");
@@ -121,69 +126,41 @@ export function AuditLogsTable({
       const old = log.oldValues || {};
       const newVal = log.newValues || {};
 
-      lines.push(`Cập nhật đơn đặt hàng: ${newVal.code || log.entityCode}`);
+      lines.push(
+        `Cập nhật thông tin đơn đặt hàng: ${newVal.code || log.entityCode} (${newVal.statusValue || "Phiếu tạm"}), Thuế: ${"Tắt thuế"}, bảng giá: ${newVal.priceBook?.name || "Mặc định"}, Người tạo: ${log.userName}, Người nhận đặt: ${newVal.soldBy?.name || log.userName}, bao gồm:`
+      );
 
-      const changes: string[] = [];
-
-      // So sánh statusValue
-      if (
-        old.statusValue &&
-        newVal.statusValue &&
-        old.statusValue !== newVal.statusValue
-      ) {
-        changes.push(`Trạng thái: ${old.statusValue} → ${newVal.statusValue}`);
-      }
-
-      // So sánh grandTotal (convert to number)
-      const oldTotal =
-        typeof old.grandTotal === "number"
-          ? old.grandTotal
-          : Number(old.grandTotal);
-      const newTotal =
-        typeof newVal.grandTotal === "number"
-          ? newVal.grandTotal
-          : Number(newVal.grandTotal);
-
-      if (oldTotal !== newTotal) {
-        changes.push(
-          `Tổng tiền: ${new Intl.NumberFormat("vi-VN").format(oldTotal)}đ → ${new Intl.NumberFormat("vi-VN").format(newTotal)}đ`
-        );
-      }
-
-      // So sánh items
-      if (old.items && newVal.items) {
-        const oldItemMap = new Map(old.items.map((i: any) => [i.productId, i]));
-        const newItemMap = new Map(
-          newVal.items.map((i: any) => [i.productId, i])
-        );
-
-        // Check thêm mới và cập nhật
-        newVal.items.forEach((newItem: any) => {
-          const oldItem: any = oldItemMap.get(newItem.productId);
-          if (!oldItem) {
-            changes.push(`Thêm sản phẩm: ${newItem.productName}`);
-          } else {
-            if (Number(oldItem.quantity) !== Number(newItem.quantity)) {
-              changes.push(
-                `${newItem.productName}: SL ${Number(oldItem.quantity)} → ${Number(newItem.quantity)}`
-              );
-            }
-          }
-        });
-
-        // Check xóa
-        old.items.forEach((oldItem: any) => {
-          if (!newItemMap.has(oldItem.productId)) {
-            changes.push(`Xóa sản phẩm: ${oldItem.productName}`);
-          }
+      // Hiển thị items mới
+      if (newVal.items?.length > 0) {
+        newVal.items.forEach((item: any) => {
+          lines.push(
+            `- ${item.productName} : ${item.quantity}×${new Intl.NumberFormat("vi-VN").format(item.price)}`
+          );
         });
       }
 
-      if (changes.length > 0) {
-        lines.push(`Các thay đổi:`);
-        changes.forEach((c) => lines.push(`- ${c}`));
-      } else {
-        lines.push(`(Không phát hiện thay đổi)`);
+      // Hiển thị ghi chú nếu có thay đổi
+      if (old.description !== newVal.description) {
+        lines.push(
+          `- Ghi chú: ${old.description || "(trống)"} -> ${newVal.description || "(trống)"}`
+        );
+      }
+
+      lines.push(`\nThông tin giao hàng:`);
+      const delivery = newVal.delivery || old.delivery;
+      if (delivery) {
+        lines.push(`- Người nhận: ${delivery.receiver || "N/A"}`);
+        lines.push(`- Địa chỉ: ${delivery.address || "N/A"}`);
+        if (delivery.wardName) {
+          lines.push(`- Phường Xã: ${delivery.wardName}`);
+        }
+        lines.push(`- Trọng lượng: ${delivery.weight || 0}`);
+        lines.push(
+          `- Kích thước: ${delivery.length || 0} - ${delivery.width || 0} - ${delivery.height || 0}`
+        );
+        if (delivery.noteForDriver) {
+          lines.push(`- Thu hộ tiền hàng: ${delivery.noteForDriver}`);
+        }
       }
 
       return lines.join("\n");
@@ -208,17 +185,44 @@ export function AuditLogsTable({
       const invoice = log.newValues;
 
       lines.push(
-        `Tạo hóa đơn: ${invoice.code} (cho đơn đặt hàng: ${invoice.orderCode || "N/A"}), khách hàng ${invoice.customerName || "N/A"}`
+        `Tạo hóa đơn: ${invoice.code}( cho đơn đặt hàng: ${invoice.orderCode || "N/A"} ), khách hàng ${invoice.customer?.code || "N/A"}, bảng giá: ${invoice.priceBook?.name || "Mặc định"}, Thuê: ${invoice.taxEnabled ? "Bật thuế" : "Tắt thuế"}, giá trị: ${new Intl.NumberFormat("vi-VN").format(invoice.grandTotal || 0)}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, trạng thái: ${invoice.statusValue || "N/A"}, Người tạo: ${log.userName}, Người bán: ${invoice.soldBy?.name || log.userName}, tại kho: ${invoice.branch?.name || "N/A"}, bao gồm:`
       );
-      lines.push(
-        `- Tổng tiền: ${new Intl.NumberFormat("vi-VN").format(invoice.totalAmount || 0)}đ`
-      );
-      lines.push(
-        `- Đã thanh toán: ${new Intl.NumberFormat("vi-VN").format(invoice.paidAmount || 0)}đ`
-      );
-      lines.push(
-        `- Còn nợ: ${new Intl.NumberFormat("vi-VN").format(invoice.debtAmount || 0)}đ`
-      );
+
+      if (invoice.details?.length > 0) {
+        invoice.details.forEach((item: any) => {
+          lines.push(
+            `- ${item.productCode} : ${item.quantity}×${new Intl.NumberFormat("vi-VN").format(item.price)}, Tích điểm: ${item.isRewardPoint ? "Có" : "Không"}`
+          );
+        });
+      }
+
+      if (invoice.description) {
+        lines.push(`- Ghi chú: ${invoice.description}`);
+      }
+
+      lines.push(`\nThông tin giao hàng:`);
+      if (invoice.delivery) {
+        lines.push(`- Người nhận: ${invoice.delivery.receiver || "N/A"}`);
+        lines.push(
+          `- Số điện thoại: ${invoice.delivery.contactNumber || "N/A"}`
+        );
+        lines.push(`- Địa chỉ: ${invoice.delivery.address || "N/A"}`);
+        lines.push(`- Trọng lượng: ${invoice.delivery.weight || 0}`);
+        lines.push(
+          `- Kích thước: ${invoice.delivery.length || 0} - ${invoice.delivery.width || 0} - ${invoice.delivery.height || 0}`
+        );
+        if (invoice.delivery.price) {
+          lines.push(
+            `- Phí giao hàng: ${new Intl.NumberFormat("vi-VN").format(invoice.delivery.price)}`
+          );
+        }
+        if (invoice.delivery.noteForDriver) {
+          lines.push(`- Thu hộ tiền hàng: ${invoice.delivery.noteForDriver}`);
+        }
+        lines.push(
+          `- Trạng thái giao: ${invoice.delivery.statusValue || "Chờ xử lý"}`
+        );
+      }
 
       return lines.join("\n");
     }
@@ -425,8 +429,6 @@ export function AuditLogsTable({
     lines.push(`Người dùng: ${log.userName}`);
     lines.push(`Hành động: ${log.actionCode}`);
     lines.push(`Mã: ${log.entityCode || "N/A"}`);
-    lines.push(`Chi nhánh: ${log.branchName || "N/A"}`);
-    lines.push(`IP: ${log.ipAddress || "N/A"}`);
 
     return lines.join("\n");
   };
