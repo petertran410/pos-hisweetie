@@ -94,9 +94,7 @@ export function AuditLogsTable({
         });
       }
 
-      if (order.description) {
-        lines.push(`- Ghi chú: ${order.description}`);
-      }
+      lines.push(`- Ghi chú: ${order.description || ""}`);
 
       lines.push(`\nThông tin giao hàng:`);
       if (order.delivery) {
@@ -138,9 +136,7 @@ export function AuditLogsTable({
         });
       }
 
-      if (old.description !== newVal.description && newVal.description) {
-        lines.push(`- Ghi chú: ${newVal.description}`);
-      }
+      lines.push(`- Ghi chú: ${newVal.description || ""}`);
 
       lines.push(`\nThông tin giao hàng:`);
       const delivery = newVal.delivery;
@@ -183,7 +179,7 @@ export function AuditLogsTable({
       const invoice = log.newValues;
 
       lines.push(
-        `Tạo hóa đơn: ${invoice.code}( cho đơn đặt hàng: ${invoice.orderCode || "N/A"} ), khách hàng ${invoice.customer?.code || "N/A"}, bảng giá: ${invoice.priceBook?.name || "Mặc định"}, Thuê: ${invoice.taxEnabled ? "Bật thuế" : "Tắt thuế"}, giá trị: ${new Intl.NumberFormat("vi-VN").format(invoice.grandTotal || 0)}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, trạng thái: ${invoice.statusValue || "N/A"}, Người tạo: ${log.userName}, Người bán: ${invoice.soldBy?.name || log.userName}, tại kho: ${invoice.branch?.name || "N/A"}, bao gồm:`
+        `Tạo hóa đơn: ${invoice.code} ( cho đơn đặt hàng: ${invoice.order?.code || "N/A"} ), khách hàng ${invoice.customer?.code || "N/A"}, bảng giá: ${invoice.priceBook?.name || "Mặc định"}, Thuê: ${invoice.taxEnabled ? "Bật thuế" : "Tắt thuế"}, giá trị: ${new Intl.NumberFormat("vi-VN").format(invoice.grandTotal || 0)}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, trạng thái: ${invoice.statusValue || "N/A"}, Người tạo: ${log.userName}, Người bán: ${invoice.soldBy?.name || log.userName}, tại kho: ${invoice.branch?.name || "N/A"}, bao gồm:`
       );
 
       if (invoice.details?.length > 0) {
@@ -194,9 +190,7 @@ export function AuditLogsTable({
         });
       }
 
-      if (invoice.description) {
-        lines.push(`- Ghi chú: ${invoice.description}`);
-      }
+      lines.push(`- Ghi chú: ${invoice.description || ""}`);
 
       lines.push(`\nThông tin giao hàng:`);
       if (invoice.delivery) {
@@ -467,7 +461,9 @@ export function AuditLogsTable({
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm">{log.userName}</td>
-                <td className="px-6 py-4 text-sm">{log.message}</td>
+                <td className="px-6 py-4 text-sm">
+                  {resourceNames[log.entityType] || log.entityType}
+                </td>
                 <td className="px-6 py-4 text-sm">
                   {format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", {
                     locale: vi,
