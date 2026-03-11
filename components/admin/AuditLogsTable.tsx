@@ -27,6 +27,7 @@ const resourceNames: Record<string, string> = {
   transfers: "Chuyển kho",
   purchase_orders: "Đơn mua hàng",
   order_suppliers: "Đặt hàng NCC",
+  invoice_payment: "Phiếu thu",
   packing_slips: "Thu khác",
   packing_hangs: "Hóa đơn",
   packing_loadings: "Đặt hàng",
