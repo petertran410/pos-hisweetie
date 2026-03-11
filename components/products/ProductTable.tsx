@@ -372,12 +372,12 @@ export function ProductTable({
               <button
                 onClick={() => setShowCreateDropdown(!showCreateDropdown)}
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
-                <span>➕</span>
+                <span>+</span>
                 <span>Tạo mới</span>
               </button>
 
               {showCreateDropdown && (
-                <div className="absolute right-0 top-full mt-1 bg-white border rounded shadow-lg min-w-[200px] z-50">
+                <div className="absolute top-full mt-1 bg-white border rounded shadow-lg min-w-[200px] z-50">
                   <button
                     onClick={() => handleCreateProduct(2)}
                     className="w-full text-left px-4 py-2 hover:bg-gray-50">

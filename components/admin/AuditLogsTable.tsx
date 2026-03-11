@@ -124,32 +124,29 @@ export function AuditLogsTable({
     // ORDER_UPDATE
     if (log.actionCode === "ORDER_UPDATE") {
       const old = log.oldValues || {};
-      const newVal = log.newValues || {};
+      const newVal = log.newValues?.order || log.newValues || {};
 
       lines.push(
         `Cập nhật thông tin đơn đặt hàng: ${newVal.code || log.entityCode} (${newVal.statusValue || "Phiếu tạm"}), khách hàng: ${newVal.customer?.name || "N/A"}, Thuế: ${"Tắt thuế"}, bảng giá: ${newVal.priceBook?.name || "Mặc định"}, Người tạo: ${log.userName}, Người nhận đặt: ${newVal.soldBy?.name || log.userName}, bao gồm:`
       );
 
-      // Hiển thị items mới
       if (newVal.items?.length > 0) {
         newVal.items.forEach((item: any) => {
           lines.push(
-            `- ${item.productName} : ${item.quantity}×${new Intl.NumberFormat("vi-VN").format(item.price)}`
+            `- ${item.productCode || item.productName} : ${item.quantity}×${new Intl.NumberFormat("vi-VN").format(item.price)}`
           );
         });
       }
 
-      // Hiển thị ghi chú nếu có thay đổi
-      if (old.description !== newVal.description) {
-        lines.push(
-          `- Ghi chú: ${old.description || "(trống)"} -> ${newVal.description || "(trống)"}`
-        );
+      if (old.description !== newVal.description && newVal.description) {
+        lines.push(`- Ghi chú: ${newVal.description}`);
       }
 
       lines.push(`\nThông tin giao hàng:`);
-      const delivery = newVal.delivery || old.delivery;
+      const delivery = newVal.delivery;
       if (delivery) {
         lines.push(`- Người nhận: ${delivery.receiver || "N/A"}`);
+        lines.push(`- Số điện thoại: ${delivery.contactNumber || "N/A"}`);
         lines.push(`- Địa chỉ: ${delivery.address || "N/A"}`);
         if (delivery.wardName) {
           lines.push(`- Phường Xã: ${delivery.wardName}`);
@@ -161,6 +158,7 @@ export function AuditLogsTable({
         if (delivery.noteForDriver) {
           lines.push(`- Thu hộ tiền hàng: ${delivery.noteForDriver}`);
         }
+        lines.push(`- Trạng thái giao: ${delivery.statusValue || "Chờ xử lý"}`);
       }
 
       return lines.join("\n");
