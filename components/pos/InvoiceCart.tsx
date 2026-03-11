@@ -407,11 +407,11 @@ export function InvoiceCart({
           </button>
         ) : isEditMode ? (
           <button
-            onClick={() =>
+            onClick={() => {
               onSaveOrder(
                 paymentMethods.length > 0 ? paymentMethods : undefined
-              )
-            }
+              );
+            }}
             disabled={cartItems.length === 0}
             className="w-full bg-orange-400 text-white py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
             LƯU

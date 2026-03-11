@@ -531,8 +531,12 @@ export default function BanHangPage() {
 
     const editTabId = `edit-invoice-${invoiceId}`;
     const existingTab = tabs.find((t) => t.id === editTabId);
+
     if (existingTab) {
-      return;
+      if (existingTab.cartItems.length > 0) {
+        setActiveTabId(editTabId);
+        return;
+      }
     }
 
     const key = getEditStorageKey(Number(invoiceId), "invoice");
@@ -639,7 +643,9 @@ export default function BanHangPage() {
       const existingEditIndex = prevTabs.findIndex((t) => t.id === editTabId);
 
       if (existingEditIndex >= 0) {
-        return prevTabs;
+        const updatedTabs = [...prevTabs];
+        updatedTabs[existingEditIndex] = editTab;
+        return updatedTabs;
       } else {
         const nonEditTabs = prevTabs.filter(
           (t) => !t.isEditMode || t.id !== editTabId
@@ -1167,84 +1173,6 @@ export default function BanHangPage() {
         console.error("Save order error:", error);
         toast.error(error.message || "Không thể lưu đơn hàng");
       }
-    } else {
-      if (!existingInvoice) {
-        toast.error("Không tìm thấy thông tin hóa đơn");
-        return;
-      }
-
-      const actualPayment = activeTab.paymentAmount || 0;
-
-      const invoiceData = {
-        customerId: activeTab.selectedCustomer.id,
-        branchId: selectedBranch?.id,
-        purchaseDate: new Date().toISOString(),
-        description: activeTab.orderNote,
-        paidAmount: actualPayment,
-        discountAmount: Number(activeTab.discount) || 0,
-        discountRatio: Number(activeTab.discountRatio) || 0,
-        items: activeTab.cartItems.map((item) => {
-          const price = Number(item.price);
-          const quantity = Number(item.quantity);
-          const discount = Number(item.discount) || 0;
-          return {
-            productId: Number(item.product.id),
-            productCode: item.product.code,
-            productName: item.product.name,
-            quantity: quantity,
-            price: price,
-            discount: discount,
-            discountRatio: 0,
-            totalPrice: quantity * price - discount,
-            note: item.note || "",
-          };
-        }),
-        delivery: {
-          receiver: activeTab.deliveryInfo.receiver,
-          contactNumber: activeTab.deliveryInfo.contactNumber,
-          address: activeTab.deliveryInfo.detailAddress,
-          locationName: activeTab.deliveryInfo.locationName,
-          wardName: activeTab.deliveryInfo.wardName,
-          weight: Number(activeTab.deliveryInfo.weight) || 0,
-          length: Number(activeTab.deliveryInfo.length) || 10,
-          width: Number(activeTab.deliveryInfo.width) || 10,
-          height: Number(activeTab.deliveryInfo.height) || 10,
-        },
-      };
-
-      try {
-        if (actualPayment > 0) {
-          const payments =
-            activeTab.paymentMethods && activeTab.paymentMethods.length > 0
-              ? activeTab.paymentMethods
-              : [{ method: "cash", amount: actualPayment }];
-
-          for (const payment of payments) {
-            await createInvoicePayment.mutateAsync({
-              invoiceId: activeTab.documentId,
-              amount: payment.amount,
-              paymentMethod: payment.method,
-              notes: `Thanh toán bổ sung - ${payment.method}`,
-            });
-          }
-        }
-
-        await updateInvoice.mutateAsync({
-          id: activeTab.documentId,
-          data: invoiceData,
-        });
-
-        const key = getEditStorageKey(activeTab.documentId, "invoice");
-        localStorage.removeItem(key);
-
-        setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
-
-        toast.success("Lưu hóa đơn thành công");
-        router.push("/don-hang/hoa-don");
-      } catch (error: any) {
-        console.error("Save invoice error:", error);
-        toast.error(error.message || "Không thể lưu hóa đơn");
-      }
     }
   };
 
@@ -1285,84 +1213,82 @@ export default function BanHangPage() {
       return;
     }
 
-    if (activeTab.type === "order") {
-      if (!existingInvoice) {
-        toast.error("Không tìm thấy thông tin hóa đơn");
-        return;
-      }
+    if (!existingInvoice) {
+      toast.error("Không tìm thấy thông tin hóa đơn");
+      return;
+    }
 
-      const actualPayment = activeTab.paymentAmount || 0;
+    const actualPayment = activeTab.paymentAmount || 0;
 
-      const invoiceData = {
-        customerId: activeTab.selectedCustomer.id,
-        branchId: selectedBranch?.id,
-        purchaseDate: new Date().toISOString(),
-        description: activeTab.orderNote,
-        paidAmount: actualPayment,
-        discountAmount: Number(activeTab.discount) || 0,
-        discountRatio: Number(activeTab.discountRatio) || 0,
-        items: activeTab.cartItems.map((item) => {
-          const price = Number(item.price);
-          const quantity = Number(item.quantity);
-          const discount = Number(item.discount) || 0;
-          return {
-            productId: Number(item.product.id),
-            productCode: item.product.code,
-            productName: item.product.name,
-            quantity: quantity,
-            price: price,
-            discount: discount,
-            discountRatio: 0,
-            totalPrice: quantity * price - discount,
-            note: item.note || "",
-          };
-        }),
-        delivery: {
-          receiver: activeTab.deliveryInfo.receiver,
-          contactNumber: activeTab.deliveryInfo.contactNumber,
-          address: activeTab.deliveryInfo.detailAddress,
-          locationName: activeTab.deliveryInfo.locationName,
-          wardName: activeTab.deliveryInfo.wardName,
-          weight: Number(activeTab.deliveryInfo.weight) || 0,
-          length: Number(activeTab.deliveryInfo.length) || 10,
-          width: Number(activeTab.deliveryInfo.width) || 10,
-          height: Number(activeTab.deliveryInfo.height) || 10,
-        },
-      };
+    const invoiceData = {
+      customerId: activeTab.selectedCustomer.id,
+      branchId: selectedBranch?.id,
+      purchaseDate: new Date().toISOString(),
+      description: activeTab.orderNote,
+      paidAmount: actualPayment,
+      discountAmount: Number(activeTab.discount) || 0,
+      discountRatio: Number(activeTab.discountRatio) || 0,
+      items: activeTab.cartItems.map((item) => {
+        const price = Number(item.price);
+        const quantity = Number(item.quantity);
+        const discount = Number(item.discount) || 0;
+        return {
+          productId: Number(item.product.id),
+          productCode: item.product.code,
+          productName: item.product.name,
+          quantity: quantity,
+          price: price,
+          discount: discount,
+          discountRatio: 0,
+          totalPrice: quantity * price - discount,
+          note: item.note || "",
+        };
+      }),
+      delivery: {
+        receiver: activeTab.deliveryInfo.receiver,
+        contactNumber: activeTab.deliveryInfo.contactNumber,
+        address: activeTab.deliveryInfo.detailAddress,
+        locationName: activeTab.deliveryInfo.locationName,
+        wardName: activeTab.deliveryInfo.wardName,
+        weight: Number(activeTab.deliveryInfo.weight) || 0,
+        length: Number(activeTab.deliveryInfo.length) || 10,
+        width: Number(activeTab.deliveryInfo.width) || 10,
+        height: Number(activeTab.deliveryInfo.height) || 10,
+      },
+    };
 
-      try {
-        if (actualPayment > 0) {
-          const payments =
-            activeTab.paymentMethods && activeTab.paymentMethods.length > 0
-              ? activeTab.paymentMethods
-              : [{ method: "cash", amount: actualPayment }];
+    try {
+      if (actualPayment > 0) {
+        const payments =
+          activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+            ? activeTab.paymentMethods
+            : [{ method: "cash", amount: actualPayment }];
 
-          for (const payment of payments) {
-            await createInvoicePayment.mutateAsync({
-              invoiceId: activeTab.documentId,
-              amount: payment.amount,
-              paymentMethod: payment.method,
-              notes: `Thanh toán bổ sung - ${payment.method}`,
-            });
-          }
+        for (const payment of payments) {
+          await createInvoicePayment.mutateAsync({
+            invoiceId: activeTab.documentId,
+            amount: payment.amount,
+            paymentMethod: payment.method,
+            notes: `Thanh toán bổ sung - ${payment.method}`,
+          });
         }
-
-        await updateInvoice.mutateAsync({
-          id: activeTab.documentId,
-          data: invoiceData,
-        });
-
-        const key = getEditStorageKey(activeTab.documentId, "invoice");
-        localStorage.removeItem(key);
-
-        setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
-
-        toast.success("Lưu hóa đơn thành công");
-        router.push("/don-hang/hoa-don");
-      } catch (error: any) {
-        console.error("Save invoice error:", error);
-        toast.error(error.message || "Không thể lưu hóa đơn");
       }
+
+      await updateInvoice.mutateAsync({
+        id: activeTab.documentId,
+        data: invoiceData,
+      });
+
+      const key = getEditStorageKey(activeTab.documentId, "invoice");
+      localStorage.removeItem(key);
+
+      setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
+
+      toast.success("Lưu hóa đơn thành công");
+      router.push("/don-hang/hoa-don");
+    } catch (error: any) {
+      console.error("Save invoice error:", error);
+      toast.error(error.message || "Không thể lưu hóa đơn");
     }
   };
 
