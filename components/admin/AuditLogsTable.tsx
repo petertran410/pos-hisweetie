@@ -220,20 +220,52 @@ export function AuditLogsTable({
     }
 
     // INVOICE_UPDATE
-    if (log.actionCode === "INVOICE_UPDATE" && log.oldValues && log.newValues) {
-      const old = log.oldValues;
-      const newVal = log.newValues;
+    if (log.actionCode === "INVOICE_UPDATE" && log.newValues) {
+      const invoice = log.newValues;
 
-      lines.push(`Cập nhật hóa đơn: ${newVal.code || old.code}`);
-      lines.push(`Các thay đổi:`);
+      lines.push(
+        `Cập nhật hóa đơn: ${invoice.code} ( cho đơn đặt hàng: ${invoice.order?.code || "N/A"} ), khách hàng ${invoice.customer?.code || "N/A"}, bảng giá: ${invoice.priceBook?.name || "Mặc định"}, Thuê: ${invoice.taxEnabled ? "Bật thuế" : "Tắt thuế"}, giá trị: ${new Intl.NumberFormat("vi-VN").format(invoice.grandTotal || 0)}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, trạng thái: ${invoice.statusValue || "N/A"}, Người tạo: ${log.userName}, Người bán: ${invoice.soldBy?.name || log.userName}, tại kho: ${invoice.branch?.name || "N/A"}, bao gồm:`
+      );
 
-      if (old.paidAmount !== newVal.paidAmount) {
+      if (invoice.details?.length > 0) {
+        invoice.details.forEach((item: any) => {
+          lines.push(
+            `- ${item.productCode} : ${item.quantity}×${new Intl.NumberFormat("vi-VN").format(item.price)}, Tích điểm: ${item.isRewardPoint ? "Có" : "Không"}`
+          );
+        });
+      }
+
+      lines.push(`- Ghi chú: ${invoice.description || ""}`);
+
+      lines.push(`\nThông tin giao hàng:`);
+      if (invoice.delivery) {
+        lines.push(`- Người nhận: ${invoice.delivery.receiver || "N/A"}`);
         lines.push(
-          `- Đã thanh toán: ${new Intl.NumberFormat("vi-VN").format(old.paidAmount)}đ → ${new Intl.NumberFormat("vi-VN").format(newVal.paidAmount)}đ`
+          `- Số điện thoại: ${invoice.delivery.contactNumber || "N/A"}`
+        );
+        lines.push(`- Địa chỉ: ${invoice.delivery.address || "N/A"}`);
+        lines.push(`- Trọng lượng: ${invoice.delivery.weight || 0}`);
+        lines.push(
+          `- Kích thước: ${invoice.delivery.length || 0} - ${invoice.delivery.width || 0} - ${invoice.delivery.height || 0}`
+        );
+        if (invoice.delivery.price) {
+          lines.push(
+            `- Phí giao hàng: ${new Intl.NumberFormat("vi-VN").format(invoice.delivery.price)}`
+          );
+        }
+        if (invoice.delivery.noteForDriver) {
+          lines.push(`- Thu hộ tiền hàng: ${invoice.delivery.noteForDriver}`);
+        }
+        lines.push(
+          `- Trạng thái giao: ${invoice.delivery.statusValue || "Chờ xử lý"}`
         );
       }
-      if (old.statusValue !== newVal.statusValue) {
-        lines.push(`- Trạng thái: ${old.statusValue} → ${newVal.statusValue}`);
+
+      if (log.oldValues && log.oldValues.paidAmount !== invoice.paidAmount) {
+        lines.push(`\nThông tin thanh toán:`);
+        lines.push(
+          `- Đã thanh toán: ${new Intl.NumberFormat("vi-VN").format(log.oldValues.paidAmount || 0)}đ → ${new Intl.NumberFormat("vi-VN").format(invoice.paidAmount || 0)}đ`
+        );
       }
 
       return lines.join("\n");
@@ -246,6 +278,23 @@ export function AuditLogsTable({
       lines.push(`Xóa hóa đơn: ${invoice.code}`);
       lines.push(
         `- Tổng tiền: ${new Intl.NumberFormat("vi-VN").format(invoice.totalAmount || 0)}đ`
+      );
+
+      return lines.join("\n");
+    }
+
+    // INVOICE_PAYMENT_CREATE - Thêm block mới sau CASHFLOW_CREATE
+    if (log.actionCode === "INVOICE_PAYMENT_CREATE" && log.newValues) {
+      const payment = log.newValues;
+      const methodMap: Record<string, string> = {
+        cash: "Tiền mặt",
+        transfer: "Chuyển khoản",
+        card: "Thẻ",
+        ewallet: "Ví điện tử",
+      };
+
+      lines.push(
+        `Tạo phiếu thu: ${payment.code}, cho hóa đơn: ${payment.invoice?.code || "N/A"}, khách hàng ${payment.invoice?.customer?.code || "N/A"}, với giá trị: ${new Intl.NumberFormat("vi-VN").format(payment.amount || 0)}, phương thức thanh toán: ${methodMap[payment.paymentMethod] || payment.paymentMethod}, thời gian: ${format(new Date(payment.paymentDate || log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}`
       );
 
       return lines.join("\n");
