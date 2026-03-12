@@ -152,13 +152,13 @@ export function DashboardHeader() {
               </button>
 
               {hoveredMenu === "orders" && (
-                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
-                  <ul className="px-2 py-2">
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md z-50 border">
+                  <ul>
                     {orderSubmenu.map((item) => (
                       <li key={item.href}>
                         <Link
                           href={item.href}
-                          className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                          className="block px-5 py-2 min-w-max hover:bg-gray-100 rounded-md text-md transition-colors">
                           {item.label}
                         </Link>
                       </li>
