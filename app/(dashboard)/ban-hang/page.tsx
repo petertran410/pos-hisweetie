@@ -467,7 +467,7 @@ export default function BanHangPage() {
         : existingOrder.customer || null,
       selectedPriceBookId: restoredState
         ? restoredState.selectedPriceBookId
-        : null,
+        : existingOrder.priceBookId || null,
       orderNote: restoredState
         ? restoredState.orderNote
         : existingOrder.description || "",
@@ -581,7 +581,7 @@ export default function BanHangPage() {
         : existingInvoice.customer || null,
       selectedPriceBookId: restoredState
         ? restoredState.selectedPriceBookId
-        : null,
+        : existingInvoice.priceBookId || null,
       orderNote: restoredState
         ? restoredState.orderNote
         : existingInvoice.description || "",

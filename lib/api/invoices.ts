@@ -7,6 +7,8 @@ export interface Invoice {
   branchId?: number;
   soldById?: number;
   saleChannelId?: number;
+  priceBookId?: number | null;
+  priceBookName?: string | null;
   purchaseDate: string;
   totalAmount: number;
   discount: number;

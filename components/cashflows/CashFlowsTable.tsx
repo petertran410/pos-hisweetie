@@ -384,7 +384,7 @@ export function CashFlowsTable({
               </button>
 
               {showReceiptDropdown && (
-                <div className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
+                <div className="absolute top-full left-0 bg-white border rounded-lg shadow-lg py-2 z-50">
                   {RECEIPT_TYPES.map((item) => (
                     <button
                       key={item.type}
@@ -409,7 +409,7 @@ export function CashFlowsTable({
               </button>
 
               {showPaymentDropdown && (
-                <div className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
+                <div className="absolute top-full left-0 bg-white border rounded-lg shadow-lg py-2 z-50">
                   {RECEIPT_TYPES.map((item) => (
                     <button
                       key={item.type}

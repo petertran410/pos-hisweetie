@@ -32,6 +32,8 @@ export interface Order {
   branchId?: number;
   soldById?: number;
   saleChannelId?: number;
+  priceBookId?: number | null;
+  priceBookName?: string | null;
   orderDate: string;
   totalAmount: number;
   discount: number;

@@ -267,7 +267,7 @@ export function InvoiceDetailRow({
                         Bảng giá:
                       </label>
                       <span className="w-full px-3 py-2 text-md border rounded bg-white">
-                        Bảng giá chung
+                        {invoice.priceBookName || "Bảng giá chung"}
                       </span>
                     </div>
 
