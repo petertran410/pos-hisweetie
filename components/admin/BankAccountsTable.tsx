@@ -3,6 +3,8 @@
 import { Edit, Trash2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
+import { usePermission } from "@/lib/hooks/usePermissions";
+import { table } from "console";
 
 export function BankAccountsTable({
   bankAccounts,
@@ -14,6 +16,11 @@ export function BankAccountsTable({
   onEdit: (bankAccount: any) => void;
 }) {
   const queryClient = useQueryClient();
+
+  const canCreate = usePermission("bank_accounts", "create");
+  const canView = usePermission("bank_accounts", "view");
+  const canUpdate = usePermission("bank_accounts", "update");
+  const canDelete = usePermission("bank_accounts", "update");
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -87,16 +94,20 @@ export function BankAccountsTable({
             </td>
             <td className="px-6 py-4 text-sm">{account.note || "-"}</td>
             <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-              <button
-                onClick={() => onEdit(account)}
-                className="text-blue-600 hover:text-blue-900 mr-3">
-                <Edit className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => handleDelete(account.id)}
-                className="text-red-600 hover:text-red-900">
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {canUpdate && (
+                <button
+                  onClick={() => onEdit(account)}
+                  className="text-blue-600 hover:text-blue-900 mr-3">
+                  <Edit className="w-4 h-4" />
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  onClick={() => handleDelete(account.id)}
+                  className="text-red-600 hover:text-red-900">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </td>
           </tr>
         ))}

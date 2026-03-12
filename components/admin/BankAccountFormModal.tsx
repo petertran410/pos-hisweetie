@@ -5,78 +5,79 @@ import { X } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { SearchableSelect } from "../ui/SearchableSelect";
 
 const VIETNAM_BANKS = [
-  { code: "TCB", name: "Techcombank - Ngân hàng TMCP Kỹ thương Việt Nam" },
-  { code: "COOPBANK", name: "COOPBANK - Ngân hàng Hợp tác xã Việt Nam" },
-  { code: "ACB", name: "ACB - Ngân hàng TMCP Á Châu" },
-  { code: "VPB", name: "VPBank - Ngân hàng TMCP Việt Nam Thịnh Vượng" },
-  { code: "MSB", name: "MSB - Ngân hàng TMCP Hàng Hải" },
-  { code: "ABB", name: "ABBANK - Ngân hàng TMCP An Bình" },
+  { code: "Techcombank", name: "Ngân hàng TMCP Kỹ thương Việt Nam" },
+  { code: "COOPBANK", name: "Ngân hàng Hợp tác xã Việt Nam" },
+  { code: "ACB", name: "Ngân hàng TMCP Á Châu" },
+  { code: "VPB", name: "Ngân hàng TMCP Việt Nam Thịnh Vượng" },
+  { code: "MSB", name: "Ngân hàng TMCP Hàng Hải" },
+  { code: "ABB", name: "Ngân hàng TMCP An Bình" },
   { code: "VTB", name: "Vietinbank - Ngân hàng TMCP Công thương Việt Nam" },
-  { code: "VIB", name: "VIB - Ngân hàng TMCP Quốc tế Việt Nam" },
-  { code: "OCB", name: "OCB - Ngân hàng TMCP Phương Đông" },
+  { code: "VIB", name: "Ngân hàng TMCP Quốc tế Việt Nam" },
+  { code: "OCB", name: "Ngân hàng TMCP Phương Đông" },
   { code: "BAB", name: "BacABank - Ngân hàng TMCP Bắc Á" },
   { code: "DAB", name: "DongABank - Ngân hàng TMCP Đông Á" },
-  { code: "NCB", name: "NCB - Ngân hàng TMCP Quốc Dân" },
+  { code: "NCB", name: "Ngân hàng TMCP Quốc Dân" },
   { code: "VCAB", name: "VietCapitalBank - Ngân hàng TMCP Bản Việt" },
-  { code: "LPB", name: "LPBank - Ngân hàng TMCP Lộc Phát Việt Nam" },
-  { code: "STB", name: "Sacombank - Ngân hàng TMCP Sài Gòn Thương Tín" },
-  { code: "SBC", name: "SaigonBank - Ngân hàng TMCP Sài Gòn Công Thương" },
+  { code: "LPBank", name: "Ngân hàng TMCP Lộc Phát Việt Nam" },
+  { code: "STB", name: "Ngân hàng TMCP Sài Gòn Thương Tín" },
+  { code: "SBC", name: "Ngân hàng TMCP Sài Gòn Công Thương" },
   {
     code: "AGR",
-    name: "Agribank - Ngân hàng Nông nghiệp và Phát triển Nông thôn Việt Nam",
+    name: "Ngân hàng Nông nghiệp và Phát triển Nông thôn Việt Nam",
   },
   {
     code: "HDB",
-    name: "HDBank - Ngân hàng TMCP Phát triển Thành phố Hồ Chí Minh",
+    name: "Ngân hàng TMCP Phát triển Thành phố Hồ Chí Minh",
   },
-  { code: "PGB", name: "PGBank - Ngân hàng TMCP Xăng dầu Petrolimex" },
-  { code: "MB", name: "MBBank - Ngân hàng TMCP Quân đội" },
-  { code: "SAB", name: "SeABank - Ngân hàng TMCP Đông Nam Á" },
-  { code: "SHB", name: "SHB - Ngân hàng TMCP Sài Gòn - Hà Nội" },
-  { code: "NAB", name: "NamABank - Ngân hàng TMCP Nam Á" },
-  { code: "PVCB", name: "PVcomBank - Ngân hàng TMCP Đại Chúng Việt Nam" },
-  { code: "VBC", name: "VietBank - Ngân hàng TMCP Việt Nam Thương Tín" },
-  { code: "TPB", name: "TPBank - Ngân hàng TMCP Tiên Phong" },
-  { code: "KLB", name: "KienLongBank - Ngân hàng TMCP Kiên Long" },
-  { code: "VCB", name: "Vietcombank - Ngân hàng TMCP Ngoại Thương Việt Nam" },
-  { code: "IVB", name: "IndovinaBank - Ngân hàng TNHH Indovina" },
-  { code: "SCB", name: "SCB - Ngân hàng TMCP Sài Gòn" },
-  { code: "BIDV", name: "BIDV - Ngân hàng TMCP Đầu tư và Phát triển Việt Nam" },
-  { code: "EIB", name: "Eximbank - Ngân hàng TMCP Xuất Nhập khẩu Việt Nam" },
-  { code: "VAB", name: "VietABank - Ngân hàng TMCP Việt Á" },
-  { code: "BVB", name: "BaoVietBank - Ngân hàng TMCP Bảo Việt" },
+  { code: "PGB", name: "Ngân hàng TMCP Xăng dầu Petrolimex" },
+  { code: "MB", name: "Ngân hàng TMCP Quân đội" },
+  { code: "SAB", name: "Ngân hàng TMCP Đông Nam Á" },
+  { code: "SHB", name: "Ngân hàng TMCP Sài Gòn - Hà Nội" },
+  { code: "NAB", name: "Ngân hàng TMCP Nam Á" },
+  { code: "PVCB", name: "Ngân hàng TMCP Đại Chúng Việt Nam" },
+  { code: "VBC", name: "Ngân hàng TMCP Việt Nam Thương Tín" },
+  { code: "TPB", name: "Ngân hàng TMCP Tiên Phong" },
+  { code: "KLB", name: "Ngân hàng TMCP Kiên Long" },
+  { code: "VCB", name: "Ngân hàng TMCP Ngoại Thương Việt Nam" },
+  { code: "IVB", name: "Ngân hàng TNHH Indovina" },
+  { code: "SCB", name: "Ngân hàng TMCP Sài Gòn" },
+  { code: "BIDV", name: "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam" },
+  { code: "EIB", name: "Ngân hàng TMCP Xuất Nhập khẩu Việt Nam" },
+  { code: "VAB", name: "Ngân hàng TMCP Việt Á" },
+  { code: "BVB", name: "Ngân hàng TMCP Bảo Việt" },
   {
     code: "SHINHAN",
-    name: "ShinhanBank - Ngân hàng TNHH MTV Shinhan Việt Nam",
+    name: "Ngân hàng TNHH MTV Shinhan Việt Nam",
   },
-  { code: "HSBC", name: "HSBC - Ngân hàng TNHH MTV HSBC (Việt Nam)" },
-  { code: "WRB", name: "Woori - Ngân hàng TNHH MTV Woori Việt Nam" },
-  { code: "CIMB", name: "CIMB - Ngân hàng TNHH MTV CIMB Việt Nam" },
+  { code: "HSBC", name: "Ngân hàng TNHH MTV HSBC (Việt Nam)" },
+  { code: "WRB", name: "Ngân hàng TNHH MTV Woori Việt Nam" },
+  { code: "CIMB", name: "Ngân hàng TNHH MTV CIMB Việt Nam" },
   {
     code: "HONGLEONG",
-    name: "HongLeong - Ngân hàng TNHH MTV Hongleong Việt Nam",
+    name: "Ngân hàng TNHH MTV Hongleong Việt Nam",
   },
   {
     code: "SCVN",
-    name: "StandardChartered - Ngân hàng TNHH MTV Standard Chartered Bank Việt Nam",
+    name: "Ngân hàng TNHH MTV Standard Chartered Bank Việt Nam",
   },
-  { code: "IBK", name: "IBK - Ngân hàng Công nghiệp Hàn Quốc" },
+  { code: "IBK", name: "Ngân hàng Công nghiệp Hàn Quốc" },
   {
     code: "CAKE",
-    name: "CAKE - TMCP Việt Nam Thịnh Vượng - Ngân hàng số CAKE by VPBank",
+    name: "TMCP Việt Nam Thịnh Vượng - Ngân hàng số CAKE by VPBank",
   },
   {
     code: "Ubank",
-    name: "Ubank - TMCP Việt Nam Thịnh Vượng - Ngân hàng số Ubank by VPBank",
+    name: "TMCP Việt Nam Thịnh Vượng - Ngân hàng số Ubank by VPBank",
   },
-  { code: "TIMO", name: "Timo - Ngân hàng số Timo by Ban Viet Bank" },
-  { code: "LIOBANK", name: "LioBank - Ngân hàng số LioBank" },
-  { code: "VTLMONEY", name: "ViettelMoney - Tổng Công ty Dịch vụ số Viettel" },
+  { code: "TIMO", name: "Ngân hàng số Timo by Ban Viet Bank" },
+  { code: "LIOBANK", name: "Ngân hàng số LioBank" },
+  { code: "VTLMONEY", name: "Tổng Công ty Dịch vụ số Viettel" },
   {
     code: "VNPTMONEY",
-    name: "VNPTMoney - Trung tâm dịch vụ tài chính số VNPT",
+    name: "Trung tâm dịch vụ tài chính số VNPT",
   },
 ];
 
@@ -90,6 +91,11 @@ export function BankAccountFormModal({
   const queryClient = useQueryClient();
   const { data: branches } = useBranches();
   const [activeTab, setActiveTab] = useState<"info" | "scope">("info");
+
+  const bankOptions = VIETNAM_BANKS.map((bank) => ({
+    value: bank.code,
+    label: `${bank.code} - ${bank.name}`,
+  }));
 
   const [formData, setFormData] = useState({
     accountNumber: "",
@@ -234,18 +240,27 @@ export function BankAccountFormModal({
                   <label className="block text-sm font-medium mb-1">
                     Ngân hàng <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    required
+                  <SearchableSelect
+                    options={VIETNAM_BANKS.map((bank) => ({
+                      value: bank.code,
+                      label: bank.name,
+                    }))}
                     value={formData.bankCode}
-                    onChange={(e) => handleBankChange(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Chọn ngân hàng</option>
-                    {VIETNAM_BANKS.map((bank) => (
-                      <option key={bank.code} value={bank.code}>
-                        {bank.code} - {bank.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(code) => handleBankChange(code)}
+                    placeholder="Chọn ngân hàng"
+                    searchPlaceholder="Tìm kiếm ngân hàng..."
+                    renderOption={(option) => {
+                      const bank = VIETNAM_BANKS.find(
+                        (b) => b.code === option.value
+                      );
+                      return (
+                        <>
+                          <span className="font-bold italic">{bank?.code}</span>
+                          <span className="ml-2">- {option.label}</span>
+                        </>
+                      );
+                    }}
+                  />
                 </div>
 
                 <div>

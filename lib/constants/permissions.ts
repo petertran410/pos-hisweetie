@@ -24,6 +24,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   branches: "Chi nhánh",
   audit_logs: "Lịch sử",
   print_templates: "Mẫu in",
+  bank_accounts: "Tài khoản ngân hàng",
 };
 
 export const ACTION_LABELS: Record<string, string> = {
