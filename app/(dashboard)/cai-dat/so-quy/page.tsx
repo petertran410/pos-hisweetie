@@ -32,41 +32,47 @@ export default function BankAccountsPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-6 border-b bg-white">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold">Quản lý tài khoản thu chi</h1>
-            <p className="text-gray-600 mt-1">
-              Quản lý các tài khoản ngân hàng và ví điện tử dùng cho giao dịch
-              thu chi của cửa hàng.
-            </p>
+    <>
+      {canView && (
+        <div className="flex flex-col h-full">
+          <div className="p-6 border-b bg-white">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-2xl font-bold">
+                  Quản lý tài khoản thu chi
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  Quản lý các tài khoản ngân hàng và ví điện tử dùng cho giao
+                  dịch thu chi của cửa hàng.
+                </p>
+              </div>
+              {canCreate && (
+                <button
+                  onClick={handleCreate}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  <Plus className="w-5 h-5" />
+                  Thêm tài khoản
+                </button>
+              )}
+            </div>
           </div>
-          {canCreate && (
-            <button
-              onClick={handleCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              <Plus className="w-5 h-5" />
-              Thêm tài khoản
-            </button>
+
+          <div className="flex-1 overflow-auto">
+            <BankAccountsTable
+              bankAccounts={bankAccounts || []}
+              isLoading={isLoading}
+              onEdit={handleEdit}
+            />
+          </div>
+
+          {isModalOpen && (
+            <BankAccountFormModal
+              bankAccount={editingBankAccount}
+              onClose={handleCloseModal}
+            />
           )}
         </div>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        <BankAccountsTable
-          bankAccounts={bankAccounts || []}
-          isLoading={isLoading}
-          onEdit={handleEdit}
-        />
-      </div>
-
-      {isModalOpen && (
-        <BankAccountFormModal
-          bankAccount={editingBankAccount}
-          onClose={handleCloseModal}
-        />
       )}
-    </div>
+    </>
   );
 }

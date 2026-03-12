@@ -8,6 +8,13 @@ export function useBankAccounts() {
   });
 }
 
+export function useBankAccountsForPayment() {
+  return useQuery({
+    queryKey: ["bankAccountsForPayment"],
+    queryFn: () => apiClient.get("/bank-accounts/for-payment"),
+  });
+}
+
 export function useBankAccount(id: number) {
   return useQuery({
     queryKey: ["bankAccount", id],
