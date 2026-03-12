@@ -20,6 +20,7 @@ export interface CreateOrderPaymentDto {
   paymentMethod?: string;
   paymentDate?: string;
   notes?: string;
+  accountId?: number;
 }
 
 export const orderPaymentsApi = {

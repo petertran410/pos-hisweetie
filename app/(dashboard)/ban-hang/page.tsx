@@ -64,7 +64,7 @@ export interface Tab {
   discountRatio: number;
   useCOD: boolean;
   paymentAmount: number;
-  paymentMethods: Array<{ method: string; amount: number }>;
+  paymentMethods: Array<{ method: string; amount: number; accountId?: number }>;
   deliveryInfo: DeliveryInfo;
   documentId?: number;
   sourceOrderId?: number;
@@ -1152,6 +1152,7 @@ export default function BanHangPage() {
               orderId: activeTab.documentId,
               amount: payment.amount,
               paymentMethod: payment.method,
+              accountId: payment.accountId,
               notes: `Thanh toán bổ sung - ${payment.method}`,
             });
           }
@@ -1269,6 +1270,7 @@ export default function BanHangPage() {
             invoiceId: activeTab.documentId,
             amount: payment.amount,
             paymentMethod: payment.method,
+            accountId: payment.accountId,
             notes: `Thanh toán bổ sung - ${payment.method}`,
           });
         }

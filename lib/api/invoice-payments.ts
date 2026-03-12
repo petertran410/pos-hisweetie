@@ -16,6 +16,7 @@ export interface CreateInvoicePaymentDto {
   paymentMethod?: string;
   paymentDate?: string;
   notes?: string;
+  accountId?: number;
 }
 
 export const invoicePaymentsApi = {
