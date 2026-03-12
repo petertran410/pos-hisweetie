@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Shield, Building2, Clock } from "lucide-react";
+import { Users, Shield, Building2, Clock, Wallet } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export default function SettingsLayout({
@@ -30,6 +30,12 @@ export default function SettingsLayout({
       label: "Chi nhánh",
       icon: Building2,
       permission: { resource: "branches", action: "view" },
+    },
+    {
+      href: "/cai-dat/so-quy",
+      label: "Sổ quỹ",
+      icon: Wallet,
+      permission: { resource: "bank_accounts", action: "view" },
     },
     {
       href: "/cai-dat/lich-su",
