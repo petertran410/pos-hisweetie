@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { SearchableSelect } from "../ui/SearchableSelect";
+import { apiClient } from "@/lib/config/api";
 
 const VIETNAM_BANKS = [
   { code: "Techcombank", name: "Ngân hàng TMCP Kỹ thương Việt Nam" },
@@ -92,11 +93,6 @@ export function BankAccountFormModal({
   const { data: branches } = useBranches();
   const [activeTab, setActiveTab] = useState<"info" | "scope">("info");
 
-  const bankOptions = VIETNAM_BANKS.map((bank) => ({
-    value: bank.code,
-    label: `${bank.code} - ${bank.name}`,
-  }));
-
   const [formData, setFormData] = useState({
     accountNumber: "",
     bankCode: "",
@@ -123,19 +119,11 @@ export function BankAccountFormModal({
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      const url = bankAccount
-        ? `/api/bank-accounts/${bankAccount.id}`
-        : "/api/bank-accounts";
-      const method = bankAccount ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) throw new Error("Lưu thất bại");
-      return res.json();
+      if (bankAccount) {
+        return apiClient.put(`/bank-accounts/${bankAccount.id}`, data);
+      } else {
+        return apiClient.post("/bank-accounts", data);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bankAccounts"] });

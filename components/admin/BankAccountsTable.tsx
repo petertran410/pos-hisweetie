@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { table } from "console";
+import { apiClient } from "@/lib/config/api";
 
 export function BankAccountsTable({
   bankAccounts,
@@ -23,13 +24,7 @@ export function BankAccountsTable({
   const canDelete = usePermission("bank_accounts", "update");
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await fetch(`/api/bank-accounts/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Xóa thất bại");
-      return res.json();
-    },
+    mutationFn: (id: number) => apiClient.delete(`/bank-accounts/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bankAccounts"] });
       toast.success("Xóa tài khoản thành công");
