@@ -84,7 +84,7 @@ export function AuditLogsTable({
       const order = log.newValues.order;
 
       lines.push(
-        `Tạo đơn đặt hàng: ${order.code} (${order.statusValue || "Phiếu tạm"}), khách hàng: ${order.customer?.name || "N/A"}, Thuế: ${"Tắt thuế"}, thời gian ${format(new Date(order.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, bảng giá: ${order.priceBook?.name || "Mặc định"}, Người tạo: ${log.userName}, Người nhận đặt: ${order.soldBy?.name || log.userName}, bao gồm:`
+        `Tạo đơn đặt hàng: ${order.code} (${order.statusValue || "Phiếu tạm"}), khách hàng: ${order.customer?.name || "N/A"}, Thuế: ${"Tắt thuế"}, thời gian ${format(new Date(order.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, bảng giá: ${order.priceBookName || "Bảng giá chung"}, Người tạo: ${log.userName}, Người nhận đặt: ${order.soldBy?.name || log.userName}, bao gồm:`
       );
 
       if (order.items?.length > 0) {
@@ -126,7 +126,7 @@ export function AuditLogsTable({
       const newVal = log.newValues?.order || log.newValues || {};
 
       lines.push(
-        `Cập nhật thông tin đơn đặt hàng: ${newVal.code || log.entityCode} (${newVal.statusValue || "Phiếu tạm"}), khách hàng: ${newVal.customer?.name || "N/A"}, Thuế: ${"Tắt thuế"}, bảng giá: ${newVal.priceBook?.name || "Mặc định"}, Người tạo: ${log.userName}, Người nhận đặt: ${newVal.soldBy?.name || log.userName}, bao gồm:`
+        `Cập nhật thông tin đơn đặt hàng: ${newVal.code || log.entityCode} (${newVal.statusValue || "Phiếu tạm"}), khách hàng: ${newVal.customer?.name || "N/A"}, Thuế: ${"Tắt thuế"}, bảng giá: ${newVal.priceBookName || "Bảng giá chung"}, Người tạo: ${log.userName}, Người nhận đặt: ${newVal.soldBy?.name || log.userName}, bao gồm:`
       );
 
       if (newVal.items?.length > 0) {
@@ -180,7 +180,7 @@ export function AuditLogsTable({
       const invoice = log.newValues;
 
       lines.push(
-        `Tạo hóa đơn: ${invoice.code} ( cho đơn đặt hàng: ${invoice.order?.code || "N/A"} ), khách hàng ${invoice.customer?.code || "N/A"}, bảng giá: ${invoice.priceBook?.name || "Mặc định"}, Thuê: ${invoice.taxEnabled ? "Bật thuế" : "Tắt thuế"}, giá trị: ${new Intl.NumberFormat("en-US").format(invoice.grandTotal || 0)}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, trạng thái: ${invoice.statusValue || "N/A"}, Người tạo: ${log.userName}, Người bán: ${invoice.soldBy?.name || log.userName}, tại kho: ${invoice.branch?.name || "N/A"}. \nBao gồm:`
+        `Tạo hóa đơn: ${invoice.code} ( cho đơn đặt hàng: ${invoice.order?.code || "N/A"} ), khách hàng ${invoice.customer?.code || "N/A"}, bảng giá: ${invoice.priceBookName || "Bảng giá chung"}, Thuê: ${invoice.taxEnabled ? "Bật thuế" : "Tắt thuế"}, giá trị: ${new Intl.NumberFormat("en-US").format(invoice.grandTotal || 0)}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, trạng thái: ${invoice.statusValue || "N/A"}, Người tạo: ${log.userName}, Người bán: ${invoice.soldBy?.name || log.userName}, tại kho: ${invoice.branch?.name || "N/A"}. \nBao gồm:`
       );
 
       if (invoice.details?.length > 0) {
@@ -225,7 +225,7 @@ export function AuditLogsTable({
       const invoice = log.newValues;
 
       lines.push(
-        `Cập nhật hóa đơn: ${invoice.code} ( cho đơn đặt hàng: ${invoice.order?.code || "N/A"} ), khách hàng ${invoice.customer?.code || "N/A"}, bảng giá: ${invoice.priceBook?.name || "Mặc định"}, Thuê: ${invoice.taxEnabled ? "Bật thuế" : "Tắt thuế"}, giá trị: ${new Intl.NumberFormat("en-US").format(invoice.grandTotal || 0)}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, trạng thái: ${invoice.statusValue || "N/A"}, Người tạo: ${log.userName}, Người bán: ${invoice.soldBy?.name || log.userName}, tại kho: ${invoice.branch?.name || "N/A"}. \nBao gồm:`
+        `Cập nhật hóa đơn: ${invoice.code} ( cho đơn đặt hàng: ${invoice.order?.code || "N/A"} ), khách hàng ${invoice.customer?.code || "N/A"}, bảng giá: ${invoice.priceBookName || "Bảng giá chung"}, Thuê: ${invoice.taxEnabled ? "Bật thuế" : "Tắt thuế"}, giá trị: ${new Intl.NumberFormat("en-US").format(invoice.grandTotal || 0)}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, trạng thái: ${invoice.statusValue || "N/A"}, Người tạo: ${log.userName}, Người bán: ${invoice.soldBy?.name || log.userName}, tại kho: ${invoice.branch?.name || "N/A"}. \nBao gồm:`
       );
 
       if (invoice.details?.length > 0) {
@@ -329,10 +329,8 @@ export function AuditLogsTable({
     if (log.actionCode === "INVOICE_CREATE_FROM_CANCELLED" && log.newValues) {
       const invoice = log.newValues;
 
-      console.log(invoice);
-
       lines.push(
-        `Tạo hóa đơn: ${invoice.code} ( cho đơn đặt hàng: ${invoice.order?.code || "N/A"} ), khách hàng ${invoice.customer?.code || "N/A"}, bảng giá: ${invoice.priceBook?.name || "Mặc định"}, Thuế: ${invoice.taxEnabled ? "Bật thuế" : "Tắt thuế"}, giá trị: ${new Intl.NumberFormat("en-US").format(invoice.grandTotal || 0)}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, trạng thái: ${invoice.statusValue || "N/A"}, Người tạo: ${log.userName}, Người bán: ${invoice.soldBy?.name || log.userName}, tại kho: ${invoice.branch?.name || "N/A"}. \nBao gồm:`
+        `Tạo hóa đơn: ${invoice.code} ( cho đơn đặt hàng: ${invoice.order?.code || "N/A"} ), khách hàng ${invoice.customer?.code || "N/A"}, bảng giá: ${invoice.priceBookName || "Bảng giá chung"}, Thuế: ${invoice.taxEnabled ? "Bật thuế" : "Tắt thuế"}, giá trị: ${new Intl.NumberFormat("en-US").format(invoice.grandTotal || 0)}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, trạng thái: ${invoice.statusValue || "N/A"}, Người tạo: ${log.userName}, Người bán: ${invoice.soldBy?.name || log.userName}, tại kho: ${invoice.branch?.name || "N/A"}. \nBao gồm:`
       );
 
       if (invoice.details?.length > 0) {
