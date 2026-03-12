@@ -276,10 +276,51 @@ export function AuditLogsTable({
     if (log.actionCode === "INVOICE_CANCEL" && log.oldValues) {
       const invoice = log.oldValues;
 
-      lines.push(`Hủy hóa đơn: ${invoice.code}`);
+      const newInvoiceCode = log.message.match(
+        /\(tạo hóa đơn mới: ([^)]+)\)/
+      )?.[1];
+
       lines.push(
-        `- Tổng tiền: ${new Intl.NumberFormat("en-US").format(invoice.totalAmount || 0)}đ`
+        `Hủy hóa đơn: ${invoice.code}${newInvoiceCode ? ` (tạo hóa đơn mới: ${newInvoiceCode})` : ""} (cho đơn đặt hàng: ${invoice.order?.code || "N/A"}), khách hàng ${invoice.customer?.name || "N/A"}, với giá trị: ${new Intl.NumberFormat("en-US").format(invoice.grandTotal || 0)}, thời gian: ${format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}, Người hủy: ${log.userName}, Người bán: ${invoice.soldBy?.name || log.userName}, tại kho: ${invoice.branch?.name || "N/A"}.`
       );
+
+      lines.push(`\nBao gồm:`);
+
+      if (invoice.details?.length > 0) {
+        invoice.details.forEach((item: any) => {
+          lines.push(
+            `- ${item.productCode} : ${item.quantity}×${new Intl.NumberFormat("en-US").format(item.price)}, Tích điểm: ${item.isRewardPoint ? "Có" : "Không"}`
+          );
+        });
+      }
+
+      lines.push(`- Ghi chú: ${invoice.description || ""}`);
+
+      lines.push(`\nThông tin giao hàng:`);
+      if (invoice.delivery) {
+        lines.push(`- Người nhận: ${invoice.delivery.receiver || "N/A"}`);
+        lines.push(
+          `- Số điện thoại: ${invoice.delivery.contactNumber || "N/A"}`
+        );
+        lines.push(`- Địa chỉ: ${invoice.delivery.address || "N/A"}`);
+        lines.push(`- Trọng lượng: ${invoice.delivery.weight || 0}`);
+        lines.push(
+          `- Kích thước: ${invoice.delivery.length || 0} - ${invoice.delivery.width || 0} - ${invoice.delivery.height || 0}`
+        );
+        if (invoice.delivery.price) {
+          lines.push(
+            `- Phí giao hàng: ${new Intl.NumberFormat("en-US").format(invoice.delivery.price)}`
+          );
+        }
+        if (invoice.delivery.noteForDriver) {
+          lines.push(`- Thu hộ tiền hàng: ${invoice.delivery.noteForDriver}`);
+        }
+        lines.push(
+          `- Trạng thái giao: ${invoice.delivery.statusValue || "Chờ xử lý"}`
+        );
+      } else {
+        lines.push(`- Không có thông tin giao hàng`);
+      }
 
       return lines.join("\n");
     }
