@@ -295,7 +295,7 @@ export function AuditLogsTable({
       };
 
       lines.push(
-        `Tạo phiếu thu: ${payment.code}, cho hóa đơn: ${payment.invoice?.code || "N/A"}, khách hàng ${payment.invoice?.customer?.code || "N/A"}, với giá trị: ${new Intl.NumberFormat("vi-VN").format(payment.amount || 0)}, phương thức thanh toán: ${methodMap[payment.paymentMethod] || payment.paymentMethod}, thời gian: ${format(new Date(payment.paymentDate || log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}`
+        `Tạo phiếu thu: ${payment.code}, cho hóa đơn: ${payment.invoice?.code || "N/A"}, khách hàng ${payment.invoice?.customer?.name || "N/A"}, với giá trị: ${new Intl.NumberFormat("vi-VN").format(payment.amount || 0)}, phương thức thanh toán: ${methodMap[payment.paymentMethod] || payment.paymentMethod}, thời gian: ${format(new Date(payment.paymentDate || log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: vi })}`
       );
 
       return lines.join("\n");
