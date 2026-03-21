@@ -11,6 +11,7 @@ import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { CreateCashFlowGroupModal } from "./CreateCashFlowGroupModal";
 import { X, ChevronDown, Calendar, Clock } from "lucide-react";
+import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 
 interface CreateCashFlowModalProps {
   isOpen: boolean;
@@ -100,6 +101,14 @@ export function CreateCashFlowModal({
     Record<number, string>
   >({});
 
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
+    null
+  );
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+  const accountDropdownRef = useRef<HTMLDivElement>(null);
+
+  const { data: bankAccounts } = useBankAccountsForPayment();
+
   const groupDropdownRef = useRef<HTMLDivElement>(null);
   const partnerTypeDropdownRef = useRef<HTMLDivElement>(null);
   const partnerDropdownRef = useRef<HTMLDivElement>(null);
@@ -167,6 +176,12 @@ export function CreateCashFlowModal({
         !timePickerRef.current.contains(event.target as Node)
       ) {
         setShowTimePicker(false);
+      }
+      if (
+        accountDropdownRef.current &&
+        !accountDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowAccountDropdown(false);
       }
     };
 
@@ -298,6 +313,7 @@ export function CreateCashFlowModal({
         transDate: finalTransDate.toISOString(),
         method:
           type === "cash" ? "cash" : type === "bank" ? "transfer" : "ewallet",
+        accountId: selectedAccountId || undefined,
         cashFlowGroupId: cashFlowGroupId ? Number(cashFlowGroupId) : undefined,
         partnerType,
         partnerId: selectedPartner?.id,
@@ -333,6 +349,8 @@ export function CreateCashFlowModal({
     setAffectDebt(true);
     setAllocateToInvoices(true);
     setInvoicePayments({});
+    setSelectedAccountId(null);
+    setShowAccountDropdown(false);
   };
 
   return (
@@ -686,6 +704,63 @@ export function CreateCashFlowModal({
                 className="w-full px-3 py-2 border rounded-lg text-right text-lg"
               />
             </div>
+
+            {(type === "bank" || type === "ewallet") && (
+              <div className="col-span-2">
+                <label className="block text-sm font-medium mb-2">
+                  Tài khoản {type === "bank" ? "ngân hàng" : "ví điện tử"}
+                </label>
+                <div ref={accountDropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+                    className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between hover:border-blue-500">
+                    <span className="text-sm">
+                      {selectedAccountId && bankAccounts
+                        ? (() => {
+                            const account = bankAccounts.find(
+                              (a: any) => a.id === selectedAccountId
+                            );
+                            return account
+                              ? `${account.bankCode} - ${account.accountNumber} - ${account.accountHolder}`
+                              : "Chọn tài khoản";
+                          })()
+                        : "Chọn tài khoản"}
+                    </span>
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+
+                  {showAccountDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                      {bankAccounts && bankAccounts.length > 0 ? (
+                        bankAccounts.map((account: any) => (
+                          <button
+                            key={account.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedAccountId(account.id);
+                              setShowAccountDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors border-b last:border-b-0">
+                            <div className="font-medium text-sm">
+                              {account.bankCode} - {account.accountNumber}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              {account.accountHolder}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="text-sm text-gray-500 text-center py-4">
+                          Chưa có tài khoản{" "}
+                          {type === "bank" ? "ngân hàng" : "ví điện tử"}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="col-span-2">
               <label className="block text-sm font-medium mb-2">Ghi chú</label>
