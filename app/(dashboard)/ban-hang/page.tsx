@@ -449,6 +449,13 @@ export default function BanHangPage() {
     );
 
     if (hasActiveInvoices && !restoredState) {
+      const invoiceTabId = `invoice-from-order-${orderId}`;
+      const existingInvoiceTab = tabs.find((t) => t.id === invoiceTabId);
+      if (existingInvoiceTab) {
+        setActiveTabId(invoiceTabId);
+        return;
+      }
+
       const invoicedQuantities: Record<number, number> = {};
       (existingOrder.invoices || []).forEach((inv: any) => {
         if (inv.status !== 2 && inv.status !== 5) {
@@ -486,7 +493,7 @@ export default function BanHangPage() {
         Number(existingOrder.discount || 0) - usedDiscount;
 
       const invoiceTab: Tab = {
-        id: editTabId,
+        id: invoiceTabId,
         type: "invoice",
         label: `Tạo HĐ từ ${existingOrder.code}`,
         code: existingOrder.code,
@@ -518,13 +525,13 @@ export default function BanHangPage() {
       };
 
       setTabs((prevTabs) => {
-        const nonEditTabs = prevTabs.filter(
-          (t) => !t.isEditMode || t.id !== editTabId
-        );
-        return [...nonEditTabs, invoiceTab];
+        if (prevTabs.some((t) => t.id === invoiceTabId)) {
+          return prevTabs;
+        }
+        return [...prevTabs, invoiceTab];
       });
 
-      setActiveTabId(editTabId);
+      setActiveTabId(invoiceTabId);
       return;
     }
 
