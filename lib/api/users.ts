@@ -64,6 +64,7 @@ export const usersApi = {
       permissionIds?: number[];
       denyPermissionIds?: number[];
       branchIds?: number[];
+      canViewOtherStaffData?: boolean;
     }
   ) => {
     return apiClient.put(`/users/${id}`, data);

@@ -6,7 +6,14 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
 import { BranchSelector } from "./BranchSelector";
-import { useFilteredNav, useFilteredPosActions } from "@/lib/hooks/useCan";
+import {
+  useFilteredNav,
+  useFilteredPosActions,
+  useFilteredSections,
+  useFilteredMenuItems,
+  useCan,
+} from "@/lib/hooks/useCan";
+import { ROUTE_PERMISSIONS } from "@/lib/permissions/registry";
 
 export function DashboardHeader() {
   const router = useRouter();
@@ -98,6 +105,17 @@ export function DashboardHeader() {
     []
   );
 
+  const filteredProductSubmenu = useFilteredSections(
+    productSubmenu,
+    ROUTE_PERMISSIONS
+  );
+  const filteredOrderSubmenu = useFilteredMenuItems(
+    orderSubmenu,
+    ROUTE_PERMISSIONS
+  );
+  const canViewCustomers = useCan("customers", "view");
+  const canViewCashflows = useCan("cash_flows", "view");
+
   return (
     <header className="text-black">
       <div className="flex items-center h-14">
@@ -112,55 +130,103 @@ export function DashboardHeader() {
               className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
               Tổng quan
             </Link>
-            <div
-              className="relative"
-              onMouseEnter={() => setHoveredMenu("products")}
-              onMouseLeave={() => setHoveredMenu(null)}>
-              <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
-                Hàng hóa
-              </button>
+            {filteredProductSubmenu.length > 0 && (
+              <div
+                className="relative"
+                onMouseEnter={() => setHoveredMenu("products")}
+                onMouseLeave={() => setHoveredMenu(null)}>
+                <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                  Hàng hóa
+                </button>
 
-              {hoveredMenu === "products" && (
-                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
-                  <div className="flex gap-6 p-6">
-                    {productSubmenu.map((section) => (
-                      <div key={section.title}>
-                        <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
-                          {section.title}
+                {hoveredMenu === "products" && (
+                  <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
+                    <div className="flex gap-6 p-6">
+                      {filteredProductSubmenu.map((section) => (
+                        <div key={section.title}>
+                          <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
+                            {section.title}
+                          </div>
+                          <ul>
+                            {section.items.map((item) => (
+                              <li key={item.href}>
+                                <Link
+                                  href={item.href}
+                                  className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                                  {item.label}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                        <ul>
-                          {section.items.map((item) => (
-                            <li key={item.href}>
-                              <Link
-                                href={item.href}
-                                className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
-                                {item.label}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
+            {filteredOrderSubmenu.length > 0 && (
+              <div
+                className="relative"
+                onMouseEnter={() => setHoveredMenu("orders")}
+                onMouseLeave={() => setHoveredMenu(null)}>
+                <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                  Đơn hàng
+                </button>
+
+                {hoveredMenu === "orders" && (
+                  <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md z-50 border">
+                    <ul>
+                      {filteredOrderSubmenu.map((item) => (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            className="block px-5 py-2 min-w-max hover:bg-gray-100 rounded-md text-md transition-colors">
+                            {item.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {canViewCustomers && (
+              <Link
+                href="/khach-hang"
+                className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                Khách hàng
+              </Link>
+            )}
+
+            {canViewCashflows && (
+              <Link
+                href="/so-quy"
+                className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                Sổ quỹ
+              </Link>
+            )}
+          </nav>
+        </div>
+
+        <div className="ml-auto px-4 flex items-center gap-4">
+          {posActions.length > 0 && (
             <div
               className="relative"
-              onMouseEnter={() => setHoveredMenu("orders")}
+              onMouseEnter={() => setHoveredMenu("pos")}
               onMouseLeave={() => setHoveredMenu(null)}>
-              <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
-                Đơn hàng
+              <button className="px-4 py-4 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
+                🛒 Bán hàng
               </button>
-
-              {hoveredMenu === "orders" && (
-                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md z-50 border">
-                  <ul>
-                    {orderSubmenu.map((item) => (
-                      <li key={item.href}>
+              {hoveredMenu === "pos" && (
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
+                  <ul className="px-2 py-2">
+                    {posActions.map((item) => (
+                      <li key={item.key}>
                         <Link
                           href={item.href}
-                          className="block px-5 py-2 min-w-max hover:bg-gray-100 rounded-md text-md transition-colors">
+                          className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
                           {item.label}
                         </Link>
                       </li>
@@ -169,49 +235,7 @@ export function DashboardHeader() {
                 </div>
               )}
             </div>
-            <Link
-              href="/khach-hang"
-              className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
-              Khách hàng
-            </Link>
-            <Link
-              href="/so-quy"
-              className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
-              Sổ quỹ
-            </Link>
-          </nav>
-        </div>
-
-        <div className="ml-auto px-4 flex items-center gap-4">
-          <div
-            className="relative"
-            onMouseEnter={() => setHoveredMenu("pos")}
-            onMouseLeave={() => setHoveredMenu(null)}>
-            <button className="px-4 py-4 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
-              🛒 Bán hàng
-            </button>
-
-            {hoveredMenu === "pos" && (
-              <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
-                <ul className="px-2 py-2">
-                  <li>
-                    <Link
-                      href="/ban-hang?type=order"
-                      className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
-                      Tạo đơn hàng
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/ban-hang?type=invoice"
-                      className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
-                      Tạo hóa đơn
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            )}
-          </div>
+          )}
 
           <BranchSelector />
 

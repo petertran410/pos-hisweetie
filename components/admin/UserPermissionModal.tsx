@@ -7,14 +7,13 @@ import {
   useUser,
   useUserBranchPermissions,
   useAssignBranchPermissions,
+  useUpdateUser,
 } from "@/lib/hooks/useUsers";
-import { useRoles } from "@/lib/hooks/useRoles";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { X, Check, ChevronDown, ChevronUp, Search, Save } from "lucide-react";
 import {
   RESOURCE_LABELS,
   ACTION_LABELS,
-  CATEGORY_ICONS,
   getPermissionLabel,
 } from "@/lib/constants/permissions";
 import { toast } from "sonner";
@@ -34,7 +33,9 @@ export function UserPermissionModal({
     queryFn: () => permissionsApi.getAll(),
   });
   const { data: allBranches } = useBranches();
-  const { data: roles } = useRoles();
+  const [activeTab, setActiveTab] = useState<"role" | "other">("role");
+  const [canViewOtherStaff, setCanViewOtherStaff] = useState(false);
+  const updateUser = useUpdateUser();
 
   const [selectedBranchId, setSelectedBranchId] = useState<number>(0);
   const [localActive, setLocalActive] = useState<number[]>([]);
@@ -78,6 +79,12 @@ export function UserPermissionModal({
       userId,
       selectedBranchId > 0 ? selectedBranchId : 0
     );
+
+  useEffect(() => {
+    if (user) {
+      setCanViewOtherStaff(user.canViewOtherStaffData || false);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (userBranches.length > 0 && selectedBranchId === 0) {
@@ -203,6 +210,16 @@ export function UserPermissionModal({
   };
 
   const handleSave = async () => {
+    if (activeTab === "other") {
+      await updateUser.mutateAsync({
+        id: userId,
+        data: { canViewOtherStaffData: canViewOtherStaff },
+      });
+      toast.success("Cập nhật phân quyền khác thành công");
+      setHasChanges(false);
+      return;
+    }
+
     if (selectedBranchId === 0) return;
 
     const grantPermissionIds = localActive.filter(
@@ -253,182 +270,162 @@ export function UserPermissionModal({
           </button>
         </div>
 
-        <div className="flex flex-1 min-h-0">
-          <div className="w-56 border-r bg-gray-50 flex-shrink-0 overflow-y-auto">
-            {userBranches.map((branch: any) => (
-              <button
-                key={branch.id}
-                onClick={() => handleBranchChange(branch.id)}
-                className={`w-full text-left px-4 py-3 border-b transition-colors ${
-                  selectedBranchId === branch.id
-                    ? "bg-blue-50 border-l-4 border-l-blue-600"
-                    : "hover:bg-gray-100 border-l-4 border-l-transparent"
-                }`}>
-                <div
-                  className={`text-sm font-medium ${selectedBranchId === branch.id ? "text-blue-600" : "text-gray-900"}`}>
-                  {branch.name}
-                </div>
-                <div className="text-xs text-gray-500 mt-0.5">
-                  {userRoleNames || "Chưa có vai trò"}
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="flex-1 flex flex-col min-w-0">
-            <div className="px-6 py-3 border-b bg-white flex items-center gap-4 flex-shrink-0">
-              <span className="text-sm text-gray-500">Vai trò</span>
-              <div className="flex items-center gap-2 px-3 py-1.5 border rounded-lg bg-gray-50 text-sm">
-                {userRoleNames || "Chưa có vai trò"}
-              </div>
-              <div className="flex-1" />
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Tìm phân quyền..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+        <div className="flex border-b flex-shrink-0">
+          <button
+            onClick={() => setActiveTab("role")}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "role"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
+            Phân quyền theo vai trò
+          </button>
+          <button
+            onClick={() => setActiveTab("other")}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "other"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
+            Phân quyền khác
+          </button>
+        </div>
+        {activeTab === "role" ? (
+          <div className="flex flex-1 min-h-0">
+            <div className="w-56 border-r bg-gray-50 flex-shrink-0 overflow-y-auto">
+              {userBranches.map((branch: any) => (
+                <button
+                  key={branch.id}
+                  onClick={() => handleBranchChange(branch.id)}
+                  className={`w-full text-left px-4 py-3 border-b transition-colors ${
+                    selectedBranchId === branch.id
+                      ? "bg-blue-50 border-l-4 border-l-blue-600"
+                      : "hover:bg-gray-100 border-l-4 border-l-transparent"
+                  }`}>
+                  <div
+                    className={`text-sm font-medium ${selectedBranchId === branch.id ? "text-blue-600" : "text-gray-900"}`}>
+                    {branch.name}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {userRoleNames || "Chưa có vai trò"}
+                  </div>
+                </button>
+              ))}
             </div>
 
-            <div className="flex flex-1 min-h-0">
-              <div
-                ref={contentRef}
-                className="flex-1 overflow-y-auto px-6 py-4">
-                {isLoadingBranch ? (
-                  <div className="flex items-center justify-center h-32">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-                  </div>
-                ) : (
-                  Object.entries(filteredPermissions || {}).map(
-                    ([category, resources]: [string, any]) => (
-                      <div
-                        key={category}
-                        id={`cat-${category}`}
-                        className="mb-6">
-                        <h3 className="text-base font-bold text-gray-900 mb-1">
-                          {category}
-                        </h3>
+            <div className="flex-1 flex flex-col min-w-0">
+              <div className="px-6 py-3 border-b bg-white flex items-center gap-4 flex-shrink-0">
+                <span className="text-sm text-gray-500">Vai trò</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 border rounded-lg bg-gray-50 text-sm">
+                  {userRoleNames || "Chưa có vai trò"}
+                </div>
+                <div className="flex-1" />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Tìm phân quyền..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-4 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
 
-                        {Object.entries(resources).map(
-                          ([resource, perms]: [string, any]) => {
-                            const resourcePermIds = perms.map((p: any) => p.id);
-                            const activeCount = resourcePermIds.filter(
-                              (id: number) => localActive.includes(id)
-                            ).length;
-                            const allSelected =
-                              activeCount === resourcePermIds.length;
-                            const someSelected = activeCount > 0;
-                            const isExpanded = expandedResources.has(resource);
+              <div className="flex flex-1 min-h-0">
+                <div
+                  ref={contentRef}
+                  className="flex-1 overflow-y-auto px-6 py-4">
+                  {isLoadingBranch ? (
+                    <div className="flex items-center justify-center h-32">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                    </div>
+                  ) : (
+                    Object.entries(filteredPermissions || {}).map(
+                      ([category, resources]: [string, any]) => (
+                        <div
+                          key={category}
+                          id={`cat-${category}`}
+                          className="mb-6">
+                          <h3 className="text-base font-bold text-gray-900 mb-1">
+                            {category}
+                          </h3>
 
-                            const mainActions = perms.filter((p: any) =>
-                              ["view", "create", "update", "delete"].includes(
-                                p.action
-                              )
-                            );
-                            const otherActions = perms.filter(
-                              (p: any) =>
-                                ![
-                                  "view",
-                                  "create",
-                                  "update",
-                                  "delete",
-                                ].includes(p.action)
-                            );
+                          {Object.entries(resources).map(
+                            ([resource, perms]: [string, any]) => {
+                              const resourcePermIds = perms.map(
+                                (p: any) => p.id
+                              );
+                              const activeCount = resourcePermIds.filter(
+                                (id: number) => localActive.includes(id)
+                              ).length;
+                              const allSelected =
+                                activeCount === resourcePermIds.length;
+                              const someSelected = activeCount > 0;
+                              const isExpanded =
+                                expandedResources.has(resource);
 
-                            return (
-                              <div
-                                key={resource}
-                                className="border rounded-lg mb-2 bg-white">
-                                <div className="flex items-center px-4 py-3">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleToggleResource(resource)
-                                    }
-                                    className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border mr-3 ${
-                                      allSelected
-                                        ? "bg-blue-600 border-blue-600"
-                                        : someSelected
-                                          ? "bg-blue-100 border-blue-600"
-                                          : "border-gray-300"
-                                    }`}>
-                                    {allSelected && (
-                                      <Check className="w-3 h-3 text-white" />
-                                    )}
-                                    {someSelected && !allSelected && (
-                                      <div className="w-2.5 h-0.5 bg-blue-600 rounded" />
-                                    )}
-                                  </button>
+                              const mainActions = perms.filter((p: any) =>
+                                ["view", "create", "update", "delete"].includes(
+                                  p.action
+                                )
+                              );
+                              const otherActions = perms.filter(
+                                (p: any) =>
+                                  ![
+                                    "view",
+                                    "create",
+                                    "update",
+                                    "delete",
+                                  ].includes(p.action)
+                              );
 
-                                  <span className="font-medium text-sm flex-1">
-                                    {RESOURCE_LABELS[resource] || resource}
-                                  </span>
+                              return (
+                                <div
+                                  key={resource}
+                                  className="border rounded-lg mb-2 bg-white">
+                                  <div className="flex items-center px-4 py-3">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleToggleResource(resource)
+                                      }
+                                      className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border mr-3 ${
+                                        allSelected
+                                          ? "bg-blue-600 border-blue-600"
+                                          : someSelected
+                                            ? "bg-blue-100 border-blue-600"
+                                            : "border-gray-300"
+                                      }`}>
+                                      {allSelected && (
+                                        <Check className="w-3 h-3 text-white" />
+                                      )}
+                                      {someSelected && !allSelected && (
+                                        <div className="w-2.5 h-0.5 bg-blue-600 rounded" />
+                                      )}
+                                    </button>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleExpand(resource)}
-                                    className="p-1 hover:bg-gray-100 rounded">
-                                    {isExpanded ? (
-                                      <ChevronUp className="w-4 h-4 text-gray-400" />
-                                    ) : (
-                                      <ChevronDown className="w-4 h-4 text-gray-400" />
-                                    )}
-                                  </button>
-                                </div>
+                                    <span className="font-medium text-sm flex-1">
+                                      {RESOURCE_LABELS[resource] || resource}
+                                    </span>
 
-                                {isExpanded && (
-                                  <div className="px-4 pb-4 border-t pt-3">
-                                    {mainActions.length > 0 && (
-                                      <div className="grid grid-cols-4 gap-3 mb-3">
-                                        {mainActions.map((perm: any) => {
-                                          const isActive = localActive.includes(
-                                            perm.id
-                                          );
-                                          const isBase =
-                                            basePermissionIds.includes(perm.id);
-                                          const isOverride =
-                                            isActive !== isBase;
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleExpand(resource)}
+                                      className="p-1 hover:bg-gray-100 rounded">
+                                      {isExpanded ? (
+                                        <ChevronUp className="w-4 h-4 text-gray-400" />
+                                      ) : (
+                                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                                      )}
+                                    </button>
+                                  </div>
 
-                                          return (
-                                            <label
-                                              key={perm.id}
-                                              className="flex items-center gap-2 cursor-pointer">
-                                              <div
-                                                onClick={() =>
-                                                  handleToggle(perm.id)
-                                                }
-                                                className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border cursor-pointer ${
-                                                  isActive
-                                                    ? isOverride
-                                                      ? "bg-green-600 border-green-600"
-                                                      : "bg-blue-600 border-blue-600"
-                                                    : "border-gray-300"
-                                                }`}>
-                                                {isActive && (
-                                                  <Check className="w-3 h-3 text-white" />
-                                                )}
-                                              </div>
-                                              <span className="text-sm">
-                                                {ACTION_LABELS[perm.action] ||
-                                                  perm.action}
-                                              </span>
-                                            </label>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
-
-                                    {otherActions.length > 0 && (
-                                      <>
-                                        <div className="text-xs font-medium text-gray-500 mb-2">
-                                          Khác
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                          {otherActions.map((perm: any) => {
+                                  {isExpanded && (
+                                    <div className="px-4 pb-4 border-t pt-3">
+                                      {mainActions.length > 0 && (
+                                        <div className="grid grid-cols-4 gap-3 mb-3">
+                                          {mainActions.map((perm: any) => {
                                             const isActive =
                                               localActive.includes(perm.id);
                                             const isBase =
@@ -465,37 +462,117 @@ export function UserPermissionModal({
                                             );
                                           })}
                                         </div>
-                                      </>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          }
-                        )}
-                      </div>
-                    )
-                  )
-                )}
-              </div>
+                                      )}
 
-              <div className="w-44 border-l flex-shrink-0 overflow-y-auto py-4 px-3">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => scrollToCategory(category)}
-                    className={`w-full text-left px-3 py-1.5 text-sm rounded transition-colors mb-0.5 ${
-                      activeCategory === category
-                        ? "text-blue-600 font-medium border-l-2 border-blue-600 bg-blue-50"
-                        : "text-gray-600 hover:bg-gray-50"
-                    }`}>
-                    {category}
-                  </button>
-                ))}
+                                      {otherActions.length > 0 && (
+                                        <>
+                                          <div className="text-xs font-medium text-gray-500 mb-2">
+                                            Khác
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
+                                            {otherActions.map((perm: any) => {
+                                              const isActive =
+                                                localActive.includes(perm.id);
+                                              const isBase =
+                                                basePermissionIds.includes(
+                                                  perm.id
+                                                );
+                                              const isOverride =
+                                                isActive !== isBase;
+
+                                              return (
+                                                <label
+                                                  key={perm.id}
+                                                  className="flex items-center gap-2 cursor-pointer">
+                                                  <div
+                                                    onClick={() =>
+                                                      handleToggle(perm.id)
+                                                    }
+                                                    className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border cursor-pointer ${
+                                                      isActive
+                                                        ? isOverride
+                                                          ? "bg-green-600 border-green-600"
+                                                          : "bg-blue-600 border-blue-600"
+                                                        : "border-gray-300"
+                                                    }`}>
+                                                    {isActive && (
+                                                      <Check className="w-3 h-3 text-white" />
+                                                    )}
+                                                  </div>
+                                                  <span className="text-sm">
+                                                    {ACTION_LABELS[
+                                                      perm.action
+                                                    ] || perm.action}
+                                                  </span>
+                                                </label>
+                                              );
+                                            })}
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                          )}
+                        </div>
+                      )
+                    )
+                  )}
+                </div>
+
+                <div className="w-44 border-l flex-shrink-0 overflow-y-auto py-4 px-3">
+                  {categories.map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => scrollToCategory(category)}
+                      className={`w-full text-left px-3 py-1.5 text-sm rounded transition-colors mb-0.5 ${
+                        activeCategory === category
+                          ? "text-blue-600 font-medium border-l-2 border-blue-600 bg-blue-50"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}>
+                      {category}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="max-w-2xl">
+              <h3 className="text-base font-bold text-gray-900 mb-4">
+                Phân quyền khác
+              </h3>
+
+              <div className="border rounded-lg p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={canViewOtherStaff}
+                    onChange={(e) => {
+                      setCanViewOtherStaff(e.target.checked);
+                      setHasChanges(true);
+                    }}
+                    className="w-5 h-5 mt-0.5 rounded"
+                  />
+                  <div>
+                    <div className="font-medium text-sm text-gray-900">
+                      Xem, chỉnh sửa giao dịch và xem báo cáo cuối ngày của nhân
+                      viên khác
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Cho phép xem đơn hàng, hóa đơn, phiếu thu/chi và tất cả dữ
+                      liệu do nhân viên khác tạo. Nếu tắt, nhân viên chỉ xem
+                      được dữ liệu do chính mình tạo.
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50 flex-shrink-0">
           <button

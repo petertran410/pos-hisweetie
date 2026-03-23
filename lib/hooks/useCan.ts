@@ -48,3 +48,40 @@ export function useFilteredPosActions(): NavItem[] {
     );
   }, [permissions]);
 }
+
+export function useFilteredMenuItems<T extends { href: string }>(
+  items: T[],
+  routePermissions: Record<string, PermissionDef>
+): T[] {
+  const { user } = useAuthStore();
+  const permissions = user?.permissions || [];
+
+  return useMemo(() => {
+    return items.filter((item) => {
+      const def = routePermissions[item.href];
+      if (!def) return true;
+      return permissions.includes(`${def.resource}:${def.action}`);
+    });
+  }, [items, permissions, routePermissions]);
+}
+
+export function useFilteredSections<
+  T extends { title: string; items: Array<{ href: string }> },
+>(sections: T[], routePermissions: Record<string, PermissionDef>): T[] {
+  const { user } = useAuthStore();
+  const permissions = user?.permissions || [];
+
+  return useMemo(() => {
+    return sections
+      .map((section) => {
+        const filtered = section.items.filter((item) => {
+          const def = routePermissions[item.href];
+          if (!def) return true;
+          return permissions.includes(`${def.resource}:${def.action}`);
+        });
+        if (filtered.length === 0) return null;
+        return { ...section, items: filtered };
+      })
+      .filter(Boolean) as T[];
+  }, [sections, permissions, routePermissions]);
+}

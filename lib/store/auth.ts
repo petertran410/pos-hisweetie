@@ -11,6 +11,7 @@ export interface User {
   branchIds?: number[];
   roles: string[];
   permissions: string[];
+  canViewOtherStaffData?: boolean;
 }
 
 interface AuthState {
