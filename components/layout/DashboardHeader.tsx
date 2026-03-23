@@ -112,66 +112,55 @@ export function DashboardHeader() {
               className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
               Tổng quan
             </Link>
-
-            {navSections.map((section) => {
-              if (section.items.length === 0) return null;
-              if (section.items.length === 1 && section.key !== "products") {
-                return (
-                  <Link
-                    key={section.key}
-                    href={section.items[0].href}
-                    className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
-                    {section.label}
-                  </Link>
-                );
-              }
-              return (
-                <div
-                  key={section.key}
-                  className="relative"
-                  onMouseEnter={() => setHoveredMenu(section.key)}
-                  onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
-                    {section.label}
-                  </button>
-                  {hoveredMenu === section.key && (
-                    <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md z-50 border">
-                      <ul className="px-2 py-2">
-                        {section.items.map((item) => (
-                          <li key={item.key}>
-                            <Link
-                              href={item.href}
-                              className="block px-4 py-2 min-w-max hover:bg-gray-100 rounded-md text-md transition-colors">
-                              {item.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="ml-auto px-4 flex items-center gap-4">
-          {posActions.length > 0 && (
             <div
               className="relative"
-              onMouseEnter={() => setHoveredMenu("pos")}
+              onMouseEnter={() => setHoveredMenu("products")}
               onMouseLeave={() => setHoveredMenu(null)}>
-              <button className="px-4 py-4 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
-                🛒 Bán hàng
+              <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                Hàng hóa
               </button>
-              {hoveredMenu === "pos" && (
+
+              {hoveredMenu === "products" && (
                 <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
-                  <ul className="px-2 py-2">
-                    {posActions.map((item) => (
-                      <li key={item.key}>
+                  <div className="flex gap-6 p-6">
+                    {productSubmenu.map((section) => (
+                      <div key={section.title}>
+                        <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
+                          {section.title}
+                        </div>
+                        <ul>
+                          {section.items.map((item) => (
+                            <li key={item.href}>
+                              <Link
+                                href={item.href}
+                                className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                                {item.label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div
+              className="relative"
+              onMouseEnter={() => setHoveredMenu("orders")}
+              onMouseLeave={() => setHoveredMenu(null)}>
+              <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                Đơn hàng
+              </button>
+
+              {hoveredMenu === "orders" && (
+                <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md z-50 border">
+                  <ul>
+                    {orderSubmenu.map((item) => (
+                      <li key={item.href}>
                         <Link
                           href={item.href}
-                          className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                          className="block px-5 py-2 min-w-max hover:bg-gray-100 rounded-md text-md transition-colors">
                           {item.label}
                         </Link>
                       </li>
@@ -180,7 +169,49 @@ export function DashboardHeader() {
                 </div>
               )}
             </div>
-          )}
+            <Link
+              href="/khach-hang"
+              className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+              Khách hàng
+            </Link>
+            <Link
+              href="/so-quy"
+              className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+              Sổ quỹ
+            </Link>
+          </nav>
+        </div>
+
+        <div className="ml-auto px-4 flex items-center gap-4">
+          <div
+            className="relative"
+            onMouseEnter={() => setHoveredMenu("pos")}
+            onMouseLeave={() => setHoveredMenu(null)}>
+            <button className="px-4 py-4 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
+              🛒 Bán hàng
+            </button>
+
+            {hoveredMenu === "pos" && (
+              <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md min-w-max z-50 border">
+                <ul className="px-2 py-2">
+                  <li>
+                    <Link
+                      href="/ban-hang?type=order"
+                      className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                      Tạo đơn hàng
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/ban-hang?type=invoice"
+                      className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                      Tạo hóa đơn
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
 
           <BranchSelector />
 

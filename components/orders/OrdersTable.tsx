@@ -7,8 +7,7 @@ import { Plus, Settings } from "lucide-react";
 import type { Order } from "@/lib/types/order";
 import { OrderDetailRow } from "./OrderDetailRow";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { PermissionGate } from "@/components/permissions/PermissionGate";
-import { usePermission } from "@/lib/hooks/usePermissions";
+import { Can } from "../permissions/Can";
 
 interface ColumnConfig {
   key: string;
@@ -270,10 +269,6 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
 
-  const canViewDiscount = usePermission("orders", "view");
-  const canViewOrder = usePermission("orders", "view");
-  const canCreate = usePermission("orders", "create");
-
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("orderTableColumns");
@@ -309,12 +304,8 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
   }, [columns]);
 
   const orders = data?.data || [];
-  const total = data?.total || 0;
   const visibleColumns = columns.filter((col) => {
-    if (
-      (col.key === "discount" || col.key === "discountRatio") &&
-      !canViewDiscount
-    ) {
+    if (col.key === "discount" || col.key === "discountRatio") {
       return false;
     }
     return col.visible;
@@ -347,172 +338,174 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
-      <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4 w-[500px]">
-          <h2 className="text-xl font-semibold w-[150px]">Đặt hàng</h2>
-          <input
-            type="text"
-            placeholder="Tìm kiếm đơn hàng..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+    <Can resource="orders" action="view">
+      <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
+        <div className="border-b p-4 flex items-center justify-between">
+          <div className="flex items-center gap-4 w-[500px]">
+            <h2 className="text-xl font-semibold w-[150px]">Đặt hàng</h2>
+            <input
+              type="text"
+              placeholder="Tìm kiếm đơn hàng..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-        <div className="flex items-center gap-2">
-          {canCreate && (
+          <div className="flex items-center gap-2">
+            <Can resource="orders" action="create">
+              <button
+                onClick={onCreateClick}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Tạo Đơn Hàng
+              </button>
+            </Can>
             <button
-              onClick={onCreateClick}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Tạo Đơn Hàng
+              onClick={() => setShowColumnModal(true)}
+              className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Cột Hiển Thị
             </button>
-          )}
-          <button
-            onClick={() => setShowColumnModal(true)}
-            className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Cột Hiển Thị
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-md">
-          <thead className="bg-gray-50 sticky top-0 z-10">
-            <tr>
-              <th className="px-6 py-3 text-left sticky left-0 bg-gray-50">
-                <input
-                  type="checkbox"
-                  checked={
-                    selectedIds.length === orders.length && orders.length > 0
-                  }
-                  onChange={toggleSelectAll}
-                  className="cursor-pointer"
-                />
-              </th>
-              {visibleColumns.map((col) => (
-                <th
-                  key={col.key}
-                  className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length + 3}
-                  className="px-6 py-8 text-center text-gray-500">
-                  Đang tải...
-                </td>
-              </tr>
-            ) : orders.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length + 3}
-                  className="px-6 py-8 text-center text-gray-500">
-                  Chưa có đơn đặt hàng nào
-                </td>
-              </tr>
-            ) : (
-              orders.map((order) => {
-                return (
-                  <Fragment key={order.id}>
-                    <tr
-                      className={`border-b cursor-pointer ${
-                        expandedOrderId === order.id ? "" : ""
-                      }`}
-                      onClick={() => toggleExpand(order.id)}>
-                      <td
-                        className="px-6 py-3 sticky left-0 bg-white z-10"
-                        onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(order.id)}
-                          onChange={() => toggleSelect(order.id)}
-                          className="cursor-pointer"
-                        />
-                      </td>
-                      {visibleColumns.map((col) => (
-                        <td
-                          key={col.key}
-                          className="px-6 py-3"
-                          style={{
-                            width: col.width,
-                            minWidth: col.width,
-                            maxWidth: col.width,
-                            wordWrap: "break-word",
-                            whiteSpace: "normal",
-                          }}>
-                          {col.render(order)}
-                        </td>
-                      ))}
-                    </tr>
-                    {canViewOrder && expandedOrderId === order.id && (
-                      <OrderDetailRow
-                        orderId={order.id}
-                        colSpan={visibleColumns.length + 1}
-                      />
-                    )}
-                  </Fragment>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {showColumnModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto custom-sidebar-scroll">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Tùy chỉnh cột hiển thị</h3>
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="text-gray-400 hover:text-gray-600">
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-              {columns.map((col) => {
-                if (
-                  (col.key === "discount" || col.key === "discountRatio") &&
-                  !canViewDiscount
-                ) {
-                  return null;
-                }
-
-                return (
-                  <label
-                    key={col.key}
-                    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                    <input
-                      type="checkbox"
-                      checked={col.visible}
-                      onChange={() => toggleColumnVisibility(col.key)}
-                      className="cursor-pointer"
-                    />
-                    <span className="text-md">{col.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="px-4 py-2 border rounded hover:bg-gray-50">
-                Đóng
-              </button>
-            </div>
           </div>
         </div>
-      )}
-    </div>
+
+        <div className="flex-1 overflow-auto">
+          <table className="w-full text-md">
+            <thead className="bg-gray-50 sticky top-0 z-10">
+              <tr>
+                <th className="px-6 py-3 text-left sticky left-0 bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedIds.length === orders.length && orders.length > 0
+                    }
+                    onChange={toggleSelectAll}
+                    className="cursor-pointer"
+                  />
+                </th>
+                {visibleColumns.map((col) => (
+                  <th
+                    key={col.key}
+                    className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td
+                    colSpan={visibleColumns.length + 3}
+                    className="px-6 py-8 text-center text-gray-500">
+                    Đang tải...
+                  </td>
+                </tr>
+              ) : orders.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={visibleColumns.length + 3}
+                    className="px-6 py-8 text-center text-gray-500">
+                    Chưa có đơn đặt hàng nào
+                  </td>
+                </tr>
+              ) : (
+                orders.map((order) => {
+                  return (
+                    <Fragment key={order.id}>
+                      <tr
+                        className={`border-b cursor-pointer ${
+                          expandedOrderId === order.id ? "" : ""
+                        }`}
+                        onClick={() => toggleExpand(order.id)}>
+                        <td
+                          className="px-6 py-3 sticky left-0 bg-white z-10"
+                          onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(order.id)}
+                            onChange={() => toggleSelect(order.id)}
+                            className="cursor-pointer"
+                          />
+                        </td>
+                        {visibleColumns.map((col) => (
+                          <td
+                            key={col.key}
+                            className="px-6 py-3"
+                            style={{
+                              width: col.width,
+                              minWidth: col.width,
+                              maxWidth: col.width,
+                              wordWrap: "break-word",
+                              whiteSpace: "normal",
+                            }}>
+                            {col.render(order)}
+                          </td>
+                        ))}
+                      </tr>
+
+                      {expandedOrderId === order.id && (
+                        <OrderDetailRow
+                          orderId={order.id}
+                          colSpan={visibleColumns.length + 1}
+                        />
+                      )}
+                    </Fragment>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {showColumnModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto custom-sidebar-scroll">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  Tùy chỉnh cột hiển thị
+                </h3>
+                <button
+                  onClick={() => setShowColumnModal(false)}
+                  className="text-gray-400 hover:text-gray-600">
+                  ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                {columns.map((col) => {
+                  if (col.key === "discount" || col.key === "discountRatio") {
+                    return null;
+                  }
+
+                  return (
+                    <label
+                      key={col.key}
+                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input
+                        type="checkbox"
+                        checked={col.visible}
+                        onChange={() => toggleColumnVisibility(col.key)}
+                        className="cursor-pointer"
+                      />
+                      <span className="text-md">{col.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  onClick={() => setShowColumnModal(false)}
+                  className="px-4 py-2 border rounded hover:bg-gray-50">
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </Can>
   );
 }
