@@ -1,16 +1,23 @@
 import { useAuthStore } from "@/lib/store/auth";
+import { useBranchStore } from "../store/branch";
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3060/api";
 
 const getAuthHeaders = (): HeadersInit => {
   const token = useAuthStore.getState().token;
+  const selectedBranch = useBranchStore.getState().selectedBranch;
+
   const headers: HeadersInit = {
     "Content-Type": "application/json",
   };
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  if (selectedBranch?.id) {
+    headers["X-Branch-Id"] = String(selectedBranch.id);
   }
 
   return headers;

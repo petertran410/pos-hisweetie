@@ -4,10 +4,12 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranchStore } from "@/lib/store/branch";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useAuthStore } from "@/lib/store/auth";
+import { authApi } from "@/lib/api/auth";
 import { Branch } from "@/lib/api/branches";
 
 export function BranchSelector() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { selectedBranch, setSelectedBranch } = useBranchStore();
@@ -24,7 +26,6 @@ export function BranchSelector() {
   useEffect(() => {
     if (!selectedBranch && branches && branches.length > 0) {
       const userBranch = branches.find((b) => b.id === user?.branchId);
-
       const defaultBranch = userBranch || branches[0];
       setSelectedBranch(defaultBranch);
     }
@@ -44,16 +45,43 @@ export function BranchSelector() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSelectBranch = (branch: Branch) => {
+  const handleSelectBranch = async (branch: Branch) => {
+    if (branch.id === selectedBranch?.id) {
+      setIsOpen(false);
+      return;
+    }
+
     setSelectedBranch(branch);
     setIsOpen(false);
+
+    const token = useAuthStore.getState().token;
+    const currentUser = useAuthStore.getState().user;
+    if (!token || !currentUser) return;
+
+    setIsLoading(true);
+    try {
+      const profile = await authApi.getProfile(token, branch.id);
+      useAuthStore.getState().setAuth(
+        {
+          ...currentUser,
+          permissions: profile.permissions,
+          branchIds: profile.branchIds || currentUser.branchIds,
+          roles: profile.roles || currentUser.roles,
+        },
+        token
+      );
+    } catch {
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 min-w-[200px] text-black">
+        disabled={isLoading}
+        className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 min-w-[200px] text-black disabled:opacity-70">
         <svg
           className="w-5 h-5"
           fill="none"
@@ -67,12 +95,10 @@ export function BranchSelector() {
           />
         </svg>
         <span className="flex-1 text-left truncate text-black">
-          {selectedBranch?.name || "Chọn chi nhánh"}
+          {isLoading ? "Đang tải..." : selectedBranch?.name || "Chọn chi nhánh"}
         </span>
         <svg
-          className={`w-4 h-4 transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24">
@@ -86,20 +112,20 @@ export function BranchSelector() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-full bg-white border rounded-lg shadow-lg z-50 max-h-[300px] overflow-y-auto text-black">
+        <div className="absolute top-full right-0 mt-1 w-64 bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
           {branches?.map((branch) => (
             <button
               key={branch.id}
               onClick={() => handleSelectBranch(branch)}
-              className={`w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 ${
+              className={`w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center justify-between ${
                 selectedBranch?.id === branch.id
                   ? "bg-blue-50 text-blue-600"
                   : ""
               }`}>
-              {branch.name}
+              <span className="text-sm">{branch.name}</span>
               {selectedBranch?.id === branch.id && (
                 <svg
-                  className="w-5 h-5 ml-auto"
+                  className="w-4 h-4"
                   fill="currentColor"
                   viewBox="0 0 20 20">
                   <path

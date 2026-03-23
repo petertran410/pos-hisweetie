@@ -15,6 +15,7 @@ export interface LoginResponse {
     avatar?: string;
     roles: string[];
     permissions: string[];
+    branchIds?: number[];
   };
 }
 
@@ -36,8 +37,12 @@ export const authApi = {
     return res.json();
   },
 
-  getProfile: async (token: string) => {
-    const res = await fetch(`${API_URL}/auth/profile`, {
+  getProfile: async (token: string, branchId?: number) => {
+    const url = branchId
+      ? `${API_URL}/auth/profile?branchId=${branchId}`
+      : `${API_URL}/auth/profile`;
+
+    const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
