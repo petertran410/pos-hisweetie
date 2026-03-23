@@ -6,6 +6,8 @@ import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
 import { useRoles } from "@/lib/hooks/useRoles";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { UserPermissionMatrix } from "./UserPermissionMatrix";
+import { authApi } from "@/lib/api/auth";
+import { useAuthStore } from "@/lib/store/auth";
 
 interface UserFormModalProps {
   userId: number | null;
@@ -82,6 +84,25 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
           updateData.password = formData.password;
         }
         await updateUser.mutateAsync({ id: userId, data: updateData });
+
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser && currentUser.id === userId) {
+          const token = useAuthStore.getState().token;
+          if (token) {
+            try {
+              const profile = await authApi.getProfile(token);
+              useAuthStore.getState().setAuth(
+                {
+                  ...currentUser,
+                  permissions: profile.permissions,
+                  roles: profile.roles,
+                  branchIds: profile.branchIds,
+                },
+                token
+              );
+            } catch {}
+          }
+        }
       } else {
         await createUser.mutateAsync(formData);
       }
