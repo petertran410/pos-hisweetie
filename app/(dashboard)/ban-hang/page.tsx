@@ -326,9 +326,13 @@ export default function BanHangPage() {
     const editTabs = loadAllEditTabsFromStorage();
     allTabs.push(...editTabs);
 
-    if (allTabs.length > 0) {
-      setTabs(allTabs);
-      setActiveTabId(allTabs[0].id);
+    const uniqueTabs = allTabs.filter(
+      (tab, index, self) => self.findIndex((t) => t.id === tab.id) === index
+    );
+
+    if (uniqueTabs.length > 0) {
+      setTabs(uniqueTabs);
+      setActiveTabId(uniqueTabs[0].id);
     }
 
     setIsInitialized(true);
@@ -418,10 +422,6 @@ export default function BanHangPage() {
     if (!existingOrder || !orderId) return;
 
     const editTabId = `edit-order-${orderId}`;
-    const existingTab = tabs.find((t) => t.id === editTabId);
-    if (existingTab) {
-      return;
-    }
 
     const key = getEditStorageKey(Number(orderId), "order");
     const savedEditState = localStorage.getItem(key);
@@ -450,11 +450,6 @@ export default function BanHangPage() {
 
     if (hasActiveInvoices && !restoredState) {
       const invoiceTabId = `invoice-from-order-${orderId}`;
-      const existingInvoiceTab = tabs.find((t) => t.id === invoiceTabId);
-      if (existingInvoiceTab) {
-        setActiveTabId(invoiceTabId);
-        return;
-      }
 
       const invoicedQuantities: Record<number, number> = {};
       (existingOrder.invoices || []).forEach((inv: any) => {
@@ -468,8 +463,9 @@ export default function BanHangPage() {
 
       const remainingCartItems: CartItem[] = (existingOrder.items || [])
         .map((item: any) => {
-          const invoiced = invoicedQuantities[item.productId] || 0;
+          const invoiced = invoicedQuantities[item.product?.id] || 0;
           const remaining = Number(item.quantity) - invoiced;
+          if (remaining <= 0) return null;
           return {
             product: item.product,
             quantity: remaining,
@@ -478,30 +474,22 @@ export default function BanHangPage() {
             note: item.note || "",
           };
         })
-        .filter((item: CartItem) => item.quantity > 0);
+        .filter(Boolean) as CartItem[];
 
       if (remainingCartItems.length === 0) {
-        toast.error("Tất cả sản phẩm trong đơn hàng đã được xuất hóa đơn");
-        router.push("/don-hang/dat-hang");
+        toast.info("Đơn hàng đã được xuất hóa đơn toàn bộ");
         return;
       }
-
-      const usedDiscount = (existingOrder.invoices || [])
-        .filter((inv: any) => inv.status !== 2 && inv.status !== 5)
-        .reduce((sum: number, inv: any) => sum + Number(inv.discount || 0), 0);
-      const remainingDiscount =
-        Number(existingOrder.discount || 0) - usedDiscount;
 
       const invoiceTab: Tab = {
         id: invoiceTabId,
         type: "invoice",
-        label: `Tạo HĐ từ ${existingOrder.code}`,
-        code: existingOrder.code,
+        label: `HĐ từ ĐH #${existingOrder.code}`,
         cartItems: remainingCartItems,
         selectedCustomer: existingOrder.customer || null,
         selectedPriceBookId: existingOrder.priceBookId || null,
         orderNote: existingOrder.description || "",
-        discount: remainingDiscount > 0 ? remainingDiscount : 0,
+        discount: 0,
         discountRatio: 0,
         useCOD: false,
         paymentAmount: 0,
@@ -520,12 +508,10 @@ export default function BanHangPage() {
         },
         sourceOrderId: existingOrder.id,
         sourceOrder: existingOrder,
-        documentId: undefined,
-        isEditMode: false,
       };
 
       setTabs((prevTabs) => {
-        if (prevTabs.some((t) => t.id === invoiceTabId)) {
+        if (prevTabs.find((t) => t.id === invoiceTabId)) {
           return prevTabs;
         }
         return [...prevTabs, invoiceTab];
@@ -603,12 +589,11 @@ export default function BanHangPage() {
       const existingEditIndex = prevTabs.findIndex((t) => t.id === editTabId);
 
       if (existingEditIndex >= 0) {
-        return prevTabs;
+        const updatedTabs = [...prevTabs];
+        updatedTabs[existingEditIndex] = editTab;
+        return updatedTabs;
       } else {
-        const nonEditTabs = prevTabs.filter(
-          (t) => !t.isEditMode || t.id !== editTabId
-        );
-        return [...nonEditTabs, editTab];
+        return [...prevTabs.filter((t) => t.id !== editTabId), editTab];
       }
     });
 
