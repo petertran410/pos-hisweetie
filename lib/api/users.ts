@@ -40,6 +40,8 @@ export const usersApi = {
     branchId?: number;
     roleIds?: number[];
     permissionIds?: number[];
+    denyPermissionIds?: number[];
+    branchIds?: number[];
     isActive?: boolean;
   }) => {
     return apiClient.post("/users", data);
@@ -56,6 +58,8 @@ export const usersApi = {
       isActive?: boolean;
       roleIds?: number[];
       permissionIds?: number[];
+      denyPermissionIds?: number[];
+      branchIds?: number[];
     }
   ) => {
     return apiClient.put(`/users/${id}`, data);

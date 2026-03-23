@@ -21,9 +21,13 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
     branchId: 0,
     roleIds: [] as number[],
     permissionIds: [] as number[],
+    denyPermissionIds: [] as number[],
+    branchIds: [] as number[],
     isActive: true,
   });
+
   const [showPermissions, setShowPermissions] = useState(false);
+  const [showDenyPermissions, setShowDenyPermissions] = useState(false);
 
   const { data: user, isLoading: isLoadingUser } = useUser(userId || 0);
   const createUser = useCreateUser();
@@ -41,6 +45,8 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
         branchId: user.branchId || 0,
         roleIds: user.roles?.map((r: any) => r.id) || [],
         permissionIds: user.individualPermissions?.map((p: any) => p.id) || [],
+        denyPermissionIds: user.denyPermissions?.map((p: any) => p.id) || [],
+        branchIds: user.assignedBranches?.map((b: any) => b.id) || [],
         isActive: user.isActive ?? true,
       });
     }
@@ -48,7 +54,6 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       if (userId) {
         const updateData: any = {
@@ -59,12 +64,12 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
           isActive: formData.isActive,
           roleIds: formData.roleIds,
           permissionIds: formData.permissionIds,
+          denyPermissionIds: formData.denyPermissionIds,
+          branchIds: formData.branchIds,
         };
-
         if (formData.password) {
           updateData.password = formData.password;
         }
-
         await updateUser.mutateAsync({ id: userId, data: updateData });
       } else {
         await createUser.mutateAsync(formData);
@@ -209,6 +214,38 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
               </select>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Chi nhánh được phép truy cập
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Chọn các chi nhánh mà người dùng có thể thao tác. Để trống = tất
+                cả chi nhánh.
+              </p>
+              <div className="border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1">
+                {branches?.map((branch: any) => (
+                  <label
+                    key={branch.id}
+                    className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.branchIds.includes(branch.id)}
+                      onChange={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          branchIds: prev.branchIds.includes(branch.id)
+                            ? prev.branchIds.filter((id) => id !== branch.id)
+                            : [...prev.branchIds, branch.id],
+                        }));
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">{branch.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium">
@@ -271,6 +308,46 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                     rolePermissions={rolePermissions}
                     onChange={handlePermissionsChange}
                   />
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowDenyPermissions(!showDenyPermissions)
+                      }
+                      className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-red-600">
+                          Từ chối quyền ({formData.denyPermissionIds.length}{" "}
+                          quyền)
+                        </span>
+                        <span className="text-xs text-gray-600">
+                          Loại bỏ quyền cụ thể từ vai trò
+                        </span>
+                      </div>
+                      {showDenyPermissions ? (
+                        <ChevronUp className="w-5 h-5" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5" />
+                      )}
+                    </button>
+
+                    {showDenyPermissions && (
+                      <div className="border-t">
+                        <UserPermissionMatrix
+                          selectedPermissions={formData.denyPermissionIds}
+                          rolePermissions={[]}
+                          onChange={(ids) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              denyPermissionIds: ids,
+                            }))
+                          }
+                          isDenyMode={true}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

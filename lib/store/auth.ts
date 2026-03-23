@@ -8,6 +8,7 @@ export interface User {
   phone?: string;
   avatar?: string;
   branchId?: number;
+  branchIds?: number[];
   roles: string[];
   permissions: string[];
 }
@@ -18,6 +19,7 @@ interface AuthState {
   isAuthenticated: boolean;
   _hasHydrated: boolean;
   setAuth: (user: User, token: string) => void;
+  updatePermissions: (permissions: string[]) => void;
   clearAuth: () => void;
   setHasHydrated: (hasHydrated: boolean) => void;
 }
@@ -35,6 +37,10 @@ export const useAuthStore = create<AuthState>()(
           token,
           isAuthenticated: true,
         }),
+      updatePermissions: (permissions) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, permissions } : null,
+        })),
       clearAuth: () =>
         set({
           user: null,

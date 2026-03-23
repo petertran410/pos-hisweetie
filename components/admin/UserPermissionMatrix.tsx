@@ -15,6 +15,7 @@ interface UserPermissionMatrixProps {
   selectedPermissions: number[];
   rolePermissions: number[];
   onChange: (permissionIds: number[]) => void;
+  isDenyMode?: boolean;
 }
 
 export function UserPermissionMatrix({
@@ -117,30 +118,41 @@ export function UserPermissionMatrix({
 
   return (
     <div className="p-4">
-      {/* Legend */}
-      <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <div className="font-medium mb-3 text-gray-900">Chú thích:</div>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
-              <Check className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-sm text-gray-700">Quyền riêng</span>
+      {isDenyMode ? (
+        <div className="mb-4 p-4 bg-red-50 rounded-lg border border-red-200">
+          <div className="font-medium mb-2 text-red-800">
+            Chế độ từ chối quyền
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center flex-shrink-0">
-              <Check className="w-4 h-4 text-white" />
+          <p className="text-sm text-red-600">
+            Những quyền được chọn ở đây sẽ bị loại bỏ khỏi user, kể cả khi vai
+            trò của họ có quyền đó.
+          </p>
+        </div>
+      ) : (
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="font-medium mb-3 text-gray-900">Chú thích:</div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
+                <Check className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm text-gray-700">Quyền riêng</span>
             </div>
-            <span className="text-sm text-gray-700">Từ vai trò</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-purple-600 rounded flex items-center justify-center flex-shrink-0">
-              <Check className="w-4 h-4 text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center flex-shrink-0">
+                <Check className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm text-gray-700">Từ vai trò</span>
             </div>
-            <span className="text-sm text-gray-700">Cả hai</span>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-purple-600 rounded flex items-center justify-center flex-shrink-0">
+                <Check className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm text-gray-700">Cả hai</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Search */}
       <div className="mb-4 relative">

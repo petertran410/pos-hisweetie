@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranchStore } from "@/lib/store/branch";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useAuthStore } from "@/lib/store/auth";
@@ -11,8 +11,15 @@ export function BranchSelector() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { selectedBranch, setSelectedBranch } = useBranchStore();
-  const { data: branches } = useBranches();
   const { user } = useAuthStore();
+  const { data: allBranches } = useBranches();
+
+  const branches = useMemo(() => {
+    if (!allBranches) return [];
+    const userBranchIds = user?.branchIds || [];
+    if (userBranchIds.length === 0) return allBranches;
+    return allBranches.filter((b) => userBranchIds.includes(b.id));
+  }, [allBranches, user?.branchIds]);
 
   useEffect(() => {
     if (!selectedBranch && branches && branches.length > 0) {
