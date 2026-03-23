@@ -96,8 +96,8 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
     }));
   };
 
-  const rolePermissions = user?.rolePermissions || [];
-  const totalRolePermissions = rolePermissions.length;
+  const rolePermissionIds = (user?.rolePermissions || []).map((p: any) => p.id);
+  const totalRolePermissions = rolePermissionIds.length;
   const totalIndividualPermissions = formData.permissionIds.length;
 
   if (userId && isLoadingUser) {
@@ -305,49 +305,46 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 <div className="border-t">
                   <UserPermissionMatrix
                     selectedPermissions={formData.permissionIds}
-                    rolePermissions={rolePermissions}
+                    rolePermissions={rolePermissionIds}
                     onChange={handlePermissionsChange}
                   />
+                </div>
+              )}
+            </div>
 
-                  <div className="border rounded-lg overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowDenyPermissions(!showDenyPermissions)
-                      }
-                      className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-red-600">
-                          Từ chối quyền ({formData.denyPermissionIds.length}{" "}
-                          quyền)
-                        </span>
-                        <span className="text-xs text-gray-600">
-                          Loại bỏ quyền cụ thể từ vai trò
-                        </span>
-                      </div>
-                      {showDenyPermissions ? (
-                        <ChevronUp className="w-5 h-5" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5" />
-                      )}
-                    </button>
+            <div className="border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowDenyPermissions(!showDenyPermissions)}
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-red-600">
+                    Từ chối quyền ({formData.denyPermissionIds.length} quyền)
+                  </span>
+                  <span className="text-xs text-gray-600">
+                    Loại bỏ quyền cụ thể từ vai trò
+                  </span>
+                </div>
+                {showDenyPermissions ? (
+                  <ChevronUp className="w-5 h-5" />
+                ) : (
+                  <ChevronDown className="w-5 h-5" />
+                )}
+              </button>
 
-                    {showDenyPermissions && (
-                      <div className="border-t">
-                        <UserPermissionMatrix
-                          selectedPermissions={formData.denyPermissionIds}
-                          rolePermissions={[]}
-                          onChange={(ids) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              denyPermissionIds: ids,
-                            }))
-                          }
-                          isDenyMode={true}
-                        />
-                      </div>
-                    )}
-                  </div>
+              {showDenyPermissions && (
+                <div className="border-t">
+                  <UserPermissionMatrix
+                    selectedPermissions={formData.denyPermissionIds}
+                    rolePermissions={[]}
+                    onChange={(ids) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        denyPermissionIds: ids,
+                      }))
+                    }
+                    isDenyMode={true}
+                  />
                 </div>
               )}
             </div>
