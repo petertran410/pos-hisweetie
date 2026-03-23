@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useBankAccounts } from "@/lib/hooks/useBankAccounts";
 import { ChevronDown } from "lucide-react";
 
@@ -108,7 +108,7 @@ export function CashFlowsSidebar({
   const [showPresetDropdown, setShowPresetDropdown] = useState(false);
 
   const { data: branchesData } = useBranches();
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUsersForFilter();
 
   const branches = branchesData || [];
   const users = usersData || [];

@@ -17,7 +17,7 @@ import { useBranchStore } from "@/lib/store/branch";
 import type { OrderSupplier } from "@/lib/types/order-supplier";
 import { CreditCard } from "lucide-react";
 import { SupplierPaymentModal } from "../order-suppliers/SupplierPaymentModal";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useAuthStore } from "@/lib/store/auth";
 
 interface ProductItem {
@@ -100,7 +100,7 @@ export function PurchaseOrderForm({
   );
   const [products, setProducts] = useState<ProductItem[]>([]);
   const { user: currentUser } = useAuthStore();
-  const { data: users } = useUsers();
+  const { data: users } = useUsersForFilter();
   const [purchaseById, setPurchaseById] = useState<number>(
     purchaseOrder?.purchaseById || orderSupplier?.userId || currentUser?.id || 0
   );

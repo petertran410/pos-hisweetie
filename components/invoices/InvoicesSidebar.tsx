@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useCustomers } from "@/lib/hooks/useCustomers";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
-import { Filter, X, Calendar, ChevronDown } from "lucide-react";
+import { X, Calendar, ChevronDown } from "lucide-react";
 
 interface InvoicesSidebarProps {
   filters: any;
@@ -111,7 +111,7 @@ export function InvoicesSidebar({
 
   const { data: branchesData } = useBranches();
   const { data: customersData } = useCustomers({ pageSize: 1000 });
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUsersForFilter();
   const { data: saleChannelsData } = useSaleChannels();
 
   const branches = branchesData || [];

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { ChevronDown } from "lucide-react";
 import type { OrderSupplierFilters } from "@/lib/types/order-supplier";
 import {
@@ -20,7 +20,7 @@ export function OrderSupplierSidebar({
   setFilters,
 }: OrderSupplierSidebarProps) {
   const { data: branches } = useBranches();
-  const { data: users } = useUsers();
+  const { data: users } = useUsersForFilter();
 
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);

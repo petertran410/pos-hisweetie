@@ -9,7 +9,7 @@ import {
 } from "@/lib/hooks/usePriceBooks";
 import { useBranches } from "@/lib/hooks/useBranches"; // SỬA
 import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups"; // SỬA
-import { useUsers } from "@/lib/hooks/useUsers"; // SỬA
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers"; // SỬA
 
 interface PriceBookFormProps {
   priceBook?: PriceBook | null;
@@ -27,7 +27,7 @@ export function PriceBookForm({
 
   const { data: branchesData } = useBranches();
   const { data: customerGroupsData } = useCustomerGroups();
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUsersForFilter();
 
   const createPriceBook = useCreatePriceBook();
   const updatePriceBook = useUpdatePriceBook();
@@ -47,23 +47,23 @@ export function PriceBookForm({
       branchScope: priceBook?.isGlobal
         ? "all"
         : priceBook?.priceBookBranches && priceBook.priceBookBranches.length > 0
-        ? "specific"
-        : "all",
+          ? "specific"
+          : "all",
       selectedBranches:
         priceBook?.priceBookBranches?.map((b) => b.branchId) || [],
       customerGroupScope: priceBook?.forAllCusGroup
         ? "all"
         : priceBook?.priceBookCustomerGroups &&
-          priceBook.priceBookCustomerGroups.length > 0
-        ? "specific"
-        : "all",
+            priceBook.priceBookCustomerGroups.length > 0
+          ? "specific"
+          : "all",
       selectedCustomerGroups:
         priceBook?.priceBookCustomerGroups?.map((g) => g.customerGroupId) || [],
       userScope: priceBook?.forAllUser
         ? "all"
         : priceBook?.priceBookUsers && priceBook.priceBookUsers.length > 0
-        ? "specific"
-        : "all",
+          ? "specific"
+          : "all",
       selectedUsers: priceBook?.priceBookUsers?.map((u) => u.userId) || [],
     },
   });

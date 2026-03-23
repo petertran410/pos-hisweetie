@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import type { PurchaseOrderFilters } from "@/lib/types/purchase-order";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { ChevronDown, X } from "lucide-react";
 
 interface PurchaseOrderSidebarProps {
@@ -18,7 +18,7 @@ export function PurchaseOrderSidebar({
 }: PurchaseOrderSidebarProps) {
   const { data: branches } = useBranches();
   const { data: suppliersData } = useSuppliers({});
-  const { data: users } = useUsers();
+  const { data: users } = useUsersForFilter();
 
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);

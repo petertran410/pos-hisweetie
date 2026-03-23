@@ -8,7 +8,7 @@ import {
   useUpdateDestruction,
   useDestruction,
 } from "@/lib/hooks/useDestructions";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { toast } from "sonner";
 
 interface DestructionDetailRowProps {
@@ -49,7 +49,7 @@ export function DestructionDetailRow({
   const router = useRouter();
   const cancelDestruction = useCancelDestruction();
   const updateDestruction = useUpdateDestruction();
-  const { data: users } = useUsers();
+  const { data: users } = useUsersForFilter();
   const { data: destruction, isLoading } = useDestruction(destructionId);
 
   const [searchCode, setSearchCode] = useState("");

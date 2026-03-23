@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { X, Camera, Upload, ChevronDown } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useInvoices } from "@/lib/hooks/useInvoices";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { uploadPackingLoadingImage } from "@/lib/hooks/usePackingLoadings";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingLoading } from "@/lib/types/packing-loading";
@@ -26,7 +26,7 @@ export function PackingLoadingForm({
   preselectedBranchId = null,
 }: PackingLoadingFormProps) {
   const { data: branches } = useBranches();
-  const { data: users } = useUsers();
+  const { data: users } = useUsersForFilter();
   const [branchId, setBranchId] = useState(
     packingLoading?.branchId || preselectedBranchId || 0
   );

@@ -28,6 +28,10 @@ export const usersApi = {
     return apiClient.get("/users/all");
   },
 
+  getUsersForFilter: (): Promise<{ id: number; name: string }[]> => {
+    return apiClient.get("/users/for-filter");
+  },
+
   getOne: (id: number) => {
     return apiClient.get(`/users/${id}`);
   },

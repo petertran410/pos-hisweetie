@@ -3,10 +3,9 @@
 import { useState, useEffect } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useCustomers } from "@/lib/hooks/useCustomers";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 import { ChevronDown, X } from "lucide-react";
-import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface OrdersSidebarProps {
   filters: any;
@@ -115,12 +114,9 @@ export function OrdersSidebar({
   filters,
   onFiltersChange,
 }: OrdersSidebarProps) {
-  const canViewOwn = usePermission("orders", "view", "own");
-  const canViewBranch = usePermission("orders", "view", "branch");
-  const canViewAll = usePermission("orders", "view", "all");
   const { data: branches } = useBranches();
   const { data: customersData } = useCustomers({ pageSize: 1000 });
-  const { data: users } = useUsers();
+  const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
 
   const [branchId, setBranchId] = useState<string>("");

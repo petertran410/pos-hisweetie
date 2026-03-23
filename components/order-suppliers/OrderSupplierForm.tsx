@@ -10,7 +10,7 @@ import {
   useCreateOrderSupplier,
   useUpdateOrderSupplier,
 } from "@/lib/hooks/useOrderSuppliers";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
 import type { OrderSupplier } from "@/lib/types/order-supplier";
@@ -110,7 +110,7 @@ export function OrderSupplierForm({
     orderSupplier?.userId || currentUser?.id || 0
   );
   const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const { data: users } = useUsers();
+  const { data: users } = useUsersForFilter();
   const selectedUser = users?.find((u: any) => u.id === userId);
 
   const statusDropdownRef = useRef<HTMLDivElement>(null);

@@ -5,7 +5,7 @@ import { useCreateCashFlow } from "@/lib/hooks/useCashflows";
 import { useCashFlowGroups } from "@/lib/hooks/useCashflowGroups";
 import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useUnpaidInvoicesByPartner } from "@/lib/hooks/useInvoices";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
@@ -120,7 +120,7 @@ export function CreateCashFlowModal({
   const { data: cashFlowGroups } = useCashFlowGroups(isReceipt);
   const { data: customersData } = useCustomers({ pageSize: 100 });
   const { data: suppliersData } = useSuppliers({ pageSize: 100 });
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUsersForFilter();
   const { data: unpaidInvoicesData } = useUnpaidInvoicesByPartner(
     selectedPartner?.id || null,
     partnerType

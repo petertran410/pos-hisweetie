@@ -22,6 +22,13 @@ export function useAllUsers(params?: {
   });
 }
 
+export function useUsersForFilter() {
+  return useQuery({
+    queryKey: ["users-for-filter"],
+    queryFn: () => usersApi.getUsersForFilter(),
+  });
+}
+
 export function useUser(id: number) {
   return useQuery({
     queryKey: ["users", id],

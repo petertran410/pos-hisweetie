@@ -5,7 +5,7 @@ import {
   useUpdatePurchaseOrder,
 } from "@/lib/hooks/usePurchaseOrders";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -24,7 +24,7 @@ export function PurchaseOrderDetailRow({
   const router = useRouter();
   const { data: purchaseOrder, isLoading } = usePurchaseOrder(purchaseOrderId);
   const { data: suppliersData } = useSuppliers({});
-  const { data: users } = useUsers();
+  const { data: users } = useUsersForFilter();
   const updatePurchaseOrder = useUpdatePurchaseOrder();
 
   const [productCodeSearch, setProductCodeSearch] = useState("");

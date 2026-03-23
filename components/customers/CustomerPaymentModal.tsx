@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { invoicesApi } from "@/lib/api/invoices";
 import { cashflowsApi } from "@/lib/api/cashflows";
-import { useUsers } from "@/lib/hooks/useUsers";
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
 import { X, Calendar, Clock, ChevronDown } from "lucide-react";
@@ -82,7 +82,7 @@ export function CustomerPaymentModal({
   const timePickerRef = useRef<HTMLDivElement>(null);
   const collectorDropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUsersForFilter();
   const users = usersData || [];
 
   const { data: invoicesData, isLoading } = useQuery({
