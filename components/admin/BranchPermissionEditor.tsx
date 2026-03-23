@@ -14,7 +14,6 @@ import {
   CATEGORY_ICONS,
   getPermissionLabel,
 } from "@/lib/constants/permissions";
-import { toast } from "sonner";
 
 interface BranchPermissionEditorProps {
   userId: number;

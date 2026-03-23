@@ -5,10 +5,10 @@ import { X, ChevronDown, ChevronUp, Building2 } from "lucide-react";
 import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
 import { useRoles } from "@/lib/hooks/useRoles";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { UserPermissionMatrix } from "./UserPermissionMatrix";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/store/auth";
 import { BranchPermissionEditor } from "./BranchPermissionEditor";
+import { UserPermissionMatrix } from "./UserPermissionMatrix";
 
 interface UserFormModalProps {
   userId: number | null;
@@ -29,31 +29,11 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
     isActive: true,
   });
 
-  const [showPermissions, setShowPermissions] = useState(false);
-  const [showBranchPermissions, setShowBranchPermissions] = useState(false);
-
   const { data: user, isLoading: isLoadingUser } = useUser(userId || 0);
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const { data: roles } = useRoles();
   const { data: branches } = useBranches();
-
-  const assignedBranchList = useMemo(() => {
-    if (!branches) return [];
-    return branches.filter((b: any) => formData.branchIds.includes(b.id));
-  }, [branches, formData.branchIds]);
-
-  const allUserPermissionIds = useMemo(() => {
-    const fromRole = (user?.rolePermissions || []).map((p: any) => p.id);
-    const fromGrant = formData.permissionIds;
-    const denied = formData.denyPermissionIds;
-    const merged = [...new Set([...fromRole, ...fromGrant])];
-    return merged.filter((id) => !denied.includes(id));
-  }, [
-    user?.rolePermissions,
-    formData.permissionIds,
-    formData.denyPermissionIds,
-  ]);
 
   useEffect(() => {
     if (user) {
@@ -141,9 +121,6 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
       denyPermissionIds: denyIds,
     }));
   };
-
-  const rolePermissionIds = (user?.rolePermissions || []).map((p: any) => p.id);
-  const totalRolePermissions = rolePermissionIds.length;
 
   if (userId && isLoadingUser) {
     return (
@@ -290,102 +267,6 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 ))}
               </div>
             </div>
-
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium">
-                  Vai trò ({formData.roleIds.length} vai trò)
-                </label>
-                {userId && totalRolePermissions > 0 && (
-                  <span className="text-xs text-gray-600">
-                    {totalRolePermissions} quyền từ vai trò
-                  </span>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                {roles?.map((role: any) => (
-                  <label
-                    key={role.id}
-                    className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.roleIds.includes(role.id)}
-                      onChange={() => handleRoleToggle(role.id)}
-                      className="w-4 h-4"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{role.name}</div>
-                      {role.description && (
-                        <div className="text-xs text-gray-600">
-                          {role.description}
-                        </div>
-                      )}
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="border rounded-lg overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowPermissions(!showPermissions)}
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    Phân quyền ({allUserPermissionIds.length} quyền đang bật)
-                  </span>
-                </div>
-                {showPermissions ? (
-                  <ChevronUp className="w-5 h-5" />
-                ) : (
-                  <ChevronDown className="w-5 h-5" />
-                )}
-              </button>
-
-              {showPermissions && (
-                <div className="border-t">
-                  <UserPermissionMatrix
-                    activePermissionIds={allUserPermissionIds}
-                    onChange={handlePermissionsChange}
-                  />
-                </div>
-              )}
-            </div>
-
-            {userId && formData.branchIds.length > 0 && (
-              <div className="border rounded-lg overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowBranchPermissions(!showBranchPermissions)
-                  }
-                  className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium">
-                      Phân quyền theo chi nhánh ({formData.branchIds.length} chi
-                      nhánh)
-                    </span>
-                  </div>
-                  {showBranchPermissions ? (
-                    <ChevronUp className="w-5 h-5" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5" />
-                  )}
-                </button>
-
-                {showBranchPermissions && (
-                  <div className="border-t">
-                    <BranchPermissionEditor
-                      userId={userId}
-                      branches={assignedBranchList}
-                      basePermissionIds={allUserPermissionIds}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
 
             <div className="flex items-center gap-2">
               <input

@@ -4,6 +4,8 @@ import { Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
 import { useDeleteUser } from "@/lib/hooks/useUsers";
 import { ActionGuard } from "@/components/permissions/ActionGuard";
 import { useState } from "react";
+import { UserPermissionModal } from "./UserPermissionModal";
+import { Shield } from "lucide-react";
 
 interface UsersTableProps {
   users: any[];
@@ -28,6 +30,7 @@ export function UsersTable({
 }: UsersTableProps) {
   const deleteUser = useDeleteUser();
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [permissionUserId, setPermissionUserId] = useState<number | null>(null);
 
   const handleDelete = async (id: number) => {
     if (!confirm("Bạn có chắc chắn muốn xóa người dùng này?")) return;
@@ -140,6 +143,13 @@ export function UsersTable({
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </ActionGuard>
+
+                  <button
+                    onClick={() => setPermissionUserId(user.id)}
+                    className="p-1 hover:bg-gray-200 rounded"
+                    title="Phân quyền">
+                    <Shield className="w-4 h-4 text-blue-600" />
+                  </button>
                 </div>
               </td>
             </tr>
@@ -186,6 +196,13 @@ export function UsersTable({
           </button>
         </div>
       </div>
+
+      {permissionUserId && (
+        <UserPermissionModal
+          userId={permissionUserId}
+          onClose={() => setPermissionUserId(null)}
+        />
+      )}
     </div>
   );
 }
