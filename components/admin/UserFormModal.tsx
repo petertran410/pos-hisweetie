@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
 import { useRoles } from "@/lib/hooks/useRoles";
@@ -27,13 +27,24 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
   });
 
   const [showPermissions, setShowPermissions] = useState(false);
-  const [showDenyPermissions, setShowDenyPermissions] = useState(false);
 
   const { data: user, isLoading: isLoadingUser } = useUser(userId || 0);
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const { data: roles } = useRoles();
   const { data: branches } = useBranches();
+
+  const allUserPermissionIds = useMemo(() => {
+    const fromRole = (user?.rolePermissions || []).map((p: any) => p.id);
+    const fromGrant = formData.permissionIds;
+    const denied = formData.denyPermissionIds;
+    const merged = [...new Set([...fromRole, ...fromGrant])];
+    return merged.filter((id) => !denied.includes(id));
+  }, [
+    user?.rolePermissions,
+    formData.permissionIds,
+    formData.denyPermissionIds,
+  ]);
 
   useEffect(() => {
     if (user) {
@@ -89,16 +100,22 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
     }));
   };
 
-  const handlePermissionsChange = (permissionIds: number[]) => {
+  const handlePermissionsChange = (activeIds: number[]) => {
+    const fromRole = (user?.rolePermissions || []).map((p: any) => p.id);
+
+    const grantIds = activeIds.filter((id) => !fromRole.includes(id));
+
+    const denyIds = fromRole.filter((id: any) => !activeIds.includes(id));
+
     setFormData((prev) => ({
       ...prev,
-      permissionIds,
+      permissionIds: grantIds,
+      denyPermissionIds: denyIds,
     }));
   };
 
   const rolePermissionIds = (user?.rolePermissions || []).map((p: any) => p.id);
   const totalRolePermissions = rolePermissionIds.length;
-  const totalIndividualPermissions = formData.permissionIds.length;
 
   if (userId && isLoadingUser) {
     return (
@@ -288,10 +305,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">
-                    Quyền riêng ({totalIndividualPermissions} quyền)
-                  </span>
-                  <span className="text-xs text-gray-600">
-                    Tùy chỉnh quyền ngoài vai trò
+                    Phân quyền ({allUserPermissionIds.length} quyền đang bật)
                   </span>
                 </div>
                 {showPermissions ? (
@@ -304,46 +318,8 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
               {showPermissions && (
                 <div className="border-t">
                   <UserPermissionMatrix
-                    selectedPermissions={formData.permissionIds}
-                    rolePermissions={rolePermissionIds}
+                    activePermissionIds={allUserPermissionIds}
                     onChange={handlePermissionsChange}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="border rounded-lg overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowDenyPermissions(!showDenyPermissions)}
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-red-600">
-                    Từ chối quyền ({formData.denyPermissionIds.length} quyền)
-                  </span>
-                  <span className="text-xs text-gray-600">
-                    Loại bỏ quyền cụ thể từ vai trò
-                  </span>
-                </div>
-                {showDenyPermissions ? (
-                  <ChevronUp className="w-5 h-5" />
-                ) : (
-                  <ChevronDown className="w-5 h-5" />
-                )}
-              </button>
-
-              {showDenyPermissions && (
-                <div className="border-t">
-                  <UserPermissionMatrix
-                    selectedPermissions={formData.denyPermissionIds}
-                    rolePermissions={[]}
-                    onChange={(ids) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        denyPermissionIds: ids,
-                      }))
-                    }
-                    isDenyMode={true}
                   />
                 </div>
               )}

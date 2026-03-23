@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { permissionsApi } from "@/lib/api/permissions";
-import { Check, Minus, Search } from "lucide-react";
+import { Check, Search } from "lucide-react";
 import {
   RESOURCE_LABELS,
   ACTION_LABELS,
@@ -12,20 +12,15 @@ import {
 } from "@/lib/constants/permissions";
 
 interface UserPermissionMatrixProps {
-  selectedPermissions: number[];
-  rolePermissions: number[];
+  activePermissionIds: number[];
   onChange: (permissionIds: number[]) => void;
-  isDenyMode?: boolean;
 }
 
 export function UserPermissionMatrix({
-  selectedPermissions,
-  rolePermissions,
+  activePermissionIds,
   onChange,
-  isDenyMode,
 }: UserPermissionMatrixProps) {
-  const [localSelected, setLocalSelected] =
-    useState<number[]>(selectedPermissions);
+  const [localActive, setLocalActive] = useState<number[]>(activePermissionIds);
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: permissions, isLoading } = useQuery({
@@ -34,22 +29,15 @@ export function UserPermissionMatrix({
   });
 
   useEffect(() => {
-    setLocalSelected(selectedPermissions);
-  }, [selectedPermissions]);
-
-  const rolePermissionIds = rolePermissions || [];
+    setLocalActive(activePermissionIds);
+  }, [activePermissionIds]);
 
   const groupedPermissions = useMemo(() => {
     if (!permissions) return {};
-
     return permissions.reduce((acc: any, perm: any) => {
       const category = perm.category || "Khác";
-      if (!acc[category]) {
-        acc[category] = {};
-      }
-      if (!acc[category][perm.resource]) {
-        acc[category][perm.resource] = [];
-      }
+      if (!acc[category]) acc[category] = {};
+      if (!acc[category][perm.resource]) acc[category][perm.resource] = [];
       acc[category][perm.resource].push(perm);
       return acc;
     }, {});
@@ -57,59 +45,53 @@ export function UserPermissionMatrix({
 
   const filteredPermissions = useMemo(() => {
     if (!groupedPermissions || !searchQuery) return groupedPermissions;
-
     const query = searchQuery.toLowerCase();
     const result: any = {};
-
     Object.entries(groupedPermissions).forEach(
       ([category, resources]: [string, any]) => {
         const filteredResources: any = {};
-
         Object.entries(resources).forEach(
           ([resource, perms]: [string, any]) => {
-            const matchingPerms = perms.filter((p: any) => {
-              const label = getPermissionLabel(
-                p.resource,
-                p.action
-              ).toLowerCase();
-              return label.includes(query);
-            });
-
-            if (matchingPerms.length > 0) {
-              filteredResources[resource] = matchingPerms;
-            }
+            const matching = perms.filter((p: any) =>
+              getPermissionLabel(p.resource, p.action)
+                .toLowerCase()
+                .includes(query)
+            );
+            if (matching.length > 0) filteredResources[resource] = matching;
           }
         );
-
-        if (Object.keys(filteredResources).length > 0) {
+        if (Object.keys(filteredResources).length > 0)
           result[category] = filteredResources;
-        }
       }
     );
-
     return result;
   }, [groupedPermissions, searchQuery]);
 
-  const handleTogglePermission = (permId: number) => {
-    const newSelected = localSelected.includes(permId)
-      ? localSelected.filter((id) => id !== permId)
-      : [...localSelected, permId];
+  const handleToggle = (permId: number) => {
+    const newActive = localActive.includes(permId)
+      ? localActive.filter((id) => id !== permId)
+      : [...localActive, permId];
 
-    setLocalSelected(newSelected);
-    onChange(newSelected);
+    setLocalActive(newActive);
+    onChange(newActive);
   };
 
-  const getPermissionStatus = (permId: number) => {
-    if (isDenyMode) {
-      return localSelected.includes(permId) ? "deny" : "none";
-    }
-    const fromRole = rolePermissionIds.includes(permId);
-    const individual = localSelected.includes(permId);
+  const handleToggleResource = (resource: string) => {
+    const resourcePerms = Object.values(filteredPermissions)
+      .flatMap((cat: any) => cat[resource] || [])
+      .map((p: any) => p.id);
 
-    if (fromRole && individual) return "both";
-    if (fromRole) return "role";
-    if (individual) return "individual";
-    return "none";
+    const allSelected = resourcePerms.every((id) => localActive.includes(id));
+    let newActive: number[];
+
+    if (allSelected) {
+      newActive = localActive.filter((id) => !resourcePerms.includes(id));
+    } else {
+      newActive = [...new Set([...localActive, ...resourcePerms])];
+    }
+
+    setLocalActive(newActive);
+    onChange(newActive);
   };
 
   if (isLoading) {
@@ -120,45 +102,16 @@ export function UserPermissionMatrix({
     );
   }
 
+  const totalPermissions = permissions?.length || 0;
+
   return (
     <div className="p-4">
-      {isDenyMode ? (
-        <div className="mb-4 p-4 bg-red-50 rounded-lg border border-red-200">
-          <div className="font-medium mb-2 text-red-800">
-            Chế độ từ chối quyền
-          </div>
-          <p className="text-sm text-red-600">
-            Những quyền được chọn ở đây sẽ bị loại bỏ khỏi user, kể cả khi vai
-            trò của họ có quyền đó.
-          </p>
-        </div>
-      ) : (
-        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="font-medium mb-3 text-gray-900">Chú thích:</div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
-                <Check className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-sm text-gray-700">Quyền riêng</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center flex-shrink-0">
-                <Check className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-sm text-gray-700">Từ vai trò</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-purple-600 rounded flex items-center justify-center flex-shrink-0">
-                <Check className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-sm text-gray-700">Cả hai</span>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-sm text-gray-600">
+          Đã bật {localActive.length}/{totalPermissions} quyền
+        </span>
+      </div>
 
-      {/* Search */}
       <div className="mb-4 relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input
@@ -170,7 +123,6 @@ export function UserPermissionMatrix({
         />
       </div>
 
-      {/* Permissions */}
       <div className="space-y-4 max-h-96 overflow-y-auto">
         {Object.entries(filteredPermissions || {}).map(
           ([category, resources]: [string, any]) => (
@@ -188,60 +140,87 @@ export function UserPermissionMatrix({
 
               <div className="divide-y">
                 {Object.entries(resources).map(
-                  ([resource, perms]: [string, any]) => (
-                    <div key={resource} className="p-4">
-                      <div className="font-medium text-gray-900 mb-3">
-                        {RESOURCE_LABELS[resource] || resource}
-                      </div>
+                  ([resource, perms]: [string, any]) => {
+                    const resourcePerms = perms as any[];
+                    const allSelected = resourcePerms.every((p) =>
+                      localActive.includes(p.id)
+                    );
+                    const someSelected = resourcePerms.some((p) =>
+                      localActive.includes(p.id)
+                    );
 
-                      <div className="grid grid-cols-2 gap-2">
-                        {perms.map((perm: any) => {
-                          const status = getPermissionStatus(perm.id);
-                          const isDisabled = status === "role";
-
-                          return (
-                            <button
-                              key={perm.id}
-                              onClick={() =>
-                                !isDisabled && handleTogglePermission(perm.id)
-                              }
-                              disabled={isDisabled}
-                              className={`flex items-start gap-2 p-2 rounded border text-left transition-colors ${
-                                isDisabled
-                                  ? "opacity-60 cursor-not-allowed bg-gray-50"
-                                  : "hover:bg-gray-50"
+                    return (
+                      <div key={resource} className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleResource(resource)}
+                            className="flex items-center gap-2 hover:text-blue-600">
+                            <div
+                              className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 ${
+                                allSelected
+                                  ? "bg-blue-600 border-blue-600"
+                                  : someSelected
+                                    ? "bg-blue-100 border-blue-600"
+                                    : "border-gray-300"
                               }`}>
-                              <div
-                                className={`w-5 h-5 mt-0.5 rounded flex items-center justify-center flex-shrink-0 ${
-                                  status === "deny"
-                                    ? "bg-red-600"
-                                    : status === "both"
-                                      ? "bg-purple-600"
-                                      : status === "role"
-                                        ? "bg-green-600"
-                                        : status === "individual"
-                                          ? "bg-blue-600"
-                                          : "bg-white border-2 border-gray-300"
+                              {allSelected && (
+                                <Check className="w-3 h-3 text-white" />
+                              )}
+                              {someSelected && !allSelected && (
+                                <div className="w-2.5 h-0.5 bg-blue-600 rounded" />
+                              )}
+                            </div>
+                            <span className="font-medium text-gray-900">
+                              {RESOURCE_LABELS[resource] || resource}
+                            </span>
+                          </button>
+                          <span className="text-xs text-gray-500">
+                            {
+                              resourcePerms.filter((p) =>
+                                localActive.includes(p.id)
+                              ).length
+                            }
+                            /{resourcePerms.length}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          {resourcePerms.map((perm: any) => {
+                            const isActive = localActive.includes(perm.id);
+
+                            return (
+                              <button
+                                type="button"
+                                key={perm.id}
+                                onClick={() => handleToggle(perm.id)}
+                                className={`flex items-start gap-2 p-2 rounded border text-left transition-colors hover:bg-gray-50 ${
+                                  isActive
+                                    ? "border-blue-200 bg-blue-50"
+                                    : "border-gray-200"
                                 }`}>
-                                {status === "deny" ? (
-                                  <Minus className="w-3 h-3 text-white" />
-                                ) : status === "both" ||
-                                  status === "role" ||
-                                  status === "individual" ? (
-                                  <Check className="w-3 h-3 text-white" />
-                                ) : null}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {ACTION_LABELS[perm.action] || perm.action}
+                                <div
+                                  className={`w-5 h-5 mt-0.5 rounded flex items-center justify-center flex-shrink-0 ${
+                                    isActive
+                                      ? "bg-blue-600"
+                                      : "bg-white border-2 border-gray-300"
+                                  }`}>
+                                  {isActive && (
+                                    <Check className="w-3 h-3 text-white" />
+                                  )}
                                 </div>
-                              </div>
-                            </button>
-                          );
-                        })}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {ACTION_LABELS[perm.action] || perm.action}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )
+                    );
+                  }
                 )}
               </div>
             </div>
