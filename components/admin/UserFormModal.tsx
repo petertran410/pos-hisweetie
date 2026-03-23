@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { X, ChevronDown, ChevronUp } from "lucide-react";
+import { X, ChevronDown, ChevronUp, Building2 } from "lucide-react";
 import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
 import { useRoles } from "@/lib/hooks/useRoles";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { UserPermissionMatrix } from "./UserPermissionMatrix";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/store/auth";
+import { BranchPermissionEditor } from "./BranchPermissionEditor";
 
 interface UserFormModalProps {
   userId: number | null;
@@ -29,12 +30,18 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
   });
 
   const [showPermissions, setShowPermissions] = useState(false);
+  const [showBranchPermissions, setShowBranchPermissions] = useState(false);
 
   const { data: user, isLoading: isLoadingUser } = useUser(userId || 0);
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const { data: roles } = useRoles();
   const { data: branches } = useBranches();
+
+  const assignedBranchList = useMemo(() => {
+    if (!branches) return [];
+    return branches.filter((b: any) => formData.branchIds.includes(b.id));
+  }, [branches, formData.branchIds]);
 
   const allUserPermissionIds = useMemo(() => {
     const fromRole = (user?.rolePermissions || []).map((p: any) => p.id);
@@ -345,6 +352,40 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 </div>
               )}
             </div>
+
+            {userId && formData.branchIds.length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowBranchPermissions(!showBranchPermissions)
+                  }
+                  className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium">
+                      Phân quyền theo chi nhánh ({formData.branchIds.length} chi
+                      nhánh)
+                    </span>
+                  </div>
+                  {showBranchPermissions ? (
+                    <ChevronUp className="w-5 h-5" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5" />
+                  )}
+                </button>
+
+                {showBranchPermissions && (
+                  <div className="border-t">
+                    <BranchPermissionEditor
+                      userId={userId}
+                      branches={assignedBranchList}
+                      basePermissionIds={allUserPermissionIds}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <input

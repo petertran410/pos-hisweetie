@@ -76,4 +76,37 @@ export const usersApi = {
   assignPermissions: (id: number, permissionIds: number[]) => {
     return apiClient.put(`/users/${id}/permissions`, { permissionIds });
   },
+
+  getBranchPermissions: (
+    userId: number,
+    branchId: number
+  ): Promise<{
+    grants: Array<{
+      id: number;
+      resource: string;
+      action: string;
+      name: string;
+    }>;
+    denies: Array<{
+      id: number;
+      resource: string;
+      action: string;
+      name: string;
+    }>;
+  }> => {
+    return apiClient.get(`/users/${userId}/branch-permissions/${branchId}`);
+  },
+
+  assignBranchPermissions: (
+    userId: number,
+    branchId: number,
+    grantPermissionIds: number[],
+    denyPermissionIds: number[]
+  ) => {
+    return apiClient.put(`/users/${userId}/branch-permissions`, {
+      branchId,
+      grantPermissionIds,
+      denyPermissionIds,
+    });
+  },
 };
