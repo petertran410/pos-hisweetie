@@ -112,20 +112,20 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
           <h2 className="text-xl font-bold">
             {userId ? "Sửa người dùng" : "Thêm người dùng"}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg">
+            className="p-2 hover:bg-gray-100 rounded-full">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="p-6 space-y-6 overflow-y-auto flex-1">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -365,7 +365,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
+          <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
