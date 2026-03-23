@@ -24,8 +24,6 @@ import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
 import { priceBooksApi } from "@/lib/api";
-import { invoicesApi } from "@/lib/api/invoices";
-import router from "next/router";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export interface CartItem {
@@ -444,6 +442,90 @@ export default function BanHangPage() {
         console.error("Error loading edit state:", error);
         restoredState = null;
       }
+    }
+
+    const hasActiveInvoices = (existingOrder.invoices || []).some(
+      (inv: any) => inv.status !== 2 && inv.status !== 5
+    );
+
+    if (hasActiveInvoices && !restoredState) {
+      const invoicedQuantities: Record<number, number> = {};
+      (existingOrder.invoices || []).forEach((inv: any) => {
+        if (inv.status !== 2 && inv.status !== 5) {
+          (inv.details || []).forEach((d: any) => {
+            invoicedQuantities[d.productId] =
+              (invoicedQuantities[d.productId] || 0) + Number(d.quantity);
+          });
+        }
+      });
+
+      const remainingCartItems: CartItem[] = (existingOrder.items || [])
+        .map((item: any) => {
+          const invoiced = invoicedQuantities[item.productId] || 0;
+          const remaining = Number(item.quantity) - invoiced;
+          return {
+            product: item.product,
+            quantity: remaining,
+            price: Number(item.price),
+            discount: Number(item.discount) || 0,
+            note: item.note || "",
+          };
+        })
+        .filter((item: CartItem) => item.quantity > 0);
+
+      if (remainingCartItems.length === 0) {
+        toast.error("Tất cả sản phẩm trong đơn hàng đã được xuất hóa đơn");
+        router.push("/don-hang/dat-hang");
+        return;
+      }
+
+      const usedDiscount = (existingOrder.invoices || [])
+        .filter((inv: any) => inv.status !== 2 && inv.status !== 5)
+        .reduce((sum: number, inv: any) => sum + Number(inv.discount || 0), 0);
+      const remainingDiscount =
+        Number(existingOrder.discount || 0) - usedDiscount;
+
+      const invoiceTab: Tab = {
+        id: editTabId,
+        type: "invoice",
+        label: `Tạo HĐ từ ${existingOrder.code}`,
+        code: existingOrder.code,
+        cartItems: remainingCartItems,
+        selectedCustomer: existingOrder.customer || null,
+        selectedPriceBookId: existingOrder.priceBookId || null,
+        orderNote: existingOrder.description || "",
+        discount: remainingDiscount > 0 ? remainingDiscount : 0,
+        discountRatio: 0,
+        useCOD: false,
+        paymentAmount: 0,
+        paymentMethods: [],
+        deliveryInfo: {
+          receiver: existingOrder.delivery?.receiver || "",
+          contactNumber: existingOrder.delivery?.contactNumber || "",
+          detailAddress: existingOrder.delivery?.address || "",
+          locationName: existingOrder.delivery?.locationName || "",
+          wardName: existingOrder.delivery?.wardName || "",
+          weight: Number(existingOrder.delivery?.weight) || 0,
+          length: Number(existingOrder.delivery?.length) || 10,
+          width: Number(existingOrder.delivery?.width) || 10,
+          height: Number(existingOrder.delivery?.height) || 10,
+          noteForDriver: existingOrder.delivery?.noteForDriver || "",
+        },
+        sourceOrderId: existingOrder.id,
+        sourceOrder: existingOrder,
+        documentId: undefined,
+        isEditMode: false,
+      };
+
+      setTabs((prevTabs) => {
+        const nonEditTabs = prevTabs.filter(
+          (t) => !t.isEditMode || t.id !== editTabId
+        );
+        return [...nonEditTabs, invoiceTab];
+      });
+
+      setActiveTabId(editTabId);
+      return;
     }
 
     const cartItems: CartItem[] = restoredState
