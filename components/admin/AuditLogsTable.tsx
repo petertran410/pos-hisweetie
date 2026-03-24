@@ -81,8 +81,6 @@ function renderSnapshot(entityType: string, snapshot: any): string {
   if (!snapshot) return "";
   const lines: string[] = [];
 
-  console.log(snapshot);
-
   if (entityType === "orders" || entityType === "invoices") {
     lines.push(`Mã: ${snapshot.code || "N/A"}`);
     if (snapshot.order?.code) lines.push(`Đơn hàng: ${snapshot.order.code}`);
@@ -274,17 +272,33 @@ function renderSnapshot(entityType: string, snapshot: any): string {
   }
 
   if (entityType === "order_suppliers" || entityType === "purchase_orders") {
+    console.log(snapshot);
     lines.push(`Mã: ${snapshot.code || "N/A"}`);
-    if (snapshot.supplier)
-      lines.push(`NCC: ${snapshot.supplier.name || "N/A"}`);
-    if (snapshot.branch)
-      lines.push(`Chi nhánh: ${snapshot.branch.name || "N/A"}`);
+    lines.push(`NCC: ${snapshot.supplierName || "N/A"}`);
+    if (snapshot.branchId === 2) {
+      lines.push(`Chi nhánh: Kho Hà Nội`);
+    } else if (snapshot.branchId === 1) {
+      lines.push(`Chi nhánh: Kho Sài Gòn`);
+    } else if (snapshot.branchId === 3) {
+      lines.push(`Chi nhánh: Cửa Hàng Diệp Trà`);
+    }
     lines.push(
-      `Tổng tiền: ${fmtCurrency(snapshot.totalAmt || snapshot.grandTotal)}`
+      `Tổng tiền: ${fmtCurrency(snapshot.total || snapshot.grandTotal)}`
     );
     lines.push(`Đã thanh toán: ${fmtCurrency(snapshot.paidAmount)}`);
     lines.push(`Công nợ NCC: ${fmtCurrency(snapshot.supplierDebt)}`);
-    if (snapshot.description) lines.push(`Ghi chú: ${snapshot.description}`);
+    if (snapshot.status === 0) {
+      lines.push(`Trạng thái: Phiếu Tạm`);
+    } else if (snapshot.status === 1) {
+      lines.push(`Trạng thái: Đã Xác Nhận NCC`);
+    } else if (snapshot.status === 2) {
+      lines.push(`Trạng thái: Đã Nhập 1 Phần`);
+    } else if (snapshot.status === 3) {
+      lines.push(`Trạng thái: Hoàn Thành`);
+    } else if (snapshot.status === 4) {
+      lines.push(`Trạng thái: Đã Hủy`);
+    }
+    lines.push(`Ghi chú: ${snapshot.description || ""}`);
 
     if (snapshot.items?.length > 0) {
       lines.push("");
@@ -295,6 +309,77 @@ function renderSnapshot(entityType: string, snapshot: any): string {
         );
       });
     }
+    return lines.join("\n");
+  }
+
+  if (
+    entityType === "packing_slips" ||
+    entityType === "packing_hangs" ||
+    entityType === "packing_loadings"
+  ) {
+    const typeLabel =
+      entityType === "packing_slips"
+        ? "Phiếu giao hàng"
+        : entityType === "packing_hangs"
+          ? "Phiếu treo hàng"
+          : "Phiếu xếp hàng lên xe";
+    lines.push(`Loại: ${typeLabel}`);
+    lines.push(`Mã: ${snapshot.code || "N/A"}`);
+    lines.push(`Chi nhánh: ${snapshot.branchName || "N/A"}`);
+    lines.push(`Số kiện: ${fmt(snapshot.numberOfPackages)}`);
+    if (snapshot.paymentMethod)
+      lines.push(`Phương thức TT: ${snapshot.paymentMethod}`);
+    if (snapshot.cashAmount)
+      lines.push(`Tiền mặt: ${fmtCurrency(snapshot.cashAmount)}`);
+    if (snapshot.feeGuiBen)
+      lines.push(`Phí gửi bên: ${fmtCurrency(snapshot.feeGuiBen)}`);
+    if (snapshot.feeGrab)
+      lines.push(`Phí Grab: ${fmtCurrency(snapshot.feeGrab)}`);
+    if (snapshot.cuocGuiHang)
+      lines.push(`Cước gửi hàng: ${fmtCurrency(snapshot.cuocGuiHang)}`);
+    if (snapshot.loadingByName)
+      lines.push(`Người xếp hàng: ${snapshot.loadingByName}`);
+    if (snapshot.note) lines.push(`Ghi chú: ${snapshot.note}`);
+
+    if (snapshot.invoices?.length > 0) {
+      lines.push("");
+      lines.push("Hóa đơn:");
+      snapshot.invoices.forEach((inv: any) => {
+        lines.push(`  - ${inv.invoiceCode || inv.invoiceId}`);
+      });
+    }
+    return lines.join("\n");
+  }
+
+  if (
+    entityType === "purchase_order_payment" ||
+    entityType === "order_supplier_payment"
+  ) {
+    const parentLabel =
+      entityType === "purchase_order_payment"
+        ? "Phiếu nhập hàng"
+        : "Đặt hàng nhập";
+    lines.push(`Mã phiếu: ${snapshot.code || "N/A"}`);
+    lines.push(`Số tiền: ${fmtCurrency(snapshot.amount)}`);
+    lines.push(`Phương thức: ${snapshot.paymentMethod || "N/A"}`);
+    if (snapshot.purchaseOrder?.code)
+      lines.push(`${parentLabel}: ${snapshot.purchaseOrder.code}`);
+    if (snapshot.orderSupplier?.code)
+      lines.push(`${parentLabel}: ${snapshot.orderSupplier.code}`);
+    const supplierName =
+      snapshot.purchaseOrder?.supplier || snapshot.orderSupplier?.supplier;
+    if (supplierName)
+      lines.push(
+        `NCC: ${typeof supplierName === "object" ? supplierName.name : supplierName}`
+      );
+    return lines.join("\n");
+  }
+
+  if (entityType === "bank_accounts") {
+    lines.push(`Ngân hàng: ${snapshot.bankName || "N/A"}`);
+    lines.push(`Số TK: ${snapshot.accountNumber || "N/A"}`);
+    lines.push(`Chủ TK: ${snapshot.accountHolder || "N/A"}`);
+    if (snapshot.scope) lines.push(`Phạm vi: ${snapshot.scope}`);
     return lines.join("\n");
   }
 
