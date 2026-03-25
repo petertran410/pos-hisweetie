@@ -13,6 +13,7 @@ import {
 import { NoteDropdown } from "./NoteDropdown";
 import { NoteTemplateModal } from "./NoteTemplateModal";
 import { ItemDiscountModal } from "./ItemDiscountModal";
+import { ProductPriceHistory } from "./ProductPriceHistory";
 
 interface InvoiceItemsListProps {
   cartItems: CartItem[];
@@ -24,6 +25,7 @@ interface InvoiceItemsListProps {
   onDiscountRatioChange: (ratio: number) => void;
   orderNote: string;
   onOrderNoteChange: (note: string) => void;
+  selectedCustomerId?: number;
 }
 
 export function InvoiceItemsList({
@@ -36,9 +38,9 @@ export function InvoiceItemsList({
   onDiscountRatioChange,
   orderNote,
   onOrderNoteChange,
+  selectedCustomerId,
 }: InvoiceItemsListProps) {
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
-  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
   const [discountType, setDiscountType] = useState<"amount" | "ratio">(
     "amount"
   );
@@ -212,6 +214,10 @@ export function InvoiceItemsList({
                     <span className="text-md font-semibold text-gray-900">
                       {item.product.name}
                     </span>
+                    <ProductPriceHistory
+                      customerId={selectedCustomerId}
+                      productId={item.product.id}
+                    />
                   </div>
 
                   <NoteDropdown

@@ -38,6 +38,7 @@ export function OrderItemsList({
   onDiscountRatioChange,
   orderNote,
   onOrderNoteChange,
+  selectedCustomerId,
 }: CartItemsListProps) {
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
@@ -214,19 +215,10 @@ export function OrderItemsList({
                     <span className="text-md font-semibold text-gray-900">
                       {item.product.name}
                     </span>
-
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <span className="text-md font-medium text-gray-600">
-                        {item.product.code}
-                      </span>
-                      <span className="text-md font-semibold text-gray-900">
-                        {item.product.name}
-                      </span>
-                      <ProductPriceHistory
-                        customerId={selectedCustomerId}
-                        productId={item.product.id}
-                      />
-                    </div>
+                    <ProductPriceHistory
+                      customerId={selectedCustomerId}
+                      productId={item.product.id}
+                    />
                   </div>
 
                   <NoteDropdown
