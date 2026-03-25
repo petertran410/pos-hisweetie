@@ -218,6 +218,7 @@ export function OrderItemsList({
                     <ProductPriceHistory
                       customerId={selectedCustomerId}
                       productId={item.product.id}
+                      documentType="order"
                     />
                   </div>
 

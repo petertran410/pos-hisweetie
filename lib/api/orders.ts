@@ -1,3 +1,5 @@
+import { type } from "os";
+import { string, number } from "zod";
 import { apiClient } from "../config/api";
 import { Order } from "../types/order";
 
@@ -38,7 +40,8 @@ export const ordersApi = {
 
   getProductPriceHistory: (
     customerId: number,
-    productId: number
+    productId: number,
+    type?: "order" | "invoice"
   ): Promise<
     Array<{
       code: string;
@@ -53,6 +56,9 @@ export const ordersApi = {
     const queryParams = new URLSearchParams();
     queryParams.append("customerId", customerId.toString());
     queryParams.append("productId", productId.toString());
+    if (type) {
+      queryParams.append("type", type);
+    }
     return apiClient.get(
       `/orders/product-price-history?${queryParams.toString()}`
     );

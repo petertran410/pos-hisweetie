@@ -10,18 +10,21 @@ import { vi } from "date-fns/locale";
 interface ProductPriceHistoryProps {
   customerId?: number;
   productId: number;
+  documentType: "order" | "invoice";
 }
 
 export function ProductPriceHistory({
   customerId,
   productId,
+  documentType,
 }: ProductPriceHistoryProps) {
   const [showHistory, setShowHistory] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const { data: history = [], isLoading } = useProductPriceHistory(
     customerId,
-    productId
+    productId,
+    documentType
   );
 
   useEffect(() => {
@@ -53,7 +56,8 @@ export function ProductPriceHistory({
         <div className="absolute z-50 left-0 top-full mt-1 bg-white border rounded-lg shadow-lg w-80">
           <div className="px-3 py-2 border-b bg-gray-50">
             <h4 className="font-semibold text-sm">
-              Lịch sử giá 5 đơn gần nhất
+              Lịch sử giá 5 {documentType === "order" ? "đơn hàng" : "hóa đơn"}{" "}
+              gần nhất
             </h4>
           </div>
 
@@ -90,14 +94,6 @@ export function ProductPriceHistory({
                       <td className="px-3 py-2 text-xs">
                         <div className="flex items-center gap-1">
                           <span>{item.code}</span>
-                          <span
-                            className={`text-[10px] px-1 py-0.5 rounded ${
-                              item.type === "order"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-green-100 text-green-700"
-                            }`}>
-                            {item.type === "order" ? "ĐH" : "HĐ"}
-                          </span>
                         </div>
                       </td>
                       <td className="px-3 py-2 text-xs text-gray-600">

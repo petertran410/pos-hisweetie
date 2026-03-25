@@ -217,6 +217,7 @@ export function InvoiceItemsList({
                     <ProductPriceHistory
                       customerId={selectedCustomerId}
                       productId={item.product.id}
+                      documentType="invoice"
                     />
                   </div>
 
