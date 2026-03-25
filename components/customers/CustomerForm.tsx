@@ -913,8 +913,87 @@ export function CustomerForm({
             <h3 className="font-semibold mb-4">Nhóm khách hàng, ghi chú</h3>
 
             <div className="space-y-4">
-              {/* Multi-select với tags */}
-              <div className="relative" ref={dropdownRef}>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Cột trái: Nhóm khách hàng */}
+                <div className="relative" ref={dropdownRef}>
+                  <label className="block text-sm font-medium mb-2">
+                    Nhóm khách hàng
+                  </label>
+
+                  <div
+                    className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
+                    onClick={() => setShowGroupDropdown(true)}>
+                    {selectedGroups.map((group) => (
+                      <span
+                        key={group.id}
+                        className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                        {group.name}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveGroup(group.id);
+                          }}
+                          className="hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center">
+                          ×
+                        </button>
+                      </span>
+                    ))}
+
+                    <input
+                      type="text"
+                      value={groupSearchTerm}
+                      onChange={(e) => setGroupSearchTerm(e.target.value)}
+                      onFocus={() => setShowGroupDropdown(true)}
+                      placeholder={
+                        selectedGroups.length === 0
+                          ? "Chọn nhóm khách hàng"
+                          : ""
+                      }
+                      className="flex-1 outline-none min-w-[120px] bg-transparent"
+                    />
+                  </div>
+
+                  {showGroupDropdown && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-[240px] overflow-y-auto">
+                      {filteredGroups.length > 0 ? (
+                        filteredGroups.map((group) => {
+                          const isSelected = selectedGroupIds.includes(
+                            group.id
+                          );
+                          return (
+                            <div
+                              key={group.id}
+                              onClick={() => handleToggleGroup(group.id)}
+                              className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
+                              <span className="text-sm">{group.name}</span>
+                              {isSelected && (
+                                <svg
+                                  className="w-5 h-5 text-blue-600"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24">
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="px-4 py-2 text-sm text-gray-500">
+                          Không tìm thấy nhóm khách hàng
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Cột phải: Tài khoản cha */}
                 <div className="relative" ref={parentDropdownRef}>
                   <label className="block text-sm font-medium mb-2">
                     Tài khoản cha
@@ -947,7 +1026,7 @@ export function CustomerForm({
                         value={parentSearchTerm}
                         onChange={(e) => setParentSearchTerm(e.target.value)}
                         onFocus={() => setShowParentDropdown(true)}
-                        placeholder="Chọn tài khoản cha (bỏ trống = tài khoản cha)"
+                        placeholder="Bỏ trống = tài khoản cha"
                         className="flex-1 outline-none bg-transparent text-sm"
                       />
                     )}
@@ -1013,82 +1092,6 @@ export function CustomerForm({
                     </div>
                   )}
                 </div>
-
-                <label className="block text-sm font-medium mb-2">
-                  Nhóm khách hàng
-                </label>
-
-                {/* Input container với tags */}
-                <div
-                  className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
-                  onClick={() => setShowGroupDropdown(true)}>
-                  {/* Tags hiển thị các nhóm đã chọn */}
-                  {selectedGroups.map((group) => (
-                    <span
-                      key={group.id}
-                      className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                      {group.name}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveGroup(group.id);
-                        }}
-                        className="hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center">
-                        ×
-                      </button>
-                    </span>
-                  ))}
-
-                  {/* Input search */}
-                  <input
-                    type="text"
-                    value={groupSearchTerm}
-                    onChange={(e) => setGroupSearchTerm(e.target.value)}
-                    onFocus={() => setShowGroupDropdown(true)}
-                    placeholder={
-                      selectedGroups.length === 0 ? "Chọn nhóm khách hàng" : ""
-                    }
-                    className="flex-1 outline-none min-w-[120px] bg-transparent"
-                  />
-                </div>
-
-                {/* Dropdown danh sách nhóm */}
-                {showGroupDropdown && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-[240px] overflow-y-auto">
-                    {filteredGroups.length > 0 ? (
-                      filteredGroups.map((group) => {
-                        const isSelected = selectedGroupIds.includes(group.id);
-                        return (
-                          <div
-                            key={group.id}
-                            onClick={() => handleToggleGroup(group.id)}
-                            className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
-                            <span className="text-sm">{group.name}</span>
-                            {isSelected && (
-                              <svg
-                                className="w-5 h-5 text-blue-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                            )}
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="px-4 py-2 text-sm text-gray-500">
-                        Không tìm thấy nhóm khách hàng
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Ghi chú */}
