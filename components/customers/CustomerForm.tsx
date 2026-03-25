@@ -6,11 +6,11 @@ import {
   useCreateCustomer,
   useCustomerGroups,
   useUpdateCustomer,
+  useParentCustomers,
 } from "@/lib/hooks/useCustomers";
 import { X, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { Customer } from "@/lib/types/customer";
-import { useRouter } from "next/navigation";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useBranchStore } from "@/lib/store/branch";
 
@@ -101,6 +101,13 @@ export function CustomerForm({
   const selectedCityCode = watch("cityCode");
   const selectedDistrictCode = watch("districtCode");
   const selectedInvoiceCityCode = watch("invoiceCityCode");
+
+  const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
+  const [showParentDropdown, setShowParentDropdown] = useState(false);
+  const [parentSearchTerm, setParentSearchTerm] = useState("");
+  const parentDropdownRef = useRef<HTMLDivElement>(null);
+
+  const { data: parentCustomersData } = useParentCustomers(parentSearchTerm);
 
   const checkInvoiceDataLoaded = () => {
     if (invoiceProvinces.length > 0 && invoiceCommunes.length > 0) {
@@ -243,6 +250,12 @@ export function CustomerForm({
         !birthDatePickerRef.current.contains(event.target as Node)
       ) {
         setShowBirthDatePicker(false);
+      }
+      if (
+        parentDropdownRef.current &&
+        !parentDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowParentDropdown(false);
       }
     };
 
@@ -387,6 +400,10 @@ export function CustomerForm({
         setSelectedGroupIds(groupIds);
       }
 
+      if (customer.parentId) {
+        setSelectedParentId(customer.parentId);
+      }
+
       setTimeout(() => {
         setIsPopulating(false);
       }, 150);
@@ -417,6 +434,14 @@ export function CustomerForm({
     customerGroupsData?.data?.filter((group) =>
       group.name.toLowerCase().includes(groupSearchTerm.toLowerCase())
     ) || [];
+
+  const filteredParents = (parentCustomersData?.data || []).filter(
+    (p) => !customer || p.id !== customer.id
+  );
+
+  const selectedParent =
+    filteredParents.find((p) => p.id === selectedParentId) ||
+    (parentCustomersData?.data || []).find((p) => p.id === selectedParentId);
 
   const selectedGroups =
     customerGroupsData?.data?.filter((group) =>
@@ -458,6 +483,7 @@ export function CustomerForm({
       ...data,
       branchId: selectedBranch?.id,
       groupIds: selectedGroupIds.length > 0 ? selectedGroupIds : undefined,
+      parentId: selectedParentId !== null ? selectedParentId : null,
       code: data.code || undefined,
       cityCode: data.cityCode ? String(data.cityCode) : undefined,
       cityName: cityName || undefined,
@@ -889,6 +915,105 @@ export function CustomerForm({
             <div className="space-y-4">
               {/* Multi-select với tags */}
               <div className="relative" ref={dropdownRef}>
+                <div className="relative" ref={parentDropdownRef}>
+                  <label className="block text-sm font-medium mb-2">
+                    Tài khoản cha
+                  </label>
+
+                  <div
+                    className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex items-center"
+                    onClick={() => setShowParentDropdown(true)}>
+                    {selectedParent ? (
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-sm">
+                          {selectedParent.name}
+                          {selectedParent.code
+                            ? ` (${selectedParent.code})`
+                            : ""}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedParentId(null);
+                          }}
+                          className="hover:bg-gray-200 rounded-full w-5 h-5 flex items-center justify-center text-gray-400">
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        value={parentSearchTerm}
+                        onChange={(e) => setParentSearchTerm(e.target.value)}
+                        onFocus={() => setShowParentDropdown(true)}
+                        placeholder="Chọn tài khoản cha (bỏ trống = tài khoản cha)"
+                        className="flex-1 outline-none bg-transparent text-sm"
+                      />
+                    )}
+                  </div>
+
+                  {showParentDropdown && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-[240px] overflow-y-auto">
+                      {!selectedParent && (
+                        <div className="px-4 py-2">
+                          <input
+                            type="text"
+                            value={parentSearchTerm}
+                            onChange={(e) =>
+                              setParentSearchTerm(e.target.value)
+                            }
+                            placeholder="Tìm kiếm..."
+                            className="w-full border rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                            autoFocus
+                          />
+                        </div>
+                      )}
+                      {filteredParents.length > 0 ? (
+                        filteredParents.map((parent) => (
+                          <div
+                            key={parent.id}
+                            onClick={() => {
+                              setSelectedParentId(parent.id);
+                              setShowParentDropdown(false);
+                              setParentSearchTerm("");
+                            }}
+                            className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
+                            <div>
+                              <span className="text-sm font-medium">
+                                {parent.name}
+                              </span>
+                              {parent.code && (
+                                <span className="text-xs text-gray-500 ml-2">
+                                  {parent.code}
+                                </span>
+                              )}
+                            </div>
+                            {selectedParentId === parent.id && (
+                              <svg
+                                className="w-5 h-5 text-blue-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-sm text-gray-500">
+                          Không tìm thấy tài khoản cha
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <label className="block text-sm font-medium mb-2">
                   Nhóm khách hàng
                 </label>

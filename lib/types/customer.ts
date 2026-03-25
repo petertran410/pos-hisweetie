@@ -26,12 +26,12 @@ export interface Customer {
   invoiceWardName?: string;
   invoiceAddress?: string;
   invoiceCccdCmnd?: string;
-  // invoiceBankAccount?: string;
   invoiceEmail?: string;
   invoicePhone?: string;
   invoiceDvqhnsCode?: string;
   customerTypeId?: number;
   branchId?: number;
+  parentId?: number;
   totalPurchased: number;
   totalDebt: number;
   totalInvoiced: number;
@@ -49,6 +49,16 @@ export interface Customer {
     id: number;
     name: string;
   };
+  parent?: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  children?: Array<{
+    id: number;
+    code: string;
+    name: string;
+  }>;
   customerGroupDetails?: Array<{
     id: number;
     customerId: number;

@@ -111,3 +111,22 @@ export function useDeleteCustomer() {
     },
   });
 }
+
+export function useParentCustomers(search?: string) {
+  return useQuery({
+    queryKey: ["parent-customers", search],
+    queryFn: async () => {
+      const params: any = {};
+      if (search) params.search = search;
+      const response = await apiClient.get<{
+        data: {
+          id: number;
+          code: string;
+          name: string;
+          contactNumber: string;
+        }[];
+      }>("/customers/parents", params);
+      return response;
+    },
+  });
+}
