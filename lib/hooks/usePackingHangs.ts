@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/auth";
-
-const API_URL = "http://localhost:3060/api";
+import { API_URL } from "../config/api";
 
 export function usePackingHangs(params?: any) {
   const token = useAuthStore((state) => state.token);

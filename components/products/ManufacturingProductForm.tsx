@@ -15,6 +15,7 @@ import { CategoryDropdown } from "./CategoryDropdown";
 import { toast } from "sonner";
 import { TrademarkDropdown } from "./TrademarkDropdown";
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
+import { API_URL } from "@/lib/config/api";
 
 interface ManufacturingComponent {
   id?: number;
@@ -199,7 +200,7 @@ export function ManufacturingProductForm({
     formData.append("file", file);
 
     const token = useAuthStore.getState().token;
-    const res = await fetch("http://localhost:3060/api/upload/image", {
+    const res = await fetch(`${API_URL}/upload/image`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
