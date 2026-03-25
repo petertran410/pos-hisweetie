@@ -15,6 +15,7 @@ interface SearchableSelectProps {
   placeholder?: string;
   searchPlaceholder?: string;
   renderOption?: (option: Option) => React.ReactNode;
+  disabled?: boolean;
 }
 
 export function SearchableSelect({
@@ -24,6 +25,7 @@ export function SearchableSelect({
   placeholder = "Chọn...",
   searchPlaceholder = "Tìm kiếm...",
   renderOption,
+  disabled = false,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,17 +61,28 @@ export function SearchableSelect({
   }, []);
 
   const handleSelect = (optionValue: string) => {
+    if (disabled) return;
     onChange(optionValue);
     setIsOpen(false);
     setSearchQuery("");
+  };
+
+  const handleButtonClick = () => {
+    if (disabled) return;
+    setIsOpen(!isOpen);
   };
 
   return (
     <div ref={dropdownRef} className="relative">
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-2 border rounded-lg flex items-center justify-between bg-white hover:border-gray-400 transition-colors">
+        onClick={handleButtonClick}
+        disabled={disabled}
+        className={`w-full px-3 py-2 border rounded-lg flex items-center justify-between transition-colors ${
+          disabled
+            ? "bg-gray-100 cursor-not-allowed opacity-60"
+            : "bg-white hover:border-gray-400"
+        }`}>
         <span className={selectedOption ? "text-gray-900" : "text-gray-400"}>
           {selectedOption
             ? renderOption
@@ -84,7 +97,7 @@ export function SearchableSelect({
         />
       </button>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="absolute z-50 w-full mt-2 bg-white border rounded-lg shadow-lg max-h-80 flex flex-col">
           <div className="p-2 border-b sticky top-0 bg-white">
             <div className="relative">

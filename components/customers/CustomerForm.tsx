@@ -771,8 +771,8 @@ export function CustomerForm({
                               dayNumber === currentDate.getDate()
                                 ? "bg-blue-600 text-white font-medium"
                                 : isToday
-                                ? "border border-blue-600 text-blue-600"
-                                : "hover:bg-gray-100"
+                                  ? "border border-blue-600 text-blue-600"
+                                  : "hover:bg-gray-100"
                             }`}>
                             {dayNumber}
                           </button>
@@ -840,7 +840,7 @@ export function CustomerForm({
                 </label>
                 <SearchableSelect
                   options={cities.map((city) => ({
-                    value: city.code,
+                    value: String(city.code),
                     label: city.name,
                   }))}
                   value={selectedCityCode || ""}
@@ -855,7 +855,7 @@ export function CustomerForm({
                 </label>
                 <SearchableSelect
                   options={districts.map((district) => ({
-                    value: district.code,
+                    value: String(district.code),
                     label: district.name,
                   }))}
                   value={selectedDistrictCode || ""}
@@ -871,7 +871,7 @@ export function CustomerForm({
                 </label>
                 <SearchableSelect
                   options={wards.map((ward) => ({
-                    value: ward.code,
+                    value: String(ward.code),
                     label: ward.name,
                   }))}
                   value={watch("wardCode") || ""}
@@ -1257,8 +1257,8 @@ export function CustomerForm({
               {createCustomer.isPending || updateCustomer.isPending
                 ? "Đang lưu..."
                 : customer
-                ? "Cập nhật"
-                : "Lưu"}
+                  ? "Cập nhật"
+                  : "Lưu"}
             </button>
           </div>
         </form>
