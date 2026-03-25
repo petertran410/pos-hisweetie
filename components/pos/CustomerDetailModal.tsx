@@ -8,6 +8,7 @@ import { CustomerOrdersTab } from "../customers/CustomerOrdersTab";
 import { CustomerDebtsTab } from "../customers/CustomerDebtsTab";
 import { CustomerInfoTab } from "./CustomerInfoTab";
 import { CustomerInvoiceInfoTab } from "./CustomerInvoiceInfoTab";
+import { formatCurrency } from "@/lib/utils";
 
 interface CustomerDetailModalProps {
   isOpen: boolean;
@@ -36,7 +37,7 @@ export function CustomerDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z99">
       <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-6 border-b">
           <div>
@@ -53,13 +54,11 @@ export function CustomerDetailModal({
                     className={
                       customer.totalDebt > 0 ? "text-red-600" : "text-gray-600"
                     }>
-                    {customer.totalDebt.toLocaleString()}
+                    {formatCurrency(customer.totalDebt)}
                   </span>
                 </span>
                 <span>•</span>
-                <span>
-                  Tổng bán: {customer.totalPurchased.toLocaleString()}
-                </span>
+                <span>Tổng bán: {formatCurrency(customer.totalPurchased)}</span>
               </div>
             )}
           </div>

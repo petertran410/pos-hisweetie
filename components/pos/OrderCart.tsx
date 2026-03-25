@@ -273,7 +273,7 @@ export function OrderCart({
         )}
       </div>
       <div className="p-3 space-y-2.5 flex-shrink-0 border mr-3 ml-3 mb-3 rounded-xl shadow-sm">
-        <div className="flex items-center justify-between">
+        {/* <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-md">Thu hộ tiền (COD)</span>
             <label className="relative inline-flex items-center cursor-not-allowed opacity-60">
@@ -289,7 +289,7 @@ export function OrderCart({
           <span className="font-semibold text-md">
             {calculateTotal().toLocaleString()}
           </span>
-        </div>
+        </div> */}
 
         <div className="flex items-center justify-between text-md">
           <span>Khách cần trả</span>

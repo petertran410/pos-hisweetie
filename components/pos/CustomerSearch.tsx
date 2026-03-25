@@ -96,9 +96,16 @@ export function CustomerSearch({
               className="flex-1 border rounded-xl px-3 py-2"
             />
           ) : (
-            <button
+            <div
+              role="button"
+              tabIndex={0}
               onClick={handleOpenModal}
-              className="flex-1 border rounded-xl px-3 py-2 text-left bg-white hover:bg-gray-50 transition-colors flex items-center justify-between group">
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  handleOpenModal();
+                }
+              }}
+              className="flex-1 border rounded-xl px-3 py-2 text-left bg-white hover:bg-gray-50 transition-colors flex items-center justify-between group cursor-pointer">
               <span className="text-blue-600 hover:underline">
                 {selectedCustomer.name} {selectedCustomer.contactNumber}
               </span>
@@ -107,7 +114,7 @@ export function CustomerSearch({
                 className="ml-2 p-1 hover:bg-gray-200 rounded-full transition-colors">
                 <X className="w-4 h-4 text-gray-500" />
               </button>
-            </button>
+            </div>
           )}
 
           <button className="p-2 border rounded-md hover:bg-gray-50">
