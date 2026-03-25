@@ -255,33 +255,19 @@ export function OrderCart({
                 </select>
               </div>
               <div className="flex items-center gap-1.5 py-2">
-                <input
-                  type="checkbox"
-                  checked={deliveryInfo.noteForDriver !== ""}
-                  onChange={(e) => {
-                    if (!e.target.checked) {
-                      handleDeliveryChange("noteForDriver", "");
-                    } else {
-                      handleDeliveryChange("noteForDriver", " ");
-                    }
-                  }}
-                  className="w-3.5 h-3.5 text-blue-600 rounded"
-                />
                 <span className="text-md text-gray-700">
                   Ghi chú cho bưu tá
                 </span>
               </div>
-              {deliveryInfo.noteForDriver !== "" && (
-                <textarea
-                  value={deliveryInfo.noteForDriver || ""}
-                  onChange={(e) =>
-                    handleDeliveryChange("noteForDriver", e.target.value)
-                  }
-                  placeholder="Nhập ghi chú..."
-                  className="w-full text-md border rounded-xl p-2 outline-none focus:border-blue-500 resize-none"
-                  rows={3}
-                />
-              )}
+              <textarea
+                value={deliveryInfo.noteForDriver || ""}
+                onChange={(e) =>
+                  handleDeliveryChange("noteForDriver", e.target.value)
+                }
+                placeholder="Nhập ghi chú..."
+                className="w-full text-md border rounded-xl p-2 outline-none focus:border-blue-500 resize-none"
+                rows={3}
+              />
             </div>
           </div>
         )}
