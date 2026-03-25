@@ -17,6 +17,17 @@ export function useOrder(id: number) {
   });
 }
 
+export function useProductPriceHistory(
+  customerId?: number,
+  productId?: number
+) {
+  return useQuery({
+    queryKey: ["product-price-history", customerId, productId],
+    queryFn: () => ordersApi.getProductPriceHistory(customerId!, productId!),
+    enabled: !!customerId && !!productId,
+  });
+}
+
 export function useCreateOrder() {
   const queryClient = useQueryClient();
   return useMutation({

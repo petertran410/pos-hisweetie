@@ -13,6 +13,7 @@ import {
 import { NoteDropdown } from "./NoteDropdown";
 import { NoteTemplateModal } from "./NoteTemplateModal";
 import { ItemDiscountModal } from "./ItemDiscountModal";
+import { ProductPriceHistory } from "./ProductPriceHistory";
 
 interface CartItemsListProps {
   cartItems: CartItem[];
@@ -24,6 +25,7 @@ interface CartItemsListProps {
   onDiscountRatioChange: (ratio: number) => void;
   orderNote: string;
   onOrderNoteChange: (note: string) => void;
+  selectedCustomerId?: number;
 }
 
 export function OrderItemsList({
@@ -212,6 +214,19 @@ export function OrderItemsList({
                     <span className="text-md font-semibold text-gray-900">
                       {item.product.name}
                     </span>
+
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="text-md font-medium text-gray-600">
+                        {item.product.code}
+                      </span>
+                      <span className="text-md font-semibold text-gray-900">
+                        {item.product.name}
+                      </span>
+                      <ProductPriceHistory
+                        customerId={selectedCustomerId}
+                        productId={item.product.id}
+                      />
+                    </div>
                   </div>
 
                   <NoteDropdown

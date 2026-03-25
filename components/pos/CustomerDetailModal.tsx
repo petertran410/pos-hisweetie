@@ -148,6 +148,7 @@ export function CustomerDetailModal({
                 <CustomerDebtsTab
                   customerId={customer.id}
                   customerDebt={customer.totalDebt}
+                  hidePaymentButton={true}
                 />
               )}
             </>

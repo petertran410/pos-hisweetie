@@ -36,6 +36,28 @@ export const ordersApi = {
     return apiClient.get(`/orders/${id}`);
   },
 
+  getProductPriceHistory: (
+    customerId: number,
+    productId: number
+  ): Promise<
+    Array<{
+      code: string;
+      date: string;
+      price: number;
+      discount: number;
+      quantity: number;
+      finalPrice: number;
+      type: "order" | "invoice";
+    }>
+  > => {
+    const queryParams = new URLSearchParams();
+    queryParams.append("customerId", customerId.toString());
+    queryParams.append("productId", productId.toString());
+    return apiClient.get(
+      `/orders/product-price-history?${queryParams.toString()}`
+    );
+  },
+
   createOrder: (data: Order): Promise<{ order: Order; warnings: any[] }> => {
     return apiClient.post("/orders", data);
   },
