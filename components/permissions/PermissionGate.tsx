@@ -6,7 +6,6 @@ import { usePermission } from "@/lib/hooks/usePermissions";
 interface PermissionGateProps {
   resource: string;
   action: string;
-  scope?: string;
   fallback?: ReactNode;
   children: ReactNode;
 }
@@ -14,11 +13,10 @@ interface PermissionGateProps {
 export function PermissionGate({
   resource,
   action,
-  scope,
   fallback = null,
   children,
 }: PermissionGateProps) {
-  const hasPermission = usePermission(resource, action, scope);
+  const hasPermission = usePermission(resource, action);
 
   if (!hasPermission) {
     return <>{fallback}</>;
