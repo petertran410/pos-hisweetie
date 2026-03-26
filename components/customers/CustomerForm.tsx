@@ -577,10 +577,10 @@ export function CustomerForm({
 
             <div>
               <label className="block text-sm font-medium mb-2">
-                Điện thoại 1
+                Điện thoại 1 <span className="text-red-500">*</span>
               </label>
               <input
-                {...register("contactNumber")}
+                {...register("contactNumber", { required: true })}
                 className="w-full border rounded px-3 py-2"
               />
             </div>
@@ -851,10 +851,10 @@ export function CustomerForm({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Khu vực
+                  Khu vực <span className="text-red-500">*</span>
                 </label>
                 <input
-                  {...register("address")}
+                  {...register("address", { required: true })}
                   placeholder="Nhập địa chỉ"
                   className="w-full border rounded px-3 py-2"
                 />
@@ -862,13 +862,14 @@ export function CustomerForm({
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Tỉnh/Thành phố
+                  Tỉnh/Thành phố <span className="text-red-500">*</span>
                 </label>
                 <SearchableSelect
                   options={cities.map((city) => ({
                     value: String(city.code),
                     label: city.name,
                   }))}
+                  required
                   value={selectedCityCode || ""}
                   onChange={(value) => setValue("cityCode", value)}
                   placeholder="Chọn Tỉnh/Thành phố"
@@ -877,7 +878,7 @@ export function CustomerForm({
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Quận/Huyện
+                  Quận/Huyện <span className="text-red-500">*</span>
                 </label>
                 <SearchableSelect
                   options={districts.map((district) => ({
@@ -893,7 +894,7 @@ export function CustomerForm({
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Phường/Xã
+                  Phường/Xã <span className="text-red-500">*</span>
                 </label>
                 <SearchableSelect
                   options={wards.map((ward) => ({
@@ -917,7 +918,7 @@ export function CustomerForm({
                 {/* Cột trái: Nhóm khách hàng */}
                 <div className="relative" ref={dropdownRef}>
                   <label className="block text-sm font-medium mb-2">
-                    Nhóm khách hàng
+                    Nhóm khách hàng <span className="text-red-500">*</span>
                   </label>
 
                   <div

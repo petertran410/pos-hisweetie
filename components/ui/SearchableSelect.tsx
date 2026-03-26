@@ -16,6 +16,8 @@ interface SearchableSelectProps {
   searchPlaceholder?: string;
   renderOption?: (option: Option) => React.ReactNode;
   disabled?: boolean;
+  required?: boolean;
+  error?: string;
 }
 
 export function SearchableSelect({
@@ -26,6 +28,8 @@ export function SearchableSelect({
   searchPlaceholder = "Tìm kiếm...",
   renderOption,
   disabled = false,
+  required = false,
+  error,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -78,10 +82,14 @@ export function SearchableSelect({
         type="button"
         onClick={handleButtonClick}
         disabled={disabled}
+        aria-required={required}
+        aria-invalid={!!error}
         className={`w-full px-3 py-2 border rounded-lg flex items-center justify-between transition-colors ${
           disabled
             ? "bg-gray-100 cursor-not-allowed opacity-60"
-            : "bg-white hover:border-gray-400"
+            : error
+              ? "bg-white border-red-500"
+              : "bg-white hover:border-gray-400"
         }`}>
         <span className={selectedOption ? "text-gray-900" : "text-gray-400"}>
           {selectedOption
@@ -139,6 +147,8 @@ export function SearchableSelect({
           </div>
         </div>
       )}
+
+      {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
     </div>
   );
 }
