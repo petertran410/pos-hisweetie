@@ -119,7 +119,7 @@ export function CustomerForm({
     const loadCities = async () => {
       try {
         const response = await fetch(
-          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/build_customer/old-location.json"
+          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/production/old-location.json"
         );
 
         if (!response.ok) {
@@ -151,7 +151,7 @@ export function CustomerForm({
     const loadInvoiceProvinces = async () => {
       try {
         const response = await fetch(
-          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/build_customer/new-province-location.json"
+          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/production/new-province-location.json"
         );
 
         if (!response.ok) {
@@ -184,7 +184,7 @@ export function CustomerForm({
     const loadInvoiceCommunes = async () => {
       try {
         const response = await fetch(
-          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/build_customer/new-commune-location.json"
+          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/production/new-commune-location.json"
         );
 
         if (!response.ok) {

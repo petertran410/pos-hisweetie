@@ -124,9 +124,33 @@ export function useParentCustomers(search?: string) {
           code: string;
           name: string;
           contactNumber: string;
+          _count?: {
+            children: number;
+          };
         }[];
       }>("/customers/parents", params);
       return response;
     },
+  });
+}
+
+export function useChildCustomers(parentId: number | null, search?: string) {
+  return useQuery({
+    queryKey: ["child-customers", parentId, search],
+    queryFn: async () => {
+      if (!parentId) return { data: [] };
+      const params: any = {};
+      if (search) params.search = search;
+      const response = await apiClient.get<{
+        data: {
+          id: number;
+          code: string;
+          name: string;
+          contactNumber: string;
+        }[];
+      }>(`/customers/children/${parentId}`, params);
+      return response;
+    },
+    enabled: !!parentId,
   });
 }

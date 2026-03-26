@@ -57,10 +57,10 @@ export function CustomerInvoiceInfoTab({
       try {
         const [provincesRes, communesRes] = await Promise.all([
           fetch(
-            "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/build_customer/new-province-location.json"
+            "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/production/new-province-location.json"
           ),
           fetch(
-            "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/build_customer/new-commune-location.json"
+            "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/production/new-commune-location.json"
           ),
         ]);
 

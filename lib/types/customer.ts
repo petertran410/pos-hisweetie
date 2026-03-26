@@ -53,6 +53,10 @@ export interface Customer {
     id: number;
     code: string;
     name: string;
+    contactNumber: string;
+    _count?: {
+      children: number;
+    };
   };
   children?: Array<{
     id: number;
@@ -113,4 +117,14 @@ export interface CustomerGroup {
   description?: string;
   createdBy?: number;
   createdAt: string;
+}
+
+export interface ParentCustomer {
+  id: number;
+  code: string;
+  name: string;
+  contactNumber: string;
+  _count?: {
+    children: number;
+  };
 }
