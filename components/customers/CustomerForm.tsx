@@ -472,8 +472,9 @@ export function CustomerForm({
       (c) => c.code === data.invoiceWardCode
     )?.name;
 
-    const formattedData = {
-      ...data,
+    const formattedData: Record<string, any> = {
+      name: data.name || undefined,
+      contactNumber: data.contactNumber || undefined,
       branchId: selectedBranch?.id,
       groupIds: selectedGroupIds.length > 0 ? selectedGroupIds : undefined,
       parentId: selectedParentId !== null ? selectedParentId : null,
@@ -505,6 +506,12 @@ export function CustomerForm({
       birthDate: birthDate ? birthDate.toISOString() : undefined,
       gender: data.gender === "" ? undefined : data.gender === "true",
     };
+
+    Object.keys(formattedData).forEach((key) => {
+      if (formattedData[key] === undefined) {
+        delete formattedData[key];
+      }
+    });
 
     if (customer) {
       updateCustomer.mutate(

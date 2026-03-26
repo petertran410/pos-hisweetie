@@ -2,8 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/config/api";
 import { Customer, CustomerFilters, CustomerGroup } from "@/lib/types/customer";
 import { toast } from "sonner";
+import { useAuthStore } from "../store/auth";
 
 export function useCustomers(filters?: CustomerFilters) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+
   return useQuery({
     queryKey: ["customers", filters],
     queryFn: async () => {
@@ -14,21 +18,28 @@ export function useCustomers(filters?: CustomerFilters) {
       }>("/customers", filters);
       return response;
     },
+    enabled: hasHydrated && isAuthenticated,
   });
 }
 
 export function useCustomer(id: number) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+
   return useQuery({
     queryKey: ["customers", id],
     queryFn: async () => {
       const response = await apiClient.get<Customer>(`/customers/${id}`);
       return response;
     },
-    enabled: !!id,
+    enabled: !!id && hasHydrated && isAuthenticated,
   });
 }
 
 export function useCustomerGroups() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+
   return useQuery({
     queryKey: ["customer-groups"],
     queryFn: async () => {
@@ -38,10 +49,14 @@ export function useCustomerGroups() {
       }>("/customer-groups");
       return response;
     },
+    enabled: hasHydrated && isAuthenticated,
   });
 }
 
 export function useCustomerDebtTimeline(customerId: number) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+
   return useQuery({
     queryKey: ["customers", customerId, "debt-timeline"],
     queryFn: async () => {
@@ -50,7 +65,7 @@ export function useCustomerDebtTimeline(customerId: number) {
       }>(`/customers/${customerId}/debt-timeline`);
       return response;
     },
-    enabled: !!customerId,
+    enabled: !!customerId && hasHydrated && isAuthenticated,
   });
 }
 
@@ -113,6 +128,9 @@ export function useDeleteCustomer() {
 }
 
 export function useParentCustomers(search?: string) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+
   return useQuery({
     queryKey: ["parent-customers", search],
     queryFn: async () => {
@@ -131,10 +149,14 @@ export function useParentCustomers(search?: string) {
       }>("/customers/parents", params);
       return response;
     },
+    enabled: hasHydrated && isAuthenticated,
   });
 }
 
 export function useChildCustomers(parentId: number | null, search?: string) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+
   return useQuery({
     queryKey: ["child-customers", parentId, search],
     queryFn: async () => {
@@ -151,6 +173,6 @@ export function useChildCustomers(parentId: number | null, search?: string) {
       }>(`/customers/children/${parentId}`, params);
       return response;
     },
-    enabled: !!parentId,
+    enabled: !!parentId && hasHydrated && isAuthenticated,
   });
 }
