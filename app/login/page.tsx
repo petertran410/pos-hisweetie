@@ -64,6 +64,11 @@ export default function LoginPage() {
           <p className="mt-2 text-center text-sm text-gray-600">
             Hệ thống quản lý bán hàng HiSweetie
           </p>
+
+          <p className="text-center">
+            Tài khoản đăng nhập admin: dieptra.sg@gmail.com
+          </p>
+          <p className="text-center">Mật khẩu đăng nhập admin: Dieptra@123</p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
