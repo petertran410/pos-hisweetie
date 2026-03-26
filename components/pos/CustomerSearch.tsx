@@ -46,15 +46,19 @@ export function CustomerSearch({
   const parentCustomers = parentCustomersData?.data || [];
   const childCustomers = childCustomersData?.data || [];
 
+  const hasRestoredParent = useRef(false);
+
   useEffect(() => {
-    if (!selectedParent && selectedCustomer) {
-      if (selectedCustomer.parent) {
-        setSelectedParent(selectedCustomer.parent);
-      } else if (!selectedCustomer.parentId) {
-        setSelectedParent(selectedCustomer);
-      }
+    if (hasRestoredParent.current) return;
+    if (!selectedCustomer) return;
+
+    if (selectedCustomer.parent) {
+      setSelectedParent(selectedCustomer.parent);
+    } else if (!selectedCustomer.parentId) {
+      setSelectedParent(selectedCustomer);
     }
-  }, []);
+    hasRestoredParent.current = true;
+  }, [selectedCustomer]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

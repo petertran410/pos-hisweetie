@@ -208,7 +208,7 @@ export function OrderItemsList({
               onMouseLeave={() => setHoveredItemId(null)}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 mb-1">
+                  <div className="flex gap-2 mb-1">
                     <span className="text-md font-medium text-gray-600">
                       {item.product.code}
                     </span>
