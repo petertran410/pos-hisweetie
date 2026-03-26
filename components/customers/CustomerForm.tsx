@@ -118,9 +118,7 @@ export function CustomerForm({
   useEffect(() => {
     const loadCities = async () => {
       try {
-        const response = await fetch(
-          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/production/old-location.json"
-        );
+        const response = await fetch("/data/old-location.json");
 
         if (!response.ok) {
           throw new Error("Failed to load cities");
@@ -150,9 +148,7 @@ export function CustomerForm({
   useEffect(() => {
     const loadInvoiceProvinces = async () => {
       try {
-        const response = await fetch(
-          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/production/new-province-location.json"
-        );
+        const response = await fetch("/data/new-province-location.json");
 
         if (!response.ok) {
           throw new Error("Failed to load invoice provinces");
@@ -183,9 +179,7 @@ export function CustomerForm({
   useEffect(() => {
     const loadInvoiceCommunes = async () => {
       try {
-        const response = await fetch(
-          "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/production/new-commune-location.json"
-        );
+        const response = await fetch("/data/new-commune-location.json");
 
         if (!response.ok) {
           throw new Error("Failed to load invoice communes");
@@ -337,7 +331,6 @@ export function CustomerForm({
       setValue("invoiceBuyerName", customer.invoiceBuyerName || "");
       setValue("invoiceAddress", customer.invoiceAddress || "");
       setValue("invoiceCccdCmnd", customer.invoiceCccdCmnd || "");
-      // setValue("invoiceBankAccount", customer.invoiceBankAccount || "");
       setValue("invoiceEmail", customer.invoiceEmail || "");
       setValue("invoicePhone", customer.invoicePhone || "");
       setValue("invoiceDvqhnsCode", customer.invoiceDvqhnsCode || "");

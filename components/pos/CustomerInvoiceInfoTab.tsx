@@ -56,12 +56,8 @@ export function CustomerInvoiceInfoTab({
     const loadInvoiceData = async () => {
       try {
         const [provincesRes, communesRes] = await Promise.all([
-          fetch(
-            "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/production/new-province-location.json"
-          ),
-          fetch(
-            "https://raw.githubusercontent.com/petertran410/pos-hisweetie/refs/heads/production/new-commune-location.json"
-          ),
+          fetch("/data/new-province-location.json"),
+          fetch("/data/new-commune-location.json"),
         ]);
 
         const provincesData = await provincesRes.json();
