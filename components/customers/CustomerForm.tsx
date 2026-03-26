@@ -118,9 +118,7 @@ export function CustomerForm({
   useEffect(() => {
     const loadCities = async () => {
       try {
-        const response = await fetch(
-          "https://media.hisweetievietnam.com/location-website/old-location/old-location.json"
-        );
+        const response = await fetch("/data/old-location.json");
 
         if (!response.ok) {
           throw new Error("Failed to load cities");
