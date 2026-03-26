@@ -196,7 +196,7 @@ export function CustomerSearch({
                         <span className="text-xs text-blue-600">
                           {parent.contactNumber || "Chưa có SĐT"}
                         </span>
-                        {parent._count?.children &&
+                        {/* {parent._count?.children &&
                           parent._count.children > 0 && (
                             <>
                               <span className="text-xs text-gray-400">|</span>
@@ -204,7 +204,7 @@ export function CustomerSearch({
                                 {parent._count.children} khách hàng con
                               </span>
                             </>
-                          )}
+                          )} */}
                       </div>
                     </button>
                   ))}
