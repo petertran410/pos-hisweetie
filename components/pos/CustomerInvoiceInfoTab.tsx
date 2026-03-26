@@ -38,6 +38,9 @@ export function CustomerInvoiceInfoTab({
       invoiceWardCode: customer.invoiceWardCode || "",
       invoiceEmail: customer.invoiceEmail || "",
       invoicePhone: customer.invoicePhone || "",
+      invoiceCccdCmnd: customer.invoiceCccdCmnd || "",
+      invoiceBankAccount: customer.invoiceBankAccount || "",
+      invoiceDvqhnsCode: customer.invoiceDvqhnsCode || "",
       taxCode: customer.taxCode || "",
       organization: customer.organization || "",
     },
@@ -65,10 +68,14 @@ export function CustomerInvoiceInfoTab({
 
         if (Array.isArray(provincesData)) {
           setInvoiceProvinces(provincesData);
+        } else if (provincesData && Array.isArray(provincesData.provinces)) {
+          setInvoiceProvinces(provincesData.provinces);
         }
 
         if (Array.isArray(communesData)) {
           setInvoiceCommunes(communesData);
+        } else if (communesData && Array.isArray(communesData.communes)) {
+          setInvoiceCommunes(communesData.communes);
         }
       } catch (error) {
         console.error("Error loading invoice data:", error);
@@ -81,7 +88,8 @@ export function CustomerInvoiceInfoTab({
   useEffect(() => {
     if (selectedInvoiceCityCode && invoiceCommunes.length > 0) {
       const filtered = invoiceCommunes.filter(
-        (commune) => commune.provinceCode === selectedInvoiceCityCode
+        (commune) =>
+          String(commune.provinceCode) === String(selectedInvoiceCityCode)
       );
       setFilteredInvoiceCommunes(filtered);
     } else {
@@ -93,17 +101,18 @@ export function CustomerInvoiceInfoTab({
     try {
       const updateData: any = {
         type: parseInt(data.type),
+        invoiceAddress: data.invoiceAddress || null,
+        invoiceBuyerName: data.invoiceBuyerName || null,
+        invoiceCccdCmnd: data.invoiceCccdCmnd || null,
+        invoiceBankAccount: data.invoiceBankAccount || null,
+        invoiceDvqhnsCode: data.invoiceDvqhnsCode || null,
+        invoiceEmail: data.invoiceEmail || null,
+        invoicePhone: data.invoicePhone || null,
       };
 
-      if (data.type === "0") {
-        updateData.invoiceBuyerName = data.invoiceBuyerName || null;
-        updateData.invoiceAddress = data.invoiceAddress || null;
-        updateData.invoiceEmail = data.invoiceEmail || null;
-        updateData.invoicePhone = data.invoicePhone || null;
-      } else {
+      if (data.type === "1") {
         updateData.taxCode = data.taxCode || null;
         updateData.organization = data.organization || null;
-        updateData.invoiceAddress = data.invoiceAddress || null;
       }
 
       if (data.invoiceCityCode) {
@@ -114,6 +123,9 @@ export function CustomerInvoiceInfoTab({
         if (province) {
           updateData.invoiceCityName = province.name;
         }
+      } else {
+        updateData.invoiceCityCode = null;
+        updateData.invoiceCityName = null;
       }
 
       if (data.invoiceWardCode) {
@@ -124,6 +136,9 @@ export function CustomerInvoiceInfoTab({
         if (commune) {
           updateData.invoiceWardName = commune.name;
         }
+      } else {
+        updateData.invoiceWardCode = null;
+        updateData.invoiceWardName = null;
       }
 
       await updateCustomer.mutateAsync({
@@ -151,6 +166,9 @@ export function CustomerInvoiceInfoTab({
     setValue("invoiceWardCode", customer.invoiceWardCode || "");
     setValue("invoiceEmail", customer.invoiceEmail || "");
     setValue("invoicePhone", customer.invoicePhone || "");
+    setValue("invoiceCccdCmnd", customer.invoiceCccdCmnd || "");
+    setValue("invoiceBankAccount", customer.invoiceBankAccount || "");
+    setValue("invoiceDvqhnsCode", customer.invoiceDvqhnsCode || "");
     setValue("taxCode", customer.taxCode || "");
     setValue("organization", customer.organization || "");
   };
@@ -162,13 +180,13 @@ export function CustomerInvoiceInfoTab({
           <h3 className="text-lg font-semibold">Thông tin xuất hóa đơn</h3>
           <button
             onClick={() => setIsEditing(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
+            className="px-4 py-2 border rounded hover:bg-gray-50 flex items-center gap-2">
             <Pencil className="w-4 h-4" />
             Chỉnh sửa
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Loại khách hàng
@@ -186,6 +204,33 @@ export function CustomerInvoiceInfoTab({
                 </label>
                 <div className="text-base">
                   {customer.invoiceBuyerName || "Chưa có"}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Số CCCD/CMND
+                </label>
+                <div className="text-base">
+                  {customer.invoiceCccdCmnd || "Chưa có"}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Số hộ chiếu
+                </label>
+                <div className="text-base">
+                  {customer.invoiceBankAccount || "Chưa có"}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Mã ĐVQHNS
+                </label>
+                <div className="text-base">
+                  {customer.invoiceDvqhnsCode || "Chưa có"}
                 </div>
               </div>
 
@@ -224,6 +269,42 @@ export function CustomerInvoiceInfoTab({
                 </label>
                 <div className="text-base">
                   {customer.organization || "Chưa có"}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Tên người mua
+                </label>
+                <div className="text-base">
+                  {customer.invoiceBuyerName || "Chưa có"}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Mã ĐVQHNS
+                </label>
+                <div className="text-base">
+                  {customer.invoiceDvqhnsCode || "Chưa có"}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Email
+                </label>
+                <div className="text-base">
+                  {customer.invoiceEmail || "Chưa có"}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Số điện thoại
+                </label>
+                <div className="text-base">
+                  {customer.invoicePhone || "Chưa có"}
                 </div>
               </div>
             </>
@@ -314,16 +395,16 @@ export function CustomerInvoiceInfoTab({
               Tỉnh/Thành phố
             </label>
             <SearchableSelect
-              options={invoiceProvinces.map((province) => ({
+              options={(invoiceProvinces || []).map((province) => ({
                 value: province.code,
                 label: province.name,
               }))}
-              value={watch("invoiceCityCode")}
+              value={watch("invoiceCityCode") || ""}
               onChange={(value) => {
                 setValue("invoiceCityCode", value);
                 setValue("invoiceWardCode", "");
               }}
-              placeholder="Chọn Tỉnh/Thành phố"
+              placeholder="Tìm Tỉnh/Thành phố"
             />
           </div>
 
@@ -336,10 +417,41 @@ export function CustomerInvoiceInfoTab({
                   label: commune.name,
                 })
               )}
-              value={watch("invoiceWardCode")}
+              value={watch("invoiceWardCode") || ""}
               onChange={(value) => setValue("invoiceWardCode", value)}
-              placeholder="Chọn Phường/Xã"
+              placeholder="Tìm Phường/Xã"
               disabled={!selectedInvoiceCityCode}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Số CCCD/CMND
+            </label>
+            <input
+              {...register("invoiceCccdCmnd")}
+              className="w-full border rounded px-3 py-2"
+              placeholder="Nhập số CCCD/CMND"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Số hộ chiếu
+            </label>
+            <input
+              {...register("invoiceBankAccount")}
+              className="w-full border rounded px-3 py-2"
+              placeholder="Nhập số hộ chiếu"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Mã ĐVQHNS</label>
+            <input
+              {...register("invoiceDvqhnsCode")}
+              className="w-full border rounded px-3 py-2"
+              placeholder="Nhập mã đơn vị"
             />
           </div>
 
@@ -406,16 +518,16 @@ export function CustomerInvoiceInfoTab({
               Tỉnh/Thành phố
             </label>
             <SearchableSelect
-              options={invoiceProvinces.map((province) => ({
+              options={(invoiceProvinces || []).map((province) => ({
                 value: province.code,
                 label: province.name,
               }))}
-              value={watch("invoiceCityCode")}
+              value={watch("invoiceCityCode") || ""}
               onChange={(value) => {
                 setValue("invoiceCityCode", value);
                 setValue("invoiceWardCode", "");
               }}
-              placeholder="Chọn Tỉnh/Thành phố"
+              placeholder="Tìm Tỉnh/Thành phố"
             />
           </div>
 
@@ -428,10 +540,51 @@ export function CustomerInvoiceInfoTab({
                   label: commune.name,
                 })
               )}
-              value={watch("invoiceWardCode")}
+              value={watch("invoiceWardCode") || ""}
               onChange={(value) => setValue("invoiceWardCode", value)}
-              placeholder="Chọn Phường/Xã"
+              placeholder="Tìm Phường/Xã"
               disabled={!selectedInvoiceCityCode}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Tên người mua
+            </label>
+            <input
+              {...register("invoiceBuyerName")}
+              className="w-full border rounded px-3 py-2"
+              placeholder="Nhập tên người mua"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Mã ĐVQHNS</label>
+            <input
+              {...register("invoiceDvqhnsCode")}
+              className="w-full border rounded px-3 py-2"
+              placeholder="Nhập mã đơn vị"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Email</label>
+            <input
+              {...register("invoiceEmail")}
+              type="email"
+              className="w-full border rounded px-3 py-2"
+              placeholder="email@example.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Số điện thoại
+            </label>
+            <input
+              {...register("invoicePhone")}
+              className="w-full border rounded px-3 py-2"
+              placeholder="Nhập số điện thoại"
             />
           </div>
         </div>
