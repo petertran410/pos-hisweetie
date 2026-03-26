@@ -142,6 +142,11 @@ export function useParentCustomers(search?: string) {
           code: string;
           name: string;
           contactNumber: string;
+          phone: string;
+          address: string;
+          cityName: string;
+          districtName: string;
+          wardName: string;
           _count?: {
             children: number;
           };
@@ -169,6 +174,11 @@ export function useChildCustomers(parentId: number | null, search?: string) {
           code: string;
           name: string;
           contactNumber: string;
+          phone: string;
+          address: string;
+          cityName: string;
+          districtName: string;
+          wardName: string;
         }[];
       }>(`/customers/children/${parentId}`, params);
       return response;

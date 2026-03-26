@@ -66,6 +66,8 @@ export function OrderCart({
     }>
   >([]);
 
+  console.log(deliveryInfo);
+
   useEffect(() => {
     if (isEditMode && existingOrder && paymentAmount > 0) {
       setPaymentDisplayValue(formatNumber(paymentAmount));

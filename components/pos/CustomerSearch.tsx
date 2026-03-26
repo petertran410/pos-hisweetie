@@ -30,6 +30,7 @@ export function CustomerSearch({
   const [showChildDropdown, setShowChildDropdown] = useState(false);
   const [selectedParent, setSelectedParent] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [modalCustomerId, setModalCustomerId] = useState<number | null>(null);
 
   const parentDropdownRef = useRef<HTMLDivElement>(null);
   const childDropdownRef = useRef<HTMLDivElement>(null);
@@ -44,6 +45,16 @@ export function CustomerSearch({
 
   const parentCustomers = parentCustomersData?.data || [];
   const childCustomers = childCustomersData?.data || [];
+
+  useEffect(() => {
+    if (!selectedParent && selectedCustomer) {
+      if (selectedCustomer.parent) {
+        setSelectedParent(selectedCustomer.parent);
+      } else if (!selectedCustomer.parentId) {
+        setSelectedParent(selectedCustomer);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -118,14 +129,24 @@ export function CustomerSearch({
     onSelectCustomer(null);
   };
 
-  const handleOpenModal = () => {
+  const handleOpenParentModal = () => {
+    if (selectedParent) {
+      setModalCustomerId(selectedParent.id);
+      setShowDetailModal(true);
+    }
+  };
+
+  const handleOpenChildModal = () => {
     if (selectedCustomer) {
+      setModalCustomerId(selectedCustomer.id);
       setShowDetailModal(true);
     }
   };
 
   const handleCustomerUpdate = (updatedCustomer: any) => {
-    onSelectCustomer(updatedCustomer);
+    if (modalCustomerId === selectedCustomer?.id) {
+      onSelectCustomer(updatedCustomer);
+    }
   };
 
   const hasChildren = selectedParent?._count?.children > 0;
@@ -150,26 +171,15 @@ export function CustomerSearch({
               <div
                 role="button"
                 tabIndex={0}
-                onClick={hasChildren ? undefined : handleOpenModal}
+                onClick={handleOpenParentModal}
                 onKeyDown={(e) => {
-                  if (!hasChildren && (e.key === "Enter" || e.key === " ")) {
-                    handleOpenModal();
+                  if (e.key === "Enter" || e.key === " ") {
+                    handleOpenParentModal();
                   }
                 }}
-                className={`w-full border rounded-xl px-3 py-2 bg-white transition-colors flex items-center justify-between ${
-                  hasChildren
-                    ? "cursor-default"
-                    : "hover:bg-gray-50 cursor-pointer"
-                }`}>
-                <span
-                  className={
-                    hasChildren
-                      ? "text-gray-900"
-                      : "text-blue-600 hover:underline"
-                  }>
+                className="w-full border rounded-xl px-3 py-2 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
+                <span className="text-blue-600 hover:underline">
                   {selectedParent.name} {selectedParent.contactNumber}
-                  {/* {hasChildren &&
-                    ` (${selectedParent._count.children} khách hàng con)`} */}
                 </span>
                 <button
                   onClick={handleClearParent}
@@ -196,15 +206,6 @@ export function CustomerSearch({
                         <span className="text-xs text-blue-600">
                           {parent.contactNumber || "Chưa có SĐT"}
                         </span>
-                        {/* {parent._count?.children &&
-                          parent._count.children > 0 && (
-                            <>
-                              <span className="text-xs text-gray-400">|</span>
-                              <span className="text-xs text-orange-600">
-                                {parent._count.children} khách hàng con
-                              </span>
-                            </>
-                          )} */}
                       </div>
                     </button>
                   ))}
@@ -241,10 +242,10 @@ export function CustomerSearch({
                 <div
                   role="button"
                   tabIndex={0}
-                  onClick={handleOpenModal}
+                  onClick={handleOpenChildModal}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
-                      handleOpenModal();
+                      handleOpenChildModal();
                     }
                   }}
                   className="w-full border rounded-xl px-3 py-2 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
@@ -283,13 +284,15 @@ export function CustomerSearch({
                 )}
             </div>
 
-            <button className="p-2 border rounded-md hover:bg-gray-50">
-              <Plus className="w-4 h-4" />
-            </button>
-            <PriceBookDropdown
-              selectedPriceBookId={selectedPriceBookId}
-              onSelectPriceBook={onSelectPriceBook}
-            />
+            <div className="flex items-center gap-2">
+              <button className="p-2 border rounded-md hover:bg-gray-50">
+                <Plus className="w-4 h-4" />
+              </button>
+              <PriceBookDropdown
+                selectedPriceBookId={selectedPriceBookId}
+                onSelectPriceBook={onSelectPriceBook}
+              />
+            </div>
           </div>
         )}
 
@@ -306,11 +309,14 @@ export function CustomerSearch({
         )}
       </div>
 
-      {selectedCustomer && (
+      {showDetailModal && modalCustomerId && (
         <CustomerDetailModal
           isOpen={showDetailModal}
-          onClose={() => setShowDetailModal(false)}
-          customerId={selectedCustomer.id}
+          onClose={() => {
+            setShowDetailModal(false);
+            setModalCustomerId(null);
+          }}
+          customerId={modalCustomerId}
           onCustomerUpdate={handleCustomerUpdate}
         />
       )}
