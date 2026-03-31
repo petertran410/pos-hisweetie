@@ -1,14 +1,22 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { invoicesApi } from "@/lib/api/invoices";
 import { cashflowsApi } from "@/lib/api/cashflows";
 import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
-import { X, Calendar, Clock, ChevronDown } from "lucide-react";
+import {
+  X,
+  Calendar,
+  Clock,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useBranchStore } from "@/lib/store/branch";
+import { useCustomer, useChildCustomers } from "@/lib/hooks/useCustomers";
 
 interface CustomerPaymentModalProps {
   customerId: number;
@@ -78,20 +86,40 @@ export function CustomerPaymentModal({
     Record<number, string>
   >({});
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
   const datePickerRef = useRef<HTMLDivElement>(null);
   const timePickerRef = useRef<HTMLDivElement>(null);
   const collectorDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: usersData } = useUsersForFilter();
   const users = usersData || [];
+  const { data: customerData } = useCustomer(customerId);
+  const customer = customerData;
+
+  const isParent = customer && !customer.parentId;
+
+  const { data: childrenData } = useChildCustomers(
+    isParent ? customerId : null
+  );
+  const children = childrenData?.data || [];
+
+  const allCustomerIds = useMemo(() => {
+    if (isParent && children.length > 0) {
+      return [customerId, ...children.map((c) => c.id)];
+    }
+    return [customerId];
+  }, [isParent, customerId, children]);
 
   const { data: invoicesData, isLoading } = useQuery({
-    queryKey: ["invoices", "customer", customerId, "unpaid"],
+    queryKey: ["invoices", "customer", allCustomerIds, "unpaid"],
     queryFn: () =>
       invoicesApi.getInvoices({
-        customerIds: [customerId],
-        limit: 100,
+        customerIds: allCustomerIds,
+        limit: 1000,
       }),
+    enabled: allCustomerIds.length > 0,
   });
 
   const createPayment = useMutation({
@@ -141,14 +169,23 @@ export function CustomerPaymentModal({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const unpaidInvoices =
-    invoicesData?.data
-      .filter((invoice: any) => Number(invoice.debtAmount) > 0)
-      .sort(
-        (a: any, b: any) =>
-          new Date(a.purchaseDate).getTime() -
-          new Date(b.purchaseDate).getTime()
-      ) || [];
+  const unpaidInvoices = useMemo(() => {
+    return (
+      invoicesData?.data
+        .filter((invoice: any) => Number(invoice.debtAmount) > 0)
+        .sort(
+          (a: any, b: any) =>
+            new Date(a.purchaseDate).getTime() -
+            new Date(b.purchaseDate).getTime()
+        ) || []
+    );
+  }, [invoicesData]);
+
+  const totalPages = Math.ceil(unpaidInvoices.length / pageSize);
+  const paginatedInvoices = unpaidInvoices.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const handleDateSelect = (date: Date) => {
     const newDateTime = new Date(transDateTime);
@@ -623,7 +660,7 @@ export function CustomerPaymentModal({
                       </td>
                     </tr>
                   ) : (
-                    unpaidInvoices.map((invoice: any) => (
+                    paginatedInvoices.map((invoice: any) => (
                       <tr
                         key={invoice.id}
                         className="border-b hover:bg-gray-50">
@@ -673,6 +710,33 @@ export function CustomerPaymentModal({
                   )}
                 </tbody>
               </table>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                  <div className="text-sm text-gray-600">
+                    Hiển thị {paginatedInvoices.length} /{" "}
+                    {unpaidInvoices.length} hóa đơn (Trang {currentPage} /{" "}
+                    {totalPages})
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
+                      <ChevronLeft className="w-4 h-4" />
+                      Trước
+                    </button>
+                    <button
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
+                      Sau
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

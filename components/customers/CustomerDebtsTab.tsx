@@ -71,6 +71,9 @@ export function CustomerDebtsTab({
                   Loại
                 </th>
                 <th className="px-4 py-3 text-left text-md font-medium">
+                  Khách hàng
+                </th>
+                <th className="px-4 py-3 text-left text-md font-medium">
                   Chi nhánh
                 </th>
                 <th className="px-4 py-3 text-right text-md font-medium">
@@ -88,7 +91,7 @@ export function CustomerDebtsTab({
               {timeline.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-8 text-center text-gray-500">
                     Chưa có giao dịch nào
                   </td>
@@ -112,6 +115,22 @@ export function CustomerDebtsTab({
                       </td>
                       <td className="px-4 py-3 text-md">
                         {isInvoice ? "Bán hàng" : getPaymentType(item.code)}
+                      </td>
+                      <td className="px-4 py-3 text-md">
+                        {item.customerName ? (
+                          <div>
+                            <div className="font-medium">
+                              {item.customerName}
+                            </div>
+                            {item.customerCode && (
+                              <div className="text-xs text-gray-500">
+                                {item.customerCode}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          "-"
+                        )}
                       </td>
                       <td className="px-4 py-3 text-md">
                         {item.branch?.name || "-"}
@@ -144,10 +163,12 @@ export function CustomerDebtsTab({
                         <span
                           className={`px-2 py-1 rounded text-xs font-medium ${
                             item.status === 4 || item.status === 0
-                              ? "bg-green-100 text-green-700"
-                              : "bg-yellow-100 text-yellow-700"
+                              ? "bg-green-100 text-green-800"
+                              : item.status === 3
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-red-100 text-red-800"
                           }`}>
-                          {item.statusValue || "Đã xử lý"}
+                          {item.statusValue}
                         </span>
                       </td>
                     </tr>
