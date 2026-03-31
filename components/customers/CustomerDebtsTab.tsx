@@ -16,8 +16,21 @@ export function CustomerDebtsTab({
   hidePaymentButton = false,
 }: CustomerDebtsTabProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 8;
 
   const { data, isLoading } = useCustomerDebtTimeline(customerId);
+
+  const timeline = data?.data || [];
+  const totalPages = Math.ceil(timeline.length / limit);
+  const paginatedTimeline = timeline.slice((page - 1) * limit, page * limit);
+
+  const getPaymentType = (code: string) => {
+    if (code.startsWith("TTDH")) return "Thanh toán đơn hàng";
+    if (code.startsWith("TTHD")) return "Thanh toán hóa đơn";
+    if (code.startsWith("TT")) return "Thu tiền khách";
+    return "Thanh toán";
+  };
 
   if (isLoading) {
     return (
@@ -26,15 +39,6 @@ export function CustomerDebtsTab({
       </div>
     );
   }
-
-  const timeline = data?.data || [];
-
-  const getPaymentType = (code: string) => {
-    if (code.startsWith("TTDH")) return "Thanh toán đơn hàng";
-    if (code.startsWith("TTHD")) return "Thanh toán hóa đơn";
-    if (code.startsWith("TT")) return "Thu tiền khách";
-    return "Thanh toán";
-  };
 
   return (
     <>
@@ -97,7 +101,7 @@ export function CustomerDebtsTab({
                   </td>
                 </tr>
               ) : (
-                timeline.map((item: any) => {
+                paginatedTimeline.map((item: any) => {
                   const isInvoice = item.type === "invoice";
                   const isPayment = item.type === "payment";
 
@@ -122,11 +126,6 @@ export function CustomerDebtsTab({
                             <div className="font-medium">
                               {item.customerName}
                             </div>
-                            {item.customerCode && (
-                              <div className="text-xs text-gray-500">
-                                {item.customerCode}
-                              </div>
-                            )}
                           </div>
                         ) : (
                           "-"
@@ -178,6 +177,31 @@ export function CustomerDebtsTab({
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t">
+            <div className="text-sm text-gray-600">
+              Tổng: {timeline.length} giao dịch
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(Math.max(1, page - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
+                Trước
+              </button>
+              <span className="text-sm">
+                {page} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(Math.min(totalPages, page + 1))}
+                disabled={page >= totalPages}
+                className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
+                Sau
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showPaymentModal && (

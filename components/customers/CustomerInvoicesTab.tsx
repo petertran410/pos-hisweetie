@@ -5,7 +5,7 @@ import { invoicesApi } from "@/lib/api/invoices";
 import { returnOrdersApi } from "@/lib/api/return-orders";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 interface CustomerInvoicesTabProps {
   customerId: number;
@@ -109,6 +109,8 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
   });
 
   const isLoading = invoicesLoading || returnsLoading;
+  const [page, setPage] = useState(1);
+  const limit = 8;
 
   const timeline = useMemo(() => {
     const items: TimelineItem[] = [];
@@ -153,6 +155,9 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
     return items;
   }, [invoicesData, returnsData]);
 
+  const totalPages = Math.ceil(timeline.length / limit);
+  const paginatedItems = timeline.slice((page - 1) * limit, page * limit);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -196,7 +201,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
           </tr>
         </thead>
         <tbody>
-          {timeline.map((item) => (
+          {paginatedItems.map((item) => (
             <tr
               key={`${item.type}-${item.id}`}
               className="border-b hover:bg-gray-50">
@@ -242,6 +247,31 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
           ))}
         </tbody>
       </table>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t">
+          <div className="text-sm text-gray-600">
+            Tổng: {timeline.length} bản ghi
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
+              Trước
+            </button>
+            <span className="text-sm">
+              {page} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
+              Sau
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ordersApi } from "@/lib/api/orders";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
 interface CustomerOrdersTabProps {
   customerId: number;
@@ -19,20 +20,26 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
       }),
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-      </div>
-    );
-  }
+  const [page, setPage] = useState(1);
+  const limit = 8;
 
   const orders = data?.data || [];
+
+  const totalPages = Math.ceil(orders.length / limit);
+  const paginatedOrders = orders.slice((page - 1) * limit, page * limit);
 
   if (orders.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
         Chưa có lịch sử đặt hàng
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -63,7 +70,7 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
           </tr>
         </thead>
         <tbody>
-          {orders.map((order) => (
+          {paginatedOrders.map((order) => (
             <tr key={order.id} className="border-b hover:bg-gray-50">
               <td className="px-4 py-3">
                 <a
@@ -88,8 +95,8 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
                     order.status === 3
                       ? "bg-green-100 text-green-800"
                       : order.status === 4
-                      ? "bg-red-100 text-red-800"
-                      : "bg-yellow-100 text-yellow-800"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-yellow-100 text-yellow-800"
                   }`}>
                   {order.statusValue}
                 </span>
@@ -99,25 +106,30 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
         </tbody>
       </table>
 
-      <div className="mt-4 flex items-center gap-2">
-        <button className="px-4 py-2 border rounded hover:bg-gray-50">
-          <span className="flex items-center gap-2">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-              />
-            </svg>
-            Xuất file
-          </span>
-        </button>
-      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t">
+          <div className="text-sm text-gray-600">
+            Tổng: {orders.length} đơn hàng
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
+              Trước
+            </button>
+            <span className="text-sm">
+              {page} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
+              Sau
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
