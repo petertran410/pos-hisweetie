@@ -74,7 +74,13 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "invoiceCode",
     label: "Mã hóa đơn",
     visible: true,
-    render: (item) => item.invoice?.code || "-",
+    render: (item) => {
+      if (item.invoice?.code) return item.invoice.code;
+      const codes = [
+        ...new Set((item.details || []).map((d: any) => d.invoiceCode)),
+      ];
+      return codes.join(", ") || "-";
+    },
   },
   {
     key: "invoiceSeller",

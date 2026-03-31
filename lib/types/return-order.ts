@@ -1,6 +1,8 @@
 export interface ReturnOrderDetail {
   id: number;
   returnOrderId: number;
+  invoiceId: number;
+  invoiceCode: string;
   productId: number;
   productCode: string;
   productName: string;

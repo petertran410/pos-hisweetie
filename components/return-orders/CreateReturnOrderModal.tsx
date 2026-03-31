@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, Search } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, Search, ChevronDown } from "lucide-react";
 import { useInvoices } from "@/lib/hooks/useInvoices";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranchStore } from "@/lib/store/branch";
@@ -14,6 +14,8 @@ interface CreateReturnOrderModalProps {
 }
 
 interface ReturnItem {
+  invoiceId: number;
+  invoiceCode: string;
   productId: number;
   productCode: string;
   productName: string;
@@ -24,6 +26,17 @@ interface ReturnItem {
   note: string;
 }
 
+interface SelectedInvoice {
+  id: number;
+  code: string;
+  customerId?: number;
+  customer?: any;
+  soldBy?: any;
+  creator?: any;
+  grandTotal: number;
+  details: any[];
+}
+
 export function CreateReturnOrderModal({
   onClose,
   onSubmit,
@@ -32,26 +45,58 @@ export function CreateReturnOrderModal({
   const { data: branches } = useBranches();
   const [branchId, setBranchId] = useState(selectedBranch?.id || 0);
   const [invoiceSearch, setInvoiceSearch] = useState("");
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [selectedInvoices, setSelectedInvoices] = useState<SelectedInvoice[]>(
+    []
+  );
   const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
   const [note, setNote] = useState("");
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
+  const invoiceDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: invoicesData } = useInvoices({
     search: invoiceSearch,
-    limit: 10,
+    limit: 20,
     statusIds: "1",
   });
 
-  const availableInvoices = invoicesData?.data || [];
+  const availableInvoices = (invoicesData?.data || []).filter(
+    (inv: any) => !selectedInvoices.find((s) => s.id === inv.id)
+  );
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        invoiceDropdownRef.current &&
+        !invoiceDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowInvoiceDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSelectInvoice = async (invoice: any) => {
     try {
       const fullInvoice = await invoicesApi.getInvoice(invoice.id);
-      setSelectedInvoice(fullInvoice);
 
-      const items: ReturnItem[] = (fullInvoice.details || []).map(
+      const newSelected: SelectedInvoice = {
+        id: fullInvoice.id,
+        code: fullInvoice.code,
+        customerId: fullInvoice.customerId,
+        customer: fullInvoice.customer,
+        soldBy: fullInvoice.soldBy,
+        creator: fullInvoice.creator,
+        grandTotal: Number(fullInvoice.grandTotal),
+        details: fullInvoice.details || [],
+      };
+
+      setSelectedInvoices((prev) => [...prev, newSelected]);
+
+      const newItems: ReturnItem[] = (fullInvoice.details || []).map(
         (detail: any) => ({
+          invoiceId: fullInvoice.id,
+          invoiceCode: fullInvoice.code,
           productId: detail.productId,
           productCode: detail.productCode || detail.product?.code || "",
           productName: detail.productName || detail.product?.name || "",
@@ -63,12 +108,18 @@ export function CreateReturnOrderModal({
         })
       );
 
-      setReturnItems(items);
-      setShowInvoiceDropdown(false);
+      setReturnItems((prev) => [...prev, ...newItems]);
       setInvoiceSearch("");
     } catch (error) {
       console.error("Error loading invoice:", error);
     }
+  };
+
+  const handleRemoveInvoice = (invoiceId: number) => {
+    setSelectedInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
+    setReturnItems((prev) =>
+      prev.filter((item) => item.invoiceId !== invoiceId)
+    );
   };
 
   const updateReturnItem = (
@@ -79,17 +130,13 @@ export function CreateReturnOrderModal({
     setReturnItems((prev) =>
       prev.map((item, i) => {
         if (i !== index) return item;
-
         const updated = { ...item, [field]: value };
-
         if (field === "requestQuantity") {
-          const qty = Math.min(
+          updated.requestQuantity = Math.min(
             Math.max(0, Number(value)),
             item.invoiceQuantity
           );
-          updated.requestQuantity = qty;
         }
-
         return updated;
       })
     );
@@ -101,16 +148,19 @@ export function CreateReturnOrderModal({
   );
 
   const handleSubmit = () => {
-    if (!selectedInvoice) return;
+    if (selectedInvoices.length === 0 || !branchId) return;
 
     const validItems = returnItems.filter((item) => item.requestQuantity > 0);
     if (validItems.length === 0) return;
 
     onSubmit({
-      invoiceId: selectedInvoice.id,
+      invoiceIds: selectedInvoices.map((inv) => inv.id),
       branchId,
+      customerId: selectedInvoices[0]?.customerId,
       note,
       details: validItems.map((item) => ({
+        invoiceId: item.invoiceId,
+        invoiceCode: item.invoiceCode,
         productId: item.productId,
         productCode: item.productCode,
         productName: item.productName,
@@ -123,10 +173,15 @@ export function CreateReturnOrderModal({
     });
   };
 
+  const groupedByInvoice = selectedInvoices.map((inv) => ({
+    invoice: inv,
+    items: returnItems.filter((item) => item.invoiceId === inv.id),
+  }));
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-[900px] h-[500px]  overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b">
+      <div className="bg-white rounded-xl w-[950px] max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-lg font-semibold">Tạo phiếu trả hàng</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
             <X className="w-5 h-5" />
@@ -152,22 +207,17 @@ export function CreateReturnOrderModal({
               </select>
             </div>
 
-            <div className="relative">
+            <div ref={invoiceDropdownRef} className="relative">
               <label className="block text-sm font-medium mb-1">
-                Chọn hóa đơn
+                Thêm hóa đơn
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Tìm mã hóa đơn..."
-                  value={
-                    selectedInvoice
-                      ? `${selectedInvoice.code} - ${selectedInvoice.customer?.name || "Khách lẻ"}`
-                      : invoiceSearch
-                  }
+                  placeholder="Tìm mã hóa đơn, tên KH..."
+                  value={invoiceSearch}
                   onChange={(e) => {
                     setInvoiceSearch(e.target.value);
-                    setSelectedInvoice(null);
                     setShowInvoiceDropdown(true);
                   }}
                   onFocus={() => setShowInvoiceDropdown(true)}
@@ -176,7 +226,7 @@ export function CreateReturnOrderModal({
                 <Search className="absolute right-2 top-2.5 w-4 h-4 text-gray-400" />
               </div>
               {showInvoiceDropdown && availableInvoices.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-30 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
                   {availableInvoices.map((inv: any) => (
                     <button
                       key={inv.id}
@@ -194,99 +244,120 @@ export function CreateReturnOrderModal({
             </div>
           </div>
 
-          {selectedInvoice && (
-            <div className="bg-gray-50 p-3 rounded-lg text-sm">
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <span className="text-gray-500">Khách hàng:</span>{" "}
-                  {selectedInvoice.customer?.name || "Khách lẻ"}
+          {selectedInvoices.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedInvoices.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-sm">
+                  <span className="font-medium">{inv.code}</span>
+                  <span className="text-gray-500">
+                    - {inv.customer?.name || "Khách lẻ"}
+                  </span>
+                  <button
+                    onClick={() => handleRemoveInvoice(inv.id)}
+                    className="ml-1 p-0.5 hover:bg-blue-100 rounded-full">
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
-                <div>
-                  <span className="text-gray-500">Người bán:</span>{" "}
-                  {selectedInvoice.soldBy?.name ||
-                    selectedInvoice.creator?.name}
-                </div>
-                <div>
-                  <span className="text-gray-500">Tổng HĐ:</span>{" "}
-                  {formatCurrency(Number(selectedInvoice.grandTotal))}
-                </div>
-              </div>
+              ))}
             </div>
           )}
 
-          {returnItems.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium mb-2">
-                Sản phẩm trả ({returnItems.length})
-              </h3>
-              <table className="w-full text-sm border">
-                <thead className="bg-gray-50">
+          {groupedByInvoice.map(({ invoice, items }) => (
+            <div key={invoice.id} className="border rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-3 py-2 flex items-center justify-between">
+                <div className="text-sm">
+                  <span className="font-medium">{invoice.code}</span>
+                  <span className="text-gray-500 ml-2">
+                    {invoice.customer?.name || "Khách lẻ"}
+                  </span>
+                  <span className="text-gray-400 ml-2">
+                    Người bán:{" "}
+                    {invoice.soldBy?.name || invoice.creator?.name || "-"}
+                  </span>
+                </div>
+                <span className="text-sm text-gray-500">
+                  Tổng HĐ: {formatCurrency(invoice.grandTotal)}
+                </span>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100">
                   <tr>
                     <th className="px-3 py-2 text-left">Sản phẩm</th>
-                    <th className="px-3 py-2 text-right w-24">SL trên HĐ</th>
+                    <th className="px-3 py-2 text-right w-20">SL HĐ</th>
                     <th className="px-3 py-2 text-right w-24">SL trả</th>
-                    <th className="px-3 py-2 text-right w-32">Giá trên HĐ</th>
-                    <th className="px-3 py-2 text-right w-32">Giá nhập lại</th>
-                    <th className="px-3 py-2 text-right w-32">Thành tiền</th>
+                    <th className="px-3 py-2 text-right w-28">Giá HĐ</th>
+                    <th className="px-3 py-2 text-right w-28">Giá nhập lại</th>
+                    <th className="px-3 py-2 text-right w-28">Thành tiền</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {returnItems.map((item, idx) => (
-                    <tr key={idx} className="border-t">
-                      <td className="px-3 py-2">
-                        <div className="font-medium">{item.productName}</div>
-                        <div className="text-xs text-gray-500">
-                          {item.productCode}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {item.invoiceQuantity}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <input
-                          type="number"
-                          min={0}
-                          max={item.invoiceQuantity}
-                          value={item.requestQuantity}
-                          onChange={(e) =>
-                            updateReturnItem(
-                              idx,
-                              "requestQuantity",
-                              Number(e.target.value)
-                            )
-                          }
-                          className="w-20 px-2 py-1 border rounded text-right text-sm"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {formatCurrency(item.invoicePrice)}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.returnPrice}
-                          onChange={(e) =>
-                            updateReturnItem(
-                              idx,
-                              "returnPrice",
-                              Number(e.target.value)
-                            )
-                          }
-                          className="w-28 px-2 py-1 border rounded text-right text-sm"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-right font-medium">
-                        {formatCurrency(
-                          item.returnPrice * item.requestQuantity
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map((item) => {
+                    const globalIndex = returnItems.findIndex(
+                      (ri) =>
+                        ri.invoiceId === item.invoiceId &&
+                        ri.productId === item.productId
+                    );
+                    return (
+                      <tr
+                        key={`${item.invoiceId}-${item.productId}`}
+                        className="border-t">
+                        <td className="px-3 py-2">
+                          <div className="font-medium">{item.productName}</div>
+                          <div className="text-xs text-gray-500">
+                            {item.productCode}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {item.invoiceQuantity}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <input
+                            type="number"
+                            min={0}
+                            max={item.invoiceQuantity}
+                            value={item.requestQuantity}
+                            onChange={(e) =>
+                              updateReturnItem(
+                                globalIndex,
+                                "requestQuantity",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-20 px-2 py-1 border rounded text-right text-sm"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {formatCurrency(item.invoicePrice)}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.returnPrice}
+                            onChange={(e) =>
+                              updateReturnItem(
+                                globalIndex,
+                                "returnPrice",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-24 px-2 py-1 border rounded text-right text-sm"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium">
+                          {formatCurrency(
+                            item.returnPrice * item.requestQuantity
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          )}
+          ))}
 
           <div>
             <label className="block text-sm font-medium mb-1">Ghi chú</label>
@@ -300,31 +371,29 @@ export function CreateReturnOrderModal({
           </div>
         </div>
 
-        <div className="self-end">
-          <div className="flex items-center justify-between p-4 border-t bg-gray-50">
-            <div className="text-sm">
-              <span className="text-gray-500">Tổng tiền trả: </span>
-              <span className="text-lg font-bold text-red-600">
-                {formatCurrency(totalReturnAmount)}
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">
-                Hủy
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={
-                  !selectedInvoice ||
-                  !branchId ||
-                  returnItems.filter((i) => i.requestQuantity > 0).length === 0
-                }
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
-                Tạo phiếu trả hàng
-              </button>
-            </div>
+        <div className="flex items-center justify-between p-4 border-t bg-gray-50 shrink-0 rounded-b-xl">
+          <div className="text-sm">
+            <span className="text-gray-500">Tổng tiền trả: </span>
+            <span className="text-lg font-bold text-red-600">
+              {formatCurrency(totalReturnAmount)}
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">
+              Hủy
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={
+                selectedInvoices.length === 0 ||
+                !branchId ||
+                returnItems.filter((i) => i.requestQuantity > 0).length === 0
+              }
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+              Tạo phiếu trả hàng
+            </button>
           </div>
         </div>
       </div>
