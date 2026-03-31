@@ -2,15 +2,95 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { invoicesApi } from "@/lib/api/invoices";
+import { returnOrdersApi } from "@/lib/api/return-orders";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { useMemo } from "react";
 
 interface CustomerInvoicesTabProps {
   customerId: number;
 }
 
+interface TimelineItem {
+  id: number;
+  code: string;
+  date: string;
+  type: "invoice" | "return";
+  sellerName: string;
+  branchName: string;
+  totalAmount: number;
+  status: number;
+  statusLabel: string;
+  statusColor: string;
+  debtAdjustment: number;
+}
+
+const getInvoiceStatusLabel = (status: number) => {
+  switch (status) {
+    case 1:
+      return "Hoàn thành";
+    case 2:
+      return "Đã hủy";
+    case 3:
+      return "Đang xử lý";
+    case 4:
+      return "Không giao được";
+    default:
+      return "Không xác định";
+  }
+};
+
+const getInvoiceStatusColor = (status: number) => {
+  switch (status) {
+    case 1:
+      return "bg-green-100 text-green-800";
+    case 2:
+      return "bg-red-100 text-red-800";
+    case 3:
+      return "bg-blue-100 text-blue-800";
+    case 4:
+      return "bg-yellow-100 text-yellow-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
+
+const getReturnStatusLabel = (status: number) => {
+  switch (status) {
+    case 1:
+      return "Yêu cầu trả hàng";
+    case 2:
+      return "Nhập hàng trả";
+    case 3:
+      return "Yêu cầu hoàn tiền";
+    case 4:
+      return "Hoàn thành";
+    case 5:
+      return "Đã hủy";
+    default:
+      return "Không xác định";
+  }
+};
+
+const getReturnStatusColor = (status: number) => {
+  switch (status) {
+    case 1:
+      return "bg-blue-100 text-blue-800";
+    case 2:
+      return "bg-yellow-100 text-yellow-800";
+    case 3:
+      return "bg-orange-100 text-orange-800";
+    case 4:
+      return "bg-green-100 text-green-800";
+    case 5:
+      return "bg-red-100 text-red-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
+
 export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
-  const { data, isLoading } = useQuery({
+  const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
     queryKey: ["invoices", "customer", customerId],
     queryFn: () =>
       invoicesApi.getInvoices({
@@ -18,6 +98,60 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
         limit: 100,
       }),
   });
+
+  const { data: returnsData, isLoading: returnsLoading } = useQuery({
+    queryKey: ["return-orders", "customer", customerId],
+    queryFn: () =>
+      returnOrdersApi.getAll({
+        customerId,
+        limit: 100,
+      }),
+  });
+
+  const isLoading = invoicesLoading || returnsLoading;
+
+  const timeline = useMemo(() => {
+    const items: TimelineItem[] = [];
+
+    (invoicesData?.data || []).forEach((inv: any) => {
+      items.push({
+        id: inv.id,
+        code: inv.code,
+        date: inv.purchaseDate,
+        type: "invoice",
+        sellerName: inv.soldBy?.name || inv.creator?.name || "-",
+        branchName: inv.branch?.name || "-",
+        totalAmount: Number(inv.grandTotal),
+        status: inv.status,
+        statusLabel: getInvoiceStatusLabel(inv.status),
+        statusColor: getInvoiceStatusColor(inv.status),
+        debtAdjustment: Number(inv.grandTotal),
+      });
+    });
+
+    (returnsData?.data || []).forEach((ro: any) => {
+      const refundAmount = Number(ro.refundAmount || ro.totalReturnAmount || 0);
+      items.push({
+        id: ro.id,
+        code: ro.code,
+        date: ro.createdAt,
+        type: "return",
+        sellerName: ro.creator?.name || ro.createdByName || "-",
+        branchName: ro.branch?.name || "-",
+        totalAmount: refundAmount,
+        status: ro.status,
+        statusLabel: getReturnStatusLabel(ro.status),
+        statusColor: getReturnStatusColor(ro.status),
+        debtAdjustment: ro.status === 4 ? -refundAmount : 0,
+      });
+    });
+
+    items.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    return items;
+  }, [invoicesData, returnsData]);
 
   if (isLoading) {
     return (
@@ -27,12 +161,10 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
     );
   }
 
-  const invoices = data?.data || [];
-
-  if (invoices.length === 0) {
+  if (timeline.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        Chưa có lịch sử bán hàng
+        Chưa có lịch sử bán hàng/trả hàng
       </div>
     );
   }
@@ -42,20 +174,21 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
       <table className="w-full">
         <thead>
           <tr className="border-b bg-gray-50">
+            <th className="px-4 py-3 text-left text-sm font-medium">Loại</th>
             <th className="px-4 py-3 text-left text-sm font-medium">
-              Mã hóa đơn
+              Mã phiếu
             </th>
             <th className="px-4 py-3 text-left text-sm font-medium">
               Thời gian
             </th>
             <th className="px-4 py-3 text-left text-sm font-medium">
-              Người bán
+              Người thực hiện
             </th>
             <th className="px-4 py-3 text-left text-sm font-medium">
               Chi nhánh
             </th>
             <th className="px-4 py-3 text-right text-sm font-medium">
-              Tổng cộng
+              Giá trị
             </th>
             <th className="px-4 py-3 text-center text-sm font-medium">
               Trạng thái
@@ -63,61 +196,52 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
           </tr>
         </thead>
         <tbody>
-          {invoices.map((invoice) => (
-            <tr key={invoice.id} className="border-b hover:bg-gray-50">
+          {timeline.map((item) => (
+            <tr
+              key={`${item.type}-${item.id}`}
+              className="border-b hover:bg-gray-50">
               <td className="px-4 py-3">
-                <a
-                  href={`/invoices/${invoice.id}`}
-                  className="text-blue-600 hover:underline">
-                  {invoice.code}
-                </a>
+                {item.type === "invoice" ? (
+                  <span className="px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                    Bán hàng
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 rounded text-xs font-medium bg-orange-50 text-orange-700">
+                    Trả hàng
+                  </span>
+                )}
+              </td>
+              <td className="px-4 py-3">
+                <span className="text-blue-600 hover:underline cursor-pointer">
+                  {item.code}
+                </span>
               </td>
               <td className="px-4 py-3 text-sm">
-                {new Date(invoice.purchaseDate).toLocaleString("vi-VN")}
+                {new Date(item.date).toLocaleString("vi-VN")}
               </td>
-              <td className="px-4 py-3 text-sm">
-                {invoice.soldBy?.name || "admin"}
-              </td>
-              <td className="px-4 py-3 text-sm">
-                {invoice.branch?.name || "-"}
-              </td>
+              <td className="px-4 py-3 text-sm">{item.sellerName}</td>
+              <td className="px-4 py-3 text-sm">{item.branchName}</td>
               <td className="px-4 py-3 text-sm text-right">
-                {formatCurrency(invoice.grandTotal)}
+                {item.type === "invoice" ? (
+                  <span className="text-red-600 font-medium">
+                    +{formatCurrency(item.totalAmount)}
+                  </span>
+                ) : (
+                  <span className="text-green-600 font-medium">
+                    -{formatCurrency(item.totalAmount)}
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3 text-center">
                 <span
-                  className={`px-2 py-1 rounded text-xs font-medium ${
-                    invoice.status === 4
-                      ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}>
-                  {invoice.statusValue || "Đang xử lý"}
+                  className={`px-2 py-1 rounded text-xs font-medium ${item.statusColor}`}>
+                  {item.statusLabel}
                 </span>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-
-      <div className="mt-4 flex items-center gap-2">
-        <button className="px-4 py-2 border rounded hover:bg-gray-50">
-          <span className="flex items-center gap-2">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-              />
-            </svg>
-            Xuất file
-          </span>
-        </button>
-      </div>
     </div>
   );
 }

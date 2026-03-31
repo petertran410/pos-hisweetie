@@ -59,7 +59,7 @@ export function CreateReturnOrderModal({
   const { data: invoicesData } = useInvoices({
     search: invoiceSearch,
     limit: 20,
-    statusIds: "1",
+    statusIds: "1,3",
   });
 
   const availableInvoices = (invoicesData?.data || []).filter(
