@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useBranchStore } from "@/lib/store/branch";
 import { useCustomer, useChildCustomers } from "@/lib/hooks/useCustomers";
+import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 
 interface CustomerPaymentModalProps {
   customerId: number;
@@ -86,6 +87,11 @@ export function CustomerPaymentModal({
     Record<number, string>
   >({});
 
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
+    null
+  );
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
@@ -93,10 +99,14 @@ export function CustomerPaymentModal({
   const timePickerRef = useRef<HTMLDivElement>(null);
   const collectorDropdownRef = useRef<HTMLDivElement>(null);
 
+  const accountDropdownRef = useRef<HTMLDivElement>(null);
+
   const { data: usersData } = useUsersForFilter();
   const users = usersData || [];
   const { data: customerData } = useCustomer(customerId);
   const customer = customerData;
+  const { data: bankAccountsData } = useBankAccountsForPayment();
+  const bankAccounts = bankAccountsData || [];
 
   const isParent = customer && !customer.parentId;
 
@@ -162,6 +172,12 @@ export function CustomerPaymentModal({
         !timePickerRef.current.contains(event.target as Node)
       ) {
         setShowTimePicker(false);
+      }
+      if (
+        accountDropdownRef.current &&
+        !accountDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowAccountDropdown(false);
       }
     };
 
@@ -262,6 +278,11 @@ export function CustomerPaymentModal({
       return;
     }
 
+    if ((method === "wallet" || method === "transfer") && !selectedAccountId) {
+      alert("Vui lòng chọn tài khoản ngân hàng");
+      return;
+    }
+
     let finalTransDate = transDateTime;
     if (transDate) {
       finalTransDate = parseDateTime(transDate);
@@ -306,6 +327,7 @@ export function CustomerPaymentModal({
       description,
       allocateToInvoices,
       invoices: invoicesToPay.length > 0 ? invoicesToPay : undefined,
+      accountId: selectedAccountId || undefined,
     });
   };
 
@@ -528,67 +550,124 @@ export function CustomerPaymentModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="relative">
-              <label className="block text-sm font-medium mb-2">
-                Phương thức thanh toán
-              </label>
-              <button
-                onClick={() => setShowMethodDropdown(!showMethodDropdown)}
-                className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between">
-                <span>{methodLabels[method]}</span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
+          <div className="mb-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="relative">
+                <label className="block text-sm font-medium mb-2">
+                  Phương thức thanh toán
+                </label>
+                <button
+                  onClick={() => setShowMethodDropdown(!showMethodDropdown)}
+                  className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between">
+                  <span>{methodLabels[method]}</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
 
-              {showMethodDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50">
-                  <button
-                    onClick={() => {
-                      setMethod("cash");
-                      setShowMethodDropdown(false);
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2">
-                    {method === "cash" && (
-                      <span className="text-blue-600">✓</span>
-                    )}
-                    <span>Tiền mặt</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMethod("wallet");
-                      setShowMethodDropdown(false);
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2">
-                    {method === "wallet" && (
-                      <span className="text-blue-600">✓</span>
-                    )}
-                    <span>Thẻ</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMethod("transfer");
-                      setShowMethodDropdown(false);
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2">
-                    {method === "transfer" && (
-                      <span className="text-blue-600">✓</span>
-                    )}
-                    <span>Chuyển khoản</span>
-                  </button>
-                </div>
-              )}
+                {showMethodDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50">
+                    <button
+                      onClick={() => {
+                        setMethod("cash");
+                        setSelectedAccountId(null);
+                        setShowMethodDropdown(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2">
+                      {method === "cash" && (
+                        <span className="text-blue-600">✓</span>
+                      )}
+                      <span>Tiền mặt</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMethod("wallet");
+                        setShowMethodDropdown(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2">
+                      {method === "wallet" && (
+                        <span className="text-blue-600">✓</span>
+                      )}
+                      <span>Thẻ</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMethod("transfer");
+                        setShowMethodDropdown(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2">
+                      {method === "transfer" && (
+                        <span className="text-blue-600">✓</span>
+                      )}
+                      <span>Chuyển khoản</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Số tiền
+                </label>
+                <input
+                  type="text"
+                  value={totalAmount}
+                  onChange={(e) => handleTotalAmountChange(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 border rounded-lg text-right"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Số tiền</label>
-              <input
-                type="text"
-                value={totalAmount}
-                onChange={(e) => handleTotalAmountChange(e.target.value)}
-                placeholder="0"
-                className="w-full px-3 py-2 border rounded-lg text-right"
-              />
-            </div>
+            {(method === "wallet" || method === "transfer") && (
+              <div className="relative" ref={accountDropdownRef}>
+                <label className="block text-sm font-medium mb-2">
+                  Tài khoản ngân hàng
+                </label>
+                <button
+                  onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+                  className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between">
+                  <span className={selectedAccountId ? "" : "text-gray-400"}>
+                    {selectedAccountId
+                      ? (() => {
+                          const account = bankAccounts.find(
+                            (a: any) => a.id === selectedAccountId
+                          );
+                          return account
+                            ? `${account.bankCode} - ${account.accountNumber}`
+                            : "Chọn tài khoản";
+                        })()
+                      : "Chọn tài khoản"}
+                  </span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+
+                {showAccountDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    {bankAccounts.length > 0 ? (
+                      bankAccounts.map((account: any) => (
+                        <button
+                          key={account.id}
+                          onClick={() => {
+                            setSelectedAccountId(account.id);
+                            setShowAccountDropdown(false);
+                          }}
+                          className="w-full px-3 py-2 text-left hover:bg-gray-100">
+                          <div className="font-medium text-sm">
+                            {account.bankCode} - {account.accountNumber}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {account.accountHolder}
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                        Chưa có tài khoản ngân hàng
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="mb-4">
