@@ -40,7 +40,7 @@ export function CreateReturnOrderModal({
   const { data: invoicesData } = useInvoices({
     search: invoiceSearch,
     limit: 20,
-    status: 1,
+    statusIds: "1",
   });
 
   const availableInvoices = invoicesData?.data || [];
