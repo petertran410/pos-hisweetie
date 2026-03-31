@@ -180,7 +180,7 @@ export function CreateReturnOrderModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-[950px] max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl w-[950px] min-h-[90vh] max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-lg font-semibold">Tạo phiếu trả hàng</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
@@ -251,9 +251,6 @@ export function CreateReturnOrderModal({
                   key={inv.id}
                   className="flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-sm">
                   <span className="font-medium">{inv.code}</span>
-                  <span className="text-gray-500">
-                    - {inv.customer?.name || "Khách lẻ"}
-                  </span>
                   <button
                     onClick={() => handleRemoveInvoice(inv.id)}
                     className="ml-1 p-0.5 hover:bg-blue-100 rounded-full">
@@ -358,17 +355,17 @@ export function CreateReturnOrderModal({
               </table>
             </div>
           ))}
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Ghi chú</label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-              placeholder="Lý do trả hàng..."
-            />
-          </div>
+        <div className="px-4 py-3 border-t shrink-0">
+          <label className="block text-sm font-medium mb-1">Ghi chú</label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2 border rounded-lg resize-none"
+            placeholder="Lý do trả hàng..."
+          />
         </div>
 
         <div className="flex items-center justify-between p-4 border-t bg-gray-50 shrink-0 rounded-b-xl">
