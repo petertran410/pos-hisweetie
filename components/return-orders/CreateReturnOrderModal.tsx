@@ -39,7 +39,7 @@ export function CreateReturnOrderModal({
 
   const { data: invoicesData } = useInvoices({
     search: invoiceSearch,
-    limit: 20,
+    limit: 10,
     statusIds: "1",
   });
 
@@ -125,7 +125,7 @@ export function CreateReturnOrderModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-[900px] max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl w-[900px] h-[500px]  overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">Tạo phiếu trả hàng</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
@@ -300,29 +300,31 @@ export function CreateReturnOrderModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-between p-4 border-t bg-gray-50">
-          <div className="text-sm">
-            <span className="text-gray-500">Tổng tiền trả: </span>
-            <span className="text-lg font-bold text-red-600">
-              {formatCurrency(totalReturnAmount)}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">
-              Hủy
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={
-                !selectedInvoice ||
-                !branchId ||
-                returnItems.filter((i) => i.requestQuantity > 0).length === 0
-              }
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
-              Tạo phiếu trả hàng
-            </button>
+        <div className="self-end">
+          <div className="flex items-center justify-between p-4 border-t bg-gray-50">
+            <div className="text-sm">
+              <span className="text-gray-500">Tổng tiền trả: </span>
+              <span className="text-lg font-bold text-red-600">
+                {formatCurrency(totalReturnAmount)}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">
+                Hủy
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={
+                  !selectedInvoice ||
+                  !branchId ||
+                  returnItems.filter((i) => i.requestQuantity > 0).length === 0
+                }
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+                Tạo phiếu trả hàng
+              </button>
+            </div>
           </div>
         </div>
       </div>
