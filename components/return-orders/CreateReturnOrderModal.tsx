@@ -51,6 +51,9 @@ export function CreateReturnOrderModal({
   const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
   const [note, setNote] = useState("");
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
+  const branchDropdownRef = useRef<HTMLDivElement>(null);
+  const [showBranchDropdown, setShowBranchDropdown] = useState(false);
+  const [branchSearchTerm, setBranchSearchTerm] = useState("");
   const invoiceDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: invoicesData } = useInvoices({
@@ -71,10 +74,24 @@ export function CreateReturnOrderModal({
       ) {
         setShowInvoiceDropdown(false);
       }
+      if (
+        branchDropdownRef.current &&
+        !branchDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowBranchDropdown(false);
+        setBranchSearchTerm("");
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const selectedBranchObj = (branches || []).find(
+    (b: any) => b.id === branchId
+  );
+  const filteredBranches = (branches || []).filter((b: any) =>
+    b.name.toLowerCase().includes(branchSearchTerm.toLowerCase())
+  );
 
   const handleSelectInvoice = async (invoice: any) => {
     try {
@@ -180,7 +197,7 @@ export function CreateReturnOrderModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-[950px] min-h-[90vh] max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl w-[950px] min-h-[70vh] max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-lg font-semibold">Tạo phiếu trả hàng</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
@@ -190,21 +207,69 @@ export function CreateReturnOrderModal({
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div ref={branchDropdownRef} className="relative">
               <label className="block text-sm font-medium mb-1">
                 Chi nhánh nhận
               </label>
-              <select
-                value={branchId}
-                onChange={(e) => setBranchId(Number(e.target.value))}
-                className="w-full px-3 py-2 border rounded-lg text-sm">
-                <option value={0}>Chọn chi nhánh</option>
-                {(branches || []).map((b: any) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
+              <button
+                type="button"
+                onClick={() => setShowBranchDropdown(!showBranchDropdown)}
+                className={`w-full border rounded-lg px-3 py-2 text-left flex items-center justify-between bg-white text-sm ${
+                  showBranchDropdown ? "border-blue-500" : "border-gray-300"
+                }`}>
+                <span className={branchId ? "text-gray-900" : "text-gray-400"}>
+                  {selectedBranchObj
+                    ? selectedBranchObj.name
+                    : "Chọn chi nhánh"}
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${
+                    showBranchDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {showBranchDropdown && (
+                <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-[300px] overflow-hidden">
+                  <div className="p-2 border-b border-gray-200">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={branchSearchTerm}
+                        onChange={(e) => setBranchSearchTerm(e.target.value)}
+                        placeholder="Tìm chi nhánh..."
+                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  <div className="overflow-y-auto max-h-[240px]">
+                    {filteredBranches.length > 0 ? (
+                      filteredBranches.map((branch: any) => (
+                        <button
+                          key={branch.id}
+                          type="button"
+                          onClick={() => {
+                            setBranchId(branch.id);
+                            setShowBranchDropdown(false);
+                            setBranchSearchTerm("");
+                          }}
+                          className={`w-full px-3 py-2 text-left hover:bg-blue-50 text-sm ${
+                            branchId === branch.id
+                              ? "bg-blue-100 text-blue-700"
+                              : "text-gray-900"
+                          }`}>
+                          {branch.name}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-gray-500 text-center text-sm">
+                        Không tìm thấy
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div ref={invoiceDropdownRef} className="relative">

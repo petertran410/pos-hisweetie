@@ -5,6 +5,7 @@ import { useReturnOrders } from "@/lib/hooks/useReturnOrders";
 import { useBranchStore } from "@/lib/store/branch";
 import { Plus, Settings } from "lucide-react";
 import type { ReturnOrder } from "@/lib/types/return-order";
+import { Can } from "../permissions/Can";
 
 interface ColumnConfig {
   key: string;
@@ -234,144 +235,146 @@ export function ReturnOrdersTable({
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b bg-white">
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Tìm theo mã trả hàng, mã HĐ, tên KH..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="px-3 py-2 border rounded-lg text-sm w-80"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowColumnModal(true)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-            title="Cấu hình cột">
-            <Settings className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onCreateClick}
-            className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
-            <Plus className="w-4 h-4" />
-            Tạo phiếu trả hàng
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 sticky top-0">
-            <tr>
-              {visibleColumns.map((col) => (
-                <th
-                  key={col.key}
-                  className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length}
-                  className="text-center py-8 text-gray-500">
-                  Đang tải...
-                </td>
-              </tr>
-            ) : returnOrders.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length}
-                  className="text-center py-8 text-gray-500">
-                  Không có phiếu trả hàng
-                </td>
-              </tr>
-            ) : (
-              returnOrders.map((item: ReturnOrder) => (
-                <tr
-                  key={item.id}
-                  className="border-b hover:bg-blue-50 cursor-pointer"
-                  onClick={() => onViewClick(item)}>
-                  {visibleColumns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 whitespace-nowrap">
-                      {col.render(item)}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex items-center justify-between px-4 py-3 border-t bg-white">
-        <div className="text-sm text-gray-600">
-          Tổng: {total} phiếu trả hàng
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={limit}
-            onChange={(e) => {
-              setLimit(Number(e.target.value));
-              setPage(1);
-            }}
-            className="px-2 py-1 border rounded text-sm">
-            <option value={15}>15</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-          </select>
-          <button
-            onClick={() => setPage(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded text-sm disabled:opacity-50">
-            Trước
-          </button>
-          <span className="text-sm">
-            {page} / {totalPages || 1}
-          </span>
-          <button
-            onClick={() => setPage(Math.min(totalPages, page + 1))}
-            disabled={page >= totalPages}
-            className="px-3 py-1 border rounded text-sm disabled:opacity-50">
-            Sau
-          </button>
-        </div>
-      </div>
-
-      {showColumnModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-96 max-h-[80vh] overflow-y-auto">
-            <h3 className="font-semibold mb-4">Cấu hình cột hiển thị</h3>
-            <div className="space-y-2">
-              {columns.map((col) => (
-                <label
-                  key={col.key}
-                  className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={col.visible}
-                    onChange={() => toggleColumnVisibility(col.key)}
-                  />
-                  <span className="text-sm">{col.label}</span>
-                </label>
-              ))}
-            </div>
+    <Can resource="return_orders" action="view">
+      <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
+        <div className="flex items-center justify-between p-4 border-b bg-white">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Tìm theo mã trả hàng, mã HĐ, tên KH..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 border rounded-lg text-sm w-80"
+            />
+          </div>
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowColumnModal(false)}
-              className="mt-4 w-full py-2 bg-blue-600 text-white rounded-lg text-sm">
-              Đóng
+              onClick={() => setShowColumnModal(true)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+              title="Cấu hình cột">
+              <Settings className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onCreateClick}
+              className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+              <Plus className="w-4 h-4" />
+              Tạo phiếu trả hàng
             </button>
           </div>
         </div>
-      )}
-    </div>
+
+        <div className="flex-1 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 sticky top-0">
+              <tr>
+                {visibleColumns.map((col) => (
+                  <th
+                    key={col.key}
+                    className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td
+                    colSpan={visibleColumns.length}
+                    className="text-center py-8 text-gray-500">
+                    Đang tải...
+                  </td>
+                </tr>
+              ) : returnOrders.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={visibleColumns.length}
+                    className="text-center py-8 text-gray-500">
+                    Không có phiếu trả hàng
+                  </td>
+                </tr>
+              ) : (
+                returnOrders.map((item: ReturnOrder) => (
+                  <tr
+                    key={item.id}
+                    className="border-b hover:bg-blue-50 cursor-pointer"
+                    onClick={() => onViewClick(item)}>
+                    {visibleColumns.map((col) => (
+                      <td key={col.key} className="px-4 py-3 whitespace-nowrap">
+                        {col.render(item)}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex items-center justify-between px-4 py-3 border-t bg-white">
+          <div className="text-sm text-gray-600">
+            Tổng: {total} phiếu trả hàng
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="px-2 py-1 border rounded text-sm">
+              <option value={15}>15</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-50">
+              Trước
+            </button>
+            <span className="text-sm">
+              {page} / {totalPages || 1}
+            </span>
+            <button
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-50">
+              Sau
+            </button>
+          </div>
+        </div>
+
+        {showColumnModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-96 max-h-[80vh] overflow-y-auto">
+              <h3 className="font-semibold mb-4">Cấu hình cột hiển thị</h3>
+              <div className="space-y-2">
+                {columns.map((col) => (
+                  <label
+                    key={col.key}
+                    className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={col.visible}
+                      onChange={() => toggleColumnVisibility(col.key)}
+                    />
+                    <span className="text-sm">{col.label}</span>
+                  </label>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowColumnModal(false)}
+                className="mt-4 w-full py-2 bg-blue-600 text-white rounded-lg text-sm">
+                Đóng
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Can>
   );
 }

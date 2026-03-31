@@ -82,8 +82,8 @@ export function ConfirmStockModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-[800px] max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
+      <div className="bg-white rounded-xl w-[950px] min-h-[70vh] max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-lg font-semibold">
             Nhập hàng trả - {returnOrder?.code}
           </h2>
@@ -164,19 +164,19 @@ export function ConfirmStockModal({
               ))}
             </tbody>
           </table>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Ghi chú</label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-            />
-          </div>
         </div>
 
-        <div className="flex items-center justify-between p-4 border-t bg-gray-50">
+        <div className="px-4 py-3 border-t shrink-0">
+          <label className="block text-sm font-medium mb-1">Ghi chú</label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2 border rounded-lg resize-none"
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-4 border-t bg-gray-50 shrink-0 rounded-b-xl">
           <div className="text-sm">
             <span className="text-gray-500">Tổng hoàn tiền: </span>
             <span className="text-lg font-bold text-red-600">
