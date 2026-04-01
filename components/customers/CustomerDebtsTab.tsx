@@ -104,6 +104,7 @@ export function CustomerDebtsTab({
                 paginatedTimeline.map((item: any) => {
                   const isInvoice = item.type === "invoice";
                   const isPayment = item.type === "payment";
+                  const isDebtOffset = item.type === "debt_offset";
 
                   return (
                     <tr
@@ -118,7 +119,11 @@ export function CustomerDebtsTab({
                         {new Date(item.date).toLocaleString("vi-VN")}
                       </td>
                       <td className="px-4 py-3 text-md">
-                        {isInvoice ? "Bán hàng" : getPaymentType(item.code)}
+                        {isInvoice
+                          ? "Bán hàng"
+                          : isDebtOffset
+                            ? "Cấn trừ công nợ"
+                            : getPaymentType(item.code)}
                       </td>
                       <td className="px-4 py-3 text-md">
                         {item.customerName ? (
@@ -143,6 +148,11 @@ export function CustomerDebtsTab({
                           </div>
                         )}
                         {isPayment && (
+                          <span className="text-green-600 font-medium">
+                            -{formatCurrency(item.amount)}
+                          </span>
+                        )}
+                        {isDebtOffset && (
                           <span className="text-green-600 font-medium">
                             -{formatCurrency(item.amount)}
                           </span>

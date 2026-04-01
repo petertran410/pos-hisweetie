@@ -31,6 +31,9 @@ export function ConfirmRefundModal({
   );
   const [showMethodDropdown, setShowMethodDropdown] = useState(false);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+  const [refundType, setRefundType] = useState<"cash_refund" | "debt_offset">(
+    "cash_refund"
+  );
 
   const methodDropdownRef = useRef<HTMLDivElement>(null);
   const accountDropdownRef = useRef<HTMLDivElement>(null);
@@ -66,8 +69,12 @@ export function ConfirmRefundModal({
   const handleSubmit = () => {
     onSubmit({
       note,
-      method,
-      accountId: method === "transfer" ? selectedAccountId : undefined,
+      method: refundType === "cash_refund" ? method : undefined,
+      accountId:
+        refundType === "cash_refund" && method === "transfer"
+          ? selectedAccountId
+          : undefined,
+      refundType,
     });
   };
 
@@ -81,7 +88,7 @@ export function ConfirmRefundModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-[900px] min-h-[75vh] max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl w-[900px] min-h-[85vh] max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-lg font-semibold">
             Xác nhận hoàn tiền - {returnOrder?.code}
@@ -153,108 +160,140 @@ export function ConfirmRefundModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div ref={methodDropdownRef} className="relative">
-              <label className="block text-sm font-medium mb-1">
-                Phương thức hoàn tiền
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowMethodDropdown(!showMethodDropdown)}
-                className={`w-full border rounded-lg px-3 py-2 text-left flex items-center justify-between bg-white text-sm ${
-                  showMethodDropdown ? "border-blue-500" : "border-gray-300"
-                }`}>
-                <span>{selectedMethodLabel}</span>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform ${
-                    showMethodDropdown ? "rotate-180" : ""
-                  }`}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium">Hình thức xử lý</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="refundType"
+                  checked={refundType === "cash_refund"}
+                  onChange={() => setRefundType("cash_refund")}
+                  className="w-4 h-4"
                 />
-              </button>
-              {showMethodDropdown && (
-                <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-                  {METHOD_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => {
-                        setMethod(opt.value);
-                        setShowMethodDropdown(false);
-                        if (opt.value === "cash") {
-                          setSelectedAccountId(null);
-                        }
-                      }}
-                      className={`w-full px-3 py-2 text-left hover:bg-blue-50 text-sm flex items-center gap-2 ${
-                        method === opt.value
-                          ? "bg-blue-100 text-blue-700"
-                          : "text-gray-900"
-                      }`}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+                <span className="text-sm">
+                  Tạo phiếu chi (hoàn tiền cho khách)
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="refundType"
+                  checked={refundType === "debt_offset"}
+                  onChange={() => setRefundType("debt_offset")}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Cấn trừ công nợ (chỉ giảm nợ)</span>
+              </label>
             </div>
+          </div>
 
-            {method === "transfer" && (
-              <div ref={accountDropdownRef} className="relative">
+          {refundType === "cash_refund" && (
+            <div className="grid grid-cols-2 gap-4">
+              <div ref={methodDropdownRef} className="relative">
                 <label className="block text-sm font-medium mb-1">
-                  Tài khoản ngân hàng
+                  Phương thức hoàn tiền
                 </label>
                 <button
                   type="button"
-                  onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+                  onClick={() => setShowMethodDropdown(!showMethodDropdown)}
                   className={`w-full border rounded-lg px-3 py-2 text-left flex items-center justify-between bg-white text-sm ${
-                    showAccountDropdown ? "border-blue-500" : "border-gray-300"
+                    showMethodDropdown ? "border-blue-500" : "border-gray-300"
                   }`}>
-                  <span
-                    className={
-                      selectedAccount ? "text-gray-900" : "text-gray-400"
-                    }>
-                    {selectedAccount
-                      ? `${selectedAccount.bankCode} - ${selectedAccount.accountNumber}`
-                      : "Chọn tài khoản"}
-                  </span>
+                  <span>{selectedMethodLabel}</span>
                   <ChevronDown
                     className={`w-4 h-4 transition-transform ${
-                      showAccountDropdown ? "rotate-180" : ""
+                      showMethodDropdown ? "rotate-180" : ""
                     }`}
                   />
                 </button>
-                {showAccountDropdown && (
-                  <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {bankAccounts && bankAccounts.length > 0 ? (
-                      bankAccounts.map((account: any) => (
-                        <button
-                          key={account.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedAccountId(account.id);
-                            setShowAccountDropdown(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 hover:bg-blue-50 border-b last:border-b-0 ${
-                            selectedAccountId === account.id
-                              ? "bg-blue-100"
-                              : ""
-                          }`}>
-                          <div className="font-medium text-sm">
-                            {account.bankCode} - {account.accountNumber}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {account.accountHolder}
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="text-sm text-gray-500 text-center py-4">
-                        Chưa có tài khoản ngân hàng
-                      </div>
-                    )}
+                {showMethodDropdown && (
+                  <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                    {METHOD_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setMethod(opt.value);
+                          setShowMethodDropdown(false);
+                          if (opt.value === "cash") {
+                            setSelectedAccountId(null);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 text-left hover:bg-blue-50 text-sm flex items-center gap-2 ${
+                          method === opt.value
+                            ? "bg-blue-100 text-blue-700"
+                            : "text-gray-900"
+                        }`}>
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
-            )}
-          </div>
+
+              {method === "transfer" && (
+                <div ref={accountDropdownRef} className="relative">
+                  <label className="block text-sm font-medium mb-1">
+                    Tài khoản ngân hàng
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+                    className={`w-full border rounded-lg px-3 py-2 text-left flex items-center justify-between bg-white text-sm ${
+                      showAccountDropdown
+                        ? "border-blue-500"
+                        : "border-gray-300"
+                    }`}>
+                    <span
+                      className={
+                        selectedAccount ? "text-gray-900" : "text-gray-400"
+                      }>
+                      {selectedAccount
+                        ? `${selectedAccount.bankCode} - ${selectedAccount.accountNumber}`
+                        : "Chọn tài khoản"}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${
+                        showAccountDropdown ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {showAccountDropdown && (
+                    <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {bankAccounts && bankAccounts.length > 0 ? (
+                        bankAccounts.map((account: any) => (
+                          <button
+                            key={account.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedAccountId(account.id);
+                              setShowAccountDropdown(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 hover:bg-blue-50 border-b last:border-b-0 ${
+                              selectedAccountId === account.id
+                                ? "bg-blue-100"
+                                : ""
+                            }`}>
+                            <div className="font-medium text-sm">
+                              {account.bankCode} - {account.accountNumber}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {account.accountHolder}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="text-sm text-gray-500 text-center py-4">
+                          Chưa có tài khoản ngân hàng
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="px-4 py-3 border-t shrink-0">

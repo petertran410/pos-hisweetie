@@ -36,6 +36,7 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionDef> = {
   "/don-hang/dat-hang": { resource: "orders", action: "view" },
   "/don-hang/hoa-don": { resource: "invoices", action: "view" },
   "/don-hang/tra-hang": { resource: "invoices", action: "view" },
+  "/don-hang/can-tru-cong-no": { resource: "return_orders", action: "view" },
   "/don-hang/bao-don": { resource: "packing_slips", action: "view" },
   "/khach-hang": { resource: "customers", action: "view" },
   "/so-quy": { resource: "cash_flows", action: "view" },
@@ -128,6 +129,12 @@ export const NAV_CONFIG: NavSection[] = [
         label: "Trả hàng",
         href: "/don-hang/tra-hang",
         permission: { resource: "invoices", action: "view" },
+      },
+      {
+        key: "can-tru-cong-no",
+        label: "Cấn trừ công nợ",
+        href: "/don-hang/can-tru-cong-no",
+        permission: { resource: "return_orders", action: "view" },
       },
       {
         key: "bao-don",

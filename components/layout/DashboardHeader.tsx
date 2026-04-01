@@ -98,6 +98,10 @@ export function DashboardHeader() {
         href: "/don-hang/tra-hang",
       },
       {
+        label: "Cấn trừ công nợ",
+        href: "/don-hang/can-tru-cong-no",
+      },
+      {
         label: "Báo đơn",
         href: "/don-hang/bao-don",
       },

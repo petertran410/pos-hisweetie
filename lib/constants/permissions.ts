@@ -26,6 +26,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   print_templates: "Mẫu in",
   bank_accounts: "Tài khoản ngân hàng",
   return_orders: "Trả hàng",
+  debt_offsets: "Cấn trừ công nợ",
 };
 
 export const ACTION_LABELS: Record<string, string> = {

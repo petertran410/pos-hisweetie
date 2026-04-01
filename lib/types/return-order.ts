@@ -32,6 +32,7 @@ export interface ReturnOrder {
   statusValue?: string;
   totalReturnAmount: number;
   refundAmount: number;
+  refundType?: string;
   refundedAmount: number;
   note?: string;
   receivedById?: number;
