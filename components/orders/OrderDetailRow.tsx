@@ -48,7 +48,12 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
   useEffect(() => {
     if (order) {
-      setSelectedStatus(order.status || ORDER_STATUS.PENDING);
+      const initStatus =
+        order.status === ORDER_STATUS.PENDING ||
+        order.status === ORDER_STATUS.CONFIRMED
+          ? order.status
+          : ORDER_STATUS.PENDING;
+      setSelectedStatus(initStatus);
       setDescription(order.description || "");
     }
   }, [order]);
@@ -147,6 +152,8 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     order.status === ORDER_STATUS.PENDING ||
     order.status === ORDER_STATUS.CONFIRMED;
 
+  const isStatusEditable = order.status !== ORDER_STATUS.PROCESSING;
+
   return (
     <tr>
       <td colSpan={colSpan} className="py-2 bg-gray-50">
@@ -210,7 +217,18 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Trạng thái:
                     </label>
-                    {isManualEditable ? (
+                    {!isStatusEditable ? (
+                      <div className="w-full px-3 py-2 border rounded bg-gray-50">
+                        <span
+                          className={`px-2 py-1 rounded text-sm font-medium ${getOrderStatusBadgeColor(
+                            order.status
+                          )}`}>
+                          {ORDER_STATUS_LABELS[
+                            order.status as keyof typeof ORDER_STATUS_LABELS
+                          ] || "Không xác định"}
+                        </span>
+                      </div>
+                    ) : isManualEditable ? (
                       <select
                         value={selectedStatus}
                         onChange={(e) =>
@@ -223,15 +241,30 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         </option>
                       </select>
                     ) : (
-                      <div className="w-full px-3 py-2 border rounded bg-gray-50">
-                        <span
-                          className={`px-2 py-1 rounded text-sm font-medium ${getOrderStatusBadgeColor(
-                            order.status
-                          )}`}>
-                          {ORDER_STATUS_LABELS[
-                            order.status as keyof typeof ORDER_STATUS_LABELS
-                          ] || "Không xác định"}
-                        </span>
+                      <div className="space-y-2">
+                        <div className="w-full px-3 py-2 border rounded bg-gray-50">
+                          <span
+                            className={`px-2 py-1 rounded text-sm font-medium ${getOrderStatusBadgeColor(
+                              order.status
+                            )}`}>
+                            {ORDER_STATUS_LABELS[
+                              order.status as keyof typeof ORDER_STATUS_LABELS
+                            ] || "Không xác định"}
+                          </span>
+                        </div>
+                        <select
+                          value={selectedStatus}
+                          onChange={(e) =>
+                            setSelectedStatus(Number(e.target.value))
+                          }
+                          className="w-full px-3 py-2 text-md border rounded bg-white font-medium">
+                          <option value={ORDER_STATUS.PENDING}>
+                            Phiếu tạm
+                          </option>
+                          <option value={ORDER_STATUS.CONFIRMED}>
+                            Đã xác nhận
+                          </option>
+                        </select>
                       </div>
                     )}
                   </div>
@@ -443,7 +476,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                     <button
                       onClick={handleSave}
                       disabled={isSaving}
-                      // hidden={!isManualEditable}
+                      hidden={!isStatusEditable}
                       className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                       {isSaving ? "Đang lưu..." : "Lưu"}
                     </button>
