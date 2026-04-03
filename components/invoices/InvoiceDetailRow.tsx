@@ -285,13 +285,21 @@ export function InvoiceDetailRow({
                         <option value={INVOICE_STATUS.PROCESSING}>
                           Đang xử lý
                         </option>
+                        <option value={INVOICE_STATUS.PACKED}>Đóng hàng</option>
+                        <option value={INVOICE_STATUS.LOADING}>Lấy hàng</option>
+                        <option value={INVOICE_STATUS.DELIVERED}>
+                          Giao thành công
+                        </option>
+                        <option value={INVOICE_STATUS.RETURNED}>
+                          Trả hàng
+                        </option>
                         <option value={INVOICE_STATUS.COMPLETED}>
                           Hoàn thành
                         </option>
-                        <option value={INVOICE_STATUS.CANCELLED}>Đã hủy</option>
                         <option value={INVOICE_STATUS.FAILED_DELIVERY}>
                           Không giao được
                         </option>
+                        <option value={INVOICE_STATUS.CANCELLED}>Đã hủy</option>
                       </select>
                     </div>
 

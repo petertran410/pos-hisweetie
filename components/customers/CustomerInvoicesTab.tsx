@@ -35,6 +35,14 @@ const getInvoiceStatusLabel = (status: number) => {
       return "Đang xử lý";
     case 4:
       return "Không giao được";
+    case 5:
+      return "Đóng hàng";
+    case 6:
+      return "Lấy hàng";
+    case 7:
+      return "Giao thành công";
+    case 8:
+      return "Trả hàng";
     default:
       return "Không xác định";
   }
@@ -50,6 +58,14 @@ const getInvoiceStatusColor = (status: number) => {
       return "bg-blue-100 text-blue-800";
     case 4:
       return "bg-yellow-100 text-yellow-800";
+    case 5:
+      return "bg-orange-100 text-orange-800";
+    case 6:
+      return "bg-purple-100 text-purple-800";
+    case 7:
+      return "bg-teal-100 text-teal-800";
+    case 8:
+      return "bg-pink-100 text-pink-800";
     default:
       return "bg-gray-100 text-gray-800";
   }

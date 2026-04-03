@@ -52,13 +52,32 @@ export const INVOICE_STATUS = {
   CANCELLED: 2,
   PROCESSING: 3,
   FAILED_DELIVERY: 4,
+  PACKED: 5,
+  LOADING: 6,
+  DELIVERED: 7,
+  RETURNED: 8,
 } as const;
+
+export const INVOICE_STATUS_LABELS: Record<number, string> = {
+  1: "Hoàn thành",
+  2: "Đã hủy",
+  3: "Đang xử lý",
+  4: "Không giao được",
+  5: "Đóng hàng",
+  6: "Lấy hàng",
+  7: "Giao thành công",
+  8: "Trả hàng",
+};
 
 export const INVOICE_STATUS_NUMBER_TO_STRING: Record<number, string> = {
   1: "completed",
   2: "cancelled",
   3: "processing",
   4: "failed-delivery",
+  5: "packed",
+  6: "loading",
+  7: "delivered",
+  8: "returned",
 };
 
 export const INVOICE_STATUS_STRING_TO_NUMBER: Record<string, number> = {
@@ -66,4 +85,8 @@ export const INVOICE_STATUS_STRING_TO_NUMBER: Record<string, number> = {
   cancelled: 2,
   processing: 3,
   "failed-delivery": 4,
+  packed: 5,
+  loading: 6,
+  delivered: 7,
+  returned: 8,
 };

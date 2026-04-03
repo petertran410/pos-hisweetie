@@ -14,8 +14,12 @@ interface InvoicesSidebarProps {
 
 const INVOICE_STATUS_OPTIONS = [
   { value: 3, label: "Đang xử lý", color: "bg-blue-100" },
+  { value: 5, label: "Đóng hàng", color: "bg-orange-100" },
+  { value: 6, label: "Lấy hàng", color: "bg-purple-100" },
+  { value: 7, label: "Giao thành công", color: "bg-teal-100" },
+  { value: 8, label: "Trả hàng", color: "bg-pink-100" },
   { value: 1, label: "Hoàn thành", color: "bg-green-100" },
-  { value: 5, label: "Không giao được", color: "bg-yellow-100" },
+  { value: 4, label: "Không giao được", color: "bg-yellow-100" },
   { value: 2, label: "Đã hủy", color: "bg-red-100" },
 ];
 
