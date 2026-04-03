@@ -109,10 +109,16 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (cashflow) => cashflow.creatorName || "-",
   },
   {
-    key: "branch",
-    label: "Chi nhánh",
+    key: "branchCreate",
+    label: "Chi nhánh tạo",
     visible: false,
     render: (cashflow) => cashflow.branchName || "-",
+  },
+  {
+    key: "branchCollection",
+    label: "Chi nhánh thu/chi",
+    visible: false,
+    render: (cashflow) => cashflow.collectionBranchName || "-",
   },
   {
     key: "accountName",
@@ -221,6 +227,8 @@ export function CashFlowsTable({
     currentItem: (page - 1) * limit,
     ...filters,
   });
+
+  console.log(data);
 
   const { data: openingBalanceData } = useOpeningBalance(filters);
 

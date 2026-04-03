@@ -12,6 +12,8 @@ import { useBranchStore } from "@/lib/store/branch";
 import { CreateCashFlowGroupModal } from "./CreateCashFlowGroupModal";
 import { X, ChevronDown, Calendar, Clock } from "lucide-react";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
+import { useCollectionBranches } from "@/lib/hooks/useCashflowCollectionBranches";
+import { CreateCashFlowCollectionBranchModal } from "./CreateCashFlowCollectionBranchModal";
 
 interface CreateCashFlowModalProps {
   isOpen: boolean;
@@ -83,6 +85,11 @@ export function CreateCashFlowModal({
   const [cashFlowGroupId, setCashFlowGroupId] = useState<string>("");
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [collectionBranchId, setCollectionBranchId] = useState<string>("");
+  const [showCollectionBranchDropdown, setShowCollectionBranchDropdown] =
+    useState(false);
+  const [showCreateCollectionBranchModal, setShowCreateCollectionBranchModal] =
+    useState(false);
   const [partnerType, setPartnerType] = useState("C");
   const [showPartnerTypeDropdown, setShowPartnerTypeDropdown] = useState(false);
   const [showPartnerDropdown, setShowPartnerDropdown] = useState(false);
@@ -110,6 +117,7 @@ export function CreateCashFlowModal({
   const { data: bankAccounts } = useBankAccountsForPayment();
 
   const groupDropdownRef = useRef<HTMLDivElement>(null);
+  const collectionBranchDropdownRef = useRef<HTMLDivElement>(null);
   const partnerTypeDropdownRef = useRef<HTMLDivElement>(null);
   const partnerDropdownRef = useRef<HTMLDivElement>(null);
   const collectorDropdownRef = useRef<HTMLDivElement>(null);
@@ -118,6 +126,8 @@ export function CreateCashFlowModal({
 
   const createCashFlow = useCreateCashFlow();
   const { data: cashFlowGroups } = useCashFlowGroups(isReceipt);
+  const { data: collectionBranches } = useCollectionBranches();
+  const branches = collectionBranches || [];
   const { data: customersData } = useCustomers({ pageSize: 100 });
   const { data: suppliersData } = useSuppliers({ pageSize: 100 });
   const { data: usersData } = useUsersForFilter();
@@ -182,6 +192,12 @@ export function CreateCashFlowModal({
         !accountDropdownRef.current.contains(event.target as Node)
       ) {
         setShowAccountDropdown(false);
+      }
+      if (
+        collectionBranchDropdownRef.current &&
+        !collectionBranchDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowCollectionBranchDropdown(false);
       }
     };
 
@@ -315,6 +331,10 @@ export function CreateCashFlowModal({
           type === "cash" ? "cash" : type === "bank" ? "transfer" : "ewallet",
         accountId: selectedAccountId || undefined,
         cashFlowGroupId: cashFlowGroupId ? Number(cashFlowGroupId) : undefined,
+        collectionBranchId:
+          type === "cash" && collectionBranchId
+            ? Number(collectionBranchId)
+            : undefined,
         partnerType,
         partnerId: selectedPartner?.id,
         partnerName: selectedPartner?.name || partnerSearch || undefined,
@@ -339,6 +359,7 @@ export function CreateCashFlowModal({
     setTransDate("");
     setTransDateTime(new Date());
     setCashFlowGroupId("");
+    setCollectionBranchId("");
     setPartnerType("C");
     setPartnerSearch("");
     setSelectedPartner(null);
@@ -576,9 +597,57 @@ export function CreateCashFlowModal({
               )}
             </div>
 
+            {type === "cash" && (
+              <div className="relative" ref={collectionBranchDropdownRef}>
+                <label className="block text-sm font-medium mb-2">
+                  Chi nhánh cần {isReceipt ? "thu" : "chi"}
+                </label>
+                <button
+                  onClick={() =>
+                    setShowCollectionBranchDropdown(
+                      !showCollectionBranchDropdown
+                    )
+                  }
+                  className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between">
+                  <span className={collectionBranchId ? "" : "text-gray-400"}>
+                    {collectionBranchId
+                      ? branches.find(
+                          (b: any) => b.id === Number(collectionBranchId)
+                        )?.name
+                      : "Chọn chi nhánh cần thu"}
+                  </span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+
+                {showCollectionBranchDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    {branches.map((branch: any) => (
+                      <button
+                        key={branch.id}
+                        onClick={() => {
+                          setCollectionBranchId(branch.id.toString());
+                          setShowCollectionBranchDropdown(false);
+                        }}
+                        className="w-full px-3 py-2 text-left hover:bg-gray-100">
+                        {branch.name}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        setShowCreateCollectionBranchModal(true);
+                        setShowCollectionBranchDropdown(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-blue-500 hover:bg-gray-100 border-t">
+                      + Thêm chi nhánh
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="relative" ref={collectorDropdownRef}>
               <label className="block text-sm font-medium mb-2">
-                Người thu
+                Người {isReceipt ? "thu" : "chi"}
               </label>
               <button
                 onClick={() => setShowCollectorDropdown(!showCollectorDropdown)}
@@ -914,6 +983,11 @@ export function CreateCashFlowModal({
         isOpen={showCreateGroupModal}
         onClose={() => setShowCreateGroupModal(false)}
         isReceipt={isReceipt}
+      />
+
+      <CreateCashFlowCollectionBranchModal
+        isOpen={showCreateCollectionBranchModal}
+        onClose={() => setShowCreateCollectionBranchModal(false)}
       />
     </>
   );

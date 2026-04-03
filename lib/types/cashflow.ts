@@ -5,6 +5,7 @@ export interface CashFlow {
   branchName?: string;
   cashFlowGroupId?: number;
   cashFlowGroupName?: string;
+  collectionBranchName?: string;
   isReceipt: boolean;
   amount: number;
   transDate: string;
