@@ -69,7 +69,7 @@ const getStatusText = (status: number) => {
     case 5:
       return "Đóng hàng";
     case 6:
-      return "Lấy hàng";
+      return "Loading";
     case 7:
       return "Giao thành công";
     case 8:

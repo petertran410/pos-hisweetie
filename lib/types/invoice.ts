@@ -64,7 +64,7 @@ export const INVOICE_STATUS_LABELS: Record<number, string> = {
   3: "Đang xử lý",
   4: "Không giao được",
   5: "Đóng hàng",
-  6: "Lấy hàng",
+  6: "Loading",
   7: "Giao thành công",
   8: "Trả hàng",
 };

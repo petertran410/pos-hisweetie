@@ -286,7 +286,7 @@ export function InvoiceDetailRow({
                           Đang xử lý
                         </option>
                         <option value={INVOICE_STATUS.PACKED}>Đóng hàng</option>
-                        <option value={INVOICE_STATUS.LOADING}>Lấy hàng</option>
+                        <option value={INVOICE_STATUS.LOADING}>Loading</option>
                         <option value={INVOICE_STATUS.DELIVERED}>
                           Giao thành công
                         </option>
