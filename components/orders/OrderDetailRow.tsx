@@ -5,8 +5,31 @@ import { useRouter } from "next/navigation";
 import { useOrder, useUpdateOrder } from "@/lib/hooks/useOrders";
 import { Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { ORDER_STATUS, ORDER_STATUS_NUMBER_TO_STRING } from "@/lib/types/order";
+import {
+  ORDER_STATUS,
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_NUMBER_TO_STRING,
+} from "@/lib/types/order";
 import { formatCurrency, formatDate } from "@/lib/utils";
+
+const getOrderStatusBadgeColor = (status: number) => {
+  switch (status) {
+    case ORDER_STATUS.PENDING:
+      return "bg-yellow-100 text-yellow-700";
+    case ORDER_STATUS.CONFIRMED:
+      return "bg-teal-100 text-teal-700";
+    case ORDER_STATUS.PARTIALLY_INVOICED:
+      return "bg-teal-100 text-teal-700";
+    case ORDER_STATUS.PROCESSING:
+      return "bg-blue-100 text-blue-700";
+    case ORDER_STATUS.COMPLETED:
+      return "bg-green-100 text-green-700";
+    case ORDER_STATUS.CANCELLED:
+      return "bg-red-100 text-red-700";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+};
 
 interface OrderDetailRowProps {
   orderId: number;
@@ -107,10 +130,6 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     );
   }
 
-  const isCompleted = order.status === ORDER_STATUS.COMPLETED;
-  const isCancelled = order.status === ORDER_STATUS.CANCELLED;
-  const canEdit = !isCompleted && !isCancelled;
-
   const invoicedQuantities: Record<number, number> = {};
   order.invoices?.forEach((inv) => {
     if (inv.status !== 5) {
@@ -120,6 +139,10 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
       });
     }
   });
+
+  const isManualEditable =
+    order.status === ORDER_STATUS.PENDING ||
+    order.status === ORDER_STATUS.CONFIRMED;
 
   return (
     <tr>
@@ -184,29 +207,29 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Trạng thái:
                     </label>
-                    <select
-                      value={selectedStatus}
-                      onChange={(e) =>
-                        setSelectedStatus(Number(e.target.value))
-                      }
-                      className="w-full px-3 py-2 text-md border rounded bg-white font-medium"
-                      disabled={!canEdit}>
-                      <option value={ORDER_STATUS.PENDING}>Phiếu tạm</option>
-                      <option value={ORDER_STATUS.CONFIRMED}>
-                        Đã xác nhận
-                      </option>
-                      <option value={ORDER_STATUS.PARTIALLY_INVOICED}>
-                        Đã ra 1 phần hóa đơn
-                      </option>
-                      {isCompleted && (
-                        <option value={ORDER_STATUS.COMPLETED}>
-                          Hoàn thành
+                    {isManualEditable ? (
+                      <select
+                        value={selectedStatus}
+                        onChange={(e) =>
+                          setSelectedStatus(Number(e.target.value))
+                        }
+                        className="w-full px-3 py-2 text-md border rounded bg-white font-medium">
+                        <option value={ORDER_STATUS.PENDING}>Phiếu tạm</option>
+                        <option value={ORDER_STATUS.CONFIRMED}>
+                          Đã xác nhận
                         </option>
-                      )}
-                      {isCancelled && (
-                        <option value={ORDER_STATUS.CANCELLED}>Đã hủy</option>
-                      )}
-                    </select>
+                      </select>
+                    ) : (
+                      <div className="w-full px-3 py-2 border rounded bg-gray-50">
+                        <span
+                          className={`px-2 py-1 rounded text-sm font-medium ${getOrderStatusBadgeColor(
+                            order.status
+                          )}`}>
+                          {ORDER_STATUS_LABELS[order.status] ||
+                            "Không xác định"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -398,20 +421,15 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                   <div className="flex gap-2">
                     <button
-                      onClick={handleCancel}
-                      hidden={
-                        isSaving || order.status === ORDER_STATUS.CANCELLED
-                      }
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      hidden={!isManualEditable}
                       className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                      {isSaving ? "Đang xử lý..." : "Hủy"}
+                      {isSaving ? "Đang lưu..." : "Lưu"}
                     </button>
                     <button
                       onClick={handleProcessOrder}
-                      hidden={
-                        isSaving ||
-                        order.status === ORDER_STATUS.CANCELLED ||
-                        order.status === ORDER_STATUS.COMPLETED
-                      }
+                      hidden={isSaving || order.status !== ORDER_STATUS.PENDING}
                       className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                       Xử lý đơn hàng
                     </button>

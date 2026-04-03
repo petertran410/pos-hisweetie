@@ -25,6 +25,52 @@ const formatDateTime = (dateString: string) => {
   return date.toLocaleString("vi-VN");
 };
 
+const getInvoiceStatusColor = (status: number) => {
+  switch (status) {
+    case 1:
+      return "bg-green-100 text-green-700";
+    case 2:
+      return "bg-red-100 text-red-700";
+    case 3:
+      return "bg-blue-100 text-blue-700";
+    case 4:
+      return "bg-yellow-100 text-yellow-700";
+    case 5:
+      return "bg-orange-100 text-orange-700";
+    case 6:
+      return "bg-purple-100 text-purple-700";
+    case 7:
+      return "bg-teal-100 text-teal-700";
+    case 8:
+      return "bg-pink-100 text-pink-700";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+};
+
+const getInvoiceStatusText = (status: number) => {
+  switch (status) {
+    case 1:
+      return "Hoàn thành";
+    case 2:
+      return "Đã hủy";
+    case 3:
+      return "Đang xử lý";
+    case 4:
+      return "Không giao được";
+    case 5:
+      return "Đóng hàng";
+    case 6:
+      return "Lấy hàng";
+    case 7:
+      return "Giao thành công";
+    case 8:
+      return "Trả hàng";
+    default:
+      return "Không xác định";
+  }
+};
+
 export function InvoiceDetailRow({
   invoiceId,
   colSpan,
@@ -32,19 +78,11 @@ export function InvoiceDetailRow({
   const router = useRouter();
   const { data: invoice, isLoading } = useInvoice(invoiceId);
   const updateInvoice = useUpdateInvoice();
-  const [selectedStatus, setSelectedStatus] = useState<number>(
-    INVOICE_STATUS.PROCESSING
-  );
+
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "info" | "deliveries" | "payments"
   >("info");
-
-  useEffect(() => {
-    if (invoice) {
-      setSelectedStatus(invoice.status || INVOICE_STATUS.PROCESSING);
-    }
-  }, [invoice]);
 
   const handleCancel = async () => {
     if (!invoice) return;
@@ -126,23 +164,6 @@ export function InvoiceDetailRow({
     }
   };
 
-  const handleSave = async () => {
-    if (!invoice) return;
-
-    try {
-      setIsSaving(true);
-      await updateInvoice.mutateAsync({
-        id: invoice.id,
-        data: { status: selectedStatus },
-      });
-      toast.success("Lưu hóa đơn thành công");
-    } catch (error) {
-      toast.error("Không thể lưu hóa đơn");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleProcessInvoice = () => {
     if (!invoice) return;
     router.push(`/ban-hang?invoiceId=${invoice.id}`);
@@ -173,7 +194,6 @@ export function InvoiceDetailRow({
 
   const isCompleted = invoice.status === INVOICE_STATUS.COMPLETED;
   const isCancelled = invoice.status === INVOICE_STATUS.CANCELLED;
-  const canEdit = !isCompleted && !isCancelled;
 
   return (
     <tr>
@@ -275,32 +295,14 @@ export function InvoiceDetailRow({
                       <label className="block text-md font-medium text-gray-500 mb-1.5">
                         Trạng thái:
                       </label>
-                      <select
-                        value={selectedStatus}
-                        onChange={(e) =>
-                          setSelectedStatus(Number(e.target.value))
-                        }
-                        className="w-full px-3 py-2 text-md border rounded bg-white"
-                        disabled={!canEdit}>
-                        <option value={INVOICE_STATUS.PROCESSING}>
-                          Đang xử lý
-                        </option>
-                        <option value={INVOICE_STATUS.PACKED}>Đóng hàng</option>
-                        <option value={INVOICE_STATUS.LOADING}>Loading</option>
-                        <option value={INVOICE_STATUS.DELIVERED}>
-                          Giao thành công
-                        </option>
-                        <option value={INVOICE_STATUS.RETURNED}>
-                          Trả hàng
-                        </option>
-                        <option value={INVOICE_STATUS.COMPLETED}>
-                          Hoàn thành
-                        </option>
-                        <option value={INVOICE_STATUS.FAILED_DELIVERY}>
-                          Không giao được
-                        </option>
-                        <option value={INVOICE_STATUS.CANCELLED}>Đã hủy</option>
-                      </select>
+                      <div className="w-full px-3 py-2 border rounded bg-gray-50">
+                        <span
+                          className={`px-2 py-1 rounded text-sm font-medium ${getInvoiceStatusColor(
+                            invoice.status
+                          )}`}>
+                          {getInvoiceStatusText(invoice.status)}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="col-span-4">
@@ -533,12 +535,12 @@ export function InvoiceDetailRow({
                 </button>
               </div>
               <div className="flex gap-2">
-                <button
+                {/* <button
                   onClick={handleSave}
                   disabled={isSaving}
                   className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {isSaving ? "Đang lưu..." : "Lưu"}
-                </button>
+                </button> */}
                 <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
                   Kết thúc
                 </button>
