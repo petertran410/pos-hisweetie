@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOrder, useUpdateOrder } from "@/lib/hooks/useOrders";
-import { Loader2, MapPin } from "lucide-react";
+import { ChevronDown, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import {
   ORDER_STATUS,
@@ -45,18 +45,28 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [description, setDescription] = useState("");
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (order) {
-      const initStatus =
-        order.status === ORDER_STATUS.PENDING ||
-        order.status === ORDER_STATUS.CONFIRMED
-          ? order.status
-          : ORDER_STATUS.PENDING;
-      setSelectedStatus(initStatus);
+      setSelectedStatus(order.status);
       setDescription(order.description || "");
     }
   }, [order]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowStatusDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleCancel = async () => {
     if (!order) return;
@@ -87,17 +97,23 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const handleSave = async () => {
     if (!order) return;
 
-    const statusString = ORDER_STATUS_NUMBER_TO_STRING[selectedStatus];
-    if (!statusString) {
-      toast.error("Trạng thái không hợp lệ");
-      return;
-    }
-
     try {
       setIsSaving(true);
+
+      const updateData: any = { description };
+
+      if (isStatusEditable) {
+        const statusString = ORDER_STATUS_NUMBER_TO_STRING[selectedStatus];
+        if (!statusString) {
+          toast.error("Trạng thái không hợp lệ");
+          return;
+        }
+        updateData.orderStatus = statusString;
+      }
+
       await updateOrder.mutateAsync({
         id: order.id,
-        data: { orderStatus: statusString, description },
+        data: updateData,
       });
 
       toast.success("Lưu đơn hàng thành công");
@@ -228,43 +244,73 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           ] || "Không xác định"}
                         </span>
                       </div>
-                    ) : isManualEditable ? (
-                      <select
-                        value={selectedStatus}
-                        onChange={(e) =>
-                          setSelectedStatus(Number(e.target.value))
-                        }
-                        className="w-full px-3 py-2 text-md border rounded bg-white font-medium">
-                        <option value={ORDER_STATUS.PENDING}>Phiếu tạm</option>
-                        <option value={ORDER_STATUS.CONFIRMED}>
-                          Đã xác nhận
-                        </option>
-                      </select>
                     ) : (
-                      <div className="space-y-2">
-                        <div className="w-full px-3 py-2 border rounded bg-gray-50">
+                      <div ref={statusDropdownRef} className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowStatusDropdown((prev) => !prev)}
+                          className="w-full px-3 py-2 border rounded bg-white text-left flex items-center justify-between hover:border-blue-400 transition-colors">
                           <span
                             className={`px-2 py-1 rounded text-sm font-medium ${getOrderStatusBadgeColor(
-                              order.status
+                              isManualEditable ? selectedStatus : order.status
                             )}`}>
-                            {ORDER_STATUS_LABELS[
-                              order.status as keyof typeof ORDER_STATUS_LABELS
-                            ] || "Không xác định"}
+                            {isManualEditable
+                              ? ORDER_STATUS_LABELS[
+                                  selectedStatus as keyof typeof ORDER_STATUS_LABELS
+                                ]
+                              : ORDER_STATUS_LABELS[
+                                  order.status as keyof typeof ORDER_STATUS_LABELS
+                                ] || "Không xác định"}
                           </span>
-                        </div>
-                        <select
-                          value={selectedStatus}
-                          onChange={(e) =>
-                            setSelectedStatus(Number(e.target.value))
-                          }
-                          className="w-full px-3 py-2 text-md border rounded bg-white font-medium">
-                          <option value={ORDER_STATUS.PENDING}>
-                            Phiếu tạm
-                          </option>
-                          <option value={ORDER_STATUS.CONFIRMED}>
-                            Đã xác nhận
-                          </option>
-                        </select>
+                          <ChevronDown
+                            className={`w-4 h-4 text-gray-400 transition-transform ${
+                              showStatusDropdown ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {showStatusDropdown && (
+                          <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedStatus(ORDER_STATUS.PENDING);
+                                setShowStatusDropdown(false);
+                              }}
+                              className={`w-full px-4 py-2.5 text-sm text-left flex items-center gap-2 hover:bg-gray-50 transition-colors ${
+                                selectedStatus === ORDER_STATUS.PENDING
+                                  ? "bg-yellow-50"
+                                  : ""
+                              }`}>
+                              <span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" />
+                              <span className="font-medium">Phiếu tạm</span>
+                              {selectedStatus === ORDER_STATUS.PENDING && (
+                                <span className="ml-auto text-blue-500 text-xs">
+                                  ✓
+                                </span>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedStatus(ORDER_STATUS.CONFIRMED);
+                                setShowStatusDropdown(false);
+                              }}
+                              className={`w-full px-4 py-2.5 text-sm text-left flex items-center gap-2 hover:bg-gray-50 transition-colors border-t ${
+                                selectedStatus === ORDER_STATUS.CONFIRMED
+                                  ? "bg-teal-50"
+                                  : ""
+                              }`}>
+                              <span className="w-2 h-2 rounded-full bg-teal-400 shrink-0" />
+                              <span className="font-medium">Đã xác nhận</span>
+                              {selectedStatus === ORDER_STATUS.CONFIRMED && (
+                                <span className="ml-auto text-blue-500 text-xs">
+                                  ✓
+                                </span>
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -476,7 +522,6 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                     <button
                       onClick={handleSave}
                       disabled={isSaving}
-                      hidden={!isStatusEditable}
                       className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                       {isSaving ? "Đang lưu..." : "Lưu"}
                     </button>
