@@ -80,9 +80,16 @@ export function InvoiceDetailRow({
   const updateInvoice = useUpdateInvoice();
 
   const [isSaving, setIsSaving] = useState(false);
+  const [description, setDescription] = useState("");
   const [activeTab, setActiveTab] = useState<
     "info" | "deliveries" | "payments"
   >("info");
+
+  useEffect(() => {
+    if (invoice) {
+      setDescription(invoice.description || "");
+    }
+  }, [invoice]);
 
   const handleCancel = async () => {
     if (!invoice) return;
@@ -167,6 +174,22 @@ export function InvoiceDetailRow({
   const handleProcessInvoice = () => {
     if (!invoice) return;
     router.push(`/ban-hang?invoiceId=${invoice.id}`);
+  };
+
+  const handleSave = async () => {
+    if (!invoice) return;
+    try {
+      setIsSaving(true);
+      await updateInvoice.mutateAsync({
+        id: invoice.id,
+        data: { description },
+      });
+      toast.success("Lưu hóa đơn thành công");
+    } catch (error) {
+      toast.error("Không thể lưu hóa đơn");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {
@@ -310,11 +333,11 @@ export function InvoiceDetailRow({
                         Ghi chú hóa đơn:
                       </label>
                       <textarea
-                        value={invoice.description || ""}
-                        readOnly
-                        className="w-full px-3 py-2 text-md border rounded bg-gray-50 resize-none"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="w-full px-3 py-2 text-md border rounded bg-white resize-none"
                         rows={2}
-                        placeholder="Không có ghi chú"
+                        placeholder="Nhập ghi chú hóa đơn"
                       />
                     </div>
                   </div>
@@ -518,7 +541,9 @@ export function InvoiceDetailRow({
                 <button
                   onClick={handleCancel}
                   hidden={
-                    isSaving || invoice.status === INVOICE_STATUS.CANCELLED
+                    isSaving ||
+                    invoice.status === INVOICE_STATUS.CANCELLED ||
+                    invoice.status === INVOICE_STATUS.COMPLETED
                   }
                   className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {isSaving ? "Đang xử lý..." : "Hủy"}
@@ -535,12 +560,14 @@ export function InvoiceDetailRow({
                 </button>
               </div>
               <div className="flex gap-2">
-                {/* <button
+                <button
                   onClick={handleSave}
-                  disabled={isSaving}
+                  disabled={
+                    isSaving || invoice.status === INVOICE_STATUS.CANCELLED
+                  }
                   className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {isSaving ? "Đang lưu..." : "Lưu"}
-                </button> */}
+                </button>
                 <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
                   Kết thúc
                 </button>

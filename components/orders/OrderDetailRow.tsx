@@ -44,10 +44,12 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     ORDER_STATUS.PENDING
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (order) {
       setSelectedStatus(order.status || ORDER_STATUS.PENDING);
+      setDescription(order.description || "");
     }
   }, [order]);
 
@@ -90,8 +92,9 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
       setIsSaving(true);
       await updateOrder.mutateAsync({
         id: order.id,
-        data: { orderStatus: statusString },
+        data: { orderStatus: statusString, description },
       });
+
       toast.success("Lưu đơn hàng thành công");
     } catch (error) {
       toast.error("Không thể lưu đơn hàng");
@@ -225,11 +228,28 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           className={`px-2 py-1 rounded text-sm font-medium ${getOrderStatusBadgeColor(
                             order.status
                           )}`}>
-                          {ORDER_STATUS_LABELS[order.status] ||
-                            "Không xác định"}
+                          {ORDER_STATUS_LABELS[
+                            order.status as keyof typeof ORDER_STATUS_LABELS
+                          ] || "Không xác định"}
                         </span>
                       </div>
                     )}
+                  </div>
+
+                  <div className="col-span-4">
+                    <label className="block text-md font-medium text-gray-500 mb-1.5">
+                      Ghi chú:
+                    </label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      // disabled={!isManualEditable}
+                      className={`w-full px-3 py-2 text-md border rounded resize-none ${
+                        isManualEditable ? "bg-white" : "bg-gray-50"
+                      }`}
+                      rows={2}
+                      placeholder="Nhập ghi chú đơn hàng"
+                    />
                   </div>
                 </div>
 
@@ -423,7 +443,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                     <button
                       onClick={handleSave}
                       disabled={isSaving}
-                      hidden={!isManualEditable}
+                      // hidden={!isManualEditable}
                       className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                       {isSaving ? "Đang lưu..." : "Lưu"}
                     </button>
@@ -435,12 +455,6 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                     </button>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={handleSave}
-                      disabled={isSaving}
-                      className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                      {isSaving ? "Đang lưu..." : "Lưu"}
-                    </button>
                     <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
                       Kết thúc
                     </button>
