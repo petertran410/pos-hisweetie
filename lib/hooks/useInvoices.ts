@@ -112,3 +112,14 @@ export function useUnpaidInvoicesByPartner(
     enabled: !!partnerId && !!partnerType,
   });
 }
+
+export function useInvoicesForReturnOrder(params: {
+  search?: string;
+  branchId?: number;
+  limit?: number;
+}) {
+  return useQuery({
+    queryKey: ["invoices", "for-return-order", params],
+    queryFn: () => invoicesApi.getInvoicesForReturnOrder(params),
+  });
+}

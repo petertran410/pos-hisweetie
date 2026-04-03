@@ -57,7 +57,7 @@ export function CreateCashFlowGroupModal({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">
-              Tên loại thu <span className="text-red-500">*</span>
+              Tên loại thu/chi <span className="text-red-500">*</span>
             </label>
             <input
               type="text"

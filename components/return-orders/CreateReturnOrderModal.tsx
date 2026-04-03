@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { X, Search, ChevronDown } from "lucide-react";
-import { useInvoices } from "@/lib/hooks/useInvoices";
+import { useInvoicesForReturnOrder } from "@/lib/hooks/useInvoices";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
@@ -56,13 +56,13 @@ export function CreateReturnOrderModal({
   const [branchSearchTerm, setBranchSearchTerm] = useState("");
   const invoiceDropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: invoicesData } = useInvoices({
+  const { data: invoicesForReturn } = useInvoicesForReturnOrder({
     search: invoiceSearch,
+    branchId: branchId > 0 ? branchId : undefined,
     limit: 20,
-    statusIds: "1,3",
   });
 
-  const availableInvoices = (invoicesData?.data || []).filter(
+  const availableInvoices = (invoicesForReturn || []).filter(
     (inv: any) => !selectedInvoices.find((s) => s.id === inv.id)
   );
 

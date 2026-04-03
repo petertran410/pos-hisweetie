@@ -546,7 +546,7 @@ export function CreateCashFlowModal({
                 onClick={() => setShowGroupDropdown(!showGroupDropdown)}
                 className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between">
                 <span className={selectedGroup ? "" : "text-gray-400"}>
-                  {selectedGroup ? selectedGroup.name : "Chọn loại thu"}
+                  {selectedGroup ? selectedGroup.name : "Chọn loại thu/chi"}
                 </span>
                 <ChevronDown className="w-4 h-4" />
               </button>

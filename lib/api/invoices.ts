@@ -73,4 +73,11 @@ export const invoicesApi = {
       payments: payments || [],
     });
   },
+  getInvoicesForReturnOrder: (params: {
+    search?: string;
+    branchId?: number;
+    limit?: number;
+  }): Promise<any[]> => {
+    return apiClient.get("/invoices/for-return-order", params);
+  },
 };

@@ -172,7 +172,7 @@ export function CashFlowDetailRow({
 
                 <div>
                   <label className="block text-md font-medium text-gray-500 mb-1.5">
-                    Loại thu:
+                    Loại thu/chi:
                   </label>
                   <span className="text-md text-gray-900">
                     {cashFlow.cashFlowGroupName || "-"}
