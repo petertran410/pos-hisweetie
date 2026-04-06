@@ -25,8 +25,9 @@ export function PrintTemplateEditorModal({
   const [code, setCode] = useState(template?.code || "");
   const [content, setContent] = useState(template?.content || "");
   const [isDefault, setIsDefault] = useState(template?.isDefault || false);
-  const quillRef = useRef<any>(null);
+  // const quillRef = useRef<any>(null);
   const queryClient = useQueryClient();
+  const [quillInstance, setQuillInstance] = useState<any>(null);
 
   const { data: variables } = useQuery({
     queryKey: ["print-variables", templateFor],
@@ -64,13 +65,12 @@ export function PrintTemplateEditorModal({
   };
 
   const insertVariable = (variableKey: string) => {
-    const quill = quillRef.current?.getEditor();
-    if (!quill) return;
+    if (!quillInstance) return;
 
-    const range = quill.getSelection();
+    const range = quillInstance.getSelection();
     if (range) {
-      quill.insertText(range.index, `{${variableKey}}`);
-      quill.setSelection(range.index + variableKey.length + 2);
+      quillInstance.insertText(range.index, `{${variableKey}}`);
+      quillInstance.setSelection(range.index + variableKey.length + 2);
     }
   };
 
@@ -144,9 +144,13 @@ export function PrintTemplateEditorModal({
                 Nội dung mẫu in
               </label>
               <ReactQuill
-                ref={quillRef}
                 value={content}
                 onChange={setContent}
+                onChangeSelection={(range, source, editor) => {
+                  if (!quillInstance) {
+                    setQuillInstance(editor);
+                  }
+                }}
                 modules={modules}
                 theme="snow"
                 style={{ height: "400px", marginBottom: "50px" }}
