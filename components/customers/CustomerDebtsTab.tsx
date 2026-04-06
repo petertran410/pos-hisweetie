@@ -86,9 +86,9 @@ export function CustomerDebtsTab({
                 <th className="px-4 py-3 text-right text-md font-medium">
                   Dư nợ khách hàng
                 </th>
-                <th className="px-4 py-3 text-center text-md font-medium">
+                {/* <th className="px-4 py-3 text-center text-md font-medium">
                   Trạng thái
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody>
@@ -168,7 +168,7 @@ export function CustomerDebtsTab({
                           {formatCurrency(item.debtSnapshot)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      {/* <td className="px-4 py-3 text-center">
                         <span
                           className={`px-2 py-1 rounded text-xs font-medium ${
                             item.status === 4 || item.status === 0
@@ -179,7 +179,7 @@ export function CustomerDebtsTab({
                           }`}>
                           {item.statusValue}
                         </span>
-                      </td>
+                      </td> */}
                     </tr>
                   );
                 })

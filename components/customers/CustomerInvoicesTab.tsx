@@ -211,9 +211,9 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
             <th className="px-4 py-3 text-right text-sm font-medium">
               Giá trị
             </th>
-            <th className="px-4 py-3 text-center text-sm font-medium">
+            {/* <th className="px-4 py-3 text-center text-sm font-medium">
               Trạng thái
-            </th>
+            </th> */}
           </tr>
         </thead>
         <tbody>
@@ -253,12 +253,12 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
                   </span>
                 )}
               </td>
-              <td className="px-4 py-3 text-center">
+              {/* <td className="px-4 py-3 text-center">
                 <span
                   className={`px-2 py-1 rounded text-xs font-medium ${item.statusColor}`}>
                   {item.statusLabel}
                 </span>
-              </td>
+              </td> */}
             </tr>
           ))}
         </tbody>
