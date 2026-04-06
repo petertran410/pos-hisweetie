@@ -131,4 +131,36 @@ export const productsApi = {
   updateRetailPrice: (id: number, basePrice: number): Promise<Product> => {
     return apiClient.put(`/products/${id}`, { basePrice });
   },
+
+  getInventoryLogs: async (
+    productId: number,
+    branchId?: number
+  ): Promise<InventoryLog[]> => {
+    const params = new URLSearchParams();
+    if (branchId) params.append("branchId", branchId.toString());
+    return apiClient.get(
+      `/products/${productId}/inventory-logs?${params.toString()}`
+    );
+  },
 };
+
+export interface InventoryLog {
+  id: number;
+  productId: number;
+  productCode: string;
+  productName: string;
+  branchId: number;
+  branchName: string;
+  transactionType: string;
+  refCode: string;
+  refType: string;
+  refId: number;
+  quantity: number;
+  costPrice: number;
+  transactionPrice?: number | null;
+  partnerId?: number | null;
+  partnerName?: string | null;
+  note?: string | null;
+  createdAt: string;
+  createdByName?: string | null;
+}

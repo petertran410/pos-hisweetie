@@ -8,6 +8,7 @@ import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { ActionGuard } from "../permissions/ActionGuard";
+import { ProductInventoryLogTab } from "./ProductInventoryLogTab";
 
 interface ProductDetailProps {
   product?: Product;
@@ -229,9 +230,19 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
             }`}>
             Thông tin
           </button>
+
+          <button
+            onClick={() => setActiveTab("the-kho")}
+            className={`px-4 py-3 border-b-2 ${
+              activeTab === "the-kho"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent"
+            }`}>
+            Thẻ kho
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto `p`-6">
           {activeTab === "info" && (
             <div className="space-y-6">
               {product.images && product.images.length > 0 && (
@@ -736,6 +747,13 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                 </div>
               )}
             </div>
+          )}
+
+          {activeTab === "the-kho" && (
+            <ProductInventoryLogTab
+              productId={product.id}
+              branchId={selectedBranch?.id}
+            />
           )}
         </div>
 
