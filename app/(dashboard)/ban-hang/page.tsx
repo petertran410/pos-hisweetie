@@ -1227,7 +1227,7 @@ export default function BanHangPage() {
               amount: payment.amount,
               paymentMethod: payment.method,
               accountId: payment.accountId,
-              notes: `Thanh toán bổ sung - ${payment.method}`,
+              description: `Thanh toán bổ sung - ${payment.method}`,
             });
           }
         }
@@ -1408,7 +1408,7 @@ export default function BanHangPage() {
     if (activeTab.type === "order") {
       documentData.orderDate = new Date().toISOString();
       documentData.orderStatus = "pending";
-      documentData.notes = activeTab.orderNote;
+      documentData.description = activeTab.orderNote;
       documentData.depositAmount = Number(actualPayment) || 0;
       documentData.items = activeTab.cartItems.map((item) => ({
         productId: Number(item.product.id),
@@ -1478,7 +1478,7 @@ export default function BanHangPage() {
               orderId: result.order.id,
               amount: payment.amount,
               paymentMethod: payment.method,
-              notes: `Thanh toán khi tạo đơn - ${payment.method}`,
+              description: `Thanh toán khi tạo đơn - ${payment.method}`,
             });
           }
         }

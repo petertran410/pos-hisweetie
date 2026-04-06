@@ -19,7 +19,7 @@ export interface CreateOrderPaymentDto {
   amount: number;
   paymentMethod?: string;
   paymentDate?: string;
-  notes?: string;
+  description?: string;
   accountId?: number;
 }
 
