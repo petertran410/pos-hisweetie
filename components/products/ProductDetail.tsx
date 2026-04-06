@@ -242,7 +242,7 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto `p`-6">
+        <div className="overflow-y-auto p-6">
           {activeTab === "info" && (
             <div className="space-y-6">
               {product.images && product.images.length > 0 && (
