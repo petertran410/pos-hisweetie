@@ -1188,7 +1188,7 @@ export default function BanHangPage() {
         branchId: selectedBranch?.id,
         orderDate: new Date().toISOString(),
         orderStatus: existingOrder.orderStatus,
-        notes: activeTab.orderNote,
+        description: activeTab.orderNote,
         paidAmount: actualPayment,
         discountAmount: Number(activeTab.discount) || 0,
         discountRatio: Number(activeTab.discountRatio) || 0,
