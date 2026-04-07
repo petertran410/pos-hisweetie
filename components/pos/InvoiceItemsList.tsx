@@ -41,6 +41,9 @@ export function InvoiceItemsList({
   selectedCustomerId,
 }: InvoiceItemsListProps) {
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
+  const [quantityDisplays, setQuantityDisplays] = useState<
+    Record<number, string>
+  >({});
   const [discountType, setDiscountType] = useState<"amount" | "ratio">(
     "amount"
   );
@@ -53,6 +56,41 @@ export function InvoiceItemsList({
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [selectedItemForDiscount, setSelectedItemForDiscount] =
     useState<CartItem | null>(null);
+
+  const getQuantityDisplay = (item: CartItem): string => {
+    return quantityDisplays[item.product.id] ?? String(item.quantity);
+  };
+
+  const handleQuantityChange = (productId: number, value: string) => {
+    const onlyNumbers = value.replace(/[^\d]/g, "");
+    setQuantityDisplays((prev) => ({ ...prev, [productId]: onlyNumbers }));
+    if (onlyNumbers !== "" && onlyNumbers !== "0") {
+      const parsed = parseInt(onlyNumbers, 10);
+      onUpdateItem(productId, { quantity: parsed });
+    }
+  };
+
+  const handleQuantityBlur = (productId: number, currentQuantity: number) => {
+    const display = quantityDisplays[productId];
+    if (display === undefined) return;
+    const parsed = parseInt(display, 10);
+    const validQty =
+      !display || isNaN(parsed) || parsed < 1 ? currentQuantity : Math.max(1, parsed);
+    onUpdateItem(productId, { quantity: validQty });
+    setQuantityDisplays((prev) => {
+      const next = { ...prev };
+      delete next[productId];
+      return next;
+    });
+  };
+
+  const clearQuantityDisplay = (productId: number) => {
+    setQuantityDisplays((prev) => {
+      const next = { ...prev };
+      delete next[productId];
+      return next;
+    });
+  };
 
   const handleOpenDiscountModal = (item: CartItem) => {
     setSelectedItemForDiscount(item);
@@ -242,31 +280,34 @@ export function InvoiceItemsList({
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() =>
+                    onClick={() => {
                       onUpdateItem(item.product.id, {
                         quantity: Math.max(1, item.quantity - 1),
-                      })
-                    }
+                      });
+                      clearQuantityDisplay(item.product.id);
+                    }}
                     className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Minus className="w-3 h-3" />
                   </button>
                   <input
                     type="text"
-                    value={item.quantity}
+                    value={getQuantityDisplay(item)}
                     onChange={(e) =>
-                      onUpdateItem(item.product.id, {
-                        quantity: Math.max(1, parseInt(e.target.value) || 1),
-                      })
+                      handleQuantityChange(item.product.id, e.target.value)
+                    }
+                    onBlur={() =>
+                      handleQuantityBlur(item.product.id, item.quantity)
                     }
                     className="w-9 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                   />
                   <button
-                    onClick={() =>
+                    onClick={() => {
                       onUpdateItem(item.product.id, {
                         quantity: item.quantity + 1,
-                      })
-                    }
+                      });
+                      clearQuantityDisplay(item.product.id);
+                    }}
                     className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Plus className="w-3 h-3" />
                   </button>
