@@ -358,7 +358,7 @@ export function OrderCart({
               onClick={onCreateInvoice}
               disabled={cartItems.length === 0}
               className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
-              HÓA ĐƠN
+              TẠO HÓA ĐƠN
             </button>
             <button
               onClick={() =>

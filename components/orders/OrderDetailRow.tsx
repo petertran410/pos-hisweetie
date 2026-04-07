@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useOrder, useUpdateOrder } from "@/lib/hooks/useOrders";
+import {
+  useCancelOrder,
+  useOrder,
+  useUpdateOrder,
+} from "@/lib/hooks/useOrders";
 import { ChevronDown, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -12,6 +16,8 @@ import {
 } from "@/lib/types/order";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { INVOICE_STATUS } from "@/lib/types/invoice";
+import { useAuthStore } from "@/lib/store/auth";
+import { CancelOrderModal } from "./CancelOrderModal";
 
 const getOrderStatusBadgeColor = (status: number) => {
   switch (status) {
@@ -21,8 +27,6 @@ const getOrderStatusBadgeColor = (status: number) => {
       return "bg-teal-100 text-teal-700";
     case ORDER_STATUS.PARTIALLY_INVOICED:
       return "bg-teal-100 text-teal-700";
-    case ORDER_STATUS.PROCESSING:
-      return "bg-blue-100 text-blue-700";
     case ORDER_STATUS.COMPLETED:
       return "bg-green-100 text-green-700";
     case ORDER_STATUS.CANCELLED:
@@ -48,6 +52,19 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const [description, setDescription] = useState("");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const cancelOrder = useCancelOrder();
+  const { user } = useAuthStore();
+
+  const isAdmin = user?.roles?.some(
+    (role: string) => role === "Admin" || role === "Super Admin"
+  );
+
+  const canCancelOrder =
+    order?.status === ORDER_STATUS.PENDING ||
+    order?.status === ORDER_STATUS.CONFIRMED ||
+    order?.status === ORDER_STATUS.PARTIALLY_INVOICED ||
+    (order?.status === ORDER_STATUS.COMPLETED && isAdmin);
 
   useEffect(() => {
     if (order) {
@@ -69,29 +86,31 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleCancel = async () => {
+  const handleCancelClick = () => {
     if (!order) return;
 
+    // Kiểm tra có hóa đơn không
     if (order.invoices && order.invoices.some((inv) => inv.status !== 2)) {
       toast.error(
-        "Đơn hàng có hóa đơn, vui lòng hủy hóa đơn trước khi hủy đơn hàng"
+        "Đơn hàng có hóa đơn. Vui lòng hủy tất cả hóa đơn trước khi hủy đơn hàng"
       );
       return;
     }
 
-    if (confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
-      try {
-        setIsSaving(true);
-        await updateOrder.mutateAsync({
-          id: order.id,
-          data: { orderStatus: "cancelled" },
-        });
-        toast.success("Đã hủy đơn hàng thành công");
-      } catch (error) {
-        toast.error("Không thể hủy đơn hàng");
-      } finally {
-        setIsSaving(false);
-      }
+    // Hiển thị modal
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async (cancelPayments: boolean) => {
+    if (!order) return;
+
+    try {
+      await cancelOrder.mutateAsync({
+        id: order.id,
+        cancelPayments,
+      });
+    } catch (error: any) {
+      throw new Error("Có lỗi khi hủy đơn hàng", error);
     }
   };
 
@@ -547,6 +566,14 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                     </button>
                   </div>
                   <div className="flex gap-2">
+                    {canCancelOrder && (
+                      <button
+                        onClick={handleCancelClick}
+                        disabled={isSaving}
+                        className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        Hủy
+                      </button>
+                    )}
                     <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
                       Kết thúc
                     </button>
@@ -560,6 +587,15 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
           </div>
         </div>
       </td>
+
+      <CancelOrderModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleConfirmCancel}
+        hasPayments={order?.payments && order.payments.length > 0}
+        orderCode={order?.code || ""}
+        totalPayments={order?.payments?.length || 0}
+      />
     </tr>
   );
 }

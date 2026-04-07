@@ -77,3 +77,24 @@ export function useDeleteOrder() {
     },
   });
 }
+
+export function useCancelOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      cancelPayments,
+    }: {
+      id: number;
+      cancelPayments: boolean;
+    }) => ordersApi.cancel(id, cancelPayments),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast.success("Hủy đơn hàng thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Không thể hủy đơn hàng");
+    },
+  });
+}

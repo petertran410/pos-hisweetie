@@ -75,4 +75,8 @@ export const ordersApi = {
   deleteOrder: (id: number): Promise<void> => {
     return apiClient.delete(`/orders/${id}`);
   },
+
+  cancel: (id: number, cancelPayments: boolean): Promise<any> => {
+    return apiClient.put(`/orders/${id}/cancel`, { cancelPayments });
+  },
 };
