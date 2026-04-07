@@ -7,7 +7,7 @@ interface CancelOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (cancelPayments: boolean) => void;
-  hasPayments: boolean;
+  hasPayments: boolean | undefined;
   orderCode: string;
   totalPayments: number;
 }
