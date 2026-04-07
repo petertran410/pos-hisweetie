@@ -56,7 +56,7 @@ export function DebtOffsetsSidebar({
   }, [selectedBranch]);
 
   useEffect(() => {
-    const filters: any = { refundType: "debt_offset", status: 4 };
+    const filters: any = { refundType: "debt_offsets", status: 4 };
     if (branchId) filters.branchId = parseInt(branchId);
     if (enableDate) {
       const range = getDateRangeFromPreset(selectedPreset);

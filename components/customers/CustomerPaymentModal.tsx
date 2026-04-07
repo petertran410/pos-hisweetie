@@ -86,6 +86,10 @@ export function CustomerPaymentModal({
   const [invoicePayments, setInvoicePayments] = useState<
     Record<number, string>
   >({});
+  const [invoiceDebtOffsets, setInvoiceDebtOffsets] = useState<
+    Record<number, string>
+  >({});
+  const debtOffsetsInitialized = useRef(false);
 
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
     null
@@ -197,6 +201,36 @@ export function CustomerPaymentModal({
     );
   }, [invoicesData]);
 
+  // Credit = phần chênh lệch giữa tổng debtAmount các hóa đơn và customerDebt thực tế.
+  // Ví dụ: sum(debtAmount) = 20,000, customerDebt = 10,000 → credit = 10,000.
+  // Điều này xảy ra khi có return order / giao dịch cũ đã giảm customerDebt
+  // nhưng invoice chưa được phân bổ.
+  const availableCredit = useMemo(() => {
+    const totalUnpaid = unpaidInvoices.reduce(
+      (sum: number, inv: any) => sum + Number(inv.debtAmount),
+      0
+    );
+    return Math.max(0, totalUnpaid - customerDebt);
+  }, [unpaidInvoices, customerDebt]);
+
+  useEffect(() => {
+    if (debtOffsetsInitialized.current || unpaidInvoices.length === 0) return;
+    debtOffsetsInitialized.current = true;
+
+    if (availableCredit <= 0) return;
+
+    const oldestInvoice = unpaidInvoices[0];
+    const defaultOffset = Math.min(
+      availableCredit,
+      Number(oldestInvoice.debtAmount)
+    );
+    if (defaultOffset > 0) {
+      setInvoiceDebtOffsets({
+        [oldestInvoice.id]: formatNumberInput(defaultOffset.toString()),
+      });
+    }
+  }, [unpaidInvoices, availableCredit]);
+
   const totalPages = Math.ceil(unpaidInvoices.length / pageSize);
   const paginatedInvoices = unpaidInvoices.slice(
     (currentPage - 1) * pageSize,
@@ -267,6 +301,30 @@ export function CustomerPaymentModal({
     }));
   };
 
+  const handleInvoiceDebtOffsetChange = (
+    invoiceId: number,
+    value: string
+  ) => {
+    const invoice = unpaidInvoices.find((inv: any) => inv.id === invoiceId);
+    if (!invoice) return;
+
+    // Tổng các invoice khác đã điền
+    const otherTotal = Object.entries(invoiceDebtOffsets)
+      .filter(([id]) => Number(id) !== invoiceId)
+      .reduce((sum, [_, amt]) => sum + parseNumberInput(amt), 0);
+
+    // Giới hạn: không vượt debtAmount của hóa đơn và không vượt phần còn lại của availableCredit
+    const remaining = Math.max(0, availableCredit - otherTotal);
+    const maxAmount = Math.min(Number(invoice.debtAmount), remaining);
+    const numericValue = parseNumberInput(value);
+    const limitedValue = Math.min(numericValue, maxAmount);
+    const formatted = formatNumberInput(limitedValue.toString());
+    setInvoiceDebtOffsets((prev) => ({
+      ...prev,
+      [invoiceId]: formatted,
+    }));
+  };
+
   const handleSubmit = async () => {
     if (!selectedBranch) {
       alert("Vui lòng chọn chi nhánh");
@@ -278,7 +336,11 @@ export function CustomerPaymentModal({
       return;
     }
 
-    if ((method === "wallet" || method === "transfer") && !selectedAccountId) {
+    if (
+      (method === "wallet" || method === "transfer") &&
+      !selectedAccountId &&
+      parseNumberInput(totalAmount) > 0
+    ) {
       alert("Vui lòng chọn tài khoản ngân hàng");
       return;
     }
@@ -286,6 +348,27 @@ export function CustomerPaymentModal({
     let finalTransDate = transDateTime;
     if (transDate) {
       finalTransDate = parseDateTime(transDate);
+    }
+
+    const debtOffsetsToApply =
+      availableCredit > 0
+        ? Object.entries(invoiceDebtOffsets)
+            .filter(([_, amount]) => parseNumberInput(amount) > 0)
+            .map(([invoiceId, amount]) => ({
+              invoiceId: Number(invoiceId),
+              amount: parseNumberInput(amount),
+            }))
+        : [];
+
+    const totalDebtOffset = debtOffsetsToApply.reduce(
+      (sum, d) => sum + d.amount,
+      0
+    );
+    if (totalDebtOffset > availableCredit) {
+      alert(
+        `Tổng cấn trừ nợ (${formatCurrency(totalDebtOffset)}) vượt quá giới hạn cho phép (${formatCurrency(availableCredit)})`
+      );
+      return;
     }
 
     let invoicesToPay: Array<{ invoiceId: number; amount: number }> = [];
@@ -299,8 +382,12 @@ export function CustomerPaymentModal({
           amount: parseNumberInput(amount),
         }));
 
-      if (finalTotalAmount <= 0 && invoicesToPay.length === 0) {
-        alert("Vui lòng nhập số tiền thanh toán hoặc phân bổ vào hóa đơn");
+      if (
+        finalTotalAmount <= 0 &&
+        invoicesToPay.length === 0 &&
+        debtOffsetsToApply.length === 0
+      ) {
+        alert("Vui lòng nhập số tiền thanh toán hoặc cấn trừ nợ");
         return;
       }
 
@@ -311,7 +398,7 @@ export function CustomerPaymentModal({
         );
       }
     } else {
-      if (finalTotalAmount <= 0) {
+      if (finalTotalAmount <= 0 && debtOffsetsToApply.length === 0) {
         alert("Vui lòng nhập số tiền thanh toán");
         return;
       }
@@ -328,6 +415,7 @@ export function CustomerPaymentModal({
       allocateToInvoices,
       invoices: invoicesToPay.length > 0 ? invoicesToPay : undefined,
       accountId: selectedAccountId || undefined,
+      debtOffsets: debtOffsetsToApply.length > 0 ? debtOffsetsToApply : undefined,
     });
   };
 
@@ -343,7 +431,7 @@ export function CustomerPaymentModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-[900px] max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-lg w-[1100px] max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-6 border-b">
           <div>
             <h3 className="text-lg font-semibold">Thanh toán</h3>
@@ -700,6 +788,15 @@ export function CustomerPaymentModal({
 
           {allocateToInvoices && (
             <div className="border rounded-lg overflow-hidden">
+              {availableCredit > 0 && (
+                <div className="px-4 py-2 bg-blue-50 border-b text-xs text-blue-700">
+                  Có thể cấn trừ tối đa{" "}
+                  <span className="font-semibold">
+                    {formatCurrency(availableCredit)}
+                  </span>{" "}
+                  từ credit hiện có của khách hàng
+                </div>
+              )}
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
@@ -718,6 +815,11 @@ export function CustomerPaymentModal({
                     <th className="px-4 py-3 text-right text-xs font-medium">
                       Còn cần thu
                     </th>
+                    {availableCredit > 0 && (
+                      <th className="px-4 py-3 text-left text-xs font-medium">
+                        Cấn trừ nợ
+                      </th>
+                    )}
                     <th className="px-4 py-3 text-left text-xs font-medium">
                       Tiền thu
                     </th>
@@ -726,14 +828,16 @@ export function CustomerPaymentModal({
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center">
+                      <td
+                        colSpan={availableCredit > 0 ? 7 : 6}
+                        className="px-4 py-8 text-center">
                         Đang tải...
                       </td>
                     </tr>
                   ) : unpaidInvoices.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={availableCredit > 0 ? 7 : 6}
                         className="px-4 py-8 text-center text-gray-500">
                         Không có hóa đơn nào cần thanh toán
                       </td>
@@ -770,6 +874,22 @@ export function CustomerPaymentModal({
                         <td className="px-4 py-3 text-right font-medium">
                           {formatCurrency(invoice.debtAmount)}
                         </td>
+                        {availableCredit > 0 && (
+                          <td className="px-4 py-3">
+                            <input
+                              type="text"
+                              value={invoiceDebtOffsets[invoice.id] || ""}
+                              onChange={(e) =>
+                                handleInvoiceDebtOffsetChange(
+                                  invoice.id,
+                                  e.target.value
+                                )
+                              }
+                              placeholder="0"
+                              className="w-full px-2 py-1 border rounded text-right"
+                            />
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           <input
                             type="text"

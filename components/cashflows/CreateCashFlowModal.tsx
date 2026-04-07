@@ -599,9 +599,7 @@ export function CreateCashFlowModal({
 
             {type === "cash" && (
               <div className="relative" ref={collectionBranchDropdownRef}>
-                <label className="block text-sm font-medium mb-2">
-                  Chi nhánh cần {isReceipt ? "thu" : "chi"}
-                </label>
+                <label className="block text-sm font-medium mb-2">Sổ cái</label>
                 <button
                   onClick={() =>
                     setShowCollectionBranchDropdown(
@@ -614,7 +612,7 @@ export function CreateCashFlowModal({
                       ? branches.find(
                           (b: any) => b.id === Number(collectionBranchId)
                         )?.name
-                      : "Chọn chi nhánh cần thu"}
+                      : "Chọn chi nhánh"}
                   </span>
                   <ChevronDown className="w-4 h-4" />
                 </button>

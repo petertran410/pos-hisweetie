@@ -9,6 +9,7 @@ import { INVOICE_STATUS, InvoiceDetail } from "@/lib/types/invoice";
 import Swal from "sweetalert2";
 import { InvoicePackingSlipsTab } from "./InvoicePackingSlipsTab";
 import { InvoicePaymentsTab } from "./InvoicePaymentsTab";
+import { useAuthStore } from "@/lib/store/auth";
 
 interface InvoiceDetailRowProps {
   invoiceId: number;
@@ -65,7 +66,7 @@ const getInvoiceStatusText = (status: number) => {
     case 7:
       return "Giao thành công";
     case 8:
-      return "Trả hàng";
+      return "Đã trả hàng";
     default:
       return "Không xác định";
   }
@@ -78,6 +79,11 @@ export function InvoiceDetailRow({
   const router = useRouter();
   const { data: invoice, isLoading } = useInvoice(invoiceId);
   const updateInvoice = useUpdateInvoice();
+  const { user } = useAuthStore();
+
+  const isAdmin = user?.roles?.some(
+    (role: string) => role === "Admin" || role === "Super Admin"
+  );
 
   const [isSaving, setIsSaving] = useState(false);
   const [description, setDescription] = useState("");
@@ -217,6 +223,13 @@ export function InvoiceDetailRow({
 
   const isCompleted = invoice.status === INVOICE_STATUS.COMPLETED;
   const isCancelled = invoice.status === INVOICE_STATUS.CANCELLED;
+  const hasReturnOrders = (invoice as any)?._count?.returnOrders > 0;
+
+  const canCancel =
+    !isSaving &&
+    !isCancelled &&
+    !hasReturnOrders &&
+    (invoice.status !== INVOICE_STATUS.COMPLETED || isAdmin);
 
   return (
     <tr>
@@ -540,11 +553,7 @@ export function InvoiceDetailRow({
               <div className="flex gap-2">
                 <button
                   onClick={handleCancel}
-                  hidden={
-                    isSaving ||
-                    invoice.status === INVOICE_STATUS.CANCELLED ||
-                    invoice.status === INVOICE_STATUS.COMPLETED
-                  }
+                  hidden={!canCancel}
                   className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {isSaving ? "Đang xử lý..." : "Hủy"}
                 </button>

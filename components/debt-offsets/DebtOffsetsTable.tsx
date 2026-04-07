@@ -50,7 +50,7 @@ export function DebtOffsetsTable({ filters }: DebtOffsetsTableProps) {
           <thead className="bg-gray-50 sticky top-0">
             <tr>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
-                Mã phiếu trả hàng
+                Mã phiếu
               </th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">
                 Mã hóa đơn
