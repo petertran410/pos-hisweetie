@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 interface CancelOrderModalProps {
@@ -29,7 +30,7 @@ export function CancelOrderModal({
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="flex items-center justify-between p-6 border-b">
@@ -115,6 +116,7 @@ export function CancelOrderModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -228,7 +228,8 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: true,
     width: "200px",
     render: (order) =>
-      formatCurrency(Number(order.grandTotal) - Number(order.paidAmount)),
+      // formatCurrency(Number(order.grandTotal) - Number(order.paidAmount)),
+      formatCurrency(Number(order.debtAmount)),
   },
   {
     key: "waitingDays",

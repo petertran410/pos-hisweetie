@@ -553,12 +553,16 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                     <div className="flex gap-2">
-                      <button
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        {isSaving ? "Đang lưu..." : "Lưu"}
-                      </button>
+                      {canCancelOrder && (
+                        <button
+                          onClick={handleCancelClick}
+                          disabled={isSaving}
+                          className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                          Hủy
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
                       <button
                         onClick={handleProcessOrder}
                         hidden={
@@ -570,16 +574,12 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                         Xử lý đơn hàng
                       </button>
-                    </div>
-                    <div className="flex gap-2">
-                      {canCancelOrder && (
-                        <button
-                          onClick={handleCancelClick}
-                          disabled={isSaving}
-                          className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                          Hủy
-                        </button>
-                      )}
+                      <button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isSaving ? "Đang lưu..." : "Lưu"}
+                      </button>
                       <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
                         Kết thúc
                       </button>
