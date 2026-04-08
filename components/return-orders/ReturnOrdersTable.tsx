@@ -67,7 +67,7 @@ const getStatusText = (status: number) => {
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "code",
-    label: "Mã trả hàng",
+    label: "Mã cấn trừ nợ",
     visible: true,
     render: (item) => item.code,
   },
