@@ -105,6 +105,8 @@ export function CustomerDebtsTab({
                   const isInvoice = item.type === "invoice";
                   const isPayment = item.type === "payment";
                   const isDebtOffset = item.type === "debt_offset";
+                  const isReturnOrder = item.type === "return_order"; // THÊM
+                  const isExpense = item.type === "expense"; // THÊM
 
                   return (
                     <tr
@@ -123,7 +125,11 @@ export function CustomerDebtsTab({
                           ? "Bán hàng"
                           : isDebtOffset
                             ? "Cấn trừ công nợ"
-                            : getPaymentType(item.code)}
+                            : isReturnOrder // THÊM
+                              ? "Trả hàng"
+                              : isExpense // THÊM
+                                ? "Thanh toán"
+                                : getPaymentType(item.code)}
                       </td>
                       <td className="px-4 py-3 text-md">
                         {item.customerName ? (
@@ -157,29 +163,31 @@ export function CustomerDebtsTab({
                             -{formatCurrency(item.amount)}
                           </span>
                         )}
+                        {/* THÊM: Hiển thị cho return_order */}
+                        {isReturnOrder && (
+                          <span className="text-red-600 font-medium">
+                            -{formatCurrency(item.amount)}
+                          </span>
+                        )}
+                        {/* THÊM: Hiển thị cho expense (phiếu chi) */}
+                        {isExpense && (
+                          <span className="text-green-600 font-medium">
+                            {formatCurrency(item.amount)}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-md text-right font-medium">
                         <span
                           className={
                             item.debtSnapshot > 0
                               ? "text-red-600"
-                              : "text-green-600"
+                              : item.debtSnapshot < 0
+                                ? "text-orange-600"
+                                : "text-green-600"
                           }>
                           {formatCurrency(item.debtSnapshot)}
                         </span>
                       </td>
-                      {/* <td className="px-4 py-3 text-center">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            item.status === 4 || item.status === 0
-                              ? "bg-green-100 text-green-800"
-                              : item.status === 3
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-red-100 text-red-800"
-                          }`}>
-                          {item.statusValue}
-                        </span>
-                      </td> */}
                     </tr>
                   );
                 })
