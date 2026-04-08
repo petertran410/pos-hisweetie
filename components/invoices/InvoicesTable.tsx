@@ -268,6 +268,60 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: true,
     render: (invoice) => formatMoney(Number(invoice.paidAmount)),
   },
+  // THÊM 4 CỘT MỚI TẠI ĐÂY
+  {
+    key: "returnOrderAmount",
+    label: "Trả hàng",
+    visible: true,
+    render: (invoice) => {
+      const amount = Number((invoice as any).returnOrderAmount || 0);
+      return formatMoney(amount);
+    },
+  },
+  {
+    key: "cashRefundAmount",
+    label: "Phiếu chi",
+    visible: true,
+    render: (invoice) => {
+      const amount = Number((invoice as any).cashRefundAmount || 0);
+      return amount < 0 ? (
+        <span className="text-red-600">{formatMoney(amount)}</span>
+      ) : (
+        formatMoney(amount)
+      );
+    },
+  },
+  {
+    key: "debtOffsetAmount",
+    label: "Cấn trừ nợ",
+    visible: true,
+    render: (invoice) => {
+      const amount = Number((invoice as any).debtOffsetAmount || 0);
+      return amount < 0 ? (
+        <span className="text-red-600">{formatMoney(amount)}</span>
+      ) : (
+        formatMoney(amount)
+      );
+    },
+  },
+  {
+    key: "remainingAmount",
+    label: "Còn lại",
+    visible: true,
+    render: (invoice) => {
+      const amount = Number((invoice as any).remainingAmount || 0);
+      return amount > 0 ? (
+        <span className="text-orange-600 font-medium">
+          {formatMoney(amount)}
+        </span>
+      ) : amount < 0 ? (
+        <span className="text-red-600">{formatMoney(amount)}</span>
+      ) : (
+        <span className="text-green-600">{formatMoney(amount)}</span>
+      );
+    },
+  },
+  // KẾT THÚC 4 CỘT MỚI
   {
     key: "codAmount",
     label: "Còn cần thu (COD)",
