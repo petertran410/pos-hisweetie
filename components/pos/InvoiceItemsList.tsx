@@ -75,7 +75,9 @@ export function InvoiceItemsList({
     if (display === undefined) return;
     const parsed = parseInt(display, 10);
     const validQty =
-      !display || isNaN(parsed) || parsed < 1 ? currentQuantity : Math.max(1, parsed);
+      !display || isNaN(parsed) || parsed < 1
+        ? currentQuantity
+        : Math.max(1, parsed);
     onUpdateItem(productId, { quantity: validQty });
     setQuantityDisplays((prev) => {
       const next = { ...prev };
@@ -298,7 +300,7 @@ export function InvoiceItemsList({
                     onBlur={() =>
                       handleQuantityBlur(item.product.id, item.quantity)
                     }
-                    className="w-9 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                   />
                   <button
