@@ -39,6 +39,10 @@ export function ConfirmRefundModal({
   const accountDropdownRef = useRef<HTMLDivElement>(null);
 
   const refundAmount = Number(returnOrder?.refundAmount || 0);
+  const invoicePaidAmount = Number(returnOrder?.invoice?.paidAmount ?? -1);
+  // -1: chưa load xong. 0: hóa đơn chưa thanh toán. >0: đã thanh toán một phần hoặc toàn bộ
+  // Nếu returnOrder.invoice === null (nhiều hóa đơn) → invoicePaidAmount = -1 → hiện cả 2 lựa chọn
+  const isInvoiceUnpaid = invoicePaidAmount === 0;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -58,6 +62,12 @@ export function ConfirmRefundModal({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (returnOrder && isInvoiceUnpaid) {
+      setRefundType("debt_offset");
+    }
+  }, [returnOrder, isInvoiceUnpaid]);
 
   const selectedMethodLabel =
     METHOD_OPTIONS.find((m) => m.value === method)?.label || "Tiền mặt";
@@ -163,18 +173,20 @@ export function ConfirmRefundModal({
           <div className="space-y-3">
             <label className="block text-sm font-medium">Hình thức xử lý</label>
             <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="refundType"
-                  checked={refundType === "cash_refund"}
-                  onChange={() => setRefundType("cash_refund")}
-                  className="w-4 h-4"
-                />
-                <span className="text-sm">
-                  Tạo phiếu chi (hoàn tiền cho khách)
-                </span>
-              </label>
+              {!isInvoiceUnpaid && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="refundType"
+                    checked={refundType === "cash_refund"}
+                    onChange={() => setRefundType("cash_refund")}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">
+                    Tạo phiếu chi (hoàn tiền cho khách)
+                  </span>
+                </label>
+              )}
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
@@ -183,7 +195,11 @@ export function ConfirmRefundModal({
                   onChange={() => setRefundType("debt_offset")}
                   className="w-4 h-4"
                 />
-                <span className="text-sm">Cấn trừ công nợ (chỉ giảm nợ)</span>
+                <span className="text-sm">
+                  {isInvoiceUnpaid
+                    ? "Xác nhận cấn trừ công nợ (hóa đơn chưa thanh toán)"
+                    : "Cấn trừ công nợ (chỉ giảm nợ)"}
+                </span>
               </label>
             </div>
           </div>
