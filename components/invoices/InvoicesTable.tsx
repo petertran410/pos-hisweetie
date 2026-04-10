@@ -284,11 +284,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: true,
     render: (invoice) => {
       const amount = Number((invoice as any).cashRefundAmount || 0);
-      return amount < 0 ? (
-        <span className="text-red-600">{formatMoney(amount)}</span>
-      ) : (
-        formatMoney(amount)
-      );
+      return formatMoney(amount);
     },
   },
   {
@@ -297,11 +293,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: true,
     render: (invoice) => {
       const amount = Number((invoice as any).debtOffsetAmount || 0);
-      return amount < 0 ? (
-        <span className="text-red-600">{formatMoney(amount)}</span>
-      ) : (
-        formatMoney(amount)
-      );
+      return formatMoney(amount);
     },
   },
   {
