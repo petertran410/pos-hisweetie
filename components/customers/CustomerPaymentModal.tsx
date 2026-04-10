@@ -192,7 +192,16 @@ export function CustomerPaymentModal({
   const unpaidInvoices = useMemo(() => {
     return (
       invoicesData?.data
-        .filter((invoice: any) => Number(invoice.debtAmount) > 0)
+        .filter((invoice: any) => {
+          const debtAmount = Number(invoice.debtAmount);
+          if (debtAmount <= 0) return false;
+          // Loại invoice đã bị trả hàng đủ số lượng ở bước 2 (returnOrderAmount >= debtAmount)
+          const returnOrderAmount = Number(
+            (invoice as any).returnOrderAmount || 0
+          );
+          if (returnOrderAmount >= debtAmount) return false;
+          return true;
+        })
         .sort(
           (a: any, b: any) =>
             new Date(a.purchaseDate).getTime() -
@@ -301,10 +310,7 @@ export function CustomerPaymentModal({
     }));
   };
 
-  const handleInvoiceDebtOffsetChange = (
-    invoiceId: number,
-    value: string
-  ) => {
+  const handleInvoiceDebtOffsetChange = (invoiceId: number, value: string) => {
     const invoice = unpaidInvoices.find((inv: any) => inv.id === invoiceId);
     if (!invoice) return;
 
@@ -415,7 +421,8 @@ export function CustomerPaymentModal({
       allocateToInvoices,
       invoices: invoicesToPay.length > 0 ? invoicesToPay : undefined,
       accountId: selectedAccountId || undefined,
-      debtOffsets: debtOffsetsToApply.length > 0 ? debtOffsetsToApply : undefined,
+      debtOffsets:
+        debtOffsetsToApply.length > 0 ? debtOffsetsToApply : undefined,
     });
   };
 
