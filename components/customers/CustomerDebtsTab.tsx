@@ -148,18 +148,18 @@ export function CustomerDebtsTab({
                       <td className="px-4 py-3 text-md text-right">
                         {isInvoice && (
                           <div>
-                            <div className="text-red-600 font-medium">
+                            <div className="text-green-600 font-medium">
                               {formatCurrency(item.amount)}
                             </div>
                           </div>
                         )}
                         {isPayment && (
-                          <span className="text-green-600 font-medium">
+                          <span className="text-red-600 font-medium">
                             -{formatCurrency(item.amount)}
                           </span>
                         )}
                         {isDebtOffset && (
-                          <span className="text-green-600 font-medium">
+                          <span className="text-red-600 font-medium">
                             -{formatCurrency(item.amount)}
                           </span>
                         )}
@@ -182,8 +182,8 @@ export function CustomerDebtsTab({
                             item.debtSnapshot > 0
                               ? "text-red-600"
                               : item.debtSnapshot < 0
-                                ? "text-orange-600"
-                                : "text-green-600"
+                                ? "text-red-600"
+                                : "text-red-600"
                           }>
                           {formatCurrency(item.debtSnapshot)}
                         </span>
