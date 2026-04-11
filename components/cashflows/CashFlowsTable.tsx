@@ -41,7 +41,7 @@ const getStatusColor = (status: number) => {
   switch (status) {
     case 0:
       return "bg-green-100 text-green-700";
-    case 1:
+    case 2:
       return "bg-red-100 text-red-700";
     default:
       return "bg-gray-100 text-gray-700";
