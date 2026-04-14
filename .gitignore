@@ -13,6 +13,8 @@
 # testing
 /coverage
 
+public/tinymce/
+
 # next.js
 /.next/
 /out/

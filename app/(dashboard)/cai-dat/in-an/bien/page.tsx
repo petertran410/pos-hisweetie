@@ -1,237 +1,179 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { printTemplatesApi } from "@/lib/api/print-templates";
-import { Plus, Edit, Trash2 } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { Edit, Plus } from "lucide-react";
+import { PrintTemplateEditorModal } from "@/components/print-templates/PrintTemplateEditorModal";
+import { PrintPreviewPane } from "@/components/print-templates/PrintPreviewPane";
+import { replaceTokensWithDummy } from "@/components/print-templates/dummy-data";
+import { ActionGuard } from "@/components/permissions/ActionGuard";
 
-export default function VariablesPage() {
-  const [selectedType, setSelectedType] = useState("invoice");
-  const [editModal, setEditModal] = useState(false);
-  const [editingVar, setEditingVar] = useState<any>(null);
-  const queryClient = useQueryClient();
+const TABS: Array<{ key: string; label: string }> = [
+  { key: "order", label: "Đặt hàng" },
+  { key: "invoice", label: "Hóa đơn" },
+  { key: "return_order", label: "Trả hàng" },
+  { key: "order_supplier", label: "Đặt hàng nhập" },
+  { key: "purchase_order", label: "Nhập hàng" },
+  { key: "transfer", label: "Chuyển hàng" },
+  { key: "cash_flow_receipt", label: "Phiếu thu" },
+  { key: "cash_flow_payment", label: "Phiếu chi" },
+];
 
-  const { data: variables, isLoading } = useQuery({
-    queryKey: ["print-variables-all", selectedType],
-    queryFn: () => printTemplatesApi.getAllVariables(selectedType),
+export default function PrintTemplatesPage() {
+  const [activeTab, setActiveTab] = useState("invoice");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<any>(null);
+
+  const { data: templates } = useQuery({
+    queryKey: ["print-templates", activeTab],
+    queryFn: () => printTemplatesApi.getAll({ templateFor: activeTab }),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: printTemplatesApi.deleteVariable,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["print-variables-all"] });
-      toast.success("Đã xóa biến");
-    },
+  const { data: variablesGrouped } = useQuery({
+    queryKey: ["print-variables", activeTab],
+    queryFn: () => printTemplatesApi.getVariables(activeTab),
   });
 
-  const handleDelete = (id: number) => {
-    if (!confirm("Xác nhận xóa biến này?")) return;
-    deleteMutation.mutate(id);
+  const itemKeys = useMemo(() => {
+    const s = new Set<string>();
+    Object.values(variablesGrouped || {}).forEach((vars: any) => {
+      vars.forEach((v: any) => v.isItemVariable && s.add(v.key));
+    });
+    return s;
+  }, [variablesGrouped]);
+
+  // Auto-select default template or first template on tab change
+  const selectedTemplate = useMemo(() => {
+    if (!templates?.length) return null;
+    if (selectedId) {
+      const found = templates.find((t: any) => t.id === selectedId);
+      if (found) return found;
+    }
+    return templates.find((t: any) => t.isDefault) || templates[0];
+  }, [templates, selectedId]);
+
+  const previewHtml = useMemo(() => {
+    if (!selectedTemplate?.content) return "";
+    return replaceTokensWithDummy(
+      selectedTemplate.content,
+      activeTab,
+      itemKeys
+    );
+  }, [selectedTemplate, activeTab, itemKeys]);
+
+  const handleTabChange = (key: string) => {
+    setActiveTab(key);
+    setSelectedId(null);
   };
 
-  const groupedVars = (variables || []).reduce((acc: any, v: any) => {
-    if (!acc[v.group]) acc[v.group] = [];
-    acc[v.group].push(v);
-    return acc;
-  }, {});
+  const handleEdit = () => {
+    if (!selectedTemplate) return;
+    setEditingTemplate(selectedTemplate);
+    setEditorOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingTemplate(null);
+    setEditorOpen(true);
+  };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Quản lý biến mẫu in</h1>
-        <button
-          onClick={() => {
-            setEditingVar(null);
-            setEditModal(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg">
-          <Plus className="w-4 h-4" />
-          Thêm biến
-        </button>
+    <div className="flex flex-col h-full">
+      {/* Tabs */}
+      <div className="flex items-center border-b bg-white px-6 overflow-x-auto">
+        <h1 className="text-lg font-bold pr-6 whitespace-nowrap">Mẫu in</h1>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => handleTabChange(t.key)}
+            className={`px-4 py-3 text-sm whitespace-nowrap border-b-2 transition-colors ${
+              activeTab === t.key
+                ? "border-blue-500 text-blue-600 font-medium"
+                : "border-transparent text-gray-600 hover:text-gray-900"
+            }`}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      <div className="bg-white rounded-lg border">
-        <div className="border-b p-4">
-          <select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            className="border rounded px-3 py-2">
-            <option value="invoice">Hóa đơn</option>
-            <option value="order">Đơn hàng</option>
-            <option value="purchase_order">Phiếu nhập hàng</option>
-          </select>
-        </div>
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 px-6 py-3 border-b bg-white">
+        <label className="text-sm font-medium whitespace-nowrap">Mẫu in</label>
+        <select
+          value={selectedTemplate?.id || ""}
+          onChange={(e) => setSelectedId(Number(e.target.value))}
+          className="border rounded px-3 py-1.5 text-sm min-w-[240px]">
+          {!templates?.length && <option value="">(Chưa có mẫu)</option>}
+          {templates?.map((t: any) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+              {t.isDefault ? " (Mặc định)" : ""}
+            </option>
+          ))}
+        </select>
 
-        <div className="p-4">
-          {isLoading ? (
-            <div className="text-center py-8">Đang tải...</div>
+        <ActionGuard resource="print_templates" action="update">
+          <button
+            onClick={handleEdit}
+            disabled={!selectedTemplate}
+            className="p-2 border rounded hover:bg-gray-50 disabled:opacity-40"
+            title="Sửa mẫu">
+            <Edit className="w-4 h-4" />
+          </button>
+        </ActionGuard>
+
+        <ActionGuard resource="print_templates" action="create">
+          <button
+            onClick={handleCreate}
+            className="p-2 border rounded hover:bg-gray-50"
+            title="Thêm mẫu">
+            <Plus className="w-4 h-4" />
+          </button>
+        </ActionGuard>
+
+        <div className="ml-auto text-sm text-gray-500">Xem trước mẫu in</div>
+      </div>
+
+      {/* Content: split source (left) + preview (right) */}
+      <div className="flex-1 flex overflow-hidden">
+        <div className="w-1/2 border-r bg-white overflow-auto p-4">
+          <div className="text-xs text-gray-500 mb-2">Nguồn mẫu in</div>
+          {selectedTemplate ? (
+            <div
+              className="border rounded p-4 text-sm font-mono whitespace-pre-wrap break-words bg-gray-50"
+              dangerouslySetInnerHTML={{ __html: selectedTemplate.content }}
+            />
           ) : (
-            Object.entries(groupedVars).map(([group, vars]: any) => (
-              <div key={group} className="mb-6">
-                <h3 className="font-medium mb-3">{group}</h3>
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Key</th>
-                      <th className="px-4 py-2 text-left">Label</th>
-                      <th className="px-4 py-2 text-left">Mô tả</th>
-                      <th className="px-4 py-2 text-center">Thứ tự</th>
-                      <th className="px-4 py-2 text-center">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vars.map((v: any) => (
-                      <tr key={v.id} className="border-t">
-                        <td className="px-4 py-2 font-mono text-xs">{v.key}</td>
-                        <td className="px-4 py-2">{v.label}</td>
-                        <td className="px-4 py-2 text-gray-500">
-                          {v.description || "-"}
-                        </td>
-                        <td className="px-4 py-2 text-center">{v.sortOrder}</td>
-                        <td className="px-4 py-2 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => {
-                                setEditingVar(v);
-                                setEditModal(true);
-                              }}
-                              className="p-1 hover:bg-gray-100 rounded">
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(v.id)}
-                              className="p-1 hover:bg-red-100 rounded text-red-600">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))
+            <div className="text-gray-400 text-sm">
+              Chưa có mẫu in. Bấm ➕ để tạo mẫu mới.
+            </div>
           )}
         </div>
+        <div className="w-1/2 bg-gray-100 p-4 overflow-auto">
+          <div className="bg-white shadow-sm" style={{ minHeight: "600px" }}>
+            {selectedTemplate ? (
+              <PrintPreviewPane
+                html={previewHtml}
+                paperSize={selectedTemplate.paperSize}
+              />
+            ) : (
+              <div className="p-8 text-center text-gray-400">
+                Chưa có mẫu để xem trước
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {editModal && (
-        <VariableEditModal
-          variable={editingVar}
-          templateFor={selectedType}
-          onClose={() => setEditModal(false)}
+      {editorOpen && (
+        <PrintTemplateEditorModal
+          template={editingTemplate}
+          templateFor={activeTab}
+          onClose={() => setEditorOpen(false)}
         />
       )}
-    </div>
-  );
-}
-
-function VariableEditModal({ variable, templateFor, onClose }: any) {
-  const [formData, setFormData] = useState({
-    templateFor: variable?.templateFor || templateFor,
-    key: variable?.key || "",
-    label: variable?.label || "",
-    group: variable?.group || "",
-    description: variable?.description || "",
-    sortOrder: variable?.sortOrder || 0,
-  });
-  const queryClient = useQueryClient();
-
-  const saveMutation = useMutation({
-    mutationFn: (data: any) =>
-      variable
-        ? printTemplatesApi.updateVariable(variable.id, data)
-        : printTemplatesApi.createVariable(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["print-variables-all"] });
-      toast.success(variable ? "Đã cập nhật biến" : "Đã tạo biến");
-      onClose();
-    },
-  });
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-md p-6">
-        <h2 className="text-lg font-bold mb-4">
-          {variable ? "Sửa biến" : "Thêm biến mới"}
-        </h2>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Key</label>
-            <input
-              type="text"
-              value={formData.key}
-              onChange={(e) =>
-                setFormData({ ...formData, key: e.target.value })
-              }
-              className="w-full border rounded px-3 py-2"
-              disabled={!!variable}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Label</label>
-            <input
-              type="text"
-              value={formData.label}
-              onChange={(e) =>
-                setFormData({ ...formData, label: e.target.value })
-              }
-              className="w-full border rounded px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Nhóm</label>
-            <input
-              type="text"
-              value={formData.group}
-              onChange={(e) =>
-                setFormData({ ...formData, group: e.target.value })
-              }
-              className="w-full border rounded px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Mô tả</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              className="w-full border rounded px-3 py-2"
-              rows={2}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Thứ tự</label>
-            <input
-              type="number"
-              value={formData.sortOrder}
-              onChange={(e) =>
-                setFormData({ ...formData, sortOrder: +e.target.value })
-              }
-              className="w-full border rounded px-3 py-2"
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2 mt-6">
-          <button onClick={onClose} className="px-4 py-2 border rounded-lg">
-            Hủy
-          </button>
-          <button
-            onClick={() => saveMutation.mutate(formData)}
-            disabled={saveMutation.isPending}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg">
-            {saveMutation.isPending ? "Đang lưu..." : "Lưu"}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
