@@ -7,7 +7,7 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
     Ngay: "14/04/2026",
     Thang: "4",
     Nam: "2026",
-    Ma_Don_Hang: "HD049170",
+    Ma_Hoa_Don: "HD049170",
     Ma_Khach_Hang: "KH241165876",
     Khach_Hang: "Ms Thùy Trang",
     So_Dien_Thoai: "0978034316",

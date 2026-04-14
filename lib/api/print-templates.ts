@@ -2,75 +2,58 @@ import { apiClient } from "@/lib/config/api";
 
 export const printTemplatesApi = {
   getAll: async (params?: { templateFor?: string; isActive?: boolean }) => {
-    const { data } = await apiClient.get("/print-templates", { params });
-    return data;
+    const res = await apiClient.get<any>("/print-templates", params);
+    return res ?? [];
   },
 
   getOne: async (id: number) => {
-    const { data } = await apiClient.get(`/print-templates/${id}`);
-    return data;
+    return apiClient.get(`/print-templates/${id}`);
   },
 
   getByCode: async (code: string) => {
-    const { data } = await apiClient.get(`/print-templates/by-code/${code}`);
-    return data;
+    return apiClient.get(`/print-templates/by-code/${code}`);
   },
 
   create: async (payload: any) => {
-    const { data } = await apiClient.post("/print-templates", payload);
-    return data;
+    return apiClient.post("/print-templates", payload);
   },
 
   update: async (id: number, payload: any) => {
-    const { data } = await apiClient.put(`/print-templates/${id}`, payload);
-    return data;
+    return apiClient.put(`/print-templates/${id}`, payload);
   },
 
   delete: async (id: number) => {
-    const { data } = await apiClient.delete(`/print-templates/${id}`);
-    return data;
+    return apiClient.delete(`/print-templates/${id}`);
   },
 
   getVariables: async (templateFor: string) => {
-    const { data } = await apiClient.get(
+    const res = await apiClient.get<any>(
       `/print-templates/variables/${templateFor}`
     );
-    return data;
+    return res ?? {};
   },
 
   renderPreview: async (templateId: number, entityId: number) => {
-    const { data } = await apiClient.post("/print-templates/preview", {
-      templateId,
-      entityId,
-    });
-    return data;
+    return apiClient.post("/print-templates/preview", { templateId, entityId });
   },
 
   getAllVariables: async (templateFor?: string) => {
-    const { data } = await apiClient.get("/print-templates/variables", {
-      params: { templateFor },
-    });
-    return data;
+    const res = await apiClient.get<any>(
+      "/print-templates/variables",
+      templateFor ? { templateFor } : undefined
+    );
+    return res ?? [];
   },
 
   createVariable: async (payload: any) => {
-    const { data } = await apiClient.post(
-      "/print-templates/variables",
-      payload
-    );
-    return data;
+    return apiClient.post("/print-templates/variables", payload);
   },
 
   updateVariable: async (id: number, payload: any) => {
-    const { data } = await apiClient.put(
-      `/print-templates/variables/${id}`,
-      payload
-    );
-    return data;
+    return apiClient.put(`/print-templates/variables/${id}`, payload);
   },
 
   deleteVariable: async (id: number) => {
-    const { data } = await apiClient.delete(`/print-templates/variables/${id}`);
-    return data;
+    return apiClient.delete(`/print-templates/variables/${id}`);
   },
 };
