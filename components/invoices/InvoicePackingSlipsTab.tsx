@@ -2,24 +2,58 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { packingSlipsApi } from "@/lib/api/packing-slips";
-import { formatCurrency } from "@/lib/utils";
+import { apiClient } from "@/lib/config/api";
 import { Loader2 } from "lucide-react";
 
 interface InvoicePackingSlipsTabProps {
   invoiceId: number;
 }
 
+const TYPE_ORDER: Record<string, number> = {
+  "dong-hang": 0,
+  loading: 1,
+  "giao-hang": 2,
+};
+
+const TYPE_LABEL: Record<string, string> = {
+  "giao-hang": "Giao hàng",
+  "dong-hang": "Đóng hàng",
+  loading: "Loading",
+};
+
+const TYPE_COLOR: Record<string, string> = {
+  "giao-hang": "bg-green-100 text-green-800",
+  "dong-hang": "bg-blue-100 text-blue-800",
+  loading: "bg-purple-100 text-purple-800",
+};
+
 export function InvoicePackingSlipsTab({
   invoiceId,
 }: InvoicePackingSlipsTabProps) {
-  const { data, isLoading } = useQuery({
+  const { data: giaoHangData, isLoading: isLoadingGiaoHang } = useQuery({
     queryKey: ["packing-slips", "invoice", invoiceId],
+    queryFn: () => packingSlipsApi.getPackingSlips({ invoiceId, limit: 100 }),
+  });
+
+  const { data: dongHangData, isLoading: isLoadingDongHang } = useQuery({
+    queryKey: ["packing-hangs", "invoice", invoiceId],
     queryFn: () =>
-      packingSlipsApi.getPackingSlips({
+      apiClient.get<{ data: any[] }>("/packing-hangs", {
         invoiceId,
         limit: 100,
       }),
   });
+
+  const { data: loadingData, isLoading: isLoadingLoading } = useQuery({
+    queryKey: ["packing-loadings", "invoice", invoiceId],
+    queryFn: () =>
+      apiClient.get<{ data: any[] }>("/packing-loadings", {
+        invoiceId,
+        limit: 100,
+      }),
+  });
+
+  const isLoading = isLoadingGiaoHang || isLoadingDongHang || isLoadingLoading;
 
   if (isLoading) {
     return (
@@ -29,9 +63,26 @@ export function InvoicePackingSlipsTab({
     );
   }
 
-  const packingSlips = data?.data || [];
+  const allItems = [
+    ...(dongHangData?.data || []).map((item: any) => ({
+      ...item,
+      type: "dong-hang",
+    })),
+    ...(loadingData?.data || []).map((item: any) => ({
+      ...item,
+      type: "loading",
+    })),
+    ...(giaoHangData?.data || []).map((item: any) => ({
+      ...item,
+      type: "giao-hang",
+    })),
+  ].sort((a, b) => {
+    const orderDiff = (TYPE_ORDER[a.type] ?? 99) - (TYPE_ORDER[b.type] ?? 99);
+    if (orderDiff !== 0) return orderDiff;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
-  if (packingSlips.length === 0) {
+  if (allItems.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">Chưa có báo đơn nào</div>
     );
@@ -42,6 +93,7 @@ export function InvoicePackingSlipsTab({
       <table className="w-full">
         <thead>
           <tr className="border-b bg-gray-50">
+            <th className="px-4 py-3 text-left text-sm font-medium">Loại</th>
             <th className="px-4 py-3 text-left text-sm font-medium">
               Mã báo đơn
             </th>
@@ -52,48 +104,32 @@ export function InvoicePackingSlipsTab({
               Số kiện
             </th>
             <th className="px-4 py-3 text-left text-sm font-medium">
-              Thanh toán
-            </th>
-            <th className="px-4 py-3 text-right text-sm font-medium">
-              Phí gửi bến
-            </th>
-            <th className="px-4 py-3 text-right text-sm font-medium">
-              Phí Grab
-            </th>
-            <th className="px-4 py-3 text-right text-sm font-medium">
-              Cước gửi hàng
-            </th>
-            <th className="px-4 py-3 text-left text-sm font-medium">
               Thời gian
             </th>
           </tr>
         </thead>
         <tbody>
-          {packingSlips.map((slip: any) => (
-            <tr key={slip.id} className="border-b hover:bg-gray-50">
+          {allItems.map((item: any) => (
+            <tr
+              key={`${item.type}-${item.id}`}
+              className="border-b hover:bg-gray-50">
               <td className="px-4 py-3">
-                <span className="text-blue-600 font-medium">{slip.code}</span>
+                <span
+                  className={`px-2 py-1 rounded text-xs font-medium ${
+                    TYPE_COLOR[item.type] || "bg-gray-100 text-gray-800"
+                  }`}>
+                  {TYPE_LABEL[item.type] || item.type}
+                </span>
               </td>
-              <td className="px-4 py-3 text-sm">{slip.branch?.name || "-"}</td>
+              <td className="px-4 py-3">
+                <span className="text-blue-600 font-medium">{item.code}</span>
+              </td>
+              <td className="px-4 py-3 text-sm">{item.branch?.name || "-"}</td>
               <td className="px-4 py-3 text-center text-sm">
-                {slip.numberOfPackages}
+                {item.numberOfPackages}
               </td>
               <td className="px-4 py-3 text-sm">
-                {slip.paymentMethod === "cash"
-                  ? `Tiền mặt - ${formatCurrency(slip.cashAmount)}`
-                  : "Chuyển khoản"}
-              </td>
-              <td className="px-4 py-3 text-right text-sm">
-                {slip.hasFeeGuiBen ? formatCurrency(slip.feeGuiBen) : "-"}
-              </td>
-              <td className="px-4 py-3 text-right text-sm">
-                {slip.hasFeeGrab ? formatCurrency(slip.feeGrab) : "-"}
-              </td>
-              <td className="px-4 py-3 text-right text-sm">
-                {slip.hasCuocGuiHang ? formatCurrency(slip.cuocGuiHang) : "-"}
-              </td>
-              <td className="px-4 py-3 text-sm">
-                {new Date(slip.createdAt).toLocaleString("vi-VN")}
+                {new Date(item.createdAt).toLocaleString("vi-VN")}
               </td>
             </tr>
           ))}
