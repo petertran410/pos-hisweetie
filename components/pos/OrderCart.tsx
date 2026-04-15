@@ -7,6 +7,7 @@ import { useBranchStore } from "@/lib/store/branch";
 import { MapPin, User, Phone, House, MoreVertical } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MultiPaymentModal } from "./MultiPaymentModal";
+import { DeliveryAddressDropdown } from "./DeliveryAddressDropdown";
 
 interface OrderCartProps {
   cartItems: CartItem[];
@@ -31,6 +32,8 @@ interface OrderCartProps {
   isEditMode?: boolean;
   existingOrder?: any;
   documentType?: "order" | "invoice";
+  onSelectAddress?: (address: any) => void;
+  selectedAddressId?: number | null;
 }
 
 export function OrderCart({
@@ -54,6 +57,8 @@ export function OrderCart({
   isEditMode = false,
   existingOrder,
   documentType,
+  onSelectAddress,
+  selectedAddressId,
 }: OrderCartProps) {
   const { user } = useAuthStore();
   const { selectedBranch } = useBranchStore();
@@ -178,6 +183,15 @@ export function OrderCart({
 
         {selectedCustomer && (
           <div className="pl-3 pr-3 pb-3 space-y-2 flex-1">
+            {selectedCustomer.addresses &&
+              selectedCustomer.addresses.length > 1 && (
+                <DeliveryAddressDropdown
+                  addresses={selectedCustomer.addresses}
+                  selectedAddressId={selectedAddressId}
+                  onSelect={(addr) => onSelectAddress?.(addr)}
+                />
+              )}
+
             <div className="border rounded-xl shadow-sm p-3 space-y-5">
               <div className="flex items-center gap-1.5">
                 <MapPin className="w-5 h-5 text-blue-500 flex-shrink-0" />
@@ -190,7 +204,7 @@ export function OrderCart({
               </div>
 
               <div className="flex items-center gap-1.5">
-                <Phone className="w-5 h-5 text-gray-400 flex-shrink-0" />{" "}
+                <Phone className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 <span className="text-lg">
                   {deliveryInfo.contactNumber || ""}
                 </span>

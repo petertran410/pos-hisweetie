@@ -26,6 +26,10 @@ import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
 import { priceBooksApi } from "@/lib/api";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { queuePrintAfterRedirect } from "@/lib/utils/print";
+import {
+  getDefaultAddress,
+  addressToDeliveryInfo,
+} from "@/lib/utils/customer-address";
 
 export interface CartItem {
   product: any;
@@ -69,6 +73,7 @@ export interface Tab {
   sourceOrderId?: number;
   sourceOrder?: any;
   isEditMode?: boolean;
+  selectedAddressId?: number | null;
 }
 
 const STORAGE_KEY = "pos-tabs";
@@ -92,6 +97,7 @@ const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   useCOD: false,
   paymentAmount: 0,
   paymentMethods: [],
+  selectedAddressId: null,
   deliveryInfo: {
     receiver: "",
     contactNumber: "",
@@ -793,6 +799,7 @@ export default function BanHangPage() {
               sourceOrderId: tab.documentId,
               sourceOrder: order,
               documentId: undefined,
+              selectedAddressId: null,
               cartItems: remainingCartItems,
               selectedCustomer: order.customer || tab.selectedCustomer,
               discount: remainingDiscount > 0 ? remainingDiscount : 0,
@@ -991,6 +998,7 @@ export default function BanHangPage() {
           noteForDriver: "",
         },
         documentId: undefined,
+        selectedAddressId: null,
       });
 
       toast.success(
@@ -1035,29 +1043,46 @@ export default function BanHangPage() {
   }, [tabs, isInitialized]);
 
   const handleCustomerSelect = (customer: any) => {
+    if (!customer) {
+      updateActiveTab({
+        selectedCustomer: null,
+        deliveryInfo: {
+          receiver: "",
+          contactNumber: "",
+          detailAddress: "",
+          locationName: "",
+          wardName: "",
+          weight: 0,
+          length: 10,
+          width: 10,
+          height: 10,
+          noteForDriver: "",
+        },
+      });
+      return;
+    }
+
+    const defaultAddr = getDefaultAddress(customer.addresses);
+    const fill = addressToDeliveryInfo(customer, defaultAddr);
+
     updateActiveTab({
       selectedCustomer: customer,
-      deliveryInfo: customer
-        ? {
-            ...activeTab.deliveryInfo,
-            receiver: customer.name || "",
-            contactNumber: customer.contactNumber || customer.phone || "",
-            detailAddress: customer.address || "",
-            locationName: customer.cityName || "",
-            wardName: customer.wardName || "",
-          }
-        : {
-            receiver: "",
-            contactNumber: "",
-            detailAddress: "",
-            locationName: "",
-            wardName: "",
-            weight: 0,
-            length: 10,
-            width: 10,
-            height: 10,
-            noteForDriver: "",
-          },
+      deliveryInfo: {
+        ...activeTab.deliveryInfo,
+        ...fill,
+      },
+    });
+  };
+
+  const handleSelectAddress = (address: any) => {
+    if (!activeTab.selectedCustomer) return;
+    const fill = addressToDeliveryInfo(activeTab.selectedCustomer, address);
+    updateActiveTab({
+      deliveryInfo: {
+        ...activeTab.deliveryInfo,
+        ...fill,
+      },
+      selectedAddressId: address.id,
     });
   };
 
@@ -1626,6 +1651,8 @@ export default function BanHangPage() {
               isEditMode={!!activeTab.documentId}
               existingOrder={activeTab.sourceOrder || existingOrder}
               documentType={activeTab.type}
+              onSelectAddress={handleSelectAddress}
+              selectedAddressId={activeTab.selectedAddressId}
             />
           </>
         ) : (
@@ -1672,6 +1699,8 @@ export default function BanHangPage() {
               isCreatingFromOrder={!!activeTab.sourceOrderId}
               existingOrder={activeTab.sourceOrder || existingInvoice}
               documentType={activeTab.type}
+              onSelectAddress={handleSelectAddress}
+              selectedAddressId={activeTab.selectedAddressId}
             />
           </>
         )}
