@@ -7,7 +7,7 @@ import {
   useOrder,
   useUpdateOrder,
 } from "@/lib/hooks/useOrders";
-import { ChevronDown, Loader2, MapPin } from "lucide-react";
+import { ChevronDown, Loader2, MapPin, Printer } from "lucide-react";
 import { toast } from "sonner";
 import {
   ORDER_STATUS,
@@ -18,6 +18,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { INVOICE_STATUS } from "@/lib/types/invoice";
 import { useAuthStore } from "@/lib/store/auth";
 import { CancelOrderModal } from "./CancelOrderModal";
+import { printEntity } from "@/lib/utils/print";
 
 const getOrderStatusBadgeColor = (status: number) => {
   switch (status) {
@@ -141,6 +142,15 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
       toast.error("Không thể lưu đơn hàng");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    if (!order) return;
+    try {
+      await printEntity("order", order.id);
+    } catch (e: any) {
+      toast.error(e?.message || "In thất bại");
     }
   };
 
@@ -561,8 +571,6 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           Hủy
                         </button>
                       )}
-                    </div>
-                    <div className="flex gap-2">
                       <button
                         onClick={handleProcessOrder}
                         hidden={
@@ -574,17 +582,23 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                         Xử lý đơn hàng
                       </button>
+                    </div>
+                    <div className="flex gap-2">
                       <button
                         onClick={handleSave}
                         disabled={isSaving}
                         className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         {isSaving ? "Đang lưu..." : "Lưu"}
                       </button>
-                      <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                        Kết thúc
+                      <button
+                        onClick={handlePrint}
+                        disabled={order.status === ORDER_STATUS.CANCELLED}
+                        className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50">
+                        <Printer className="w-4 h-4" />
+                        In
                       </button>
                       <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                        In
+                        Kết thúc
                       </button>
                     </div>
                   </div>
