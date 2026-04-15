@@ -246,20 +246,26 @@ export function InvoiceDetailRow({
       <td colSpan={colSpan} className="py-2 bg-gray-50">
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1090px] 2xl:max-w-[1540px]">
           <div className="p-6">
-            <div className="border-b border-gray-200 pb-4 mb-6">
-              <div className="flex items-center mb-3 content-center gap-2 text-xl">
+            <div className="border-b border-gray-200 mb-6">
+              <div className="flex items-center content-center gap-2 text-md">
                 <p className="font-bold gap-3">{invoice.code}</p>
                 {"-"}
                 <h3 className="">
                   {invoice.customer?.name || "Khách vãng lai"}
                 </h3>
+                <span
+                  className={`px-2 py-1 rounded text-sm font-medium ${getInvoiceStatusColor(
+                    invoice.status
+                  )}`}>
+                  {getInvoiceStatusText(invoice.status)}
+                </span>
               </div>
 
-              <div className="border-b">
+              <div>
                 <div className="flex gap-1">
                   <button
                     onClick={() => setActiveTab("info")}
-                    className={`py-4 text-md font-medium border-b-2 transition-colors ${
+                    className={` text-sm font-medium border-b-2 transition-colors ${
                       activeTab === "info"
                         ? "border-blue-600 text-blue-600"
                         : "border-transparent text-gray-600 hover:text-gray-900"
@@ -268,7 +274,7 @@ export function InvoiceDetailRow({
                   </button>
                   <button
                     onClick={() => setActiveTab("deliveries")}
-                    className={`px-4 py-4 text-md font-medium border-b-2 transition-colors ${
+                    className={`px-4 py-4 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === "deliveries"
                         ? "border-blue-600 text-blue-600"
                         : "border-transparent text-gray-600 hover:text-gray-900"
@@ -277,7 +283,7 @@ export function InvoiceDetailRow({
                   </button>
                   <button
                     onClick={() => setActiveTab("payments")}
-                    className={`px-4 py-4 text-md font-medium border-b-2 transition-colors ${
+                    className={`px-4 py-4 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === "payments"
                         ? "border-blue-600 text-blue-600"
                         : "border-transparent text-gray-600 hover:text-gray-900"
@@ -288,60 +294,60 @@ export function InvoiceDetailRow({
               </div>
             </div>
 
-            <div className="py-6">
+            <div>
               {activeTab === "info" && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-4 gap-6">
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
+                <div>
+                  <div className="flex gap-6 mb-4">
+                    <div className="flex gap-1">
+                      <label className="text-sm font-medium text-gray-500">
                         Người tạo:
                       </label>
-                      <span className="w-full px-3 py-2 text-md border rounded bg-gray-50">
+                      <span className="text-sm font-medium text-gray-500">
                         {invoice.creator?.name || "-"}
                       </span>
                     </div>
 
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
+                    <div className="flex gap-1">
+                      <label className="text-sm font-medium text-gray-500">
                         Người bán:
                       </label>
-                      <span className="w-full px-3 py-2 text-md border rounded bg-white">
+                      <span className="text-sm font-medium text-gray-500">
                         {invoice.soldBy?.name || invoice.creator?.name || "-"}
                       </span>
                     </div>
 
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
+                    <div className="flex gap-1">
+                      <label className="text-sm font-medium text-gray-500">
                         Ngày bán:
                       </label>
-                      <span className="w-full px-3 py-2 text-md border rounded bg-gray-50">
+                      <span className="text-sm font-medium text-gray-500">
                         {formatDateTime(invoice.purchaseDate)}
                       </span>
                     </div>
 
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
+                    <div className="flex gap-1">
+                      <label className="text-sm font-medium text-gray-500">
                         Chi nhánh xử lý:
                       </label>
-                      <span className="w-full px-3 py-2 text-md border rounded bg-white">
+                      <span className="text-sm font-medium text-gray-500">
                         {invoice.branch?.name || "-"}
                       </span>
                     </div>
 
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
+                    <div className="flex gap-1">
+                      <label className="text-sm font-medium text-gray-500">
                         Bảng giá:
                       </label>
-                      <span className="w-full px-3 py-2 text-md border rounded bg-white">
+                      <span className="text-sm font-medium text-gray-500">
                         {invoice.priceBookName || "Bảng giá chung"}
                       </span>
                     </div>
 
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
+                    {/* <div className="flex gap-1">
+                      <label className="text-sm font-medium text-gray-500">
                         Trạng thái:
                       </label>
-                      <div className="w-full px-3 py-2 border rounded bg-gray-50">
+                      <div className="text-sm font-medium text-gray-500">
                         <span
                           className={`px-2 py-1 rounded text-sm font-medium ${getInvoiceStatusColor(
                             invoice.status
@@ -349,20 +355,7 @@ export function InvoiceDetailRow({
                           {getInvoiceStatusText(invoice.status)}
                         </span>
                       </div>
-                    </div>
-
-                    <div className="col-span-4">
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Ghi chú hóa đơn:
-                      </label>
-                      <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="w-full px-3 py-2 text-md border rounded bg-white resize-none"
-                        rows={2}
-                        placeholder="Nhập ghi chú hóa đơn"
-                      />
-                    </div>
+                    </div> */}
                   </div>
 
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -486,7 +479,18 @@ export function InvoiceDetailRow({
                   </div>
 
                   <div className="flex gap-6">
-                    <div className="flex-1"></div>
+                    <div className="flex-1">
+                      <label className="text-md font-medium text-gray-500">
+                        Ghi chú hóa đơn:
+                      </label>
+                      <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="w-full px-3 py-2 text-md border rounded bg-white resize-none"
+                        rows={2}
+                        placeholder="Nhập ghi chú hóa đơn"
+                      />
+                    </div>
                     <div className="w-80">
                       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
                         <div className="flex justify-between items-center text-md">
