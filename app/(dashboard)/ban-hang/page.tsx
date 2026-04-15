@@ -25,6 +25,7 @@ import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
 import { priceBooksApi } from "@/lib/api";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { queuePrintAfterRedirect } from "@/lib/utils/print";
 
 export interface CartItem {
   product: any;
@@ -1242,6 +1243,9 @@ export default function BanHangPage() {
 
         setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
 
+        // QUEUE PRINT
+        queuePrintAfterRedirect("order", activeTab.documentId);
+
         toast.success("Lưu đơn hàng thành công");
         router.push("/don-hang/dat-hang");
       } catch (error: any) {
@@ -1359,6 +1363,9 @@ export default function BanHangPage() {
       localStorage.removeItem(key);
 
       setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
+
+      // QUEUE PRINT
+      queuePrintAfterRedirect("invoice", activeTab.documentId);
 
       toast.success("Lưu hóa đơn thành công");
       router.push("/don-hang/hoa-don");
@@ -1482,15 +1489,21 @@ export default function BanHangPage() {
             });
           }
         }
+
+        // QUEUE PRINT
+        if (result?.order?.id) {
+          queuePrintAfterRedirect("order", result.order.id);
+        }
       } else {
-        await createInvoice.mutateAsync(documentData);
+        const result = await createInvoice.mutateAsync(documentData);
+
+        // QUEUE PRINT
+        if (result?.id) {
+          queuePrintAfterRedirect("invoice", result.id);
+        }
       }
 
       handleCloseTab(activeTabId);
-
-      // toast.success(
-      //   `Tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"} thành công`
-      // );
       router.push(
         activeTab.type === "order" ? "/don-hang/dat-hang" : "/don-hang/hoa-don"
       );

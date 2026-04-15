@@ -5,10 +5,13 @@ import { OrdersTable } from "@/components/orders/OrdersTable";
 import { OrdersSidebar } from "@/components/orders/OrdersSidebar";
 import type { Order } from "@/lib/types/order";
 import { useRouter } from "next/navigation";
+import { usePendingPrint } from "@/lib/hooks/usePendingPrint";
 
 export default function DatHangPage() {
   const router = useRouter();
   const [filters, setFilters] = useState({});
+
+  usePendingPrint();
 
   const handleCreateClick = () => {
     router.push("/ban-hang?type=order");

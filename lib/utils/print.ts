@@ -84,3 +84,37 @@ export async function printEntity(
     cleanup();
   };
 }
+
+const PENDING_PRINT_KEY = "pending-print";
+
+/**
+ * Lưu yêu cầu in để trang đích sau redirect tự xử lý.
+ */
+export function queuePrintAfterRedirect(
+  templateFor: string,
+  entityId: number
+): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(
+    PENDING_PRINT_KEY,
+    JSON.stringify({ templateFor, entityId })
+  );
+}
+
+/**
+ * Đọc và xóa yêu cầu in pending. Trả về null nếu không có.
+ */
+export function consumePendingPrint(): {
+  templateFor: string;
+  entityId: number;
+} | null {
+  if (typeof window === "undefined") return null;
+  const raw = sessionStorage.getItem(PENDING_PRINT_KEY);
+  if (!raw) return null;
+  sessionStorage.removeItem(PENDING_PRINT_KEY);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}

@@ -22,6 +22,7 @@ import type { Invoice } from "@/lib/types/invoice";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { usePendingPrint } from "@/lib/hooks/usePendingPrint";
 
 type FormType = "giao-hang" | "dong-hang" | "loading" | null;
 
@@ -37,11 +38,10 @@ export default function HoaDonPage() {
   );
 
   const createPackingSlip = useCreatePackingSlip();
-  const updatePackingSlip = useUpdatePackingSlip();
   const createPackingHang = useCreatePackingHang();
-  const updatePackingHang = useUpdatePackingHang();
   const createPackingLoading = useCreatePackingLoading();
-  const updatePackingLoading = useUpdatePackingLoading();
+
+  usePendingPrint();
 
   const handleCreateClick = () => {
     router.push("/ban-hang?type=invoice");
