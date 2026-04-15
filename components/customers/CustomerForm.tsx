@@ -6,13 +6,12 @@ import {
   useCreateCustomer,
   useCustomerGroups,
   useUpdateCustomer,
-  useParentCustomers,
 } from "@/lib/hooks/useCustomers";
-import { X, Calendar } from "lucide-react";
+import { X, Calendar, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Customer } from "@/lib/types/customer";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useBranchStore } from "@/lib/store/branch";
+import { CustomerAddressItem } from "./CustomerAddressItem";
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -57,6 +56,35 @@ interface Commune {
   provinceCode: string;
 }
 
+const createEmptyAddress = (isDefault = false) => ({
+  label: undefined,
+  receiver: undefined,
+  contactNumber: undefined,
+  address: undefined,
+  cityCode: undefined,
+  cityName: undefined,
+  districtCode: undefined,
+  districtName: undefined,
+  wardCode: undefined,
+  wardName: undefined,
+  newCityCode: undefined,
+  newCityName: undefined,
+  newWardCode: undefined,
+  newWardName: undefined,
+  invoiceBuyerName: undefined,
+  invoiceAddress: undefined,
+  invoiceCityCode: undefined,
+  invoiceCityName: undefined,
+  invoiceWardCode: undefined,
+  invoiceWardName: undefined,
+  invoiceCccdCmnd: undefined,
+  invoiceBankAccount: undefined,
+  invoiceEmail: undefined,
+  invoicePhone: undefined,
+  invoiceDvqhnsCode: undefined,
+  isDefault,
+});
+
 export function CustomerForm({
   customer,
   onClose,
@@ -74,17 +102,10 @@ export function CustomerForm({
   const { selectedBranch } = useBranchStore();
 
   const [cities, setCities] = useState<City[]>([]);
-  const [districts, setDistricts] = useState<District[]>([]);
-  const [wards, setWards] = useState<Ward[]>([]);
-
   const [invoiceProvinces, setInvoiceProvinces] = useState<Province[]>([]);
   const [invoiceCommunes, setInvoiceCommunes] = useState<Commune[]>([]);
-  const [filteredInvoiceCommunes, setFilteredInvoiceCommunes] = useState<
-    Commune[]
-  >([]);
-  const [isPopulating, setIsPopulating] = useState(false);
-  const [citiesLoaded, setCitiesLoaded] = useState(false);
-  const [invoiceDataLoaded, setInvoiceDataLoaded] = useState(false);
+
+  const [addresses, setAddresses] = useState<any[]>([createEmptyAddress(true)]);
 
   const { data: customerGroupsData } = useCustomerGroups();
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
@@ -98,138 +119,52 @@ export function CustomerForm({
   const [showYearPicker, setShowYearPicker] = useState(false);
 
   const customerType = watch("type", "0");
-  const selectedCityCode = watch("cityCode");
-  const selectedDistrictCode = watch("districtCode");
-  const selectedInvoiceCityCode = watch("invoiceCityCode");
 
-  const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
-  const [showParentDropdown, setShowParentDropdown] = useState(false);
-  const [parentSearchTerm, setParentSearchTerm] = useState("");
-  const parentDropdownRef = useRef<HTMLDivElement>(null);
-
-  const { data: parentCustomersData } = useParentCustomers(parentSearchTerm);
-
-  const checkInvoiceDataLoaded = () => {
-    if (invoiceProvinces.length > 0 && invoiceCommunes.length > 0) {
-      setInvoiceDataLoaded(true);
-    }
-  };
-
+  // Load cities (địa chỉ cũ)
   useEffect(() => {
-    const loadCities = async () => {
-      try {
-        const response = await fetch("/data/old-location.json");
-
-        if (!response.ok) {
-          throw new Error("Failed to load cities");
-        }
-
-        const data = await response.json();
-
-        if (Array.isArray(data)) {
-          setCities(data);
-          setCitiesLoaded(true);
-        } else {
-          console.error("Invalid cities data structure:", data);
-          setCities([]);
-          setCitiesLoaded(true);
-        }
-      } catch (error) {
-        console.error("Error loading cities:", error);
+    fetch("/data/old-location.json")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setCities(data);
+      })
+      .catch(() => {
         toast.error("Không thể tải dữ liệu Tỉnh/Thành phố");
-        setCities([]);
-        setCitiesLoaded(true);
-      }
-    };
-
-    loadCities();
+      });
   }, []);
 
+  // Load invoiceProvinces (địa chỉ mới)
   useEffect(() => {
-    const loadInvoiceProvinces = async () => {
-      try {
-        const response = await fetch("/data/new-province-location.json");
-
-        if (!response.ok) {
-          throw new Error("Failed to load invoice provinces");
-        }
-
-        const data = await response.json();
-
+    fetch("/data/new-province-location.json")
+      .then((res) => res.json())
+      .then((data) => {
         if (Array.isArray(data)) {
           setInvoiceProvinces(data);
-        } else if (data && Array.isArray(data.provinces)) {
+        } else if (data?.provinces) {
           setInvoiceProvinces(data.provinces);
-        } else {
-          console.error("Invalid provinces data structure:", data);
-          setInvoiceProvinces([]);
         }
-
-        checkInvoiceDataLoaded();
-      } catch (error) {
-        console.error("Error loading invoice provinces:", error);
+      })
+      .catch(() => {
         setInvoiceProvinces([]);
-        checkInvoiceDataLoaded();
-      }
-    };
-
-    loadInvoiceProvinces();
+      });
   }, []);
 
+  // Load invoiceCommunes (địa chỉ mới)
   useEffect(() => {
-    const loadInvoiceCommunes = async () => {
-      try {
-        const response = await fetch("/data/new-commune-location.json");
-
-        if (!response.ok) {
-          throw new Error("Failed to load invoice communes");
-        }
-
-        const data = await response.json();
-
+    fetch("/data/new-commune-location.json")
+      .then((res) => res.json())
+      .then((data) => {
         if (Array.isArray(data)) {
           setInvoiceCommunes(data);
-        } else if (data && Array.isArray(data.communes)) {
+        } else if (data?.communes) {
           setInvoiceCommunes(data.communes);
-        } else {
-          console.error("Invalid communes data structure:", data);
-          setInvoiceCommunes([]);
         }
-
-        checkInvoiceDataLoaded();
-      } catch (error) {
-        console.error("Error loading invoice communes:", error);
+      })
+      .catch(() => {
         setInvoiceCommunes([]);
-        checkInvoiceDataLoaded();
-      }
-    };
-
-    loadInvoiceCommunes();
+      });
   }, []);
 
-  useEffect(() => {
-    if (selectedInvoiceCityCode && invoiceCommunes.length > 0) {
-      const filtered = invoiceCommunes.filter(
-        (commune) =>
-          String(commune.provinceCode) === String(selectedInvoiceCityCode)
-      );
-      setFilteredInvoiceCommunes(filtered);
-    } else {
-      setFilteredInvoiceCommunes([]);
-    }
-  }, [selectedInvoiceCityCode, invoiceCommunes]);
-
-  useEffect(() => {
-    if (selectedInvoiceCityCode && invoiceCommunes.length > 0) {
-      const filtered = invoiceCommunes.filter(
-        (commune) => commune.provinceCode === selectedInvoiceCityCode
-      );
-      setFilteredInvoiceCommunes(filtered);
-    } else {
-      setFilteredInvoiceCommunes([]);
-    }
-  }, [selectedInvoiceCityCode, invoiceCommunes]);
-
+  // Click outside cho group dropdown + birth picker
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -245,171 +180,49 @@ export function CustomerForm({
       ) {
         setShowBirthDatePicker(false);
       }
-      if (
-        parentDropdownRef.current &&
-        !parentDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowParentDropdown(false);
-      }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (selectedCityCode && !isPopulating) {
-      const city = cities.find(
-        (c) => String(c.code) === String(selectedCityCode)
-      );
-      if (city) {
-        setDistricts(city.districts || []);
-
-        const currentDistrictCode = watch("districtCode");
-        if (
-          !currentDistrictCode ||
-          !city.districts.find(
-            (d) => String(d.code) === String(currentDistrictCode)
-          )
-        ) {
-          setValue("districtCode", "");
-          setValue("wardCode", "");
-          setWards([]);
-        }
-      }
-    } else if (!selectedCityCode && !isPopulating) {
-      setDistricts([]);
-      setWards([]);
-    }
-  }, [selectedCityCode, cities, setValue, isPopulating, watch]);
-
-  useEffect(() => {
-    if (selectedDistrictCode && !isPopulating) {
-      const district = districts.find(
-        (d) => String(d.code) === String(selectedDistrictCode)
-      );
-      if (district) {
-        setWards(district.wards || []);
-
-        const currentWardCode = watch("wardCode");
-        if (
-          !currentWardCode ||
-          !district.wards.find(
-            (w) => String(w.code) === String(currentWardCode)
-          )
-        ) {
-          setValue("wardCode", "");
-        }
-      }
-    } else if (!selectedDistrictCode && !isPopulating) {
-      setWards([]);
-    }
-  }, [selectedDistrictCode, districts, setValue, isPopulating, watch]);
-
+  // Populate khi edit
   useEffect(() => {
     if (customer) {
-      setIsPopulating(true);
-
       setValue("code", customer.code || "");
       setValue("name", customer.name);
       setValue("contactNumber", customer.contactNumber || "");
       setValue("phone", customer.phone || "");
+      setValue("email", customer.email || "");
+      setValue("type", String(customer.type || 0));
+      setValue("organization", customer.organization || "");
+      setValue("taxCode", customer.taxCode || "");
+      setValue("comments", customer.comments || "");
+      setValue(
+        "gender",
+        customer.gender === null || customer.gender === undefined
+          ? ""
+          : customer.gender
+            ? "true"
+            : "false"
+      );
 
       if (customer.birthDate) {
         setBirthDate(new Date(customer.birthDate));
       }
 
-      setValue(
-        "gender",
-        customer.gender === null ? "" : customer.gender ? "true" : "false"
-      );
-      setValue("email", customer.email || "");
-      setValue("address", customer.address || "");
-      setValue("type", String(customer.type || 0));
-      setValue("organization", customer.organization || "");
-      setValue("taxCode", customer.taxCode || "");
-      setValue("invoiceBuyerName", customer.invoiceBuyerName || "");
-      setValue("invoiceAddress", customer.invoiceAddress || "");
-      setValue("invoiceCccdCmnd", customer.invoiceCccdCmnd || "");
-      setValue("invoiceEmail", customer.invoiceEmail || "");
-      setValue("invoicePhone", customer.invoicePhone || "");
-      setValue("invoiceDvqhnsCode", customer.invoiceDvqhnsCode || "");
-      setValue("comments", customer.comments || "");
-
-      if (customer.cityCode && cities.length > 0) {
-        const city = cities.find(
-          (c) => String(c.code) === String(customer.cityCode)
+      if (customer.customerGroupDetails?.length) {
+        setSelectedGroupIds(
+          customer.customerGroupDetails.map((d: any) => d.groupId)
         );
-
-        if (city) {
-          setDistricts(city.districts || []);
-          setValue("cityCode", customer.cityCode);
-
-          if (customer.districtCode) {
-            const district = city.districts.find(
-              (d) => String(d.code) === String(customer.districtCode)
-            );
-
-            if (district) {
-              setWards(district.wards || []);
-
-              setTimeout(() => {
-                setValue("districtCode", customer.districtCode);
-
-                if (customer.wardCode) {
-                  setTimeout(() => {
-                    setValue("wardCode", customer.wardCode);
-                  }, 50);
-                }
-              }, 50);
-            }
-          }
-        }
       }
 
-      if (customer.invoiceCityCode && invoiceCommunes.length > 0) {
-        setValue("invoiceCityCode", customer.invoiceCityCode);
-
-        const filtered = invoiceCommunes.filter(
-          (commune) =>
-            String(commune.provinceCode) === String(customer.invoiceCityCode)
-        );
-        setFilteredInvoiceCommunes(filtered);
-
-        if (customer.invoiceWardCode) {
-          setValue("invoiceWardCode", customer.invoiceWardCode);
-        }
+      if (customer.addresses && customer.addresses.length > 0) {
+        setAddresses(customer.addresses);
+      } else {
+        setAddresses([createEmptyAddress(true)]);
       }
-
-      setValue("comments", customer.comments || "");
-
-      if (
-        customer.customerGroupDetails &&
-        customer.customerGroupDetails.length > 0
-      ) {
-        const groupIds = customer.customerGroupDetails.map(
-          (detail: any) => detail.groupId
-        );
-        setSelectedGroupIds(groupIds);
-      }
-
-      if (customer.parentId) {
-        setSelectedParentId(customer.parentId);
-      }
-
-      setTimeout(() => {
-        setIsPopulating(false);
-      }, 150);
     }
-  }, [
-    customer,
-    cities,
-    citiesLoaded,
-    invoiceProvinces,
-    invoiceCommunes,
-    invoiceDataLoaded,
-    setValue,
-  ]);
+  }, [customer, setValue]);
 
   const handleToggleGroup = (groupId: number) => {
     setSelectedGroupIds((prev) =>
@@ -427,14 +240,6 @@ export function CustomerForm({
     customerGroupsData?.data?.filter((group) =>
       group.name.toLowerCase().includes(groupSearchTerm.toLowerCase())
     ) || [];
-
-  const filteredParents = (parentCustomersData?.data || []).filter(
-    (p) => !customer || p.id !== customer.id
-  );
-
-  const selectedParent =
-    filteredParents.find((p) => p.id === selectedParentId) ||
-    (parentCustomersData?.data || []).find((p) => p.id === selectedParentId);
 
   const selectedGroups =
     customerGroupsData?.data?.filter((group) =>
@@ -454,57 +259,71 @@ export function CustomerForm({
     setShowBirthDatePicker(false);
   };
 
-  const onSubmit = async (data: any) => {
-    const cityName = cities.find(
-      (c) => String(c.code) === String(data.cityCode)
-    )?.name;
-    const districtName = districts.find(
-      (d) => String(d.code) === String(data.districtCode)
-    )?.name;
-    const wardName = wards.find(
-      (w) => String(w.code) === String(data.wardCode)
-    )?.name;
+  // Handlers cho danh sách địa chỉ
+  const handleAddAddress = () => {
+    setAddresses((prev) => [...prev, createEmptyAddress(false)]);
+  };
 
-    const invoiceCityName = invoiceProvinces.find(
-      (p) => p.code === data.invoiceCityCode
-    )?.name;
-    const invoiceWardName = filteredInvoiceCommunes.find(
-      (c) => c.code === data.invoiceWardCode
-    )?.name;
+  const handleUpdateAddress = (index: number, addr: any) => {
+    setAddresses((prev) => prev.map((a, i) => (i === index ? addr : a)));
+  };
+
+  const handleRemoveAddress = (index: number) => {
+    setAddresses((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      // Đảm bảo còn 1 default
+      if (!next.some((a) => a.isDefault) && next.length > 0) {
+        next[0] = { ...next[0], isDefault: true };
+      }
+      return next;
+    });
+  };
+
+  const handleSetDefault = (index: number) => {
+    setAddresses((prev) =>
+      prev.map((a, i) => ({ ...a, isDefault: i === index }))
+    );
+  };
+
+  const validateAddresses = (): string | null => {
+    if (addresses.length === 0) {
+      return "Phải có ít nhất 1 địa chỉ giao hàng";
+    }
+    const defaultCount = addresses.filter((a) => a.isDefault).length;
+    if (defaultCount !== 1) {
+      return "Phải có đúng 1 địa chỉ mặc định";
+    }
+    for (let i = 0; i < addresses.length; i++) {
+      const a = addresses[i];
+      if (!a.cityCode && !a.newCityCode) {
+        return `Địa chỉ #${i + 1}: Phải điền ít nhất 1 trong 2 loại địa chỉ (cũ hoặc mới)`;
+      }
+    }
+    return null;
+  };
+
+  const onSubmit = async (data: any) => {
+    const validationError = validateAddresses();
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
 
     const formattedData: Record<string, any> = {
       name: data.name || undefined,
       contactNumber: data.contactNumber || undefined,
       branchId: selectedBranch?.id,
       groupIds: selectedGroupIds.length > 0 ? selectedGroupIds : undefined,
-      parentId: selectedParentId !== null ? selectedParentId : null,
       code: data.code || undefined,
-      cityCode: data.cityCode ? String(data.cityCode) : undefined,
-      cityName: cityName || undefined,
-      districtCode: data.districtCode ? String(data.districtCode) : undefined,
-      districtName: districtName || undefined,
-      wardCode: data.wardCode ? String(data.wardCode) : undefined,
-      wardName: wardName || undefined,
       email: data.email || undefined,
       phone: data.phone || undefined,
-      address: data.address || undefined,
       comments: data.comments || undefined,
-      invoiceCityCode: data.invoiceCityCode || undefined,
-      invoiceCityName: invoiceCityName || undefined,
-      invoiceWardCode: data.invoiceWardCode || undefined,
-      invoiceWardName: invoiceWardName || undefined,
-      invoiceAddress: data.invoiceAddress || undefined,
-      invoiceBuyerName: data.invoiceBuyerName || undefined,
-      invoiceCccdCmnd: data.invoiceCccdCmnd || undefined,
-      invoiceBankAccount: data.invoiceBankAccount || undefined,
-      invoiceEmail: data.invoiceEmail || undefined,
-      invoicePhone: data.invoicePhone || undefined,
-      invoiceDvqhnsCode: data.invoiceDvqhnsCode || undefined,
       organization: data.organization || undefined,
       taxCode: data.taxCode || undefined,
       type: parseInt(data.type),
       birthDate: birthDate ? birthDate.toISOString() : undefined,
       gender: data.gender === "" ? undefined : data.gender === "true",
+      addresses,
     };
 
     Object.keys(formattedData).forEach((key) => {
@@ -527,7 +346,7 @@ export function CustomerForm({
         }
       );
     } else {
-      createCustomer.mutate(formattedData, {
+      createCustomer.mutate(formattedData as any, {
         onSuccess: () => {
           onSuccess?.();
           onClose();
@@ -552,6 +371,7 @@ export function CustomerForm({
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+          {/* Thông tin cơ bản */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -596,6 +416,29 @@ export function CustomerForm({
             </div>
 
             <div>
+              <label className="block text-sm font-medium mb-2">Email</label>
+              <input
+                type="email"
+                {...register("email")}
+                placeholder="email@gmail.com"
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Giới tính
+              </label>
+              <select
+                {...register("gender")}
+                className="w-full border rounded px-3 py-2">
+                <option value="">Chọn</option>
+                <option value="true">Nam</option>
+                <option value="false">Nữ</option>
+              </select>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium mb-2">
                 Sinh nhật
               </label>
@@ -624,20 +467,8 @@ export function CustomerForm({
                           setBirthDate(newDate);
                         }}
                         className="p-1 hover:bg-gray-100 rounded">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 19l-7-7 7-7"
-                          />
-                        </svg>
+                        ‹
                       </button>
-
                       <div className="flex items-center gap-2 relative">
                         <button
                           type="button"
@@ -719,7 +550,6 @@ export function CustomerForm({
                           </div>
                         )}
                       </div>
-
                       <button
                         type="button"
                         onClick={() => {
@@ -730,28 +560,13 @@ export function CustomerForm({
                           setBirthDate(newDate);
                         }}
                         className="p-1 hover:bg-gray-100 rounded">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
+                        ›
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-7 gap-1 mb-2">
-                      {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map((day) => (
-                        <div
-                          key={day}
-                          className="text-center text-xs font-medium text-gray-500 py-1">
-                          {day}
-                        </div>
+                    <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-1">
+                      {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map((d) => (
+                        <div key={d}>{d}</div>
                       ))}
                     </div>
 
@@ -775,12 +590,6 @@ export function CustomerForm({
                           return <div key={i} className="w-8 h-8" />;
                         }
 
-                        const isToday =
-                          dayNumber === new Date().getDate() &&
-                          currentDate.getMonth() === new Date().getMonth() &&
-                          currentDate.getFullYear() ===
-                            new Date().getFullYear();
-
                         return (
                           <button
                             key={i}
@@ -796,280 +605,155 @@ export function CustomerForm({
                             className={`w-8 h-8 rounded text-sm transition-colors ${
                               dayNumber === currentDate.getDate()
                                 ? "bg-blue-600 text-white font-medium"
-                                : isToday
-                                  ? "border border-blue-600 text-blue-600"
-                                  : "hover:bg-gray-100"
+                                : "hover:bg-gray-100"
                             }`}>
                             {dayNumber}
                           </button>
                         );
                       })}
                     </div>
-
-                    <div className="mt-3 pt-3 border-t flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBirthDate(new Date());
-                          setShowBirthDatePicker(false);
-                        }}
-                        className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded">
-                        Hôm nay
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Giới tính
-              </label>
-              <select
-                {...register("gender")}
-                className="w-full border rounded px-3 py-2">
-                <option value="">Chọn giới tính</option>
-                <option value="true">Nam</option>
-                <option value="false">Nữ</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
-              <input
-                type="email"
-                {...register("email")}
-                placeholder="email@gmail.com"
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
           </div>
 
+          {/* Loại khách hàng + Thông tin doanh nghiệp */}
           <div className="border-t pt-6">
-            <h3 className="font-semibold mb-4">Địa chỉ</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Khu vực <span className="text-red-500">*</span>
-                </label>
+            <h3 className="font-semibold mb-4">Loại khách hàng</h3>
+            <div className="flex gap-4 mb-4">
+              <label className="flex items-center gap-2">
                 <input
-                  {...register("address", { required: true })}
-                  placeholder="Nhập địa chỉ"
-                  className="w-full border rounded px-3 py-2"
+                  type="radio"
+                  value="0"
+                  {...register("type")}
+                  defaultChecked
                 />
-              </div>
+                <span>Cá nhân</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="radio" value="1" {...register("type")} />
+                <span>Tổ chức/Hộ kinh doanh</span>
+              </label>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Tỉnh/Thành phố <span className="text-red-500">*</span>
-                </label>
-                <SearchableSelect
-                  options={cities.map((city) => ({
-                    value: String(city.code),
-                    label: city.name,
-                  }))}
-                  required
-                  value={selectedCityCode || ""}
-                  onChange={(value) => setValue("cityCode", value)}
-                  placeholder="Chọn Tỉnh/Thành phố"
-                />
+            {customerType === "1" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Mã số thuế
+                  </label>
+                  <input
+                    {...register("taxCode")}
+                    placeholder="Nhập mã số thuế"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Tên công ty
+                  </label>
+                  <input
+                    {...register("organization")}
+                    placeholder="Nhập tên công ty"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
               </div>
+            )}
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Quận/Huyện <span className="text-red-500">*</span>
-                </label>
-                <SearchableSelect
-                  options={districts.map((district) => ({
-                    value: String(district.code),
-                    label: district.name,
-                  }))}
-                  value={selectedDistrictCode || ""}
-                  onChange={(value) => setValue("districtCode", value)}
-                  placeholder="Chọn Quận/Huyện"
-                  disabled={!selectedCityCode}
-                />
-              </div>
+          {/* Danh sách địa chỉ giao hàng */}
+          <div className="border-t pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">
+                Địa chỉ giao hàng <span className="text-red-500">*</span>
+                <span className="text-xs text-gray-500 font-normal ml-2">
+                  ({addresses.length} địa chỉ)
+                </span>
+              </h3>
+              <button
+                type="button"
+                onClick={handleAddAddress}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                <Plus className="w-4 h-4" />
+                Thêm địa chỉ
+              </button>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Phường/Xã <span className="text-red-500">*</span>
-                </label>
-                <SearchableSelect
-                  options={wards.map((ward) => ({
-                    value: String(ward.code),
-                    label: ward.name,
-                  }))}
-                  value={watch("wardCode") || ""}
-                  onChange={(value) => setValue("wardCode", value)}
-                  placeholder="Chọn Phường/Xã"
-                  disabled={!selectedDistrictCode}
+            <div className="space-y-4">
+              {addresses.map((addr, index) => (
+                <CustomerAddressItem
+                  key={index}
+                  address={addr}
+                  index={index}
+                  cities={cities}
+                  invoiceProvinces={invoiceProvinces}
+                  invoiceCommunes={invoiceCommunes}
+                  customerType={customerType}
+                  canRemove={addresses.length > 1}
+                  onUpdate={handleUpdateAddress}
+                  onRemove={handleRemoveAddress}
+                  onSetDefault={handleSetDefault}
                 />
-              </div>
+              ))}
             </div>
           </div>
 
+          {/* Nhóm khách hàng + Ghi chú */}
           <div className="border-t pt-6">
             <h3 className="font-semibold mb-4">Nhóm khách hàng, ghi chú</h3>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Cột trái: Nhóm khách hàng */}
-                <div className="relative" ref={dropdownRef}>
-                  <label className="block text-sm font-medium mb-2">
-                    Nhóm khách hàng <span className="text-red-500">*</span>
-                  </label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="relative" ref={dropdownRef}>
+                <label className="block text-sm font-medium mb-2">
+                  Nhóm khách hàng
+                </label>
 
-                  <div
-                    className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
-                    onClick={() => setShowGroupDropdown(true)}>
-                    {selectedGroups.map((group) => (
-                      <span
-                        key={group.id}
-                        className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                        {group.name}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveGroup(group.id);
-                          }}
-                          className="hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center">
-                          ×
-                        </button>
-                      </span>
-                    ))}
+                <div
+                  className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
+                  onClick={() => setShowGroupDropdown(true)}>
+                  {selectedGroups.map((group) => (
+                    <span
+                      key={group.id}
+                      className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                      {group.name}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveGroup(group.id);
+                        }}
+                        className="hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center">
+                        ×
+                      </button>
+                    </span>
+                  ))}
 
-                    <input
-                      type="text"
-                      value={groupSearchTerm}
-                      onChange={(e) => setGroupSearchTerm(e.target.value)}
-                      onFocus={() => setShowGroupDropdown(true)}
-                      placeholder={
-                        selectedGroups.length === 0
-                          ? "Chọn nhóm khách hàng"
-                          : ""
-                      }
-                      className="flex-1 outline-none min-w-[120px] bg-transparent"
-                    />
-                  </div>
-
-                  {showGroupDropdown && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-[240px] overflow-y-auto">
-                      {filteredGroups.length > 0 ? (
-                        filteredGroups.map((group) => {
-                          const isSelected = selectedGroupIds.includes(
-                            group.id
-                          );
-                          return (
-                            <div
-                              key={group.id}
-                              onClick={() => handleToggleGroup(group.id)}
-                              className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
-                              <span className="text-sm">{group.name}</span>
-                              {isSelected && (
-                                <svg
-                                  className="w-5 h-5 text-blue-600"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24">
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="px-4 py-2 text-sm text-gray-500">
-                          Không tìm thấy nhóm khách hàng
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <input
+                    type="text"
+                    value={groupSearchTerm}
+                    onChange={(e) => setGroupSearchTerm(e.target.value)}
+                    onFocus={() => setShowGroupDropdown(true)}
+                    placeholder={
+                      selectedGroups.length === 0 ? "Chọn nhóm khách hàng" : ""
+                    }
+                    className="flex-1 outline-none min-w-[120px] bg-transparent"
+                  />
                 </div>
 
-                {/* Cột phải: Tài khoản cha */}
-                <div className="relative" ref={parentDropdownRef}>
-                  <label className="block text-sm font-medium mb-2">
-                    Tài khoản cha
-                  </label>
-
-                  <div
-                    className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex items-center"
-                    onClick={() => setShowParentDropdown(true)}>
-                    {selectedParent ? (
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-sm">
-                          {selectedParent.name}
-                          {selectedParent.code
-                            ? ` (${selectedParent.code})`
-                            : ""}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedParentId(null);
-                          }}
-                          className="hover:bg-gray-200 rounded-full w-5 h-5 flex items-center justify-center text-gray-400">
-                          ×
-                        </button>
-                      </div>
-                    ) : (
-                      <input
-                        type="text"
-                        value={parentSearchTerm}
-                        onChange={(e) => setParentSearchTerm(e.target.value)}
-                        onFocus={() => setShowParentDropdown(true)}
-                        placeholder="Bỏ trống = tài khoản cha"
-                        className="flex-1 outline-none bg-transparent text-sm"
-                      />
-                    )}
-                  </div>
-
-                  {showParentDropdown && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-[240px] overflow-y-auto">
-                      {!selectedParent && (
-                        <div className="px-4 py-2">
-                          <input
-                            type="text"
-                            value={parentSearchTerm}
-                            onChange={(e) =>
-                              setParentSearchTerm(e.target.value)
-                            }
-                            placeholder="Tìm kiếm..."
-                            className="w-full border rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-blue-500"
-                            autoFocus
-                          />
-                        </div>
-                      )}
-                      {filteredParents.length > 0 ? (
-                        filteredParents.map((parent) => (
+                {showGroupDropdown && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-[240px] overflow-y-auto">
+                    {filteredGroups.length > 0 ? (
+                      filteredGroups.map((group) => {
+                        const isSelected = selectedGroupIds.includes(group.id);
+                        return (
                           <div
-                            key={parent.id}
-                            onClick={() => {
-                              setSelectedParentId(parent.id);
-                              setShowParentDropdown(false);
-                              setParentSearchTerm("");
-                            }}
+                            key={group.id}
+                            onClick={() => handleToggleGroup(group.id)}
                             className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
-                            <div>
-                              <span className="text-sm font-medium">
-                                {parent.name}
-                              </span>
-                              {parent.code && (
-                                <span className="text-xs text-gray-500 ml-2">
-                                  {parent.code}
-                                </span>
-                              )}
-                            </div>
-                            {selectedParentId === parent.id && (
+                            <span className="text-sm">{group.name}</span>
+                            {isSelected && (
                               <svg
                                 className="w-5 h-5 text-blue-600"
                                 fill="none"
@@ -1084,18 +768,17 @@ export function CustomerForm({
                               </svg>
                             )}
                           </div>
-                        ))
-                      ) : (
-                        <div className="px-4 py-2 text-sm text-gray-500">
-                          Không tìm thấy tài khoản cha
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                        );
+                      })
+                    ) : (
+                      <div className="px-4 py-2 text-sm text-gray-500">
+                        Không tìm thấy nhóm khách hàng
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Ghi chú */}
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Ghi chú
@@ -1103,291 +786,26 @@ export function CustomerForm({
                 <textarea
                   {...register("comments")}
                   placeholder="Nhập ghi chú"
-                  className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full border rounded px-3 py-2 resize-none"
                   rows={2}
                 />
               </div>
             </div>
           </div>
 
-          <div className="border-t pt-6">
-            <h3 className="font-semibold mb-4">Thông tin xuất hóa đơn</h3>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
-                Loại khách hàng
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    value="0"
-                    {...register("type")}
-                    defaultChecked
-                  />
-                  <span>Cá nhân</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input type="radio" value="1" {...register("type")} />
-                  <span>Tổ chức/ Hộ kinh doanh</span>
-                </label>
-              </div>
-            </div>
-
-            {customerType === "0" && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium mb-2">
-                    Tên người mua
-                  </label>
-                  <input
-                    {...register("invoiceBuyerName")}
-                    placeholder="Nhập tên người mua"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Địa chỉ
-                  </label>
-                  <input
-                    {...register("invoiceAddress")}
-                    placeholder="Nhập địa chỉ"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Tỉnh/Thành phố
-                  </label>
-                  <SearchableSelect
-                    options={(invoiceProvinces || []).map((province) => ({
-                      value: province.code,
-                      label: province.name,
-                    }))}
-                    value={selectedInvoiceCityCode || ""}
-                    onChange={(value) => setValue("invoiceCityCode", value)}
-                    placeholder="Tìm Tỉnh/Thành phố"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Phường/Xã
-                  </label>
-                  <SearchableSelect
-                    options={filteredInvoiceCommunes.map((commune) => ({
-                      value: commune.code,
-                      label: commune.name,
-                    }))}
-                    value={watch("invoiceWardCode") || ""}
-                    onChange={(value) => setValue("invoiceWardCode", value)}
-                    placeholder="Tìm Phường/Xã"
-                    disabled={!selectedInvoiceCityCode}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Số CCCD/CMND
-                  </label>
-                  <input
-                    {...register("invoiceCccdCmnd")}
-                    placeholder="Nhập số CCCD/CMND"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Số hộ chiếu
-                  </label>
-                  <input
-                    {...register("invoiceBankAccount")}
-                    placeholder="Nhập số hộ chiếu"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    {...register("invoiceEmail")}
-                    placeholder="email@gmail.com"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Số điện thoại
-                  </label>
-                  <input
-                    {...register("invoicePhone")}
-                    placeholder="Nhập số điện thoại"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-              </div>
-            )}
-
-            {customerType === "1" && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Mã số thuế
-                  </label>
-                  <input
-                    {...register("taxCode")}
-                    placeholder="Bắt buộc"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Tên công ty
-                  </label>
-                  <input
-                    {...register("organization")}
-                    placeholder="Nhập tên công ty"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Địa chỉ
-                  </label>
-                  <input
-                    {...register("invoiceAddress")}
-                    placeholder="Nhập địa chỉ"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Tỉnh/Thành phố
-                  </label>
-                  <SearchableSelect
-                    options={(invoiceProvinces || []).map((province) => ({
-                      value: province.code,
-                      label: province.name,
-                    }))}
-                    value={selectedInvoiceCityCode || ""}
-                    onChange={(value) => setValue("invoiceCityCode", value)}
-                    placeholder="Tìm Tỉnh/Thành phố"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Phường/Xã
-                  </label>
-                  <SearchableSelect
-                    options={filteredInvoiceCommunes.map((commune) => ({
-                      value: commune.code,
-                      label: commune.name,
-                    }))}
-                    value={watch("invoiceWardCode") || ""}
-                    onChange={(value) => setValue("invoiceWardCode", value)}
-                    placeholder="Tìm Phường/Xã"
-                    disabled={!selectedInvoiceCityCode}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Tên người mua
-                  </label>
-                  <input
-                    {...register("invoiceBuyerName")}
-                    placeholder="Nhập tên người mua"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Mã ĐVQHNS
-                  </label>
-                  <input
-                    {...register("invoiceDvqhnsCode")}
-                    placeholder="Nhập mã đơn vị"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    {...register("invoiceEmail")}
-                    placeholder="email@gmail.com"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Số điện thoại
-                  </label>
-                  <input
-                    {...register("invoicePhone")}
-                    placeholder="Nhập số điện thoại"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-
-                {/* <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Ngân hàng
-                  </label>
-                  <select
-                    {...register("invoiceBankAccount")}
-                    className="w-full border rounded px-3 py-2">
-                    <option value="">Chọn ngân hàng</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Số tài khoản ngân hàng
-                  </label>
-                  <input
-                    {...register("invoiceBankAccountNumber")}
-                    placeholder="Nhập số tài khoản ngân hàng"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div> */}
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          {/* Footer */}
+          <div className="sticky bottom-0 bg-white border-t pt-4 flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border rounded hover:bg-gray-50">
-              Bỏ qua
+              className="px-4 py-2 border rounded hover:bg-gray-50">
+              Hủy
             </button>
             <button
               type="submit"
               disabled={createCustomer.isPending || updateCustomer.isPending}
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-              {createCustomer.isPending || updateCustomer.isPending
-                ? "Đang lưu..."
-                : customer
-                  ? "Cập nhật"
-                  : "Lưu"}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+              {customer ? "Cập nhật" : "Tạo khách hàng"}
             </button>
           </div>
         </form>
