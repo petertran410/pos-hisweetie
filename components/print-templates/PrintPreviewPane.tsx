@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Props {
   html: string;
@@ -9,6 +9,7 @@ interface Props {
 
 export function PrintPreviewPane({ html, paperSize = "A5" }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [height, setHeight] = useState(600);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -23,11 +24,11 @@ export function PrintPreviewPane({ html, paperSize = "A5" }: Props) {
         <head>
           <meta charset="utf-8" />
           <style>
+            html, body { margin: 0; padding: 0; }
             body {
               font-family: Arial, sans-serif;
               font-size: 13px;
               padding: 16px;
-              margin: 0;
               color: #000;
             }
             table { width: 100%; border-collapse: collapse; }
@@ -41,12 +42,27 @@ export function PrintPreviewPane({ html, paperSize = "A5" }: Props) {
       </html>
     `);
     doc.close();
+
+    // Auto-resize iframe theo nội dung
+    const resize = () => {
+      if (!iframe.contentDocument?.body) return;
+      const newHeight = iframe.contentDocument.body.scrollHeight + 32;
+      setHeight(Math.max(newHeight, 600));
+    };
+
+    // Đợi render xong
+    setTimeout(resize, 50);
   }, [html, paperSize]);
 
   return (
     <iframe
       ref={iframeRef}
-      className="w-full h-full border-0 bg-white"
+      style={{
+        width: "100%",
+        height: `${height}px`,
+        border: 0,
+        background: "#fff",
+      }}
       title="Print preview"
     />
   );
