@@ -168,7 +168,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Thành Phố",
     visible: false,
     width: "150px",
-    render: (customer) => customer.cityName || "-",
+    render: (customer) => customer.addresses?.map((i) => i.cityName) || "-",
   },
   {
     key: "wardName",

@@ -302,12 +302,68 @@ export function CustomerForm({
     return null;
   };
 
+  // Thêm hàm này trước onSubmit (hoặc đặt ngoài component)
+  const sanitizeAddressForApi = (addr: any) => {
+    const allowedFields = [
+      "id",
+      "label",
+      "receiver",
+      "contactNumber",
+      "address",
+      "cityCode",
+      "cityName",
+      "districtCode",
+      "districtName",
+      "wardCode",
+      "wardName",
+      "newCityCode",
+      "newCityName",
+      "newWardCode",
+      "newWardName",
+      "locationName",
+      "invoiceBuyerName",
+      "invoiceAddress",
+      "invoiceCityCode",
+      "invoiceCityName",
+      "invoiceWardCode",
+      "invoiceWardName",
+      "invoiceCccdCmnd",
+      "invoiceBankAccount",
+      "invoiceEmail",
+      "invoicePhone",
+      "invoiceDvqhnsCode",
+      "isDefault",
+    ];
+
+    const clean: Record<string, any> = {};
+    for (const key of allowedFields) {
+      const val = addr[key];
+      if (val === null || val === undefined || val === "") continue;
+      if (key === "id") {
+        clean.id = typeof val === "number" ? val : parseInt(val, 10);
+      } else if (key === "isDefault") {
+        clean.isDefault = Boolean(val);
+      } else {
+        // Đảm bảo tất cả string fields là string (xử lý cityCode number → string)
+        clean[key] = String(val);
+      }
+    }
+
+    // isDefault phải luôn có
+    if (clean.isDefault === undefined) clean.isDefault = false;
+
+    return clean;
+  };
+
   const onSubmit = async (data: any) => {
     const validationError = validateAddresses();
     if (validationError) {
       toast.error(validationError);
       return;
     }
+
+    // Sanitize addresses — loại bỏ null, extra fields, đảm bảo đúng type
+    const cleanedAddresses = addresses.map(sanitizeAddressForApi);
 
     const formattedData: Record<string, any> = {
       name: data.name || undefined,
@@ -323,7 +379,7 @@ export function CustomerForm({
       type: parseInt(data.type),
       birthDate: birthDate ? birthDate.toISOString() : undefined,
       gender: data.gender === "" ? undefined : data.gender === "true",
-      addresses,
+      addresses: cleanedAddresses,
     };
 
     Object.keys(formattedData).forEach((key) => {
