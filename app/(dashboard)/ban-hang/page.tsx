@@ -837,7 +837,7 @@ export default function BanHangPage() {
             ? [{ method: "cash", amount: actualPayment }]
             : [];
 
-      await createInvoiceFromOrder.mutateAsync({
+      const result = await createInvoiceFromOrder.mutateAsync({
         orderId: activeTab.sourceOrderId,
         additionalPayment: actualPayment,
         payments: payments,
@@ -858,6 +858,11 @@ export default function BanHangPage() {
           };
         }),
       });
+
+      // QUEUE PRINT
+      if (result?.id) {
+        queuePrintAfterRedirect("invoice", result.id);
+      }
 
       handleCloseTab(activeTabId);
       toast.success("Tạo hóa đơn thành công");
