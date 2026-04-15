@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useInvoice, useUpdateInvoice } from "@/lib/hooks/useInvoices";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { INVOICE_STATUS, InvoiceDetail } from "@/lib/types/invoice";
 import Swal from "sweetalert2";
 import { InvoicePackingSlipsTab } from "./InvoicePackingSlipsTab";
 import { InvoicePaymentsTab } from "./InvoicePaymentsTab";
 import { useAuthStore } from "@/lib/store/auth";
+import { printEntity } from "@/lib/utils/print";
 
 interface InvoiceDetailRowProps {
   invoiceId: number;
@@ -195,6 +196,15 @@ export function InvoiceDetailRow({
       toast.error("Không thể lưu hóa đơn");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    if (!invoice) return;
+    try {
+      await printEntity("invoice", invoice.id);
+    } catch (e: any) {
+      toast.error(e?.message || "In thất bại");
     }
   };
 
@@ -577,11 +587,15 @@ export function InvoiceDetailRow({
                   className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {isSaving ? "Đang lưu..." : "Lưu"}
                 </button>
-                <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                  Kết thúc
+                <button
+                  onClick={handlePrint}
+                  disabled={invoice.status === INVOICE_STATUS.CANCELLED}
+                  className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50">
+                  <Printer className="w-4 h-4" />
+                  In
                 </button>
                 <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                  In
+                  Kết thúc
                 </button>
               </div>
             </div>
