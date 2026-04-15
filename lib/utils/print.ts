@@ -1,13 +1,9 @@
 import { printTemplatesApi } from "@/lib/api/print-templates";
 
-/**
- * Load default template + render với entityId thật + mở dialog in browser
- */
 export async function printEntity(
   templateFor: string,
   entityId: number
 ): Promise<void> {
-  // 1. Lấy danh sách template loại này, tìm default
   const templates = await printTemplatesApi.getAll({
     templateFor,
     isActive: true,
@@ -19,26 +15,36 @@ export async function printEntity(
 
   const template = templates.find((t: any) => t.isDefault) || templates[0];
 
-  // 2. Render với data thật
   const preview = await printTemplatesApi.renderPreview(template.id, entityId);
 
   if (!preview?.content) {
     throw new Error("Không render được nội dung in");
   }
 
-  // 3. Mở popup + in
-  const win = window.open("", "_blank", "width=900,height=700");
-  if (!win) {
-    throw new Error("Trình duyệt chặn popup. Vui lòng cho phép popup.");
-  }
-
   const paperSize = template.paperSize || "A5";
 
-  win.document.write(`<!DOCTYPE html>
+  // Tạo iframe ẩn trong trang hiện tại
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument;
+  if (!doc) {
+    document.body.removeChild(iframe);
+    throw new Error("Không tạo được iframe in");
+  }
+
+  doc.open();
+  doc.write(`<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>${template.name}</title>
+  <title></title>
   <style>
     @page { size: ${paperSize}; margin: 10mm; }
     html, body { margin: 0; padding: 0; }
@@ -49,15 +55,27 @@ export async function printEntity(
     * { box-sizing: border-box; }
   </style>
 </head>
-<body>${preview.content}
-<script>
-  window.onload = function() {
-    window.focus();
-    window.print();
-    window.onafterprint = function() { window.close(); };
-  };
-<\/script>
-</body>
+<body>${preview.content}</body>
 </html>`);
-  win.document.close();
+  doc.close();
+
+  // Đợi render xong rồi in
+  const cleanup = () => {
+    setTimeout(() => {
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+    }, 100);
+  };
+
+  iframe.onload = () => {
+    const win = iframe.contentWindow;
+    if (!win) {
+      cleanup();
+      return;
+    }
+    win.focus();
+    win.print();
+    cleanup();
+  };
 }
