@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Customer } from "@/lib/types/customer";
 import { useBranchStore } from "@/lib/store/branch";
 import { CustomerAddressItem } from "./CustomerAddressItem";
+import { sanitizeAddresses } from "@/lib/utils/sanitize-address";
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -379,7 +380,7 @@ export function CustomerForm({
       type: parseInt(data.type),
       birthDate: birthDate ? birthDate.toISOString() : undefined,
       gender: data.gender === "" ? undefined : data.gender === "true",
-      addresses: cleanedAddresses,
+      addresses: sanitizeAddresses(addresses),
     };
 
     Object.keys(formattedData).forEach((key) => {

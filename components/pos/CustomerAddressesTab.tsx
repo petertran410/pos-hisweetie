@@ -5,6 +5,7 @@ import { useUpdateCustomer } from "@/lib/hooks/useCustomers";
 import { toast } from "sonner";
 import { Pencil, Save, X as XIcon, Plus, MapPin, Loader2 } from "lucide-react";
 import { CustomerAddressItem } from "@/components/customers/CustomerAddressItem";
+import { sanitizeAddresses } from "@/lib/utils/sanitize-address";
 
 interface CustomerAddressesTabProps {
   customer: any;
@@ -176,7 +177,7 @@ export function CustomerAddressesTab({
     try {
       const updated = await updateCustomer.mutateAsync({
         id: customer.id,
-        data: { addresses },
+        data: { addresses: sanitizeAddresses(addresses) }, // ← sanitize
       });
       toast.success("Cập nhật địa chỉ thành công");
       setIsEditing(false);
