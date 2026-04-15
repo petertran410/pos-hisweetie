@@ -9,6 +9,7 @@ import { CustomerGroupsModal } from "./CustomerGroupsModal";
 import { CustomerInvoicesTab } from "./CustomerInvoicesTab";
 import { CustomerOrdersTab } from "./CustomerOrdersTab";
 import { CustomerDebtsTab } from "./CustomerDebtsTab";
+import { CustomerAddressesTab } from "../pos/CustomerAddressesTab";
 
 interface CustomerDetailRowProps {
   customerId: number;
@@ -126,6 +127,16 @@ export function CustomerDetailRow({
                     Thông tin
                   </button>
                   <button
+                    onClick={() => setActiveTab("addresses")}
+                    className={`px-4 py-4 text-md font-medium border-b-2 transition-colors ${
+                      activeTab === "addresses"
+                        ? "border-blue-600 text-blue-600"
+                        : "border-transparent text-gray-600 hover:text-gray-900"
+                    }`}>
+                    Địa chỉ giao hàng
+                  </button>
+
+                  <button
                     onClick={() => setActiveTab("invoices")}
                     className={`px-4 py-4 text-md font-medium border-b-2 transition-colors ${
                       activeTab === "invoices"
@@ -209,71 +220,7 @@ export function CustomerDetailRow({
                         </label>
                         <div className="text-base">Chưa có</div>
                       </div>
-
-                      <div className="col-span-3">
-                        <label className="block text-sm font-medium text-gray-500 mb-1">
-                          Địa chỉ
-                        </label>
-                        <div className="text-base">
-                          {[
-                            customer.address,
-                            customer.wardName,
-                            customer.districtName,
-                            customer.cityName,
-                          ]
-                            .filter(Boolean)
-                            .join(", ") || "Chưa có"}
-                        </div>
-                      </div>
                     </div>
-
-                    {(customer.type === 1 ||
-                      customer.invoiceBuyerName ||
-                      customer.invoiceAddress) && (
-                      <div className="mt-8 pt-6 border-t">
-                        <h4 className="text-lg font-semibold mb-4">
-                          Thông tin xuất hóa đơn
-                        </h4>
-                        <div className="grid grid-cols-3 gap-6">
-                          {customer.type === 1 && (
-                            <>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-500 mb-1">
-                                  Mã số thuế
-                                </label>
-                                <div className="text-base">
-                                  {customer.taxCode || "Chưa có"}
-                                </div>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-500 mb-1">
-                                  Tên công ty
-                                </label>
-                                <div className="text-base">
-                                  {customer.organization || "Chưa có"}
-                                </div>
-                              </div>
-                            </>
-                          )}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-500 mb-1">
-                              Địa chỉ
-                            </label>
-                            <div className="text-base">
-                              {customer.invoiceAddress || "Chưa có"}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-500 mb-1">
-                              Tỉnh/Thành phố
-                            </label>
-                            <div className="text-base">
-                              {customer.invoiceCityName || "Chưa có"}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
                     {customer.comments && (
                       <div className="mt-8 pt-6 border-t">
@@ -287,6 +234,10 @@ export function CustomerDetailRow({
                     )}
                   </div>
                 )}
+                {activeTab === "addresses" && (
+                  <CustomerAddressesTab customer={customer} />
+                )}
+
                 {activeTab === "invoices" && (
                   <CustomerInvoicesTab customerId={customer.id} />
                 )}
