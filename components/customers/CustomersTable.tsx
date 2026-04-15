@@ -168,23 +168,34 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Thành Phố",
     visible: false,
     width: "150px",
-    render: (customer) => customer.addresses?.map((i) => i.cityName) || "-",
+    render: (customer) => {
+      const defaultAddr =
+        customer.addresses?.find((a) => a.isDefault) || customer.addresses?.[0];
+      return defaultAddr?.cityName || defaultAddr?.newCityName || "-";
+    },
   },
   {
     key: "wardName",
     label: "Phường/Xã",
     visible: false,
     width: "150px",
-    render: (customer) => customer.wardName || "-",
+    render: (customer) => {
+      const defaultAddr =
+        customer.addresses?.find((a) => a.isDefault) || customer.addresses?.[0];
+      return defaultAddr?.wardName || defaultAddr?.newWardName || "-";
+    },
   },
   {
     key: "address",
     label: "Địa chỉ",
     visible: false,
     width: "300px",
-    render: (customer) => customer.address || "-",
+    render: (customer) => {
+      const defaultAddr =
+        customer.addresses?.find((a) => a.isDefault) || customer.addresses?.[0];
+      return defaultAddr?.address || "-";
+    },
   },
-
   {
     key: "totalPoint",
     label: "Tổng điểm",
