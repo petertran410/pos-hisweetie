@@ -1,3 +1,45 @@
+export interface CustomerAddress {
+  id?: number;
+  customerId?: number;
+  label?: string;
+  receiver?: string;
+  contactNumber?: string;
+  address?: string;
+
+  // Địa chỉ cũ (3 cấp - trước sáp nhập)
+  cityCode?: string;
+  cityName?: string;
+  districtCode?: string;
+  districtName?: string;
+  wardCode?: string;
+  wardName?: string;
+
+  // Địa chỉ mới (2 cấp - sau sáp nhập)
+  newCityCode?: string;
+  newCityName?: string;
+  newWardCode?: string;
+  newWardName?: string;
+
+  locationName?: string;
+
+  // Thông tin xuất hóa đơn theo từng địa chỉ
+  invoiceBuyerName?: string;
+  invoiceAddress?: string;
+  invoiceCityCode?: string;
+  invoiceCityName?: string;
+  invoiceWardCode?: string;
+  invoiceWardName?: string;
+  invoiceCccdCmnd?: string;
+  invoiceBankAccount?: string;
+  invoiceEmail?: string;
+  invoicePhone?: string;
+  invoiceDvqhnsCode?: string;
+
+  isDefault: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Customer {
   id: number;
   code: string;
@@ -7,31 +49,12 @@ export interface Customer {
   contactNumber?: string;
   phone?: string;
   email?: string;
-  cityCode?: string;
-  cityName?: string;
-  districtCode?: string;
-  districtName?: string;
-  wardCode?: string;
-  wardName?: string;
-  address?: string;
-  locationName?: string;
   type: number;
   organization?: string;
   taxCode?: string;
   comments?: string;
-  invoiceBuyerName?: string;
-  invoiceCityCode?: string;
-  invoiceCityName?: string;
-  invoiceWardCode?: string;
-  invoiceWardName?: string;
-  invoiceAddress?: string;
-  invoiceCccdCmnd?: string;
-  invoiceEmail?: string;
-  invoicePhone?: string;
-  invoiceDvqhnsCode?: string;
   customerTypeId?: number;
   branchId?: number;
-  parentId?: number;
   totalPurchased: number;
   totalDebt: number;
   totalInvoiced: number;
@@ -49,20 +72,7 @@ export interface Customer {
     id: number;
     name: string;
   };
-  parent?: {
-    id: number;
-    code: string;
-    name: string;
-    contactNumber: string;
-    _count?: {
-      children: number;
-    };
-  };
-  children?: Array<{
-    id: number;
-    code: string;
-    name: string;
-  }>;
+  addresses?: CustomerAddress[];
   customerGroupDetails?: Array<{
     id: number;
     customerId: number;
@@ -119,12 +129,14 @@ export interface CustomerGroup {
   createdAt: string;
 }
 
-export interface ParentCustomer {
+// Type cho dropdown khách hàng (POS, form,...)
+// Lấy từ GET /customers/search — chỉ chứa thông tin tối thiểu + addresses
+export interface CustomerSearchResult {
   id: number;
   code: string;
   name: string;
-  contactNumber: string;
-  _count?: {
-    children: number;
-  };
+  contactNumber?: string;
+  phone?: string;
+  email?: string;
+  addresses?: CustomerAddress[];
 }

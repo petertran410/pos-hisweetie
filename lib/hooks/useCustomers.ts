@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/config/api";
-import { Customer, CustomerFilters, CustomerGroup } from "@/lib/types/customer";
+import {
+  Customer,
+  CustomerFilters,
+  CustomerGroup,
+  CustomerSearchResult,
+} from "@/lib/types/customer";
 import { toast } from "sonner";
 import { useAuthStore } from "../store/auth";
 
@@ -73,11 +78,12 @@ export function useCreateCustomer() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: Partial<Customer>) => {
+    mutationFn: async (data: Partial<Customer> & { addresses?: any[] }) => {
       return await apiClient.post<Customer>("/customers", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customers-search"] });
       toast.success("Tạo khách hàng thành công");
     },
     onError: (error: Error) => {
@@ -95,13 +101,14 @@ export function useUpdateCustomer() {
       data,
     }: {
       id: number;
-      data: Partial<Customer>;
+      data: Partial<Customer> & { addresses?: any[] };
     }) => {
       return await apiClient.put<Customer>(`/customers/${id}`, data);
     },
     onSuccess: (updatedCustomer, variables) => {
       queryClient.setQueryData(["customers", variables.id], updatedCustomer);
       queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customers-search"] });
       toast.success("Cập nhật khách hàng thành công");
     },
     onError: (error: Error) => {
@@ -119,6 +126,7 @@ export function useDeleteCustomer() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customers-search"] });
       toast.success("Xóa khách hàng thành công");
     },
     onError: (error: Error) => {
@@ -127,62 +135,20 @@ export function useDeleteCustomer() {
   });
 }
 
-export function useParentCustomers(search?: string) {
+export function useSearchCustomers(search?: string) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   return useQuery({
-    queryKey: ["parent-customers", search],
+    queryKey: ["customers-search", search],
     queryFn: async () => {
       const params: any = {};
       if (search) params.search = search;
       const response = await apiClient.get<{
-        data: {
-          id: number;
-          code: string;
-          name: string;
-          contactNumber: string;
-          phone: string;
-          address: string;
-          cityName: string;
-          districtName: string;
-          wardName: string;
-          _count?: {
-            children: number;
-          };
-        }[];
-      }>("/customers/parents", params);
+        data: CustomerSearchResult[];
+      }>("/customers/search", params);
       return response;
     },
     enabled: hasHydrated && isAuthenticated,
-  });
-}
-
-export function useChildCustomers(parentId: number | null, search?: string) {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const hasHydrated = useAuthStore((state) => state._hasHydrated);
-
-  return useQuery({
-    queryKey: ["child-customers", parentId, search],
-    queryFn: async () => {
-      if (!parentId) return { data: [] };
-      const params: any = {};
-      if (search) params.search = search;
-      const response = await apiClient.get<{
-        data: {
-          id: number;
-          code: string;
-          name: string;
-          contactNumber: string;
-          phone: string;
-          address: string;
-          cityName: string;
-          districtName: string;
-          wardName: string;
-        }[];
-      }>(`/customers/children/${parentId}`, params);
-      return response;
-    },
-    enabled: !!parentId && hasHydrated && isAuthenticated,
   });
 }

@@ -16,7 +16,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useBranchStore } from "@/lib/store/branch";
-import { useCustomer, useChildCustomers } from "@/lib/hooks/useCustomers";
+import { useCustomer } from "@/lib/hooks/useCustomers";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 
 interface CustomerPaymentModalProps {
@@ -112,19 +112,7 @@ export function CustomerPaymentModal({
   const { data: bankAccountsData } = useBankAccountsForPayment();
   const bankAccounts = bankAccountsData || [];
 
-  const isParent = customer && !customer.parentId;
-
-  const { data: childrenData } = useChildCustomers(
-    isParent ? customerId : null
-  );
-  const children = childrenData?.data || [];
-
-  const allCustomerIds = useMemo(() => {
-    if (isParent && children.length > 0) {
-      return [customerId, ...children.map((c) => c.id)];
-    }
-    return [customerId];
-  }, [isParent, customerId, children]);
+  const allCustomerIds = useMemo(() => [customerId], [customerId]);
 
   const { data: invoicesData, isLoading } = useQuery({
     queryKey: ["invoices", "customer", allCustomerIds, "unpaid"],
