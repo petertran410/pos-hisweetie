@@ -46,9 +46,14 @@ export async function printEntity(
   <meta charset="utf-8" />
   <title></title>
   <style>
-    @page { size: ${paperSize}; margin: 10mm; }
+    @page { size: ${paperSize}; margin: 0; }
     html, body { margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 13px; color: #000; }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      color: #000;
+      padding: 10mm;
+    }
     table { width: 100%; border-collapse: collapse; }
     td, th { padding: 4px 8px; }
     h1, h2, h3 { margin: 8px 0; }
