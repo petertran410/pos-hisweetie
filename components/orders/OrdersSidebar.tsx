@@ -6,7 +6,14 @@ import { useBranches } from "@/lib/hooks/useBranches";
 import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
-import { ChevronDown, X, Check } from "lucide-react";
+import {
+  ChevronDown,
+  X,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+} from "lucide-react";
 
 interface OrdersSidebarProps {
   filters: any;
@@ -320,6 +327,152 @@ function SimpleDropdown({
     </div>
   );
 }
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+const MONTH_NAMES = [
+  "Tháng 1",
+  "Tháng 2",
+  "Tháng 3",
+  "Tháng 4",
+  "Tháng 5",
+  "Tháng 6",
+  "Tháng 7",
+  "Tháng 8",
+  "Tháng 9",
+  "Tháng 10",
+  "Tháng 11",
+  "Tháng 12",
+];
+const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+
+// ─── MiniCalendar ─────────────────────────────────────────────────────────────
+function MiniCalendar({
+  value,
+  onChange,
+  onClose,
+  minDate,
+}: {
+  value: string;
+  onChange: (d: string) => void;
+  onClose: () => void;
+  minDate?: string;
+}) {
+  const todayObj = new Date();
+  const init = value ? new Date(value + "T00:00:00") : todayObj;
+  const [vy, setVy] = useState(init.getFullYear());
+  const [vm, setVm] = useState(init.getMonth());
+
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
+  // Mon = 0 offset
+  const startOffset = (new Date(vy, vm, 1).getDay() + 6) % 7;
+
+  const cells: (number | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const fmt = (d: number) =>
+    `${vy}-${String(vm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+  const prev = () =>
+    vm === 0 ? (setVm(11), setVy((y) => y - 1)) : setVm((m) => m - 1);
+  const next = () =>
+    vm === 11 ? (setVm(0), setVy((y) => y + 1)) : setVm((m) => m + 1);
+
+  return (
+    <div className="mt-2 bg-white border border-gray-200 rounded-xl p-3 shadow-sm select-none">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          onClick={prev}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-semibold text-gray-800">
+          {MONTH_NAMES[vm]} {vy}
+        </span>
+        <button
+          type="button"
+          onClick={next}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Day headers */}
+      <div className="grid grid-cols-7 mb-1">
+        {DAY_NAMES.map((d) => (
+          <div
+            key={d}
+            className="text-center text-[10px] font-medium text-gray-400 py-0.5">
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Day cells */}
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} className="aspect-square" />;
+          const ds = fmt(day);
+          const isSel = value === ds;
+          const isToday =
+            todayObj.getFullYear() === vy &&
+            todayObj.getMonth() === vm &&
+            todayObj.getDate() === day;
+          const isDisabled = !!minDate && ds < minDate;
+
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => {
+                onChange(ds);
+                onClose();
+              }}
+              className={[
+                "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
+                isSel
+                  ? "bg-blue-600 text-white font-bold"
+                  : isToday
+                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
+                    : isDisabled
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
+              ].join(" ")}>
+              {day}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div className="flex justify-between mt-2 pt-2 border-t border-gray-100">
+        <button
+          type="button"
+          onClick={() => {
+            onChange("");
+            onClose();
+          }}
+          className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100 transition-colors">
+          Xóa
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onChange(todayObj.toISOString().split("T")[0]);
+            onClose();
+          }}
+          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors">
+          Hôm nay
+        </button>
+      </div>
+    </div>
+  );
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
@@ -337,24 +490,14 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   const [enableOrderDate, setEnableOrderDate] = useState(true);
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState("this_month");
-  const [showPresetDrop, setShowPresetDrop] = useState(false);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [creatorId, setCreatorId] = useState("");
   const [saleChannelId, setSaleChannelId] = useState("");
+  const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
 
-  const presetRef = useRef<HTMLDivElement>(null);
+  const customDateRef = useRef<HTMLDivElement>(null);
   const customerRef = useRef<HTMLDivElement>(null);
-
-  // Click-outside cho preset dropdown
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (presetRef.current && !presetRef.current.contains(e.target as Node))
-        setShowPresetDrop(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   const customers = useMemo(() => customersData?.data || [], [customersData]);
 
@@ -396,6 +539,19 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     creatorId,
     saleChannelId,
   ]);
+
+  useEffect(() => {
+    if (!openCal) return;
+    const h = (e: MouseEvent) => {
+      if (
+        customDateRef.current &&
+        !customDateRef.current.contains(e.target as Node)
+      )
+        setOpenCal(null);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [openCal]);
 
   // Debounce 300ms qua cleanup pattern
   useEffect(() => {
@@ -491,78 +647,94 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
 
           {enableOrderDate && (
             <div className="space-y-2">
-              {/* Toggle preset / custom */}
-              <div className="flex rounded-lg overflow-hidden border border-gray-200 text-sm">
+              {/* Mode toggle */}
+              <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs">
                 {(["preset", "custom"] as const).map((m) => (
                   <button
                     key={m}
-                    onClick={() => setDateMode(m)}
+                    type="button"
+                    onClick={() => {
+                      setDateMode(m);
+                      setOpenCal(null); // đóng calendar khi switch mode
+                    }}
                     className={`flex-1 py-1.5 font-medium transition-colors ${
                       dateMode === m
                         ? "bg-blue-600 text-white"
                         : "bg-white text-gray-500 hover:bg-gray-50"
                     }`}>
-                    {m === "preset" ? "Nhanh" : "Tùy chọn"}
+                    {m === "preset" ? "Nhanh" : "Tùy chỉnh"}
                   </button>
                 ))}
               </div>
 
               {dateMode === "preset" ? (
-                // Preset dropdown đẹp
-                <div ref={presetRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowPresetDrop((p) => !p)}
-                    className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm bg-blue-50 border-blue-200 text-blue-700 font-medium transition-colors ${
-                      showPresetDrop ? "ring-2 ring-blue-100" : ""
-                    }`}>
-                    <span>{PRESET_LABELS[selectedPreset]}</span>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform ${showPresetDrop ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                  {showPresetDrop && (
-                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                      {TIME_PRESETS.map((p, idx) => (
-                        <button
-                          key={p.value}
-                          type="button"
-                          onClick={() => {
-                            setSelectedPreset(p.value);
-                            setShowPresetDrop(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
-                            selectedPreset === p.value
-                              ? "bg-blue-50 text-blue-700 font-medium"
-                              : "hover:bg-gray-50 text-gray-700"
-                          } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-                          {p.label}
-                          {selectedPreset === p.value && (
-                            <Check className="w-3.5 h-3.5 text-blue-500" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                // Chip grid — không có dropdown, không có native calendar
+                <div className="grid grid-cols-2 gap-1">
+                  {TIME_PRESETS.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => setSelectedPreset(p.value)}
+                      className={`px-2 py-1.5 rounded-lg text-xs font-medium text-center transition-all ${
+                        selectedPreset === p.value
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200"
+                      }`}>
+                      {p.label}
+                    </button>
+                  ))}
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {[
-                    { label: "Từ ngày", val: fromDate, set: setFromDate },
-                    { label: "Đến ngày", val: toDate, set: setToDate },
-                  ].map(({ label, val, set }) => (
-                    <div key={label}>
-                      <label className="text-xs text-gray-500 mb-1 block">
-                        {label}
-                      </label>
-                      <input
-                        type="date"
-                        value={val}
-                        onChange={(e) => set(e.target.value)}
-                        className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  ))}
+                // Custom — MiniCalendar inline, không dùng <input type="date">
+                <div ref={customDateRef} className="space-y-2">
+                  {(["from", "to"] as const).map((field) => {
+                    const isFrom = field === "from";
+                    const val = isFrom ? fromDate : toDate;
+                    const label = isFrom ? "Từ ngày" : "Đến ngày";
+                    const setVal = isFrom ? setFromDate : setToDate;
+                    const isOpen = openCal === field;
+
+                    return (
+                      <div key={field}>
+                        <span className="text-xs text-gray-500 mb-1 block">
+                          {label}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setOpenCal(isOpen ? null : field)}
+                          className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                            val
+                              ? "border-blue-300 bg-blue-50 text-gray-800"
+                              : "border-gray-200 text-gray-400"
+                          } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                          <span>
+                            {val
+                              ? new Date(val + "T00:00:00").toLocaleDateString(
+                                  "vi-VN",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  }
+                                )
+                              : "Chọn ngày"}
+                          </span>
+                          <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        </button>
+
+                        {isOpen && (
+                          <MiniCalendar
+                            value={val}
+                            onChange={setVal}
+                            onClose={() => setOpenCal(null)}
+                            minDate={
+                              field === "to" ? fromDate || undefined : undefined
+                            }
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
