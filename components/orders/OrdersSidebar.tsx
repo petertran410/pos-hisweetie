@@ -701,8 +701,8 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
             : fromDate && toDate
               ? { from: new Date(fromDate), to: new Date(toDate) }
               : getDateRangeFromPreset("this_month");
-        f.fromDate = range.from.toISOString();
-        f.toDate = range.to.toISOString();
+        f.fromCreatedDate = range.from.toISOString();
+        f.toCreatedDate = range.to.toISOString();
       }
       if (paymentMethod) f.paymentMethod = paymentMethod;
       if (paymentMethod === "transfer" && selectedBankAccountIds.length > 0)
@@ -780,7 +780,7 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
                 onChange={(e) => setEnableOrderDate(e.target.checked)}
                 className="w-4 h-4 rounded cursor-pointer accent-blue-600"
               />
-              <span className="text-xs text-gray-500">Ngày đặt hàng</span>
+              <span className="text-xs text-gray-500">Ngày tạo</span>
             </label>
           </div>
 

@@ -13,6 +13,8 @@ export const ordersApi = {
     branchId?: number;
     fromDate?: string;
     toDate?: string;
+    fromCreatedDate?: string;
+    toCreatedDate?: string;
     paymentMethod?: string;
     bankAccountIds?: number[];
   }): Promise<{
@@ -32,6 +34,10 @@ export const ordersApi = {
       queryParams.append("branchId", params.branchId.toString());
     if (params?.fromDate) queryParams.append("fromDate", params.fromDate);
     if (params?.toDate) queryParams.append("toDate", params.toDate);
+    if (params?.fromCreatedDate)
+      queryParams.append("fromCreatedDate", params.fromCreatedDate);
+    if (params?.toCreatedDate)
+      queryParams.append("toCreatedDate", params.toCreatedDate);
     if (params?.paymentMethod)
       queryParams.append("paymentMethod", params.paymentMethod);
     if (params?.bankAccountIds && params.bankAccountIds.length > 0)

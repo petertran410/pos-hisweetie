@@ -6,12 +6,13 @@ import { useBranches } from "@/lib/hooks/useBranches";
 import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
+import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import {
   ChevronDown,
-  X,
-  Check,
   ChevronLeft,
   ChevronRight,
+  X,
+  Check,
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -53,12 +54,6 @@ const STATUS_OPTIONS = [
     dot: "bg-green-500",
   },
   {
-    value: "4",
-    label: "Không giao được",
-    color: "bg-yellow-100 text-yellow-700",
-    dot: "bg-yellow-400",
-  },
-  {
     value: "8",
     label: "Trả hàng",
     color: "bg-pink-100 text-pink-700",
@@ -69,6 +64,27 @@ const STATUS_OPTIONS = [
     label: "Đã hủy",
     color: "bg-red-100 text-red-700",
     dot: "bg-red-400",
+  },
+];
+
+const DELIVERY_STATUS_OPTIONS = [
+  {
+    value: "none",
+    label: "Chưa có giao hàng",
+    color: "bg-gray-100 text-gray-700",
+    dot: "bg-gray-400",
+  },
+  {
+    value: "pending",
+    label: "Chưa giao",
+    color: "bg-yellow-100 text-yellow-700",
+    dot: "bg-yellow-400",
+  },
+  {
+    value: "delivered",
+    label: "Đã giao",
+    color: "bg-green-100 text-green-700",
+    dot: "bg-green-500",
   },
 ];
 
@@ -115,6 +131,22 @@ const PRESET_GROUPS = [
 const PRESET_LABELS: Record<string, string> = Object.fromEntries(
   PRESET_GROUPS.flatMap((g) => g.options.map((o) => [o.value, o.label]))
 );
+
+const MONTH_NAMES = [
+  "Tháng 1",
+  "Tháng 2",
+  "Tháng 3",
+  "Tháng 4",
+  "Tháng 5",
+  "Tháng 6",
+  "Tháng 7",
+  "Tháng 8",
+  "Tháng 9",
+  "Tháng 10",
+  "Tháng 11",
+  "Tháng 12",
+];
+const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 const getDateRangeFromPreset = (preset: string) => {
   const now = new Date();
@@ -174,7 +206,7 @@ const getDateRangeFromPreset = (preset: string) => {
   }
 };
 
-// ─── StatusDropdown ──────────────────────────────────────────────────────────
+// ─── StatusDropdown (dùng cho cả "Trạng thái HĐ" và "Trạng thái giao hàng") ──
 interface DropdownOption {
   value: string;
   label: string;
@@ -393,7 +425,6 @@ function PresetPanel({
   }, [onClose, triggerRef]);
 
   if (!anchorRect) return null;
-
   const top = anchorRect.bottom + 6;
   const left = Math.max(8, anchorRect.right - 320);
 
@@ -433,22 +464,6 @@ function PresetPanel({
 }
 
 // ─── MiniCalendar ────────────────────────────────────────────────────────────
-const MONTH_NAMES = [
-  "Tháng 1",
-  "Tháng 2",
-  "Tháng 3",
-  "Tháng 4",
-  "Tháng 5",
-  "Tháng 6",
-  "Tháng 7",
-  "Tháng 8",
-  "Tháng 9",
-  "Tháng 10",
-  "Tháng 11",
-  "Tháng 12",
-];
-const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-
 function MiniCalendar({
   value,
   onChange,
@@ -571,13 +586,15 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   const { data: customersData } = useCustomers({ pageSize: 1000 });
   const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
+  const { data: bankAccounts } = useBankAccountsForPayment();
 
   const [branchId, setBranchId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [enablePurchaseDate, setEnablePurchaseDate] = useState(true);
+  const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState("");
+  const [enableCreatedDate, setEnableCreatedDate] = useState(true);
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState("this_month");
   const [fromDate, setFromDate] = useState("");
@@ -585,6 +602,12 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   const [creatorId, setCreatorId] = useState("");
   const [soldById, setSoldById] = useState("");
   const [saleChannelId, setSaleChannelId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"" | "cash" | "transfer">(
+    ""
+  );
+  const [selectedBankAccountIds, setSelectedBankAccountIds] = useState<
+    number[]
+  >([]);
 
   const [showPresetPanel, setShowPresetPanel] = useState(false);
   const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
@@ -617,19 +640,23 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     if (branchId) n++;
     if (customerId) n++;
     if (selectedStatus) n++;
-    if (enablePurchaseDate) n++;
+    if (selectedDeliveryStatus) n++;
+    if (enableCreatedDate) n++;
     if (creatorId) n++;
     if (soldById) n++;
     if (saleChannelId) n++;
+    if (paymentMethod) n++;
     return n;
   }, [
     branchId,
     customerId,
     selectedStatus,
-    enablePurchaseDate,
+    selectedDeliveryStatus,
+    enableCreatedDate,
     creatorId,
     soldById,
     saleChannelId,
+    paymentMethod,
   ]);
 
   useEffect(() => {
@@ -652,19 +679,24 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
       if (branchId) f.branchId = parseInt(branchId);
       if (customerId) f.customerIds = [parseInt(customerId)];
       if (selectedStatus) f.statusIds = [parseInt(selectedStatus)];
+      if (selectedDeliveryStatus) f.deliveryStatus = selectedDeliveryStatus;
       if (creatorId) f.createdBy = parseInt(creatorId);
       if (soldById) f.soldById = parseInt(soldById);
       if (saleChannelId) f.saleChannelId = parseInt(saleChannelId);
-      if (enablePurchaseDate) {
+      if (enableCreatedDate) {
         const range =
           dateMode === "preset"
             ? getDateRangeFromPreset(selectedPreset)
             : fromDate && toDate
               ? { from: new Date(fromDate), to: new Date(toDate) }
               : getDateRangeFromPreset("this_month");
-        f.fromDate = range.from.toISOString();
-        f.toDate = range.to.toISOString();
+        f.fromCreatedDate = range.from.toISOString();
+        f.toCreatedDate = range.to.toISOString();
       }
+      if (paymentMethod) f.paymentMethod = paymentMethod;
+      if (paymentMethod === "transfer" && selectedBankAccountIds.length > 0)
+        f.bankAccountIds = selectedBankAccountIds;
+
       onFiltersChange(f);
     }, 300);
     return () => clearTimeout(timer);
@@ -672,7 +704,8 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     branchId,
     customerId,
     selectedStatus,
-    enablePurchaseDate,
+    selectedDeliveryStatus,
+    enableCreatedDate,
     dateMode,
     selectedPreset,
     fromDate,
@@ -680,6 +713,8 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     creatorId,
     soldById,
     saleChannelId,
+    paymentMethod,
+    selectedBankAccountIds,
   ]);
 
   const clearAll = () => {
@@ -687,7 +722,8 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     setCustomerId("");
     setCustomerSearch("");
     setSelectedStatus("");
-    setEnablePurchaseDate(true);
+    setSelectedDeliveryStatus("");
+    setEnableCreatedDate(true);
     setDateMode("preset");
     setSelectedPreset("this_month");
     setFromDate("");
@@ -695,6 +731,8 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     setCreatorId("");
     setSoldById("");
     setSaleChannelId("");
+    setPaymentMethod("");
+    setSelectedBankAccountIds([]);
     onFiltersChange({});
   };
 
@@ -720,75 +758,103 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
       </div>
 
       <div className="p-4 space-y-5">
-        {/* Thời gian */}
+        {/* ── Thời gian (UI giống OrdersSidebar) ── */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Ngày bán
+            <label className="text-sm font-medium text-gray-700">
+              Thời gian
             </label>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
               <input
                 type="checkbox"
-                checked={enablePurchaseDate}
-                onChange={(e) => setEnablePurchaseDate(e.target.checked)}
-                className="sr-only peer"
+                checked={enableCreatedDate}
+                onChange={(e) => setEnableCreatedDate(e.target.checked)}
+                className="w-4 h-4 rounded cursor-pointer accent-blue-600"
               />
-              <div className="w-8 h-4 bg-gray-200 rounded-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4" />
+              <span className="text-xs text-gray-500">Ngày tạo</span>
             </label>
           </div>
-          {enablePurchaseDate && (
-            <div className="space-y-2">
-              {/* Preset row */}
+
+          {enableCreatedDate && (
+            <div className="space-y-1.5">
+              {/* Row Preset */}
               <div
                 ref={presetRowRef}
-                onClick={(e) => {
-                  setPanelAnchorRect(
-                    (e.currentTarget as HTMLDivElement).getBoundingClientRect()
-                  );
-                  setShowPresetPanel((p) => !p);
+                onClick={() => {
                   setDateMode("preset");
+                  setOpenCal(null);
+                  if (showPresetPanel) {
+                    setShowPresetPanel(false);
+                  } else {
+                    setPanelAnchorRect(
+                      presetRowRef.current?.getBoundingClientRect() ?? null
+                    );
+                    setShowPresetPanel(true);
+                  }
                 }}
-                className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors ${
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all select-none ${
                   dateMode === "preset"
-                    ? "border-blue-300 bg-blue-50"
-                    : "hover:border-gray-400"
-                } bg-white`}>
-                <span className="text-gray-700">
-                  {PRESET_LABELS[selectedPreset] || "Chọn khoảng"}
+                    ? "border-blue-400 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}>
+                <div
+                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                    dateMode === "preset"
+                      ? "border-blue-600"
+                      : "border-gray-300"
+                  }`}>
+                  {dateMode === "preset" && (
+                    <div className="w-2 h-2 rounded-full bg-blue-600" />
+                  )}
+                </div>
+                <span className="text-sm text-gray-700 flex-1 font-medium">
+                  {PRESET_LABELS[selectedPreset] ?? "Chọn thời gian"}
                 </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-gray-400 transition-transform ${showPresetPanel ? "rotate-180" : ""}`}
+                <ChevronRight
+                  className={`w-4 h-4 transition-colors flex-shrink-0 ${
+                    showPresetPanel ? "text-blue-500" : "text-gray-400"
+                  }`}
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-gray-200" />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDateMode(dateMode === "custom" ? "preset" : "custom")
-                  }
-                  className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
+              {/* Row Tùy chỉnh */}
+              <div
+                onClick={() => {
+                  setDateMode("custom");
+                  setShowPresetPanel(false);
+                }}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+                  dateMode === "custom"
+                    ? "border-blue-400 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}>
+                <div
+                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     dateMode === "custom"
-                      ? "bg-blue-600 text-white"
-                      : "text-blue-600 bg-blue-50 hover:bg-blue-100"
+                      ? "border-blue-600"
+                      : "border-gray-300"
                   }`}>
-                  {dateMode === "custom" ? "Đang tùy chỉnh" : "Tùy chỉnh"}
-                </button>
-                <div className="flex-1 h-px bg-gray-200" />
+                  {dateMode === "custom" && (
+                    <div className="w-2 h-2 rounded-full bg-blue-600" />
+                  )}
+                </div>
+                <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
+                <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
               </div>
 
               {dateMode === "custom" && (
-                <div ref={customDateRef} className="space-y-2">
+                <div ref={customDateRef} className="space-y-2 pt-1">
                   {(["from", "to"] as const).map((field) => {
-                    const val = field === "from" ? fromDate : toDate;
-                    const setVal = field === "from" ? setFromDate : setToDate;
+                    const isFrom = field === "from";
+                    const val = isFrom ? fromDate : toDate;
+                    const label = isFrom ? "Từ ngày" : "Đến ngày";
+                    const setVal = isFrom ? setFromDate : setToDate;
                     const isOpen = openCal === field;
                     return (
                       <div key={field}>
-                        <label className="block text-xs text-gray-500 mb-1">
-                          {field === "from" ? "Từ ngày" : "Đến ngày"}
-                        </label>
+                        <span className="text-xs text-gray-500 mb-1 block">
+                          {label}
+                        </span>
                         <button
                           type="button"
                           onClick={() => setOpenCal(isOpen ? null : field)}
@@ -843,7 +909,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
 
         <div className="border-t border-gray-100" />
 
-        {/* Trạng thái hóa đơn */}
+        {/* ── Trạng thái hóa đơn ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Trạng thái hóa đơn
@@ -856,9 +922,104 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
           />
         </div>
 
+        {/* ── Trạng thái giao hàng ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Trạng thái giao hàng
+          </label>
+          <StatusDropdown
+            options={DELIVERY_STATUS_OPTIONS}
+            value={selectedDeliveryStatus}
+            placeholder="Tất cả"
+            onChange={setSelectedDeliveryStatus}
+          />
+        </div>
+
         <div className="border-t border-gray-100" />
 
-        {/* Khách hàng */}
+        {/* ── Phương thức thanh toán ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Phương thức thanh toán
+          </label>
+          <SimpleDropdown
+            options={[
+              { value: "cash", label: "Tiền mặt" },
+              { value: "transfer", label: "Ngân hàng" },
+            ]}
+            value={paymentMethod}
+            placeholder="Tất cả"
+            onChange={(v) => {
+              setPaymentMethod(v as "" | "cash" | "transfer");
+              setSelectedBankAccountIds([]);
+            }}
+          />
+
+          {paymentMethod === "transfer" && (
+            <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
+              <label className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors select-none">
+                <input
+                  type="checkbox"
+                  checked={
+                    Array.isArray(bankAccounts) &&
+                    bankAccounts.length > 0 &&
+                    selectedBankAccountIds.length === bankAccounts.length
+                  }
+                  onChange={(e) => {
+                    if (!Array.isArray(bankAccounts)) return;
+                    setSelectedBankAccountIds(
+                      e.target.checked ? bankAccounts.map((a: any) => a.id) : []
+                    );
+                  }}
+                  className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer flex-shrink-0"
+                />
+                <span className="text-xs font-medium text-gray-600">
+                  Tất cả tài khoản
+                </span>
+              </label>
+              <div className="max-h-40 overflow-y-auto">
+                {!Array.isArray(bankAccounts) || bankAccounts.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-gray-400">
+                    Không có tài khoản
+                  </div>
+                ) : (
+                  bankAccounts.map((acc: any, idx: number) => (
+                    <label
+                      key={acc.id}
+                      className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors select-none ${
+                        idx > 0 ? "border-t border-gray-50" : ""
+                      }`}>
+                      <input
+                        type="checkbox"
+                        checked={selectedBankAccountIds.includes(acc.id)}
+                        onChange={(e) => {
+                          setSelectedBankAccountIds((prev) =>
+                            e.target.checked
+                              ? [...prev, acc.id]
+                              : prev.filter((id) => id !== acc.id)
+                          );
+                        }}
+                        className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer flex-shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-gray-800 truncate">
+                          {acc.bankCode || acc.bankName}
+                        </div>
+                        <div className="text-[11px] text-gray-400 truncate">
+                          {acc.accountNumber}
+                        </div>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* ── Khách hàng ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Khách hàng
@@ -918,7 +1079,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
 
         <div className="border-t border-gray-100" />
 
-        {/* Chi nhánh */}
+        {/* ── Chi nhánh ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Chi nhánh
@@ -936,7 +1097,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
           />
         </div>
 
-        {/* Người tạo */}
+        {/* ── Người tạo ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Người tạo
@@ -954,7 +1115,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
           />
         </div>
 
-        {/* Người bán */}
+        {/* ── Người bán ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Người bán
@@ -972,7 +1133,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
           />
         </div>
 
-        {/* Kênh bán */}
+        {/* ── Kênh bán ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Kênh bán hàng
