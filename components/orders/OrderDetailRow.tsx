@@ -251,19 +251,19 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                     </h3>
                   </div>
 
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-4 gap-6">
-                      <div>
-                        <label className="block text-md font-medium text-gray-500 mb-1.5">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-4 gap-x-6 gap-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
                           Người tạo:
                         </label>
-                        <span className="w-full px-3 py-2 text-md border rounded bg-gray-50">
+                        <span className="flex-1 px-3 py-1.5 text-md border rounded bg-gray-50 truncate">
                           {order.creator?.name || "-"}
                         </span>
                       </div>
 
-                      <div>
-                        <label className="block text-md font-medium text-gray-500 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
                           Người nhận đặt:
                         </label>
                         <span className="w-full px-3 py-2 text-md border rounded bg-white">
@@ -271,17 +271,17 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         </span>
                       </div>
 
-                      <div>
-                        <label className="block text-md font-medium text-gray-500 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
                           Ngày đặt:
                         </label>
-                        <span className="w-full px-3 py-2 text-md border rounded bg-gray-50">
+                        <span className="flex-1 px-3 py-1.5 text-md border rounded bg-gray-50 truncate">
                           {formatDate(order.orderDate)}
                         </span>
                       </div>
 
-                      <div>
-                        <label className="block text-md font-medium text-gray-500 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
                           Chi nhánh xử lý:
                         </label>
                         <span className="w-full px-3 py-2 text-md border rounded bg-white">
@@ -289,8 +289,8 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         </span>
                       </div>
 
-                      <div>
-                        <label className="block text-md font-medium text-gray-500 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
                           Bảng giá:
                         </label>
                         <span className="w-full px-3 py-2 text-md border rounded bg-white">
@@ -298,8 +298,8 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         </span>
                       </div>
 
-                      <div>
-                        <label className="block text-md font-medium text-gray-500 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
                           Trạng thái:
                         </label>
                         {!isStatusEditable ? (
@@ -391,8 +391,8 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         )}
                       </div>
 
-                      <div className="col-span-4">
-                        <label className="block text-md font-medium text-gray-500 mb-1.5">
+                      <div className="flex items-start gap-2">
+                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px] pt-1.5">
                           Ghi chú:
                         </label>
                         <textarea
