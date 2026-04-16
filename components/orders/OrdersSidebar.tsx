@@ -403,26 +403,27 @@ function PresetPanel({
   onSelect,
   onClose,
   anchorRect,
+  triggerRef,
 }: {
   groups: typeof PRESET_GROUPS;
   selected: string;
   onSelect: (v: string) => void;
   onClose: () => void;
   anchorRect: DOMRect | null;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+      // Exclude cả panel lẫn trigger khỏi close-outside
+      const insidePanel = ref.current?.contains(e.target as Node);
+      const insideTrigger = triggerRef.current?.contains(e.target as Node);
+      if (!insidePanel && !insideTrigger) onClose();
     };
-    // setTimeout tránh close ngay lập tức khi click trigger
-    const id = setTimeout(() => document.addEventListener("mousedown", h), 0);
-    return () => {
-      clearTimeout(id);
-      document.removeEventListener("mousedown", h);
-    };
-  }, [onClose]);
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [onClose, triggerRef]);
 
   if (!anchorRect || typeof window === "undefined") return null;
 
@@ -615,7 +616,7 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   const [showPresetPanel, setShowPresetPanel] = useState(false);
   const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
-  const triggerBtnRef = useRef<HTMLButtonElement>(null);
+  const presetRowRef = useRef<HTMLDivElement>(null);
 
   const customDateRef = useRef<HTMLDivElement>(null);
   const customerRef = useRef<HTMLDivElement>(null);
@@ -770,11 +771,20 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
             <div className="space-y-1.5">
               {/* ── Row: Preset (radio) ── */}
               <div
+                ref={presetRowRef}
                 onClick={() => {
                   setDateMode("preset");
                   setOpenCal(null);
+                  if (showPresetPanel) {
+                    setShowPresetPanel(false);
+                  } else {
+                    setPanelAnchorRect(
+                      presetRowRef.current?.getBoundingClientRect() ?? null
+                    );
+                    setShowPresetPanel(true);
+                  }
                 }}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all select-none ${
                   dateMode === "preset"
                     ? "border-blue-400 bg-blue-50"
                     : "border-gray-200 hover:border-gray-300"
@@ -790,35 +800,14 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
                     <div className="w-2 h-2 rounded-full bg-blue-600" />
                   )}
                 </div>
-
                 <span className="text-sm text-gray-700 flex-1 font-medium">
                   {PRESET_LABELS[selectedPreset] ?? "Chọn thời gian"}
                 </span>
-
-                {/* Trigger mở PresetPanel */}
-                <button
-                  ref={triggerBtnRef}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDateMode("preset");
-                    setOpenCal(null);
-                    if (showPresetPanel) {
-                      setShowPresetPanel(false);
-                    } else {
-                      setPanelAnchorRect(
-                        triggerBtnRef.current?.getBoundingClientRect() ?? null
-                      );
-                      setShowPresetPanel(true);
-                    }
-                  }}
-                  className={`p-1 rounded-md transition-colors ${
-                    showPresetPanel
-                      ? "bg-blue-100 text-blue-600"
-                      : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                  }`}>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <ChevronRight
+                  className={`w-4 h-4 transition-colors flex-shrink-0 ${
+                    showPresetPanel ? "text-blue-500" : "text-gray-400"
+                  }`}
+                />
               </div>
 
               {/* ── Row: Tùy chỉnh (radio) ── */}
@@ -907,6 +896,7 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
                   onSelect={setSelectedPreset}
                   onClose={() => setShowPresetPanel(false)}
                   anchorRect={panelAnchorRect}
+                  triggerRef={presetRowRef}
                 />
               )}
             </div>
