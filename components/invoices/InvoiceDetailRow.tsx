@@ -366,18 +366,12 @@ export function InvoiceDetailRow({
                           Địa chỉ giao hàng:
                         </label>
                         <p className="text-md text-gray-900 font-medium">
-                          {invoice.delivery?.address ||
-                            invoice.customer?.address ||
-                            "-"}
+                          {invoice.delivery?.address || "-"}
                         </p>
                         <p className="text-md text-gray-600 mt-1">
                           {[
-                            invoice.delivery?.wardName ||
-                              invoice.customer?.wardName,
-                            invoice.delivery?.locationName ||
-                              invoice.customer?.districtName,
-                            invoice.delivery?.cityName ||
-                              invoice.customer?.cityName,
+                            invoice.delivery?.wardName,
+                            invoice.delivery?.locationName,
                           ]
                             .filter(Boolean)
                             .join(", ")}

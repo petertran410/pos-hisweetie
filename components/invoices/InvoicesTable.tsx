@@ -161,19 +161,19 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "address",
     label: "Địa chỉ",
     visible: false,
-    render: (invoice) => invoice.customer?.address || "-",
+    render: (invoice) => invoice.delivery?.address || "-",
   },
   {
     key: "area",
     label: "Khu vực",
     visible: false,
-    render: (invoice) => invoice.customer?.cityName || "-",
+    render: (invoice) => invoice.delivery?.locationName || "-",
   },
   {
     key: "ward",
     label: "Phường/Xã",
     visible: false,
-    render: (invoice) => invoice.customer?.wardName || "-",
+    render: (invoice) => invoice.delivery?.wardName || "-",
   },
   {
     key: "birthDate",

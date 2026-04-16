@@ -119,23 +119,21 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Địa chỉ",
     visible: false,
     width: "200px",
-    render: (order) => order.customer?.address || "-",
+    render: (order) => order.delivery?.address || "-",
   },
   {
     key: "area",
     label: "Khu vực",
     visible: false,
     width: "200px",
-    render: (order) =>
-      order.delivery?.locationName || order.customer?.cityName || "-",
+    render: (order) => order.delivery?.locationName || "-",
   },
   {
     key: "ward",
     label: "Phường/Xã",
     visible: false,
     width: "200px",
-    render: (order) =>
-      order.delivery?.wardName || order.customer?.wardName || "-",
+    render: (order) => order.delivery?.wardName || "-",
   },
   {
     key: "deliveryPartner",

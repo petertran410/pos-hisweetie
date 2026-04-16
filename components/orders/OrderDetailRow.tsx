@@ -383,16 +383,12 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           Tự giao đến:
                         </label>
                         <p className="text-md text-gray-900 font-medium">
-                          {order.delivery?.address ||
-                            order.customer?.address ||
-                            "-"}
+                          {order.delivery?.address || "-"}
                         </p>
                         <p className="text-md text-gray-600 mt-1">
                           {[
-                            order.delivery?.wardName ||
-                              order.customer?.wardName,
-                            order.delivery?.locationName ||
-                              order.customer?.cityName,
+                            order.delivery?.wardName,
+                            order.delivery?.locationName,
                           ]
                             .filter(Boolean)
                             .join(", ")}
