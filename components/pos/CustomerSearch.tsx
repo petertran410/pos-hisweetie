@@ -105,7 +105,7 @@ export function CustomerSearch({
                     handleOpenModal();
                   }
                 }}
-                className="w-full border rounded-xl px-3 py-2 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
+                className="w-full border rounded-xl px-2 py-2 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
                 <span className="text-blue-600 hover:underline">
                   {selectedCustomer.name} {selectedCustomer.contactNumber}
                 </span>

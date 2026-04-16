@@ -30,6 +30,7 @@ import {
   getDefaultAddress,
   addressToDeliveryInfo,
 } from "@/lib/utils/customer-address";
+import { useAuthStore } from "@/lib/store/auth";
 
 export interface CartItem {
   product: any;
@@ -74,6 +75,7 @@ export interface Tab {
   sourceOrder?: any;
   isEditMode?: boolean;
   selectedAddressId?: number | null;
+  soldById: number | null;
 }
 
 const STORAGE_KEY = "pos-tabs";
@@ -98,6 +100,7 @@ const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   paymentAmount: 0,
   paymentMethods: [],
   selectedAddressId: null,
+  soldById: null,
   deliveryInfo: {
     receiver: "",
     contactNumber: "",
@@ -119,6 +122,7 @@ export default function BanHangPage() {
   const tabType = searchParams.get("type") as TabType | null;
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
+  const { user } = useAuthStore();
 
   const [tabs, setTabs] = useState<Tab[]>([getDefaultTab("order", "tab-1")]);
   const [activeTabId, setActiveTabId] = useState("tab-1");
@@ -206,6 +210,7 @@ export default function BanHangPage() {
               useCOD: editState.useCOD || false,
               paymentAmount: editState.paymentAmount || 0,
               paymentMethods: [],
+              soldById: editState.soldById ?? null,
               deliveryInfo: editState.deliveryInfo || {
                 receiver: "",
                 contactNumber: "",
@@ -501,6 +506,7 @@ export default function BanHangPage() {
         useCOD: false,
         paymentAmount: 0,
         paymentMethods: [],
+        soldById: existingOrder.soldById ?? null,
         deliveryInfo: {
           receiver: existingOrder.delivery?.receiver || "",
           contactNumber: existingOrder.delivery?.contactNumber || "",
@@ -562,6 +568,7 @@ export default function BanHangPage() {
       useCOD: restoredState ? restoredState.useCOD : false,
       paymentAmount: restoredState ? restoredState.paymentAmount : 0,
       paymentMethods: [],
+      soldById: existingOrder.soldById ?? null,
       deliveryInfo: restoredState
         ? restoredState.deliveryInfo
         : {
@@ -677,6 +684,7 @@ export default function BanHangPage() {
         : existingInvoice.usingCod || false,
       paymentAmount: restoredState ? restoredState.paymentAmount : 0,
       paymentMethods: [],
+      soldById: existingInvoice.soldById ?? null,
       deliveryInfo: restoredState
         ? restoredState.deliveryInfo
         : existingInvoice.delivery
@@ -1217,6 +1225,7 @@ export default function BanHangPage() {
       const orderData = {
         customerId: activeTab.selectedCustomer.id,
         branchId: selectedBranch?.id,
+        soldById: activeTab.soldById ?? user?.id,
         orderDate: new Date().toISOString(),
         orderStatus: existingOrder.orderStatus,
         description: activeTab.orderNote,
@@ -1332,6 +1341,7 @@ export default function BanHangPage() {
     const invoiceData = {
       customerId: activeTab.selectedCustomer.id,
       branchId: selectedBranch?.id,
+      soldById: activeTab.soldById ?? user?.id,
       purchaseDate: new Date().toISOString(),
       description: activeTab.orderNote,
       paidAmount: actualPayment,
@@ -1438,6 +1448,7 @@ export default function BanHangPage() {
     const documentData: any = {
       customerId: activeTab.selectedCustomer.id,
       branchId: selectedBranch?.id,
+      soldById: activeTab.soldById ?? user?.id,
       discountAmount: Number(activeTab.discount) || 0,
       discountRatio: Number(activeTab.discountRatio) || 0,
     };
@@ -1653,6 +1664,8 @@ export default function BanHangPage() {
               documentType={activeTab.type}
               onSelectAddress={handleSelectAddress}
               selectedAddressId={activeTab.selectedAddressId}
+              soldById={activeTab.soldById}
+              onSellerChange={(soldById) => updateActiveTab({ soldById })}
             />
           </>
         ) : (
@@ -1701,6 +1714,8 @@ export default function BanHangPage() {
               documentType={activeTab.type}
               onSelectAddress={handleSelectAddress}
               selectedAddressId={activeTab.selectedAddressId}
+              soldById={activeTab.soldById}
+              onSellerChange={(soldById) => updateActiveTab({ soldById })}
             />
           </>
         )}

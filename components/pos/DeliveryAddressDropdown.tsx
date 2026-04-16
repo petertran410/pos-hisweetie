@@ -47,7 +47,7 @@ export function DeliveryAddressDropdown({
       <button
         type="button"
         onClick={() => setShowDropdown(!showDropdown)}
-        className="w-full border rounded-xl px-3 py-2 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
+        className="w-full border rounded-xl px-2 py-2 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" />
           <span className="text-sm text-blue-600 truncate">

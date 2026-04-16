@@ -4,10 +4,20 @@ import { CustomerSearch } from "./CustomerSearch";
 import { CartItem, DeliveryInfo } from "@/app/(dashboard)/ban-hang/page";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
-import { MapPin, User, Phone, House, MoreVertical } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  MapPin,
+  User,
+  Phone,
+  House,
+  MoreVertical,
+  Check,
+  ChevronDown,
+  XIcon,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { MultiPaymentModal } from "./MultiPaymentModal";
 import { DeliveryAddressDropdown } from "./DeliveryAddressDropdown";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
 
 interface InvoiceCartProps {
   cartItems: CartItem[];
@@ -35,6 +45,106 @@ interface InvoiceCartProps {
   documentType?: "order" | "invoice";
   onSelectAddress?: (address: any) => void;
   selectedAddressId?: number | null;
+  soldById: number | null;
+  onSellerChange: (id: number | null) => void;
+}
+
+function SellerDropdown({
+  users,
+  soldById,
+  currentUserId,
+  currentUserName,
+  onChange,
+}: {
+  users: Array<{ id: number; name: string }>;
+  soldById: number | null;
+  currentUserId: number;
+  currentUserName: string;
+  onChange: (id: number | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const effectiveId = soldById ?? currentUserId;
+  const selected = users.find((u) => u.id === effectiveId);
+  const displayName = selected?.name ?? currentUserName;
+  const isOverridden = soldById !== null && soldById !== currentUserId;
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((prev) => !prev)}
+        onKeyDown={(e) => e.key === "Enter" && setOpen((prev) => !prev)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-1 py-1 text-sm cursor-pointer transition-colors select-none ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "hover:border-gray-400"
+        } bg-white`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+          <span
+            className={`truncate ${
+              isOverridden ? "text-blue-600 font-medium" : "text-gray-700"
+            }`}>
+            {displayName}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {isOverridden && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange(null);
+              }}
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              <XIcon className="w-3 h-3" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+      </div>
+
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+          {users.map((u, idx) => (
+            <button
+              key={u.id}
+              type="button"
+              onClick={() => {
+                onChange(
+                  u.id === currentUserId && soldById === null ? null : u.id
+                );
+                setOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
+                u.id === effectiveId ? "bg-blue-50" : "hover:bg-gray-50"
+              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+              <span className="flex-1 truncate">{u.name}</span>
+              {u.id === effectiveId && (
+                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function InvoiceCart({
@@ -61,7 +171,10 @@ export function InvoiceCart({
   documentType,
   onSelectAddress,
   selectedAddressId,
+  soldById,
+  onSellerChange,
 }: InvoiceCartProps) {
+  const { data: usersForFilter = [] } = useUsersForFilter();
   const { user } = useAuthStore();
   const { selectedBranch } = useBranchStore();
   const [paymentDisplayValue, setPaymentDisplayValue] = useState("");
@@ -182,12 +295,16 @@ export function InvoiceCart({
   return (
     <div className="w-[40%] h-full bg-white border-l flex flex-col ">
       <div className="flex-1 flex flex-col overflow-y-auto">
-        <div className="p-3 space-y-2 flex-shrink-0">
+        <div className="pl-3 pr-3 pt-3 pb-1 space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <button className="px-2 py-1 text-sm border rounded-md hover:bg-gray-50">
-                {user?.name || "Admin"}
-              </button>
+              <SellerDropdown
+                users={usersForFilter}
+                soldById={soldById}
+                currentUserId={user?.id ?? 0}
+                currentUserName={user?.name ?? ""}
+                onChange={onSellerChange}
+              />
             </div>
             <div className="text-xs text-gray-600">{formatDate()}</div>
           </div>
@@ -211,28 +328,33 @@ export function InvoiceCart({
                 />
               )}
 
-            <div className="border rounded-xl shadow-sm p-3 space-y-5">
+            <div className="border rounded-xl shadow-sm p-3 space-y-2">
               <div className="flex items-center gap-1.5">
-                <MapPin className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                <span className="text-lg">{selectedBranch?.address || ""}</span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <User className="w-5 h-5 text-green-500 flex-shrink-0" />
-                <span className="text-lg">{deliveryInfo.receiver || ""}</span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <Phone className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <span className="text-lg">
-                  {deliveryInfo.contactNumber || ""}
+                <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                <span className="text-[18px]">
+                  {selectedBranch?.address || ""}
                 </span>
               </div>
-              <div className="flex gap-1.5">
-                <House className="w-5 h-5 flex-shrink-0" />
-                <span>
+
+              <div className="flex items-center gap-1.5">
+                <House className="w-4 h-4 flex-shrink-0" />
+                <span className="text-[18px]">
                   {deliveryInfo.detailAddress}, {deliveryInfo.locationName},{" "}
                   {deliveryInfo.wardName}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <User className="w-4 h-4 text-green-500 flex-shrink-0" />
+                <span className="text-[18px]">
+                  {deliveryInfo.receiver || ""}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span className="text-[18px]">
+                  {deliveryInfo.contactNumber || ""}
                 </span>
               </div>
             </div>
