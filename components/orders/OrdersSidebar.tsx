@@ -746,7 +746,7 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   };
 
   return (
-    <aside className="w-64 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll bg-white shadow-xl flex flex-col">
+    <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
       {/* ── Header ── */}
       <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10 rounded-t-xl">
         <div className="flex items-center gap-2">
