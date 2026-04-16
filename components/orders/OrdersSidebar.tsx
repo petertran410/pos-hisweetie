@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Calendar,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 
 interface OrdersSidebarProps {
   filters: any;
@@ -74,19 +75,49 @@ const PAYMENT_STATUS_OPTIONS = [
   },
 ];
 
-const TIME_PRESETS = [
-  { label: "Hôm nay", value: "today" },
-  { label: "Hôm qua", value: "yesterday" },
-  { label: "Tuần này", value: "this_week" },
-  { label: "Tuần trước", value: "last_week" },
-  { label: "Tháng này", value: "this_month" },
-  { label: "Tháng trước", value: "last_month" },
-  { label: "7 ngày qua", value: "last_7_days" },
-  { label: "30 ngày qua", value: "last_30_days" },
+const PRESET_GROUPS = [
+  {
+    label: "Theo ngày",
+    options: [
+      { label: "Hôm nay", value: "today" },
+      { label: "Hôm qua", value: "yesterday" },
+    ],
+  },
+  {
+    label: "Theo tuần",
+    options: [
+      { label: "Tuần này", value: "this_week" },
+      { label: "Tuần trước", value: "last_week" },
+      { label: "7 ngày qua", value: "last_7_days" },
+    ],
+  },
+  {
+    label: "Theo tháng",
+    options: [
+      { label: "Tháng này", value: "this_month" },
+      { label: "Tháng trước", value: "last_month" },
+      { label: "30 ngày qua", value: "last_30_days" },
+    ],
+  },
+  {
+    label: "Theo quý",
+    options: [
+      { label: "Quý này", value: "this_quarter" },
+      { label: "Quý trước", value: "last_quarter" },
+    ],
+  },
+  {
+    label: "Theo năm",
+    options: [
+      { label: "Năm nay", value: "this_year" },
+      { label: "Năm trước", value: "last_year" },
+    ],
+  },
 ];
 
+// Flat map để lookup label nhanh
 const PRESET_LABELS: Record<string, string> = Object.fromEntries(
-  TIME_PRESETS.map((p) => [p.value, p.label])
+  PRESET_GROUPS.flatMap((g) => g.options.map((o) => [o.value, o.label]))
 );
 
 const getDateRangeFromPreset = (preset: string) => {
@@ -111,6 +142,8 @@ const getDateRangeFromPreset = (preset: string) => {
       e.setDate(s.getDate() + 6);
       return { from: s, to: e };
     }
+    case "last_7_days":
+      return { from: new Date(today.getTime() - 7 * 86400000), to: now };
     case "this_month":
       return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
     case "last_month":
@@ -118,10 +151,28 @@ const getDateRangeFromPreset = (preset: string) => {
         from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
         to: new Date(now.getFullYear(), now.getMonth(), 0),
       };
-    case "last_7_days":
-      return { from: new Date(today.getTime() - 7 * 86400000), to: now };
     case "last_30_days":
       return { from: new Date(today.getTime() - 30 * 86400000), to: now };
+    case "this_quarter": {
+      const q = Math.floor(now.getMonth() / 3);
+      return { from: new Date(now.getFullYear(), q * 3, 1), to: now };
+    }
+    case "last_quarter": {
+      const q = Math.floor(now.getMonth() / 3);
+      const s =
+        q === 0
+          ? new Date(now.getFullYear() - 1, 9, 1)
+          : new Date(now.getFullYear(), (q - 1) * 3, 1);
+      const e = new Date(now.getFullYear(), q * 3, 0);
+      return { from: s, to: e };
+    }
+    case "this_year":
+      return { from: new Date(now.getFullYear(), 0, 1), to: now };
+    case "last_year":
+      return {
+        from: new Date(now.getFullYear() - 1, 0, 1),
+        to: new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59),
+      };
     default:
       return { from: today, to: now };
   }
@@ -345,6 +396,73 @@ const MONTH_NAMES = [
 ];
 const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
+// ─── PresetPanel (portal) ─────────────────────────────────────────────────────
+function PresetPanel({
+  groups,
+  selected,
+  onSelect,
+  onClose,
+  anchorRect,
+}: {
+  groups: typeof PRESET_GROUPS;
+  selected: string;
+  onSelect: (v: string) => void;
+  onClose: () => void;
+  anchorRect: DOMRect | null;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    // setTimeout tránh close ngay lập tức khi click trigger
+    const id = setTimeout(() => document.addEventListener("mousedown", h), 0);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener("mousedown", h);
+    };
+  }, [onClose]);
+
+  if (!anchorRect || typeof window === "undefined") return null;
+
+  // Cạnh phải sidebar + 8px gap; nếu tràn màn hình thì flip trái
+  const left = anchorRect.right + 8;
+  const top = anchorRect.top;
+
+  return createPortal(
+    <div
+      ref={ref}
+      style={{ position: "fixed", top, left, zIndex: 9999 }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 flex gap-5 animate-in fade-in zoom-in-95 duration-150">
+      {groups.map((group) => (
+        <div key={group.label} className="flex flex-col gap-1.5 min-w-[88px]">
+          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+            {group.label}
+          </span>
+          {group.options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onSelect(opt.value);
+                onClose();
+              }}
+              className={`px-3 py-1.5 rounded-full text-sm border transition-all whitespace-nowrap text-left ${
+                selected === opt.value
+                  ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
+                  : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+              }`}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
 // ─── MiniCalendar ─────────────────────────────────────────────────────────────
 function MiniCalendar({
   value,
@@ -494,7 +612,10 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   const [toDate, setToDate] = useState("");
   const [creatorId, setCreatorId] = useState("");
   const [saleChannelId, setSaleChannelId] = useState("");
+  const [showPresetPanel, setShowPresetPanel] = useState(false);
+  const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
+  const triggerBtnRef = useRef<HTMLButtonElement>(null);
 
   const customDateRef = useRef<HTMLDivElement>(null);
   const customerRef = useRef<HTMLDivElement>(null);
@@ -646,47 +767,88 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
           </div>
 
           {enableOrderDate && (
-            <div className="space-y-2">
-              {/* Mode toggle */}
-              <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs">
-                {(["preset", "custom"] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => {
-                      setDateMode(m);
-                      setOpenCal(null); // đóng calendar khi switch mode
-                    }}
-                    className={`flex-1 py-1.5 font-medium transition-colors ${
-                      dateMode === m
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-500 hover:bg-gray-50"
-                    }`}>
-                    {m === "preset" ? "Nhanh" : "Tùy chỉnh"}
-                  </button>
-                ))}
+            <div className="space-y-1.5">
+              {/* ── Row: Preset (radio) ── */}
+              <div
+                onClick={() => {
+                  setDateMode("preset");
+                  setOpenCal(null);
+                }}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+                  dateMode === "preset"
+                    ? "border-blue-400 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}>
+                {/* Radio dot */}
+                <div
+                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                    dateMode === "preset"
+                      ? "border-blue-600"
+                      : "border-gray-300"
+                  }`}>
+                  {dateMode === "preset" && (
+                    <div className="w-2 h-2 rounded-full bg-blue-600" />
+                  )}
+                </div>
+
+                <span className="text-sm text-gray-700 flex-1 font-medium">
+                  {PRESET_LABELS[selectedPreset] ?? "Chọn thời gian"}
+                </span>
+
+                {/* Trigger mở PresetPanel */}
+                <button
+                  ref={triggerBtnRef}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDateMode("preset");
+                    setOpenCal(null);
+                    if (showPresetPanel) {
+                      setShowPresetPanel(false);
+                    } else {
+                      setPanelAnchorRect(
+                        triggerBtnRef.current?.getBoundingClientRect() ?? null
+                      );
+                      setShowPresetPanel(true);
+                    }
+                  }}
+                  className={`p-1 rounded-md transition-colors ${
+                    showPresetPanel
+                      ? "bg-blue-100 text-blue-600"
+                      : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  }`}>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
 
-              {dateMode === "preset" ? (
-                // Chip grid — không có dropdown, không có native calendar
-                <div className="grid grid-cols-2 gap-1">
-                  {TIME_PRESETS.map((p) => (
-                    <button
-                      key={p.value}
-                      type="button"
-                      onClick={() => setSelectedPreset(p.value)}
-                      className={`px-2 py-1.5 rounded-lg text-xs font-medium text-center transition-all ${
-                        selectedPreset === p.value
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200"
-                      }`}>
-                      {p.label}
-                    </button>
-                  ))}
+              {/* ── Row: Tùy chỉnh (radio) ── */}
+              <div
+                onClick={() => {
+                  setDateMode("custom");
+                  setShowPresetPanel(false);
+                }}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+                  dateMode === "custom"
+                    ? "border-blue-400 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}>
+                <div
+                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                    dateMode === "custom"
+                      ? "border-blue-600"
+                      : "border-gray-300"
+                  }`}>
+                  {dateMode === "custom" && (
+                    <div className="w-2 h-2 rounded-full bg-blue-600" />
+                  )}
                 </div>
-              ) : (
-                // Custom — MiniCalendar inline, không dùng <input type="date">
-                <div ref={customDateRef} className="space-y-2">
+                <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
+                <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              </div>
+
+              {/* ── Custom date fields + MiniCalendar ── */}
+              {dateMode === "custom" && (
+                <div ref={customDateRef} className="space-y-2 pt-1">
                   {(["from", "to"] as const).map((field) => {
                     const isFrom = field === "from";
                     const val = isFrom ? fromDate : toDate;
@@ -721,7 +883,6 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
                           </span>
                           <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         </button>
-
                         {isOpen && (
                           <MiniCalendar
                             value={val}
@@ -736,6 +897,17 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
                     );
                   })}
                 </div>
+              )}
+
+              {/* PresetPanel portal */}
+              {showPresetPanel && (
+                <PresetPanel
+                  groups={PRESET_GROUPS}
+                  selected={selectedPreset}
+                  onSelect={setSelectedPreset}
+                  onClose={() => setShowPresetPanel(false)}
+                  anchorRect={panelAnchorRect}
+                />
               )}
             </div>
           )}
