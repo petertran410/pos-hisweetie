@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import {
   useCreateCustomer,
   useCustomerGroups,
   useUpdateCustomer,
 } from "@/lib/hooks/useCustomers";
-import { X, Calendar, Plus } from "lucide-react";
+import { X, Calendar, Plus, Pencil, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Customer } from "@/lib/types/customer";
 import { useBranchStore } from "@/lib/store/branch";
-import { CustomerAddressItem } from "./CustomerAddressItem";
 import { sanitizeAddresses } from "@/lib/utils/sanitize-address";
+import { SearchableSelect } from "../ui/SearchableSelect";
+import { CustomerAddressFormModal } from "../pos/CustomerAddressFormModal";
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -116,11 +117,57 @@ export function CustomerForm({
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [showBirthDatePicker, setShowBirthDatePicker] = useState(false);
   const birthDatePickerRef = useRef<HTMLDivElement>(null);
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
-  const [showYearPicker, setShowYearPicker] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState<"basic" | "invoice">(
     "basic"
   );
+
+  const [addrModal, setAddrModal] = useState<{
+    open: boolean;
+    mode: "create" | "edit";
+    index?: number;
+  }>({ open: false, mode: "create" });
+
+  const selectedInvoiceCityCode = watch("invoiceCityCode");
+
+  const filteredInvoiceCommunes = useMemo(() => {
+    if (!selectedInvoiceCityCode) return [];
+    return invoiceCommunes.filter(
+      (c) => String(c.provinceCode) === String(selectedInvoiceCityCode)
+    );
+  }, [selectedInvoiceCityCode, invoiceCommunes]);
+
+  const formatAddressLine = (a: any): string => {
+    const newLine = [a.address, a.newWardName, a.newCityName]
+      .filter(Boolean)
+      .join(", ");
+    if (newLine) return newLine;
+    return [a.address, a.wardName, a.districtName, a.cityName]
+      .filter(Boolean)
+      .join(", ");
+  };
+
+  const handleAddFromModal = (addr: any) => {
+    const isFirst = addresses.length === 0;
+    const toAdd = { ...addr, isDefault: isFirst || !!addr.isDefault };
+    const next = toAdd.isDefault
+      ? [...addresses.map((a) => ({ ...a, isDefault: false })), toAdd]
+      : [...addresses, toAdd];
+    setAddresses(next);
+    setAddrModal({ open: false, mode: "create" });
+  };
+
+  const handleEditFromModal = (addr: any) => {
+    if (addrModal.index == null) return;
+    const idx = addrModal.index;
+    let next = addresses.map((a, i) => (i === idx ? { ...a, ...addr } : a));
+    if (addr.isDefault) {
+      next = next.map((a, i) => ({ ...a, isDefault: i === idx }));
+    } else if (!next.some((a) => a.isDefault) && next.length > 0) {
+      next[0] = { ...next[0], isDefault: true };
+    }
+    setAddresses(next);
+    setAddrModal({ open: false, mode: "create" });
+  };
 
   const customerType = watch("type", "0");
 
@@ -250,19 +297,6 @@ export function CustomerForm({
       selectedGroupIds.includes(group.id)
     ) || [];
 
-  const formatDateDisplay = (date: Date | null) => {
-    if (!date) return "";
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
-
-  const handleBirthDateSelect = (date: Date) => {
-    setBirthDate(date);
-    setShowBirthDatePicker(false);
-  };
-
   // Handlers cho danh sách địa chỉ
   const handleAddAddress = () => {
     setAddresses((prev) => [...prev, createEmptyAddress(false)]);
@@ -384,6 +418,17 @@ export function CustomerForm({
       birthDate: birthDate ? birthDate.toISOString() : undefined,
       gender: data.gender === "" ? undefined : data.gender === "true",
       addresses: sanitizeAddresses(addresses),
+      invoiceCityCode: data.invoiceCityCode || undefined,
+      invoiceCityName: data.invoiceCityName || undefined,
+      invoiceWardCode: data.invoiceWardCode || undefined,
+      invoiceWardName: data.invoiceWardName || undefined,
+      invoiceBuyerName: data.invoiceBuyerName || undefined,
+      invoiceAddress: data.invoiceAddress || undefined,
+      invoiceCccdCmnd: data.invoiceCccdCmnd || undefined,
+      invoiceBankAccount: data.invoiceBankAccount || undefined,
+      invoiceEmail: data.invoiceEmail || undefined,
+      invoicePhone: data.invoicePhone || undefined,
+      invoiceDvqhnsCode: data.invoiceDvqhnsCode || undefined,
     };
 
     Object.keys(formattedData).forEach((key) => {
@@ -524,40 +569,92 @@ export function CustomerForm({
                 </h3>
                 <button
                   type="button"
-                  onClick={handleAddAddress}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                  onClick={() => setAddrModal({ open: true, mode: "create" })}
+                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
                   <Plus className="w-4 h-4" /> Thêm địa chỉ
                 </button>
               </div>
-              <div className="space-y-4">
-                {addresses.map((addr, index) => (
-                  <CustomerAddressItem
-                    key={index}
-                    address={addr}
-                    index={index}
-                    cities={cities}
-                    invoiceProvinces={invoiceProvinces}
-                    invoiceCommunes={invoiceCommunes}
-                    customerType={customerType}
-                    canRemove={addresses.length > 1}
-                    onUpdate={handleUpdateAddress}
-                    onRemove={handleRemoveAddress}
-                    onSetDefault={handleSetDefault}
-                  />
-                ))}
-              </div>
+
+              {addresses.length === 0 ? (
+                <div className="text-center py-6 text-gray-500 border-2 border-dashed rounded-lg text-sm">
+                  Chưa có địa chỉ. Bấm "Thêm địa chỉ" để bắt đầu.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {addresses.map((addr: any, index: number) => (
+                    <div
+                      key={index}
+                      className={`border rounded-lg px-3 py-2.5 flex items-start justify-between gap-3 ${
+                        addr.isDefault
+                          ? "border-blue-500 bg-blue-50/50"
+                          : "border-gray-200"
+                      }`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <span className="font-medium text-sm truncate">
+                            {addr.label ||
+                              addr.receiver ||
+                              `Địa chỉ #${index + 1}`}
+                          </span>
+                          {addr.isDefault && (
+                            <span className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded">
+                              Mặc định
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-600 truncate">
+                          {addr.receiver && <span>{addr.receiver} · </span>}
+                          {addr.contactNumber && (
+                            <span>{addr.contactNumber} · </span>
+                          )}
+                          {formatAddressLine(addr) || (
+                            <span className="italic">Chưa có địa chỉ</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {!addr.isDefault && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetDefault(index)}
+                            title="Đặt mặc định"
+                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded">
+                            <Star className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAddrModal({ open: true, mode: "edit", index })
+                          }
+                          title="Sửa"
+                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        {addresses.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAddress(index)}
+                            title="Xóa"
+                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Nhóm khách hàng + Ghi chú */}
             <div className="border-t pt-6">
               <h3 className="font-semibold mb-4">Nhóm khách hàng, ghi chú</h3>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div>
                 <div className="relative" ref={dropdownRef}>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-1">
                     Nhóm khách hàng
                   </label>
-
                   <div
                     className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
                     onClick={() => setShowGroupDropdown(true)}>
@@ -631,72 +728,294 @@ export function CustomerForm({
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
+                <div className="mt-2">
+                  <label className="block text-sm font-medium mb-1">
                     Ghi chú
                   </label>
                   <textarea
                     {...register("comments")}
                     placeholder="Nhập ghi chú"
-                    className="w-full border rounded px-3 py-2 resize-none"
-                    rows={2}
+                    className="w-full px-3 py-2 border rounded-lg resize-none"
+                    rows={3}
                   />
                 </div>
               </div>
             </div>
           </div>
+
           {/* ================= TAB 2: THÔNG TIN XUẤT HÓA ĐƠN ================= */}
           <div
             className={
               activeFormTab === "invoice" ? "p-6 space-y-6" : "hidden"
             }>
-            {/* Loại khách hàng + Thông tin doanh nghiệp */}
-            <div className="border-t pt-6">
-              <h3 className="font-semibold mb-4">Loại khách hàng</h3>
-              <div className="flex gap-4 mb-4">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    value="0"
-                    {...register("type")}
-                    defaultChecked
-                  />
-                  <span>Cá nhân</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input type="radio" value="1" {...register("type")} />
-                  <span>Tổ chức/Hộ kinh doanh</span>
-                </label>
-              </div>
-
-              {customerType === "1" && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Mã số thuế
-                    </label>
-                    <input
-                      {...register("taxCode")}
-                      placeholder="Nhập mã số thuế"
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Tên công ty
-                    </label>
-                    <input
-                      {...register("organization")}
-                      placeholder="Nhập tên công ty"
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-                </div>
-              )}
+            {/* Loại khách hàng radio — inline theo hình 4/5 */}
+            <div className="flex items-center gap-6">
+              <span className="text-sm font-medium">Loại khách hàng</span>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  value="0"
+                  {...register("type")}
+                  defaultChecked
+                />
+                <span>Cá nhân</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" value="1" {...register("type")} />
+                <span>Tổ chức/Hộ kinh doanh</span>
+              </label>
             </div>
+
+            {/* ============ CÁ NHÂN (type=0) — theo hình 4 ============ */}
+            {customerType === "0" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Tên người mua
+                  </label>
+                  <input
+                    {...register("invoiceBuyerName")}
+                    placeholder="Nhập tên người mua"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Mã số thuế
+                  </label>
+                  <input
+                    {...register("taxCode")}
+                    placeholder="Nhập mã số thuế"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium mb-1.5">
+                    Địa chỉ
+                  </label>
+                  <input
+                    {...register("invoiceAddress")}
+                    placeholder="Nhập địa chỉ"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Tỉnh/Thành phố
+                  </label>
+                  <SearchableSelect
+                    options={(invoiceProvinces || []).map((p) => ({
+                      value: p.code,
+                      label: p.name,
+                    }))}
+                    value={watch("invoiceCityCode") || ""}
+                    onChange={(value) => {
+                      const prov = invoiceProvinces.find(
+                        (p) => p.code === value
+                      );
+                      setValue("invoiceCityCode", value);
+                      setValue("invoiceCityName", prov?.name || "");
+                      setValue("invoiceWardCode", "");
+                      setValue("invoiceWardName", "");
+                    }}
+                    placeholder="Tìm Tỉnh/Thành phố"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Phường/Xã
+                  </label>
+                  <SearchableSelect
+                    options={filteredInvoiceCommunes.map((c) => ({
+                      value: c.code,
+                      label: c.name,
+                    }))}
+                    value={watch("invoiceWardCode") || ""}
+                    onChange={(value) => {
+                      const com = filteredInvoiceCommunes.find(
+                        (c) => c.code === value
+                      );
+                      setValue("invoiceWardCode", value);
+                      setValue("invoiceWardName", com?.name || "");
+                    }}
+                    placeholder="Tìm Phường/Xã"
+                    disabled={!watch("invoiceCityCode")}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Số CCCD/CMND
+                  </label>
+                  <input
+                    {...register("invoiceCccdCmnd")}
+                    placeholder="Nhập số CCCD/CMND"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Số hộ chiếu
+                  </label>
+                  <input
+                    {...register("invoiceBankAccount")}
+                    placeholder="Nhập số hộ chiếu"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    {...register("invoiceEmail")}
+                    placeholder="email@gmail.com"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Số điện thoại
+                  </label>
+                  <input
+                    {...register("invoicePhone")}
+                    placeholder="Nhập số điện thoại"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* ============ TỔ CHỨC (type=1) — theo hình 5 ============ */}
+            {customerType === "1" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Mã số thuế <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    {...register("taxCode")}
+                    placeholder="Bắt buộc"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Tên công ty
+                  </label>
+                  <input
+                    {...register("organization")}
+                    placeholder="Nhập tên công ty"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium mb-1.5">
+                    Địa chỉ
+                  </label>
+                  <input
+                    {...register("invoiceAddress")}
+                    placeholder="Nhập địa chỉ"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Tỉnh/Thành phố
+                  </label>
+                  <SearchableSelect
+                    options={(invoiceProvinces || []).map((p) => ({
+                      value: p.code,
+                      label: p.name,
+                    }))}
+                    value={watch("invoiceCityCode") || ""}
+                    onChange={(value) => {
+                      const prov = invoiceProvinces.find(
+                        (p) => p.code === value
+                      );
+                      setValue("invoiceCityCode", value);
+                      setValue("invoiceCityName", prov?.name || "");
+                      setValue("invoiceWardCode", "");
+                      setValue("invoiceWardName", "");
+                    }}
+                    placeholder="Tìm Tỉnh/Thành phố"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Phường/Xã
+                  </label>
+                  <SearchableSelect
+                    options={filteredInvoiceCommunes.map((c) => ({
+                      value: c.code,
+                      label: c.name,
+                    }))}
+                    value={watch("invoiceWardCode") || ""}
+                    onChange={(value) => {
+                      const com = filteredInvoiceCommunes.find(
+                        (c) => c.code === value
+                      );
+                      setValue("invoiceWardCode", value);
+                      setValue("invoiceWardName", com?.name || "");
+                    }}
+                    placeholder="Tìm Phường/Xã"
+                    disabled={!watch("invoiceCityCode")}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Tên người mua
+                  </label>
+                  <input
+                    {...register("invoiceBuyerName")}
+                    placeholder="Nhập tên người mua"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Mã ĐVQHNS
+                  </label>
+                  <input
+                    {...register("invoiceDvqhnsCode")}
+                    placeholder="Nhập mã đơn vị"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    {...register("invoiceEmail")}
+                    placeholder="email@gmail.com"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Số điện thoại
+                  </label>
+                  <input
+                    {...register("invoicePhone")}
+                    placeholder="Nhập số điện thoại"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+              </div>
+            )}
           </div>
           {/* Footer */}
-          <div className="sticky bottom-0 bg-white border-t pt-4 flex justify-end gap-2">
+          <div className="sticky bottom-0 bg-white border-t py-4 px-4 flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
@@ -712,6 +1031,25 @@ export function CustomerForm({
           </div>
         </form>
       </div>
+
+      <CustomerAddressFormModal
+        isOpen={addrModal.open}
+        mode={addrModal.mode}
+        initial={
+          addrModal.mode === "edit" && addrModal.index != null
+            ? addresses[addrModal.index]
+            : undefined
+        }
+        cities={cities}
+        invoiceProvinces={invoiceProvinces}
+        invoiceCommunes={invoiceCommunes}
+        onClose={() => setAddrModal({ open: false, mode: "create" })}
+        onSubmit={(addr) =>
+          addrModal.mode === "create"
+            ? handleAddFromModal(addr)
+            : handleEditFromModal(addr)
+        }
+      />
     </div>
   );
 }
