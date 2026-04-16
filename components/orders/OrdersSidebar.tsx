@@ -15,6 +15,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 
 interface OrdersSidebarProps {
   filters: any;
@@ -599,7 +600,14 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   const { data: customersData } = useCustomers({ pageSize: 1000 });
   const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
+  const { data: bankAccounts } = useBankAccountsForPayment();
 
+  const [paymentMethod, setPaymentMethod] = useState<"" | "cash" | "transfer">(
+    ""
+  );
+  const [selectedBankAccountIds, setSelectedBankAccountIds] = useState<
+    number[]
+  >([]);
   const [branchId, setBranchId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
@@ -651,6 +659,7 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     if (enableOrderDate) n++;
     if (creatorId) n++;
     if (saleChannelId) n++;
+    if (paymentMethod) n++;
     return n;
   }, [
     branchId,
@@ -695,6 +704,10 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
         f.fromDate = range.from.toISOString();
         f.toDate = range.to.toISOString();
       }
+      if (paymentMethod) f.paymentMethod = paymentMethod;
+      if (paymentMethod === "transfer" && selectedBankAccountIds.length > 0)
+        f.bankAccountIds = selectedBankAccountIds;
+
       onFiltersChange(f);
     }, 300);
     return () => clearTimeout(timer);
@@ -710,6 +723,8 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     toDate,
     creatorId,
     saleChannelId,
+    paymentMethod,
+    selectedBankAccountIds,
   ]);
 
   const clearAll = () => {
@@ -726,10 +741,12 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     setCreatorId("");
     setSaleChannelId("");
     onFiltersChange({});
+    setPaymentMethod("");
+    setSelectedBankAccountIds([]);
   };
 
   return (
-    <aside className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll bg-white shadow-xl flex flex-col">
+    <aside className="w-64 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll bg-white shadow-xl flex flex-col">
       {/* ── Header ── */}
       <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10 rounded-t-xl">
         <div className="flex items-center gap-2">
@@ -929,6 +946,91 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
             placeholder="Chọn trạng thái TT"
             onChange={setSelectedPaymentStatus}
           />
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* ── Phương thức thanh toán ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Phương thức thanh toán
+          </label>
+
+          <SimpleDropdown
+            options={[
+              { value: "cash", label: "Tiền mặt" },
+              { value: "transfer", label: "Ngân hàng" },
+            ]}
+            value={paymentMethod}
+            placeholder="Tất cả"
+            onChange={(v) => {
+              setPaymentMethod(v as "" | "cash" | "transfer");
+              setSelectedBankAccountIds([]);
+            }}
+          />
+
+          {/* Bank account multi-select — chỉ hiện khi chọn Ngân hàng */}
+          {paymentMethod === "transfer" && (
+            <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
+              {/* Chọn tất cả */}
+              <label className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors select-none">
+                <input
+                  type="checkbox"
+                  checked={
+                    Array.isArray(bankAccounts) &&
+                    bankAccounts.length > 0 &&
+                    selectedBankAccountIds.length === bankAccounts.length
+                  }
+                  onChange={(e) => {
+                    if (!Array.isArray(bankAccounts)) return;
+                    setSelectedBankAccountIds(
+                      e.target.checked ? bankAccounts.map((a: any) => a.id) : []
+                    );
+                  }}
+                  className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer flex-shrink-0"
+                />
+                <span className="text-xs font-medium text-gray-600">
+                  Tất cả tài khoản
+                </span>
+              </label>
+
+              {/* Danh sách tài khoản */}
+              <div className="max-h-40 overflow-y-auto">
+                {!Array.isArray(bankAccounts) || bankAccounts.length === 0 ? (
+                  <div className="px-3 py-3 text-xs text-gray-400 text-center">
+                    Không có tài khoản
+                  </div>
+                ) : (
+                  bankAccounts.map((acc: any) => (
+                    <label
+                      key={acc.id}
+                      className="flex items-center gap-2.5 px-3 py-2 border-t border-gray-50 cursor-pointer hover:bg-blue-50 transition-colors select-none">
+                      <input
+                        type="checkbox"
+                        checked={selectedBankAccountIds.includes(acc.id)}
+                        onChange={(e) =>
+                          setSelectedBankAccountIds((prev) =>
+                            e.target.checked
+                              ? [...prev, acc.id]
+                              : prev.filter((id) => id !== acc.id)
+                          )
+                        }
+                        className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer flex-shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium text-gray-700 truncate">
+                          {acc.bankCode} · {acc.accountNumber}
+                        </div>
+                        <div className="text-[10px] text-gray-400 truncate">
+                          {acc.accountHolder}
+                        </div>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="border-t border-gray-100" />

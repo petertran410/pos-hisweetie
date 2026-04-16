@@ -13,6 +13,8 @@ export const ordersApi = {
     branchId?: number;
     fromDate?: string;
     toDate?: string;
+    paymentMethod?: string;
+    bankAccountIds?: number[];
   }): Promise<{
     data: Order[];
     total: number;
@@ -30,6 +32,10 @@ export const ordersApi = {
       queryParams.append("branchId", params.branchId.toString());
     if (params?.fromDate) queryParams.append("fromDate", params.fromDate);
     if (params?.toDate) queryParams.append("toDate", params.toDate);
+    if (params?.paymentMethod)
+      queryParams.append("paymentMethod", params.paymentMethod);
+    if (params?.bankAccountIds && params.bankAccountIds.length > 0)
+      queryParams.append("bankAccountIds", params.bankAccountIds.join(","));
 
     return apiClient.get(`/orders?${queryParams.toString()}`);
   },
