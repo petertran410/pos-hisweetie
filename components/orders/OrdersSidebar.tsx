@@ -27,12 +27,6 @@ const STATUS_OPTIONS = [
     dot: "bg-teal-500",
   },
   {
-    value: "processing",
-    label: "Đang giao hàng",
-    color: "bg-blue-100 text-blue-700",
-    dot: "bg-blue-400",
-  },
-  {
     value: "partially_invoiced",
     label: "Ra 1 phần HĐ",
     color: "bg-teal-100 text-teal-600",
@@ -161,10 +155,13 @@ function StatusDropdown({
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
+      {/* Đổi <button> → <div> để tránh nested button (X clear button bên trong) */}
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen((prev) => !prev)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-sm transition-colors ${
+        onKeyDown={(e) => e.key === "Enter" && setOpen((prev) => !prev)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors select-none ${
           open
             ? "border-blue-400 ring-2 ring-blue-100"
             : "hover:border-gray-400"
@@ -186,6 +183,7 @@ function StatusDropdown({
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {selected && (
+            // Đây là button thật duy nhất — không còn lồng trong button nữa
             <button
               type="button"
               onClick={(e) => {
@@ -200,7 +198,7 @@ function StatusDropdown({
             className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
           />
         </div>
-      </button>
+      </div>
 
       {open && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
@@ -223,6 +221,96 @@ function StatusDropdown({
                 {opt.label}
               </span>
               {value === opt.value && (
+                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface SimpleOption {
+  value: string;
+  label: string;
+}
+
+function SimpleDropdown({
+  options,
+  value,
+  placeholder,
+  onChange,
+}: {
+  options: SimpleOption[];
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((prev) => !prev)}
+        onKeyDown={(e) => e.key === "Enter" && setOpen((prev) => !prev)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors select-none ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "hover:border-gray-400"
+        } bg-white`}>
+        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {selected && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange("");
+              }}
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </div>
+      </div>
+
+      {open && options.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+          {options.map((opt, idx) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value === value ? "" : opt.value);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                opt.value === value
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "hover:bg-gray-50 text-gray-700"
+              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+              {opt.label}
+              {opt.value === value && (
                 <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
               )}
             </button>
@@ -578,17 +666,15 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Chi nhánh
           </label>
-          <select
+          <SimpleDropdown
+            options={
+              branches?.map((b) => ({ value: String(b.id), label: b.name })) ??
+              []
+            }
             value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-            <option value="">Tất cả chi nhánh</option>
-            {branches?.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+            placeholder="Tất cả chi nhánh"
+            onChange={setBranchId}
+          />
         </div>
 
         {/* ── Người tạo ── */}
@@ -596,17 +682,17 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Người tạo
           </label>
-          <select
+          <SimpleDropdown
+            options={
+              users?.map((u: any) => ({
+                value: String(u.id),
+                label: u.name,
+              })) ?? []
+            }
             value={creatorId}
-            onChange={(e) => setCreatorId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-            <option value="">Tất cả</option>
-            {users?.map((u: any) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
+            placeholder="Tất cả"
+            onChange={setCreatorId}
+          />
         </div>
 
         {/* ── Kênh bán ── */}
@@ -614,17 +700,17 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Kênh bán hàng
           </label>
-          <select
+          <SimpleDropdown
+            options={
+              saleChannels?.map((sc) => ({
+                value: String(sc.id),
+                label: sc.name,
+              })) ?? []
+            }
             value={saleChannelId}
-            onChange={(e) => setSaleChannelId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-            <option value="">Tất cả kênh</option>
-            {saleChannels?.map((sc) => (
-              <option key={sc.id} value={sc.id}>
-                {sc.name}
-              </option>
-            ))}
-          </select>
+            placeholder="Tất cả kênh"
+            onChange={setSaleChannelId}
+          />
         </div>
       </div>
     </aside>
