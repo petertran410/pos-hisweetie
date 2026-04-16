@@ -85,7 +85,7 @@ function SellerDropdown({
         tabIndex={0}
         onClick={() => setOpen((prev) => !prev)}
         onKeyDown={(e) => e.key === "Enter" && setOpen((prev) => !prev)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors select-none ${
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-1 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
             ? "border-blue-400 ring-2 ring-blue-100"
             : "hover:border-gray-400"
@@ -276,22 +276,16 @@ export function OrderCart({
   return (
     <div className="w-[40%] h-full bg-white border-l flex flex-col ">
       <div className="flex-1 flex flex-col overflow-y-auto">
-        <div className="p-3 space-y-2 flex-shrink-0">
+        <div className="pl-3 pr-3 pt-3 pb-1 space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {/* Người bán */}
-              <div className="mb-2">
-                <label className="block text-xs text-gray-500 mb-1">
-                  Người bán
-                </label>
-                <SellerDropdown
-                  users={usersForFilter}
-                  soldById={soldById}
-                  currentUserId={user?.id ?? 0}
-                  currentUserName={user?.name ?? ""}
-                  onChange={onSellerChange}
-                />
-              </div>
+              <SellerDropdown
+                users={usersForFilter}
+                soldById={soldById}
+                currentUserId={user?.id ?? 0}
+                currentUserName={user?.name ?? ""}
+                onChange={onSellerChange}
+              />
             </div>
             <div className="text-xs text-gray-600">{formatDate()}</div>
           </div>
@@ -315,28 +309,33 @@ export function OrderCart({
                 />
               )}
 
-            <div className="border rounded-xl shadow-sm p-3 space-y-5">
+            <div className="border rounded-xl shadow-sm p-3 space-y-2">
               <div className="flex items-center gap-1.5">
-                <MapPin className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                <span className="text-lg">{selectedBranch?.address || ""}</span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <User className="w-5 h-5 text-green-500 flex-shrink-0" />
-                <span className="text-lg">{deliveryInfo.receiver || ""}</span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <Phone className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <span className="text-lg">
-                  {deliveryInfo.contactNumber || ""}
+                <MapPin className="w-[16px] h-[16px] text-blue-500 flex-shrink-0" />
+                <span className="text-[16px]">
+                  {selectedBranch?.address || ""}
                 </span>
               </div>
-              <div className="flex gap-1.5">
-                <House className="w-5 h-5 flex-shrink-0" />
-                <span>
+
+              <div className="flex items-center gap-1.5">
+                <House className="w-[16px] h-[16px] flex-shrink-0" />
+                <span className="text-[16px]">
                   {deliveryInfo.detailAddress}, {deliveryInfo.locationName},{" "}
                   {deliveryInfo.wardName}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <User className="w-[16px] h-[16px] text-green-500 flex-shrink-0" />
+                <span className="text-[16px]">
+                  {deliveryInfo.receiver || ""}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <Phone className="w-[16px] h-[16px] text-gray-400 flex-shrink-0" />
+                <span className="text-[16px]">
+                  {deliveryInfo.contactNumber || ""}
                 </span>
               </div>
             </div>

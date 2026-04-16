@@ -105,8 +105,8 @@ export function CustomerSearch({
                     handleOpenModal();
                   }
                 }}
-                className="w-full border rounded-xl px-2 py-2 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
-                <span className="text-blue-600 hover:underline">
+                className="w-full flex items-center justify-between gap-2 border rounded-lg px-1 py-1 cursor-pointer transition-colors select-none bg-white">
+                <span className="text-blue-600 hover:underline text-md pl-1">
                   {selectedCustomer.name} {selectedCustomer.contactNumber}
                 </span>
                 <button
@@ -140,7 +140,7 @@ export function CustomerSearch({
           </div>
 
           <button className="p-2 border rounded-md hover:bg-gray-50">
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
           </button>
           <PriceBookDropdown
             selectedPriceBookId={selectedPriceBookId}

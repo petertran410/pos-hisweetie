@@ -330,30 +330,30 @@ export function InvoiceCart({
 
             <div className="border rounded-xl shadow-sm p-3 space-y-2">
               <div className="flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                <span className="text-[18px]">
+                <MapPin className="w-[16px] h-[16px] text-blue-500 flex-shrink-0" />
+                <span className="text-[16px]">
                   {selectedBranch?.address || ""}
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
-                <House className="w-4 h-4 flex-shrink-0" />
-                <span className="text-[18px]">
+                <House className="w-[16px] h-[16px] flex-shrink-0" />
+                <span className="text-[16px]">
                   {deliveryInfo.detailAddress}, {deliveryInfo.locationName},{" "}
                   {deliveryInfo.wardName}
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
-                <User className="w-4 h-4 text-green-500 flex-shrink-0" />
-                <span className="text-[18px]">
+                <User className="w-[16px] h-[16px] text-green-500 flex-shrink-0" />
+                <span className="text-[16px]">
                   {deliveryInfo.receiver || ""}
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
-                <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <span className="text-[18px]">
+                <Phone className="w-[16px] h-[16px] text-gray-400 flex-shrink-0" />
+                <span className="text-[16px]">
                   {deliveryInfo.contactNumber || ""}
                 </span>
               </div>
@@ -410,39 +410,25 @@ export function InvoiceCart({
                 </select>
               </div>
               <div className="flex items-center gap-1.5 py-2">
-                <input
-                  type="checkbox"
-                  checked={deliveryInfo.noteForDriver !== ""}
-                  onChange={(e) => {
-                    if (!e.target.checked) {
-                      handleDeliveryChange("noteForDriver", "");
-                    } else {
-                      handleDeliveryChange("noteForDriver", " ");
-                    }
-                  }}
-                  className="w-3.5 h-3.5 text-blue-600 rounded"
-                />
                 <span className="text-md text-gray-700">
                   Ghi chú cho bưu tá
                 </span>
               </div>
-              {deliveryInfo.noteForDriver !== "" && (
-                <textarea
-                  value={deliveryInfo.noteForDriver || ""}
-                  onChange={(e) =>
-                    handleDeliveryChange("noteForDriver", e.target.value)
-                  }
-                  placeholder="Nhập ghi chú..."
-                  className="w-full text-md border rounded-xl p-2 outline-none focus:border-blue-500 resize-none"
-                  rows={3}
-                />
-              )}
+              <textarea
+                value={deliveryInfo.noteForDriver || ""}
+                onChange={(e) =>
+                  handleDeliveryChange("noteForDriver", e.target.value)
+                }
+                placeholder="Nhập ghi chú..."
+                className="w-full text-md border rounded-xl p-2 outline-none focus:border-blue-500 resize-none"
+                rows={3}
+              />
             </div>
           </div>
         )}
       </div>
       <div className="p-3 space-y-2.5 flex-shrink-0 border mr-3 ml-3 mb-3 rounded-xl shadow-sm">
-        <div className="flex items-center justify-between">
+        {/* <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-md">Thu hộ tiền (COD)</span>
             <label className="relative inline-flex items-center cursor-not-allowed opacity-60">
@@ -458,7 +444,7 @@ export function InvoiceCart({
           <span className="font-semibold text-md">
             {calculateTotal().toLocaleString()}
           </span>
-        </div>
+        </div> */}
 
         <div className="flex items-center justify-between text-md">
           <span>Khách cần trả</span>

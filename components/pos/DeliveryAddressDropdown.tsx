@@ -47,10 +47,10 @@ export function DeliveryAddressDropdown({
       <button
         type="button"
         onClick={() => setShowDropdown(!showDropdown)}
-        className="w-full border rounded-xl px-2 py-2 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        className="w-full flex items-center justify-between gap-2 border rounded-lg px-1 py-1 text-md cursor-pointer transition-colors select-none bg-white">
+        <div className="flex items-center gap-1 min-w-0 flex-1 pl-1">
           <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" />
-          <span className="text-sm text-blue-600 truncate">
+          <span className="text-md text-blue-600 truncate">
             {selected
               ? selected.label ||
                 selected.receiver ||
@@ -66,7 +66,7 @@ export function DeliveryAddressDropdown({
       </button>
 
       {showDropdown && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg max-h-80 overflow-y-auto z-50">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-80 overflow-y-auto z-50">
           {addresses.map((addr) => (
             <button
               key={addr.id}
