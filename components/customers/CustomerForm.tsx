@@ -118,6 +118,9 @@ export function CustomerForm({
   const birthDatePickerRef = useRef<HTMLDivElement>(null);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
+  const [activeFormTab, setActiveFormTab] = useState<"basic" | "invoice">(
+    "basic"
+  );
 
   const customerType = watch("type", "0");
 
@@ -428,6 +431,29 @@ export function CustomerForm({
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+          {/* THÊM: Tab navigation */}
+          <div className="border-b flex gap-6 px-6">
+            <button
+              type="button"
+              onClick={() => setActiveFormTab("basic")}
+              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeFormTab === "basic"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              Thông tin cơ bản
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFormTab("invoice")}
+              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeFormTab === "invoice"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              Thông tin xuất hóa đơn
+            </button>
+          </div>
           {/* Thông tin cơ bản */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -441,283 +467,289 @@ export function CustomerForm({
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Mã khách hàng
-              </label>
-              <input
-                {...register("code")}
-                placeholder="Tự động"
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Điện thoại 1 <span className="text-red-500">*</span>
-              </label>
-              <input
-                {...register("contactNumber", { required: true })}
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Điện thoại 2
-              </label>
-              <input
-                {...register("phone")}
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
-              <input
-                type="email"
-                {...register("email")}
-                placeholder="email@gmail.com"
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Giới tính
-              </label>
-              <select
-                {...register("gender")}
-                className="w-full border rounded px-3 py-2">
-                <option value="">Chọn</option>
-                <option value="true">Nam</option>
-                <option value="false">Nữ</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Sinh nhật
-              </label>
-              <div className="relative">
+            <div className={activeFormTab === "basic" ? "" : "hidden"}>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Mã khách hàng
+                </label>
                 <input
-                  type="text"
-                  readOnly
-                  value={formatDateDisplay(birthDate)}
-                  onClick={() => setShowBirthDatePicker(!showBirthDatePicker)}
-                  placeholder="DD/MM/YYYY"
-                  className="w-full border rounded px-3 py-2 pr-10 cursor-pointer"
+                  {...register("code")}
+                  placeholder="Tự động"
+                  className="w-full border rounded px-3 py-2"
                 />
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                {showBirthDatePicker && (
-                  <div
-                    ref={birthDatePickerRef}
-                    className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg p-4 z-50 w-[320px]">
-                    <div className="flex items-center justify-between mb-3 pb-3 border-b">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newDate = birthDate
-                            ? new Date(birthDate)
-                            : new Date();
-                          newDate.setMonth(newDate.getMonth() - 1);
-                          setBirthDate(newDate);
-                        }}
-                        className="p-1 hover:bg-gray-100 rounded">
-                        ‹
-                      </button>
-                      <div className="flex items-center gap-2 relative">
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Điện thoại 1 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  {...register("contactNumber", { required: true })}
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Điện thoại 2
+                </label>
+                <input
+                  {...register("phone")}
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <input
+                  type="email"
+                  {...register("email")}
+                  placeholder="email@gmail.com"
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Giới tính
+                </label>
+                <select
+                  {...register("gender")}
+                  className="w-full border rounded px-3 py-2">
+                  <option value="">Chọn</option>
+                  <option value="true">Nam</option>
+                  <option value="false">Nữ</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Sinh nhật
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    readOnly
+                    value={formatDateDisplay(birthDate)}
+                    onClick={() => setShowBirthDatePicker(!showBirthDatePicker)}
+                    placeholder="DD/MM/YYYY"
+                    className="w-full border rounded px-3 py-2 pr-10 cursor-pointer"
+                  />
+                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  {showBirthDatePicker && (
+                    <div
+                      ref={birthDatePickerRef}
+                      className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg p-4 z-50 w-[320px]">
+                      <div className="flex items-center justify-between mb-3 pb-3 border-b">
                         <button
                           type="button"
                           onClick={() => {
-                            setShowMonthPicker(!showMonthPicker);
-                            setShowYearPicker(false);
+                            const newDate = birthDate
+                              ? new Date(birthDate)
+                              : new Date();
+                            newDate.setMonth(newDate.getMonth() - 1);
+                            setBirthDate(newDate);
                           }}
-                          className="px-3 py-1 hover:bg-gray-100 rounded font-medium">
-                          Tháng{" "}
-                          {(birthDate?.getMonth() ?? new Date().getMonth()) + 1}
+                          className="p-1 hover:bg-gray-100 rounded">
+                          ‹
                         </button>
-                        <span className="text-gray-400">/</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowYearPicker(!showYearPicker);
-                            setShowMonthPicker(false);
-                          }}
-                          className="px-3 py-1 hover:bg-gray-100 rounded font-medium">
-                          {birthDate?.getFullYear() ?? new Date().getFullYear()}
-                        </button>
+                        <div className="flex items-center gap-2 relative">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowMonthPicker(!showMonthPicker);
+                              setShowYearPicker(false);
+                            }}
+                            className="px-3 py-1 hover:bg-gray-100 rounded font-medium">
+                            Tháng{" "}
+                            {(birthDate?.getMonth() ?? new Date().getMonth()) +
+                              1}
+                          </button>
+                          <span className="text-gray-400">/</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowYearPicker(!showYearPicker);
+                              setShowMonthPicker(false);
+                            }}
+                            className="px-3 py-1 hover:bg-gray-100 rounded font-medium">
+                            {birthDate?.getFullYear() ??
+                              new Date().getFullYear()}
+                          </button>
 
-                        {showMonthPicker && (
-                          <div className="absolute top-full mt-2 bg-white border rounded-lg shadow-lg p-3 z-50 left-0">
-                            <div className="grid grid-cols-3 gap-2">
-                              {Array.from({ length: 12 }, (_, i) => (
-                                <button
-                                  key={i}
-                                  type="button"
-                                  onClick={() => {
-                                    const newDate = birthDate
-                                      ? new Date(birthDate)
-                                      : new Date();
-                                    newDate.setMonth(i);
-                                    setBirthDate(newDate);
-                                    setShowMonthPicker(false);
-                                  }}
-                                  className={`px-3 py-2 text-sm rounded hover:bg-gray-100 ${
-                                    (birthDate?.getMonth() ??
-                                      new Date().getMonth()) === i
-                                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                                      : ""
-                                  }`}>
-                                  T{i + 1}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {showYearPicker && (
-                          <div className="absolute top-full mt-2 bg-white border rounded-lg shadow-lg p-3 z-50 right-0 max-h-[240px] overflow-y-auto w-[200px]">
-                            <div className="grid grid-cols-3 gap-2">
-                              {Array.from({ length: 100 }, (_, i) => {
-                                const year = new Date().getFullYear() - i;
-                                return (
+                          {showMonthPicker && (
+                            <div className="absolute top-full mt-2 bg-white border rounded-lg shadow-lg p-3 z-50 left-0">
+                              <div className="grid grid-cols-3 gap-2">
+                                {Array.from({ length: 12 }, (_, i) => (
                                   <button
-                                    key={year}
+                                    key={i}
                                     type="button"
                                     onClick={() => {
                                       const newDate = birthDate
                                         ? new Date(birthDate)
                                         : new Date();
-                                      newDate.setFullYear(year);
+                                      newDate.setMonth(i);
                                       setBirthDate(newDate);
-                                      setShowYearPicker(false);
+                                      setShowMonthPicker(false);
                                     }}
                                     className={`px-3 py-2 text-sm rounded hover:bg-gray-100 ${
-                                      (birthDate?.getFullYear() ??
-                                        new Date().getFullYear()) === year
+                                      (birthDate?.getMonth() ??
+                                        new Date().getMonth()) === i
                                         ? "bg-blue-600 text-white hover:bg-blue-700"
                                         : ""
                                     }`}>
-                                    {year}
+                                    T{i + 1}
                                   </button>
-                                );
-                              })}
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+
+                          {showYearPicker && (
+                            <div className="absolute top-full mt-2 bg-white border rounded-lg shadow-lg p-3 z-50 right-0 max-h-[240px] overflow-y-auto w-[200px]">
+                              <div className="grid grid-cols-3 gap-2">
+                                {Array.from({ length: 100 }, (_, i) => {
+                                  const year = new Date().getFullYear() - i;
+                                  return (
+                                    <button
+                                      key={year}
+                                      type="button"
+                                      onClick={() => {
+                                        const newDate = birthDate
+                                          ? new Date(birthDate)
+                                          : new Date();
+                                        newDate.setFullYear(year);
+                                        setBirthDate(newDate);
+                                        setShowYearPicker(false);
+                                      }}
+                                      className={`px-3 py-2 text-sm rounded hover:bg-gray-100 ${
+                                        (birthDate?.getFullYear() ??
+                                          new Date().getFullYear()) === year
+                                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                                          : ""
+                                      }`}>
+                                      {year}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newDate = birthDate
+                              ? new Date(birthDate)
+                              : new Date();
+                            newDate.setMonth(newDate.getMonth() + 1);
+                            setBirthDate(newDate);
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded">
+                          ›
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newDate = birthDate
-                            ? new Date(birthDate)
-                            : new Date();
-                          newDate.setMonth(newDate.getMonth() + 1);
-                          setBirthDate(newDate);
-                        }}
-                        className="p-1 hover:bg-gray-100 rounded">
-                        ›
-                      </button>
+
+                      <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-1">
+                        {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map((d) => (
+                          <div key={d}>{d}</div>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-1">
+                        {Array.from({ length: 42 }, (_, i) => {
+                          const currentDate = birthDate ?? new Date();
+                          const firstDay = new Date(
+                            currentDate.getFullYear(),
+                            currentDate.getMonth(),
+                            1
+                          );
+                          const startDay = firstDay.getDay();
+                          const dayNumber = i - startDay + 1;
+                          const daysInMonth = new Date(
+                            currentDate.getFullYear(),
+                            currentDate.getMonth() + 1,
+                            0
+                          ).getDate();
+
+                          if (dayNumber < 1 || dayNumber > daysInMonth) {
+                            return <div key={i} className="w-8 h-8" />;
+                          }
+
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                const newDate = new Date(
+                                  currentDate.getFullYear(),
+                                  currentDate.getMonth(),
+                                  dayNumber
+                                );
+                                handleBirthDateSelect(newDate);
+                              }}
+                              className={`w-8 h-8 rounded text-sm transition-colors ${
+                                dayNumber === currentDate.getDate()
+                                  ? "bg-blue-600 text-white font-medium"
+                                  : "hover:bg-gray-100"
+                              }`}>
+                              {dayNumber}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-
-                    <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-1">
-                      {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map((d) => (
-                        <div key={d}>{d}</div>
-                      ))}
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-1">
-                      {Array.from({ length: 42 }, (_, i) => {
-                        const currentDate = birthDate ?? new Date();
-                        const firstDay = new Date(
-                          currentDate.getFullYear(),
-                          currentDate.getMonth(),
-                          1
-                        );
-                        const startDay = firstDay.getDay();
-                        const dayNumber = i - startDay + 1;
-                        const daysInMonth = new Date(
-                          currentDate.getFullYear(),
-                          currentDate.getMonth() + 1,
-                          0
-                        ).getDate();
-
-                        if (dayNumber < 1 || dayNumber > daysInMonth) {
-                          return <div key={i} className="w-8 h-8" />;
-                        }
-
-                        return (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => {
-                              const newDate = new Date(
-                                currentDate.getFullYear(),
-                                currentDate.getMonth(),
-                                dayNumber
-                              );
-                              handleBirthDateSelect(newDate);
-                            }}
-                            className={`w-8 h-8 rounded text-sm transition-colors ${
-                              dayNumber === currentDate.getDate()
-                                ? "bg-blue-600 text-white font-medium"
-                                : "hover:bg-gray-100"
-                            }`}>
-                            {dayNumber}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Loại khách hàng + Thông tin doanh nghiệp */}
-          <div className="border-t pt-6">
-            <h3 className="font-semibold mb-4">Loại khách hàng</h3>
-            <div className="flex gap-4 mb-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  value="0"
-                  {...register("type")}
-                  defaultChecked
-                />
-                <span>Cá nhân</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="radio" value="1" {...register("type")} />
-                <span>Tổ chức/Hộ kinh doanh</span>
-              </label>
-            </div>
-
-            {customerType === "1" && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Mã số thuế
-                  </label>
+          <div className={activeFormTab === "invoice" ? "" : "hidden"}>
+            {/* Loại khách hàng + Thông tin doanh nghiệp */}
+            <div className="border-t pt-6">
+              <h3 className="font-semibold mb-4">Loại khách hàng</h3>
+              <div className="flex gap-4 mb-4">
+                <label className="flex items-center gap-2">
                   <input
-                    {...register("taxCode")}
-                    placeholder="Nhập mã số thuế"
-                    className="w-full border rounded px-3 py-2"
+                    type="radio"
+                    value="0"
+                    {...register("type")}
+                    defaultChecked
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Tên công ty
-                  </label>
-                  <input
-                    {...register("organization")}
-                    placeholder="Nhập tên công ty"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
+                  <span>Cá nhân</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" value="1" {...register("type")} />
+                  <span>Tổ chức/Hộ kinh doanh</span>
+                </label>
               </div>
-            )}
+
+              {customerType === "1" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Mã số thuế
+                    </label>
+                    <input
+                      {...register("taxCode")}
+                      placeholder="Nhập mã số thuế"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Tên công ty
+                    </label>
+                    <input
+                      {...register("organization")}
+                      placeholder="Nhập tên công ty"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Danh sách địa chỉ giao hàng */}

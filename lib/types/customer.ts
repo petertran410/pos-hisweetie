@@ -1,45 +1,3 @@
-export interface CustomerAddress {
-  id?: number;
-  customerId?: number;
-  label?: string;
-  receiver?: string;
-  contactNumber?: string;
-  address?: string;
-
-  // Địa chỉ cũ (3 cấp - trước sáp nhập)
-  cityCode?: string;
-  cityName?: string;
-  districtCode?: string;
-  districtName?: string;
-  wardCode?: string;
-  wardName?: string;
-
-  // Địa chỉ mới (2 cấp - sau sáp nhập)
-  newCityCode?: string;
-  newCityName?: string;
-  newWardCode?: string;
-  newWardName?: string;
-
-  locationName?: string;
-
-  // Thông tin xuất hóa đơn theo từng địa chỉ
-  invoiceBuyerName?: string;
-  invoiceAddress?: string;
-  invoiceCityCode?: string;
-  invoiceCityName?: string;
-  invoiceWardCode?: string;
-  invoiceWardName?: string;
-  invoiceCccdCmnd?: string;
-  invoiceBankAccount?: string;
-  invoiceEmail?: string;
-  invoicePhone?: string;
-  invoiceDvqhnsCode?: string;
-
-  isDefault: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
 export interface Customer {
   id: number;
   code: string;
@@ -139,4 +97,33 @@ export interface CustomerSearchResult {
   phone?: string;
   email?: string;
   addresses?: CustomerAddress[];
+}
+
+export interface CustomerAddress {
+  id?: number;
+  customerId?: number;
+  label?: string;
+  receiver?: string;
+  contactNumber?: string;
+  address?: string;
+
+  // Địa chỉ cũ (3 cấp)
+  cityCode?: string;
+  cityName?: string;
+  districtCode?: string;
+  districtName?: string;
+  wardCode?: string;
+  wardName?: string;
+
+  // Địa chỉ mới (2 cấp)
+  newCityCode?: string;
+  newCityName?: string;
+  newWardCode?: string;
+  newWardName?: string;
+
+  locationName?: string;
+
+  isDefault: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }

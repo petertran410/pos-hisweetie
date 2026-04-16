@@ -1,10 +1,19 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useUpdateCustomer } from "@/lib/hooks/useCustomers";
 import { toast } from "sonner";
-import { Pencil, Save, X as XIcon, Plus, MapPin, Loader2 } from "lucide-react";
-import { CustomerAddressItem } from "@/components/customers/CustomerAddressItem";
+import {
+  Pencil,
+  Plus,
+  MapPin,
+  Loader2,
+  Trash2,
+  Star,
+  Phone,
+  User,
+} from "lucide-react";
+import { CustomerAddressFormModal } from "@/components/pos/CustomerAddressFormModal";
 import { sanitizeAddresses } from "@/lib/utils/sanitize-address";
 
 interface CustomerAddressesTabProps {
@@ -21,51 +30,19 @@ interface City {
     wards: Array<{ name: string; code: number }>;
   }>;
 }
-
 interface Province {
   code: string;
   name: string;
 }
-
 interface Commune {
   code: string;
   name: string;
   provinceCode: string;
 }
 
-const createEmptyAddress = (isDefault = false) => ({
-  label: undefined,
-  receiver: undefined,
-  contactNumber: undefined,
-  address: undefined,
-  cityCode: undefined,
-  cityName: undefined,
-  districtCode: undefined,
-  districtName: undefined,
-  wardCode: undefined,
-  wardName: undefined,
-  newCityCode: undefined,
-  newCityName: undefined,
-  newWardCode: undefined,
-  newWardName: undefined,
-  invoiceBuyerName: undefined,
-  invoiceAddress: undefined,
-  invoiceCityCode: undefined,
-  invoiceCityName: undefined,
-  invoiceWardCode: undefined,
-  invoiceWardName: undefined,
-  invoiceCccdCmnd: undefined,
-  invoiceBankAccount: undefined,
-  invoiceEmail: undefined,
-  invoicePhone: undefined,
-  invoiceDvqhnsCode: undefined,
-  isDefault,
-});
-
-const initAddresses = (customer: any) => {
+const initAddresses = (customer: any): any[] => {
   const list = Array.isArray(customer?.addresses) ? customer.addresses : [];
-  if (list.length === 0) return [createEmptyAddress(true)];
-  // Đảm bảo có đúng 1 default
+  if (list.length === 0) return [];
   const hasDefault = list.some((a: any) => a.isDefault);
   if (!hasDefault) {
     return list.map((a: any, i: number) => ({ ...a, isDefault: i === 0 }));
@@ -73,26 +50,48 @@ const initAddresses = (customer: any) => {
   return list;
 };
 
+const validateAddressesList = (list: any[]): string | null => {
+  if (list.length === 0) return null; // Cho phép 0 address (không auto-save khi rỗng)
+  const defaultCount = list.filter((a) => a.isDefault).length;
+  if (defaultCount !== 1) return "Phải có đúng 1 địa chỉ mặc định";
+  for (let i = 0; i < list.length; i++) {
+    const a = list[i];
+    if (!a.cityCode && !a.newCityCode) {
+      return `Địa chỉ #${i + 1}: Phải điền ít nhất 1 trong 2 loại địa chỉ (cũ hoặc mới)`;
+    }
+  }
+  return null;
+};
+
+const formatAddressLine = (a: any): string => {
+  const newLine = [a.address, a.newWardName, a.newCityName]
+    .filter(Boolean)
+    .join(", ");
+  if (newLine) return newLine;
+  return [a.address, a.wardName, a.districtName, a.cityName]
+    .filter(Boolean)
+    .join(", ");
+};
+
+type ModalState =
+  | { open: false }
+  | { open: true; mode: "create" }
+  | { open: true; mode: "edit"; index: number };
+
 export function CustomerAddressesTab({
   customer,
   onUpdate,
 }: CustomerAddressesTabProps) {
-  const [isEditing, setIsEditing] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const updateCustomer = useUpdateCustomer();
-
   const [cities, setCities] = useState<City[]>([]);
   const [invoiceProvinces, setInvoiceProvinces] = useState<Province[]>([]);
   const [invoiceCommunes, setInvoiceCommunes] = useState<Commune[]>([]);
-
   const [addresses, setAddresses] = useState<any[]>(() =>
     initAddresses(customer)
   );
+  const [modalState, setModalState] = useState<ModalState>({ open: false });
 
-  const customerType = useMemo(
-    () => customer?.type?.toString() || "0",
-    [customer?.type]
-  );
+  const updateCustomer = useUpdateCustomer();
 
   // Load 3 file JSON 1 lần khi mount
   useEffect(() => {
@@ -124,72 +123,72 @@ export function CustomerAddressesTab({
     };
   }, []);
 
-  // Reset addresses khi customer prop đổi (sau save / refetch)
+  // Sync addresses khi customer prop đổi
   useEffect(() => {
-    if (!isEditing) {
-      setAddresses(initAddresses(customer));
-    }
-  }, [customer, isEditing]);
+    setAddresses(initAddresses(customer));
+  }, [customer]);
 
-  const handleAddAddress = () => {
-    setAddresses((prev) => [...prev, createEmptyAddress(false)]);
-  };
-
-  const handleUpdateAddress = (index: number, addr: any) => {
-    setAddresses((prev) => prev.map((a, i) => (i === index ? addr : a)));
-  };
-
-  const handleRemoveAddress = (index: number) => {
-    setAddresses((prev) => {
-      const next = prev.filter((_, i) => i !== index);
-      if (!next.some((a) => a.isDefault) && next.length > 0) {
-        next[0] = { ...next[0], isDefault: true };
-      }
-      return next;
-    });
-  };
-
-  const handleSetDefault = (index: number) => {
-    setAddresses((prev) =>
-      prev.map((a, i) => ({ ...a, isDefault: i === index }))
-    );
-  };
-
-  const validateAddresses = (): string | null => {
-    if (addresses.length === 0) return "Phải có ít nhất 1 địa chỉ giao hàng";
-    const defaultCount = addresses.filter((a) => a.isDefault).length;
-    if (defaultCount !== 1) return "Phải có đúng 1 địa chỉ mặc định";
-    for (let i = 0; i < addresses.length; i++) {
-      const a = addresses[i];
-      if (!a.cityCode && !a.newCityCode) {
-        return `Địa chỉ #${i + 1}: Phải điền ít nhất 1 trong 2 loại địa chỉ (cũ hoặc mới)`;
-      }
-    }
-    return null;
-  };
-
-  const handleSave = async () => {
-    const err = validateAddresses();
+  // Call API lưu addresses — dùng chung cho mọi thao tác
+  const saveAddresses = async (next: any[]): Promise<boolean> => {
+    const err = validateAddressesList(next);
     if (err) {
       toast.error(err);
-      return;
+      return false;
     }
     try {
       const updated = await updateCustomer.mutateAsync({
         id: customer.id,
-        data: { addresses: sanitizeAddresses(addresses) }, // ← sanitize
+        data: { addresses: sanitizeAddresses(next) },
       });
-      toast.success("Cập nhật địa chỉ thành công");
-      setIsEditing(false);
       if (onUpdate) onUpdate(updated);
+      return true;
     } catch (e: any) {
       toast.error(e.message || "Cập nhật địa chỉ thất bại");
+      return false;
     }
   };
 
-  const handleCancel = () => {
-    setAddresses(initAddresses(customer));
-    setIsEditing(false);
+  const handleCreateSubmit = async (newAddr: any) => {
+    const isFirst = addresses.length === 0;
+    const toAdd = {
+      ...newAddr,
+      isDefault: isFirst || !!newAddr.isDefault,
+    };
+    const next = toAdd.isDefault
+      ? [...addresses.map((a) => ({ ...a, isDefault: false })), toAdd]
+      : [...addresses, toAdd];
+    const ok = await saveAddresses(next);
+    if (ok) setModalState({ open: false });
+  };
+
+  const handleEditSubmit = async (updatedAddr: any) => {
+    if (!modalState.open || modalState.mode !== "edit") return;
+    const idx = modalState.index;
+    let next = addresses.map((a, i) =>
+      i === idx ? { ...a, ...updatedAddr } : a
+    );
+    if (updatedAddr.isDefault) {
+      next = next.map((a, i) => ({ ...a, isDefault: i === idx }));
+    } else if (!next.some((a) => a.isDefault) && next.length > 0) {
+      next[0] = { ...next[0], isDefault: true };
+    }
+    const ok = await saveAddresses(next);
+    if (ok) setModalState({ open: false });
+  };
+
+  const handleSetDefault = async (index: number) => {
+    if (addresses[index]?.isDefault) return;
+    const next = addresses.map((a, i) => ({ ...a, isDefault: i === index }));
+    await saveAddresses(next);
+  };
+
+  const handleRemove = async (index: number) => {
+    if (!confirm("Bạn có chắc muốn xóa địa chỉ này?")) return;
+    const next = addresses.filter((_, i) => i !== index);
+    if (next.length > 0 && !next.some((a) => a.isDefault)) {
+      next[0] = { ...next[0], isDefault: true };
+    }
+    await saveAddresses(next);
   };
 
   if (isLoadingData) {
@@ -200,159 +199,137 @@ export function CustomerAddressesTab({
     );
   }
 
-  // === VIEW MODE ===
-  if (!isEditing) {
-    const list = Array.isArray(customer?.addresses) ? customer.addresses : [];
-    return (
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">
-            Địa chỉ giao hàng
-            <span className="text-sm text-gray-500 font-normal ml-2">
-              ({list.length} địa chỉ)
-            </span>
-          </h3>
-          <button
-            onClick={() => setIsEditing(true)}
-            className="px-4 py-2 border rounded hover:bg-gray-50 flex items-center gap-2">
-            <Pencil className="w-4 h-4" />
-            Chỉnh sửa
-          </button>
-        </div>
-
-        {list.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
-            Khách hàng chưa có địa chỉ giao hàng. Bấm "Chỉnh sửa" để thêm.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {list.map((addr: any) => (
-              <div
-                key={addr.id}
-                className={`border rounded-lg p-4 ${
-                  addr.isDefault ? "border-blue-500 bg-blue-50" : ""
-                }`}>
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                    <span className="font-medium">
-                      {addr.label || addr.receiver || "Địa chỉ giao hàng"}
-                    </span>
-                    {addr.isDefault && (
-                      <span className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded">
-                        Mặc định
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  {addr.receiver && (
-                    <div>
-                      <span className="text-gray-500">Người nhận: </span>
-                      <span>{addr.receiver}</span>
-                    </div>
-                  )}
-                  {addr.contactNumber && (
-                    <div>
-                      <span className="text-gray-500">SĐT: </span>
-                      <span>{addr.contactNumber}</span>
-                    </div>
-                  )}
-
-                  {(addr.cityName || addr.districtName || addr.wardName) && (
-                    <div className="col-span-2">
-                      <span className="text-gray-500">Địa chỉ cũ: </span>
-                      <span>
-                        {[
-                          addr.address,
-                          addr.wardName,
-                          addr.districtName,
-                          addr.cityName,
-                        ]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
-                    </div>
-                  )}
-
-                  {(addr.newCityName || addr.newWardName) && (
-                    <div className="col-span-2">
-                      <span className="text-gray-500">Địa chỉ mới: </span>
-                      <span>
-                        {[addr.address, addr.newWardName, addr.newCityName]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // === EDIT MODE ===
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">
-          Chỉnh sửa địa chỉ giao hàng
+          Địa chỉ giao hàng
           <span className="text-sm text-gray-500 font-normal ml-2">
             ({addresses.length} địa chỉ)
           </span>
         </h3>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleAddAddress}
-            className="px-3 py-2 border rounded hover:bg-gray-50 flex items-center gap-1 text-sm">
-            <Plus className="w-4 h-4" />
-            Thêm địa chỉ
-          </button>
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={updateCustomer.isPending}
-            className="px-4 py-2 border rounded hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50">
-            <XIcon className="w-4 h-4" />
-            Hủy
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={updateCustomer.isPending}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50">
-            {updateCustomer.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            Lưu
-          </button>
-        </div>
+        <button
+          onClick={() => setModalState({ open: true, mode: "create" })}
+          disabled={updateCustomer.isPending}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50">
+          <Plus className="w-4 h-4" />
+          Thêm địa chỉ
+        </button>
       </div>
 
-      <div className="space-y-4">
-        {addresses.map((addr, index) => (
-          <CustomerAddressItem
-            key={index}
-            address={addr}
-            index={index}
-            cities={cities}
-            invoiceProvinces={invoiceProvinces}
-            invoiceCommunes={invoiceCommunes}
-            customerType={customerType}
-            canRemove={addresses.length > 1}
-            onUpdate={handleUpdateAddress}
-            onRemove={handleRemoveAddress}
-            onSetDefault={handleSetDefault}
-          />
-        ))}
-      </div>
+      {addresses.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 border-2 border-dashed rounded-lg">
+          <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+          <p>Khách hàng chưa có địa chỉ giao hàng.</p>
+          <p className="text-sm">Bấm "Thêm địa chỉ" để bắt đầu.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {addresses.map((addr: any, index: number) => (
+            <div
+              key={addr.id ?? index}
+              className={`group border rounded-lg p-4 transition-colors ${
+                addr.isDefault
+                  ? "border-blue-500 bg-blue-50/50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <span className="font-medium truncate">
+                      {addr.label || addr.receiver || `Địa chỉ #${index + 1}`}
+                    </span>
+                    {addr.isDefault && (
+                      <span className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded flex items-center gap-1">
+                        <Star className="w-3 h-3" fill="currentColor" />
+                        Mặc định
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-1 text-sm text-gray-700">
+                    {(addr.receiver || addr.contactNumber) && (
+                      <div className="flex items-center gap-4 text-gray-600">
+                        {addr.receiver && (
+                          <span className="flex items-center gap-1">
+                            <User className="w-3.5 h-3.5" />
+                            {addr.receiver}
+                          </span>
+                        )}
+                        {addr.contactNumber && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3.5 h-3.5" />
+                            {addr.contactNumber}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className="text-gray-800">
+                      {formatAddressLine(addr) || (
+                        <span className="italic text-gray-400">
+                          Chưa có địa chỉ
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {!addr.isDefault && (
+                    <button
+                      type="button"
+                      onClick={() => handleSetDefault(index)}
+                      disabled={updateCustomer.isPending}
+                      title="Đặt làm mặc định"
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50">
+                      <Star className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setModalState({ open: true, mode: "edit", index })
+                    }
+                    disabled={updateCustomer.isPending}
+                    title="Chỉnh sửa"
+                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(index)}
+                    disabled={updateCustomer.isPending}
+                    title="Xóa"
+                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded disabled:opacity-50">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <CustomerAddressFormModal
+        isOpen={modalState.open}
+        mode={modalState.open ? modalState.mode : "create"}
+        initial={
+          modalState.open && modalState.mode === "edit"
+            ? addresses[modalState.index]
+            : undefined
+        }
+        cities={cities}
+        invoiceProvinces={invoiceProvinces}
+        invoiceCommunes={invoiceCommunes}
+        isSaving={updateCustomer.isPending}
+        onClose={() => setModalState({ open: false })}
+        onSubmit={
+          modalState.open && modalState.mode === "edit"
+            ? handleEditSubmit
+            : handleCreateSubmit
+        }
+      />
     </div>
   );
 }

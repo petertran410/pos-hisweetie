@@ -57,26 +57,9 @@ export function CustomerAddressItem({
   onRemove,
   onSetDefault,
 }: CustomerAddressItemProps) {
-  const [showInvoiceInfo, setShowInvoiceInfo] = useState(
-    !!(
-      address.invoiceBuyerName ||
-      address.invoiceAddress ||
-      address.invoiceCityCode ||
-      address.invoiceWardCode ||
-      address.invoiceCccdCmnd ||
-      address.invoiceBankAccount ||
-      address.invoiceEmail ||
-      address.invoicePhone ||
-      address.invoiceDvqhnsCode
-    )
-  );
-
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
   const [filteredCommunes, setFilteredCommunes] = useState<Commune[]>([]);
-  const [filteredInvoiceCommunes, setFilteredInvoiceCommunes] = useState<
-    Commune[]
-  >([]);
 
   // Derive districts khi cityCode (cũ) đổi
   useEffect(() => {
@@ -113,18 +96,6 @@ export function CustomerAddressItem({
       setFilteredCommunes([]);
     }
   }, [address.newCityCode, invoiceCommunes]);
-
-  // Derive invoiceCommunes khi invoiceCityCode đổi
-  useEffect(() => {
-    if (address.invoiceCityCode && invoiceCommunes.length > 0) {
-      const filtered = invoiceCommunes.filter(
-        (c) => String(c.provinceCode) === String(address.invoiceCityCode)
-      );
-      setFilteredInvoiceCommunes(filtered);
-    } else {
-      setFilteredInvoiceCommunes([]);
-    }
-  }, [address.invoiceCityCode, invoiceCommunes]);
 
   const updateField = (field: string, value: any) => {
     onUpdate(index, { ...address, [field]: value });
@@ -180,26 +151,6 @@ export function CustomerAddressItem({
       ...address,
       newWardCode: value || undefined,
       newWardName: commune?.name || undefined,
-    });
-  };
-
-  const handleInvoiceCityCodeChange = (value: string) => {
-    const province = invoiceProvinces.find((p) => p.code === value);
-    onUpdate(index, {
-      ...address,
-      invoiceCityCode: value || undefined,
-      invoiceCityName: province?.name || undefined,
-      invoiceWardCode: undefined,
-      invoiceWardName: undefined,
-    });
-  };
-
-  const handleInvoiceWardCodeChange = (value: string) => {
-    const commune = filteredInvoiceCommunes.find((c) => c.code === value);
-    onUpdate(index, {
-      ...address,
-      invoiceWardCode: value || undefined,
-      invoiceWardName: commune?.name || undefined,
     });
   };
 
@@ -375,166 +326,6 @@ export function CustomerAddressItem({
         <p className="text-xs text-gray-500 mt-2">
           Phải điền ít nhất 1 trong 2 loại địa chỉ (cũ hoặc mới)
         </p>
-      </div>
-
-      {/* Toggle thông tin xuất hóa đơn theo địa chỉ */}
-      <div className="border-t pt-3">
-        <button
-          type="button"
-          onClick={() => setShowInvoiceInfo(!showInvoiceInfo)}
-          className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700">
-          {showInvoiceInfo ? (
-            <ChevronUp className="w-4 h-4" />
-          ) : (
-            <ChevronDown className="w-4 h-4" />
-          )}
-          Thông tin xuất hóa đơn riêng cho địa chỉ này
-        </button>
-
-        {showInvoiceInfo && (
-          <div className="mt-3 grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded">
-            {customerType === "0" && (
-              <>
-                <div className="col-span-2">
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Tên người mua
-                  </label>
-                  <input
-                    type="text"
-                    value={address.invoiceBuyerName || ""}
-                    onChange={(e) =>
-                      updateField(
-                        "invoiceBuyerName",
-                        e.target.value || undefined
-                      )
-                    }
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Số CCCD/CMND
-                  </label>
-                  <input
-                    type="text"
-                    value={address.invoiceCccdCmnd || ""}
-                    onChange={(e) =>
-                      updateField(
-                        "invoiceCccdCmnd",
-                        e.target.value || undefined
-                      )
-                    }
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Số hộ chiếu
-                  </label>
-                  <input
-                    type="text"
-                    value={address.invoiceBankAccount || ""}
-                    onChange={(e) =>
-                      updateField(
-                        "invoiceBankAccount",
-                        e.target.value || undefined
-                      )
-                    }
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="col-span-2">
-              <label className="block text-xs text-gray-500 mb-1">
-                Địa chỉ xuất hóa đơn
-              </label>
-              <input
-                type="text"
-                value={address.invoiceAddress || ""}
-                onChange={(e) =>
-                  updateField("invoiceAddress", e.target.value || undefined)
-                }
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Tỉnh/Thành phố (mới)
-              </label>
-              <SearchableSelect
-                options={invoiceProvinces.map((p) => ({
-                  value: p.code,
-                  label: p.name,
-                }))}
-                value={address.invoiceCityCode || ""}
-                onChange={handleInvoiceCityCodeChange}
-                placeholder="Tìm Tỉnh/Thành phố"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Phường/Xã (mới)
-              </label>
-              <SearchableSelect
-                options={filteredInvoiceCommunes.map((c) => ({
-                  value: c.code,
-                  label: c.name,
-                }))}
-                value={address.invoiceWardCode || ""}
-                onChange={handleInvoiceWardCodeChange}
-                placeholder="Tìm Phường/Xã"
-                disabled={!address.invoiceCityCode}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Email</label>
-              <input
-                type="email"
-                value={address.invoiceEmail || ""}
-                onChange={(e) =>
-                  updateField("invoiceEmail", e.target.value || undefined)
-                }
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Số điện thoại
-              </label>
-              <input
-                type="text"
-                value={address.invoicePhone || ""}
-                onChange={(e) =>
-                  updateField("invoicePhone", e.target.value || undefined)
-                }
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-
-            {customerType === "1" && (
-              <div className="col-span-2">
-                <label className="block text-xs text-gray-500 mb-1">
-                  Mã ĐVQHNS
-                </label>
-                <input
-                  type="text"
-                  value={address.invoiceDvqhnsCode || ""}
-                  onChange={(e) =>
-                    updateField(
-                      "invoiceDvqhnsCode",
-                      e.target.value || undefined
-                    )
-                  }
-                  className="w-full border rounded px-3 py-2"
-                />
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

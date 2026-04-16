@@ -19,17 +19,6 @@ const ALLOWED_FIELDS = new Set([
   "newWardCode",
   "newWardName",
   "locationName",
-  "invoiceBuyerName",
-  "invoiceAddress",
-  "invoiceCityCode",
-  "invoiceCityName",
-  "invoiceWardCode",
-  "invoiceWardName",
-  "invoiceCccdCmnd",
-  "invoiceBankAccount",
-  "invoiceEmail",
-  "invoicePhone",
-  "invoiceDvqhnsCode",
   "isDefault",
 ]);
 
