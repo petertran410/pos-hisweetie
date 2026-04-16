@@ -1,16 +1,27 @@
+// components/invoices/InvoicesTable.tsx
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import { useInvoices } from "@/lib/hooks/useInvoices";
 import { useBranchStore } from "@/lib/store/branch";
-import { Plus, Settings } from "lucide-react";
+import {
+  Plus,
+  Settings,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import type { Invoice } from "@/lib/types/invoice";
 import { InvoiceDetailRow } from "./InvoiceDetailRow";
+import { formatCurrency } from "@/lib/utils";
+import { Can } from "../permissions/Can";
 
 interface ColumnConfig {
   key: string;
   label: string;
   visible: boolean;
+  width?: string;
   render: (invoice: Invoice) => React.ReactNode;
 }
 
@@ -23,286 +34,250 @@ interface InvoicesTableProps {
   onCreateLoading: (selectedIds: number[], branchId: number | null) => void;
 }
 
-const formatMoney = (value: number) => {
-  return new Intl.NumberFormat("en-US").format(value);
+const STATUS_TABS = [
+  { value: "all", label: "Tất cả" },
+  { value: "3", label: "Đang xử lý" },
+  { value: "5", label: "Đóng hàng" },
+  { value: "6", label: "Loading" },
+  { value: "7", label: "Giao thành công" },
+  { value: "1", label: "Hoàn thành" },
+  { value: "4", label: "Không giao được" },
+  { value: "8", label: "Trả hàng" },
+  { value: "2", label: "Đã hủy" },
+];
+
+const STATUS_COLOR: Record<number, string> = {
+  1: "bg-green-100 text-green-700",
+  2: "bg-red-100 text-red-700",
+  3: "bg-blue-100 text-blue-700",
+  4: "bg-yellow-100 text-yellow-700",
+  5: "bg-orange-100 text-orange-700",
+  6: "bg-purple-100 text-purple-700",
+  7: "bg-teal-100 text-teal-700",
+  8: "bg-pink-100 text-pink-700",
 };
 
-const formatDateTime = (dateString: string) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleString("vi-VN");
+const STATUS_TEXT: Record<number, string> = {
+  1: "Hoàn thành",
+  2: "Đã hủy",
+  3: "Đang xử lý",
+  4: "Không giao được",
+  5: "Đóng hàng",
+  6: "Loading",
+  7: "Giao thành công",
+  8: "Trả hàng",
 };
 
-const getStatusColor = (status: number) => {
-  switch (status) {
-    case 1:
-      return "bg-green-100 text-green-700";
-    case 2:
-      return "bg-red-100 text-red-700";
-    case 3:
-      return "bg-blue-100 text-blue-700";
-    case 4:
-      return "bg-yellow-100 text-yellow-700";
-    case 5:
-      return "bg-orange-100 text-orange-700";
-    case 6:
-      return "bg-purple-100 text-purple-700";
-    case 7:
-      return "bg-teal-100 text-teal-700";
-    case 8:
-      return "bg-pink-100 text-pink-700";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
-};
-
-const getStatusText = (status: number) => {
-  switch (status) {
-    case 1:
-      return "Hoàn thành";
-    case 2:
-      return "Đã hủy";
-    case 3:
-      return "Đang xử lý";
-    case 4:
-      return "Không giao được";
-    case 5:
-      return "Đóng hàng";
-    case 6:
-      return "Loading";
-    case 7:
-      return "Giao thành công";
-    case 8:
-      return "Trả hàng";
-    default:
-      return "Không xác định";
-  }
-};
+const formatDateTime = (d?: string) =>
+  d ? new Date(d).toLocaleString("vi-VN") : "-";
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "code",
     label: "Mã hóa đơn",
     visible: true,
-    render: (invoice) => invoice.code,
+    width: "140px",
+    render: (inv) => (
+      <span className="font-medium text-blue-600">{inv.code}</span>
+    ),
   },
   {
     key: "orderCode",
     label: "Mã vận đơn",
     visible: false,
-    render: (invoice) => invoice.delivery?.deliveryCode || "-",
+    width: "160px",
+    render: (inv) => inv.delivery?.deliveryCode || "-",
   },
   {
     key: "deliveryStatus",
     label: "Trạng thái giao hàng",
     visible: false,
-    render: (invoice) => {
-      const deliveryStatus = invoice.delivery?.status;
-      if (!deliveryStatus) return "-";
-      return deliveryStatus === 1 ? "Chưa giao" : "Đã giao";
+    width: "160px",
+    render: (inv) => {
+      const s = inv.delivery?.status;
+      if (!s) return "-";
+      return s === 1 ? "Chưa giao" : "Đã giao";
     },
-  },
-  {
-    key: "reconciliationCode",
-    label: "Mã đối soát",
-    visible: false,
-    render: () => "-",
   },
   {
     key: "purchaseDate",
     label: "Thời gian",
     visible: true,
-    render: (invoice) => formatDateTime(invoice.purchaseDate),
+    width: "160px",
+    render: (inv) => formatDateTime(inv.purchaseDate),
   },
   {
     key: "createTime",
     label: "Thời gian tạo",
     visible: true,
-    render: (invoice) => formatDateTime(invoice.createdAt),
+    width: "160px",
+    render: (inv) => formatDateTime(inv.createdAt),
   },
   {
     key: "updateDate",
     label: "Ngày cập nhật",
-    visible: true,
-    render: (invoice) => formatDateTime(invoice.updatedAt),
-  },
-  {
-    key: "returnCode",
-    label: "Mã trả hàng",
     visible: false,
-    render: () => "-",
+    width: "160px",
+    render: (inv) => formatDateTime(inv.updatedAt),
   },
   {
     key: "customerCode",
     label: "Mã KH",
     visible: true,
-    render: (invoice) => invoice.customer?.code || "-",
+    width: "120px",
+    render: (inv) => inv.customer?.code || "-",
   },
   {
     key: "customer",
     label: "Khách hàng",
     visible: true,
-    render: (invoice) => invoice.customer?.name || "-",
-  },
-  {
-    key: "email",
-    label: "Email",
-    visible: false,
-    render: (invoice) => invoice.customer?.email || "-",
+    width: "180px",
+    render: (inv) => inv.customer?.name || "-",
   },
   {
     key: "phone",
     label: "Điện thoại",
     visible: false,
-    render: (invoice) =>
-      invoice.customer?.contactNumber || invoice.customer?.phone || "-",
+    width: "140px",
+    render: (inv) => inv.customer?.contactNumber || inv.customer?.phone || "-",
   },
   {
     key: "address",
     label: "Địa chỉ",
     visible: false,
-    render: (invoice) => invoice.delivery?.address || "-",
+    width: "200px",
+    render: (inv) => inv.delivery?.address || "-",
   },
   {
     key: "area",
     label: "Khu vực",
     visible: false,
-    render: (invoice) => invoice.delivery?.locationName || "-",
+    width: "160px",
+    render: (inv) => inv.delivery?.locationName || "-",
   },
   {
     key: "ward",
     label: "Phường/Xã",
     visible: false,
-    render: (invoice) => invoice.delivery?.wardName || "-",
-  },
-  {
-    key: "birthDate",
-    label: "Ngày sinh",
-    visible: false,
-    render: (invoice) => {
-      if (!invoice.customer?.birthDate) return "-";
-      return formatDateTime(invoice.customer.birthDate);
-    },
-  },
-  {
-    key: "branch",
-    label: "Chi nhánh",
-    visible: false,
-    render: (invoice) => invoice.branch?.name || "-",
-  },
-  {
-    key: "seller",
-    label: "Người bán",
-    visible: true,
-    render: (invoice) => invoice.soldBy?.name || invoice.creator?.name || "-",
-  },
-  {
-    key: "creator",
-    label: "Người tạo",
-    visible: true,
-    render: (invoice) => invoice.creator?.name || "-",
-  },
-  {
-    key: "saleChannel",
-    label: "Kênh bán",
-    visible: false,
-    render: (invoice) => invoice.saleChannel?.name || "Khác",
+    width: "160px",
+    render: (inv) => inv.delivery?.wardName || "-",
   },
   {
     key: "deliveryPartner",
     label: "Đối tác giao hàng",
     visible: false,
-    render: (invoice) => invoice.delivery?.partnerDelivery?.name || "-",
+    width: "180px",
+    render: (inv) => inv.delivery?.partnerDelivery?.name || "-",
+  },
+  {
+    key: "branch",
+    label: "Chi nhánh",
+    visible: false,
+    width: "160px",
+    render: (inv) => inv.branch?.name || "-",
+  },
+  {
+    key: "seller",
+    label: "Người bán",
+    visible: true,
+    width: "140px",
+    render: (inv) => inv.soldBy?.name || inv.creator?.name || "-",
+  },
+  {
+    key: "creator",
+    label: "Người tạo",
+    visible: false,
+    width: "140px",
+    render: (inv) => inv.creator?.name || "-",
+  },
+  {
+    key: "saleChannel",
+    label: "Kênh bán",
+    visible: false,
+    width: "140px",
+    render: (inv) => inv.saleChannel?.name || "Khác",
   },
   {
     key: "notes",
     label: "Ghi chú",
     visible: false,
-    render: (invoice) => invoice.description || "-",
+    width: "200px",
+    render: (inv) => inv.description || "-",
   },
   {
     key: "totalAmount",
     label: "Tổng tiền hàng",
     visible: false,
-    render: (invoice) => formatMoney(Number(invoice.totalAmount)),
+    width: "140px",
+    render: (inv) => formatCurrency(Number(inv.totalAmount)),
   },
   {
     key: "discount",
     label: "Giảm giá",
     visible: false,
-    render: (invoice) => formatMoney(Number(invoice.discount)),
+    width: "120px",
+    render: (inv) => formatCurrency(Number(inv.discount)),
   },
   {
     key: "grandTotal",
-    label: "Tổng sau giảm giá",
+    label: "Tổng sau giảm",
     visible: false,
-    render: (invoice) => formatMoney(Number(invoice.grandTotal)),
-  },
-  {
-    key: "taxDiscount",
-    label: "Giảm thuế",
-    visible: false,
-    render: () => "-",
-  },
-  {
-    key: "otherFees",
-    label: "Thu khác",
-    visible: false,
-    render: () => "-",
-  },
-  {
-    key: "paymentDiscount",
-    label: "Chiết khấu thanh toán",
-    visible: false,
-    render: () => "-",
+    width: "140px",
+    render: (inv) => formatCurrency(Number(inv.grandTotal)),
   },
   {
     key: "customerDebt",
     label: "Khách cần trả",
     visible: true,
-    render: (invoice) => formatMoney(Number(invoice.grandTotal)),
+    width: "140px",
+    render: (inv) => formatCurrency(Number(inv.grandTotal)),
   },
   {
     key: "customerPaid",
     label: "Khách đã trả",
     visible: true,
-    render: (invoice) => formatMoney(Number(invoice.paidAmount)),
+    width: "120px",
+    render: (inv) => (
+      <span className="text-green-700 font-medium">
+        {formatCurrency(Number(inv.paidAmount))}
+      </span>
+    ),
   },
-  // THÊM 4 CỘT MỚI TẠI ĐÂY
   {
     key: "returnOrderAmount",
     label: "Trả hàng",
     visible: true,
-    render: (invoice) => {
-      const amount = Number((invoice as any).returnOrderAmount || 0);
-      return formatMoney(amount);
-    },
+    width: "120px",
+    render: (inv) =>
+      formatCurrency(Number((inv as any).returnOrderAmount || 0)),
   },
   {
     key: "cashRefundAmount",
     label: "Phiếu chi",
-    visible: true,
-    render: (invoice) => {
-      const amount = Number((invoice as any).cashRefundAmount || 0);
-      const display = amount > 0 ? -amount : amount;
-      return display < 0 ? (
-        <span className="text-red-600">{formatMoney(display)}</span>
+    visible: false,
+    width: "120px",
+    render: (inv) => {
+      const a = Number((inv as any).cashRefundAmount || 0);
+      const d = a > 0 ? -a : a;
+      return d < 0 ? (
+        <span className="text-red-600">{formatCurrency(d)}</span>
       ) : (
-        formatMoney(display)
+        formatCurrency(d)
       );
     },
   },
   {
     key: "debtOffsetAmount",
     label: "Cấn trừ nợ",
-    visible: true,
-    render: (invoice) => {
-      const amount = Number((invoice as any).debtOffsetAmount || 0);
-      const display = amount > 0 ? -amount : amount;
-      return display < 0 ? (
-        <span className="text-red-600">{formatMoney(display)}</span>
+    visible: false,
+    width: "120px",
+    render: (inv) => {
+      const a = Number((inv as any).debtOffsetAmount || 0);
+      const d = a > 0 ? -a : a;
+      return d < 0 ? (
+        <span className="text-red-600">{formatCurrency(d)}</span>
       ) : (
-        formatMoney(display)
+        formatCurrency(d)
       );
     },
   },
@@ -310,60 +285,44 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "remainingAmount",
     label: "Còn lại",
     visible: true,
-    render: (invoice) => {
-      const amount = Number((invoice as any).remainingAmount || 0);
-      return amount > 0 ? (
-        <span className="text-orange-600 font-medium">
-          {formatMoney(amount)}
-        </span>
-      ) : amount < 0 ? (
-        <span className="text-red-600">{formatMoney(amount)}</span>
-      ) : (
-        <span className="text-green-600">{formatMoney(amount)}</span>
-      );
+    width: "120px",
+    render: (inv) => {
+      const a = Number((inv as any).remainingAmount || 0);
+      if (a > 0)
+        return (
+          <span className="text-orange-600 font-medium">
+            {formatCurrency(a)}
+          </span>
+        );
+      if (a < 0)
+        return <span className="text-red-600">{formatCurrency(a)}</span>;
+      return <span className="text-green-600">{formatCurrency(a)}</span>;
     },
   },
-  // KẾT THÚC 4 CỘT MỚI
   {
     key: "codAmount",
     label: "Còn cần thu (COD)",
     visible: false,
-    render: (invoice) => formatMoney(Number(invoice.debtAmount)),
+    width: "140px",
+    render: (inv) => formatCurrency(Number(inv.debtAmount)),
   },
   {
     key: "deliveryFee",
     label: "Phí trả ĐTGH",
     visible: false,
-    render: (invoice) =>
-      invoice.delivery?.price
-        ? formatMoney(Number(invoice.delivery.price))
-        : "-",
-  },
-  {
-    key: "deliveryNote",
-    label: "Ghi chú trạng thái giao hàng",
-    visible: false,
-    render: () => "-",
-  },
-  {
-    key: "deliveryTime",
-    label: "Thời gian giao hàng",
-    visible: false,
-    render: (invoice) => {
-      if (!invoice.delivery?.createdAt) return "-";
-      return formatDateTime(invoice.delivery.createdAt);
-    },
+    width: "120px",
+    render: (inv) =>
+      inv.delivery?.price ? formatCurrency(Number(inv.delivery.price)) : "-",
   },
   {
     key: "status",
     label: "Trạng thái",
     visible: true,
-    render: (invoice) => (
+    width: "140px",
+    render: (inv) => (
       <span
-        className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-          invoice.status
-        )}`}>
-        {getStatusText(invoice.status)}
+        className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOR[inv.status] || "bg-gray-100 text-gray-700"}`}>
+        {STATUS_TEXT[inv.status] || inv.status}
       </span>
     ),
   },
@@ -372,13 +331,10 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
 export function InvoicesTable({
   filters,
   onCreateClick,
-  onEditClick,
   onCreateGiaoHang,
   onCreateDongHang,
   onCreateLoading,
 }: InvoicesTableProps) {
-  const [showCreateBaoDonDropdown, setShowCreateBaoDonDropdown] =
-    useState(false);
   const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
@@ -386,35 +342,49 @@ export function InvoicesTable({
   );
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
+  const [activeStatusTab, setActiveStatusTab] = useState("all");
+  const [showBaoDonDropdown, setShowBaoDonDropdown] = useState(false);
+  const baoDonRef = useRef<HTMLDivElement>(null);
 
-  const handleCreateBaoDonClick = (
-    type: "giao-hang" | "dong-hang" | "loading"
-  ) => {
-    const branchId = selectedBranch?.id || null;
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
-    if (type === "giao-hang") {
-      onCreateGiaoHang(selectedIds, branchId);
-    } else if (type === "dong-hang") {
-      onCreateDongHang(selectedIds, branchId);
-    } else {
-      onCreateLoading(selectedIds, branchId);
-    }
+  // Reset page khi filter/search/tab đổi
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filters, activeStatusTab]);
 
-    setShowCreateBaoDonDropdown(false);
-  };
+  // Tab override sidebar status
+  const effectiveFilters = useMemo(() => {
+    const f = { ...filters };
+    if (activeStatusTab !== "all") f.statusIds = [Number(activeStatusTab)];
+    return f;
+  }, [filters, activeStatusTab]);
+
+  // Sync tab với sidebar
+  useEffect(() => {
+    const s = filters.statusIds?.[0];
+    if (s != null && String(s) !== activeStatusTab)
+      setActiveStatusTab(String(s));
+    else if (s == null && activeStatusTab !== "all") setActiveStatusTab("all");
+  }, [filters.statusIds]);
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("invoiceTableColumns");
       if (saved) {
         try {
-          const savedColumns = JSON.parse(saved);
+          const savedCols = JSON.parse(saved);
           return DEFAULT_COLUMNS.map((col) => ({
             ...col,
             visible:
-              savedColumns.find((s: any) => s.key === col.key)?.visible ??
+              savedCols.find((s: any) => s.key === col.key)?.visible ??
               col.visible,
           }));
         } catch {
@@ -428,9 +398,9 @@ export function InvoicesTable({
   const { data, isLoading } = useInvoices({
     page,
     limit,
-    search,
+    search: debouncedSearch,
     branchId: selectedBranch?.id,
-    ...filters,
+    ...effectiveFilters,
   });
 
   useEffect(() => {
@@ -439,256 +409,342 @@ export function InvoicesTable({
     }
   }, [columns]);
 
+  // Đóng dropdown Báo đơn khi click ngoài
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (baoDonRef.current && !baoDonRef.current.contains(e.target as Node))
+        setShowBaoDonDropdown(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
   const invoices = data?.data || [];
-  const total = data?.total || 0;
-  const visibleColumns = columns.filter((col) => col.visible);
+  const total = (data as any)?.total ?? 0;
+  const totalPages = Math.ceil(total / limit) || 1;
 
-  const toggleColumnVisibility = (key: string) => {
+  const visibleColumns = useMemo(
+    () => columns.filter((c) => c.key !== "discount" && c.visible),
+    [columns]
+  );
+
+  const pageSummary = useMemo(
+    () => ({
+      grandTotal: invoices.reduce((s, i) => s + Number(i.grandTotal), 0),
+      paidAmount: invoices.reduce((s, i) => s + Number(i.paidAmount), 0),
+      debtAmount: invoices.reduce((s, i) => s + Number(i.debtAmount), 0),
+    }),
+    [invoices]
+  );
+
+  const toggleColumnVisibility = (key: string) =>
     setColumns((prev) =>
-      prev.map((col) =>
-        col.key === key ? { ...col, visible: !col.visible } : col
-      )
+      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
     );
-  };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.length === invoices.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(invoices.map((i) => i.id));
-    }
-  };
+  const toggleSelectAll = () =>
+    setSelectedIds(
+      selectedIds.length === invoices.length ? [] : invoices.map((i) => i.id)
+    );
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: number) =>
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
+
+  const toggleExpand = (id: number) =>
+    setExpandedInvoiceId((prev) => (prev === id ? null : id));
+
+  const handleCreateBaoDon = (type: "giao-hang" | "dong-hang" | "loading") => {
+    const branchId = selectedBranch?.id || null;
+    if (type === "giao-hang") onCreateGiaoHang(selectedIds, branchId);
+    else if (type === "dong-hang") onCreateDongHang(selectedIds, branchId);
+    else onCreateLoading(selectedIds, branchId);
+    setShowBaoDonDropdown(false);
   };
 
-  const toggleExpand = (invoiceId: number) => {
-    setExpandedInvoiceId((prev) => (prev === invoiceId ? null : invoiceId));
-  };
+  const colSpan = visibleColumns.length + 2;
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
-      <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4 w-[500px]">
-          <h2 className="text-xl font-semibold w-[150px]">Hóa đơn</h2>
-          <input
-            type="text"
-            placeholder="Tìm kiếm hóa đơn..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onCreateClick}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Tạo hóa đơn
-          </button>
-
-          <div className="relative">
-            <button
-              onMouseEnter={() => setShowCreateBaoDonDropdown(true)}
-              onMouseLeave={() => setShowCreateBaoDonDropdown(false)}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-md flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Tạo báo đơn
-            </button>
-            {showCreateBaoDonDropdown && (
-              <div
-                onMouseEnter={() => setShowCreateBaoDonDropdown(true)}
-                onMouseLeave={() => setShowCreateBaoDonDropdown(false)}
-                className="absolute top-full left-0 bg-white border rounded-lg shadow-lg z-50 min-w-[150px]">
-                <button
-                  onClick={() => handleCreateBaoDonClick("dong-hang")}
-                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50 first:rounded-t-lg">
-                  Đóng hàng
-                </button>
-                <button
-                  onClick={() => handleCreateBaoDonClick("loading")}
-                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50">
-                  Loading
-                </button>
-                <button
-                  onClick={() => handleCreateBaoDonClick("giao-hang")}
-                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50 last:rounded-b-lg">
-                  Giao hàng
-                </button>
-              </div>
-            )}
+    <Can resource="invoices" action="view">
+      <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
+        {/* Toolbar */}
+        <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+              Hóa đơn
+            </h2>
+            <input
+              type="text"
+              placeholder="Tìm mã HĐ, khách hàng..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
-
-          <button
-            onClick={() => setShowColumnModal(true)}
-            className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Cột Hiển Thị
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-md">
-          <thead className="bg-gray-50 sticky top-0 z-10">
-            <tr>
-              <th className="px-6 py-3 text-left sticky left-0">
-                <input
-                  type="checkbox"
-                  checked={
-                    selectedIds.length === invoices.length &&
-                    invoices.length > 0
-                  }
-                  onChange={toggleSelectAll}
-                  className="cursor-pointer"
-                />
-              </th>
-              {visibleColumns.map((col) => (
-                <th
-                  key={col.key}
-                  className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length + 1}
-                  className="px-6 py-8 text-center text-gray-500">
-                  Đang tải...
-                </td>
-              </tr>
-            ) : invoices.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length + 1}
-                  className="px-6 py-8 text-center text-gray-500">
-                  Chưa có hóa đơn nào
-                </td>
-              </tr>
-            ) : (
-              invoices.map((invoice) => (
-                <Fragment key={invoice.id}>
-                  <tr
-                    className={`border-b cursor-pointer ${
-                      expandedInvoiceId === invoice.id ? "" : ""
-                    }`}
-                    onClick={() => toggleExpand(invoice.id)}>
-                    <td
-                      className="px-6 py-3 sticky left-0 bg-white"
-                      onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(invoice.id)}
-                        onChange={() => toggleSelect(invoice.id)}
-                        className="cursor-pointer"
-                      />
-                    </td>
-                    {visibleColumns.map((col) => (
-                      <td
-                        key={col.key}
-                        className="px-6 py-3 text-md whitespace-nowrap">
-                        {col.render(invoice)}
-                      </td>
-                    ))}
-                  </tr>
-                  {expandedInvoiceId === invoice.id && (
-                    <InvoiceDetailRow
-                      invoiceId={invoice.id}
-                      colSpan={visibleColumns.length + 1}
-                    />
-                  )}
-                </Fragment>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="border-t p-4 flex items-center justify-between bg-white">
-        <div className="flex items-center gap-2">
-          <span className="text-md text-gray-600">
-            Hiển thị {(page - 1) * limit + 1} - {Math.min(page * limit, total)}{" "}
-            / {total} hóa đơn
-          </span>
-          <select
-            value={limit}
-            onChange={(e) => {
-              setLimit(Number(e.target.value));
-              setPage(1);
-            }}
-            className="border rounded px-2 py-1 text-md">
-            <option value={15}>15</option>
-            <option value={30}>30</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
-            ←
-          </button>
-          <span className="text-md">
-            Trang {page} / {Math.ceil(total / limit) || 1}
-          </span>
-          <button
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page >= Math.ceil(total / limit)}
-            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
-            →
-          </button>
-        </div>
-      </div>
-
-      {showColumnModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto custom-sidebar-scroll">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Tùy chỉnh cột hiển thị</h3>
+          <div className="flex items-center gap-2 shrink-0">
+            <Can resource="invoices" action="create">
               <button
-                onClick={() => setShowColumnModal(false)}
-                className="text-gray-400 hover:text-gray-600">
-                ✕
+                onClick={onCreateClick}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
+                <Plus className="w-4 h-4" />
+                Tạo hóa đơn
               </button>
+            </Can>
+
+            {/* Báo đơn dropdown */}
+            <div ref={baoDonRef} className="relative">
+              <button
+                onClick={() => setShowBaoDonDropdown((p) => !p)}
+                className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium flex items-center gap-1.5">
+                <Plus className="w-4 h-4" />
+                Báo đơn
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${showBaoDonDropdown ? "rotate-180" : ""}`}
+                />
+              </button>
+              {showBaoDonDropdown && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-40 overflow-hidden">
+                  <button
+                    onClick={() => handleCreateBaoDon("giao-hang")}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                    Giao hàng
+                  </button>
+                  <button
+                    onClick={() => handleCreateBaoDon("dong-hang")}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-50">
+                    Đóng hàng
+                  </button>
+                  <button
+                    onClick={() => handleCreateBaoDon("loading")}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-50">
+                    Loading
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-              {columns.map((col) => (
-                <label
-                  key={col.key}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+            <button
+              onClick={() => setShowColumnModal(true)}
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
+              <Settings className="w-4 h-4" />
+              Cột
+            </button>
+          </div>
+        </div>
+
+        {/* Status tabs */}
+        <div className="border-b px-4 flex items-center gap-0 overflow-x-auto shrink-0 scrollbar-none">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveStatusTab(tab.value)}
+              className={`px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
+                activeStatusTab === tab.value
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 sticky top-0 z-10">
+              <tr>
+                <th className="px-4 py-2.5 text-left w-10 sticky left-0 bg-gray-50">
                   <input
                     type="checkbox"
-                    checked={col.visible}
-                    onChange={() => toggleColumnVisibility(col.key)}
+                    checked={
+                      selectedIds.length === invoices.length &&
+                      invoices.length > 0
+                    }
+                    onChange={toggleSelectAll}
                     className="cursor-pointer"
                   />
-                  <span className="text-md">{col.label}</span>
-                </label>
-              ))}
-            </div>
+                </th>
+                {visibleColumns.map((col) => (
+                  <th
+                    key={col.key}
+                    className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide"
+                    style={{ width: col.width, minWidth: col.width }}>
+                    {col.label}
+                  </th>
+                ))}
+                <th className="px-4 py-2.5 w-8" />
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={colSpan} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-2 text-gray-400">
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                      <span className="text-xs">Đang tải...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : invoices.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={colSpan}
+                    className="py-20 text-center text-gray-400">
+                    <div className="text-sm">Không có hóa đơn nào</div>
+                  </td>
+                </tr>
+              ) : (
+                invoices.map((invoice) => (
+                  <Fragment key={invoice.id}>
+                    <tr
+                      className={`border-b cursor-pointer transition-colors ${
+                        expandedInvoiceId === invoice.id
+                          ? "bg-blue-50"
+                          : "hover:bg-gray-50"
+                      }`}
+                      onClick={() => toggleExpand(invoice.id)}>
+                      <td
+                        className={`px-4 py-2.5 sticky left-0 z-10 ${
+                          expandedInvoiceId === invoice.id
+                            ? "bg-blue-50"
+                            : "bg-white"
+                        }`}
+                        onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(invoice.id)}
+                          onChange={() => toggleSelect(invoice.id)}
+                          className="cursor-pointer"
+                        />
+                      </td>
+                      {visibleColumns.map((col) => (
+                        <td
+                          key={col.key}
+                          className="px-4 py-2.5"
+                          style={{
+                            width: col.width,
+                            minWidth: col.width,
+                            maxWidth: col.width,
+                            wordWrap: "break-word",
+                            whiteSpace: "normal",
+                          }}>
+                          {col.render(invoice)}
+                        </td>
+                      ))}
+                      <td className="px-4 py-2.5">
+                        <ChevronDown
+                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                            expandedInvoiceId === invoice.id ? "rotate-180" : ""
+                          }`}
+                        />
+                      </td>
+                    </tr>
+                    {expandedInvoiceId === invoice.id && (
+                      <InvoiceDetailRow
+                        invoiceId={invoice.id}
+                        colSpan={colSpan}
+                      />
+                    )}
+                  </Fragment>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="px-4 py-2 border rounded hover:bg-gray-50">
-                Đóng
-              </button>
+        {/* Pagination */}
+        <div className="border-t px-4 py-2.5 flex items-center justify-between bg-white shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Hiển thị</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+              {[10, 15, 20, 50].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-gray-500">/ trang</span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const p = Math.min(
+                Math.max(page - 2 + i, i + 1),
+                totalPages - (Math.min(5, totalPages) - 1 - i)
+              );
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
+                    p === page
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "hover:bg-gray-50 text-gray-600 border-gray-200"
+                  }`}>
+                  {p}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page >= totalPages}
+              className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <span className="text-xs text-gray-400">
+            Trang {page}/{totalPages}
+            {total > 0 ? ` • ${total.toLocaleString()} HĐ` : ""}
+          </span>
+        </div>
+
+        {/* Column modal */}
+        {showColumnModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-xl shadow-2xl w-[480px] max-h-[80vh] flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="text-base font-semibold text-gray-800">
+                  Tùy chỉnh cột hiển thị
+                </h3>
+                <button
+                  onClick={() => setShowColumnModal(false)}
+                  className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-2">
+                {columns.map((col) => (
+                  <label
+                    key={col.key}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={col.visible}
+                      onChange={() => toggleColumnVisibility(col.key)}
+                      className="accent-blue-600"
+                    />
+                    <span className="text-sm text-gray-700">{col.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </Can>
   );
 }

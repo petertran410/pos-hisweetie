@@ -1,15 +1,21 @@
+// components/invoices/InvoiceDetailRow.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useInvoice, useUpdateInvoice } from "@/lib/hooks/useInvoices";
 import { Loader2, MapPin, Printer } from "lucide-react";
 import { toast } from "sonner";
-import { INVOICE_STATUS, InvoiceDetail } from "@/lib/types/invoice";
+import {
+  INVOICE_STATUS,
+  INVOICE_STATUS_LABELS,
+  InvoiceDetail,
+} from "@/lib/types/invoice";
 import Swal from "sweetalert2";
 import { InvoicePackingSlipsTab } from "./InvoicePackingSlipsTab";
 import { InvoicePaymentsTab } from "./InvoicePaymentsTab";
 import { useAuthStore } from "@/lib/store/auth";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { printEntity } from "@/lib/utils/print";
 
 interface InvoiceDetailRowProps {
@@ -17,59 +23,26 @@ interface InvoiceDetailRowProps {
   colSpan: number;
 }
 
-const formatMoney = (value: number) => {
-  return new Intl.NumberFormat("en-US").format(value);
-};
-
-const formatDateTime = (dateString: string) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleString("vi-VN");
-};
-
-const getInvoiceStatusColor = (status: number) => {
+const getInvoiceStatusBadgeColor = (status: number) => {
   switch (status) {
-    case 1:
+    case INVOICE_STATUS.COMPLETED:
       return "bg-green-100 text-green-700";
-    case 2:
+    case INVOICE_STATUS.CANCELLED:
       return "bg-red-100 text-red-700";
-    case 3:
+    case INVOICE_STATUS.PROCESSING:
       return "bg-blue-100 text-blue-700";
-    case 4:
+    case INVOICE_STATUS.FAILED_DELIVERY:
       return "bg-yellow-100 text-yellow-700";
-    case 5:
+    case INVOICE_STATUS.PACKED:
       return "bg-orange-100 text-orange-700";
-    case 6:
+    case INVOICE_STATUS.LOADING:
       return "bg-purple-100 text-purple-700";
-    case 7:
+    case INVOICE_STATUS.DELIVERED:
       return "bg-teal-100 text-teal-700";
-    case 8:
+    case INVOICE_STATUS.RETURNED:
       return "bg-pink-100 text-pink-700";
     default:
       return "bg-gray-100 text-gray-700";
-  }
-};
-
-const getInvoiceStatusText = (status: number) => {
-  switch (status) {
-    case 1:
-      return "Hoàn thành";
-    case 2:
-      return "Đã hủy";
-    case 3:
-      return "Đang xử lý";
-    case 4:
-      return "Không giao được";
-    case 5:
-      return "Đóng hàng";
-    case 6:
-      return "Loading";
-    case 7:
-      return "Giao thành công";
-    case 8:
-      return "Đã trả hàng";
-    default:
-      return "Không xác định";
   }
 };
 
@@ -82,36 +55,49 @@ export function InvoiceDetailRow({
   const updateInvoice = useUpdateInvoice();
   const { user } = useAuthStore();
 
-  const isAdmin = user?.roles?.some(
-    (role: string) => role === "Admin" || role === "Super Admin"
-  );
-
   const [isSaving, setIsSaving] = useState(false);
   const [description, setDescription] = useState("");
   const [activeTab, setActiveTab] = useState<
     "info" | "deliveries" | "payments"
   >("info");
 
-  useEffect(() => {
-    if (invoice) {
-      setDescription(invoice.description || "");
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Sticky wrapper theo chiều ngang scroll (clone từ OrderDetailRow)
+  useLayoutEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    let scrollEl: HTMLElement | null = el.parentElement;
+    while (scrollEl) {
+      const ox = getComputedStyle(scrollEl).overflowX;
+      if (ox === "auto" || ox === "scroll") break;
+      scrollEl = scrollEl.parentElement;
     }
+    if (!scrollEl) return;
+    const setWidth = () => {
+      el.style.width = `${scrollEl!.clientWidth}px`;
+    };
+    setWidth();
+    const ro = new ResizeObserver(setWidth);
+    ro.observe(scrollEl);
+    return () => ro.disconnect();
+  }, [invoice]);
+
+  useEffect(() => {
+    if (invoice) setDescription(invoice.description || "");
   }, [invoice]);
 
   const handleCancel = async () => {
     if (!invoice) return;
-
     const hasPayments = invoice.payments && invoice.payments.length > 0;
 
     if (hasPayments) {
       const result = await Swal.fire({
         title: "Xác nhận hủy hóa đơn",
         html: `
-        <p>Hóa đơn này có <strong>${
-          invoice.payments?.length || 0
-        }</strong> phiếu thanh toán.</p>
-        <p class="text-red-600 font-bold mt-2">Bạn có muốn hủy cả phiếu thanh toán không?</p>
-      `,
+          <p>Hóa đơn này có <strong>${invoice.payments?.length || 0}</strong> phiếu thanh toán.</p>
+          <p class="text-red-600 font-bold mt-2">Bạn có muốn hủy cả phiếu thanh toán không?</p>
+        `,
         icon: "warning",
         showCancelButton: true,
         showDenyButton: true,
@@ -122,29 +108,21 @@ export function InvoiceDetailRow({
         denyButtonColor: "#059669",
         cancelButtonColor: "#6b7280",
       });
-
-      if (result.isDismissed) {
-        return;
-      }
+      if (result.isDismissed) return;
 
       const cancelPayments = result.isConfirmed;
-
       try {
         setIsSaving(true);
         await updateInvoice.mutateAsync({
           id: invoice.id,
-          data: {
-            status: INVOICE_STATUS.CANCELLED,
-            cancelPayments: cancelPayments,
-          },
+          data: { status: INVOICE_STATUS.CANCELLED, cancelPayments },
         });
-
-        if (cancelPayments) {
-          toast.success("Đã hủy hóa đơn và phiếu thanh toán");
-        } else {
-          toast.success("Đã hủy hóa đơn, giữ nguyên phiếu thanh toán");
-        }
-      } catch (error) {
+        toast.success(
+          cancelPayments
+            ? "Đã hủy hóa đơn và phiếu thanh toán"
+            : "Đã hủy hóa đơn, giữ nguyên phiếu thanh toán"
+        );
+      } catch {
         toast.error("Không thể hủy hóa đơn");
       } finally {
         setIsSaving(false);
@@ -160,7 +138,6 @@ export function InvoiceDetailRow({
         confirmButtonColor: "#dc2626",
         cancelButtonColor: "#6b7280",
       });
-
       if (result.isConfirmed) {
         try {
           setIsSaving(true);
@@ -169,18 +146,13 @@ export function InvoiceDetailRow({
             data: { status: INVOICE_STATUS.CANCELLED },
           });
           toast.success("Đã hủy hóa đơn thành công");
-        } catch (error) {
+        } catch {
           toast.error("Không thể hủy hóa đơn");
         } finally {
           setIsSaving(false);
         }
       }
     }
-  };
-
-  const handleProcessInvoice = () => {
-    if (!invoice) return;
-    router.push(`/ban-hang?invoiceId=${invoice.id}`);
   };
 
   const handleSave = async () => {
@@ -192,7 +164,7 @@ export function InvoiceDetailRow({
         data: { description },
       });
       toast.success("Lưu hóa đơn thành công");
-    } catch (error) {
+    } catch {
       toast.error("Không thể lưu hóa đơn");
     } finally {
       setIsSaving(false);
@@ -206,6 +178,11 @@ export function InvoiceDetailRow({
     } catch (e: any) {
       toast.error(e?.message || "In thất bại");
     }
+  };
+
+  const handleProcessInvoice = () => {
+    if (!invoice) return;
+    router.push(`/ban-hang?invoiceId=${invoice.id}`);
   };
 
   if (isLoading) {
@@ -231,166 +208,176 @@ export function InvoiceDetailRow({
     );
   }
 
-  const isCompleted = invoice.status === INVOICE_STATUS.COMPLETED;
-  const isCancelled = invoice.status === INVOICE_STATUS.CANCELLED;
-  const hasReturnOrders = (invoice as any)?._count?.returnOrders > 0;
+  const isFinalState =
+    invoice.status === INVOICE_STATUS.COMPLETED ||
+    invoice.status === INVOICE_STATUS.CANCELLED;
 
-  const canCancel =
-    !isSaving &&
-    !isCancelled &&
-    !hasReturnOrders &&
-    (invoice.status !== INVOICE_STATUS.COMPLETED || isAdmin);
+  const canCancel = !isFinalState;
+  const canProcess =
+    invoice.status !== INVOICE_STATUS.CANCELLED &&
+    invoice.status !== INVOICE_STATUS.COMPLETED;
 
   return (
     <tr>
-      <td colSpan={colSpan} className="py-2 bg-gray-50">
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1090px] 2xl:max-w-[1540px]">
-          <div className="p-6">
-            <div className="border-b border-gray-200 mb-6">
-              <div className="flex items-center content-center gap-2 text-md">
-                <p className="font-bold gap-3">{invoice.code}</p>
-                {"-"}
-                <h3 className="">
-                  {invoice.customer?.name || "Khách vãng lai"}
-                </h3>
-                <span
-                  className={`px-2 py-1 rounded text-sm font-medium ${getInvoiceStatusColor(
-                    invoice.status
-                  )}`}>
-                  {getInvoiceStatusText(invoice.status)}
-                </span>
-              </div>
+      <td colSpan={colSpan} className="p-0 bg-gray-50">
+        <div
+          ref={wrapperRef}
+          className="sticky left-0 p-2 bg-gray-50"
+          style={{ width: 0 }}>
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="p-4">
+              {/* Header: code - customer | branch */}
+              <div className="border-b border-gray-200 pb-3 mb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-gray-900">
+                      {invoice.code}
+                    </span>
+                    <span className="text-gray-400">-</span>
+                    <span className="text-lg font-semibold text-gray-800">
+                      {invoice.customer?.name || "Khách vãng lai"}
+                    </span>
+                    <span
+                      className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${getInvoiceStatusBadgeColor(invoice.status)}`}>
+                      {INVOICE_STATUS_LABELS[invoice.status] ||
+                        "Không xác định"}
+                    </span>
+                  </div>
+                  <span className="text-sm text-gray-600 font-medium">
+                    {invoice.branch?.name || "-"}
+                  </span>
+                </div>
 
-              <div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => setActiveTab("info")}
-                    className={` text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === "info"
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-gray-600 hover:text-gray-900"
-                    }`}>
-                    Thông tin
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("deliveries")}
-                    className={`px-4 py-4 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === "deliveries"
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-gray-600 hover:text-gray-900"
-                    }`}>
-                    Lịch sử giao hàng
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("payments")}
-                    className={`px-4 py-4 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === "payments"
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-gray-600 hover:text-gray-900"
-                    }`}>
-                    Lịch sử thanh toán
-                  </button>
+                {/* Tabs */}
+                <div className="flex gap-1 -mb-3 border-b border-gray-100">
+                  {[
+                    { key: "info", label: "Thông tin" },
+                    { key: "deliveries", label: "Lịch sử giao hàng" },
+                    { key: "payments", label: "Lịch sử thanh toán" },
+                  ].map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => setActiveTab(t.key as any)}
+                      className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                        activeTab === t.key
+                          ? "border-blue-600 text-blue-600"
+                          : "border-transparent text-gray-600 hover:text-gray-900"
+                      }`}>
+                      {t.label}
+                    </button>
+                  ))}
                 </div>
               </div>
-            </div>
 
-            <div>
+              {/* Tab content */}
               {activeTab === "info" && (
-                <div>
-                  <div className="flex gap-6 mb-4">
-                    <div className="flex gap-1">
-                      <label className="text-sm font-medium text-gray-500">
+                <div className="space-y-4">
+                  {/* Info grid 3 cols */}
+                  <div className="grid grid-cols-3 gap-x-8 gap-y-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
                         Người tạo:
                       </label>
-                      <span className="text-sm font-medium text-gray-500">
+                      <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-gray-50 truncate">
                         {invoice.creator?.name || "-"}
                       </span>
                     </div>
-
-                    <div className="flex gap-1">
-                      <label className="text-sm font-medium text-gray-500">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
                         Người bán:
                       </label>
-                      <span className="text-sm font-medium text-gray-500">
+                      <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
                         {invoice.soldBy?.name || invoice.creator?.name || "-"}
                       </span>
                     </div>
-
-                    <div className="flex gap-1">
-                      <label className="text-sm font-medium text-gray-500">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
                         Ngày bán:
                       </label>
-                      <span className="text-sm font-medium text-gray-500">
-                        {formatDateTime(invoice.purchaseDate)}
+                      <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-gray-50 truncate">
+                        {formatDate(invoice.purchaseDate)}
                       </span>
                     </div>
-
-                    <div className="flex gap-1">
-                      <label className="text-sm font-medium text-gray-500">
-                        Chi nhánh xử lý:
-                      </label>
-                      <span className="text-sm font-medium text-gray-500">
-                        {invoice.branch?.name || "-"}
-                      </span>
-                    </div>
-
-                    <div className="flex gap-1">
-                      <label className="text-sm font-medium text-gray-500">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-500 whitespace-nowrap shrink-0 pr-1.5">
                         Bảng giá:
                       </label>
-                      <span className="text-sm font-medium text-gray-500">
+                      <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
                         {invoice.priceBookName || "Bảng giá chung"}
                       </span>
                     </div>
-
-                    {/* <div className="flex gap-1">
-                      <label className="text-sm font-medium text-gray-500">
-                        Trạng thái:
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                        Chi nhánh:
                       </label>
-                      <div className="text-sm font-medium text-gray-500">
-                        <span
-                          className={`px-2 py-1 rounded text-sm font-medium ${getInvoiceStatusColor(
-                            invoice.status
-                          )}`}>
-                          {getInvoiceStatusText(invoice.status)}
-                        </span>
-                      </div>
+                      <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
+                        {invoice.branch?.name || "-"}
+                      </span>
+                    </div>
+                    {/* <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                        Kênh bán:
+                      </label>
+                      <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-gray-50 truncate">
+                        {invoice.saleChannelId || "Khác"}
+                      </span>
                     </div> */}
                   </div>
 
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <label className="block text-md font-medium text-gray-700 mb-1">
-                          Địa chỉ giao hàng:
-                        </label>
-                        <p className="text-md text-gray-900 font-medium">
-                          {invoice.delivery?.address || "-"}
-                        </p>
-                        <p className="text-md text-gray-600 mt-1">
-                          {[
-                            invoice.delivery?.wardName,
-                            invoice.delivery?.locationName,
-                          ]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </p>
+                  {/* Delivery info */}
+                  {invoice.delivery &&
+                    (invoice.delivery.address || invoice.delivery.receiver) && (
+                      <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                        <MapPin className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0 text-sm">
+                          <div className="font-medium text-gray-800">
+                            {invoice.delivery.receiver || "-"}
+                            {invoice.delivery.contactNumber && (
+                              <span className="text-gray-500 ml-2">
+                                • {invoice.delivery.contactNumber}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-gray-600 mt-0.5">
+                            {invoice.delivery.address || "-"}
+                          </div>
+                          <p className="text-gray-600 mt-1">
+                            {[
+                              invoice.delivery.wardName,
+                              invoice.delivery.locationName,
+                            ]
+                              .filter(Boolean)
+                              .join(", ")}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                  {/* Ghi chú */}
+                  <div>
+                    <label className="block text-sm text-gray-500 mb-1.5">
+                      Ghi chú:
+                    </label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={2}
+                      placeholder="Thêm ghi chú..."
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    />
                   </div>
 
+                  {/* Items */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-md font-semibold text-gray-700">
                         Danh sách sản phẩm
                       </h4>
                     </div>
-
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
                       <table className="w-full">
-                        <thead className="bg-gray-100">
-                          <tr>
+                        <thead>
+                          <tr className="bg-gray-100 border-b border-gray-200">
                             <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
                               Mã hàng
                             </th>
@@ -407,34 +394,27 @@ export function InvoiceDetailRow({
                               Giảm giá
                             </th>
                             <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                              Giá bán
-                            </th>
-                            <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
                               Thành tiền
                             </th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {invoice.details?.map((item: InvoiceDetail) => (
-                            <tr
-                              key={item.id}
-                              className="hover:bg-gray-50 transition-colors">
+                            <tr key={item.id}>
                               <td className="px-4 py-3">
                                 <span className="text-md font-medium text-blue-600">
                                   {item.productCode}
                                 </span>
                               </td>
                               <td className="px-4 py-3">
-                                <div>
-                                  <p className="text-md font-medium text-gray-900">
-                                    {item.productName}
+                                <p className="text-md font-medium text-gray-900">
+                                  {item.product?.name || item.productName}
+                                </p>
+                                {item.note && (
+                                  <p className="text-md text-gray-500 mt-1 italic">
+                                    {item.note}
                                   </p>
-                                  {item.note && (
-                                    <p className="text-md text-gray-500 mt-1 italic">
-                                      {item.note}
-                                    </p>
-                                  )}
-                                </div>
+                                )}
                               </td>
                               <td className="px-4 py-3 text-center">
                                 <span className="text-md font-medium text-gray-900">
@@ -443,26 +423,19 @@ export function InvoiceDetailRow({
                               </td>
                               <td className="px-4 py-3 text-right">
                                 <span className="text-md text-gray-900">
-                                  {formatMoney(Number(item.price))}
+                                  {formatCurrency(Number(item.price))}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-right">
-                                <span className="text-md text-red-600">
-                                  {item.discount && Number(item.discount) > 0
-                                    ? formatMoney(Number(item.discount))
+                                <span className="text-md text-gray-900">
+                                  {item.discount
+                                    ? formatCurrency(Number(item.discount))
                                     : "-"}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-right">
-                                <span className="text-md font-medium text-gray-900">
-                                  {formatMoney(
-                                    Number(item.price) - Number(item.discount)
-                                  )}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-md font-bold text-gray-900">
-                                  {formatMoney(Number(item.totalPrice))}
+                                <span className="text-md font-semibold text-blue-600">
+                                  {formatCurrency(Number(item.totalPrice))}
                                 </span>
                               </td>
                             </tr>
@@ -472,74 +445,42 @@ export function InvoiceDetailRow({
                     </div>
                   </div>
 
-                  <div className="flex gap-6">
-                    <div className="flex-1">
-                      <label className="text-md font-medium text-gray-500">
-                        Ghi chú hóa đơn:
-                      </label>
-                      <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="w-full px-3 py-2 text-md border rounded bg-white resize-none"
-                        rows={2}
-                        placeholder="Nhập ghi chú hóa đơn"
-                      />
-                    </div>
-                    <div className="w-80">
+                  {/* Summary w-96 */}
+                  <div className="flex justify-end gap-6">
+                    <div className="w-96">
                       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
                         <div className="flex justify-between items-center text-md">
-                          <span className="text-gray-600">Tổng tiền hàng:</span>
-                          <span className="font-semibold text-gray-900">
-                            {formatMoney(Number(invoice.totalAmount))}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-md">
                           <span className="text-gray-600">
-                            Giảm giá hóa đơn:
+                            Tổng tiền hàng ({invoice.details?.length || 0}):
                           </span>
-                          <span className="font-semibold text-red-600">
-                            -{" "}
-                            {formatMoney(
-                              Number(invoice.discount) +
-                                (Number(invoice.totalAmount) *
-                                  Number(invoice.discountRatio || 0)) /
-                                  100
-                            )}
-                            {Number(invoice.discountRatio) > 0 &&
-                              ` (${invoice.discountRatio}%)`}
+                          <span className="font-semibold text-gray-900">
+                            {formatCurrency(Number(invoice.totalAmount))}
                           </span>
                         </div>
-
                         <div className="flex justify-between items-center text-md">
-                          <span className="text-gray-600">Phí ship:</span>
-                          <span className="font-semibold text-gray-900">0</span>
+                          <span className="text-gray-600">Giảm giá:</span>
+                          <span className="font-semibold text-gray-900">
+                            {formatCurrency(Number(invoice.discount))}
+                          </span>
                         </div>
-
-                        <div className="border-t border-gray-300 pt-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-md font-bold text-gray-900">
-                              Tổng cộng:
-                            </span>
-                            <span className="text-md font-bold text-blue-600">
-                              {formatMoney(Number(invoice.grandTotal))}
-                            </span>
-                          </div>
+                        <div className="flex justify-between items-center text-md pt-2 border-t border-gray-200">
+                          <span className="text-gray-600">Tổng cộng:</span>
+                          <span className="text-md font-bold text-blue-600">
+                            {formatCurrency(Number(invoice.grandTotal))}
+                          </span>
                         </div>
-
                         <div className="flex justify-between items-center text-md pt-2 border-t border-gray-200">
                           <span className="text-gray-600">Khách đã trả:</span>
                           <span className="font-semibold text-green-600">
-                            {formatMoney(Number(invoice.paidAmount))}
+                            {formatCurrency(Number(invoice.paidAmount))}
                           </span>
                         </div>
-
                         <div className="flex justify-between items-center rounded-b-lg border-t-2 border-red-200 pt-2">
                           <span className="text-lg font-bold text-gray-900">
-                            Khách cần trả:
+                            Khách còn nợ:
                           </span>
                           <span className="text-lg font-bold text-red-600">
-                            {formatMoney(Number(invoice.debtAmount))}
+                            {formatCurrency(Number(invoice.debtAmount))}
                           </span>
                         </div>
                       </div>
@@ -551,50 +492,47 @@ export function InvoiceDetailRow({
               {activeTab === "deliveries" && (
                 <InvoicePackingSlipsTab invoiceId={invoice.id} />
               )}
-
               {activeTab === "payments" && (
                 <InvoicePaymentsTab invoiceId={invoice.id} />
               )}
-            </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCancel}
-                  hidden={!canCancel}
-                  className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {isSaving ? "Đang xử lý..." : "Hủy"}
-                </button>
-                <button
-                  onClick={handleProcessInvoice}
-                  hidden={
-                    isSaving ||
-                    invoice.status === INVOICE_STATUS.CANCELLED ||
-                    invoice.status === INVOICE_STATUS.COMPLETED
-                  }
-                  className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                  Xử lý hóa đơn
-                </button>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSave}
-                  disabled={
-                    isSaving || invoice.status === INVOICE_STATUS.CANCELLED
-                  }
-                  className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {isSaving ? "Đang lưu..." : "Lưu"}
-                </button>
-                <button
-                  onClick={handlePrint}
-                  disabled={invoice.status === INVOICE_STATUS.CANCELLED}
-                  className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50">
-                  <Printer className="w-4 h-4" />
-                  In
-                </button>
-                <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                  Kết thúc
-                </button>
+              {/* Action footer */}
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
+                <div className="flex gap-2">
+                  {canCancel && (
+                    <button
+                      onClick={handleCancel}
+                      disabled={isSaving}
+                      className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isSaving ? "Đang xử lý..." : "Hủy"}
+                    </button>
+                  )}
+                  {canProcess && (
+                    <button
+                      onClick={handleProcessInvoice}
+                      disabled={isSaving}
+                      className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                      Xử lý hóa đơn
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={
+                      isSaving || invoice.status === INVOICE_STATUS.CANCELLED
+                    }
+                    className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isSaving ? "Đang lưu..." : "Lưu"}
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    disabled={invoice.status === INVOICE_STATUS.CANCELLED}
+                    className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50">
+                    <Printer className="w-4 h-4" />
+                    In
+                  </button>
+                </div>
               </div>
             </div>
           </div>
