@@ -276,6 +276,29 @@ export function InvoiceCart({
     return Math.max(0, calculateTotal() - paymentAmount);
   };
 
+  const displayDebt = (() => {
+    if (useCOD) return calculateTotal();
+    if (isCreatingFromOrder && existingOrder) {
+      const hasExistingInvoices = (existingOrder.invoices || []).some(
+        (inv: any) => inv.status !== 5
+      );
+      if (!hasExistingInvoices) {
+        return (
+          calculateTotal() -
+          (Number(existingOrder.paidAmount || 0) + paymentAmount)
+        );
+      }
+      return calculateTotal() - paymentAmount;
+    }
+    if (isEditMode && existingOrder) {
+      return (
+        calculateTotal() -
+        (Number(existingOrder.paidAmount || 0) + paymentAmount)
+      );
+    }
+    return calculateTotal() - paymentAmount;
+  })();
+
   const formatDate = () => {
     const now = new Date();
     return `${now.getDate()}/${
@@ -455,7 +478,12 @@ export function InvoiceCart({
 
         <div className="flex items-center justify-between text-md">
           <div className="flex items-center gap-2">
-            <span>{isEditMode ? "Khách trả thêm:" : "Khách đã trả:"}</span>
+            <span>Khách thanh toán</span>
+            <button
+              onClick={() => setShowMultiPaymentModal(true)}
+              className="p-2 hover:bg-gray-100 rounded-lg">
+              <MoreVertical className="w-4 h-4" />
+            </button>
             <div className="flex items-center gap-1">
               <input
                 type="text"
@@ -465,11 +493,6 @@ export function InvoiceCart({
                 placeholder="Nhập số tiền"
                 className="border rounded-xl px-3 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32"
               />
-              <button
-                onClick={() => setShowMultiPaymentModal(true)}
-                className="p-2 hover:bg-gray-100 rounded-lg">
-                <MoreVertical className="w-4 h-4" />
-              </button>
             </div>
           </div>
 
@@ -489,7 +512,7 @@ export function InvoiceCart({
             return (
               isFirstInvoice && (
                 <div className="flex items-center justify-between text-md">
-                  <span>Tổng khách đã trả:</span>
+                  <span>Tổng đã thanh toán</span>
                   <span className="font-semibold">
                     {(
                       Number(existingOrder.paidAmount || 0) + paymentAmount
@@ -500,25 +523,10 @@ export function InvoiceCart({
             );
           })()}
 
-        {calculateDebt() > 0 && (
-          <div className="flex items-center justify-between text-md">
-            <span>Công nợ</span>
-            <span className="font-semibold">
-              {calculateDebt().toLocaleString()}
-            </span>
-          </div>
-        )}
-
-        {!isEditMode &&
-          !isCreatingFromOrder &&
-          paymentAmount > calculateTotal() && (
-            <div className="flex items-center justify-between text-md">
-              <span>Tiền thừa trả khách</span>
-              <span className="font-semibold">
-                {(paymentAmount - calculateTotal()).toLocaleString()}
-              </span>
-            </div>
-          )}
+        <div className="flex items-center justify-between text-md">
+          <span>Công nợ</span>
+          <span className="font-semibold">{displayDebt.toLocaleString()}</span>
+        </div>
 
         {isCreatingFromOrder ? (
           <button
