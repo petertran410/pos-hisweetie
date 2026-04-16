@@ -243,168 +243,166 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
               <div className="p-4">
                 <div className="border-b border-gray-200 pb-3 mb-4">
-                  <div className="flex items-center mb-3 content-center gap-2 text-xl">
-                    <p className="font-bold">{order.code}</p>
-                    {"-"}
-                    <h3 className="">
-                      {order.customer?.name || "Khách vãng lai"}
-                    </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-gray-900">
+                        {order.code}
+                      </span>
+                      <span className="text-gray-400">-</span>
+                      <span className="text-lg font-semibold text-gray-800">
+                        {order.customer?.name || "Khách vãng lai"}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-600 font-medium">
+                      {order.branch?.name || "-"}
+                    </span>
                   </div>
 
                   <div className="space-y-3">
-                    <div className="grid grid-cols-4 gap-x-6 gap-y-2.5">
+                    {/* Info grid — 3 cols */}
+                    <div className="grid grid-cols-3 gap-x-8 gap-y-3 mb-3">
                       <div className="flex items-center gap-2">
-                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
+                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
                           Người tạo:
                         </label>
-                        <span className="flex-1 px-3 py-1.5 text-md border rounded bg-gray-50 truncate">
+                        <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-gray-50 truncate">
                           {order.creator?.name || "-"}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
+                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
                           Người nhận đặt:
                         </label>
-                        <span className="w-full px-3 py-2 text-md border rounded bg-white">
+                        <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
                           {order.creator?.name || "-"}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
+                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
                           Ngày đặt:
                         </label>
-                        <span className="flex-1 px-3 py-1.5 text-md border rounded bg-gray-50 truncate">
+                        <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-gray-50 truncate">
                           {formatDate(order.orderDate)}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
-                          Chi nhánh xử lý:
-                        </label>
-                        <span className="w-full px-3 py-2 text-md border rounded bg-white">
-                          {order.branch?.name || "-"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
+                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
                           Bảng giá:
                         </label>
-                        <span className="w-full px-3 py-2 text-md border rounded bg-white">
+                        <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
                           Bảng giá chung
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px]">
-                          Trạng thái:
+                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                          Chi nhánh xử lý:
                         </label>
-                        {!isStatusEditable ? (
-                          <div className="w-full px-3 py-2 border rounded bg-gray-50">
-                            <span
-                              className={`px-2 py-1 rounded text-sm font-medium ${getOrderStatusBadgeColor(
-                                order.status
-                              )}`}>
-                              {ORDER_STATUS_LABELS[
-                                order.status as keyof typeof ORDER_STATUS_LABELS
-                              ] || "Không xác định"}
-                            </span>
-                          </div>
-                        ) : (
-                          <div ref={statusDropdownRef} className="relative">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setShowStatusDropdown((prev) => !prev)
-                              }
-                              className="w-full px-3 py-2 border rounded bg-white text-left flex items-center justify-between hover:border-blue-400 transition-colors">
-                              <span
-                                className={`px-2 py-1 rounded text-sm font-medium ${getOrderStatusBadgeColor(
-                                  isManualEditable
-                                    ? selectedStatus
-                                    : order.status
-                                )}`}>
-                                {isManualEditable
-                                  ? ORDER_STATUS_LABELS[
-                                      selectedStatus as keyof typeof ORDER_STATUS_LABELS
-                                    ]
-                                  : ORDER_STATUS_LABELS[
-                                      order.status as keyof typeof ORDER_STATUS_LABELS
-                                    ] || "Không xác định"}
-                              </span>
-                              <ChevronDown
-                                className={`w-4 h-4 text-gray-400 transition-transform ${
-                                  showStatusDropdown ? "rotate-180" : ""
-                                }`}
-                              />
-                            </button>
-
-                            {showStatusDropdown && (
-                              <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg overflow-hidden">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedStatus(ORDER_STATUS.PENDING);
-                                    setShowStatusDropdown(false);
-                                  }}
-                                  className={`w-full px-4 py-2.5 text-sm text-left flex items-center gap-2 hover:bg-gray-50 transition-colors ${
-                                    selectedStatus === ORDER_STATUS.PENDING
-                                      ? "bg-yellow-50"
-                                      : ""
-                                  }`}>
-                                  <span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" />
-                                  <span className="font-medium">Phiếu tạm</span>
-                                  {selectedStatus === ORDER_STATUS.PENDING && (
-                                    <span className="ml-auto text-blue-500 text-xs">
-                                      ✓
-                                    </span>
-                                  )}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedStatus(ORDER_STATUS.CONFIRMED);
-                                    setShowStatusDropdown(false);
-                                  }}
-                                  className={`w-full px-4 py-2.5 text-sm text-left flex items-center gap-2 hover:bg-gray-50 transition-colors border-t ${
-                                    selectedStatus === ORDER_STATUS.CONFIRMED
-                                      ? "bg-teal-50"
-                                      : ""
-                                  }`}>
-                                  <span className="w-2 h-2 rounded-full bg-teal-400 shrink-0" />
-                                  <span className="font-medium">
-                                    Đã xác nhận
-                                  </span>
-                                  {selectedStatus ===
-                                    ORDER_STATUS.CONFIRMED && (
-                                    <span className="ml-auto text-blue-500 text-xs">
-                                      ✓
-                                    </span>
-                                  )}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
+                          {order.branch?.name || "-"}
+                        </span>
                       </div>
 
-                      <div className="flex items-start gap-2">
-                        <label className="text-md font-medium text-gray-500 whitespace-nowrap min-w-[110px] pt-1.5">
-                          Ghi chú:
+                      {/* Trạng thái — dropdown */}
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                          Trạng thái:
                         </label>
-                        <textarea
-                          value={description}
-                          onChange={(e) => setDescription(e.target.value)}
-                          // disabled={!isManualEditable}
-                          className={`w-full px-3 py-2 text-md border rounded resize-none ${
-                            isManualEditable ? "bg-white" : "bg-gray-50"
-                          }`}
-                          rows={2}
-                          placeholder="Nhập ghi chú đơn hàng"
-                        />
+                        <div className="flex-1 min-w-0">
+                          {!isStatusEditable ? (
+                            <div className="w-full px-2.5 py-1.5 border border-gray-200 rounded bg-gray-50">
+                              <span
+                                className={`px-2 py-0.5 rounded text-xs font-medium ${getOrderStatusBadgeColor(
+                                  order.status
+                                )}`}>
+                                {ORDER_STATUS_LABELS[
+                                  order.status as keyof typeof ORDER_STATUS_LABELS
+                                ] || "Không xác định"}
+                              </span>
+                            </div>
+                          ) : (
+                            <div ref={statusDropdownRef} className="relative">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setShowStatusDropdown((prev) => !prev)
+                                }
+                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded bg-white text-left flex items-center justify-between hover:border-blue-400 transition-colors">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-xs font-medium ${getOrderStatusBadgeColor(
+                                    isManualEditable
+                                      ? selectedStatus
+                                      : order.status
+                                  )}`}>
+                                  {isManualEditable
+                                    ? ORDER_STATUS_LABELS[
+                                        selectedStatus as keyof typeof ORDER_STATUS_LABELS
+                                      ]
+                                    : ORDER_STATUS_LABELS[
+                                        order.status as keyof typeof ORDER_STATUS_LABELS
+                                      ] || "Không xác định"}
+                                </span>
+                                <ChevronDown
+                                  className={`w-4 h-4 text-gray-400 transition-transform ${
+                                    showStatusDropdown ? "rotate-180" : ""
+                                  }`}
+                                />
+                              </button>
+
+                              {showStatusDropdown && (
+                                <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg overflow-hidden">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedStatus(ORDER_STATUS.PENDING);
+                                      setShowStatusDropdown(false);
+                                    }}
+                                    className={`w-full px-4 py-2.5 text-sm text-left flex items-center gap-2 hover:bg-gray-50 transition-colors ${
+                                      selectedStatus === ORDER_STATUS.PENDING
+                                        ? "bg-yellow-50"
+                                        : ""
+                                    }`}>
+                                    <span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" />
+                                    <span className="font-medium">
+                                      Phiếu tạm
+                                    </span>
+                                    {selectedStatus ===
+                                      ORDER_STATUS.PENDING && (
+                                      <span className="ml-auto text-blue-500 text-xs">
+                                        ✓
+                                      </span>
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedStatus(ORDER_STATUS.CONFIRMED);
+                                      setShowStatusDropdown(false);
+                                    }}
+                                    className={`w-full px-4 py-2.5 text-sm text-left flex items-center gap-2 hover:bg-gray-50 transition-colors border-t ${
+                                      selectedStatus === ORDER_STATUS.CONFIRMED
+                                        ? "bg-teal-50"
+                                        : ""
+                                    }`}>
+                                    <span className="w-2 h-2 rounded-full bg-teal-400 shrink-0" />
+                                    <span className="font-medium">
+                                      Đã xác nhận
+                                    </span>
+                                    {selectedStatus ===
+                                      ORDER_STATUS.CONFIRMED && (
+                                      <span className="ml-auto text-blue-500 text-xs">
+                                        ✓
+                                      </span>
+                                    )}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
