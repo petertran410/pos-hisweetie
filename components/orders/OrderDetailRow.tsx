@@ -299,7 +299,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           Bảng giá:
                         </label>
                         <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
-                          Bảng giá chung
+                          {order.priceBookName || "Bảng giá chung"}
                         </span>
                       </div>
 
