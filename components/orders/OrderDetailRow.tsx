@@ -54,6 +54,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [noteValue, setNoteValue] = useState<string>(order?.description ?? "");
   const cancelOrder = useCancelOrder();
   const { user } = useAuthStore();
 
@@ -97,6 +98,10 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
       setDescription(order.description || "");
     }
   }, [order]);
+
+  useEffect(() => {
+    if (order) setNoteValue(order?.description ?? "");
+  }, [order?.id]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -524,7 +529,21 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                       </div>
                     </div>
 
-                    <div className="flex justify-end gap-6">
+                    <div className="flex gap-6">
+                      {/* Ghi chú đơn hàng — bên trái */}
+                      <div className="flex-1">
+                        <label className="block text-md font-medium text-gray-500 mb-1.5">
+                          Ghi chú đơn hàng:
+                        </label>
+                        <textarea
+                          value={noteValue}
+                          onChange={(e) => setNoteValue(e.target.value)}
+                          className="w-full px-3 py-2 text-md border rounded bg-white resize-none"
+                          rows={4}
+                          placeholder="Nhập ghi chú..."
+                        />
+                      </div>
+
                       <div className="w-96">
                         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
                           <div className="flex justify-between items-center text-md">

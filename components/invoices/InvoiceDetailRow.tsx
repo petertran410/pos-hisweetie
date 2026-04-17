@@ -353,20 +353,6 @@ export function InvoiceDetailRow({
                       </div>
                     )}
 
-                  {/* Ghi chú */}
-                  <div>
-                    <label className="block text-sm text-gray-500 mb-1.5">
-                      Ghi chú:
-                    </label>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={2}
-                      placeholder="Thêm ghi chú..."
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                    />
-                  </div>
-
                   {/* Items */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -446,7 +432,21 @@ export function InvoiceDetailRow({
                   </div>
 
                   {/* Summary w-96 */}
-                  <div className="flex justify-end gap-6">
+                  <div className="flex gap-6">
+                    {/* Ghi chú */}
+                    <div className="flex-1">
+                      <label className="block text-sm text-gray-500 mb-1.5">
+                        Ghi chú hóa đơn:
+                      </label>
+                      <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="w-full px-3 py-2 text-md border rounded bg-white resize-none"
+                        rows={4}
+                        placeholder="Nhập ghi chú..."
+                      />
+                    </div>
+
                     <div className="w-96">
                       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
                         <div className="flex justify-between items-center text-md">
