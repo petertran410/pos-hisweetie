@@ -17,7 +17,7 @@ export function CustomerDebtsTab({
 }: CustomerDebtsTabProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [page, setPage] = useState(1);
-  const limit = 8;
+  const limit = 5;
 
   const { data, isLoading } = useCustomerDebtTimeline(customerId);
 

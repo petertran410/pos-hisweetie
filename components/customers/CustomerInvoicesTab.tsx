@@ -129,7 +129,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
 
   const isLoading = invoicesLoading || returnsLoading;
   const [page, setPage] = useState(1);
-  const limit = 8;
+  const limit = 5;
 
   const timeline = useMemo(() => {
     const items: TimelineItem[] = [];

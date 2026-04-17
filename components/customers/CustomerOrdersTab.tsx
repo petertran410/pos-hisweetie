@@ -21,7 +21,7 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
   });
 
   const [page, setPage] = useState(1);
-  const limit = 8;
+  const limit = 5;
 
   const orders = data?.data || [];
 
