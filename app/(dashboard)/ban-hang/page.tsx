@@ -1456,7 +1456,7 @@ export default function BanHangPage() {
       soldById: activeTab.soldById ?? user?.id,
       discountAmount: Number(activeTab.discount) || 0,
       discountRatio: Number(activeTab.discountRatio) || 0,
-      priceBookId: activeTab.selectedPriceBookId || null,
+      priceBookId: activeTab.selectedPriceBookId ?? 0,
     };
 
     if (activeTab.type === "order") {
