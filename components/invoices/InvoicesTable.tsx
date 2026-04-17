@@ -428,15 +428,6 @@ export function InvoicesTable({
     [columns]
   );
 
-  const pageSummary = useMemo(
-    () => ({
-      grandTotal: invoices.reduce((s, i) => s + Number(i.grandTotal), 0),
-      paidAmount: invoices.reduce((s, i) => s + Number(i.paidAmount), 0),
-      debtAmount: invoices.reduce((s, i) => s + Number(i.debtAmount), 0),
-    }),
-    [invoices]
-  );
-
   const toggleColumnVisibility = (key: string) =>
     setColumns((prev) =>
       prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
@@ -531,22 +522,6 @@ export function InvoicesTable({
               Cột
             </button>
           </div>
-        </div>
-
-        {/* Status tabs */}
-        <div className="border-b px-4 flex items-center gap-0 overflow-x-auto shrink-0 scrollbar-none">
-          {STATUS_TABS.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => setActiveStatusTab(tab.value)}
-              className={`px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeStatusTab === tab.value
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}>
-              {tab.label}
-            </button>
-          ))}
         </div>
 
         {/* Table */}

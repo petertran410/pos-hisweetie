@@ -225,9 +225,8 @@ export function InvoiceDetailRow({
           ref={wrapperRef}
           className="sticky left-0 bg-gray-50"
           style={{ width: 0 }}>
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="p-4">
-              {/* Header: code - customer | branch */}
               <div className="border-b border-gray-200 mb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

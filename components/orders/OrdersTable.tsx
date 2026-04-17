@@ -396,22 +396,6 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
           </div>
         </div>
 
-        {/* ── Status tabs ── */}
-        <div className="border-b px-4 flex items-center gap-0 overflow-x-auto shrink-0 scrollbar-none">
-          {STATUS_TABS.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => setActiveStatusTab(tab.value)}
-              className={`px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeStatusTab === tab.value
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
         {/* ── Table ── */}
         <div className="flex-1 overflow-auto">
           <table className="w-full text-sm">

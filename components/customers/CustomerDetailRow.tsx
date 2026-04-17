@@ -124,12 +124,11 @@ export function CustomerDetailRow({
       <td colSpan={colSpan} className="p-0 bg-gray-50">
         <div
           ref={wrapperRef}
-          className="sticky left-0 p-2 bg-gray-50"
+          className="sticky left-0 bg-gray-50"
           style={{ width: 0 }}>
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="p-4">
-              {/* ── Header (giống OrderDetailRow) ── */}
-              <div className=" border-gray-200 pb-2">
+              <div className=" border-gray-200 mb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
@@ -148,23 +147,26 @@ export function CustomerDetailRow({
                       {customer.isActive ? "Hoạt động" : "Ngừng hoạt động"}
                     </span>
                   </div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {customer.branch?.name || "-"}
+                  </span>
                 </div>
-              </div>
 
-              {/* ── Tabs ── */}
-              <div className="flex gap-1 border-b border-gray-200 mb-4">
-                {TABS.map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`px-4 py-2 text-md font-medium border-b-2 transition-colors ${
-                      activeTab === tab.key
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}>
-                    {tab.label}
-                  </button>
-                ))}
+                {/* ── Tabs ── */}
+                <div className="flex gap-1 border-b border-gray-200 mb-4">
+                  {TABS.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`px-4 py-2 text-md font-medium border-b-2 transition-colors ${
+                        activeTab === tab.key
+                          ? "border-blue-600 text-blue-600"
+                          : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* ── Tab content ── */}
@@ -189,36 +191,33 @@ export function CustomerDetailRow({
                         </span>
                       </div>
                     </div>
-                    <span className="text-sm font-medium text-gray-700">
-                      {customer.branch?.name || "-"}
-                    </span>
                   </div>
 
                   {/* ── Info fields: label trên, value dưới, 3 cột ── */}
-                  <div className="grid grid-cols-3 gap-x-8 border-b border-gray-200 pb-4 mb-4">
-                    <div>
-                      <label className="block text-sm text-gray-500 mb-1">
-                        Điện thoại
+                  <div className="grid grid-cols-3 gap-x-8 border-b border-gray-200 pb-2 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-sm text-gray-500">
+                        Điện thoại:
                       </label>
-                      <div className="text-base text-gray-900">
+                      <div className="block text-sm text-gray-900">
                         {customer.contactNumber || "Chưa có"}
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-sm text-gray-500 mb-1">
-                        Sinh nhật
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-sm text-gray-500">
+                        Sinh nhật:
                       </label>
-                      <div className="text-base text-gray-900">
+                      <div className="block text-sm text-gray-900">
                         {customer.birthDate
                           ? formatDate(customer.birthDate)
                           : "Chưa có"}
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-sm text-gray-500 mb-1">
-                        Giới tính
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-sm text-gray-500">
+                        Giới tính:
                       </label>
-                      <div className="text-base text-gray-900">
+                      <div className="block text-sm text-gray-900">
                         {customer.gender === true
                           ? "Nam"
                           : customer.gender === false
@@ -226,22 +225,20 @@ export function CustomerDetailRow({
                             : "Chưa có"}
                       </div>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-x-8 border-b border-gray-200 pb-4 mb-4">
-                    <div>
-                      <label className="block text-sm text-gray-500 mb-1">
-                        Email
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-sm text-gray-500">
+                        Email:
                       </label>
-                      <div className="text-base text-gray-900">
+                      <div className="block text-sm text-gray-900">
                         {customer.email || "Chưa có"}
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-sm text-gray-500 mb-1">
-                        Facebook
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-sm text-gray-500">
+                        Facebook:
                       </label>
-                      <div className="text-base text-gray-900">Chưa có</div>
+                      <div className="block text-sm text-gray-900">Chưa có</div>
                     </div>
                     <div />
                   </div>
@@ -303,7 +300,7 @@ export function CustomerDetailRow({
 
                   {/* ── Ghi chú ── */}
                   {customer.comments && (
-                    <div className="flex items-start gap-2 text-sm text-gray-700">
+                    <div className="flex items-start gap-1 text-md text-gray-700">
                       <svg
                         className="w-4 h-4 text-gray-400 mt-0.5 shrink-0"
                         fill="none"

@@ -200,20 +200,20 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     width: "150px",
     render: (c) => c.phone || "-",
   },
-  {
-    key: "totalPoint",
-    label: "Tổng điểm",
-    visible: false,
-    width: "120px",
-    render: (c) => Number(c.totalPoint).toLocaleString(),
-  },
-  {
-    key: "rewardPoint",
-    label: "Điểm thưởng",
-    visible: false,
-    width: "120px",
-    render: (c) => c.rewardPoint.toLocaleString(),
-  },
+  // {
+  //   key: "totalPoint",
+  //   label: "Tổng điểm",
+  //   visible: false,
+  //   width: "120px",
+  //   render: (c) => Number(c.totalPoint).toLocaleString(),
+  // },
+  // {
+  //   key: "rewardPoint",
+  //   label: "Điểm thưởng",
+  //   visible: false,
+  //   width: "120px",
+  //   render: (c) => c.rewardPoint.toLocaleString(),
+  // },
   {
     key: "branch",
     label: "Chi nhánh",
@@ -368,42 +368,6 @@ export function CustomersTable({
           </div>
         </div>
 
-        {/* ── Status Tabs ── */}
-        <div className="flex gap-1 px-4 bg-white border-b">
-          {STATUS_TABS.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => setActiveStatusTab(tab.value)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeStatusTab === tab.value
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Summary Row ── */}
-        <div className="px-4 py-2 bg-gray-50 border-b flex items-center gap-6 text-sm">
-          <span className="text-gray-600">
-            Tổng bán:{" "}
-            <strong>{formatCurrency(pageSummary.totalPurchased)}</strong>
-          </span>
-          <span className="text-gray-600">
-            Tổng nợ:{" "}
-            <strong className="text-orange-600">
-              {formatCurrency(pageSummary.totalDebt)}
-            </strong>
-          </span>
-          <span className="text-gray-600">
-            Tổng doanh thu:{" "}
-            <strong className="text-green-700">
-              {formatCurrency(pageSummary.totalRevenue)}
-            </strong>
-          </span>
-        </div>
-
         {/* ── Table ── */}
         <div className="flex-1 overflow-auto">
           <table className="w-full text-sm">
@@ -510,7 +474,6 @@ export function CustomersTable({
             </tbody>
           </table>
         </div>
-
         {/* ── Pagination (giống OrdersTable) ── */}
         <div className="border-t px-4 py-2.5 flex items-center justify-between bg-white shrink-0">
           <div className="flex items-center gap-2">
