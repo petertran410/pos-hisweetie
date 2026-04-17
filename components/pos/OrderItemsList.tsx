@@ -76,7 +76,9 @@ export function OrderItemsList({
     if (display === undefined) return;
     const parsed = parseInt(display, 10);
     const validQty =
-      !display || isNaN(parsed) || parsed < 1 ? currentQuantity : Math.max(1, parsed);
+      !display || isNaN(parsed) || parsed < 1
+        ? currentQuantity
+        : Math.max(1, parsed);
     onUpdateItem(productId, { quantity: validQty });
     setQuantityDisplays((prev) => {
       const next = { ...prev };
@@ -320,9 +322,22 @@ export function OrderItemsList({
                     className="text-blue-600 hover:text-blue-700 text-md font-medium">
                     Giảm giá
                   </button>
+
+                  {/* Cột giá trị giảm giá */}
+                  <div className="text-md text-right min-w-[60px]">
+                    {item.discount > 0 ? (
+                      <span className="text-red-500">
+                        -{item.discount.toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
+                  </div>
+
                   <div className="text-md text-gray-500">
                     {item.price.toLocaleString()}
                   </div>
+
                   <div className="text-md font-medium">
                     {(
                       (item.price - item.discount) *

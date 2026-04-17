@@ -321,6 +321,18 @@ export function InvoiceItemsList({
                     className="text-blue-600 hover:text-blue-700 text-md font-medium">
                     Giảm giá
                   </button>
+
+                  {/* Cột giá trị giảm giá */}
+                  <div className="text-md text-right min-w-[60px]">
+                    {item.discount > 0 ? (
+                      <span className="text-red-500">
+                        -{item.discount.toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
+                  </div>
+
                   <div className="text-md text-gray-500">
                     {item.price.toLocaleString()}
                   </div>

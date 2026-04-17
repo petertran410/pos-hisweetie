@@ -29,28 +29,38 @@ export function ItemDiscountModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const maxAmount = item.price - item.discount;
+  const maxAmount = item.price;
+
+  // useEffect(() => {
+  //   if (isOpen) {
+  //     if (item.discount > 0) {
+  //       const discountPercent = (item.discount / maxAmount) * 100;
+  //       if (
+  //         discountPercent <= 100 &&
+  //         discountPercent === Math.floor(discountPercent)
+  //       ) {
+  //         setDiscountType("ratio");
+  //         setInputValue(discountPercent.toString());
+  //       } else {
+  //         setDiscountType("amount");
+  //         setInputValue(item.discount.toLocaleString("en-US"));
+  //       }
+  //     } else {
+  //       setInputValue("");
+  //     }
+  //     setTimeout(() => inputRef.current?.focus(), 100);
+  //   }
+  // }, [isOpen, item.discount, maxAmount]);
 
   useEffect(() => {
     if (isOpen) {
-      if (item.discount > 0) {
-        const discountPercent = (item.discount / maxAmount) * 100;
-        if (
-          discountPercent <= 100 &&
-          discountPercent === Math.floor(discountPercent)
-        ) {
-          setDiscountType("ratio");
-          setInputValue(discountPercent.toString());
-        } else {
-          setDiscountType("amount");
-          setInputValue(item.discount.toLocaleString("en-US"));
-        }
-      } else {
-        setInputValue("");
-      }
+      setDiscountType("amount");
+      setInputValue(
+        item.discount > 0 ? item.discount.toLocaleString("en-US") : ""
+      );
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen, item.discount, maxAmount]);
+  }, [isOpen, item.discount]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
