@@ -1401,7 +1401,7 @@ export default function BanHangPage() {
         }
       }
 
-      await updateInvoice.mutateAsync({
+      const updatedInvoice = await updateInvoice.mutateAsync({
         id: activeTab.documentId,
         data: invoiceData,
       });
@@ -1411,8 +1411,11 @@ export default function BanHangPage() {
 
       setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
 
-      // QUEUE PRINT
-      queuePrintAfterRedirect("invoice", activeTab.documentId);
+      // QUEUE PRINT — dùng ID từ response (invoice mới nếu items thay đổi)
+      queuePrintAfterRedirect(
+        "invoice",
+        updatedInvoice?.id ?? activeTab.documentId
+      );
 
       toast.success("Lưu hóa đơn thành công");
       router.push("/don-hang/hoa-don");
