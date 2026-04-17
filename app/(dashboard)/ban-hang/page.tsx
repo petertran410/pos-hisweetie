@@ -80,7 +80,8 @@ export interface Tab {
 
 const STORAGE_KEY = "pos-tabs";
 const EDIT_STORAGE_KEY = "pos-edit-state";
-const PRICE_BOOK_STORAGE_KEY = "pos-selected-price-book";
+const getPriceBookStorageKey = (userId?: number) =>
+  `pos-selected-price-book-${userId || "default"}`;
 
 const getEditStorageKey = (id: number, type: "order" | "invoice"): string => {
   return `${EDIT_STORAGE_KEY}-${type}-${id}`;
@@ -251,10 +252,11 @@ export default function BanHangPage() {
   };
 
   const handlePriceBookSelect = async (priceBookId: number | null) => {
+    const storageKey = getPriceBookStorageKey(user?.id);
     if (priceBookId !== null) {
-      localStorage.setItem(PRICE_BOOK_STORAGE_KEY, priceBookId.toString());
+      localStorage.setItem(storageKey, priceBookId.toString());
     } else {
-      localStorage.removeItem(PRICE_BOOK_STORAGE_KEY);
+      localStorage.removeItem(storageKey);
     }
 
     const currentCartItems = activeTab.cartItems;
@@ -351,21 +353,23 @@ export default function BanHangPage() {
   }, []);
 
   useEffect(() => {
-    if (isInitialized) return;
+    if (!isInitialized || !user?.id) return;
 
-    const savedPriceBookId = localStorage.getItem(PRICE_BOOK_STORAGE_KEY);
+    const storageKey = getPriceBookStorageKey(user.id);
+    const savedPriceBookId = localStorage.getItem(storageKey);
     if (savedPriceBookId) {
       const priceBookId = parseInt(savedPriceBookId, 10);
       if (!isNaN(priceBookId)) {
         setTabs((prevTabs) =>
-          prevTabs.map((tab) => ({
-            ...tab,
-            selectedPriceBookId: priceBookId,
-          }))
+          prevTabs.map((tab) =>
+            !tab.documentId && !tab.isEditMode
+              ? { ...tab, selectedPriceBookId: priceBookId }
+              : tab
+          )
         );
       }
     }
-  }, [isInitialized]);
+  }, [isInitialized, user?.id]);
 
   useEffect(() => {
     if (!isInitialized || orderId || invoiceId) return;
@@ -802,7 +806,7 @@ export default function BanHangPage() {
         tab.id === activeTabId
           ? {
               ...tab,
-              type: "invoice",
+              type: "invoice" as TabType,
               label: "Tạo hóa đơn",
               sourceOrderId: tab.documentId,
               sourceOrder: order,
@@ -810,6 +814,7 @@ export default function BanHangPage() {
               selectedAddressId: null,
               cartItems: remainingCartItems,
               selectedCustomer: order.customer || tab.selectedCustomer,
+              selectedPriceBookId: order.priceBookId ?? tab.selectedPriceBookId,
               discount: remainingDiscount > 0 ? remainingDiscount : 0,
               discountRatio: 0,
               paymentAmount: 0,
@@ -1451,6 +1456,7 @@ export default function BanHangPage() {
       soldById: activeTab.soldById ?? user?.id,
       discountAmount: Number(activeTab.discount) || 0,
       discountRatio: Number(activeTab.discountRatio) || 0,
+      priceBookId: activeTab.selectedPriceBookId || null,
     };
 
     if (activeTab.type === "order") {
