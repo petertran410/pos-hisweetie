@@ -325,6 +325,74 @@ function RangeInput({
   );
 }
 
+// ─── SortDropdown (custom, không dùng native select) ─────────────────────────
+function SortDropdown({
+  value,
+  onChange,
+}: {
+  value: "none" | "desc" | "asc";
+  onChange: (v: "none" | "desc" | "asc") => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const OPTIONS = [
+    { value: "none" as const, label: "Mặc định" },
+    { value: "desc" as const, label: "Nhiều nhất" },
+    { value: "asc" as const, label: "Thấp nhất" },
+  ];
+
+  const selected = OPTIONS.find((o) => o.value === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border transition-all ${
+          value !== "none"
+            ? "border-blue-400 bg-blue-50 text-blue-700"
+            : "border-gray-200 text-gray-500 hover:border-gray-300"
+        }`}>
+        <span>{selected?.label}</span>
+        <ChevronDown
+          className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[110px] overflow-hidden">
+          {OPTIONS.map((opt, idx) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                opt.value === value
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-gray-700 hover:bg-gray-50"
+              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── StatusButtons (cho loại KH, giới tính, trạng thái) ──────────────────────
 function StatusButtons({
   label,
@@ -921,8 +989,25 @@ export function CustomersSidebar({
   const [openLastTxCal, setOpenLastTxCal] = useState<"from" | "to" | null>(
     null
   );
+
+  // ─── Sort ───
+  const [purchasedSort, setPurchasedSort] = useState<"none" | "desc" | "asc">(
+    "none"
+  );
+  const [debtSort, setDebtSort] = useState<"none" | "desc" | "asc">("none");
+
   const lastTxPresetRowRef = useRef<HTMLDivElement>(null);
   const lastTxCustomDateRef = useRef<HTMLDivElement>(null);
+
+  const handlePurchasedSort = (v: "none" | "desc" | "asc") => {
+    setPurchasedSort(v);
+    if (v !== "none") setDebtSort("none");
+  };
+
+  const handleDebtSort = (v: "none" | "desc" | "asc") => {
+    setDebtSort(v);
+    if (v !== "none") setPurchasedSort("none");
+  };
 
   // ─── Active filter count ───
   const activeFilterCount = useMemo(() => {
@@ -938,6 +1023,8 @@ export function CustomersSidebar({
     if (pointFrom !== undefined || pointTo !== undefined) count++;
     if (enableCreatedDate) count++;
     if (enableLastTx) count++;
+    if (purchasedSort !== "none") count++;
+    if (debtSort !== "none") count++;
     return count;
   }, [
     groupId,
@@ -961,8 +1048,18 @@ export function CustomersSidebar({
       const f: CustomerFilters = {
         pageSize: 15,
         currentItem: 0,
-        orderBy: "createdAt",
-        orderDirection: "desc",
+        orderBy:
+          purchasedSort !== "none"
+            ? "totalPurchased"
+            : debtSort !== "none"
+              ? "totalDebt"
+              : "createdAt",
+        orderDirection:
+          purchasedSort !== "none"
+            ? purchasedSort
+            : debtSort !== "none"
+              ? debtSort
+              : "desc",
         includeCustomerGroup: true,
       };
 
@@ -1024,6 +1121,8 @@ export function CustomersSidebar({
     lastTxPreset,
     lastTxFromDate,
     lastTxToDate,
+    purchasedSort,
+    debtSort,
   ]);
 
   // ─── Clear all ───
@@ -1049,6 +1148,8 @@ export function CustomersSidebar({
     setLastTxPreset("all_time");
     setLastTxFromDate("");
     setLastTxToDate("");
+    setPurchasedSort("none");
+    setDebtSort("none");
   };
 
   const handleEditGroup = (e: React.MouseEvent, group: any) => {
@@ -1190,24 +1291,75 @@ export function CustomersSidebar({
           <div className="border-t border-gray-100" />
 
           {/* ── Tổng bán ── */}
-          <RangeInput
-            label="Tổng bán"
-            fromValue={totalPurchasedFrom}
-            toValue={totalPurchasedTo}
-            onFromChange={setTotalPurchasedFrom}
-            onToChange={setTotalPurchasedTo}
-          />
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-gray-700">
+                Tổng bán
+              </label>
+              <SortDropdown
+                value={purchasedSort}
+                onChange={handlePurchasedSort}
+              />
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                placeholder="Từ"
+                className="w-1/2 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={totalPurchasedFrom ?? ""}
+                onChange={(e) =>
+                  setTotalPurchasedFrom(
+                    e.target.value ? Number(e.target.value) : undefined
+                  )
+                }
+              />
+              <input
+                type="number"
+                placeholder="Đến"
+                className="w-1/2 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={totalPurchasedTo ?? ""}
+                onChange={(e) =>
+                  setTotalPurchasedTo(
+                    e.target.value ? Number(e.target.value) : undefined
+                  )
+                }
+              />
+            </div>
+          </div>
 
           <div className="border-t border-gray-100" />
 
           {/* ── Công nợ ── */}
-          <RangeInput
-            label="Công nợ"
-            fromValue={debtFrom}
-            toValue={debtTo}
-            onFromChange={setDebtFrom}
-            onToChange={setDebtTo}
-          />
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-gray-700">
+                Công nợ
+              </label>
+              <SortDropdown value={debtSort} onChange={handleDebtSort} />
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                placeholder="Từ"
+                className="w-1/2 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={debtFrom ?? ""}
+                onChange={(e) =>
+                  setDebtFrom(
+                    e.target.value ? Number(e.target.value) : undefined
+                  )
+                }
+              />
+              <input
+                type="number"
+                placeholder="Đến"
+                className="w-1/2 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={debtTo ?? ""}
+                onChange={(e) =>
+                  setDebtTo(e.target.value ? Number(e.target.value) : undefined)
+                }
+              />
+            </div>
+          </div>
 
           <div className="border-t border-gray-100" />
 
