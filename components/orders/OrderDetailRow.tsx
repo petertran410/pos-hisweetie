@@ -54,7 +54,6 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [noteValue, setNoteValue] = useState<string>(order?.description ?? "");
   const cancelOrder = useCancelOrder();
   const { user } = useAuthStore();
 
@@ -100,7 +99,9 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   }, [order]);
 
   useEffect(() => {
-    if (order) setNoteValue(order?.description ?? "");
+    if (order?.description !== undefined) {
+      setDescription(order.description ?? "");
+    }
   }, [order?.id]);
 
   useEffect(() => {
@@ -536,8 +537,8 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           Ghi chú đơn hàng:
                         </label>
                         <textarea
-                          value={noteValue}
-                          onChange={(e) => setNoteValue(e.target.value)}
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
                           className="w-full px-3 py-2 text-md border rounded bg-white resize-none"
                           rows={4}
                           placeholder="Nhập ghi chú..."
