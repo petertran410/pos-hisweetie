@@ -364,6 +364,12 @@ function StatusButtons({
 // ─── Date filter constants (giống OrdersSidebar) ─────────────────────────────
 const PRESET_GROUPS = [
   {
+    label: "Tất cả",
+    options: [
+      { label: "Toàn thời gian", value: "all_time" }, // ← THÊM
+    ],
+  },
+  {
     label: "Theo ngày",
     options: [
       { label: "Hôm nay", value: "today" },
@@ -889,7 +895,7 @@ export function CustomersSidebar({
   const [createdDateMode, setCreatedDateMode] = useState<"preset" | "custom">(
     "preset"
   );
-  const [createdPreset, setCreatedPreset] = useState("this_month");
+  const [createdPreset, setCreatedPreset] = useState("all_time");
   const [createdFromDate, setCreatedFromDate] = useState("");
   const [createdToDate, setCreatedToDate] = useState("");
   const [showCreatedPresetPanel, setShowCreatedPresetPanel] = useState(false);
@@ -906,7 +912,7 @@ export function CustomersSidebar({
   const [lastTxDateMode, setLastTxDateMode] = useState<"preset" | "custom">(
     "preset"
   );
-  const [lastTxPreset, setLastTxPreset] = useState("this_month");
+  const [lastTxPreset, setLastTxPreset] = useState("all_time");
   const [lastTxFromDate, setLastTxFromDate] = useState("");
   const [lastTxToDate, setLastTxToDate] = useState("");
   const [showLastTxPresetPanel, setShowLastTxPresetPanel] = useState(false);
@@ -962,38 +968,37 @@ export function CustomersSidebar({
 
       if (groupId) f.groupId = groupId;
       if (branchId) f.branchId = Number(branchId);
-      if (customerType !== "all") f.customerType = customerType as any;
-      if (gender !== "all") f.gender = gender as any;
       if (isActive === "true") f.isActive = true;
       else if (isActive === "false") f.isActive = false;
+
       if (totalPurchasedFrom !== undefined)
         f.totalPurchasedFrom = totalPurchasedFrom;
       if (totalPurchasedTo !== undefined) f.totalPurchasedTo = totalPurchasedTo;
       if (debtFrom !== undefined) f.debtFrom = debtFrom;
       if (debtTo !== undefined) f.debtTo = debtTo;
-      if (pointFrom !== undefined) f.pointFrom = pointFrom;
-      if (pointTo !== undefined) f.pointTo = pointTo;
 
-      if (enableCreatedDate) {
-        const range =
+      // ── Ngày tạo KH ──
+      if (createdPreset !== "all_time" || createdDateMode === "custom") {
+        const createdRange =
           createdDateMode === "preset"
             ? getDateRangeFromPreset(createdPreset)
             : createdFromDate && createdToDate
               ? { from: new Date(createdFromDate), to: new Date(createdToDate) }
               : getDateRangeFromPreset("this_month");
-        f.createdDateFrom = range.from.toISOString();
-        f.createdDateTo = range.to.toISOString();
+        f.createdDateFrom = createdRange.from.toISOString();
+        f.createdDateTo = createdRange.to.toISOString();
       }
 
-      if (enableLastTx) {
-        const range =
+      // ── Ngày giao dịch cuối ──
+      if (lastTxPreset !== "all_time" || lastTxDateMode === "custom") {
+        const lastTxRange =
           lastTxDateMode === "preset"
             ? getDateRangeFromPreset(lastTxPreset)
             : lastTxFromDate && lastTxToDate
               ? { from: new Date(lastTxFromDate), to: new Date(lastTxToDate) }
               : getDateRangeFromPreset("this_month");
-        f.lastTransactionFrom = range.from.toISOString();
-        f.lastTransactionTo = range.to.toISOString();
+        f.lastTransactionFrom = lastTxRange.from.toISOString();
+        f.lastTransactionTo = lastTxRange.to.toISOString();
       }
 
       onFiltersChange(f);
@@ -1011,12 +1016,10 @@ export function CustomersSidebar({
     debtTo,
     pointFrom,
     pointTo,
-    enableCreatedDate,
     createdDateMode,
     createdPreset,
     createdFromDate,
     createdToDate,
-    enableLastTx,
     lastTxDateMode,
     lastTxPreset,
     lastTxFromDate,
@@ -1038,12 +1041,12 @@ export function CustomersSidebar({
     setPointTo(undefined);
     setEnableCreatedDate(false);
     setCreatedDateMode("preset");
-    setCreatedPreset("this_month");
+    setCreatedPreset("all_time");
     setCreatedFromDate("");
     setCreatedToDate("");
     setEnableLastTx(false);
     setLastTxDateMode("preset");
-    setLastTxPreset("this_month");
+    setLastTxPreset("all_time");
     setLastTxFromDate("");
     setLastTxToDate("");
   };
