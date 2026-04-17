@@ -242,7 +242,7 @@ function StatusDropdown({
         tabIndex={0}
         onClick={() => setOpen((p) => !p)}
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors select-none ${
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
             ? "border-blue-400 ring-2 ring-blue-100"
             : "hover:border-gray-400"
@@ -344,7 +344,7 @@ function SimpleDropdown({
         tabIndex={0}
         onClick={() => setOpen((p) => !p)}
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors select-none ${
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
             ? "border-blue-400 ring-2 ring-blue-100"
             : "hover:border-gray-400"
@@ -742,11 +742,6 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
       <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10 rounded-t-xl">
         <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
-          {activeFilterCount > 0 && (
-            <span className="bg-blue-600 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center leading-none">
-              {activeFilterCount}
-            </span>
-          )}
         </div>
         {activeFilterCount > 0 && (
           <button
@@ -757,154 +752,139 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
         )}
       </div>
 
-      <div className="p-4 space-y-5">
+      <div className="p-4 space-y-3">
         {/* ── Thời gian (UI giống OrdersSidebar) ── */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-gray-700">
               Thời gian
             </label>
-            <label className="flex items-center gap-1.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={enableCreatedDate}
-                onChange={(e) => setEnableCreatedDate(e.target.checked)}
-                className="w-4 h-4 rounded cursor-pointer accent-blue-600"
-              />
-              <span className="text-xs text-gray-500">Ngày tạo</span>
-            </label>
           </div>
 
-          {enableCreatedDate && (
-            <div className="space-y-1.5">
-              {/* Row Preset */}
-              <div
-                ref={presetRowRef}
-                onClick={() => {
-                  setDateMode("preset");
-                  setOpenCal(null);
-                  if (showPresetPanel) {
-                    setShowPresetPanel(false);
-                  } else {
-                    setPanelAnchorRect(
-                      presetRowRef.current?.getBoundingClientRect() ?? null
-                    );
-                    setShowPresetPanel(true);
-                  }
-                }}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all select-none ${
-                  dateMode === "preset"
-                    ? "border-blue-400 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}>
-                <div
-                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                    dateMode === "preset"
-                      ? "border-blue-600"
-                      : "border-gray-300"
-                  }`}>
-                  {dateMode === "preset" && (
-                    <div className="w-2 h-2 rounded-full bg-blue-600" />
-                  )}
-                </div>
-                <span className="text-sm text-gray-700 flex-1 font-medium">
-                  {PRESET_LABELS[selectedPreset] ?? "Chọn thời gian"}
-                </span>
-                <ChevronRight
-                  className={`w-4 h-4 transition-colors flex-shrink-0 ${
-                    showPresetPanel ? "text-blue-500" : "text-gray-400"
-                  }`}
-                />
-              </div>
-
-              {/* Row Tùy chỉnh */}
-              <div
-                onClick={() => {
-                  setDateMode("custom");
+          <div className="space-y-1.5">
+            {/* Row Preset */}
+            <div
+              ref={presetRowRef}
+              onClick={() => {
+                setDateMode("preset");
+                setOpenCal(null);
+                if (showPresetPanel) {
                   setShowPresetPanel(false);
-                }}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
-                  dateMode === "custom"
-                    ? "border-blue-400 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
+                } else {
+                  setPanelAnchorRect(
+                    presetRowRef.current?.getBoundingClientRect() ?? null
+                  );
+                  setShowPresetPanel(true);
+                }
+              }}
+              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
+                dateMode === "preset"
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <div
+                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  dateMode === "preset" ? "border-blue-600" : "border-gray-300"
                 }`}>
-                <div
-                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                    dateMode === "custom"
-                      ? "border-blue-600"
-                      : "border-gray-300"
-                  }`}>
-                  {dateMode === "custom" && (
-                    <div className="w-2 h-2 rounded-full bg-blue-600" />
-                  )}
-                </div>
-                <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
-                <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                {dateMode === "preset" && (
+                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                )}
               </div>
-
-              {dateMode === "custom" && (
-                <div ref={customDateRef} className="space-y-2 pt-1">
-                  {(["from", "to"] as const).map((field) => {
-                    const isFrom = field === "from";
-                    const val = isFrom ? fromDate : toDate;
-                    const label = isFrom ? "Từ ngày" : "Đến ngày";
-                    const setVal = isFrom ? setFromDate : setToDate;
-                    const isOpen = openCal === field;
-                    return (
-                      <div key={field}>
-                        <span className="text-xs text-gray-500 mb-1 block">
-                          {label}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setOpenCal(isOpen ? null : field)}
-                          className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
-                            val
-                              ? "border-blue-300 bg-blue-50 text-gray-800"
-                              : "border-gray-200 text-gray-400"
-                          } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
-                          <span>
-                            {val
-                              ? new Date(val + "T00:00:00").toLocaleDateString(
-                                  "vi-VN",
-                                  {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                  }
-                                )
-                              : "Chọn ngày"}
-                          </span>
-                          <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        </button>
-                        {isOpen && (
-                          <MiniCalendar
-                            value={val}
-                            onChange={setVal}
-                            onClose={() => setOpenCal(null)}
-                            minDate={
-                              field === "to" ? fromDate || undefined : undefined
-                            }
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {showPresetPanel && (
-                <PresetPanel
-                  groups={PRESET_GROUPS}
-                  selected={selectedPreset}
-                  onSelect={setSelectedPreset}
-                  onClose={() => setShowPresetPanel(false)}
-                  anchorRect={panelAnchorRect}
-                  triggerRef={presetRowRef}
-                />
-              )}
+              <span className="text-sm text-gray-700 flex-1 font-medium">
+                {PRESET_LABELS[selectedPreset] ?? "Chọn thời gian"}
+              </span>
+              <ChevronRight
+                className={`w-4 h-4 transition-colors flex-shrink-0 ${
+                  showPresetPanel ? "text-blue-500" : "text-gray-400"
+                }`}
+              />
             </div>
-          )}
+
+            {/* Row Tùy chỉnh */}
+            <div
+              onClick={() => {
+                setDateMode("custom");
+                setShowPresetPanel(false);
+              }}
+              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
+                dateMode === "custom"
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <div
+                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  dateMode === "custom" ? "border-blue-600" : "border-gray-300"
+                }`}>
+                {dateMode === "custom" && (
+                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                )}
+              </div>
+              <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
+              <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            </div>
+
+            {dateMode === "custom" && (
+              <div ref={customDateRef} className="space-y-2 pt-1">
+                {(["from", "to"] as const).map((field) => {
+                  const isFrom = field === "from";
+                  const val = isFrom ? fromDate : toDate;
+                  const label = isFrom ? "Từ ngày" : "Đến ngày";
+                  const setVal = isFrom ? setFromDate : setToDate;
+                  const isOpen = openCal === field;
+                  return (
+                    <div key={field}>
+                      <span className="text-xs text-gray-500 mb-1 block">
+                        {label}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setOpenCal(isOpen ? null : field)}
+                        className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                          val
+                            ? "border-blue-300 bg-blue-50 text-gray-800"
+                            : "border-gray-200 text-gray-400"
+                        } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                        <span>
+                          {val
+                            ? new Date(val + "T00:00:00").toLocaleDateString(
+                                "vi-VN",
+                                {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                }
+                              )
+                            : "Chọn ngày"}
+                        </span>
+                        <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      </button>
+                      {isOpen && (
+                        <MiniCalendar
+                          value={val}
+                          onChange={setVal}
+                          onClose={() => setOpenCal(null)}
+                          minDate={
+                            field === "to" ? fromDate || undefined : undefined
+                          }
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {showPresetPanel && (
+              <PresetPanel
+                groups={PRESET_GROUPS}
+                selected={selectedPreset}
+                onSelect={setSelectedPreset}
+                onClose={() => setShowPresetPanel(false)}
+                anchorRect={panelAnchorRect}
+                triggerRef={presetRowRef}
+              />
+            )}
+          </div>
         </div>
 
         <div className="border-t border-gray-100" />
@@ -1025,7 +1005,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
             Khách hàng
           </label>
           {selectedCustomer ? (
-            <div className="flex items-center gap-2 border rounded-lg px-3 py-2 bg-blue-50 border-blue-200">
+            <div className="flex items-center gap-2 border rounded-lg px-2 py-1 bg-blue-50 border-blue-200">
               <span className="text-sm text-blue-700 font-medium flex-1 truncate">
                 {selectedCustomer.name}
               </span>
@@ -1050,7 +1030,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
                 onFocus={() => setShowCustomerDrop(true)}
                 onBlur={() => setTimeout(() => setShowCustomerDrop(false), 150)}
                 placeholder="Tìm theo tên, SĐT, mã KH..."
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               {showCustomerDrop && filteredCustomers.length > 0 && (
                 <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
@@ -1062,7 +1042,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
                         setCustomerSearch("");
                         setShowCustomerDrop(false);
                       }}
-                      className={`w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                      className={`w-full text-left px-2 py-1.5 hover:bg-blue-50 transition-colors ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                       <div className="text-sm font-medium text-gray-800">
                         {c.name}
                       </div>
