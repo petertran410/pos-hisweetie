@@ -107,7 +107,7 @@ export function CustomerForm({
   const [invoiceProvinces, setInvoiceProvinces] = useState<Province[]>([]);
   const [invoiceCommunes, setInvoiceCommunes] = useState<Commune[]>([]);
 
-  const [addresses, setAddresses] = useState<any[]>([createEmptyAddress(true)]);
+  const [addresses, setAddresses] = useState<any[]>([]);
 
   const { data: customerGroupsData } = useCustomerGroups();
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
