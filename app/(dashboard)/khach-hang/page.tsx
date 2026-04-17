@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { CustomersSidebar } from "@/components/customers/CustomersSidebar";
 import { CustomersTable } from "@/components/customers/CustomersTable";
 import { CustomerForm } from "@/components/customers/CustomerForm";
@@ -8,6 +9,9 @@ import { CustomerFilters } from "@/lib/types/customer";
 import { Customer } from "@/lib/types/customer";
 
 export default function CustomersPage() {
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code");
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [filters, setFilters] = useState<CustomerFilters>({
@@ -17,6 +21,14 @@ export default function CustomersPage() {
     orderDirection: "desc",
     isActive: true,
   });
+
+  // Sync Code param vào filters
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      code: codeParam || undefined,
+    }));
+  }, [codeParam]);
 
   return (
     <>

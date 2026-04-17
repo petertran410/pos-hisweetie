@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { InvoicesTable } from "@/components/invoices/InvoicesTable";
 import { InvoicesSidebar } from "@/components/invoices/InvoicesSidebar";
 import { PackingSlipForm } from "@/components/packing-slips/PackingSlipForm";
@@ -28,6 +29,9 @@ type FormType = "giao-hang" | "dong-hang" | "loading" | null;
 
 export default function HoaDonPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code");
+
   const [filters, setFilters] = useState({});
   const [formType, setFormType] = useState<FormType>(null);
   const [preselectedInvoiceIds, setPreselectedInvoiceIds] = useState<number[]>(
@@ -36,6 +40,14 @@ export default function HoaDonPage() {
   const [preselectedBranchId, setPreselectedBranchId] = useState<number | null>(
     null
   );
+
+  // Sync Code param vào filters
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      search: codeParam || undefined,
+    }));
+  }, [codeParam]);
 
   const createPackingSlip = useCreatePackingSlip();
   const createPackingHang = useCreatePackingHang();

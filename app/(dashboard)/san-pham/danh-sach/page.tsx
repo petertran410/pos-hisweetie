@@ -5,8 +5,13 @@ import { ProductSidebar } from "@/components/products/ProductSidebar";
 import { ProductTable } from "@/components/products/ProductTable";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { usePermission } from "@/lib/hooks/usePermissions";
+import { useSearchParams } from "next/navigation";
+import { Can } from "@/components/permissions/Can";
 
 export default function ProductListPage() {
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code");
+
   const [selectedParentName, setSelectedParentName] = useState<
     string | undefined
   >();
@@ -21,7 +26,7 @@ export default function ProductListPage() {
   const canDelete = usePermission("products", "delete");
 
   return (
-    <PagePermissionGuard resource="products" action="view">
+    <Can resource="products" action="view">
       <div className="flex h-full border-t bg-gray-50 w-screen">
         <ProductSidebar
           selectedParentName={selectedParentName}
@@ -35,8 +40,9 @@ export default function ProductListPage() {
           selectedParentName={selectedParentName}
           selectedMiddleName={selectedMiddleName}
           selectedChildName={selectedChildName}
+          codeFilter={codeParam || undefined}
         />
       </div>
-    </PagePermissionGuard>
+    </Can>
   );
 }

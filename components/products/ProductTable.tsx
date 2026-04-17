@@ -14,6 +14,7 @@ interface ProductTableProps {
   selectedParentName?: string;
   selectedMiddleName?: string;
   selectedChildName?: string;
+  codeFilter?: string;
 }
 
 type ColumnKey =
@@ -275,6 +276,7 @@ export function ProductTable({
   selectedParentName,
   selectedMiddleName,
   selectedChildName,
+  codeFilter,
 }: ProductTableProps) {
   const { selectedBranch } = useBranchStore();
   const [page, setPage] = useState(1);
@@ -320,7 +322,7 @@ export function ProductTable({
   const { data, isLoading } = useProducts({
     page,
     limit,
-    search: searchDebounced,
+    search: codeFilter || searchDebounced,
     branchId: selectedBranch?.id,
   });
 

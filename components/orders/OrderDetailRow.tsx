@@ -7,7 +7,13 @@ import {
   useOrder,
   useUpdateOrder,
 } from "@/lib/hooks/useOrders";
-import { ChevronDown, Loader2, MapPin, Printer } from "lucide-react";
+import {
+  ChevronDown,
+  ExternalLink,
+  Loader2,
+  MapPin,
+  Printer,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   ORDER_STATUS,
@@ -19,6 +25,7 @@ import { INVOICE_STATUS } from "@/lib/types/invoice";
 import { useAuthStore } from "@/lib/store/auth";
 import { CancelOrderModal } from "./CancelOrderModal";
 import { printEntity } from "@/lib/utils/print";
+import Link from "next/link";
 
 const getOrderStatusBadgeColor = (status: number) => {
   switch (status) {
@@ -255,9 +262,36 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         {order.code}
                       </span>
                       <span className="text-gray-400">-</span>
-                      <span className="text-lg font-semibold text-gray-800">
-                        {order.customer?.name || "Khách vãng lai"}
-                      </span>
+                      {order.customer?.code ? (
+                        <>
+                          <Link
+                            href={`/khach-hang?Code=${order.customer.code}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-lg font-semibold text-blue-600 hover:underline"
+                            onClick={(e) => e.stopPropagation()}>
+                            {order?.customer?.name}
+                          </Link>
+                          <Link
+                            href={`/khach-hang?Code=${order.customer.code}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                            onClick={(e) => e.stopPropagation()}>
+                            <ExternalLink className="w-4 h-4" />
+                          </Link>
+                          <span
+                            className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${getOrderStatusBadgeColor(order.status)}`}>
+                            {ORDER_STATUS_LABELS[
+                              order.status as keyof typeof ORDER_STATUS_LABELS
+                            ] || "Không xác định"}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-lg font-semibold text-gray-800">
+                          Khách vãng lai
+                        </span>
+                      )}
                     </div>
                     <span className="text-sm text-gray-600 font-medium">
                       {order.branch?.name || "-"}
@@ -469,62 +503,79 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {order.items?.map((item: any, index: number) => (
-                              <tr
-                                key={index}
-                                className="hover:bg-gray-50 transition-colors">
-                                <td className="px-4 py-3">
-                                  <span className="text-md font-medium text-blue-600">
-                                    {item.product?.code || item.productCode}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div>
-                                    <p className="text-md font-medium text-gray-900">
-                                      {item.product?.name || item.productName}
-                                    </p>
-                                    {item.note && (
-                                      <p className="text-md text-gray-500 mt-1 italic">
-                                        {item.note}
+                            {order.items?.map((item: any, index: number) => {
+                              return (
+                                <tr
+                                  key={index}
+                                  className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-4 py-3">
+                                    {item.product?.code || item.productCode ? (
+                                      <>
+                                        <Link
+                                          href={`/san-pham/danh-sach?Code=${item.product?.code || item.productCode}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-md font-medium text-blue-600 hover:underline"
+                                          onClick={(e) => e.stopPropagation()}>
+                                          {item.product?.code ||
+                                            item.productCode}
+                                        </Link>
+                                      </>
+                                    ) : (
+                                      <span>-</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div>
+                                      <p className="text-md font-medium text-gray-900">
+                                        {item.product?.name || item.productName}
                                       </p>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  <span className="text-md font-medium text-gray-900">
-                                    {item.quantity}
-                                    {invoicedQuantities[item.productId] > 0 && (
-                                      <span className="text-blue-600">
-                                        {" "}
-                                        | {invoicedQuantities[item.productId]}
-                                      </span>
-                                    )}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <span className="text-md text-gray-900">
-                                    {formatCurrency(Number(item.price))}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <span className="text-md text-gray-900">
-                                    {item.discount
-                                      ? formatCurrency(Number(item.discount))
-                                      : "-"}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <span className="text-md font-medium text-gray-900">
-                                    {formatCurrency(Number(item.appliedPrice))}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <span className="text-md font-semibold text-blue-600">
-                                    {formatCurrency(Number(item.totalPrice))}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
+                                      {item.note && (
+                                        <p className="text-md text-gray-500 mt-1 italic">
+                                          {item.note}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    <span className="text-md font-medium text-gray-900">
+                                      {item.quantity}
+                                      {invoicedQuantities[item.productId] >
+                                        0 && (
+                                        <span className="text-blue-600">
+                                          {" "}
+                                          | {invoicedQuantities[item.productId]}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <span className="text-md text-gray-900">
+                                      {formatCurrency(Number(item.price))}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <span className="text-md text-gray-900">
+                                      {item.discount
+                                        ? formatCurrency(Number(item.discount))
+                                        : "-"}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <span className="text-md font-medium text-gray-900">
+                                      {formatCurrency(
+                                        Number(item.appliedPrice)
+                                      )}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <span className="text-md font-semibold text-blue-600">
+                                      {formatCurrency(Number(item.totalPrice))}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>

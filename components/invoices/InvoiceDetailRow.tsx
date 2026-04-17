@@ -4,7 +4,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useInvoice, useUpdateInvoice } from "@/lib/hooks/useInvoices";
-import { Loader2, MapPin, Printer } from "lucide-react";
+import { ExternalLink, Loader2, MapPin, Printer } from "lucide-react";
 import { toast } from "sonner";
 import {
   INVOICE_STATUS,
@@ -17,6 +17,7 @@ import { InvoicePaymentsTab } from "./InvoicePaymentsTab";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { printEntity } from "@/lib/utils/print";
+import Link from "next/link";
 
 interface InvoiceDetailRowProps {
   invoiceId: number;
@@ -234,14 +235,40 @@ export function InvoiceDetailRow({
                       {invoice.code}
                     </span>
                     <span className="text-gray-400">-</span>
-                    <span className="text-lg font-semibold text-gray-800">
+                    {/* <span className="text-lg font-semibold text-gray-800">
                       {invoice.customer?.name || "Khách vãng lai"}
-                    </span>
-                    <span
-                      className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${getInvoiceStatusBadgeColor(invoice.status)}`}>
-                      {INVOICE_STATUS_LABELS[invoice.status] ||
-                        "Không xác định"}
-                    </span>
+                    </span> */}
+
+                    {invoice.customer?.code ? (
+                      <>
+                        <Link
+                          href={`/khach-hang?Code=${invoice.customer.code}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-lg font-semibold text-blue-600 hover:underline"
+                          onClick={(e) => e.stopPropagation()}>
+                          {invoice?.customer?.name}
+                        </Link>
+                        <Link
+                          href={`/khach-hang?Code=${invoice.customer.code}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          onClick={(e) => e.stopPropagation()}>
+                          <ExternalLink className="w-4 h-4" />
+                        </Link>
+                        <span
+                          className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${getInvoiceStatusBadgeColor(invoice.status)}`}>
+                          {INVOICE_STATUS_LABELS[
+                            invoice.status as keyof typeof INVOICE_STATUS_LABELS
+                          ] || "Không xác định"}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-lg font-semibold text-gray-800">
+                        Khách vãng lai
+                      </span>
+                    )}
                   </div>
                   <span className="text-sm text-gray-600 font-medium">
                     {invoice.branch?.name || "-"}
@@ -385,47 +412,60 @@ export function InvoiceDetailRow({
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {invoice.details?.map((item: InvoiceDetail) => (
-                            <tr key={item.id}>
-                              <td className="px-4 py-3">
-                                <span className="text-md font-medium text-blue-600">
-                                  {item.productCode}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <p className="text-md font-medium text-gray-900">
-                                  {item.product?.name || item.productName}
-                                </p>
-                                {item.note && (
-                                  <p className="text-md text-gray-500 mt-1 italic">
-                                    {item.note}
+                          {invoice.details?.map((item: InvoiceDetail) => {
+                            return (
+                              <tr key={item.id}>
+                                <td className="px-4 py-3">
+                                  {item.product?.code || item.productCode ? (
+                                    <>
+                                      <Link
+                                        href={`/san-pham/danh-sach?Code=${item.product?.code || item.productCode}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-md font-medium text-blue-600 hover:underline"
+                                        onClick={(e) => e.stopPropagation()}>
+                                        {item.product?.code || item.productCode}
+                                      </Link>
+                                    </>
+                                  ) : (
+                                    <span>-</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <p className="text-md font-medium text-gray-900">
+                                    {item.product?.name || item.productName}
                                   </p>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span className="text-md font-medium text-gray-900">
-                                  {item.quantity}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-md text-gray-900">
-                                  {formatCurrency(Number(item.price))}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-md text-gray-900">
-                                  {item.discount
-                                    ? formatCurrency(Number(item.discount))
-                                    : "-"}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-md font-semibold text-blue-600">
-                                  {formatCurrency(Number(item.totalPrice))}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
+                                  {item.note && (
+                                    <p className="text-md text-gray-500 mt-1 italic">
+                                      {item.note}
+                                    </p>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className="text-md font-medium text-gray-900">
+                                    {item.quantity}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <span className="text-md text-gray-900">
+                                    {formatCurrency(Number(item.price))}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <span className="text-md text-gray-900">
+                                    {item.discount
+                                      ? formatCurrency(Number(item.discount))
+                                      : "-"}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <span className="text-md font-semibold text-blue-600">
+                                    {formatCurrency(Number(item.totalPrice))}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
