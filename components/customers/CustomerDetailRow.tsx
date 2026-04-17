@@ -4,9 +4,8 @@
 import { useState, useRef, useLayoutEffect } from "react";
 import { useCustomer } from "@/lib/hooks/useCustomers";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Pencil, Trash2, Loader2, ExternalLink } from "lucide-react";
+import { Pencil, Trash2, Loader2, ExternalLink, MapPin } from "lucide-react";
 import { useDeleteCustomer, useUpdateCustomer } from "@/lib/hooks/useCustomers";
-import { CustomerGroupsModal } from "./CustomerGroupsModal";
 import { CustomerInvoicesTab } from "./CustomerInvoicesTab";
 import { CustomerOrdersTab } from "./CustomerOrdersTab";
 import { CustomerDebtsTab } from "./CustomerDebtsTab";
@@ -24,6 +23,7 @@ export function CustomerDetailRow({
   onEditClick,
 }: CustomerDetailRowProps) {
   const { data: customer, isLoading } = useCustomer(customerId);
+  console.log(customer);
   const updateCustomer = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
   const [activeTab, setActiveTab] = useState<
@@ -108,11 +108,10 @@ export function CustomerDetailRow({
 
   const TABS = [
     { key: "info", label: "Thông tin" },
-    { key: "addresses", label: "Địa chỉ" },
-    { key: "invoices", label: "Hóa đơn" },
-    { key: "orders", label: "Đơn hàng" },
+    { key: "addresses", label: "Địa chỉ nhận hàng" },
+    { key: "invoices", label: "Lịch sử hóa đơn/trả hàng" },
+    { key: "orders", label: "Lịch sử đơn hàng" },
     { key: "debts", label: "Công nợ" },
-    { key: "points", label: "Điểm" },
   ] as const;
 
   const groups =
@@ -130,8 +129,8 @@ export function CustomerDetailRow({
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="p-4">
               {/* ── Header (giống OrderDetailRow) ── */}
-              <div className=" border-gray-200 pb-3">
-                <div className="flex items-center justify-between mb-2">
+              <div className=" border-gray-200 pb-2">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
                       {customer.code}
@@ -171,52 +170,63 @@ export function CustomerDetailRow({
               {/* ── Tab content ── */}
               {activeTab === "info" && (
                 <div>
-                  <div className="grid grid-cols-3 gap-6">
+                  {/* ── Profile header (không avatar) ── */}
+                  <div className="flex items-start justify-between mb-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Mã khách hàng
-                      </label>
-                      <div className="text-base">{customer.code}</div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Tên khách hàng
-                      </label>
-                      <div className="text-base font-medium">
-                        {customer.name}
+                      <div className="flex items-baseline gap-2 mb-1">
+                        <span className="text-xl font-bold text-gray-900">
+                          {customer.name}
+                        </span>
+                        <span className="text-sm text-gray-400">
+                          {customer.code}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <span>
+                          Ngày tạo:{" "}
+                          <span className="text-gray-700">
+                            {formatDate(customer.createdAt)}
+                          </span>
+                        </span>
+                        <span className="text-gray-300">|</span>
+                        <span>
+                          Nhóm khách:{" "}
+                          <span className="text-gray-700">
+                            {groups.length > 0 ? groups.join(", ") : "Chưa có"}
+                          </span>
+                        </span>
                       </div>
                     </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      {customer.branch?.name || "-"}
+                    </span>
+                  </div>
+
+                  {/* ── Info fields: label trên, value dưới, 3 cột ── */}
+                  <div className="grid grid-cols-3 gap-x-8 border-b border-gray-200 pb-4 mb-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Số điện thoại
+                      <label className="block text-sm text-gray-500 mb-1">
+                        Điện thoại
                       </label>
-                      <div className="text-base">
+                      <div className="text-base text-gray-900">
                         {customer.contactNumber || "Chưa có"}
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Loại khách hàng
+                      <label className="block text-sm text-gray-500 mb-1">
+                        Sinh nhật
                       </label>
-                      <div className="text-base">
-                        {customer.type === 0 ? "Cá nhân" : "Công ty"}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Ngày sinh
-                      </label>
-                      <div className="text-base">
+                      <div className="text-base text-gray-900">
                         {customer.birthDate
                           ? formatDate(customer.birthDate)
                           : "Chưa có"}
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
+                      <label className="block text-sm text-gray-500 mb-1">
                         Giới tính
                       </label>
-                      <div className="text-base">
+                      <div className="text-base text-gray-900">
                         {customer.gender === true
                           ? "Nam"
                           : customer.gender === false
@@ -224,30 +234,97 @@ export function CustomerDetailRow({
                             : "Chưa có"}
                       </div>
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-x-8 border-b border-gray-200 pb-4 mb-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
+                      <label className="block text-sm text-gray-500 mb-1">
                         Email
                       </label>
-                      <div className="text-base">
+                      <div className="text-base text-gray-900">
                         {customer.email || "Chưa có"}
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
+                      <label className="block text-sm text-gray-500 mb-1">
                         Facebook
                       </label>
-                      <div className="text-base">Chưa có</div>
+                      <div className="text-base text-gray-900">Chưa có</div>
                     </div>
+                    <div />
                   </div>
 
-                  {customer.comments && (
-                    <div className="mt-8 pt-6 border-t">
-                      <label className="block text-sm font-medium text-gray-500 mb-2">
-                        Ghi chú
-                      </label>
-                      <div className="text-base bg-gray-50 p-4 rounded">
-                        {customer.comments}
+                  {/* ── Địa chỉ ── */}
+                  {(() => {
+                    const defaultAddr =
+                      (customer as any).addresses?.find(
+                        (a: any) => a.isDefault
+                      ) || (customer as any).addresses?.[0];
+                    const fullAddress = [
+                      defaultAddr?.address,
+                      defaultAddr?.wardName || defaultAddr?.newWardName,
+                      defaultAddr?.cityName || defaultAddr?.newCityName,
+                    ]
+                      .filter(Boolean)
+                      .join(", ");
+
+                    return fullAddress ? (
+                      <div className="border-b border-gray-200 pb-4 mb-4">
+                        <label className="block text-sm text-gray-500 mb-1">
+                          Địa chỉ
+                        </label>
+                        <div className="text-base text-gray-900">
+                          {fullAddress}
+                        </div>
                       </div>
+                    ) : null;
+                  })()}
+
+                  {/* ── Thông tin xuất hóa đơn ── */}
+                  {/* {(customer.invoiceBuyerName ||
+                    customer.invoiceAddress ||
+                    customer.invoiceCccdCmnd ||
+                    customer.invoiceBankAccount ||
+                    customer.invoiceEmail ||
+                    customer.invoicePhone) && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                        Thông tin xuất hóa đơn
+                      </h4>
+                      <div className="text-sm text-gray-700 leading-relaxed">
+                        {[
+                          customer.invoiceBuyerName,
+                          customer.invoiceCccdCmnd,
+                          customer.invoiceAddress,
+                          [customer.invoiceWardName, customer.invoiceCityName]
+                            .filter(Boolean)
+                            .join(", "),
+                          customer.invoiceEmail,
+                          customer.invoicePhone,
+                          customer.invoiceBankAccount,
+                        ]
+                          .filter(Boolean)
+                          .join(" / ")}
+                      </div>
+                    </div>
+                  )} */}
+
+                  {/* ── Ghi chú ── */}
+                  {customer.comments && (
+                    <div className="flex items-start gap-2 text-sm text-gray-700">
+                      <svg
+                        className="w-4 h-4 text-gray-400 mt-0.5 shrink-0"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                      <span>Ghi chú: {customer.comments}</span>
                     </div>
                   )}
                 </div>
