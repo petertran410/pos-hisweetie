@@ -479,25 +479,25 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         <table className="w-full">
                           <thead>
                             <tr className="bg-gray-100 border-b border-gray-200">
-                              <th className="px-2 py-1 text-left text-sm font-semibold text-gray-700  tracking-wider">
+                              <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700  tracking-wider">
                                 Mã hàng
                               </th>
-                              <th className="px-2 py-1 text-left text-sm font-semibold text-gray-700  tracking-wider">
+                              <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700  tracking-wider">
                                 Tên hàng
                               </th>
-                              <th className="px-2 py-1 text-center text-sm font-semibold text-gray-700  tracking-wider">
+                              <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700  tracking-wider">
                                 Số lượng
                               </th>
-                              <th className="px-2 py-1 text-right text-sm font-semibold text-gray-700  tracking-wider">
+                              <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700  tracking-wider">
                                 Đơn giá
                               </th>
-                              <th className="px-2 py-1 text-right text-sm font-semibold text-gray-700  tracking-wider">
+                              <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700  tracking-wider">
                                 Giảm giá
                               </th>
-                              <th className="px-2 py-1 text-right text-sm font-semibold text-gray-700  tracking-wider">
+                              <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700  tracking-wider">
                                 Giá bán
                               </th>
-                              <th className="px-2 py-1 text-right text-sm font-semibold text-gray-700  tracking-wider">
+                              <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700  tracking-wider">
                                 Thành tiền
                               </th>
                             </tr>
@@ -508,7 +508,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                 <tr
                                   key={index}
                                   className="hover:bg-gray-50 transition-colors">
-                                  <td className="px-2 py-1">
+                                  <td className="px-[10px] py-2">
                                     {item.product?.code || item.productCode ? (
                                       <>
                                         <Link
@@ -525,7 +525,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                       <span>-</span>
                                     )}
                                   </td>
-                                  <td className="px-2 py-1">
+                                  <td className="px-[10px] py-2">
                                     <div>
                                       <p className="text-sm font-medium text-gray-900">
                                         {item.product?.name || item.productName}
@@ -537,7 +537,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                       )}
                                     </div>
                                   </td>
-                                  <td className="px-2 py-1 text-center">
+                                  <td className="px-[10px] py-2 text-center">
                                     <span className="text-sm font-medium text-gray-900">
                                       {item.quantity}
                                       {invoicedQuantities[item.productId] >
@@ -549,26 +549,26 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                       )}
                                     </span>
                                   </td>
-                                  <td className="px-2 py-1 text-right">
+                                  <td className="px-[10px] py-2 text-right">
                                     <span className="text-sm text-gray-900">
                                       {formatCurrency(Number(item.price))}
                                     </span>
                                   </td>
-                                  <td className="px-2 py-1 text-right">
+                                  <td className="px-[10px] py-2 text-right">
                                     <span className="text-sm text-gray-900">
                                       {item.discount
                                         ? formatCurrency(Number(item.discount))
                                         : "-"}
                                     </span>
                                   </td>
-                                  <td className="px-2 py-1 text-right">
+                                  <td className="px-[10px] py-2 text-right">
                                     <span className="text-sm font-medium text-gray-900">
                                       {formatCurrency(
                                         Number(item.appliedPrice)
                                       )}
                                     </span>
                                   </td>
-                                  <td className="px-2 py-1 text-right">
+                                  <td className="px-[10px] py-2 text-right">
                                     <span className="text-sm font-semibold text-blue-600">
                                       {formatCurrency(Number(item.totalPrice))}
                                     </span>

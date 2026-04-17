@@ -376,7 +376,6 @@ export function InvoiceDetailRow({
                       </div>
                     )}
 
-                  {/* Items */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-semibold text-gray-700">
@@ -387,22 +386,22 @@ export function InvoiceDetailRow({
                       <table className="w-full">
                         <thead>
                           <tr className="bg-gray-100 border-b border-gray-200">
-                            <th className="px-2 py-1 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700  tracking-wider">
                               Mã hàng
                             </th>
-                            <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700  tracking-wider">
                               Tên hàng
                             </th>
-                            <th className="px-4 py-3 text-center text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700  tracking-wider">
                               Số lượng
                             </th>
-                            <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700  tracking-wider">
                               Đơn giá
                             </th>
-                            <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700  tracking-wider">
                               Giảm giá
                             </th>
-                            <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700  tracking-wider">
                               Thành tiền
                             </th>
                           </tr>
@@ -410,15 +409,17 @@ export function InvoiceDetailRow({
                         <tbody className="bg-white divide-y divide-gray-200">
                           {invoice.details?.map((item: InvoiceDetail) => {
                             return (
-                              <tr key={item.id}>
-                                <td className="px-4 py-3">
+                              <tr
+                                key={item.id}
+                                className="hover:bg-gray-50 transition-colors">
+                                <td className="px-[10px] py-2">
                                   {item.product?.code || item.productCode ? (
                                     <>
                                       <Link
                                         href={`/san-pham/danh-sach?Code=${item.product?.code || item.productCode}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-md font-medium text-blue-600 hover:underline"
+                                        className="text-sm font-medium text-blue-600 hover:underline"
                                         onClick={(e) => e.stopPropagation()}>
                                         {item.product?.code || item.productCode}
                                       </Link>
@@ -427,34 +428,34 @@ export function InvoiceDetailRow({
                                     <span>-</span>
                                   )}
                                 </td>
-                                <td className="px-4 py-3">
-                                  <p className="text-md font-medium text-gray-900">
+                                <td className="px-[10px] py-2">
+                                  <p className="text-sm font-medium text-gray-900">
                                     {item.product?.name || item.productName}
                                   </p>
                                   {item.note && (
-                                    <p className="text-md text-gray-500 mt-1 italic">
+                                    <p className="text-sm text-gray-500 mt-1 italic">
                                       {item.note}
                                     </p>
                                   )}
                                 </td>
-                                <td className="px-4 py-3 text-center">
-                                  <span className="text-md font-medium text-gray-900">
+                                <td className="px-[10px] py-2 text-center">
+                                  <span className="text-sm font-medium text-gray-900">
                                     {item.quantity}
                                   </span>
                                 </td>
-                                <td className="px-4 py-3 text-right">
+                                <td className="px-[10px] py-2 text-right">
                                   <span className="text-md text-gray-900">
                                     {formatCurrency(Number(item.price))}
                                   </span>
                                 </td>
-                                <td className="px-4 py-3 text-right">
+                                <td className="px-[10px] py-2 text-right">
                                   <span className="text-md text-gray-900">
                                     {item.discount
                                       ? formatCurrency(Number(item.discount))
                                       : "-"}
                                   </span>
                                 </td>
-                                <td className="px-4 py-3 text-right">
+                                <td className="px-[10px] py-2 text-right">
                                   <span className="text-md font-semibold text-blue-600">
                                     {formatCurrency(Number(item.totalPrice))}
                                   </span>
