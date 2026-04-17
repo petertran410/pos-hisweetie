@@ -120,7 +120,7 @@ export function CustomerDetailRow({
       .filter(Boolean) || [];
 
   return (
-    <tr>
+    <tr className="border-b-2 border-blue-400">
       <td colSpan={colSpan} className="p-0 bg-gray-50">
         <div
           ref={wrapperRef}
