@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { createPortal } from "react-dom";
 
 interface City {
   name: string;
@@ -169,10 +170,16 @@ export function CustomerAddressFormModal({
     onSubmit(form);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-lg w-[720px] max-w-full max-h-[90vh] flex flex-col">
-        <div className="border-b px-6 py-4 flex items-center justify-between">
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}>
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
           <h3 className="text-lg font-semibold">
             {mode === "create"
               ? "Thêm địa chỉ giao hàng"
@@ -385,6 +392,7 @@ export function CustomerAddressFormModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
