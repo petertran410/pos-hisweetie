@@ -70,7 +70,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "invoiceCode",
     label: "Mã hóa đơn",
     visible: true,
-    width: "180px",
+    width: "160px",
     render: (o) => o.invoices?.map((inv) => inv.code).join(" | ") || "-",
   },
   {
