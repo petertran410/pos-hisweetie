@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { CustomersSidebar } from "@/components/customers/CustomersSidebar";
 import { CustomersTable } from "@/components/customers/CustomersTable";
 import { CustomerForm } from "@/components/customers/CustomerForm";
-import { CustomerFilters } from "@/lib/types/customer";
-import { Customer } from "@/lib/types/customer";
+import { CustomerFilters, Customer } from "@/lib/types/customer";
 
 export default function CustomersPage() {
   const searchParams = useSearchParams();
@@ -14,26 +13,32 @@ export default function CustomersPage() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [filters, setFilters] = useState<CustomerFilters>({
+  const [filters, setFilters] = useState<CustomerFilters>(() => ({
     pageSize: 15,
     currentItem: 0,
     orderBy: "createdAt",
     orderDirection: "desc",
     isActive: true,
-  });
+    ...(codeParam ? { code: codeParam } : {}),
+  }));
 
-  // Sync Code param vào filters
-  useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      code: codeParam || undefined,
-    }));
-  }, [codeParam]);
+  const handleFiltersChange = useCallback(
+    (newFilters: CustomerFilters) => {
+      setFilters({
+        ...newFilters,
+        ...(codeParam ? { code: codeParam } : {}),
+      });
+    },
+    [codeParam]
+  );
 
   return (
     <>
-      <div className="flex h-full border-t bg-gray-50">
-        <CustomersSidebar filters={filters} setFilters={setFilters} />
+      <div className="flex h-full border-t bg-gray-50 w-screen">
+        <CustomersSidebar
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+        />
         <CustomersTable
           filters={filters}
           onCreateClick={() => setShowCreateForm(true)}

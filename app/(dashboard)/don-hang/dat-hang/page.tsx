@@ -13,7 +13,14 @@ export default function DatHangPage() {
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("Code");
   const [filters, setFilters] = useState<any>(() =>
-    codeParam ? { search: codeParam } : {}
+    codeParam
+      ? { search: codeParam }
+      : {
+          pageSize: 15,
+          currentItem: 0,
+          orderBy: "createdAt",
+          orderDirection: "desc",
+        }
   );
 
   const handleFiltersChange = useCallback(
