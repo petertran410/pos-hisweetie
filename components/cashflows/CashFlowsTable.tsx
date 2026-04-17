@@ -139,7 +139,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     render: (cashflow) => {
       const methodMap: { [key: string]: string } = {
         cash: "Tiền mặt",
-        card: "Thẻ",
+        // card: "Thẻ",
         transfer: "Chuyển khoản",
       };
       return methodMap[cashflow.method] || cashflow.method;

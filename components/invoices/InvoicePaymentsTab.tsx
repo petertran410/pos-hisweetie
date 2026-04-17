@@ -76,7 +76,7 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
       cash: "Tiền mặt",
       transfer: "Chuyển khoản",
       ewallet: "Ví điện tử",
-      card: "Thẻ",
+      // card: "Thẻ",
       voucher: "Voucher",
     };
     return methodMap[method] || method;

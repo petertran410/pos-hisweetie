@@ -69,8 +69,8 @@ const getPaymentMethodLabel = (method: string) => {
       return "Tiền mặt";
     case "transfer":
       return "Chuyển khoản";
-    case "card":
-      return "Thẻ";
+    // case "card":
+    //   return "Thẻ";
     default:
       return method;
   }

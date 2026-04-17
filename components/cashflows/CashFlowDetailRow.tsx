@@ -50,7 +50,7 @@ const getMethodText = (method: string) => {
     cash: "Tiền mặt",
     transfer: "Chuyển khoản",
     ewallet: "Ví điện tử",
-    card: "Thẻ",
+    // card: "Thẻ",
   };
   return methodMap[method] || method;
 };

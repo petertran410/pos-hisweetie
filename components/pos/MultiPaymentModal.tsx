@@ -41,7 +41,7 @@ export function MultiPaymentModal({
   const methodLabels = {
     cash: "Tiền mặt",
     transfer: "Chuyển khoản",
-    card: "Thẻ",
+    // card: "Thẻ",
     ewallet: "Ví",
     voucher: "Voucher",
   };

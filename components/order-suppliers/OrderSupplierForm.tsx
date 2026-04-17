@@ -769,7 +769,7 @@ export function OrderSupplierForm({
             {paymentAmount > 0 && (
               <div className="mt-1 text-xs text-gray-500">
                 {paymentMethod === "cash" && "Tiền mặt"}
-                {paymentMethod === "card" && "Thẻ"}
+                {/* {paymentMethod === "card" && "Thẻ"} */}
                 {paymentMethod === "transfer" && "Chuyển khoản"}
               </div>
             )}

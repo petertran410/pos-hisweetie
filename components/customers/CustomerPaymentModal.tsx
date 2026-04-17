@@ -421,7 +421,7 @@ export function CustomerPaymentModal({
   const methodLabels: Record<string, string> = {
     cash: "Tiền mặt",
     transfer: "Chuyển khoản",
-    wallet: "Thẻ",
+    // wallet: "Thẻ",
   };
 
   return (
@@ -660,7 +660,7 @@ export function CustomerPaymentModal({
                       )}
                       <span>Tiền mặt</span>
                     </button>
-                    <button
+                    {/* <button
                       onClick={() => {
                         setMethod("wallet");
                         setShowMethodDropdown(false);
@@ -670,7 +670,7 @@ export function CustomerPaymentModal({
                         <span className="text-blue-600">✓</span>
                       )}
                       <span>Thẻ</span>
-                    </button>
+                    </button> */}
                     <button
                       onClick={() => {
                         setMethod("transfer");
