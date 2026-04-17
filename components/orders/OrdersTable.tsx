@@ -332,15 +332,6 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
     [columns]
   );
 
-  const pageSummary = useMemo(
-    () => ({
-      grandTotal: orders.reduce((s, o) => s + Number(o.grandTotal), 0),
-      paidAmount: orders.reduce((s, o) => s + Number(o.paidAmount), 0),
-      debtAmount: orders.reduce((s, o) => s + Number(o.debtAmount), 0),
-    }),
-    [orders]
-  );
-
   const toggleColumnVisibility = (key: string) =>
     setColumns((prev) =>
       prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
@@ -405,7 +396,7 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
           </div>
         </div>
 
-        {/* ── Quick status tabs ── */}
+        {/* ── Status tabs ── */}
         <div className="border-b px-4 flex items-center gap-0 overflow-x-auto shrink-0 scrollbar-none">
           {STATUS_TABS.map((tab) => (
             <button

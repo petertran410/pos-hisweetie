@@ -248,15 +248,15 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   return (
     <>
       <tr>
-        <td colSpan={colSpan} className="p-0 bg-gray-50">
+        <td colSpan={colSpan} className="bg-gray-50">
           <div
             ref={wrapperRef}
-            className="sticky left-0 p-2 bg-gray-50"
+            className="sticky left-0 bg-gray-50"
             style={{ width: 0 }}>
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="bg-white border border-gray-200 overflow-hidden">
               <div className="p-4">
                 <div className="border-b border-gray-200 pb-3 mb-4">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex border-b pb-2 items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-gray-900">
                         {order.code}
@@ -300,60 +300,42 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
                   <div className="space-y-3">
                     {/* Info grid — 3 cols */}
-                    <div className="grid grid-cols-3 gap-x-8 gap-y-3 mb-3">
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                    <div className="grid grid-cols-3 gap-x-8 border-b border-gray-200 pb-4 mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <label className="block text-sm text-gray-500">
                           Người tạo:
                         </label>
-                        <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-gray-50 truncate">
+                        <span className="block text-sm text-gray-900">
                           {order.creator?.name || "-"}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                        <label className="block text-sm text-gray-500">
                           Người nhận đặt:
                         </label>
-                        <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
+                        <span className="block text-sm text-gray-900">
                           {order.creator?.name || "-"}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                        <label className="block text-sm text-gray-500">
                           Ngày đặt:
                         </label>
-                        <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-gray-50 truncate">
+                        <span className="block text-sm text-gray-900">
                           {formatDate(order.orderDate)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
-                          Bảng giá:
-                        </label>
-                        <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
-                          {order.priceBookName || "Bảng giá chung"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
-                          Chi nhánh xử lý:
-                        </label>
-                        <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
-                          {order.branch?.name || "-"}
                         </span>
                       </div>
 
                       {/* Trạng thái — dropdown */}
                       <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                        <label className="block text-sm text-gray-500">
                           Trạng thái:
                         </label>
                         <div className="flex-1 min-w-0">
                           {!isStatusEditable ? (
-                            <div className="w-full px-2.5 py-1.5 border border-gray-200 rounded bg-gray-50">
+                            <div className="px-2.5 py-1.5 border border-gray-200 rounded bg-gray-50">
                               <span
                                 className={`px-2 py-0.5 rounded text-xs font-medium ${getOrderStatusBadgeColor(
                                   order.status
@@ -370,7 +352,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                 onClick={() =>
                                   setShowStatusDropdown((prev) => !prev)
                                 }
-                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded bg-white text-left flex items-center justify-between hover:border-blue-400 transition-colors">
+                                className="w-[200px] px-2.5 py-1.5 border border-gray-200 rounded bg-white text-left flex items-center justify-between hover:border-blue-400 transition-colors">
                                 <span
                                   className={`px-2 py-0.5 rounded text-xs font-medium ${getOrderStatusBadgeColor(
                                     isManualEditable
@@ -444,6 +426,24 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           )}
                         </div>
                       </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="block text-sm text-gray-500">
+                          Bảng giá:
+                        </label>
+                        <span className="block text-sm text-gray-900">
+                          {order.priceBookName || "Bảng giá chung"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="block text-sm text-gray-500">
+                          Chi nhánh xử lý:
+                        </label>
+                        <span className="block text-sm text-gray-900">
+                          {order.branch?.name || "-"}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -470,7 +470,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-md font-semibold text-gray-700">
+                        <h4 className="text-sm font-semibold text-gray-700">
                           Danh sách sản phẩm
                         </h4>
                       </div>
@@ -479,25 +479,25 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         <table className="w-full">
                           <thead>
                             <tr className="bg-gray-100 border-b border-gray-200">
-                              <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
+                              <th className="px-2 py-1 text-left text-sm font-semibold text-gray-700  tracking-wider">
                                 Mã hàng
                               </th>
-                              <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
+                              <th className="px-2 py-1 text-left text-sm font-semibold text-gray-700  tracking-wider">
                                 Tên hàng
                               </th>
-                              <th className="px-4 py-3 text-center text-md font-semibold text-gray-700 uppercase tracking-wider">
+                              <th className="px-2 py-1 text-center text-sm font-semibold text-gray-700  tracking-wider">
                                 Số lượng
                               </th>
-                              <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                              <th className="px-2 py-1 text-right text-sm font-semibold text-gray-700  tracking-wider">
                                 Đơn giá
                               </th>
-                              <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                              <th className="px-2 py-1 text-right text-sm font-semibold text-gray-700  tracking-wider">
                                 Giảm giá
                               </th>
-                              <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                              <th className="px-2 py-1 text-right text-sm font-semibold text-gray-700  tracking-wider">
                                 Giá bán
                               </th>
-                              <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
+                              <th className="px-2 py-1 text-right text-sm font-semibold text-gray-700  tracking-wider">
                                 Thành tiền
                               </th>
                             </tr>
@@ -508,14 +508,14 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                 <tr
                                   key={index}
                                   className="hover:bg-gray-50 transition-colors">
-                                  <td className="px-4 py-3">
+                                  <td className="px-2 py-1">
                                     {item.product?.code || item.productCode ? (
                                       <>
                                         <Link
                                           href={`/san-pham/danh-sach?Code=${item.product?.code || item.productCode}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="text-md font-medium text-blue-600 hover:underline"
+                                          className="text-sm font-medium text-blue-600 hover:underline"
                                           onClick={(e) => e.stopPropagation()}>
                                           {item.product?.code ||
                                             item.productCode}
@@ -525,20 +525,20 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                       <span>-</span>
                                     )}
                                   </td>
-                                  <td className="px-4 py-3">
+                                  <td className="px-2 py-1">
                                     <div>
-                                      <p className="text-md font-medium text-gray-900">
+                                      <p className="text-sm font-medium text-gray-900">
                                         {item.product?.name || item.productName}
                                       </p>
                                       {item.note && (
-                                        <p className="text-md text-gray-500 mt-1 italic">
+                                        <p className="text-sm text-gray-500 mt-1 italic">
                                           {item.note}
                                         </p>
                                       )}
                                     </div>
                                   </td>
-                                  <td className="px-4 py-3 text-center">
-                                    <span className="text-md font-medium text-gray-900">
+                                  <td className="px-2 py-1 text-center">
+                                    <span className="text-sm font-medium text-gray-900">
                                       {item.quantity}
                                       {invoicedQuantities[item.productId] >
                                         0 && (
@@ -549,27 +549,27 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                       )}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-3 text-right">
-                                    <span className="text-md text-gray-900">
+                                  <td className="px-2 py-1 text-right">
+                                    <span className="text-sm text-gray-900">
                                       {formatCurrency(Number(item.price))}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-3 text-right">
-                                    <span className="text-md text-gray-900">
+                                  <td className="px-2 py-1 text-right">
+                                    <span className="text-sm text-gray-900">
                                       {item.discount
                                         ? formatCurrency(Number(item.discount))
                                         : "-"}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-3 text-right">
-                                    <span className="text-md font-medium text-gray-900">
+                                  <td className="px-2 py-1 text-right">
+                                    <span className="text-sm font-medium text-gray-900">
                                       {formatCurrency(
                                         Number(item.appliedPrice)
                                       )}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-3 text-right">
-                                    <span className="text-md font-semibold text-blue-600">
+                                  <td className="px-2 py-1 text-right">
+                                    <span className="text-sm font-semibold text-blue-600">
                                       {formatCurrency(Number(item.totalPrice))}
                                     </span>
                                   </td>

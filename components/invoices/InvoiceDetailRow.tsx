@@ -223,21 +223,18 @@ export function InvoiceDetailRow({
       <td colSpan={colSpan} className="p-0 bg-gray-50">
         <div
           ref={wrapperRef}
-          className="sticky left-0 p-2 bg-gray-50"
+          className="sticky left-0 bg-gray-50"
           style={{ width: 0 }}>
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="p-4">
               {/* Header: code - customer | branch */}
-              <div className="border-b border-gray-200 pb-3 mb-4">
-                <div className="flex items-center justify-between mb-4">
+              <div className="border-b border-gray-200 mb-4">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
                       {invoice.code}
                     </span>
                     <span className="text-gray-400">-</span>
-                    {/* <span className="text-lg font-semibold text-gray-800">
-                      {invoice.customer?.name || "Khách vãng lai"}
-                    </span> */}
 
                     {invoice.customer?.code ? (
                       <>
@@ -276,7 +273,7 @@ export function InvoiceDetailRow({
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-1 -mb-3 border-b border-gray-100">
+                <div className="flex gap-1 border-gray-100">
                   {[
                     { key: "info", label: "Thông tin" },
                     { key: "deliveries", label: "Lịch sử giao hàng" },
@@ -300,44 +297,44 @@ export function InvoiceDetailRow({
               {activeTab === "info" && (
                 <div className="space-y-4">
                   {/* Info grid 3 cols */}
-                  <div className="grid grid-cols-3 gap-x-8 gap-y-3 mb-3">
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                  <div className="grid grid-cols-3 gap-x-8 border-b border-gray-200 pb-4 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-sm text-gray-500">
                         Người tạo:
                       </label>
-                      <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-gray-50 truncate">
+                      <span className="block text-sm text-gray-900">
                         {invoice.creator?.name || "-"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-sm text-gray-500">
                         Người bán:
                       </label>
-                      <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
+                      <span className="block text-sm text-gray-900">
                         {invoice.soldBy?.name || invoice.creator?.name || "-"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-sm text-gray-500">
                         Ngày bán:
                       </label>
-                      <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-gray-50 truncate">
+                      <span className="block text-sm text-gray-900">
                         {formatDate(invoice.purchaseDate)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="text-sm text-gray-500 whitespace-nowrap shrink-0 pr-1.5">
+                      <label className="block text-sm text-gray-500 pr-1.5">
                         Bảng giá:
                       </label>
-                      <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
+                      <span className="block text-sm text-gray-900">
                         {invoice.priceBookName || "Bảng giá chung"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
+                      <label className="block text-sm text-gray-500">
                         Chi nhánh:
                       </label>
-                      <span className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded bg-white truncate">
+                      <span className="block text-sm text-gray-900">
                         {invoice.branch?.name || "-"}
                       </span>
                     </div>
@@ -383,7 +380,7 @@ export function InvoiceDetailRow({
                   {/* Items */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-md font-semibold text-gray-700">
+                      <h4 className="text-sm font-semibold text-gray-700">
                         Danh sách sản phẩm
                       </h4>
                     </div>
@@ -391,7 +388,7 @@ export function InvoiceDetailRow({
                       <table className="w-full">
                         <thead>
                           <tr className="bg-gray-100 border-b border-gray-200">
-                            <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
+                            <th className="px-2 py-1 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
                               Mã hàng
                             </th>
                             <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">

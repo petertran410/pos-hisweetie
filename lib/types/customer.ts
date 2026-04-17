@@ -20,6 +20,20 @@ export interface Customer {
   totalRevenue: number;
   rewardPoint: number;
   isActive: boolean;
+
+  // Thông tin xuất hóa đơn
+  invoiceBuyerName?: string;
+  invoiceAddress?: string;
+  invoiceCityCode?: string;
+  invoiceCityName?: string;
+  invoiceWardCode?: string;
+  invoiceWardName?: string;
+  invoiceCccdCmnd?: string;
+  invoiceBankAccount?: string;
+  invoiceEmail?: string;
+  invoicePhone?: string;
+  invoiceDvqhnsCode?: string;
+
   createdAt: string;
   updatedAt: string;
   customerType?: {

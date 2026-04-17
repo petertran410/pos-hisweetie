@@ -173,14 +173,6 @@ export function CustomerDetailRow({
                   {/* ── Profile header (không avatar) ── */}
                   <div className="flex items-start justify-between mb-6">
                     <div>
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-xl font-bold text-gray-900">
-                          {customer.name}
-                        </span>
-                        <span className="text-sm text-gray-400">
-                          {customer.code}
-                        </span>
-                      </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <span>
                           Ngày tạo:{" "}
@@ -281,7 +273,7 @@ export function CustomerDetailRow({
                   })()}
 
                   {/* ── Thông tin xuất hóa đơn ── */}
-                  {/* {(customer.invoiceBuyerName ||
+                  {(customer.invoiceBuyerName ||
                     customer.invoiceAddress ||
                     customer.invoiceCccdCmnd ||
                     customer.invoiceBankAccount ||
@@ -307,7 +299,7 @@ export function CustomerDetailRow({
                           .join(" / ")}
                       </div>
                     </div>
-                  )} */}
+                  )}
 
                   {/* ── Ghi chú ── */}
                   {customer.comments && (
