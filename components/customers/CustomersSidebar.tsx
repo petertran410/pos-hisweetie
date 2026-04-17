@@ -4,8 +4,18 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { CustomerFilters } from "@/lib/types/customer";
-import { ChevronDown, X, Search, Pencil, Plus } from "lucide-react";
+import {
+  ChevronDown,
+  X,
+  Search,
+  Pencil,
+  Plus,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { CustomerGroupForm } from "./CustomerGroupForm";
+import { createPortal } from "react-dom";
 
 interface CustomersSidebarProps {
   filters: CustomerFilters;
@@ -351,6 +361,500 @@ function StatusButtons({
   );
 }
 
+// ─── Date filter constants (giống OrdersSidebar) ─────────────────────────────
+const PRESET_GROUPS = [
+  {
+    label: "Theo ngày",
+    options: [
+      { label: "Hôm nay", value: "today" },
+      { label: "Hôm qua", value: "yesterday" },
+    ],
+  },
+  {
+    label: "Theo tuần",
+    options: [
+      { label: "Tuần này", value: "this_week" },
+      { label: "Tuần trước", value: "last_week" },
+      { label: "7 ngày qua", value: "last_7_days" },
+    ],
+  },
+  {
+    label: "Theo tháng",
+    options: [
+      { label: "Tháng này", value: "this_month" },
+      { label: "Tháng trước", value: "last_month" },
+      { label: "30 ngày qua", value: "last_30_days" },
+    ],
+  },
+  {
+    label: "Theo quý",
+    options: [
+      { label: "Quý này", value: "this_quarter" },
+      { label: "Quý trước", value: "last_quarter" },
+    ],
+  },
+  {
+    label: "Theo năm",
+    options: [
+      { label: "Năm nay", value: "this_year" },
+      { label: "Năm trước", value: "last_year" },
+    ],
+  },
+];
+
+const PRESET_LABELS: Record<string, string> = Object.fromEntries(
+  PRESET_GROUPS.flatMap((g) => g.options.map((o) => [o.value, o.label]))
+);
+
+const MONTH_NAMES = [
+  "Tháng 1",
+  "Tháng 2",
+  "Tháng 3",
+  "Tháng 4",
+  "Tháng 5",
+  "Tháng 6",
+  "Tháng 7",
+  "Tháng 8",
+  "Tháng 9",
+  "Tháng 10",
+  "Tháng 11",
+  "Tháng 12",
+];
+const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+
+const getDateRangeFromPreset = (preset: string) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (preset) {
+    case "today":
+      return { from: today, to: now };
+    case "yesterday": {
+      const y = new Date(today.getTime() - 86400000);
+      return { from: y, to: new Date(y.getTime() + 86400000 - 1) };
+    }
+    case "this_week": {
+      const s = new Date(today);
+      s.setDate(today.getDate() - today.getDay());
+      return { from: s, to: now };
+    }
+    case "last_week": {
+      const s = new Date(today);
+      s.setDate(today.getDate() - today.getDay() - 7);
+      const e = new Date(s);
+      e.setDate(s.getDate() + 6);
+      return { from: s, to: e };
+    }
+    case "last_7_days":
+      return { from: new Date(today.getTime() - 7 * 86400000), to: now };
+    case "this_month":
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+    case "last_month":
+      return {
+        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+        to: new Date(now.getFullYear(), now.getMonth(), 0),
+      };
+    case "last_30_days":
+      return { from: new Date(today.getTime() - 30 * 86400000), to: now };
+    case "this_quarter": {
+      const q = Math.floor(now.getMonth() / 3);
+      return { from: new Date(now.getFullYear(), q * 3, 1), to: now };
+    }
+    case "last_quarter": {
+      const q = Math.floor(now.getMonth() / 3);
+      const s =
+        q === 0
+          ? new Date(now.getFullYear() - 1, 9, 1)
+          : new Date(now.getFullYear(), (q - 1) * 3, 1);
+      const e =
+        q === 0
+          ? new Date(now.getFullYear() - 1, 11, 31)
+          : new Date(now.getFullYear(), q * 3, 0);
+      return { from: s, to: e };
+    }
+    case "this_year":
+      return { from: new Date(now.getFullYear(), 0, 1), to: now };
+    case "last_year":
+      return {
+        from: new Date(now.getFullYear() - 1, 0, 1),
+        to: new Date(now.getFullYear() - 1, 11, 31),
+      };
+    default:
+      return { from: today, to: now };
+  }
+};
+
+// ─── PresetPanel (portal, giống OrdersSidebar) ───────────────────────────────
+function PresetPanel({
+  groups,
+  selected,
+  onSelect,
+  onClose,
+  anchorRect,
+  triggerRef,
+}: {
+  groups: typeof PRESET_GROUPS;
+  selected: string;
+  onSelect: (v: string) => void;
+  onClose: () => void;
+  anchorRect: DOMRect | null;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      const insidePanel = ref.current?.contains(e.target as Node);
+      const insideTrigger = triggerRef.current?.contains(e.target as Node);
+      if (!insidePanel && !insideTrigger) onClose();
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [onClose, triggerRef]);
+
+  if (!anchorRect || typeof window === "undefined") return null;
+
+  const left = anchorRect.right + 8;
+  const top = anchorRect.top;
+
+  return createPortal(
+    <div
+      ref={ref}
+      style={{ position: "fixed", top, left, zIndex: 9999 }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 flex gap-5 animate-in fade-in zoom-in-95 duration-150">
+      {groups.map((group) => (
+        <div key={group.label} className="flex flex-col gap-1.5 min-w-[88px]">
+          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+            {group.label}
+          </span>
+          {group.options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onSelect(opt.value);
+                onClose();
+              }}
+              className={`px-3 py-1.5 rounded-full text-sm border transition-all whitespace-nowrap text-left ${
+                selected === opt.value
+                  ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
+                  : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+              }`}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
+// ─── MiniCalendar (giống OrdersSidebar) ──────────────────────────────────────
+function MiniCalendar({
+  value,
+  onChange,
+  onClose,
+  minDate,
+}: {
+  value: string;
+  onChange: (d: string) => void;
+  onClose: () => void;
+  minDate?: string;
+}) {
+  const todayObj = new Date();
+  const init = value ? new Date(value + "T00:00:00") : todayObj;
+  const [vy, setVy] = useState(init.getFullYear());
+  const [vm, setVm] = useState(init.getMonth());
+
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
+  const startOffset = (new Date(vy, vm, 1).getDay() + 6) % 7;
+  const cells: (number | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const fmt = (d: number) =>
+    `${vy}-${String(vm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const prev = () =>
+    vm === 0 ? (setVm(11), setVy((y) => y - 1)) : setVm((m) => m - 1);
+  const next = () =>
+    vm === 11 ? (setVm(0), setVy((y) => y + 1)) : setVm((m) => m + 1);
+
+  return (
+    <div className="mt-2 bg-white border border-gray-200 rounded-xl p-3 shadow-sm select-none">
+      <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          onClick={prev}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-semibold text-gray-800">
+          {MONTH_NAMES[vm]} {vy}
+        </span>
+        <button
+          type="button"
+          onClick={next}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {DAY_NAMES.map((d) => (
+          <div
+            key={d}
+            className="text-center text-[10px] font-medium text-gray-400 py-0.5">
+            {d}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} className="aspect-square" />;
+          const ds = fmt(day);
+          const isSel = value === ds;
+          const isToday =
+            todayObj.getFullYear() === vy &&
+            todayObj.getMonth() === vm &&
+            todayObj.getDate() === day;
+          const isDisabled = !!minDate && ds < minDate;
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => {
+                onChange(ds);
+                onClose();
+              }}
+              className={[
+                "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
+                isSel
+                  ? "bg-blue-600 text-white font-bold"
+                  : isToday
+                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
+                    : isDisabled
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
+              ].join(" ")}>
+              {day}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex justify-between mt-2 pt-2 border-t border-gray-100">
+        <button
+          type="button"
+          onClick={() => {
+            onChange("");
+            onClose();
+          }}
+          className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100">
+          Xóa
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onChange(todayObj.toISOString().split("T")[0]);
+            onClose();
+          }}
+          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50">
+          Hôm nay
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── DateFilterBlock (tái sử dụng cho cả 2 filter ngày) ─────────────────────
+function DateFilterBlock({
+  label,
+  onToggle,
+  dateMode,
+  setDateMode,
+  selectedPreset,
+  setSelectedPreset,
+  fromDate,
+  setFromDate,
+  toDate,
+  setToDate,
+  showPresetPanel,
+  setShowPresetPanel,
+  panelAnchorRect,
+  setPanelAnchorRect,
+  openCal,
+  setOpenCal,
+  presetRowRef,
+  customDateRef,
+}: {
+  label: string;
+  onToggle: (v: boolean) => void;
+  dateMode: "preset" | "custom";
+  setDateMode: (v: "preset" | "custom") => void;
+  selectedPreset: string;
+  setSelectedPreset: (v: string) => void;
+  fromDate: string;
+  setFromDate: (v: string) => void;
+  toDate: string;
+  setToDate: (v: string) => void;
+  showPresetPanel: boolean;
+  setShowPresetPanel: (v: boolean) => void;
+  panelAnchorRect: DOMRect | null;
+  setPanelAnchorRect: (v: DOMRect | null) => void;
+  openCal: "from" | "to" | null;
+  setOpenCal: (v: "from" | "to" | null) => void;
+  presetRowRef: React.RefObject<HTMLDivElement | null>;
+  customDateRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  useEffect(() => {
+    if (!openCal) return;
+    const h = (e: MouseEvent) => {
+      if (
+        customDateRef.current &&
+        !customDateRef.current.contains(e.target as Node)
+      )
+        setOpenCal(null);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [openCal]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-sm font-medium text-gray-700">{label}</label>
+      </div>
+
+      <div className="space-y-1.5">
+        {/* Preset row */}
+        <div
+          ref={presetRowRef}
+          onClick={() => {
+            setDateMode("preset");
+            setOpenCal(null);
+            if (showPresetPanel) {
+              setShowPresetPanel(false);
+            } else {
+              setPanelAnchorRect(
+                presetRowRef.current?.getBoundingClientRect() ?? null
+              );
+              setShowPresetPanel(true);
+            }
+          }}
+          className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
+            dateMode === "preset"
+              ? "border-blue-400 bg-blue-50"
+              : "border-gray-200 hover:border-gray-300"
+          }`}>
+          <div
+            className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+              dateMode === "preset" ? "border-blue-600" : "border-gray-300"
+            }`}>
+            {dateMode === "preset" && (
+              <div className="w-1 h-1 rounded-full bg-blue-600" />
+            )}
+          </div>
+          <span className="text-sm text-gray-700 flex-1 font-medium">
+            {PRESET_LABELS[selectedPreset] ?? "Chọn thời gian"}
+          </span>
+          <ChevronRight
+            className={`w-4 h-4 transition-colors flex-shrink-0 ${
+              showPresetPanel ? "text-blue-500" : "text-gray-400"
+            }`}
+          />
+        </div>
+
+        {/* Custom row */}
+        <div
+          onClick={() => {
+            setDateMode("custom");
+            setShowPresetPanel(false);
+          }}
+          className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
+            dateMode === "custom"
+              ? "border-blue-400 bg-blue-50"
+              : "border-gray-200 hover:border-gray-300"
+          }`}>
+          <div
+            className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+              dateMode === "custom" ? "border-blue-600" : "border-gray-300"
+            }`}>
+            {dateMode === "custom" && (
+              <div className="w-1 h-1 rounded-full bg-blue-600" />
+            )}
+          </div>
+          <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
+          <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        </div>
+
+        {/* Custom date fields */}
+        {dateMode === "custom" && (
+          <div ref={customDateRef} className="space-y-2 pt-1">
+            {(["from", "to"] as const).map((field) => {
+              const isFrom = field === "from";
+              const val = isFrom ? fromDate : toDate;
+              const labelText = isFrom ? "Từ ngày" : "Đến ngày";
+              const setVal = isFrom ? setFromDate : setToDate;
+              const isOpen = openCal === field;
+              return (
+                <div key={field}>
+                  <span className="text-xs text-gray-500 mb-1 block">
+                    {labelText}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setOpenCal(isOpen ? null : field)}
+                    className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all ${
+                      val
+                        ? "border-blue-300 bg-blue-50 text-gray-800"
+                        : "border-gray-200 text-gray-400"
+                    } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                    <span>
+                      {val
+                        ? new Date(val + "T00:00:00").toLocaleDateString(
+                            "vi-VN",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            }
+                          )
+                        : "Chọn ngày"}
+                    </span>
+                    <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </button>
+                  {isOpen && (
+                    <MiniCalendar
+                      value={val}
+                      onChange={setVal}
+                      onClose={() => setOpenCal(null)}
+                      minDate={
+                        field === "to" ? fromDate || undefined : undefined
+                      }
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* PresetPanel portal */}
+        {showPresetPanel && (
+          <PresetPanel
+            groups={PRESET_GROUPS}
+            selected={selectedPreset}
+            onSelect={setSelectedPreset}
+            onClose={() => setShowPresetPanel(false)}
+            anchorRect={panelAnchorRect}
+            triggerRef={presetRowRef}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 export function CustomersSidebar({
   filters,
@@ -380,6 +884,40 @@ export function CustomersSidebar({
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [editingGroup, setEditingGroup] = useState<any>(null);
 
+  // ─── Date filter: Ngày tạo KH ───
+  const [enableCreatedDate, setEnableCreatedDate] = useState(false);
+  const [createdDateMode, setCreatedDateMode] = useState<"preset" | "custom">(
+    "preset"
+  );
+  const [createdPreset, setCreatedPreset] = useState("this_month");
+  const [createdFromDate, setCreatedFromDate] = useState("");
+  const [createdToDate, setCreatedToDate] = useState("");
+  const [showCreatedPresetPanel, setShowCreatedPresetPanel] = useState(false);
+  const [createdPanelAnchorRect, setCreatedPanelAnchorRect] =
+    useState<DOMRect | null>(null);
+  const [openCreatedCal, setOpenCreatedCal] = useState<"from" | "to" | null>(
+    null
+  );
+  const createdPresetRowRef = useRef<HTMLDivElement>(null);
+  const createdCustomDateRef = useRef<HTMLDivElement>(null);
+
+  // ─── Date filter: Ngày giao dịch cuối ───
+  const [enableLastTx, setEnableLastTx] = useState(false);
+  const [lastTxDateMode, setLastTxDateMode] = useState<"preset" | "custom">(
+    "preset"
+  );
+  const [lastTxPreset, setLastTxPreset] = useState("this_month");
+  const [lastTxFromDate, setLastTxFromDate] = useState("");
+  const [lastTxToDate, setLastTxToDate] = useState("");
+  const [showLastTxPresetPanel, setShowLastTxPresetPanel] = useState(false);
+  const [lastTxPanelAnchorRect, setLastTxPanelAnchorRect] =
+    useState<DOMRect | null>(null);
+  const [openLastTxCal, setOpenLastTxCal] = useState<"from" | "to" | null>(
+    null
+  );
+  const lastTxPresetRowRef = useRef<HTMLDivElement>(null);
+  const lastTxCustomDateRef = useRef<HTMLDivElement>(null);
+
   // ─── Active filter count ───
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -392,6 +930,8 @@ export function CustomersSidebar({
       count++;
     if (debtFrom !== undefined || debtTo !== undefined) count++;
     if (pointFrom !== undefined || pointTo !== undefined) count++;
+    if (enableCreatedDate) count++;
+    if (enableLastTx) count++;
     return count;
   }, [
     groupId,
@@ -405,6 +945,8 @@ export function CustomersSidebar({
     debtTo,
     pointFrom,
     pointTo,
+    enableCreatedDate,
+    enableLastTx,
   ]);
 
   // ─── Debounce emit filters (giống OrdersSidebar) ───
@@ -422,11 +964,8 @@ export function CustomersSidebar({
       if (branchId) f.branchId = Number(branchId);
       if (customerType !== "all") f.customerType = customerType as any;
       if (gender !== "all") f.gender = gender as any;
-
       if (isActive === "true") f.isActive = true;
       else if (isActive === "false") f.isActive = false;
-      // "all" → không set isActive
-
       if (totalPurchasedFrom !== undefined)
         f.totalPurchasedFrom = totalPurchasedFrom;
       if (totalPurchasedTo !== undefined) f.totalPurchasedTo = totalPurchasedTo;
@@ -434,6 +973,28 @@ export function CustomersSidebar({
       if (debtTo !== undefined) f.debtTo = debtTo;
       if (pointFrom !== undefined) f.pointFrom = pointFrom;
       if (pointTo !== undefined) f.pointTo = pointTo;
+
+      if (enableCreatedDate) {
+        const range =
+          createdDateMode === "preset"
+            ? getDateRangeFromPreset(createdPreset)
+            : createdFromDate && createdToDate
+              ? { from: new Date(createdFromDate), to: new Date(createdToDate) }
+              : getDateRangeFromPreset("this_month");
+        f.createdDateFrom = range.from.toISOString();
+        f.createdDateTo = range.to.toISOString();
+      }
+
+      if (enableLastTx) {
+        const range =
+          lastTxDateMode === "preset"
+            ? getDateRangeFromPreset(lastTxPreset)
+            : lastTxFromDate && lastTxToDate
+              ? { from: new Date(lastTxFromDate), to: new Date(lastTxToDate) }
+              : getDateRangeFromPreset("this_month");
+        f.lastTransactionFrom = range.from.toISOString();
+        f.lastTransactionTo = range.to.toISOString();
+      }
 
       onFiltersChange(f);
     }, 300);
@@ -450,6 +1011,16 @@ export function CustomersSidebar({
     debtTo,
     pointFrom,
     pointTo,
+    enableCreatedDate,
+    createdDateMode,
+    createdPreset,
+    createdFromDate,
+    createdToDate,
+    enableLastTx,
+    lastTxDateMode,
+    lastTxPreset,
+    lastTxFromDate,
+    lastTxToDate,
   ]);
 
   // ─── Clear all ───
@@ -465,6 +1036,16 @@ export function CustomersSidebar({
     setDebtTo(undefined);
     setPointFrom(undefined);
     setPointTo(undefined);
+    setEnableCreatedDate(false);
+    setCreatedDateMode("preset");
+    setCreatedPreset("this_month");
+    setCreatedFromDate("");
+    setCreatedToDate("");
+    setEnableLastTx(false);
+    setLastTxDateMode("preset");
+    setLastTxPreset("this_month");
+    setLastTxFromDate("");
+    setLastTxToDate("");
   };
 
   const handleEditGroup = (e: React.MouseEvent, group: any) => {
@@ -531,6 +1112,52 @@ export function CustomersSidebar({
 
           <div className="border-t border-gray-100" />
 
+          {/* ── Ngày tạo khách hàng ── */}
+          <DateFilterBlock
+            label="Thời gian"
+            onToggle={setEnableCreatedDate}
+            dateMode={createdDateMode}
+            setDateMode={setCreatedDateMode}
+            selectedPreset={createdPreset}
+            setSelectedPreset={setCreatedPreset}
+            fromDate={createdFromDate}
+            setFromDate={setCreatedFromDate}
+            toDate={createdToDate}
+            setToDate={setCreatedToDate}
+            showPresetPanel={showCreatedPresetPanel}
+            setShowPresetPanel={setShowCreatedPresetPanel}
+            panelAnchorRect={createdPanelAnchorRect}
+            setPanelAnchorRect={setCreatedPanelAnchorRect}
+            openCal={openCreatedCal}
+            setOpenCal={setOpenCreatedCal}
+            presetRowRef={createdPresetRowRef}
+            customDateRef={createdCustomDateRef}
+          />
+
+          <div className="border-t border-gray-100" />
+
+          {/* ── Ngày giao dịch cuối ── */}
+          <DateFilterBlock
+            label="Giao dịch cuối"
+            onToggle={setEnableLastTx}
+            dateMode={lastTxDateMode}
+            setDateMode={setLastTxDateMode}
+            selectedPreset={lastTxPreset}
+            setSelectedPreset={setLastTxPreset}
+            fromDate={lastTxFromDate}
+            setFromDate={setLastTxFromDate}
+            toDate={lastTxToDate}
+            setToDate={setLastTxToDate}
+            showPresetPanel={showLastTxPresetPanel}
+            setShowPresetPanel={setShowLastTxPresetPanel}
+            panelAnchorRect={lastTxPanelAnchorRect}
+            setPanelAnchorRect={setLastTxPanelAnchorRect}
+            openCal={openLastTxCal}
+            setOpenCal={setOpenLastTxCal}
+            presetRowRef={lastTxPresetRowRef}
+            customDateRef={lastTxCustomDateRef}
+          />
+
           {/* ── Loại khách hàng ── */}
           {/* <StatusButtons
             label="Loại khách hàng"
@@ -557,7 +1184,7 @@ export function CustomersSidebar({
             onChange={setGender}
           /> */}
 
-          {/* <div className="border-t border-gray-100" /> */}
+          <div className="border-t border-gray-100" />
 
           {/* ── Tổng bán ── */}
           <RangeInput
