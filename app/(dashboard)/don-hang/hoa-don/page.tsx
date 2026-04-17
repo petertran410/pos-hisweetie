@@ -1,24 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { InvoicesTable } from "@/components/invoices/InvoicesTable";
 import { InvoicesSidebar } from "@/components/invoices/InvoicesSidebar";
 import { PackingSlipForm } from "@/components/packing-slips/PackingSlipForm";
 import { PackingHangForm } from "@/components/packing-hangs/PackingHangForm";
 import { PackingLoadingForm } from "@/components/packing-loadings/PackingLoadingForm";
-import {
-  useCreatePackingSlip,
-  useUpdatePackingSlip,
-} from "@/lib/hooks/usePackingSlips";
-import {
-  useCreatePackingHang,
-  useUpdatePackingHang,
-} from "@/lib/hooks/usePackingHangs";
-import {
-  useCreatePackingLoading,
-  useUpdatePackingLoading,
-} from "@/lib/hooks/usePackingLoadings";
+import { useCreatePackingSlip } from "@/lib/hooks/usePackingSlips";
+import { useCreatePackingHang } from "@/lib/hooks/usePackingHangs";
+import { useCreatePackingLoading } from "@/lib/hooks/usePackingLoadings";
 import type { Invoice } from "@/lib/types/invoice";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -32,7 +23,20 @@ export default function HoaDonPage() {
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("Code");
 
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState<any>(() =>
+    codeParam ? { search: codeParam } : {}
+  );
+
+  const handleFiltersChange = useCallback(
+    (newFilters: any) => {
+      setFilters({
+        ...newFilters,
+        ...(codeParam ? { search: codeParam } : {}),
+      });
+    },
+    [codeParam]
+  );
+
   const [formType, setFormType] = useState<FormType>(null);
   const [preselectedInvoiceIds, setPreselectedInvoiceIds] = useState<number[]>(
     []
@@ -40,14 +44,6 @@ export default function HoaDonPage() {
   const [preselectedBranchId, setPreselectedBranchId] = useState<number | null>(
     null
   );
-
-  // Sync Code param vào filters
-  useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      search: codeParam || undefined,
-    }));
-  }, [codeParam]);
 
   const createPackingSlip = useCreatePackingSlip();
   const createPackingHang = useCreatePackingHang();
@@ -127,7 +123,10 @@ export default function HoaDonPage() {
   return (
     <PagePermissionGuard resource="invoices" action="view">
       <div className="flex h-full border-t bg-gray-50">
-        <InvoicesSidebar filters={filters} onFiltersChange={setFilters} />
+        <InvoicesSidebar
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+        />
         <InvoicesTable
           filters={filters}
           onCreateClick={handleCreateClick}

@@ -237,7 +237,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
               </td>
               <td className="px-4 py-3">
                 {item.code ? (
-                  item.type === "invoice" && (
+                  item.type === "invoice" ? (
                     <>
                       <Link
                         href={`/don-hang/hoa-don?Code=${item.code}`}
@@ -248,18 +248,20 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
                         {item.code}
                       </Link>
                     </>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/don-hang/tra-hang?Code=${item.code}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-md font-medium text-blue-600 hover:underline"
+                        onClick={(e) => e.stopPropagation()}>
+                        {item.code}
+                      </Link>
+                    </>
                   )
                 ) : (
-                  <>
-                    <Link
-                      href={`/don-hang/hoa-don?Code=${item.code}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-md font-medium text-blue-600 hover:underline"
-                      onClick={(e) => e.stopPropagation()}>
-                      {item.code}
-                    </Link>
-                  </>
+                  <span>-</span>
                 )}
                 {/* <span className="text-blue-600 hover:underline cursor-pointer">
                   {item.code}

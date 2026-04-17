@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ReturnOrdersTable } from "@/components/return-orders/ReturnOrdersTable";
 import { ReturnOrdersSidebar } from "@/components/return-orders/ReturnOrdersSidebar";
 import { CreateReturnOrderModal } from "@/components/return-orders/CreateReturnOrderModal";
@@ -10,15 +10,30 @@ import {
   useCreateReturnOrder,
   useConfirmStockReceived,
   useConfirmRefund,
-  useCancelReturnOrder,
 } from "@/lib/hooks/useReturnOrders";
 import type { ReturnOrder } from "@/lib/types/return-order";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { useSearchParams } from "next/navigation";
 
 type ModalType = "create" | "confirm-stock" | "confirm-refund" | null;
 
 export default function TraHangPage() {
-  const [filters, setFilters] = useState({});
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code");
+  const [filters, setFilters] = useState<any>(() =>
+    codeParam ? { search: codeParam } : {}
+  );
+
+  const handleFiltersChange = useCallback(
+    (newFilters: any) => {
+      setFilters({
+        ...newFilters,
+        ...(codeParam ? { search: codeParam } : {}),
+      });
+    },
+    [codeParam]
+  );
+
   const [modalType, setModalType] = useState<ModalType>(null);
   const [selectedReturnOrderId, setSelectedReturnOrderId] = useState<
     number | null
@@ -27,7 +42,6 @@ export default function TraHangPage() {
   const createReturnOrder = useCreateReturnOrder();
   const confirmStock = useConfirmStockReceived();
   const confirmRefund = useConfirmRefund();
-  const cancelReturnOrder = useCancelReturnOrder();
 
   const handleCreateClick = () => {
     setModalType("create");
@@ -88,7 +102,7 @@ export default function TraHangPage() {
   return (
     <PagePermissionGuard resource="return_orders" action="view">
       <div className="flex h-full border-t bg-gray-50">
-        <ReturnOrdersSidebar onFiltersChange={setFilters} />
+        <ReturnOrdersSidebar onFiltersChange={handleFiltersChange} />
         <ReturnOrdersTable
           filters={filters}
           onCreateClick={handleCreateClick}
