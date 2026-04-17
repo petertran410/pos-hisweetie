@@ -433,9 +433,7 @@ function StatusButtons({
 const PRESET_GROUPS = [
   {
     label: "Tất cả",
-    options: [
-      { label: "Toàn thời gian", value: "all_time" }, // ← THÊM
-    ],
+    options: [{ label: "Toàn thời gian", value: "all_time" }],
   },
   {
     label: "Theo ngày",
