@@ -5,7 +5,7 @@ import { X, ChevronDown } from "lucide-react";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 
 interface PaymentMethod {
-  method: "cash" | "transfer" | "card" | "ewallet" | "voucher";
+  method: "cash" | "transfer" | "ewallet" | "voucher";
   amount: number;
   accountId?: number;
 }
@@ -41,7 +41,6 @@ export function MultiPaymentModal({
   const methodLabels = {
     cash: "Tiền mặt",
     transfer: "Chuyển khoản",
-    // card: "Thẻ",
     ewallet: "Ví",
     voucher: "Voucher",
   };
