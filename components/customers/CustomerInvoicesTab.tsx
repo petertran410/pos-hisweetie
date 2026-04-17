@@ -6,6 +6,7 @@ import { returnOrdersApi } from "@/lib/api/return-orders";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 
 interface CustomerInvoicesTabProps {
   customerId: number;
@@ -114,6 +115,8 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
         limit: 100,
       }),
   });
+
+  console.log(invoicesData?.data.map((i) => i.code));
 
   const { data: returnsData, isLoading: returnsLoading } = useQuery({
     queryKey: ["return-orders", "customer", customerId],
@@ -233,9 +236,34 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
                 )}
               </td>
               <td className="px-4 py-3">
-                <span className="text-blue-600 hover:underline cursor-pointer">
+                {item.code ? (
+                  item.type === "invoice" && (
+                    <>
+                      <Link
+                        href={`/don-hang/hoa-don?Code=${item.code}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-md font-medium text-blue-600 hover:underline"
+                        onClick={(e) => e.stopPropagation()}>
+                        {item.code}
+                      </Link>
+                    </>
+                  )
+                ) : (
+                  <>
+                    <Link
+                      href={`/don-hang/hoa-don?Code=${item.code}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-md font-medium text-blue-600 hover:underline"
+                      onClick={(e) => e.stopPropagation()}>
+                      {item.code}
+                    </Link>
+                  </>
+                )}
+                {/* <span className="text-blue-600 hover:underline cursor-pointer">
                   {item.code}
-                </span>
+                </span> */}
               </td>
               <td className="px-4 py-3 text-sm">
                 {new Date(item.date).toLocaleString("vi-VN")}

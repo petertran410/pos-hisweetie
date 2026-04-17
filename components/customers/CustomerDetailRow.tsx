@@ -84,7 +84,8 @@ export function CustomerDetailRow({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <h3 className="text-xl font-extrabold text-gray-800">
-                    {customer.name}{" "}
+                    {customer.name}
+                    {" - "}
                     <span className="text-lg font-thin">{customer.code}</span>
                   </h3>
                   <div className="space-y-6">
