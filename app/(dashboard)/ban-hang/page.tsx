@@ -362,7 +362,12 @@ export default function BanHangPage() {
       if (!isNaN(priceBookId)) {
         setTabs((prevTabs) =>
           prevTabs.map((tab) =>
-            !tab.documentId && !tab.isEditMode
+            // Chỉ áp dụng cho tab TRỐNG HOÀN TOÀN (chưa có cart và chưa có khách)
+            // Tab đã có data thì giữ nguyên selectedPriceBookId từ storage
+            !tab.documentId &&
+            !tab.isEditMode &&
+            tab.cartItems.length === 0 &&
+            !tab.selectedCustomer
               ? { ...tab, selectedPriceBookId: priceBookId }
               : tab
           )
