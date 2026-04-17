@@ -296,8 +296,8 @@ export function InvoiceDetailRow({
               {activeTab === "info" && (
                 <div className="space-y-4">
                   {/* Info grid 3 cols */}
-                  <div className="grid grid-cols-3 gap-x-8 border-b border-gray-200 pb-4 mb-4">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="grid grid-cols-3 gap-x-8 border-gray-200 pb-2 mb-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Người tạo:
                       </label>
@@ -305,7 +305,7 @@ export function InvoiceDetailRow({
                         {invoice.creator?.name || "-"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Người bán:
                       </label>
@@ -313,7 +313,7 @@ export function InvoiceDetailRow({
                         {invoice.soldBy?.name || invoice.creator?.name || "-"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Ngày bán:
                       </label>
@@ -321,7 +321,7 @@ export function InvoiceDetailRow({
                         {formatDate(invoice.purchaseDate)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500 pr-1.5">
                         Bảng giá:
                       </label>
@@ -329,7 +329,7 @@ export function InvoiceDetailRow({
                         {invoice.priceBookName || "Bảng giá chung"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Chi nhánh:
                       </label>
