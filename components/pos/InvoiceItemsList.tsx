@@ -315,32 +315,47 @@ export function InvoiceItemsList({
                   </button>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => handleOpenDiscountModal(item)}
-                    className="text-blue-600 hover:text-blue-700 text-md font-medium">
-                    Giảm giá
-                  </button>
-
-                  {/* Cột giá trị giảm giá */}
-                  <div className="text-md text-right min-w-[60px]">
-                    {item.discount > 0 ? (
-                      <span className="text-red-500">
-                        -{item.discount.toLocaleString()}
-                      </span>
-                    ) : (
-                      <span className="text-gray-300">-</span>
-                    )}
+                <div className="flex items-end gap-3">
+                  <div className="flex flex-col items-end min-w-[60px]">
+                    <span className="mb-0.5"></span>
+                    <button
+                      onClick={() => handleOpenDiscountModal(item)}
+                      className="text-blue-600 hover:text-blue-700 text-md font-medium">
+                      Giảm giá
+                    </button>
                   </div>
 
-                  <div className="text-md text-gray-500">
-                    {item.price.toLocaleString()}
+                  <div className="flex flex-col items-end min-w-[60px]">
+                    <span className="text-xs text-gray-400 mb-0.5">
+                      Chiết khấu
+                    </span>
+                    <span
+                      className={`text-md ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}>
+                      {item.discount > 0
+                        ? `-${item.discount.toLocaleString()}`
+                        : "0"}
+                    </span>
                   </div>
-                  <div className="text-md font-medium">
-                    {(
-                      (item.price - item.discount) *
-                      item.quantity
-                    ).toLocaleString()}
+
+                  <div className="flex flex-col items-end min-w-[60px]">
+                    <span className="text-xs text-gray-400 mb-0.5">
+                      Đơn giá
+                    </span>
+                    <span className="text-md text-gray-500">
+                      {item.price.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col items-end min-w-[60px]">
+                    <span className="text-xs text-gray-400 mb-0.5">
+                      Thành tiền
+                    </span>
+                    <span className="text-md font-medium">
+                      {(
+                        (item.price - item.discount) *
+                        item.quantity
+                      ).toLocaleString()}
+                    </span>
                   </div>
                 </div>
               </div>
