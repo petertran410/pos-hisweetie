@@ -194,8 +194,8 @@ export function CustomerDetailRow({
                   </div>
 
                   {/* ── Info fields: label trên, value dưới, 3 cột ── */}
-                  <div className="grid grid-cols-3 gap-x-8 border-b border-gray-200 pb-2 mb-4">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="grid grid-cols-3 gap-x-8 border-gray-200 pb-2 mb-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Điện thoại:
                       </label>
@@ -203,7 +203,7 @@ export function CustomerDetailRow({
                         {customer.contactNumber || "Chưa có"}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Sinh nhật:
                       </label>
@@ -213,7 +213,7 @@ export function CustomerDetailRow({
                           : "Chưa có"}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Giới tính:
                       </label>
@@ -226,7 +226,7 @@ export function CustomerDetailRow({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Email:
                       </label>
@@ -234,7 +234,7 @@ export function CustomerDetailRow({
                         {customer.email || "Chưa có"}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Facebook:
                       </label>
@@ -244,7 +244,7 @@ export function CustomerDetailRow({
                   </div>
 
                   {/* ── Địa chỉ ── */}
-                  {(() => {
+                  {/* {(() => {
                     const defaultAddr =
                       (customer as any).addresses?.find(
                         (a: any) => a.isDefault
@@ -267,7 +267,7 @@ export function CustomerDetailRow({
                         </div>
                       </div>
                     ) : null;
-                  })()}
+                  })()} */}
 
                   {/* ── Thông tin xuất hóa đơn ── */}
                   {(customer.invoiceBuyerName ||
