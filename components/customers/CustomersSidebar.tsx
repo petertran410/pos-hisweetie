@@ -53,7 +53,7 @@ function SimpleDropdown({
     <div ref={ref} className="relative">
       <div
         onClick={() => setOpen(!open)}
-        className={`flex items-center justify-between px-3 py-2 border rounded-lg text-sm cursor-pointer transition-all ${
+        className={`flex items-center justify-between px-2 py-1 border rounded-lg text-sm cursor-pointer transition-all ${
           open
             ? "border-blue-400 ring-2 ring-blue-100"
             : "hover:border-gray-400"
@@ -179,7 +179,7 @@ function GroupDropdown({
 
       <div
         onClick={() => setOpen(!open)}
-        className={`flex items-center justify-between px-3 py-2 border rounded-lg text-sm cursor-pointer transition-all ${
+        className={`flex items-center justify-between px-2 py-1 border rounded-lg text-sm cursor-pointer transition-all ${
           open
             ? "border-blue-400 ring-2 ring-blue-100"
             : "hover:border-gray-400"
@@ -295,7 +295,7 @@ function RangeInput({
         <input
           type="number"
           placeholder="Từ"
-          className="w-1/2 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-1/2 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
           value={fromValue ?? ""}
           onChange={(e) =>
             onFromChange(e.target.value ? Number(e.target.value) : undefined)
@@ -304,7 +304,7 @@ function RangeInput({
         <input
           type="number"
           placeholder="Đến"
-          className="w-1/2 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-1/2 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
           value={toValue ?? ""}
           onChange={(e) =>
             onToChange(e.target.value ? Number(e.target.value) : undefined)
@@ -477,7 +477,7 @@ export function CustomersSidebar({
     <>
       <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
         {/* Header (giống OrdersSidebar) */}
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10 rounded-t-xl">
+        <div className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-xl">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
             {activeFilterCount > 0 && (
@@ -495,7 +495,7 @@ export function CustomersSidebar({
           )}
         </div>
 
-        <div className="p-4 space-y-5">
+        <div className="px-4 py-2 space-y-3">
           {/* ── Nhóm khách hàng ── */}
           <GroupDropdown
             groups={groupsData?.data || []}
@@ -532,7 +532,7 @@ export function CustomersSidebar({
           <div className="border-t border-gray-100" />
 
           {/* ── Loại khách hàng ── */}
-          <StatusButtons
+          {/* <StatusButtons
             label="Loại khách hàng"
             options={[
               { value: "all", label: "Tất cả" },
@@ -541,12 +541,12 @@ export function CustomersSidebar({
             ]}
             value={customerType}
             onChange={setCustomerType}
-          />
+          /> */}
 
-          <div className="border-t border-gray-100" />
+          {/* <div className="border-t border-gray-100" /> */}
 
           {/* ── Giới tính ── */}
-          <StatusButtons
+          {/* <StatusButtons
             label="Giới tính"
             options={[
               { value: "all", label: "Tất cả" },
@@ -555,9 +555,9 @@ export function CustomersSidebar({
             ]}
             value={gender}
             onChange={setGender}
-          />
+          /> */}
 
-          <div className="border-t border-gray-100" />
+          {/* <div className="border-t border-gray-100" /> */}
 
           {/* ── Tổng bán ── */}
           <RangeInput
@@ -582,7 +582,7 @@ export function CustomersSidebar({
           <div className="border-t border-gray-100" />
 
           {/* ── Điểm ── */}
-          <RangeInput
+          {/* <RangeInput
             label="Điểm thưởng"
             fromValue={pointFrom}
             toValue={pointTo}
@@ -590,7 +590,7 @@ export function CustomersSidebar({
             onToChange={setPointTo}
           />
 
-          <div className="border-t border-gray-100" />
+          <div className="border-t border-gray-100" /> */}
 
           {/* ── Trạng thái ── */}
           <StatusButtons
