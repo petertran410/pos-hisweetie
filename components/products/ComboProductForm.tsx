@@ -14,6 +14,7 @@ import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
 import { CategoryDropdown } from "./CategoryDropdown";
 import { API_URL } from "@/lib/config/api";
+import { toast } from "sonner";
 
 interface ComboComponent {
   id?: number;
@@ -230,14 +231,17 @@ export function ComboProductForm({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Kích thước ảnh không được vượt quá 2MB");
+      e.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setImages((prev) => [
         ...prev,
-        {
-          file,
-          preview: reader.result as string,
-        },
+        { file, preview: reader.result as string },
       ]);
     };
     reader.readAsDataURL(file);

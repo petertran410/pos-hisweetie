@@ -13,6 +13,7 @@ import { CategoryDropdown } from "./CategoryDropdown";
 import { TrademarkDropdown } from "./TrademarkDropdown";
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 import { API_URL } from "@/lib/config/api";
+import { toast } from "sonner";
 
 interface ProductFormProps {
   product?: Product;
@@ -269,14 +270,17 @@ export function ProductForm({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Kích thước ảnh không được vượt quá 2MB");
+      e.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setImages((prev) => [
         ...prev,
-        {
-          file,
-          preview: reader.result as string,
-        },
+        { file, preview: reader.result as string },
       ]);
     };
     reader.readAsDataURL(file);
