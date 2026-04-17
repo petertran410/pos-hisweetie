@@ -78,6 +78,7 @@ export function RoleFormModal({ role, onClose }: RoleFormModalProps) {
               <label className="block text-sm font-medium mb-1">Mô tả</label>
               <textarea
                 value={formData.description}
+                maxLength={1000}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }

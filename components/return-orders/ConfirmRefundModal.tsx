@@ -352,7 +352,8 @@ export function ConfirmRefundModal({
           <label className="block text-sm font-medium mb-1">Ghi chú</label>
           <textarea
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => setNote(e.target.value.slice(0, 1000))}
+            maxLength={1000}
             rows={2}
             className="w-full px-3 py-2 border rounded-lg resize-none text-sm"
           />

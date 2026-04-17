@@ -276,6 +276,7 @@ export function BankAccountFormModal({
                   </label>
                   <textarea
                     value={formData.note}
+                    maxLength={1000}
                     onChange={(e) =>
                       setFormData({ ...formData, note: e.target.value })
                     }

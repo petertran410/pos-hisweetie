@@ -737,6 +737,7 @@ export function CustomerForm({
                     placeholder="Nhập ghi chú"
                     className="w-full px-3 py-2 border rounded-lg resize-none"
                     rows={3}
+                    maxLength={1000}
                   />
                 </div>
               </div>

@@ -315,6 +315,7 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
                 </label>
                 <textarea
                   {...register("comments")}
+                  maxLength={1000}
                   placeholder="Nhập ghi chú"
                   className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   rows={2}

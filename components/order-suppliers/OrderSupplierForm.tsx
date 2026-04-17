@@ -825,7 +825,8 @@ export function OrderSupplierForm({
             <label className="block text-md text-gray-600 mb-1">Ghi chú</label>
             <textarea
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => setNote(e.target.value.slice(0, 1000))}
+              maxLength={1000}
               disabled={isFormDisabled ? true : false}
               placeholder="Nhập ghi chú..."
               rows={2}

@@ -409,8 +409,12 @@ export function OrderCart({
               <textarea
                 value={deliveryInfo.noteForDriver || ""}
                 onChange={(e) =>
-                  handleDeliveryChange("noteForDriver", e.target.value)
+                  handleDeliveryChange(
+                    "noteForDriver",
+                    e.target.value.slice(0, 1000)
+                  )
                 }
+                maxLength={1000}
                 placeholder="Nhập ghi chú..."
                 className="w-full text-md border rounded-xl p-2 outline-none focus:border-blue-500 resize-none"
                 rows={3}

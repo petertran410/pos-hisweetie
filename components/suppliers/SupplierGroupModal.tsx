@@ -74,6 +74,7 @@ export function SupplierGroupModal({
             <label className="block text-sm font-medium mb-2">Ghi chú</label>
             <textarea
               {...register("description")}
+              maxLength={1000}
               placeholder="Nhập ghi chú"
               className="w-full border rounded px-3 py-2"
               rows={3}

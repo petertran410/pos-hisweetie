@@ -495,7 +495,8 @@ export function PackingLoadingForm({
               <label className="block text-sm font-medium mb-2">Ghi chú</label>
               <textarea
                 value={note}
-                onChange={(e) => setNote(e.target.value)}
+                onChange={(e) => setNote(e.target.value.slice(0, 1000))}
+                maxLength={1000}
                 className="w-full border rounded px-3 py-2"
                 rows={3}
               />

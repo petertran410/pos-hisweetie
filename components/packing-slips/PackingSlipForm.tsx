@@ -521,7 +521,8 @@ export function PackingSlipForm({
               <label className="block text-sm font-medium mb-2">Ghi chú</label>
               <textarea
                 value={note}
-                onChange={(e) => setNote(e.target.value)}
+                onChange={(e) => setNote(e.target.value.slice(0, 1000))}
+                maxLength={1000}
                 className="w-full text-md px-2 py-1.5 border rounded disabled:bg-gray-100 resize-none"
                 placeholder="Nhập ghi chú..."
               />

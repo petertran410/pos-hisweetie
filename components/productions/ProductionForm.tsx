@@ -421,7 +421,8 @@ export function ProductionForm({
                 </label>
                 <textarea
                   value={note}
-                  onChange={(e) => setNote(e.target.value)}
+                  onChange={(e) => setNote(e.target.value.slice(0, 1000))}
+                  maxLength={1000}
                   rows={3}
                   placeholder="Ghi chú..."
                   className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"

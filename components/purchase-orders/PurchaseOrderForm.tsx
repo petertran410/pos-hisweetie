@@ -936,7 +936,8 @@ export function PurchaseOrderForm({
             <label className="block text-md text-gray-600 mb-1">Ghi chú:</label>
             <textarea
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => setNote(e.target.value.slice(0, 1000))}
+              maxLength={1000}
               disabled={isFormDisabled ? true : false}
               className="w-full px-2 py-1.5 text-sm border rounded disabled:bg-gray-100 resize-none"
               rows={3}

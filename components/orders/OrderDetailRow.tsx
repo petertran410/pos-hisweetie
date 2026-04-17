@@ -589,7 +589,10 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         </label>
                         <textarea
                           value={description}
-                          onChange={(e) => setDescription(e.target.value)}
+                          onChange={(e) =>
+                            setDescription(e.target.value.slice(0, 1000))
+                          }
+                          maxLength={1000}
                           className="w-full px-3 py-2 text-md border rounded bg-white resize-none"
                           rows={4}
                           placeholder="Nhập ghi chú..."

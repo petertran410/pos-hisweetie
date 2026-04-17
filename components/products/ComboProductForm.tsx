@@ -690,6 +690,7 @@ export function ComboProductForm({
               <label className="block text-sm font-medium mb-1">Mô tả</label>
               <textarea
                 {...register("description")}
+                maxLength={1000}
                 className="w-full border rounded px-3 py-2 h-24"
                 placeholder="Nhập mô tả sản phẩm"
               />
@@ -701,6 +702,7 @@ export function ComboProductForm({
               </label>
               <textarea
                 {...register("orderTemplate")}
+                maxLength={1000}
                 className="w-full border rounded px-3 py-2 h-24"
                 placeholder="Nhập ghi chú đơn hàng"
               />

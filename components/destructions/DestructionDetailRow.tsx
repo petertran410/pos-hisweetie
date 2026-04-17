@@ -187,7 +187,8 @@ export function DestructionDetailRow({
             <p className="text-md text-gray-600 mb-1">Ghi chú</p>
             <textarea
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => setNote(e.target.value.slice(0, 1000))}
+              maxLength={1000}
               rows={3}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Nhập ghi chú..."

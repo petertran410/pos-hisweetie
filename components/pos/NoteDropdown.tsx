@@ -171,9 +171,10 @@ export function NoteDropdown({
                   ref={textareaRef}
                   value={customNote}
                   onChange={(e) => {
-                    handleCustomChange(e.target.value);
+                    handleCustomChange(e.target.value.slice(0, 1000));
                     adjustHeight();
                   }}
+                  maxLength={1000}
                   onClick={(e) => e.stopPropagation()}
                   onFocus={adjustHeight}
                   placeholder="Nhập ghi chú tùy chỉnh"

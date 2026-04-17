@@ -930,7 +930,10 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                 <>
                   <textarea
                     value={noteByDestination}
-                    onChange={(e) => setNoteByDestination(e.target.value)}
+                    onChange={(e) =>
+                      setNoteByDestination(e.target.value.slice(0, 1000))
+                    }
+                    maxLength={1000}
                     disabled={isCancelled}
                     placeholder="Nhập ghi chú từ chi nhánh nhận..."
                     rows={3}
@@ -951,7 +954,10 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                 <>
                   <textarea
                     value={noteBySource}
-                    onChange={(e) => setNoteBySource(e.target.value)}
+                    onChange={(e) =>
+                      setNoteBySource(e.target.value.slice(0, 1000))
+                    }
+                    maxLength={1000}
                     disabled={isCancelled}
                     placeholder="Nhập ghi chú cho phiếu chuyển hàng..."
                     rows={3}

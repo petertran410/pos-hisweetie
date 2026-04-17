@@ -833,7 +833,8 @@ export function CreateCashFlowModal({
               <label className="block text-sm font-medium mb-2">Ghi chú</label>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                maxLength={1000}
+                onChange={(e) => setDescription(e.target.value.slice(0, 1000))}
                 placeholder="Nhập ghi chú"
                 rows={3}
                 className="w-full px-3 py-2 border rounded-lg resize-none"

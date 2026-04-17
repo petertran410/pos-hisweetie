@@ -121,6 +121,7 @@ export function BranchFormModal({ branch, onClose }: BranchFormModalProps) {
               <label className="block text-sm font-medium mb-1">Địa chỉ</label>
               <textarea
                 value={formData.address}
+                maxLength={1000}
                 onChange={(e) =>
                   setFormData({ ...formData, address: e.target.value })
                 }

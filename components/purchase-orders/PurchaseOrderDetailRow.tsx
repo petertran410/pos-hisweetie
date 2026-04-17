@@ -450,7 +450,10 @@ export function PurchaseOrderDetailRow({
             <div className="mb-6">
               <textarea
                 value={editedDescription}
-                onChange={(e) => setEditedDescription(e.target.value)}
+                onChange={(e) =>
+                  setEditedDescription(e.target.value.slice(0, 1000))
+                }
+                maxLength={1000}
                 className="w-full px-2 py-1.5 text-sm border rounded-md disabled:bg-gray-100 resize-none"
                 rows={3}
                 placeholder="Nhập ghi chú"
