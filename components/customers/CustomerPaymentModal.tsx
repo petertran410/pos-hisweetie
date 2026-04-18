@@ -18,6 +18,7 @@ import {
 import { useBranchStore } from "@/lib/store/branch";
 import { useCustomer } from "@/lib/hooks/useCustomers";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
+import { createPortal } from "react-dom";
 
 interface CustomerPaymentModalProps {
   customerId: number;
@@ -99,6 +100,8 @@ export function CustomerPaymentModal({
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
+  const [mounted, setMounted] = useState(false);
+
   const datePickerRef = useRef<HTMLDivElement>(null);
   const timePickerRef = useRef<HTMLDivElement>(null);
   const collectorDropdownRef = useRef<HTMLDivElement>(null);
@@ -137,6 +140,10 @@ export function CustomerPaymentModal({
       alert(error.message || "Có lỗi xảy ra khi thanh toán");
     },
   });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (user?.id) {
@@ -424,7 +431,9 @@ export function CustomerPaymentModal({
     // wallet: "Thẻ",
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[99999]">
       <div className="bg-white rounded-lg w-[1100px] max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-6 border-b">
@@ -950,6 +959,7 @@ export function CustomerPaymentModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
