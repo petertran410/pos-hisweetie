@@ -758,15 +758,10 @@ export function CashFlowsSidebar({ onFiltersChange }: CashFlowsSidebarProps) {
           </label>
           <SimpleDropdown
             options={
-              branches?.data?.map((b: any) => ({
+              branches?.map((b: any) => ({
                 value: String(b.id),
                 label: b.name,
-              })) ??
-              branches?.map?.((b: any) => ({
-                value: String(b.id),
-                label: b.name,
-              })) ??
-              []
+              })) ?? []
             }
             value={branchId}
             placeholder="Tất cả chi nhánh"
