@@ -21,7 +21,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import Swal from "sweetalert2";
 import Link from "next/link";
 import type { CashFlow } from "@/lib/types/cashflow";
 
@@ -30,7 +29,6 @@ const METHOD_OPTIONS = [
   { value: "cash", label: "Tiền mặt" },
   { value: "transfer", label: "Chuyển khoản" },
   { value: "ewallet", label: "Ví điện tử" },
-  { value: "card", label: "Thẻ" },
 ];
 
 const MONTH_NAMES = [
@@ -348,7 +346,7 @@ export function EditCashFlowModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-2xl w-[680px] max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-xl shadow-2xl w-[800px] max-h-[90vh] flex flex-col overflow-hidden">
         {/* ── Header ── */}
         <div className="flex items-start justify-between px-6 pt-5 pb-3 border-b border-gray-100">
           <div>
