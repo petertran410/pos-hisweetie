@@ -529,8 +529,7 @@ export function CashFlowDetailRow({
                                     <td className="px-4 py-3 text-right text-md text-gray-400">
                                       -
                                     </td>
-                                    <td className="px-4 py-3 text-right text-md font-medium text-red-600">
-                                      -
+                                    <td className="px-4 py-3 text-right text-md font-medium text-green-600">
                                       {formatCurrency(
                                         Number(offset.refundAmount)
                                       )}
