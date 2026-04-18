@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useCreateCashFlow } from "@/lib/hooks/useCashflows";
 import { useCashFlowGroups } from "@/lib/hooks/useCashflowGroups";
 import { useCustomers } from "@/lib/hooks/useCustomers";
@@ -113,6 +113,10 @@ export function CreateCashFlowModal({
   );
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const accountDropdownRef = useRef<HTMLDivElement>(null);
+  const [invoiceDebtOffsets, setInvoiceDebtOffsets] = useState<
+    Record<number, string>
+  >({});
+  const debtOffsetsInitialized = useRef(false);
 
   const { data: bankAccounts } = useBankAccountsForPayment();
 
@@ -141,6 +145,19 @@ export function CreateCashFlowModal({
   const suppliers = suppliersData?.data || [];
   const users = usersData || [];
   const unpaidInvoices = unpaidInvoicesData?.data || [];
+  const customerDebt =
+    partnerType === "C" && selectedPartner
+      ? Number(selectedPartner.totalDebt || 0)
+      : 0;
+
+  const availableCredit = useMemo(() => {
+    if (partnerType !== "C" || !isReceipt || !selectedPartner) return 0;
+    const totalUnpaid = unpaidInvoices.reduce(
+      (sum: number, inv: any) => sum + Number(inv.debtAmount),
+      0
+    );
+    return Math.max(0, totalUnpaid - customerDebt);
+  }, [unpaidInvoices, customerDebt, partnerType, isReceipt, selectedPartner]);
 
   useEffect(() => {
     if (isOpen && user?.id) {
@@ -205,6 +222,32 @@ export function CreateCashFlowModal({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Reset debt offsets khi đổi partner
+  useEffect(() => {
+    setInvoiceDebtOffsets({});
+    debtOffsetsInitialized.current = false;
+  }, [selectedPartner?.id]);
+
+  // Auto-init debt offsets cho hóa đơn cũ nhất
+  useEffect(() => {
+    if (debtOffsetsInitialized.current || unpaidInvoices.length === 0) return;
+    debtOffsetsInitialized.current = true;
+
+    if (availableCredit <= 0) return;
+
+    // unpaidInvoices sorted DESC từ API → invoice cũ nhất ở cuối
+    const oldestInvoice = unpaidInvoices[unpaidInvoices.length - 1];
+    const defaultOffset = Math.min(
+      availableCredit,
+      Number(oldestInvoice.debtAmount)
+    );
+    if (defaultOffset > 0) {
+      setInvoiceDebtOffsets({
+        [oldestInvoice.id]: formatNumberInput(defaultOffset.toString()),
+      });
+    }
+  }, [unpaidInvoices, availableCredit]);
+
   if (!isOpen) return null;
 
   const selectedGroup = groups.find(
@@ -263,7 +306,11 @@ export function CreateCashFlowModal({
         if (remaining <= 0) break;
 
         const debtAmount = Number(invoice.debtAmount);
-        const paymentForThisInvoice = Math.min(remaining, debtAmount);
+        const debtOffsetForInvoice = parseNumberInput(
+          invoiceDebtOffsets[invoice.id] || "0"
+        );
+        const maxForInvoice = Math.max(0, debtAmount - debtOffsetForInvoice);
+        const paymentForThisInvoice = Math.min(remaining, maxForInvoice);
         newPayments[invoice.id] = formatNumberInput(
           paymentForThisInvoice.toString()
         );
@@ -275,7 +322,20 @@ export function CreateCashFlowModal({
   };
 
   const handleInvoicePaymentChange = (invoiceId: number, value: string) => {
-    const formatted = formatNumberInput(value);
+    const invoice = unpaidInvoices.find((inv: any) => inv.id === invoiceId);
+    if (!invoice) return;
+
+    const debtOffsetForInvoice = parseNumberInput(
+      invoiceDebtOffsets[invoiceId] || "0"
+    );
+    const maxAmount = Math.max(
+      0,
+      Number(invoice.debtAmount) - debtOffsetForInvoice
+    );
+    const numericValue = parseNumberInput(value);
+    const limitedValue = Math.min(numericValue, maxAmount);
+
+    const formatted = formatNumberInput(limitedValue.toString());
     setInvoicePayments((prev) => ({
       ...prev,
       [invoiceId]: formatted,
@@ -289,6 +349,43 @@ export function CreateCashFlowModal({
     setAmount(formatNumberInput(actualTotal.toString()));
   };
 
+  const handleInvoiceDebtOffsetChange = (invoiceId: number, value: string) => {
+    const invoice = unpaidInvoices.find((inv: any) => inv.id === invoiceId);
+    if (!invoice) return;
+
+    const otherTotal = Object.entries(invoiceDebtOffsets)
+      .filter(([id]) => Number(id) !== invoiceId)
+      .reduce((sum, [_, amt]) => sum + parseNumberInput(amt), 0);
+
+    const remaining = Math.max(0, availableCredit - otherTotal);
+    const maxAmount = Math.min(Number(invoice.debtAmount), remaining);
+    const numericValue = parseNumberInput(value);
+    const limitedValue = Math.min(numericValue, maxAmount);
+    const formatted = formatNumberInput(limitedValue.toString());
+    setInvoiceDebtOffsets((prev) => ({
+      ...prev,
+      [invoiceId]: formatted,
+    }));
+
+    // Cap lại tiền thu nếu vượt phần còn lại sau cấn trừ
+    const currentPayment = parseNumberInput(invoicePayments[invoiceId] || "0");
+    const maxPayment = Math.max(0, Number(invoice.debtAmount) - limitedValue);
+    if (currentPayment > maxPayment) {
+      const newPayments = {
+        ...invoicePayments,
+        [invoiceId]: formatNumberInput(maxPayment.toString()),
+      };
+      setInvoicePayments(newPayments);
+
+      // Recalculate total amount
+      const actualTotal = Object.entries(newPayments).reduce(
+        (sum, [_, amt]) => sum + parseNumberInput(amt),
+        0
+      );
+      setAmount(formatNumberInput(actualTotal.toString()));
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedBranch?.id) {
       alert("Vui lòng chọn chi nhánh");
@@ -296,7 +393,34 @@ export function CreateCashFlowModal({
     }
 
     const numericAmount = parseNumberInput(amount);
-    if (!numericAmount || numericAmount <= 0) {
+    // Tính debtOffsets trước validation
+    const debtOffsetsToApply =
+      affectDebt && allocateToInvoices && availableCredit > 0
+        ? Object.entries(invoiceDebtOffsets)
+            .filter(([_, amt]) => parseNumberInput(amt) > 0)
+            .map(([invoiceId, amt]) => ({
+              invoiceId: Number(invoiceId),
+              amount: parseNumberInput(amt),
+            }))
+        : [];
+
+    const totalDebtOffset = debtOffsetsToApply.reduce(
+      (sum, d) => sum + d.amount,
+      0
+    );
+
+    if (totalDebtOffset > availableCredit) {
+      alert(
+        `Tổng cấn trừ nợ (${formatNumberInput(totalDebtOffset.toString())}) vượt quá giới hạn cho phép (${formatNumberInput(availableCredit.toString())})`
+      );
+      return;
+    }
+
+    // Cho phép amount=0 nếu có debtOffsets
+    if (
+      (!numericAmount || numericAmount <= 0) &&
+      debtOffsetsToApply.length === 0
+    ) {
       alert("Vui lòng nhập số tiền hợp lệ");
       return;
     }
@@ -345,6 +469,8 @@ export function CreateCashFlowModal({
         allocateToInvoices: affectDebt ? allocateToInvoices : false,
         invoiceAllocations:
           affectDebt && allocateToInvoices ? invoiceAllocations : undefined,
+        debtOffsets:
+          debtOffsetsToApply.length > 0 ? debtOffsetsToApply : undefined,
       });
 
       resetForm();
@@ -372,6 +498,8 @@ export function CreateCashFlowModal({
     setInvoicePayments({});
     setSelectedAccountId(null);
     setShowAccountDropdown(false);
+    setInvoiceDebtOffsets({});
+    debtOffsetsInitialized.current = false;
   };
 
   return (
@@ -888,6 +1016,15 @@ export function CreateCashFlowModal({
 
                     {allocateToInvoices && unpaidInvoices.length > 0 && (
                       <div className="border rounded-lg overflow-hidden mt-2">
+                        {availableCredit > 0 && (
+                          <div className="px-4 py-2 bg-blue-50 border-b text-xs text-blue-700">
+                            Có thể cấn trừ tối đa{" "}
+                            <span className="font-semibold">
+                              {formatNumberInput(availableCredit.toString())}
+                            </span>{" "}
+                            từ credit hiện có của khách hàng
+                          </div>
+                        )}
                         <table className="w-full text-sm">
                           <thead className="bg-gray-100 border-b">
                             <tr>
@@ -903,6 +1040,9 @@ export function CreateCashFlowModal({
                               </th>
                               <th className="px-3 py-2 text-right">
                                 Còn cần thu
+                              </th>
+                              <th className="px-3 py-2 text-right">
+                                Cấn trừ nợ
                               </th>
                               <th className="px-3 py-2 text-right">Tiền thu</th>
                             </tr>
@@ -930,6 +1070,20 @@ export function CreateCashFlowModal({
                                   {formatNumberInput(
                                     invoice.debtAmount.toString()
                                   )}
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="text"
+                                    value={invoiceDebtOffsets[invoice.id] || ""}
+                                    onChange={(e) =>
+                                      handleInvoiceDebtOffsetChange(
+                                        invoice.id,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="0"
+                                    className="w-full px-2 py-1 border rounded text-right"
+                                  />
                                 </td>
                                 <td className="px-3 py-2">
                                   <input
