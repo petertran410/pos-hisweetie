@@ -1,4 +1,3 @@
-// components/cashflows/CashFlowDetailRow.tsx
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
@@ -7,11 +6,13 @@ import {
   useRelatedInvoicePayments,
   useCancelCashFlow,
 } from "@/lib/hooks/useCashflows";
-import { Loader2, Printer, Trash2, Edit } from "lucide-react";
+import { ExternalLink, Loader2, Printer } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { printEntity } from "@/lib/utils/print";
 import Swal from "sweetalert2";
 import { useAuthStore } from "@/lib/store/auth";
+import Link from "next/link";
 
 interface CashFlowDetailRowProps {
   cashFlowId: number;
@@ -32,7 +33,7 @@ const getStatusColor = (status: number) => {
 const getStatusText = (status: number, isReceipt: boolean) => {
   switch (status) {
     case 0:
-      return isReceipt ? "Đã thanh toán" : "Đã chi";
+      return isReceipt ? "Đã thu" : "Đã chi";
     case 2:
       return "Đã hủy";
     default:
@@ -64,10 +65,13 @@ export function CashFlowDetailRow({
   const cancelCashFlow = useCancelCashFlow();
   const { user } = useAuthStore();
 
+  console.log(cashFlow);
+
   const [activeTab, setActiveTab] = useState<"info" | "invoices">("info");
+  const [isPrinting, setIsPrinting] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Sticky wrapper theo chiều ngang scroll (giống InvoiceDetailRow)
+  // Sticky wrapper theo chiều ngang scroll
   useLayoutEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -94,255 +98,296 @@ export function CashFlowDetailRow({
     };
   }, [cashFlow]);
 
-  const handleDelete = async () => {
+  const handleCancel = async () => {
     if (!cashFlow) return;
-
     const result = await Swal.fire({
       title: `Xác nhận hủy ${cashFlow.isReceipt ? "phiếu thu" : "phiếu chi"}`,
-      html: `Bạn có chắc chắn muốn hủy <b>${cashFlow.code}</b>?<br/>Thao tác này không thể hoàn tác.`,
+      text: `Bạn có chắc muốn hủy ${cashFlow.code}?`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#dc2626",
+      confirmButtonColor: "#d33",
       cancelButtonColor: "#6b7280",
-      confirmButtonText: "Hủy phiếu",
+      confirmButtonText: "Xác nhận hủy",
       cancelButtonText: "Đóng",
     });
-
-    if (result.isConfirmed) {
-      try {
-        await cancelCashFlow.mutateAsync(cashFlowId);
-      } catch (error: any) {
-        toast.error(error.message || "Có lỗi xảy ra");
-      }
+    if (!result.isConfirmed) return;
+    try {
+      await cancelCashFlow.mutateAsync(cashFlow.id);
+      toast.success(`Đã hủy ${cashFlow.code}`);
+    } catch {
+      toast.error("Hủy phiếu thất bại");
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    if (!cashFlow) return;
+    setIsPrinting(true);
+    try {
+      await printEntity("cashflows", cashFlow.id);
+    } catch (err: any) {
+      toast.error(err?.message || "In thất bại");
+    } finally {
+      setIsPrinting(false);
+    }
   };
+
+  // Derived values
+  const partnerName =
+    cashFlow?.customer?.name ||
+    cashFlow?.supplier?.name ||
+    cashFlow?.partnerName ||
+    null;
+
+  const partnerCode =
+    cashFlow?.partnerType === "C" ? cashFlow?.customer?.code : null;
+
+  const hasInvoicePayments =
+    Array.isArray(invoicePayments) && invoicePayments.length > 0;
+
+  const isCancelled = cashFlow?.status === 2;
+
+  const isAdmin = user?.roles?.some(
+    (r: string) => r === "Admin" || r === "Super Admin"
+  );
+  const canCancel = !isCancelled && isAdmin;
 
   if (isLoading) {
     return (
       <tr>
-        <td colSpan={colSpan} className="px-6 py-8">
-          <div className="flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-500">Đang tải...</span>
+        <td colSpan={colSpan} className="p-0">
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
           </div>
         </td>
       </tr>
     );
   }
 
-  if (!cashFlow) {
-    return (
-      <tr>
-        <td colSpan={colSpan} className="px-6 py-8 text-center text-red-500">
-          Không tìm thấy phiếu thu/chi
-        </td>
-      </tr>
-    );
-  }
-
-  const hasInvoicePayments = invoicePayments && invoicePayments.length > 0;
-  const tabs = [
-    { key: "info" as const, label: "Thông tin" },
-    ...(hasInvoicePayments
-      ? [
-          {
-            key: "invoices" as const,
-            label: `Hóa đơn liên quan (${invoicePayments.length})`,
-          },
-        ]
-      : []),
-  ];
-
-  const isCancelled = cashFlow.status === 2;
+  if (!cashFlow) return null;
 
   return (
-    <tr>
-      <td colSpan={colSpan} className="p-0">
-        <div ref={wrapperRef} className="px-6 py-6 bg-gray-50">
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div className="p-6">
-              {/* ── Header ── */}
-              <div className="border-b border-gray-200 pb-4 mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <h3 className="text-xl font-extrabold text-gray-800">
-                      {cashFlow.isReceipt ? "Phiếu thu" : "Phiếu chi"}{" "}
-                      <span className="text-lg font-thin">{cashFlow.code}</span>
-                    </h3>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(cashFlow.status)}`}>
-                      {getStatusText(cashFlow.status, cashFlow.isReceipt)}
+    <tr className="border-b-2 border-blue-400">
+      <td colSpan={colSpan} className="p-0 bg-gray-50">
+        <div ref={wrapperRef} className="overflow-hidden">
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            {/* ── Header ── */}
+            <div className="flex items-center justify-between px-6 pt-3 border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold text-gray-900">
+                  {cashFlow.code}
+                </span>
+                <span className="text-gray-400">-</span>
+                {/* Title + status */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {partnerName ? (
+                    <>
+                      {partnerCode ? (
+                        <Link
+                          href={`/khach-hang?Code=${partnerCode}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-lg font-semibold text-blue-600 hover:underline"
+                          onClick={(e) => e.stopPropagation()}>
+                          {partnerName}
+                        </Link>
+                      ) : (
+                        <span className="text-lg font-semibold text-gray-800">
+                          {partnerName}
+                        </span>
+                      )}
+                      {partnerCode && (
+                        <Link
+                          href={`/khach-hang?Code=${partnerCode}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          onClick={(e) => e.stopPropagation()}>
+                          <ExternalLink className="w-4 h-4" />
+                        </Link>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-lg font-semibold text-gray-800">
+                      Không xác định
                     </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handlePrint}
-                      className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                      title="In">
-                      <Printer className="w-4 h-4" />
-                    </button>
-                  </div>
+                  )}
+
+                  <span
+                    className={`ml-1 px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(cashFlow.status)}`}>
+                    {getStatusText(cashFlow.status, cashFlow.isReceipt)}
+                  </span>
                 </div>
               </div>
 
-              {/* ── Tabs ── */}
-              {tabs.length > 1 && (
-                <div className="flex gap-4 border-b border-gray-200 mb-6">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveTab(tab.key)}
-                      className={`pb-2 text-md font-medium border-b-2 transition-colors ${
-                        activeTab === tab.key
-                          ? "border-blue-600 text-blue-600"
-                          : "border-transparent text-gray-500 hover:text-gray-700"
-                      }`}>
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* Right: mã phiếu + chi nhánh */}
+              <span className="text-sm text-gray-600 font-medium">
+                {cashFlow.branchName || cashFlow.branch?.name || "-"}
+              </span>
+            </div>
 
-              {/* ── Tab: Thông tin ── */}
+            {/* ── Tabs ── */}
+            <div className="flex gap-1 px-6 border-b border-gray-100">
+              {[
+                { key: "info", label: "Thông tin" },
+                ...(hasInvoicePayments
+                  ? [{ key: "invoices", label: "Hóa đơn liên quan" }]
+                  : []),
+              ].map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setActiveTab(t.key as any)}
+                  className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === t.key
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── Content ── */}
+            <div className="px-6 py-3 space-y-2">
+              {/* Tab: Thông tin */}
               {activeTab === "info" && (
-                <div className="space-y-6">
-                  {/* Row 1: Người tạo, Người thu/chi, Thời gian, Chi nhánh */}
-                  <div className="grid grid-cols-4 gap-6">
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Người tạo
+                <>
+                  {/* Row 1: Người thu/chi | Thời gian | Chi nhánh | Loại phiếu */}
+                  <div className="grid grid-cols-4 gap-x-8 border-gray-200 pb-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                      <label className="block text-sm text-gray-500">
+                        {cashFlow.isReceipt ? "Người thu:" : "Người chi:"}
                       </label>
-                      <span className="text-md text-gray-900 font-medium">
+                      <span className="block text-sm text-gray-900">
                         {cashFlow.creatorName || cashFlow.creator?.name || "-"}
                       </span>
                     </div>
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        {cashFlow.isReceipt ? "Người thu" : "Người chi"}
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                      <label className="block text-sm text-gray-500">
+                        Thời gian:
                       </label>
-                      <span className="text-md text-gray-900 font-medium">
-                        {cashFlow.creatorName || cashFlow.creator?.name || "-"}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Thời gian
-                      </label>
-                      <span className="text-md text-gray-900">
+                      <span className="block text-sm text-gray-900">
                         {formatDateTime(cashFlow.transDate)}
                       </span>
                     </div>
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Chi nhánh
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                      <label className="block text-sm text-gray-500">
+                        Chi nhánh:
                       </label>
-                      <span className="text-md text-gray-900">
+                      <span className="block text-sm text-gray-900">
                         {cashFlow.branchName || cashFlow.branch?.name || "-"}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                      <label className="block text-sm text-gray-500">
+                        Loại phiếu:
+                      </label>
+                      <span className="block text-sm text-gray-900">
+                        {cashFlow.isReceipt ? "Phiếu thu" : "Phiếu chi"}
                       </span>
                     </div>
                   </div>
 
-                  {/* Row 2: Số tiền, Loại thu/chi, Phương thức, Tài khoản NH */}
-                  <div className="grid grid-cols-4 gap-6">
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Số tiền
+                  {/* Row 2: Số tiền | Loại thu/chi | Phương thức | Tài khoản NH */}
+                  <div className="grid grid-cols-4 gap-x-8 border-gray-200 pb-2 mb-2">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                      <label className="block text-sm text-gray-500">
+                        Số tiền:
                       </label>
-                      <span
-                        className={`text-lg font-semibold ${
-                          cashFlow.isReceipt ? "text-green-600" : "text-red-600"
-                        }`}>
+                      <span className="block text-sm text-gray-900">
                         {cashFlow.isReceipt ? "+" : "-"}
                         {formatCurrency(Number(cashFlow.amount))}
                       </span>
                     </div>
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        {cashFlow.isReceipt ? "Loại thu" : "Loại chi"}
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                      <label className="block text-sm text-gray-500">
+                        {cashFlow.isReceipt ? "Loại thu:" : "Loại chi:"}
                       </label>
-                      <span className="text-md text-gray-900">
+                      <span className="block text-sm text-gray-900">
                         {cashFlow.cashFlowGroupName ||
                           cashFlow.cashFlowGroup?.name ||
                           "-"}
                       </span>
                     </div>
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Phương thức thanh toán
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                      <label className="block text-sm text-gray-500">
+                        Phương thức:
                       </label>
-                      <span className="text-md text-gray-900">
+                      <span className="block text-sm text-gray-900">
                         {getMethodText(cashFlow.method)}
                       </span>
                     </div>
-                    {cashFlow.account && (
-                      <div>
-                        <label className="block text-md font-medium text-gray-500 mb-1.5">
-                          Tài khoản ngân hàng
+                    {cashFlow.account ? (
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="block text-sm text-gray-500">
+                          Tài khoản ngân hàng:
                         </label>
-                        <span className="text-md text-gray-900">
+                        <span className="block text-sm text-gray-900">
                           {cashFlow.account.bankName} -{" "}
                           {cashFlow.account.accountNumber}
                         </span>
                       </div>
+                    ) : (
+                      <div />
                     )}
                   </div>
 
-                  {/* Đối tượng nộp/nhận */}
-                  <div>
-                    <label className="block text-md font-medium text-gray-500 mb-2">
-                      {cashFlow.isReceipt ? "Người nộp" : "Người nhận"}
-                    </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                      <p className="text-md text-gray-900">
-                        {cashFlow.partnerName && `${cashFlow.partnerName}`}
-                        {cashFlow.partnerType === "C" &&
-                          cashFlow.customer?.code &&
-                          ` - ${cashFlow.customer.code}`}
-                        {cashFlow.partnerType === "S" &&
-                          cashFlow.supplier?.code &&
-                          ` - ${cashFlow.supplier.code}`}
-                        {cashFlow.contactNumber &&
-                          ` - ${cashFlow.contactNumber}`}
-                        {!cashFlow.partnerName &&
-                          !cashFlow.customer?.code &&
-                          !cashFlow.supplier?.code &&
-                          !cashFlow.contactNumber &&
-                          "-"}
-                      </p>
-                      {(cashFlow.address || cashFlow.wardName) && (
-                        <p className="text-md text-gray-600 mt-1">
-                          {[
-                            cashFlow.address,
-                            cashFlow.wardName,
-                            cashFlow.customer?.cityName,
-                            cashFlow.customer?.districtName,
-                          ]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </p>
+                  {/* Row 3: Đối tượng */}
+                  {partnerName && (
+                    <div className="grid grid-cols-4 gap-6">
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="block text-sm text-gray-500">
+                          {cashFlow.isReceipt
+                            ? "Đối tượng nộp:"
+                            : "Đối tượng nhận:"}
+                        </label>
+                        <span className="block text-sm text-gray-900">
+                          {partnerName}
+                        </span>
+                      </div>
+                      {(cashFlow.customer?.contactNumber ||
+                        cashFlow.supplier?.contactNumber ||
+                        cashFlow.contactNumber) && (
+                        <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                          <label className="block text-sm text-gray-500">
+                            Số điện thoại:
+                          </label>
+                          <span className="block text-sm text-gray-900">
+                            {cashFlow.customer?.contactNumber ||
+                              cashFlow.supplier?.contactNumber ||
+                              cashFlow.contactNumber}
+                          </span>
+                        </div>
+                      )}
+                      {cashFlow.address && (
+                        <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                          <label className="block text-sm text-gray-500">
+                            Địa chỉ:
+                          </label>
+                          <span className="block text-sm text-gray-900">
+                            {cashFlow.customer?.invoiceAddress} -{" "}
+                            {cashFlow.customer?.invoiceCityName} -{" "}
+                            {cashFlow.customer?.invoiceWardName}
+                          </span>
+                        </div>
                       )}
                     </div>
-                  </div>
+                  )}
 
                   {/* Ghi chú */}
                   <div>
-                    <label className="block text-md font-medium text-gray-500 mb-2">
-                      Ghi chú
+                    <label className="block text-sm text-gray-500">
+                      Ghi chú:
                     </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div className="w-full px-3 py-2 text-md border rounded bg-gray-50 min-h-[60px]">
                       <p className="text-md text-gray-900">
                         {cashFlow.description || "Chưa có ghi chú"}
                       </p>
                     </div>
                   </div>
-                </div>
+                </>
               )}
 
-              {/* ── Tab: Hóa đơn liên quan ── */}
+              {/* Tab: Hóa đơn liên quan */}
               {activeTab === "invoices" && hasInvoicePayments && (
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
                   <table className="w-full">
@@ -420,34 +465,25 @@ export function CashFlowDetailRow({
                 </div>
               )}
 
-              {/* ── Action footer ── */}
-              <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
+              {/* ── Footer actions ── */}
+              <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-200">
                 <div className="flex gap-2">
-                  {!isCancelled && (
+                  {canCancel && (
                     <button
-                      onClick={handleDelete}
-                      className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors flex items-center gap-2">
-                      <Trash2 className="w-4 h-4" />
-                      Hủy phiếu
+                      onClick={handleCancel}
+                      disabled={cancelCashFlow.isPending}
+                      className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      {cancelCashFlow.isPending ? "Đang xử lý..." : "Hủy"}
                     </button>
                   )}
                 </div>
                 <div className="flex gap-2">
-                  {!isCancelled && (
-                    <button
-                      onClick={() =>
-                        toast.info("Chức năng chỉnh sửa đang được phát triển")
-                      }
-                      className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2">
-                      <Edit className="w-4 h-4" />
-                      Chỉnh sửa
-                    </button>
-                  )}
                   <button
                     onClick={handlePrint}
-                    className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2">
+                    disabled={isPrinting || isCancelled}
+                    className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Printer className="w-4 h-4" />
-                    In
+                    {isPrinting ? "Đang in..." : "In"}
                   </button>
                 </div>
               </div>

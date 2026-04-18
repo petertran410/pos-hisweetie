@@ -50,9 +50,9 @@ export interface CashFlow {
     contactNumber: string | null;
     address: string | null;
     totalDebt: string;
-    wardName: string | null;
-    cityName: string | null;
-    districtName: string | null;
+    invoiceAddress: string | "";
+    invoiceCityName: string | "";
+    invoiceWardName: string | "";
   };
   supplier?: {
     id: number;
