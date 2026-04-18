@@ -1,15 +1,10 @@
 // components/products/ProductDetailRow.tsx
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import {
-  useProduct,
-  useDeleteProduct,
-  useProductInventoryLogs,
-} from "@/lib/hooks/useProducts";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useProduct, useDeleteProduct } from "@/lib/hooks/useProducts";
 import { useBranchStore } from "@/lib/store/branch";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import Swal from "sweetalert2";
 import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
@@ -52,7 +47,9 @@ export function ProductDetailRow({
   const canUpdate = usePermission("products", "update");
   const canDelete = usePermission("products", "delete");
 
-  const [activeTab, setActiveTab] = useState<"info" | "inventoryLog">("info");
+  const [activeTab, setActiveTab] = useState<
+    "info" | "description" | "inventoryLog" | "inventory"
+  >("info");
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -101,7 +98,7 @@ export function ProductDetailRow({
     );
   }
 
-  // ── Edit mode: mở modal form tương ứng ──
+  // ── Edit mode ──
   if (isEditing) {
     const handleCloseEdit = () => setIsEditing(false);
     const handleSuccess = () => setIsEditing(false);
@@ -198,6 +195,15 @@ export function ProductDetailRow({
   );
   const startIndex = (currentPage - 1) * itemsPerPage;
 
+  // Nhóm hàng chain
+  const categoryChain = [
+    product.parentName,
+    product.middleName,
+    product.childName,
+  ]
+    .filter(Boolean)
+    .join(" >> ");
+
   const handleDelete = async () => {
     const result = await Swal.fire({
       title: "Xác nhận xóa",
@@ -213,38 +219,21 @@ export function ProductDetailRow({
     }
   };
 
+  const TABS = [
+    { key: "info", label: "Thông tin" },
+    { key: "description", label: "Mô tả, ghi chú" },
+    { key: "inventoryLog", label: "Thẻ kho" },
+    { key: "inventory", label: "Tồn kho" },
+  ];
+
   return (
     <tr>
       <td colSpan={colSpan} className="p-0">
         <div ref={wrapperRef} className="bg-white">
-          <div className="p-5 space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold text-gray-800">
-                  {product.name}
-                </span>
-                <span className="text-sm text-gray-500">({product.code})</span>
-                <span
-                  className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${
-                    product.isActive
-                      ? "bg-green-100 text-green-700"
-                      : "bg-red-100 text-red-700"
-                  }`}>
-                  {product.isActive ? "Hoạt động" : "Ngừng"}
-                </span>
-              </div>
-              <span className="text-sm text-gray-600 font-medium">
-                {selectedBranch?.name || "-"}
-              </span>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex gap-1 border-gray-100">
-              {[
-                { key: "info", label: "Thông tin" },
-                { key: "inventoryLog", label: "Lịch sử tồn kho" },
-              ].map((t) => (
+          <div className="p-5">
+            {/* ── Tabs ── */}
+            <div className="flex gap-1 mb-4">
+              {TABS.map((t) => (
                 <button
                   key={t.key}
                   onClick={() => setActiveTab(t.key as any)}
@@ -258,221 +247,169 @@ export function ProductDetailRow({
               ))}
             </div>
 
-            {/* Tab Content */}
+            {/* ═══════════════════════════════════════════
+                TAB 1: THÔNG TIN — giống hình 1
+               ═══════════════════════════════════════════ */}
             {activeTab === "info" && (
-              <div className="space-y-4">
-                {/* Info grid 3 cols */}
-                <div className="grid grid-cols-3 gap-x-8 border-gray-200 pb-2 mb-2">
-                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                    <label className="block text-sm text-gray-500">
-                      Mã hàng:
-                    </label>
-                    <span className="block text-sm text-gray-900">
+              <div className="space-y-5">
+                {/* Header: Ảnh + Tên + Badges */}
+                <div className="flex gap-4">
+                  {/* Ảnh sản phẩm */}
+                  <div className="w-24 h-24 rounded-lg border border-gray-200 overflow-hidden flex-shrink-0 bg-gray-50 flex items-center justify-center">
+                    {product.images?.[0] ? (
+                      <img
+                        src={product.images[0].image}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xs text-gray-400">N/A</span>
+                    )}
+                  </div>
+
+                  {/* Tên + Nhóm + Badges */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-gray-900">
+                        {product.name}
+                      </span>
+                      {product.unit && (
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">
+                          {product.unit}
+                        </span>
+                      )}
+                    </div>
+
+                    {categoryChain && (
+                      <span className="text-sm text-gray-500">
+                        Nhóm hàng: {categoryChain}
+                      </span>
+                    )}
+
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+                        {getProductTypeLabel(product.type)}
+                      </span>
+                      {product.isDirectSale && (
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                          Bán trực tiếp
+                        </span>
+                      )}
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          product.isRewardPoint
+                            ? "bg-green-50 text-green-700"
+                            : "bg-orange-50 text-orange-600"
+                        }`}>
+                        {product.isRewardPoint
+                          ? "Tích điểm"
+                          : "Không tích điểm"}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          product.isActive
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}>
+                        {product.isActive ? "Hoạt động" : "Ngừng"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info grid 4 cols — giống hình 1 */}
+                <div className="grid grid-cols-4 gap-x-6">
+                  <div className="flex flex-col gap-1 py-2 border-b">
+                    <span className="text-xs text-gray-500">Mã hàng</span>
+                    <span className="text-sm font-medium text-gray-900">
                       {product.code}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                    <label className="block text-sm text-gray-500">
-                      Loại sản phẩm:
-                    </label>
-                    <span className="block text-sm text-gray-900">
-                      {getProductTypeLabel(product.type)}
+                  <div className="flex flex-col gap-1 py-2 border-b">
+                    <span className="text-xs text-gray-500">Tồn kho</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {currentBranchInventory
+                        ? Number(currentBranchInventory.onHand).toLocaleString()
+                        : "0"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                    <label className="block text-sm text-gray-500">
-                      Thương hiệu:
-                    </label>
-                    <span className="block text-sm text-gray-900">
+                  <div className="flex flex-col gap-1 py-2 border-b">
+                    <span className="text-xs text-gray-500">Định mức tồn</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {currentBranchInventory
+                        ? `${Number(currentBranchInventory.minQuality).toLocaleString()} - ${Number(currentBranchInventory.maxQuality).toLocaleString()}`
+                        : "0 - 0"}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1 py-2 border-b">
+                    <span className="text-xs text-gray-500">Thương hiệu</span>
+                    <span className="text-sm font-medium text-gray-900">
                       {product.tradeMark?.name || "-"}
                     </span>
                   </div>
 
-                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                    <label className="block text-sm text-gray-500">
-                      Loại Hàng:
-                    </label>
-                    <span className="block text-sm text-gray-900">
-                      {product.parentName || "-"}
+                  <div className="flex flex-col gap-1 py-2 border-b">
+                    <span className="text-xs text-gray-500">Giá vốn</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {currentBranchInventory
+                        ? Number(currentBranchInventory.cost).toLocaleString()
+                        : "0"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                    <label className="block text-sm text-gray-500">
-                      Nguồn Gốc:
-                    </label>
-                    <span className="block text-sm text-gray-900">
-                      {product.middleName || "-"}
+                  <div className="flex flex-col gap-1 py-2 border-b">
+                    <span className="text-xs text-gray-500">Giá bán</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {Number(product.basePrice).toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                    <label className="block text-sm text-gray-500">
-                      Danh Mục:
-                    </label>
-                    <span className="block text-sm text-gray-900">
-                      {product.childName || "-"}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                    <label className="block text-sm text-gray-500">
-                      Đơn vị:
-                    </label>
-                    <span className="block text-sm text-gray-900">
-                      {product.unit || "-"}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                    <label className="block text-sm text-gray-500">
-                      Khối lượng:
-                    </label>
-                    <span className="block text-sm text-gray-900">
+                  <div className="flex flex-col gap-1 py-2 border-b">
+                    <span className="text-xs text-gray-500">Trọng lượng</span>
+                    <span className="text-sm font-medium text-gray-900">
                       {product.weight
                         ? `${Number(product.weight).toLocaleString()} ${product.weightUnit || "kg"}`
                         : "-"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                    <label className="block text-sm text-gray-500">
-                      Ngày tạo:
-                    </label>
-                    <span className="block text-sm text-gray-900">
+                  <div className="flex flex-col gap-1 py-2 border-b">
+                    <span className="text-xs text-gray-500">Ngày tạo</span>
+                    <span className="text-sm font-medium text-gray-900">
                       {formatDateTime(product.createdAt)}
                     </span>
                   </div>
                 </div>
 
-                {/* Tồn kho & Giá */}
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Tồn kho */}
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                      Thông tin tồn kho
-                    </h4>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Giá vốn:</span>
-                      <span className="font-medium">
-                        {currentBranchInventory
-                          ? Number(
-                              currentBranchInventory.cost
-                            ).toLocaleString() + " đ"
-                          : "0 đ"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Tồn kho:</span>
-                      <span className="font-medium">
-                        {currentBranchInventory
-                          ? Number(
-                              currentBranchInventory.onHand
-                            ).toLocaleString()
-                          : "0"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Định mức min:</span>
-                      <span className="font-medium">
-                        {currentBranchInventory
-                          ? Number(
-                              currentBranchInventory.minQuality
-                            ).toLocaleString()
-                          : "0"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Định mức max:</span>
-                      <span className="font-medium">
-                        {currentBranchInventory
-                          ? Number(
-                              currentBranchInventory.maxQuality
-                            ).toLocaleString()
-                          : "0"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Giá bán */}
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                      Thông tin giá
-                    </h4>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Giá bán lẻ:</span>
-                      <span className="font-semibold text-blue-600">
-                        {Number(product.basePrice).toLocaleString()} đ
-                      </span>
-                    </div>
-                    {(product.type === 1 || product.type === 4) && (
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-500">
-                            Tổng giá vốn thành phần:
-                          </span>
-                          <span className="font-medium">
-                            {calculateTotalPurchasePrice().toLocaleString()} đ
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-500">
-                            Tổng giá bán thành phần:
-                          </span>
-                          <span className="font-medium">
-                            {calculateTotalRetailPrice().toLocaleString()} đ
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Mô tả */}
-                {product.description && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                      Mô tả
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {product.description}
-                    </p>
-                  </div>
-                )}
-
                 {/* Bảng thành phần (Combo / Hàng SX) */}
                 {(product.type === 1 || product.type === 4) &&
                   components.length > 0 && (
-                    <div className="border-t pt-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-semibold text-gray-700">
-                          Hàng thành phần
-                        </h4>
-                        <span className="text-xs text-gray-500">
-                          {components.length} sản phẩm
-                        </span>
-                      </div>
-                      <div className="border rounded-lg overflow-hidden">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                        Hàng thành phần ({components.length})
+                      </h4>
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
                         <table className="w-full">
-                          <thead className="bg-gray-100">
+                          <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                              <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">
                                 STT
                               </th>
-                              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                              <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">
                                 Mã hàng
                               </th>
-                              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                              <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">
                                 Tên hàng
                               </th>
-                              <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">
                                 Số lượng
                               </th>
-                              <th className="px-4 py-2 text-right text-sm font-semibold text-gray-700">
+                              <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
                                 Giá vốn
                               </th>
-                              <th className="px-4 py-2 text-right text-sm font-semibold text-gray-700">
+                              <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
                                 Tổng giá vốn
                               </th>
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
+                          <tbody className="divide-y divide-gray-100">
                             {currentComponents.map((comp, index) => {
                               const actualIndex = startIndex + index;
                               const cp = comp.componentProduct;
@@ -482,7 +419,6 @@ export function ProductDetailRow({
                               const cost = inv ? Number(inv.cost) : 0;
                               const totalCost =
                                 calculateComponentCostByQuantity(comp, cp);
-
                               return (
                                 <tr
                                   key={comp.id || comp.componentProductId}
@@ -517,7 +453,6 @@ export function ProductDetailRow({
                           </tbody>
                         </table>
                       </div>
-                      {/* Pagination cho components */}
                       {totalCompPages > 1 && (
                         <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
                           <span>
@@ -558,6 +493,34 @@ export function ProductDetailRow({
               </div>
             )}
 
+            {/* ═══════════════════════════════════════════
+                TAB 2: MÔ TẢ, GHI CHÚ — giống hình 2
+               ═══════════════════════════════════════════ */}
+            {activeTab === "description" && (
+              <div className="space-y-4">
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                    Mô tả
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    {product.description || "Chưa có mô tả"}
+                  </p>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                    Ghi chú đặt hàng
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    {product.orderTemplate || "Chưa có ghi chú"}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════
+                TAB 3: THẺ KHO — giống hình 3
+               ═══════════════════════════════════════════ */}
             {activeTab === "inventoryLog" && (
               <ProductInventoryLogTab
                 productId={product.id}
@@ -565,23 +528,120 @@ export function ProductDetailRow({
               />
             )}
 
-            {/* Action footer */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-              <div className="flex gap-2">
-                {canUpdate && (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors">
-                    Sửa
-                  </button>
+            {/* ═══════════════════════════════════════════
+                TAB 4: TỒN KHO — giống hình 4
+               ═══════════════════════════════════════════ */}
+            {activeTab === "inventory" && (
+              <div>
+                {product.inventories && product.inventories.length > 0 ? (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                            Chi nhánh
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                            Tồn kho
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                            Đặt NCC
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                            KH đặt
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                            Giá vốn
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                            Định mức tồn
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {/* Dòng tổng */}
+                        <tr className="bg-gray-50 font-medium">
+                          <td className="px-4 py-2.5 text-sm text-gray-700">
+                            Tổng
+                          </td>
+                          <td className="px-4 py-2.5 text-sm text-right">
+                            {product.inventories
+                              .reduce((sum, inv) => sum + Number(inv.onHand), 0)
+                              .toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-sm text-right">
+                            {product.inventories
+                              .reduce(
+                                (sum, inv) => sum + Number(inv.onOrder),
+                                0
+                              )
+                              .toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-sm text-right">
+                            {product.inventories
+                              .reduce(
+                                (sum, inv) => sum + Number(inv.reserved),
+                                0
+                              )
+                              .toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-sm text-right">-</td>
+                          <td className="px-4 py-2.5 text-sm text-right">-</td>
+                        </tr>
+                        {/* Dòng từng chi nhánh */}
+                        {product.inventories.map((inv) => (
+                          <tr key={inv.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-2.5 text-sm text-gray-900 font-medium">
+                              {inv.branchName ||
+                                inv.branch?.name ||
+                                `Chi nhánh ${inv.branchId}`}
+                            </td>
+                            <td className="px-4 py-2.5 text-sm text-right">
+                              {Number(inv.onHand).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-2.5 text-sm text-right">
+                              {Number(inv.onOrder).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-2.5 text-sm text-right">
+                              {Number(inv.reserved).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-2.5 text-sm text-right">
+                              {Number(inv.cost).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-2.5 text-sm text-right">
+                              {Number(inv.minQuality).toLocaleString()} -{" "}
+                              {Number(inv.maxQuality).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-sm text-gray-400">
+                    Chưa có dữ liệu tồn kho
+                  </div>
                 )}
               </div>
+            )}
+
+            {/* ── Action footer ── */}
+            <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
               <div className="flex gap-2">
                 {canDelete && (
                   <button
                     onClick={handleDelete}
-                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors">
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-1.5">
                     Xóa
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {canUpdate && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors flex items-center gap-1.5">
+                    Chỉnh sửa
                   </button>
                 )}
               </div>
