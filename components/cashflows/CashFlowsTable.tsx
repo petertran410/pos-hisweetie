@@ -250,10 +250,8 @@ export function CashFlowsTable({
   });
 
   const { data, isLoading } = useCashFlows({
-    page,
     pageSize: limit,
     currentItem: (page - 1) * limit,
-    search: debouncedSearch || undefined,
     branchIds: selectedBranch?.id ? [selectedBranch.id] : undefined,
     ...effectiveFilters,
   });
@@ -318,7 +316,7 @@ export function CashFlowsTable({
   return (
     <Can resource="cash_flows" action="view">
       <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
-        {/* ── Toolbar ── */}
+        {/* Toolbar */}
         <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
@@ -329,21 +327,23 @@ export function CashFlowsTable({
               placeholder="Tìm mã phiếu, người nộp..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-64 focus:outline-none focus:border-blue-400"
+              className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Can resource="cash_flows" action="create">
               <div ref={createDropdownRef} className="relative">
                 <button
                   onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
                   <Plus className="w-4 h-4" />
                   Tạo phiếu
-                  <ChevronDown className="w-3.5 h-3.5" />
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${showCreateDropdown ? "rotate-180" : ""}`}
+                  />
                 </button>
                 {showCreateDropdown && (
-                  <div className="absolute right-0 mt-1 w-52 bg-white border rounded-lg shadow-lg z-30">
+                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-52 overflow-hidden">
                     <div className="py-1">
                       <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">
                         Phiếu thu
@@ -355,12 +355,12 @@ export function CashFlowsTable({
                       </button>
                       <button
                         onClick={() => openCreateModal("bank", true)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-50">
                         Thu chuyển khoản
                       </button>
                       <button
                         onClick={() => openCreateModal("ewallet", true)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-50">
                         Thu ví điện tử
                       </button>
                       <div className="border-t my-1" />
@@ -374,12 +374,12 @@ export function CashFlowsTable({
                       </button>
                       <button
                         onClick={() => openCreateModal("bank", false)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-50">
                         Chi chuyển khoản
                       </button>
                       <button
                         onClick={() => openCreateModal("ewallet", false)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-50">
                         Chi ví điện tử
                       </button>
                     </div>
@@ -389,13 +389,14 @@ export function CashFlowsTable({
             </Can>
             <button
               onClick={() => setShowColumnModal(true)}
-              className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <Settings className="w-4 h-4 text-gray-500" />
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
+              <Settings className="w-4 h-4" />
+              Cột
             </button>
           </div>
         </div>
 
-        {/* ── Status Tabs ── */}
+        {/* Status Tabs — giống InvoicesTable */}
         <div className="flex items-center gap-1 px-4 py-1.5 border-b bg-gray-50/50 shrink-0 overflow-x-auto">
           {STATUS_TABS.map((tab) => (
             <button
@@ -411,12 +412,12 @@ export function CashFlowsTable({
           ))}
         </div>
 
-        {/* ── Table ── */}
+        {/* Table */}
         <div className="flex-1 overflow-auto">
-          <table className="w-full border-collapse">
-            <thead className="sticky top-0 z-20 bg-white">
-              <tr className="border-b">
-                <th className="px-4 py-2.5 text-left sticky left-0 z-10 bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 sticky top-0 z-10">
+              <tr>
+                <th className="px-4 py-2.5 text-left w-10 sticky left-0 bg-gray-50">
                   <input
                     type="checkbox"
                     checked={
@@ -430,7 +431,7 @@ export function CashFlowsTable({
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
-                    className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase"
+                    className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide"
                     style={{ width: col.width, minWidth: col.width }}>
                     {col.label}
                   </th>
@@ -512,9 +513,9 @@ export function CashFlowsTable({
           </table>
         </div>
 
-        {/* ── Pagination ── */}
-        <div className="border-t px-4 py-2 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+        {/* Pagination — giống InvoicesTable */}
+        <div className="border-t px-4 py-2 flex items-center justify-between text-sm shrink-0">
+          <div className="flex items-center gap-2 text-gray-600">
             <span>Hiển thị</span>
             <select
               value={limit}
@@ -529,7 +530,7 @@ export function CashFlowsTable({
                 </option>
               ))}
             </select>
-            <span>/ {total} phiếu</span>
+            <span>{total > 0 ? ` • ${total.toLocaleString()} phiếu` : ""}</span>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -550,28 +551,32 @@ export function CashFlowsTable({
           </div>
         </div>
 
-        {/* ── Column Toggle Modal ── */}
+        {/* Column modal — giống InvoicesTable */}
         {showColumnModal && (
-          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl w-80 max-h-[70vh] flex flex-col">
-              <div className="flex items-center justify-between px-4 py-3 border-b">
-                <h3 className="font-semibold text-gray-800">Hiển thị cột</h3>
-                <button onClick={() => setShowColumnModal(false)}>
-                  <X className="w-4 h-4 text-gray-400" />
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-xl shadow-2xl w-[480px] max-h-[80vh] flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="text-base font-semibold text-gray-800">
+                  Tùy chỉnh cột hiển thị
+                </h3>
+                <button
+                  onClick={() => setShowColumnModal(false)}
+                  className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="p-4 space-y-2 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-2">
                 {columns.map((col) => (
                   <label
                     key={col.key}
-                    className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={col.visible}
                       onChange={() => toggleColumnVisibility(col.key)}
-                      className="cursor-pointer"
+                      className="accent-blue-600"
                     />
-                    {col.label}
+                    <span className="text-sm text-gray-700">{col.label}</span>
                   </label>
                 ))}
               </div>
@@ -579,7 +584,7 @@ export function CashFlowsTable({
           </div>
         )}
 
-        {/* ── Create Modal ── */}
+        {/* Create Modal */}
         {createModalType && (
           <CreateCashFlowModal
             isOpen={true}
