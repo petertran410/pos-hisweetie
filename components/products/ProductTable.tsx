@@ -1,52 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
-import { ProductDetail } from "./ProductDetail";
-import { ProductForm } from "./ProductForm";
-import type { Product } from "@/lib/api/products";
-import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
+import {
+  Plus,
+  Settings,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
+import type { Product } from "@/lib/api/products";
+import { ProductDetailRow } from "./ProductDetailRow";
+import { ProductForm } from "./ProductForm";
+import { ComboProductForm } from "./ComboProductForm";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { usePermission } from "@/lib/hooks/usePermissions";
 
-interface ProductTableProps {
-  selectedParentName?: string;
-  selectedMiddleName?: string;
-  selectedChildName?: string;
+interface ColumnConfig {
+  key: string;
+  label: string;
+  visible: boolean;
+  width?: string;
+  render: (product: Product) => React.ReactNode;
+}
+
+interface ProductsTableProps {
+  filters: any;
   codeFilter?: string;
 }
 
-type ColumnKey =
-  | "image"
-  | "code"
-  | "name"
-  | "parentName"
-  | "middleName"
-  | "childName"
-  | "type"
-  | "channelLink"
-  | "basePrice"
-  | "inventory.cost"
-  | "tradeMark"
-  | "stock"
-  | "customerOrder"
-  | "createdAt"
-  | "updatedAt"
-  | "stockOutDate"
-  | "minStock"
-  | "maxStock"
-  | "status"
-  | "rewardPoint"
-  | "supplierOrder"
-  | "point";
-
-interface ColumnConfig {
-  key: ColumnKey;
-  label: string;
-  visible: boolean;
-  render: (product: Product) => React.ReactNode;
-}
+const STATUS_TABS = [
+  { value: "all", label: "Tất cả" },
+  { value: "active", label: "Hoạt động" },
+  { value: "inactive", label: "Ngừng hoạt động" },
+];
 
 const getProductTypeLabel = (type: number) => {
   switch (type) {
@@ -65,33 +54,27 @@ const getProductTypeLabel = (type: number) => {
 
 const calculateComboPurchasePrice = (product: Product): number => {
   if (!product.comboComponents) return 0;
-
   const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
-
   return product.comboComponents.reduce((sum, comp) => {
     const componentProduct = comp.componentProduct;
     if (!componentProduct) return sum;
-
     const inventory = componentProduct.inventories?.find(
       (inv) => inv.branchId === selectedBranchId
     );
     const cost = inventory ? Number(inventory.cost) : 0;
-    const quantity = Number(comp.quantity || 0);
-
-    return sum + cost * quantity;
+    return sum + cost * Number(comp.quantity || 0);
   }, 0);
 };
 
-const formatDateTime = (date?: string) => {
-  if (!date) return "-";
-  return new Date(date).toLocaleString("vi-VN");
-};
+const formatDateTime = (d?: string) =>
+  d ? new Date(d).toLocaleString("vi-VN") : "-";
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "image",
     label: "Hình ảnh",
     visible: true,
+    width: "60px",
     render: (product) =>
       product.images?.[0] ? (
         <img
@@ -109,123 +92,130 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "code",
     label: "Mã hàng",
     visible: true,
-    render: (product) => product.code,
+    width: "130px",
+    render: (product) => (
+      <span className="font-medium text-blue-600">{product.code}</span>
+    ),
   },
   {
     key: "name",
     label: "Tên hàng",
     visible: true,
+    width: "200px",
     render: (product) => product.name,
   },
   {
     key: "parentName",
     label: "Loại Hàng",
     visible: true,
+    width: "140px",
     render: (product) => product.parentName || "-",
   },
   {
     key: "middleName",
     label: "Nguồn Gốc",
     visible: true,
+    width: "140px",
     render: (product) => product.middleName || "-",
   },
   {
     key: "childName",
     label: "Danh Mục",
     visible: true,
+    width: "140px",
     render: (product) => product.childName || "-",
   },
   {
     key: "type",
-    label: "Loại hàng",
+    label: "Loại sản phẩm",
     visible: true,
+    width: "140px",
     render: (product) => getProductTypeLabel(product.type),
-  },
-  {
-    key: "channelLink",
-    label: "Liên kết kênh bán",
-    visible: false,
-    render: () => "-",
   },
   {
     key: "basePrice",
     label: "Giá bán",
     visible: true,
+    width: "120px",
     render: (product) => Number(product.basePrice).toLocaleString() + " đ",
   },
   {
     key: "inventory.cost",
     label: "Giá vốn",
     visible: true,
+    width: "120px",
     render: (product) => {
       if (product.type === 1) {
         return calculateComboPurchasePrice(product).toLocaleString() + " đ";
       }
-
       const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
       const inventory = product.inventories?.find(
         (inv) => inv.branchId === selectedBranchId
       );
-      const cost = inventory ? Number(inventory.cost) : 0;
-      return cost.toLocaleString() + " đ";
+      return (inventory ? Number(inventory.cost) : 0).toLocaleString() + " đ";
     },
   },
   {
     key: "tradeMark",
     label: "Thương hiệu",
     visible: false,
+    width: "140px",
     render: (product) => product.tradeMark?.name || "-",
   },
   {
     key: "stock",
     label: "Tồn kho",
     visible: true,
+    width: "100px",
     render: (product) => {
       const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
-
       if (selectedBranchId) {
         const inventory = product.inventories?.find(
           (inv) => inv.branchId === selectedBranchId
         );
         return inventory ? Number(inventory.onHand).toLocaleString() : "0";
-      } else {
-        const totalStock =
-          product.inventories?.reduce(
-            (sum, inv) => sum + Number(inv.onHand),
-            0
-          ) || 0;
-        return totalStock.toLocaleString();
       }
+      const totalStock =
+        product.inventories?.reduce(
+          (sum, inv) => sum + Number(inv.onHand),
+          0
+        ) || 0;
+      return totalStock.toLocaleString();
     },
+  },
+  {
+    key: "channelLink",
+    label: "Liên kết kênh bán",
+    visible: false,
+    width: "140px",
+    render: () => "-",
   },
   {
     key: "customerOrder",
     label: "Khách đặt",
     visible: false,
+    width: "100px",
     render: () => "-",
   },
   {
     key: "createdAt",
     label: "Thời gian tạo",
     visible: false,
+    width: "160px",
     render: (product) => formatDateTime(product.createdAt),
   },
   {
     key: "updatedAt",
     label: "Thời gian cập nhật",
     visible: false,
+    width: "160px",
     render: (product) => formatDateTime(product.updatedAt),
-  },
-  {
-    key: "stockOutDate",
-    label: "Dự kiến hết hàng",
-    visible: false,
-    render: () => "-",
   },
   {
     key: "minStock",
     label: "Định mức tồn ít nhất",
     visible: false,
+    width: "160px",
     render: (product) => {
       const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
       const inventory = product.inventories?.find(
@@ -238,6 +228,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "maxStock",
     label: "Định mức tồn nhiều nhất",
     visible: false,
+    width: "160px",
     render: (product) => {
       const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
       const inventory = product.inventories?.find(
@@ -250,65 +241,88 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "status",
     label: "Trạng thái",
     visible: false,
-    render: (product) => (product.isActive ? "Hoạt động" : "Ngừng"),
+    width: "120px",
+    render: (product) => (
+      <span
+        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+          product.isActive
+            ? "bg-green-100 text-green-700"
+            : "bg-red-100 text-red-700"
+        }`}>
+        {product.isActive ? "Hoạt động" : "Ngừng"}
+      </span>
+    ),
   },
   {
     key: "rewardPoint",
     label: "Tích điểm",
     visible: false,
+    width: "100px",
     render: (product) => (product.isRewardPoint ? "Có" : "Không"),
-  },
-  {
-    key: "supplierOrder",
-    label: "Đặt NCC",
-    visible: false,
-    render: () => "-",
-  },
-  {
-    key: "point",
-    label: "Điểm",
-    visible: false,
-    render: () => "-",
   },
 ];
 
-export function ProductTable({
-  selectedParentName,
-  selectedMiddleName,
-  selectedChildName,
-  codeFilter,
-}: ProductTableProps) {
+export function ProductsTable({ filters, codeFilter }: ProductsTableProps) {
   const { selectedBranch } = useBranchStore();
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [expandedProductId, setExpandedProductId] = useState<number | null>(
+    null
+  );
+  const [showColumnModal, setShowColumnModal] = useState(false);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
-  const [search, setSearch] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [activeStatusTab, setActiveStatusTab] = useState("all");
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [productType, setProductType] = useState<number | null>(null);
-  const [searchDebounced, setSearchDebounced] = useState(search);
+  const createDropdownRef = useRef<HTMLDivElement>(null);
 
   const canCreate = usePermission("products", "create");
-  const canUpdate = usePermission("products", "update");
-  const canDelete = usePermission("products", "delete");
 
-  const handleCreateProduct = (type: number) => {
-    setProductType(type);
-    setShowCreateForm(true);
-    setShowCreateDropdown(false);
-  };
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  const [showColumnModal, setShowColumnModal] = useState(false);
+  // Reset page khi filter/search/tab đổi
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filters, activeStatusTab]);
+
+  // Tab override sidebar status
+  const effectiveFilters = useMemo(() => {
+    const f = { ...filters };
+    if (activeStatusTab === "active") f.isActive = true;
+    else if (activeStatusTab === "inactive") f.isActive = false;
+    // Nếu "all" thì không set isActive → lấy tất cả
+    return f;
+  }, [filters, activeStatusTab]);
+
+  // Sync tab với sidebar
+  useEffect(() => {
+    const isActive = filters.isActive;
+    if (isActive === true && activeStatusTab !== "active")
+      setActiveStatusTab("active");
+    else if (isActive === false && activeStatusTab !== "inactive")
+      setActiveStatusTab("inactive");
+    else if (isActive === undefined && activeStatusTab !== "all")
+      setActiveStatusTab("all");
+  }, [filters.isActive]);
+
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("productTableColumns");
+      const saved = localStorage.getItem("productTableColumnsV2");
       if (saved) {
         try {
-          const savedColumns = JSON.parse(saved);
+          const savedCols = JSON.parse(saved);
           return DEFAULT_COLUMNS.map((col) => ({
             ...col,
             visible:
-              savedColumns.find((s: any) => s.key === col.key)?.visible ??
+              savedCols.find((s: any) => s.key === col.key)?.visible ??
               col.visible,
           }));
         } catch {
@@ -322,82 +336,98 @@ export function ProductTable({
   const { data, isLoading } = useProducts({
     page,
     limit,
-    search: codeFilter || searchDebounced,
+    search: codeFilter || debouncedSearch,
     branchId: selectedBranch?.id,
+    ...effectiveFilters,
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchDebounced(search);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [selectedParentName, selectedMiddleName, selectedChildName, search]);
-
-  useEffect(() => {
-    localStorage.setItem("productTableColumns", JSON.stringify(columns));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("productTableColumnsV2", JSON.stringify(columns));
+    }
   }, [columns]);
 
-  const toggleColumnVisibility = (key: ColumnKey) => {
-    setColumns((prev) =>
-      prev.map((col) =>
-        col.key === key ? { ...col, visible: !col.visible } : col
+  // Đóng dropdown tạo mới khi click ngoài
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (
+        createDropdownRef.current &&
+        !createDropdownRef.current.contains(e.target as Node)
       )
+        setShowCreateDropdown(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const products = data?.data || [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  const visibleColumns = useMemo(
+    () => columns.filter((c) => c.visible),
+    [columns]
+  );
+
+  const colSpan = visibleColumns.length + 2; // +checkbox +chevron
+
+  const toggleColumnVisibility = (key: string) =>
+    setColumns((prev) =>
+      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
     );
+
+  const toggleSelectAll = () =>
+    setSelectedIds(
+      selectedIds.length === products.length ? [] : products.map((p) => p.id)
+    );
+
+  const toggleSelect = (id: number) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+
+  const toggleExpand = (id: number) =>
+    setExpandedProductId((prev) => (prev === id ? null : id));
+
+  const handleCreateProduct = (type: number) => {
+    setProductType(type);
+    setShowCreateForm(true);
+    setShowCreateDropdown(false);
   };
 
-  const visibleColumns = columns.filter((col) => col.visible);
-  const filteredProducts =
-    data?.data?.filter((product: Product) => {
-      if (selectedParentName && product.parentName !== selectedParentName) {
-        return false;
-      }
-      if (selectedMiddleName && product.middleName !== selectedMiddleName) {
-        return false;
-      }
-      if (selectedChildName && product.childName !== selectedChildName) {
-        return false;
-      }
-      return true;
-    }) || [];
-
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
-      <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl">
+      {/* Header */}
+      <div className="border-b p-4 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
           {canCreate && (
-            <div className="relative">
+            <div className="relative" ref={createDropdownRef}>
               <button
                 onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2">
-                <span>+</span>
-                <span>Tạo mới</span>
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm font-medium">
+                <Plus className="w-4 h-4" />
+                Tạo mới
               </button>
-
               {showCreateDropdown && (
-                <div className="absolute top-full mt-1 bg-white border rounded shadow-lg min-w-[200px] z-50">
+                <div className="absolute top-full mt-1 bg-white border rounded-lg shadow-lg min-w-[200px] z-50">
                   <button
                     onClick={() => handleCreateProduct(2)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50">
+                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">
                     Hàng hóa
                   </button>
                   <button
                     onClick={() => handleCreateProduct(3)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50">
+                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">
                     Dịch vụ
                   </button>
                   <button
                     onClick={() => handleCreateProduct(1)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50">
+                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">
                     Combo - đóng gói
                   </button>
                   <button
                     onClick={() => handleCreateProduct(4)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50">
+                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">
                     Hàng sản xuất
                   </button>
                 </div>
@@ -407,185 +437,265 @@ export function ProductTable({
           <input
             type="text"
             placeholder="Theo mã, tên hàng"
-            className="border rounded px-3 py-2 w-64"
+            className="border rounded-lg px-3 py-2 w-64 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-2 border rounded hover:bg-gray-50">
-            Import file
+          <button className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm">
+            Xuất file
           </button>
           <button
-            onClick={() => setShowColumnModal(!showColumnModal)}
-            className="px-3 py-2 border rounded hover:bg-gray-50 relative">
+            onClick={() => setShowColumnModal(true)}
+            className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-2">
+            <Settings className="w-4 h-4" />
             Cột hiển thị
           </button>
         </div>
       </div>
 
+      {/* Status tabs */}
+      <div className="flex gap-1 px-4 pt-2 border-b shrink-0 bg-white">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setActiveStatusTab(tab.value)}
+            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeStatusTab === tab.value
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Column modal */}
       {showColumnModal && (
-        <div className="absolute right-4 top-36 bg-white border rounded shadow-lg z-50 p-4 w-64 max-h-96 overflow-y-auto custom-sidebar-scroll">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold">Hiển thị cột</h3>
-            <button
-              onClick={() => setShowColumnModal(false)}
-              className="text-gray-400 hover:text-gray-600">
-              ✕
-            </button>
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-start justify-center pt-20">
+          <div className="bg-white border rounded-xl shadow-2xl p-4 w-72 max-h-[70vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-sm">Hiển thị cột</h3>
+              <button
+                onClick={() => setShowColumnModal(false)}
+                className="text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {columns.map((col) => (
+                <label
+                  key={col.key}
+                  className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={col.visible}
+                    onChange={() => toggleColumnVisibility(col.key)}
+                    className="cursor-pointer"
+                  />
+                  <span className="text-sm">{col.label}</span>
+                </label>
+              ))}
+            </div>
           </div>
-          <div className="space-y-2">
-            {columns.map((col) => (
-              <label key={col.key} className="flex items-center gap-2">
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="flex-1 overflow-auto">
+        <table className="w-full text-sm" style={{ minWidth: "max-content" }}>
+          <thead className="sticky top-0 z-10 bg-gray-50">
+            <tr>
+              <th className="px-4 py-2.5 text-left sticky left-0 bg-gray-50">
                 <input
                   type="checkbox"
-                  checked={col.visible}
-                  onChange={() => toggleColumnVisibility(col.key)}
+                  checked={
+                    products.length > 0 &&
+                    selectedIds.length === products.length
+                  }
+                  onChange={toggleSelectAll}
                   className="cursor-pointer"
                 />
-                <span className="text-sm">{col.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-auto">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">Đang tải...</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table
-              className="w-full"
-              style={{ minWidth: "max-content", borderSpacing: "0 1px" }}>
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  {visibleColumns.map((col) => (
-                    <th
-                      key={col.key}
-                      className="px-6 py-3 text-left whitespace-nowrap">
-                      {col.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data?.data && data.data.length > 0 ? (
-                  filteredProducts.map((product) => (
-                    <tr
-                      key={product.id}
-                      className="border-b hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setSelectedProduct(product)}>
-                      {visibleColumns.map((col) => (
-                        <td
-                          key={col.key}
-                          className="px-6 py-3 whitespace-nowrap">
-                          {col.render(product)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
+              </th>
+              {visibleColumns.map((col) => (
+                <th
+                  key={col.key}
+                  className="px-4 py-2.5 text-left font-medium text-gray-700 whitespace-nowrap"
+                  style={{
+                    width: col.width,
+                    minWidth: col.width,
+                    maxWidth: col.width,
+                  }}>
+                  {col.label}
+                </th>
+              ))}
+              <th className="px-4 py-2.5 w-10" />
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-100">
+            {isLoading ? (
+              <tr>
+                <td colSpan={colSpan} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                    <span className="text-xs">Đang tải...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : products.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={colSpan}
+                  className="py-20 text-center text-gray-400">
+                  <div className="text-sm">Không có sản phẩm nào</div>
+                </td>
+              </tr>
+            ) : (
+              products.map((product) => (
+                <Fragment key={product.id}>
+                  <tr
+                    className={`border-b cursor-pointer transition-colors ${
+                      expandedProductId === product.id
+                        ? "bg-blue-50"
+                        : "hover:bg-gray-50"
+                    }`}
+                    onClick={() => toggleExpand(product.id)}>
                     <td
-                      colSpan={visibleColumns.length + 1}
-                      className="p-8 text-center text-gray-500">
-                      Không có sản phẩm nào
+                      className={`px-4 py-2.5 sticky left-0 z-10 ${
+                        expandedProductId === product.id
+                          ? "bg-blue-50"
+                          : "bg-white"
+                      }`}
+                      onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(product.id)}
+                        onChange={() => toggleSelect(product.id)}
+                        className="cursor-pointer"
+                      />
+                    </td>
+                    {visibleColumns.map((col) => (
+                      <td
+                        key={col.key}
+                        className="px-4 py-2.5"
+                        style={{
+                          width: col.width,
+                          minWidth: col.width,
+                          maxWidth: col.width,
+                          wordWrap: "break-word",
+                          whiteSpace: "normal",
+                        }}>
+                        {col.render(product)}
+                      </td>
+                    ))}
+                    <td className="px-4 py-2.5">
+                      <ChevronDown
+                        className={`w-4 h-4 text-gray-400 transition-transform ${
+                          expandedProductId === product.id ? "rotate-180" : ""
+                        }`}
+                      />
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  {expandedProductId === product.id && (
+                    <ProductDetailRow
+                      productId={product.id}
+                      colSpan={colSpan}
+                    />
+                  )}
+                </Fragment>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
-      <div className="border-t p-4 flex items-center justify-between">
+      {/* Pagination */}
+      <div className="border-t px-4 py-2.5 flex items-center justify-between bg-white shrink-0">
         <div className="flex items-center gap-2">
-          <span>Hiển thị</span>
+          <span className="text-xs text-gray-500">Hiển thị</span>
           <select
-            className="border rounded px-2 py-1"
             value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}>
-            <option value={15}>15</option>
-            <option value={20}>20</option>
-            <option value={30}>30</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            {[10, 15, 20, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
           </select>
-          <span>trên tổng {data?.total || 0} sản phẩm</span>
+          <span className="text-xs text-gray-500">/ trang</span>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-1">
           <button
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            onClick={() => setPage(Math.max(1, page - 1))}
             disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}>
-            Trước
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span>
-            Trang {page} / {Math.ceil((data?.total || 0) / limit)}
-          </span>
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            const p = Math.min(
+              Math.max(page - 2 + i, i + 1),
+              totalPages - (Math.min(5, totalPages) - 1 - i)
+            );
+            return (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
+                  p === page
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "hover:bg-gray-50 text-gray-600 border-gray-200"
+                }`}>
+                {p}
+              </button>
+            );
+          })}
           <button
-            className="px-3 py-1 border rounded disabled:opacity-50"
-            disabled={page >= Math.ceil((data?.total || 0) / limit)}
-            onClick={() => setPage((p) => p + 1)}>
-            Sau
+            onClick={() => setPage(Math.min(totalPages, page + 1))}
+            disabled={page >= totalPages}
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+
+        <span className="text-xs text-gray-400">
+          Trang {page}/{totalPages}
+          {total > 0 ? ` (${total} sản phẩm)` : ""}
+        </span>
       </div>
 
-      {selectedProduct && canUpdate && (
-        <ProductDetail
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
+      {/* Create Forms (modal) */}
+      {showCreateForm && productType === 2 && (
+        <ProductForm
+          productType={2}
+          onClose={() => setShowCreateForm(false)}
+          onSuccess={() => setShowCreateForm(false)}
         />
       )}
-
-      {showCreateForm && canCreate && productType === 1 && (
+      {showCreateForm && productType === 3 && (
+        <ProductForm
+          productType={3}
+          onClose={() => setShowCreateForm(false)}
+          onSuccess={() => setShowCreateForm(false)}
+        />
+      )}
+      {showCreateForm && productType === 1 && (
         <ComboProductForm
-          onClose={() => {
-            setShowCreateForm(false);
-            setProductType(null);
-          }}
-          onSuccess={() => {
-            setShowCreateForm(false);
-            setProductType(null);
-          }}
+          onClose={() => setShowCreateForm(false)}
+          onSuccess={() => setShowCreateForm(false)}
         />
       )}
-
-      {showCreateForm && canCreate && productType === 4 && (
+      {showCreateForm && productType === 4 && (
         <ManufacturingProductForm
-          onClose={() => {
-            setShowCreateForm(false);
-            setProductType(null);
-          }}
-          onSuccess={() => {
-            setShowCreateForm(false);
-            setProductType(null);
-          }}
+          onClose={() => setShowCreateForm(false)}
+          onSuccess={() => setShowCreateForm(false)}
         />
       )}
-
-      {showCreateForm &&
-        canCreate &&
-        productType &&
-        productType !== 1 &&
-        productType !== 4 && (
-          <ProductForm
-            productType={productType}
-            onClose={() => {
-              setShowCreateForm(false);
-              setProductType(null);
-            }}
-            onSuccess={() => {
-              setShowCreateForm(false);
-              setProductType(null);
-            }}
-          />
-        )}
     </div>
   );
 }
