@@ -206,8 +206,10 @@ export function CashFlowsTable({
     "cash" | "bank" | "ewallet" | null
   >(null);
   const [createModalIsReceipt, setCreateModalIsReceipt] = useState(true);
-  const [showCreateDropdown, setShowCreateDropdown] = useState(false);
-  const createDropdownRef = useRef<HTMLDivElement>(null);
+  const [showReceiptDropdown, setShowReceiptDropdown] = useState(false);
+  const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
+  const receiptDropdownRef = useRef<HTMLDivElement>(null);
+  const paymentDropdownRef = useRef<HTMLDivElement>(null);
 
   // Debounce search
   useEffect(() => {
@@ -264,15 +266,22 @@ export function CashFlowsTable({
 
   // Đóng dropdown khi click ngoài
   useEffect(() => {
-    const h = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent) => {
       if (
-        createDropdownRef.current &&
-        !createDropdownRef.current.contains(e.target as Node)
-      )
-        setShowCreateDropdown(false);
+        receiptDropdownRef.current &&
+        !receiptDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowReceiptDropdown(false);
+      }
+      if (
+        paymentDropdownRef.current &&
+        !paymentDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowPaymentDropdown(false);
+      }
     };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const cashFlows = data?.data || [];
@@ -310,7 +319,8 @@ export function CashFlowsTable({
   ) => {
     setCreateModalType(type);
     setCreateModalIsReceipt(isReceipt);
-    setShowCreateDropdown(false);
+    setShowReceiptDropdown(false);
+    setShowPaymentDropdown(false);
   };
 
   return (
@@ -332,22 +342,23 @@ export function CashFlowsTable({
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Can resource="cash_flows" action="create">
-              <div ref={createDropdownRef} className="relative">
+              {/* Nút Phiếu thu */}
+              <div ref={receiptDropdownRef} className="relative">
                 <button
-                  onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
+                  onClick={() => {
+                    setShowReceiptDropdown((v) => !v);
+                    setShowPaymentDropdown(false);
+                  }}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium flex items-center gap-1.5">
                   <Plus className="w-4 h-4" />
-                  Tạo phiếu
+                  Phiếu thu
                   <ChevronDown
-                    className={`w-4 h-4 transition-transform ${showCreateDropdown ? "rotate-180" : ""}`}
+                    className={`w-4 h-4 transition-transform ${showReceiptDropdown ? "rotate-180" : ""}`}
                   />
                 </button>
-                {showCreateDropdown && (
-                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-52 overflow-hidden">
+                {showReceiptDropdown && (
+                  <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-44 overflow-hidden">
                     <div className="py-1">
-                      <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">
-                        Phiếu thu
-                      </div>
                       <button
                         onClick={() => openCreateModal("cash", true)}
                         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
@@ -355,18 +366,36 @@ export function CashFlowsTable({
                       </button>
                       <button
                         onClick={() => openCreateModal("bank", true)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-50">
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
                         Thu chuyển khoản
                       </button>
                       <button
                         onClick={() => openCreateModal("ewallet", true)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-50">
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
                         Thu ví điện tử
                       </button>
-                      <div className="border-t my-1" />
-                      <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">
-                        Phiếu chi
-                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Nút Phiếu chi */}
+              <div ref={paymentDropdownRef} className="relative">
+                <button
+                  onClick={() => {
+                    setShowPaymentDropdown((v) => !v);
+                    setShowReceiptDropdown(false);
+                  }}
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium flex items-center gap-1.5">
+                  <Plus className="w-4 h-4" />
+                  Phiếu chi
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${showPaymentDropdown ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {showPaymentDropdown && (
+                  <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-44 overflow-hidden">
+                    <div className="py-1">
                       <button
                         onClick={() => openCreateModal("cash", false)}
                         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
@@ -374,12 +403,12 @@ export function CashFlowsTable({
                       </button>
                       <button
                         onClick={() => openCreateModal("bank", false)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-50">
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
                         Chi chuyển khoản
                       </button>
                       <button
                         onClick={() => openCreateModal("ewallet", false)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-50">
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
                         Chi ví điện tử
                       </button>
                     </div>
