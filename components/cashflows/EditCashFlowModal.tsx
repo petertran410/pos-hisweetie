@@ -227,6 +227,10 @@ export function EditCashFlowModal({
   const users = usersData || [];
   const { data: bankAccountsData } = useBankAccountsForPayment();
   const bankAccounts: any[] = bankAccountsData || [];
+  const { data: relatedData } = useRelatedInvoicePayments(cashFlow.id);
+  const debtOffsetTotal = (relatedData?.debtOffsets || [])
+    .filter((d: any) => d.status !== 5)
+    .reduce((sum: number, d: any) => sum + Number(d.refundAmount), 0);
   const [accountId, setAccountId] = useState<number | null>(null);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
@@ -644,7 +648,7 @@ export function EditCashFlowModal({
               {cashFlow.isReceipt ? "Tổng tiền thu" : "Tổng tiền chi"}
             </label>
             <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-right font-semibold text-gray-800 cursor-not-allowed">
-              {formatCurrencyDisplay(Number(cashFlow.amount))}
+              {formatCurrencyDisplay(Number(cashFlow.amount) + debtOffsetTotal)}
             </div>
           </div>
 

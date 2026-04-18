@@ -97,13 +97,17 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Số tiền",
     visible: true,
     width: "140px",
-    render: (cf) => (
-      <span
-        className={`font-medium ${cf.isReceipt ? "text-green-600" : "text-red-600"}`}>
-        {cf.isReceipt ? "+" : "-"}
-        {formatCurrency(Number(cf.amount))}
-      </span>
-    ),
+    render: (cf) => {
+      const total =
+        Number(cf.amount) + Number((cf as any).debtOffsetTotal || 0);
+      return (
+        <span
+          className={`font-medium ${cf.isReceipt ? "text-green-600" : "text-red-600"}`}>
+          {cf.isReceipt ? "+" : "-"}
+          {formatCurrency(total)}
+        </span>
+      );
+    },
   },
   {
     key: "method",

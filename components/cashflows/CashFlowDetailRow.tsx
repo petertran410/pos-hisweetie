@@ -64,8 +64,16 @@ export function CashFlowDetailRow({
   const { data: relatedPayments } = useRelatedInvoicePayments(cashFlowId);
   const invoicePayments: any[] = relatedPayments?.invoicePayments || [];
   const orderPayments: any[] = relatedPayments?.orderPayments || [];
+  const debtOffsets: any[] = relatedPayments?.debtOffsets || [];
+  const activeDebtOffsets = debtOffsets.filter((d: any) => d.status !== 5);
+  const debtOffsetTotal = activeDebtOffsets.reduce(
+    (sum: number, d: any) => sum + Number(d.refundAmount),
+    0
+  );
   const hasInvoicePayments =
-    invoicePayments.length > 0 || orderPayments.length > 0;
+    invoicePayments.length > 0 ||
+    orderPayments.length > 0 ||
+    debtOffsets.length > 0; // ← SỬA: thêm debtOffsets
   const cancelCashFlow = useCancelCashFlow();
   const { user } = useAuthStore();
 
@@ -299,7 +307,9 @@ export function CashFlowDetailRow({
                         </label>
                         <span className="block text-sm text-gray-900">
                           {cashFlow.isReceipt ? "+" : "-"}
-                          {formatCurrency(Number(cashFlow.amount))}
+                          {formatCurrency(
+                            Number(cashFlow.amount) + debtOffsetTotal
+                          )}
                         </span>
                       </div>
                       <div className="flex flex-col gap-2 mb-2 border-b pb-1">
@@ -579,6 +589,77 @@ export function CashFlowDetailRow({
                                             "cancelled"
                                           ? "Đã hủy"
                                           : "Đang xử lý"}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bảng cấn trừ nợ */}
+                    {debtOffsets.length > 0 && (
+                      <div>
+                        <p className="text-sm font-semibold text-gray-600 mb-2">
+                          Cấn trừ nợ liên quan
+                        </p>
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <table className="w-full">
+                            <thead className="bg-gray-100 border-b border-gray-200">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                  Mã CTN
+                                </th>
+                                <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                  Hóa đơn
+                                </th>
+                                <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                  Thời gian
+                                </th>
+                                <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                  Số tiền cấn trừ
+                                </th>
+                                <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
+                                  Trạng thái
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {debtOffsets.map((offset: any) => (
+                                <tr
+                                  key={offset.id}
+                                  className="hover:bg-gray-50">
+                                  <td className="px-4 py-3 text-md font-medium text-blue-600">
+                                    {offset.code}
+                                  </td>
+                                  <td className="px-4 py-3 text-md text-blue-600">
+                                    {offset.invoice?.code || "-"}
+                                  </td>
+                                  <td className="px-4 py-3 text-md text-gray-900">
+                                    {offset.refundConfirmedAt
+                                      ? new Date(
+                                          offset.refundConfirmedAt
+                                        ).toLocaleString("vi-VN")
+                                      : "-"}
+                                  </td>
+                                  <td className="px-4 py-3 text-right text-md font-medium text-red-600">
+                                    -
+                                    {formatCurrency(
+                                      Number(offset.refundAmount)
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    <span
+                                      className={`px-2 py-1 rounded text-xs font-medium ${
+                                        offset.status === 5
+                                          ? "bg-red-100 text-red-700"
+                                          : "bg-green-100 text-green-700"
+                                      }`}>
+                                      {offset.status === 5
+                                        ? "Đã hủy"
+                                        : "Hoàn thành"}
                                     </span>
                                   </td>
                                 </tr>
