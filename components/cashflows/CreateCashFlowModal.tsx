@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useCreateCashFlow } from "@/lib/hooks/useCashflows";
 import { useCashFlowGroups } from "@/lib/hooks/useCashflowGroups";
-import { useCustomers } from "@/lib/hooks/useCustomers";
+import { useCustomer, useCustomers } from "@/lib/hooks/useCustomers";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useUnpaidInvoicesByPartner } from "@/lib/hooks/useInvoices";
@@ -139,15 +139,24 @@ export function CreateCashFlowModal({
     selectedPartner?.id || null,
     partnerType
   );
+  const { data: freshCustomerData } = useCustomer(
+    partnerType === "C" && selectedPartner?.id ? selectedPartner.id : 0
+  );
 
   const groups = cashFlowGroups || [];
   const customers = customersData?.data || [];
   const suppliers = suppliersData?.data || [];
   const users = usersData || [];
-  const unpaidInvoices = unpaidInvoicesData?.data || [];
+  const unpaidInvoices = useMemo(() => {
+    const data = unpaidInvoicesData?.data || [];
+    return [...data].sort(
+      (a: any, b: any) =>
+        new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime()
+    );
+  }, [unpaidInvoicesData]);
   const customerDebt =
     partnerType === "C" && selectedPartner
-      ? Number(selectedPartner.totalDebt || 0)
+      ? Number(freshCustomerData?.totalDebt ?? selectedPartner.totalDebt ?? 0)
       : 0;
 
   const availableCredit = useMemo(() => {
@@ -236,7 +245,7 @@ export function CreateCashFlowModal({
     if (availableCredit <= 0) return;
 
     // unpaidInvoices sorted DESC từ API → invoice cũ nhất ở cuối
-    const oldestInvoice = unpaidInvoices[unpaidInvoices.length - 1];
+    const oldestInvoice = unpaidInvoices[0];
     const defaultOffset = Math.min(
       availableCredit,
       Number(oldestInvoice.debtAmount)
@@ -1041,9 +1050,11 @@ export function CreateCashFlowModal({
                               <th className="px-3 py-2 text-right">
                                 Còn cần thu
                               </th>
-                              <th className="px-3 py-2 text-right">
-                                Cấn trừ nợ
-                              </th>
+                              {availableCredit > 0 && (
+                                <th className="px-3 py-2 text-right">
+                                  Cấn trừ nợ
+                                </th>
+                              )}
                               <th className="px-3 py-2 text-right">Tiền thu</th>
                             </tr>
                           </thead>
@@ -1071,20 +1082,24 @@ export function CreateCashFlowModal({
                                     invoice.debtAmount.toString()
                                   )}
                                 </td>
-                                <td className="px-3 py-2">
-                                  <input
-                                    type="text"
-                                    value={invoiceDebtOffsets[invoice.id] || ""}
-                                    onChange={(e) =>
-                                      handleInvoiceDebtOffsetChange(
-                                        invoice.id,
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="0"
-                                    className="w-full px-2 py-1 border rounded text-right"
-                                  />
-                                </td>
+                                {availableCredit > 0 && (
+                                  <td className="px-3 py-2">
+                                    <input
+                                      type="text"
+                                      value={
+                                        invoiceDebtOffsets[invoice.id] || ""
+                                      }
+                                      onChange={(e) =>
+                                        handleInvoiceDebtOffsetChange(
+                                          invoice.id,
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="0"
+                                      className="w-full px-2 py-1 border rounded text-right"
+                                    />
+                                  </td>
+                                )}
                                 <td className="px-3 py-2">
                                   <input
                                     type="text"
