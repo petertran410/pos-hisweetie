@@ -6,13 +6,14 @@ import {
   useRelatedInvoicePayments,
   useCancelCashFlow,
 } from "@/lib/hooks/useCashflows";
-import { ExternalLink, Loader2, Printer } from "lucide-react";
+import { ExternalLink, Loader2, Pencil, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { printEntity } from "@/lib/utils/print";
 import Swal from "sweetalert2";
 import { useAuthStore } from "@/lib/store/auth";
 import Link from "next/link";
+import { EditCashFlowModal } from "./EditCashFlowModal";
 
 interface CashFlowDetailRowProps {
   cashFlowId: number;
@@ -65,10 +66,9 @@ export function CashFlowDetailRow({
   const cancelCashFlow = useCancelCashFlow();
   const { user } = useAuthStore();
 
-  console.log(cashFlow);
-
   const [activeTab, setActiveTab] = useState<"info" | "invoices">("info");
   const [isPrinting, setIsPrinting] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Sticky wrapper theo chiều ngang scroll
@@ -229,9 +229,10 @@ export function CashFlowDetailRow({
             <div className="flex gap-1 px-6 border-b border-gray-100">
               {[
                 { key: "info", label: "Thông tin" },
-                ...(hasInvoicePayments
-                  ? [{ key: "invoices", label: "Hóa đơn liên quan" }]
-                  : []),
+                {
+                  key: "invoices",
+                  label: `Hóa đơn liên quan${invoicePayments?.length ? ` (${invoicePayments.length})` : ""}`,
+                },
               ].map((t) => (
                 <button
                   key={t.key}
@@ -388,82 +389,87 @@ export function CashFlowDetailRow({
               )}
 
               {/* Tab: Hóa đơn liên quan */}
-              {activeTab === "invoices" && hasInvoicePayments && (
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-gray-100 border-b border-gray-200">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
-                          Mã hóa đơn
-                        </th>
-                        <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
-                          Thời gian
-                        </th>
-                        <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
-                          Giá trị hóa đơn
-                        </th>
-                        <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
-                          Đã thu trước
-                        </th>
-                        <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
-                          Giá trị thu
-                        </th>
-                        <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
-                          Còn cần thu
-                        </th>
-                        <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
-                          Trạng thái
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {invoicePayments.map((payment: any) => (
-                        <tr key={payment.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3">
-                            <span className="text-md font-medium text-blue-600">
-                              {payment.invoice?.code}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-md text-gray-900">
-                            {formatDateTime(payment.paymentDate)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-md text-gray-900">
-                            {formatCurrency(
-                              Number(payment.invoice?.grandTotal || 0)
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right text-md text-gray-900">
-                            {formatCurrency(
-                              Number(payment.invoice?.paidAmount || 0) -
-                                Number(payment.amount)
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right text-md font-medium text-green-600">
-                            {formatCurrency(Number(payment.amount))}
-                          </td>
-                          <td className="px-4 py-3 text-right text-md text-gray-900">
-                            {formatCurrency(
-                              Number(payment.invoice?.debtAmount || 0)
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-medium ${
-                                payment.invoice?.status === 1
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                              }`}>
-                              {payment.invoice?.status === 1
-                                ? "Hoàn thành"
-                                : "Đang xử lý"}
-                            </span>
-                          </td>
+              {activeTab === "invoices" &&
+                (hasInvoicePayments ? (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-100 border-b border-gray-200">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                            Mã hóa đơn
+                          </th>
+                          <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                            Thời gian
+                          </th>
+                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                            Giá trị hóa đơn
+                          </th>
+                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                            Đã thu trước
+                          </th>
+                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                            Giá trị thu
+                          </th>
+                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                            Còn cần thu
+                          </th>
+                          <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
+                            Trạng thái
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {invoicePayments.map((payment: any) => (
+                          <tr key={payment.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <span className="text-md font-medium text-blue-600">
+                                {payment.invoice?.code}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-md text-gray-900">
+                              {formatDateTime(payment.paymentDate)}
+                            </td>
+                            <td className="px-4 py-3 text-right text-md text-gray-900">
+                              {formatCurrency(
+                                Number(payment.invoice?.grandTotal || 0)
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right text-md text-gray-900">
+                              {formatCurrency(
+                                Number(payment.invoice?.paidAmount || 0) -
+                                  Number(payment.amount)
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right text-md font-medium text-green-600">
+                              {formatCurrency(Number(payment.amount))}
+                            </td>
+                            <td className="px-4 py-3 text-right text-md text-gray-900">
+                              {formatCurrency(
+                                Number(payment.invoice?.debtAmount || 0)
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${
+                                  payment.invoice?.status === 1
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-yellow-100 text-yellow-700"
+                                }`}>
+                                {payment.invoice?.status === 1
+                                  ? "Hoàn thành"
+                                  : "Đang xử lý"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                    <p className="text-sm">Không có hóa đơn liên quan</p>
+                  </div>
+                ))}
 
               {/* ── Footer actions ── */}
               <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-200">
@@ -478,6 +484,15 @@ export function CashFlowDetailRow({
                   )}
                 </div>
                 <div className="flex gap-2">
+                  {/* THÊM NÚT CHỈNH SỬA */}
+                  {!isCancelled && (
+                    <button
+                      onClick={() => setShowEditModal(true)}
+                      className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2">
+                      <Pencil className="w-4 h-4" />
+                      Chỉnh sửa
+                    </button>
+                  )}
                   <button
                     onClick={handlePrint}
                     disabled={isPrinting || isCancelled}
@@ -487,6 +502,20 @@ export function CashFlowDetailRow({
                   </button>
                 </div>
               </div>
+
+              {/* Edit Modal */}
+              {showEditModal && cashFlow && (
+                <EditCashFlowModal
+                  cashFlow={cashFlow}
+                  invoicePayments={invoicePayments || []}
+                  isOpen={showEditModal}
+                  onClose={() => setShowEditModal(false)}
+                  onCancelCashFlow={() => {
+                    setShowEditModal(false);
+                    handleCancel();
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>
