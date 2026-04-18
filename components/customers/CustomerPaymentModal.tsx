@@ -276,7 +276,11 @@ export function CustomerPaymentModal({
           if (remaining <= 0) break;
 
           const debtAmount = Number(invoice.debtAmount);
-          const paymentForThisInvoice = Math.min(remaining, debtAmount);
+          const debtOffsetForInvoice = parseNumberInput(
+            invoiceDebtOffsets[invoice.id] || "0"
+          );
+          const maxForInvoice = Math.max(0, debtAmount - debtOffsetForInvoice);
+          const paymentForThisInvoice = Math.min(remaining, maxForInvoice);
           newPayments[invoice.id] = formatNumberInput(
             paymentForThisInvoice.toString()
           );
@@ -294,7 +298,13 @@ export function CustomerPaymentModal({
     const invoice = unpaidInvoices.find((inv: any) => inv.id === invoiceId);
     if (!invoice) return;
 
-    const maxAmount = Number(invoice.debtAmount);
+    const debtOffsetForInvoice = parseNumberInput(
+      invoiceDebtOffsets[invoiceId] || "0"
+    );
+    const maxAmount = Math.max(
+      0,
+      Number(invoice.debtAmount) - debtOffsetForInvoice
+    );
     const numericValue = parseNumberInput(value);
     const limitedValue = Math.min(numericValue, maxAmount);
 
@@ -309,12 +319,10 @@ export function CustomerPaymentModal({
     const invoice = unpaidInvoices.find((inv: any) => inv.id === invoiceId);
     if (!invoice) return;
 
-    // Tổng các invoice khác đã điền
     const otherTotal = Object.entries(invoiceDebtOffsets)
       .filter(([id]) => Number(id) !== invoiceId)
       .reduce((sum, [_, amt]) => sum + parseNumberInput(amt), 0);
 
-    // Giới hạn: không vượt debtAmount của hóa đơn và không vượt phần còn lại của availableCredit
     const remaining = Math.max(0, availableCredit - otherTotal);
     const maxAmount = Math.min(Number(invoice.debtAmount), remaining);
     const numericValue = parseNumberInput(value);
@@ -324,6 +332,16 @@ export function CustomerPaymentModal({
       ...prev,
       [invoiceId]: formatted,
     }));
+
+    // Cap lại tiền thu nếu vượt phần còn lại sau cấn trừ
+    const currentPayment = parseNumberInput(invoicePayments[invoiceId] || "0");
+    const maxPayment = Math.max(0, Number(invoice.debtAmount) - limitedValue);
+    if (currentPayment > maxPayment) {
+      setInvoicePayments((prev) => ({
+        ...prev,
+        [invoiceId]: formatNumberInput(maxPayment.toString()),
+      }));
+    }
   };
 
   const handleSubmit = async () => {
