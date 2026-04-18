@@ -232,7 +232,7 @@ export function CashFlowDetailRow({
                   { key: "info", label: "Thông tin" },
                   {
                     key: "invoices",
-                    label: `Hóa đơn liên quan${invoicePayments?.length ? ` (${invoicePayments.length})` : ""}`,
+                    label: "Hóa đơn liên quan",
                   },
                 ].map((t) => (
                   <button
@@ -326,7 +326,7 @@ export function CashFlowDetailRow({
                             Tài khoản ngân hàng:
                           </label>
                           <span className="block text-sm text-gray-900">
-                            {cashFlow.account.bankName} -{" "}
+                            {cashFlow.account.bankCode} -{" "}
                             {cashFlow.account.accountNumber}
                           </span>
                         </div>

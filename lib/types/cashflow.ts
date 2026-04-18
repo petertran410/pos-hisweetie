@@ -37,6 +37,7 @@ export interface CashFlow {
   account?: {
     id: number;
     bankName: string;
+    bankCode: string;
     accountNumber: string;
   };
   creator?: {

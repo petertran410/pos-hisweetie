@@ -23,6 +23,8 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import type { CashFlow } from "@/lib/types/cashflow";
+import { createPortal } from "react-dom";
+import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const METHOD_OPTIONS = [
@@ -223,6 +225,11 @@ export function EditCashFlowModal({
   const updateCashFlow = useUpdateCashFlow();
   const { data: usersData } = useUsersForFilter();
   const users = usersData || [];
+  const { data: bankAccountsData } = useBankAccountsForPayment();
+  const bankAccounts: any[] = bankAccountsData || [];
+  const [accountId, setAccountId] = useState<number | null>(null);
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
 
   // ── Parse transDate → date string + hour + minute
   const parseInitialDate = () => {
@@ -262,6 +269,7 @@ export function EditCashFlowModal({
     setCollectorId(cashFlow.createdBy ?? null);
     setMethod(cashFlow.method || "cash");
     setDescription(cashFlow.description || "");
+    setAccountId(cashFlow.accountId ?? null);
   }, [isOpen, cashFlow]);
 
   // Click outside để đóng dropdown
@@ -275,12 +283,19 @@ export function EditCashFlowModal({
         setShowUserDropdown(false);
       if (methodRef.current && !methodRef.current.contains(e.target as Node))
         setShowMethodDropdown(false);
+      if (accountRef.current && !accountRef.current.contains(e.target as Node))
+        setShowAccountDropdown(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   // ── Derived values ──────────────────────────────────────────────────────
   const selectedUser = users.find((u: any) => u.id === collectorId);
@@ -294,10 +309,6 @@ export function EditCashFlowModal({
 
   const partnerCode =
     cashFlow.partnerType === "C" ? cashFlow.customer?.code : null;
-
-  const displayDateTime = dateStr
-    ? `${dateStr.split("-").reverse().join("/")} ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
-    : "-";
 
   // ── Handlers ───────────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -320,6 +331,7 @@ export function EditCashFlowModal({
           method,
           description: description || undefined,
           ...(collectorId ? { collectorId } : {}),
+          ...(accountId ? { accountId } : { accountId: undefined }),
         },
       });
       onClose();
@@ -344,7 +356,7 @@ export function EditCashFlowModal({
   const formatCurrencyDisplay = (n: number) =>
     new Intl.NumberFormat("vi-VN").format(n);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-xl shadow-2xl w-[800px] max-h-[90vh] flex flex-col overflow-hidden">
         {/* ── Header ── */}
@@ -546,6 +558,8 @@ export function EditCashFlowModal({
                     onClick={() => {
                       setMethod(opt.value);
                       setShowMethodDropdown(false);
+                      if (opt.value === "cash" || opt.value === "card")
+                        setAccountId(null);
                     }}
                     className={`w-full text-left px-3 py-2 text-sm transition-colors ${
                       method === opt.value
@@ -558,6 +572,71 @@ export function EditCashFlowModal({
               </div>
             )}
           </div>
+
+          {/* Tài khoản ngân hàng — chỉ hiện khi method là transfer hoặc ewallet */}
+          {(method === "transfer" || method === "ewallet") && (
+            <div ref={accountRef} className="relative">
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                Tài khoản {method === "transfer" ? "ngân hàng" : "ví điện tử"}
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowAccountDropdown((v) => !v)}
+                className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-colors ${
+                  showAccountDropdown
+                    ? "border-blue-400 ring-2 ring-blue-100"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}>
+                <span className={accountId ? "text-gray-800" : "text-gray-400"}>
+                  {accountId
+                    ? (() => {
+                        const acc = bankAccounts.find(
+                          (a: any) => a.id === accountId
+                        );
+                        return acc
+                          ? `${acc.bankName} - ${acc.accountNumber}`
+                          : "Chọn tài khoản";
+                      })()
+                    : "Chọn tài khoản"}
+                </span>
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </button>
+              {showAccountDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-52 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAccountId(null);
+                      setShowAccountDropdown(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:bg-gray-50">
+                    Không chọn
+                  </button>
+                  {bankAccounts.map((acc: any) => (
+                    <button
+                      key={acc.id}
+                      type="button"
+                      onClick={() => {
+                        setAccountId(acc.id);
+                        setShowAccountDropdown(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                        accountId === acc.id
+                          ? "bg-blue-50 text-blue-700 font-medium"
+                          : "hover:bg-gray-50 text-gray-700"
+                      }`}>
+                      {"  "}
+                      <span className="font-extrabold">{acc.bankCode}</span>
+                      {" - "}
+                      <span className="text-gray-500">{acc.accountNumber}</span>
+                      {" - "}
+                      <span className="font-medium">{acc.bankName}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Tổng tiền — readonly */}
           <div>
@@ -725,6 +804,7 @@ export function EditCashFlowModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
