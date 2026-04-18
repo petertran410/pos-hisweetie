@@ -14,6 +14,8 @@ import { X, ChevronDown, Calendar, Clock } from "lucide-react";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { useCollectionBranches } from "@/lib/hooks/useCashflowCollectionBranches";
 import { CreateCashFlowCollectionBranchModal } from "./CreateCashFlowCollectionBranchModal";
+import { invoicesApi } from "@/lib/api/invoices";
+import { useQuery } from "@tanstack/react-query";
 
 interface CreateCashFlowModalProps {
   isOpen: boolean;
@@ -116,6 +118,9 @@ export function CreateCashFlowModal({
   const [invoiceDebtOffsets, setInvoiceDebtOffsets] = useState<
     Record<number, string>
   >({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
   const debtOffsetsInitialized = useRef(false);
 
   const { data: bankAccounts } = useBankAccountsForPayment();
@@ -135,10 +140,21 @@ export function CreateCashFlowModal({
   const { data: customersData } = useCustomers({ pageSize: 100 });
   const { data: suppliersData } = useSuppliers({ pageSize: 100 });
   const { data: usersData } = useUsersForFilter();
-  const { data: unpaidInvoicesData } = useUnpaidInvoicesByPartner(
-    selectedPartner?.id || null,
-    partnerType
-  );
+  const { data: unpaidInvoicesData } = useQuery({
+    queryKey: [
+      "invoices",
+      "customer",
+      selectedPartner?.id,
+      partnerType,
+      "unpaid-for-cashflow",
+    ],
+    queryFn: () =>
+      invoicesApi.getInvoices({
+        customerIds: [selectedPartner!.id],
+        limit: 1000,
+      }),
+    enabled: partnerType === "C" && !!selectedPartner?.id,
+  });
   const { data: freshCustomerData } = useCustomer(
     partnerType === "C" && selectedPartner?.id ? selectedPartner.id : 0
   );
@@ -148,12 +164,28 @@ export function CreateCashFlowModal({
   const suppliers = suppliersData?.data || [];
   const users = usersData || [];
   const unpaidInvoices = useMemo(() => {
-    const data = unpaidInvoicesData?.data || [];
-    return [...data].sort(
-      (a: any, b: any) =>
-        new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime()
-    );
-  }, [unpaidInvoicesData]);
+    if (partnerType !== "C" || !unpaidInvoicesData?.data) return [];
+    return unpaidInvoicesData.data
+      .filter((invoice: any) => {
+        const debtAmount = Number(invoice.debtAmount);
+        if (debtAmount <= 0) return false;
+        const returnOrderAmount = Number(
+          (invoice as any).returnOrderAmount || 0
+        );
+        if (returnOrderAmount >= debtAmount) return false;
+        return true;
+      })
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.purchaseDate).getTime() -
+          new Date(b.purchaseDate).getTime()
+      );
+  }, [unpaidInvoicesData, partnerType]);
+  const totalPages = Math.ceil(unpaidInvoices.length / pageSize);
+  const paginatedInvoices = unpaidInvoices.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
   const customerDebt =
     partnerType === "C" && selectedPartner
       ? Number(freshCustomerData?.totalDebt ?? selectedPartner.totalDebt ?? 0)
@@ -235,6 +267,7 @@ export function CreateCashFlowModal({
   useEffect(() => {
     setInvoiceDebtOffsets({});
     debtOffsetsInitialized.current = false;
+    setCurrentPage(1);
   }, [selectedPartner?.id]);
 
   // Auto-init debt offsets cho hóa đơn cũ nhất
@@ -509,6 +542,7 @@ export function CreateCashFlowModal({
     setShowAccountDropdown(false);
     setInvoiceDebtOffsets({});
     debtOffsetsInitialized.current = false;
+    setCurrentPage(1);
   };
 
   return (
@@ -1059,7 +1093,7 @@ export function CreateCashFlowModal({
                             </tr>
                           </thead>
                           <tbody>
-                            {unpaidInvoices.map((invoice: any) => (
+                            {paginatedInvoices.map((invoice: any) => (
                               <tr key={invoice.id} className="border-b">
                                 <td className="px-3 py-2">{invoice.code}</td>
                                 <td className="px-3 py-2">
@@ -1117,6 +1151,35 @@ export function CreateCashFlowModal({
                             ))}
                           </tbody>
                         </table>
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                            <div className="text-sm text-gray-600">
+                              Hiển thị {paginatedInvoices.length} /{" "}
+                              {unpaidInvoices.length} hóa đơn (Trang{" "}
+                              {currentPage} / {totalPages})
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() =>
+                                  setCurrentPage((p) => Math.max(1, p - 1))
+                                }
+                                disabled={currentPage === 1}
+                                className="px-3 py-1 border rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                                Trước
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setCurrentPage((p) =>
+                                    Math.min(totalPages, p + 1)
+                                  )
+                                }
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1 border rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                                Sau
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
