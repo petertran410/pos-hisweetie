@@ -555,16 +555,16 @@ export function ProductsTable({ filters, codeFilter }: ProductsTableProps) {
               products.map((product) => (
                 <Fragment key={product.id}>
                   <tr
-                    className={`border-b cursor-pointer transition-colors ${
+                    className={`cursor-pointer transition-colors ${
                       expandedProductId === product.id
                         ? "bg-blue-50"
-                        : "hover:bg-gray-50"
+                        : "border-b hover:bg-gray-50"
                     }`}
                     onClick={() => toggleExpand(product.id)}>
                     <td
                       className={`px-4 py-2.5 sticky left-0 z-10 ${
                         expandedProductId === product.id
-                          ? "bg-blue-50"
+                          ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
                           : "bg-white"
                       }`}
                       onClick={(e) => e.stopPropagation()}>
@@ -578,7 +578,11 @@ export function ProductsTable({ filters, codeFilter }: ProductsTableProps) {
                     {visibleColumns.map((col) => (
                       <td
                         key={col.key}
-                        className="px-4 py-2.5"
+                        className={`px-4 py-2.5 ${
+                          expandedProductId === product.id
+                            ? "border-t-2 border-blue-500"
+                            : ""
+                        }`}
                         style={{
                           width: col.width,
                           minWidth: col.width,
@@ -589,7 +593,12 @@ export function ProductsTable({ filters, codeFilter }: ProductsTableProps) {
                         {col.render(product)}
                       </td>
                     ))}
-                    <td className="px-4 py-2.5">
+                    <td
+                      className={`px-4 py-2.5 ${
+                        expandedProductId === product.id
+                          ? "border-t-2 border-r-2 border-blue-500"
+                          : ""
+                      }`}>
                       <ChevronDown
                         className={`w-4 h-4 text-gray-400 transition-transform ${
                           expandedProductId === product.id ? "rotate-180" : ""

@@ -170,23 +170,6 @@ export function ProductDetailRow({
     return cost * quantity;
   };
 
-  const calculateTotalPurchasePrice = () => {
-    if (!product.comboComponents) return 0;
-    return product.comboComponents.reduce((sum, comp) => {
-      return (
-        sum + calculateComponentCostByQuantity(comp, comp.componentProduct)
-      );
-    }, 0);
-  };
-
-  const calculateTotalRetailPrice = () => {
-    if (!product.comboComponents) return 0;
-    return product.comboComponents.reduce((sum, comp) => {
-      const price = Number(comp.componentProduct?.basePrice || 0);
-      return sum + price * Number(comp.quantity || 0);
-    }, 0);
-  };
-
   const components = product.comboComponents || [];
   const totalCompPages = Math.ceil(components.length / itemsPerPage);
   const currentComponents = components.slice(
@@ -228,8 +211,10 @@ export function ProductDetailRow({
 
   return (
     <tr>
-      <td colSpan={colSpan} className="p-0">
-        <div ref={wrapperRef} className="bg-white">
+      <td
+        colSpan={colSpan}
+        className="border-b-2 border-l-2 border-r-2 border-blue-500 p-0">
+        <div ref={wrapperRef}>
           <div className="p-5">
             {/* ── Tabs ── */}
             <div className="flex gap-1 mb-4">
@@ -295,7 +280,7 @@ export function ProductDetailRow({
                           Bán trực tiếp
                         </span>
                       )}
-                      <span
+                      {/* <span
                         className={`px-2 py-0.5 rounded text-xs font-medium ${
                           product.isRewardPoint
                             ? "bg-green-50 text-green-700"
@@ -304,7 +289,7 @@ export function ProductDetailRow({
                         {product.isRewardPoint
                           ? "Tích điểm"
                           : "Không tích điểm"}
-                      </span>
+                      </span> */}
                       <span
                         className={`px-2 py-0.5 rounded text-xs font-medium ${
                           product.isActive

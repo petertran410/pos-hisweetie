@@ -247,8 +247,10 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
   return (
     <>
-      <tr className="border-b-2 border-blue-400">
-        <td colSpan={colSpan} className="bg-gray-50">
+      <tr>
+        <td
+          colSpan={colSpan}
+          className="border-b-2 border-l-2 border-r-2 border-blue-500 bg-gray-50">
           <div
             ref={wrapperRef}
             className="sticky left-0 bg-gray-50"
