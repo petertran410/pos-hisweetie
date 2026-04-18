@@ -14,6 +14,7 @@ import Swal from "sweetalert2";
 import { useAuthStore } from "@/lib/store/auth";
 import Link from "next/link";
 import { EditCashFlowModal } from "./EditCashFlowModal";
+import { tr } from "date-fns/locale";
 
 interface CashFlowDetailRowProps {
   cashFlowId: number;
@@ -404,102 +405,153 @@ export function CashFlowDetailRow({
                 {/* Tab: Hóa đơn liên quan */}
                 {/* Tab: Hóa đơn & Đơn hàng liên quan */}
                 {activeTab === "invoices" && (
-                  <div className="space-y-4">
-                    {!hasInvoicePayments && (
-                      <div className="flex items-center justify-center py-10 text-gray-400 text-sm">
-                        Không có hóa đơn hay đơn hàng liên quan
-                      </div>
-                    )}
-
-                    {/* Bảng hóa đơn */}
-                    {invoicePayments.length > 0 && (
-                      <div>
-                        <p className="text-sm font-semibold text-gray-600 mb-2">
-                          Hóa đơn liên quan
-                        </p>
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                          <table className="w-full">
-                            <thead className="bg-gray-100 border-b border-gray-200">
-                              <tr>
-                                <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
-                                  Mã hóa đơn
-                                </th>
-                                <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
-                                  Thời gian
-                                </th>
-                                <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
-                                  Giá trị HĐ
-                                </th>
-                                <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
-                                  Đã thu trước
-                                </th>
-                                <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
-                                  Giá trị thu
-                                </th>
-                                <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
-                                  Còn cần thu
-                                </th>
-                                <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
-                                  Trạng thái
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                              {invoicePayments.map((payment: any) => (
-                                <tr
-                                  key={payment.id}
-                                  className="hover:bg-gray-50">
-                                  <td className="px-4 py-3">
-                                    <Link
-                                      className="text-md font-medium text-blue-600 hover:underline"
-                                      href={`/don-hang/hoa-don?Code=${payment.invoice?.code}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(e) => e.stopPropagation()}>
-                                      {payment.invoice?.code}
-                                    </Link>
-                                  </td>
-                                  <td className="px-4 py-3 text-md text-gray-900">
-                                    {formatDateTime(payment.paymentDate)}
-                                  </td>
-                                  <td className="px-4 py-3 text-right text-md text-gray-900">
-                                    {formatCurrency(
-                                      Number(payment.invoice?.grandTotal || 0)
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3 text-right text-md text-gray-900">
-                                    {formatCurrency(
-                                      Number(payment.invoice?.paidAmount || 0) -
-                                        Number(payment.amount)
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3 text-right text-md font-medium text-green-600">
-                                    {formatCurrency(Number(payment.amount))}
-                                  </td>
-                                  <td className="px-4 py-3 text-right text-md text-gray-900">
-                                    {formatCurrency(
-                                      Number(payment.invoice?.debtAmount || 0)
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3 text-center">
-                                    <span
-                                      className={`px-2 py-1 rounded text-xs font-medium ${
-                                        payment.invoice?.status === 1
-                                          ? "bg-green-100 text-green-700"
-                                          : "bg-yellow-100 text-yellow-700"
-                                      }`}>
-                                      {payment.invoice?.status === 1
-                                        ? "Hoàn thành"
-                                        : "Đang xử lý"}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
+  <div className="space-y-4">
+    {!hasInvoicePayments ? (
+      <div className="flex items-center justify-center py-10 text-gray-400 text-sm">
+        Không có hóa đơn hay đơn hàng liên quan
+      </div>
+    ) : (
+      <>
+        {/* Bảng gộp: Hóa đơn + CTN */}
+        {(invoicePayments.length > 0 || debtOffsets.length > 0) && (
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-100 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 w-[140px]">
+                    Mã phiếu
+                  </th>
+                  <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 w-[120px]">
+                    Hóa đơn
+                  </th>
+                  <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 w-[160px]">
+                    Thời gian
+                  </th>
+                  <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 w-[120px]">
+                    Giá trị HĐ
+                  </th>
+                  <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 w-[120px]">
+                    Đã thu trước
+                  </th>
+                  <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 w-[120px]">
+                    Giá trị
+                  </th>
+                  <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 w-[120px]">
+                    Còn cần thu
+                  </th>
+                  <th className="px-4 py-3 text-center text-md font-semibold text-gray-700 w-[100px]">
+                    Trạng thái
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {invoicePayments.map((payment: any) => (
+                  <tr key={`ip-${payment.id}`} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-md font-medium text-blue-600">
+                      {payment.code}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        className="text-md text-blue-600 hover:underline"
+                        href={`/don-hang/hoa-don?Code=${payment.invoice?.code}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}>
+                        {payment.invoice?.code}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-md text-gray-900">
+                      {formatDateTime(payment.paymentDate)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-md text-gray-900">
+                      {formatCurrency(
+                        Number(payment.invoice?.grandTotal || 0)
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-md text-gray-900">
+                      {formatCurrency(
+                        Number(payment.invoice?.paidAmount || 0) -
+                          Number(payment.amount)
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-md font-medium text-green-600">
+                      {formatCurrency(Number(payment.amount))}
+                    </td>
+                    <td className="px-4 py-3 text-right text-md text-gray-900">
+                      {formatCurrency(
+                        Number(payment.invoice?.debtAmount || 0)
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          payment.invoice?.status === 1
+                            ? "bg-green-100 text-green-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}>
+                        {payment.invoice?.status === 1
+                          ? "Hoàn thành"
+                          : "Đang xử lý"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {debtOffsets.map((offset: any) => (
+                  <tr
+                    key={`ctn-${offset.id}`}
+                    className="hover:bg-gray-50 bg-blue-50/30">
+                    <td className="px-4 py-3 text-md font-medium text-blue-600">
+                      {offset.code}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        className="text-md text-blue-600 hover:underline"
+                        href={`/don-hang/hoa-don?Code=${offset.invoice?.code}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}>
+                        {offset.invoice?.code || "-"}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-md text-gray-900">
+                      {offset.refundConfirmedAt
+                        ? new Date(offset.refundConfirmedAt).toLocaleString(
+                            "vi-VN"
+                          )
+                        : "-"}
+                    </td>
+                    <td className="px-4 py-3 text-right text-md text-gray-900">
+                      {formatCurrency(
+                        Number(offset.invoice?.grandTotal || 0)
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-md text-gray-400">
+                      -
+                    </td>
+                    <td className="px-4 py-3 text-right text-md font-medium text-red-600">
+                      -{formatCurrency(Number(offset.refundAmount))}
+                    </td>
+                    <td className="px-4 py-3 text-right text-md text-gray-900">
+                      {formatCurrency(
+                        Number(offset.invoice?.debtAmount || 0)
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          offset.status === 5
+                            ? "bg-red-100 text-red-700"
+                            : "bg-green-100 text-green-700"
+                        }`}>
+                        {offset.status === 5 ? "Đã hủy" : "Hoàn thành"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
                     {/* Bảng đơn hàng */}
                     {orderPayments.length > 0 && (
@@ -597,7 +649,9 @@ export function CashFlowDetailRow({
                           </table>
                         </div>
                       </div>
-                    )}
+                    )}</>)}
+  </div>
+)}
 
                     {/* Bảng cấn trừ nợ */}
                     {debtOffsets.length > 0 && (
