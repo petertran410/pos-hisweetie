@@ -166,10 +166,10 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "status",
     label: "Trạng thái",
     visible: true,
-    width: "120px",
+    width: "140px",
     render: (cf) => (
       <span
-        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+        className={`inline-block whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium ${
           STATUS_COLOR[cf.status] || "bg-gray-100 text-gray-700"
         }`}>
         {cf.status === 0
