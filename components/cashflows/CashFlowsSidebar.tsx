@@ -1,449 +1,811 @@
+// components/cashflows/CashFlowsSidebar.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
-import { useBankAccounts } from "@/lib/hooks/useBankAccounts";
-import { ChevronDown } from "lucide-react";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Check,
+  Calendar,
+} from "lucide-react";
+import { createPortal } from "react-dom";
 
 interface CashFlowsSidebarProps {
   filters: any;
   onFiltersChange: (filters: any) => void;
 }
 
-const ACCOUNT_TYPE_OPTIONS = [
-  { value: "all", label: "Tổng quỹ" },
-  { value: "cash", label: "Tiền mặt" },
-  { value: "bank", label: "Ngân hàng" },
-  { value: "ewallet", label: "Ví điện tử" },
-];
-
-const TIME_PRESETS = [
-  { label: "Hôm nay", value: "today" },
-  { label: "Hôm qua", value: "yesterday" },
-  { label: "Tuần này", value: "this_week" },
-  { label: "Tuần trước", value: "last_week" },
-  { label: "Tháng này", value: "this_month" },
-  { label: "Tháng trước", value: "last_month" },
-  { label: "7 ngày qua", value: "last_7_days" },
-  { label: "30 ngày qua", value: "last_30_days" },
+const TYPE_OPTIONS = [
+  {
+    value: "receipt",
+    label: "Phiếu thu",
+    color: "bg-green-100 text-green-700",
+    dot: "bg-green-500",
+  },
+  {
+    value: "payment",
+    label: "Phiếu chi",
+    color: "bg-red-100 text-red-700",
+    dot: "bg-red-500",
+  },
 ];
 
 const STATUS_OPTIONS = [
-  { value: 0, label: "Đã thanh toán" },
-  { value: 1, label: "Đã hủy" },
+  {
+    value: "0",
+    label: "Đã thanh toán",
+    color: "bg-green-100 text-green-700",
+    dot: "bg-green-500",
+  },
+  {
+    value: "2",
+    label: "Đã hủy",
+    color: "bg-red-100 text-red-700",
+    dot: "bg-red-400",
+  },
 ];
 
-const PARTNER_TYPE_OPTIONS = [
-  { value: "A", label: "Tất cả" },
-  { value: "C", label: "Khách hàng" },
-  { value: "S", label: "Nhà cung cấp" },
-  { value: "U", label: "Nhân viên" },
-  { value: "D", label: "Đối tác giao hàng" },
-  { value: "O", label: "Khác" },
+const METHOD_OPTIONS = [
+  { value: "cash", label: "Tiền mặt" },
+  { value: "transfer", label: "Chuyển khoản" },
+  { value: "ewallet", label: "Ví điện tử" },
 ];
+
+const PRESET_GROUPS = [
+  {
+    label: "Nhanh",
+    items: [
+      { value: "today", label: "Hôm nay" },
+      { value: "yesterday", label: "Hôm qua" },
+    ],
+  },
+  {
+    label: "Tuần",
+    items: [
+      { value: "this_week", label: "Tuần này" },
+      { value: "last_week", label: "Tuần trước" },
+      { value: "last_7_days", label: "7 ngày qua" },
+    ],
+  },
+  {
+    label: "Tháng",
+    items: [
+      { value: "this_month", label: "Tháng này" },
+      { value: "last_month", label: "Tháng trước" },
+      { value: "last_30_days", label: "30 ngày qua" },
+    ],
+  },
+  {
+    label: "Quý / Năm",
+    items: [
+      { value: "this_quarter", label: "Quý này" },
+      { value: "last_quarter", label: "Quý trước" },
+      { value: "this_year", label: "Năm nay" },
+      { value: "last_year", label: "Năm trước" },
+    ],
+  },
+];
+
+const MONTH_NAMES = [
+  "Tháng 1",
+  "Tháng 2",
+  "Tháng 3",
+  "Tháng 4",
+  "Tháng 5",
+  "Tháng 6",
+  "Tháng 7",
+  "Tháng 8",
+  "Tháng 9",
+  "Tháng 10",
+  "Tháng 11",
+  "Tháng 12",
+];
+const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 const getDateRangeFromPreset = (preset: string) => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
   switch (preset) {
     case "today":
       return { from: today, to: now };
-    case "yesterday":
-      const yesterday = new Date(today.getTime() - 86400000);
-      return {
-        from: yesterday,
-        to: new Date(yesterday.getTime() + 86400000 - 1),
-      };
-    case "this_week":
-      const startOfWeek = new Date(today);
-      startOfWeek.setDate(today.getDate() - today.getDay());
-      return { from: startOfWeek, to: now };
-    case "last_week":
-      const lastWeekEnd = new Date(today);
-      lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
-      const lastWeekStart = new Date(lastWeekEnd);
-      lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
-      return { from: lastWeekStart, to: lastWeekEnd };
-    case "this_month":
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { from: startOfMonth, to: now };
-    case "last_month":
-      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-      return { from: lastMonthStart, to: lastMonthEnd };
+    case "yesterday": {
+      const y = new Date(today.getTime() - 86400000);
+      return { from: y, to: new Date(y.getTime() + 86400000 - 1) };
+    }
+    case "this_week": {
+      const s = new Date(today);
+      s.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      return { from: s, to: now };
+    }
+    case "last_week": {
+      const e = new Date(today);
+      e.setDate(today.getDate() - ((today.getDay() + 6) % 7) - 1);
+      const s = new Date(e);
+      s.setDate(e.getDate() - 6);
+      return { from: s, to: e };
+    }
     case "last_7_days":
-      const last7Days = new Date(today.getTime() - 7 * 86400000);
-      return { from: last7Days, to: now };
+      return { from: new Date(today.getTime() - 7 * 86400000), to: now };
+    case "this_month":
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+    case "last_month":
+      return {
+        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+        to: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59),
+      };
     case "last_30_days":
-      const last30Days = new Date(today.getTime() - 30 * 86400000);
-      return { from: last30Days, to: now };
+      return { from: new Date(today.getTime() - 30 * 86400000), to: now };
+    case "this_quarter": {
+      const q = Math.floor(now.getMonth() / 3);
+      return { from: new Date(now.getFullYear(), q * 3, 1), to: now };
+    }
+    case "last_quarter": {
+      const q = Math.floor(now.getMonth() / 3);
+      const s =
+        q === 0
+          ? new Date(now.getFullYear() - 1, 9, 1)
+          : new Date(now.getFullYear(), (q - 1) * 3, 1);
+      const e =
+        q === 0
+          ? new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59)
+          : new Date(now.getFullYear(), q * 3, 0, 23, 59, 59);
+      return { from: s, to: e };
+    }
+    case "this_year":
+      return { from: new Date(now.getFullYear(), 0, 1), to: now };
+    case "last_year":
+      return {
+        from: new Date(now.getFullYear() - 1, 0, 1),
+        to: new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59),
+      };
     default:
-      return { from: today, to: now };
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
   }
 };
 
-export function CashFlowsSidebar({
-  filters,
-  onFiltersChange,
-}: CashFlowsSidebarProps) {
-  const [accountType, setAccountType] = useState("all");
-  const [selectedBranch, setSelectedBranch] = useState<string>("");
+const PRESET_LABEL: Record<string, string> = {
+  today: "Hôm nay",
+  yesterday: "Hôm qua",
+  this_week: "Tuần này",
+  last_week: "Tuần trước",
+  last_7_days: "7 ngày qua",
+  this_month: "Tháng này",
+  last_month: "Tháng trước",
+  last_30_days: "30 ngày qua",
+  this_quarter: "Quý này",
+  last_quarter: "Quý trước",
+  this_year: "Năm nay",
+  last_year: "Năm trước",
+};
+
+// ─── SimpleDropdown (copy từ InvoicesSidebar) ────────────────────────────────
+function SimpleDropdown({
+  options,
+  value,
+  placeholder,
+  onChange,
+}: {
+  options: { value: string; label: string }[];
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white hover:border-blue-300 transition-colors">
+        <span className={selected ? "text-gray-900" : "text-gray-400"}>
+          {selected?.label || placeholder}
+        </span>
+        <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+      </button>
+      {open && (
+        <div className="absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          <button
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+            className="w-full text-left px-3 py-1.5 text-sm text-gray-400 hover:bg-gray-50">
+            {placeholder}
+          </button>
+          {options.map((o) => (
+            <button
+              key={o.value}
+              onClick={() => {
+                onChange(o.value);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 flex items-center justify-between ${
+                value === o.value ? "text-blue-600 bg-blue-50" : "text-gray-700"
+              }`}>
+              {o.label}
+              {value === o.value && <Check className="w-3.5 h-3.5" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PresetPanel (copy từ InvoicesSidebar) ───────────────────────────────────
+function PresetPanel({
+  groups,
+  selected,
+  onSelect,
+  onClose,
+  anchorRect,
+  triggerRef,
+}: {
+  groups: { label: string; items: { value: string; label: string }[] }[];
+  selected: string;
+  onSelect: (v: string) => void;
+  onClose: () => void;
+  anchorRect: DOMRect | null;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      )
+        onClose();
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [onClose, triggerRef]);
+
+  if (!anchorRect) return null;
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      style={{
+        position: "fixed",
+        top: anchorRect.bottom + 4,
+        left: anchorRect.left,
+        width: anchorRect.width,
+        zIndex: 50,
+      }}
+      className="bg-white border border-gray-200 rounded-xl shadow-lg p-2 space-y-2">
+      {groups.map((g) => (
+        <div key={g.label}>
+          <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">
+            {g.label}
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {g.items.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onSelect(opt.value);
+                  onClose();
+                }}
+                className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                  selected === opt.value
+                    ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
+                    : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                }`}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
+// ─── MiniCalendar (copy từ InvoicesSidebar) ──────────────────────────────────
+function MiniCalendar({
+  value,
+  onChange,
+  onClose,
+  minDate,
+}: {
+  value: string;
+  onChange: (d: string) => void;
+  onClose: () => void;
+  minDate?: string;
+}) {
+  const todayObj = new Date();
+  const init = value ? new Date(value + "T00:00:00") : todayObj;
+  const [vy, setVy] = useState(init.getFullYear());
+  const [vm, setVm] = useState(init.getMonth());
+
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
+  const startOffset = (new Date(vy, vm, 1).getDay() + 6) % 7;
+  const cells: (number | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const fmt = (d: number) =>
+    `${vy}-${String(vm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const prev = () =>
+    vm === 0 ? (setVm(11), setVy((y) => y - 1)) : setVm((m) => m - 1);
+  const next = () =>
+    vm === 11 ? (setVm(0), setVy((y) => y + 1)) : setVm((m) => m + 1);
+
+  return (
+    <div className="mt-2 bg-white border border-gray-200 rounded-xl p-3 shadow-sm select-none">
+      <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          onClick={prev}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-semibold text-gray-800">
+          {MONTH_NAMES[vm]} {vy}
+        </span>
+        <button
+          type="button"
+          onClick={next}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {DAY_NAMES.map((d) => (
+          <div
+            key={d}
+            className="text-center text-[10px] font-medium text-gray-400 py-0.5">
+            {d}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} className="aspect-square" />;
+          const ds = fmt(day);
+          const isSel = value === ds;
+          const isToday =
+            todayObj.getFullYear() === vy &&
+            todayObj.getMonth() === vm &&
+            todayObj.getDate() === day;
+          const isDisabled = !!minDate && ds < minDate;
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => {
+                onChange(ds);
+                onClose();
+              }}
+              className={[
+                "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
+                isSel
+                  ? "bg-blue-600 text-white font-bold"
+                  : isToday
+                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
+                    : isDisabled
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
+              ].join(" ")}>
+              {day}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex justify-between mt-2 pt-2 border-t border-gray-100">
+        <button
+          type="button"
+          onClick={() => {
+            onChange("");
+            onClose();
+          }}
+          className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100">
+          Xóa
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onChange(todayObj.toISOString().split("T")[0]);
+            onClose();
+          }}
+          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50">
+          Hôm nay
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────────
+export function CashFlowsSidebar({ onFiltersChange }: CashFlowsSidebarProps) {
+  const { data: branches } = useBranches();
+  const { data: users } = useUsersForFilter();
+
+  const [branchId, setBranchId] = useState("");
+  const [selectedType, setSelectedType] = useState(""); // "receipt" | "payment" | ""
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedMethod, setSelectedMethod] = useState("");
+  const [creatorId, setCreatorId] = useState("");
+  const [partnerName, setPartnerName] = useState("");
+
+  const [enableCreatedDate, setEnableCreatedDate] = useState(true);
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState("this_month");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [isReceipt, setIsReceipt] = useState<string>("all");
-  const [selectedCashFlowGroup, setSelectedCashFlowGroup] =
-    useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<number[]>([]);
-  const [usedForFinancialReporting, setUsedForFinancialReporting] =
-    useState<string>("all");
-  const [creatorId, setCreatorId] = useState<string>("");
-  const [partnerType, setPartnerType] = useState("A");
-  const [partnerName, setPartnerName] = useState("");
-  const [contactNumber, setContactNumber] = useState("");
 
-  const [showPresetDropdown, setShowPresetDropdown] = useState(false);
+  const [showPresetPanel, setShowPresetPanel] = useState(false);
+  const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
+  const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
+  const presetRowRef = useRef<HTMLDivElement>(null);
+  const customDateRef = useRef<HTMLDivElement>(null);
 
-  const { data: branchesData } = useBranches();
-  const { data: usersData } = useUsersForFilter();
-
-  const branches = branchesData || [];
-  const users = usersData || [];
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (branchId) n++;
+    if (selectedType) n++;
+    if (selectedStatus) n++;
+    if (selectedMethod) n++;
+    if (creatorId) n++;
+    if (partnerName) n++;
+    if (enableCreatedDate) n++;
+    return n;
+  }, [
+    branchId,
+    selectedType,
+    selectedStatus,
+    selectedMethod,
+    creatorId,
+    partnerName,
+    enableCreatedDate,
+  ]);
 
   useEffect(() => {
-    applyFilters();
+    if (!openCal) return;
+    const h = (e: MouseEvent) => {
+      if (
+        customDateRef.current &&
+        !customDateRef.current.contains(e.target as Node)
+      )
+        setOpenCal(null);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [openCal]);
+
+  // Debounce 300ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const f: any = {};
+      if (branchId) f.branchIds = [parseInt(branchId)];
+      if (selectedType === "receipt") f.isReceipt = true;
+      else if (selectedType === "payment") f.isReceipt = false;
+      if (selectedStatus) f.status = parseInt(selectedStatus);
+      if (selectedMethod) f.method = [selectedMethod];
+      if (creatorId) f.userId = parseInt(creatorId);
+      if (partnerName) f.partnerName = partnerName;
+      if (enableCreatedDate) {
+        const range =
+          dateMode === "preset"
+            ? getDateRangeFromPreset(selectedPreset)
+            : fromDate && toDate
+              ? { from: new Date(fromDate), to: new Date(toDate) }
+              : getDateRangeFromPreset("this_month");
+        f.startDate = range.from.toISOString();
+        f.endDate = range.to.toISOString();
+      }
+      onFiltersChange(f);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [
-    accountType,
-    selectedBranch,
+    branchId,
+    selectedType,
+    selectedStatus,
+    selectedMethod,
+    creatorId,
+    partnerName,
+    enableCreatedDate,
     dateMode,
     selectedPreset,
     fromDate,
     toDate,
-    isReceipt,
-    selectedCashFlowGroup,
-    selectedStatus,
-    usedForFinancialReporting,
-    creatorId,
-    partnerType,
-    partnerName,
-    contactNumber,
   ]);
 
-  const applyFilters = () => {
-    const newFilters: any = {};
-
-    if (selectedBranch) {
-      newFilters.branchIds = [parseInt(selectedBranch)];
-    }
-
-    let dateRange: { from: Date; to: Date };
-    if (dateMode === "preset") {
-      dateRange = getDateRangeFromPreset(selectedPreset);
-    } else {
-      if (fromDate && toDate) {
-        dateRange = {
-          from: new Date(fromDate),
-          to: new Date(toDate),
-        };
-      } else {
-        dateRange = getDateRangeFromPreset("this_month");
-      }
-    }
-    newFilters.startDate = dateRange.from.toISOString();
-    newFilters.endDate = dateRange.to.toISOString();
-
-    if (isReceipt !== "all") {
-      newFilters.isReceipt = isReceipt === "receipt";
-    }
-
-    if (selectedStatus.length > 0) {
-      newFilters.status = selectedStatus[0];
-    }
-
-    if (usedForFinancialReporting !== "all") {
-      newFilters.usedForFinancialReporting = parseInt(
-        usedForFinancialReporting
-      );
-    }
-
-    if (creatorId) {
-      newFilters.userId = parseInt(creatorId);
-    }
-
-    if (partnerType !== "A") {
-      newFilters.partnerType = partnerType;
-    }
-
-    if (partnerName) {
-      newFilters.partnerName = partnerName;
-    }
-
-    if (contactNumber) {
-      newFilters.contactNumber = contactNumber;
-    }
-
-    onFiltersChange(newFilters);
-  };
-
-  const toggleStatus = (status: number) => {
-    setSelectedStatus((prev) =>
-      prev.includes(status) ? prev.filter((s) => s !== status) : [status]
-    );
+  const clearAll = () => {
+    setBranchId("");
+    setSelectedType("");
+    setSelectedStatus("");
+    setSelectedMethod("");
+    setCreatorId("");
+    setPartnerName("");
+    setEnableCreatedDate(true);
+    setDateMode("preset");
+    setSelectedPreset("this_month");
+    setFromDate("");
+    setToDate("");
+    onFiltersChange({});
   };
 
   return (
-    <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold">Bộ lọc</h3>
-        </div>
-        <button className="text-sm text-blue-600 hover:underline">
-          Xóa tất cả
-        </button>
+    <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-xl">
+        <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
+        {activeFilterCount > 0 && (
+          <button
+            onClick={clearAll}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            Xóa tất cả
+          </button>
+        )}
       </div>
-      <div className="flex items-center justify-between">
+
+      <div className="p-4 space-y-3">
+        {/* ── Thời gian ── */}
         <div>
-          <label className="block text-sm font-medium mb-2">Loại Quỷ</label>
-          <div className="space-y-2">
-            {ACCOUNT_TYPE_OPTIONS.map((option) => (
-              <label
-                key={option.value}
-                className="flex items-center gap-2 cursor-pointer">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-700">
+              Thời gian
+            </label>
+          </div>
+          <div className="space-y-1.5">
+            {/* Row Preset */}
+            <div
+              ref={presetRowRef}
+              onClick={() => {
+                setDateMode("preset");
+                setOpenCal(null);
+                if (showPresetPanel) {
+                  setShowPresetPanel(false);
+                } else {
+                  setPanelAnchorRect(
+                    presetRowRef.current?.getBoundingClientRect() ?? null
+                  );
+                  setShowPresetPanel(true);
+                }
+              }}
+              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
+                dateMode === "preset"
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <input
+                type="radio"
+                checked={dateMode === "preset"}
+                readOnly
+                className="accent-blue-600 w-3.5 h-3.5"
+              />
+              <Calendar className="w-3.5 h-3.5 text-gray-400" />
+              <span className="text-sm text-gray-700 flex-1">
+                {PRESET_LABEL[selectedPreset] || "Chọn"}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+            </div>
+
+            {showPresetPanel && (
+              <PresetPanel
+                groups={PRESET_GROUPS}
+                selected={selectedPreset}
+                onSelect={setSelectedPreset}
+                onClose={() => setShowPresetPanel(false)}
+                anchorRect={panelAnchorRect}
+                triggerRef={presetRowRef}
+              />
+            )}
+
+            {/* Row Custom */}
+            <div
+              ref={customDateRef}
+              onClick={() => {
+                setDateMode("custom");
+                setShowPresetPanel(false);
+              }}
+              className={`px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
+                dateMode === "custom"
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <div className="flex items-center gap-2.5">
                 <input
                   type="radio"
-                  name="accountType"
-                  value={option.value}
-                  checked={accountType === option.value}
-                  onChange={(e) => setAccountType(e.target.value)}
-                  className="cursor-pointer"
+                  checked={dateMode === "custom"}
+                  readOnly
+                  className="accent-blue-600 w-3.5 h-3.5"
                 />
-                <span className="text-sm">{option.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
+                <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-sm text-gray-700">Tùy chọn</span>
+              </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-2">Chi nhánh</label>
-        <select
-          value={selectedBranch}
-          onChange={(e) => setSelectedBranch(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg text-sm">
-          <option value="">Chọn chi nhánh</option>
-          {branches.map((branch) => (
-            <option key={branch.id} value={branch.id}>
-              {branch.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">Thời gian</label>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              checked={dateMode === "preset"}
-              onChange={() => setDateMode("preset")}
-              className="cursor-pointer"
-            />
-            <div className="flex-1 relative">
-              <button
-                onClick={() => setShowPresetDropdown(!showPresetDropdown)}
-                className="w-full px-3 py-2 border rounded-lg text-sm text-left flex items-center justify-between">
-                <span>
-                  {TIME_PRESETS.find((p) => p.value === selectedPreset)
-                    ?.label || "30 ngày qua"}
-                </span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              {showPresetDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                  {TIME_PRESETS.map((preset) => (
-                    <button
-                      key={preset.value}
-                      onClick={() => {
-                        setSelectedPreset(preset.value);
-                        setShowPresetDropdown(false);
-                      }}
-                      className="w-full px-3 py-2 text-sm text-left hover:bg-gray-50">
-                      {preset.label}
-                    </button>
-                  ))}
+              {dateMode === "custom" && (
+                <div className="mt-2 space-y-2 pl-6">
+                  {(["from", "to"] as const).map((type) => {
+                    const val = type === "from" ? fromDate : toDate;
+                    const setVal = type === "from" ? setFromDate : setToDate;
+                    return (
+                      <div key={type}>
+                        <label className="text-xs text-gray-500">
+                          {type === "from" ? "Từ ngày" : "Đến ngày"}
+                        </label>
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenCal(type);
+                          }}
+                          className="flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-lg text-sm cursor-pointer hover:border-blue-300">
+                          <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                          <span
+                            className={val ? "text-gray-900" : "text-gray-400"}>
+                            {val || "dd/mm/yyyy"}
+                          </span>
+                        </div>
+                        {openCal === type && (
+                          <MiniCalendar
+                            value={val}
+                            onChange={setVal}
+                            onClose={() => setOpenCal(null)}
+                            minDate={
+                              type === "to" ? fromDate || undefined : undefined
+                            }
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
-          </label>
+          </div>
+        </div>
 
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              checked={dateMode === "custom"}
-              onChange={() => setDateMode("custom")}
-              className="cursor-pointer"
-            />
-            <span className="text-sm">Tùy chỉnh</span>
+        {/* ── Loại phiếu (Thu/Chi) ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Loại phiếu
           </label>
+          <div className="space-y-1">
+            {TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() =>
+                  setSelectedType(selectedType === opt.value ? "" : opt.value)
+                }
+                className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  selectedType === opt.value
+                    ? opt.color + " font-medium"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}>
+                <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
+                {opt.label}
+                {selectedType === opt.value && (
+                  <Check className="w-3.5 h-3.5 ml-auto" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          {dateMode === "custom" && (
-            <div className="ml-6 space-y-2">
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-sm"
-              />
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-sm"
-              />
-            </div>
-          )}
+        {/* ── Trạng thái ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Trạng thái
+          </label>
+          <div className="space-y-1">
+            {STATUS_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() =>
+                  setSelectedStatus(
+                    selectedStatus === opt.value ? "" : opt.value
+                  )
+                }
+                className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  selectedStatus === opt.value
+                    ? opt.color + " font-medium"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}>
+                <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
+                {opt.label}
+                {selectedStatus === opt.value && (
+                  <Check className="w-3.5 h-3.5 ml-auto" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Phương thức ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Phương thức
+          </label>
+          <SimpleDropdown
+            options={METHOD_OPTIONS}
+            value={selectedMethod}
+            placeholder="Tất cả"
+            onChange={setSelectedMethod}
+          />
+        </div>
+
+        {/* ── Chi nhánh ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Chi nhánh
+          </label>
+          <SimpleDropdown
+            options={
+              branches?.data?.map((b: any) => ({
+                value: String(b.id),
+                label: b.name,
+              })) ??
+              branches?.map?.((b: any) => ({
+                value: String(b.id),
+                label: b.name,
+              })) ??
+              []
+            }
+            value={branchId}
+            placeholder="Tất cả chi nhánh"
+            onChange={setBranchId}
+          />
+        </div>
+
+        {/* ── Người tạo ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Người tạo
+          </label>
+          <SimpleDropdown
+            options={
+              users?.map((u: any) => ({
+                value: String(u.id),
+                label: u.name,
+              })) ?? []
+            }
+            value={creatorId}
+            placeholder="Tất cả"
+            onChange={setCreatorId}
+          />
+        </div>
+
+        {/* ── Người nộp/nhận ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Người nộp/nhận
+          </label>
+          <input
+            type="text"
+            value={partnerName}
+            onChange={(e) => setPartnerName(e.target.value)}
+            placeholder="Tìm theo tên..."
+            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white hover:border-blue-300 transition-colors focus:outline-none focus:border-blue-400"
+          />
         </div>
       </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">Loại chứng từ</label>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isReceipt === "all" || isReceipt === "receipt"}
-              onChange={() =>
-                setIsReceipt(isReceipt === "receipt" ? "all" : "receipt")
-              }
-              className="cursor-pointer"
-            />
-            <span className="text-sm">Phiếu thu</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isReceipt === "all" || isReceipt === "payment"}
-              onChange={() =>
-                setIsReceipt(isReceipt === "payment" ? "all" : "payment")
-              }
-              className="cursor-pointer"
-            />
-            <span className="text-sm">Phiếu chi</span>
-          </label>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">Loại thu chi</label>
-        <input
-          type="text"
-          placeholder="Chọn loại thu chi"
-          value={selectedCashFlowGroup}
-          onChange={(e) => setSelectedCashFlowGroup(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg text-sm"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">Trạng thái</label>
-        <div className="space-y-2">
-          {STATUS_OPTIONS.map((status) => (
-            <label
-              key={status.value}
-              className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedStatus.includes(status.value)}
-                onChange={() => toggleStatus(status.value)}
-                className="cursor-pointer"
-              />
-              <span className="text-sm">{status.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">
-          Hạch toán kết quả kinh doanh
-        </label>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setUsedForFinancialReporting("all")}
-            className={`flex-1 px-3 py-2 rounded-lg text-sm ${
-              usedForFinancialReporting === "all"
-                ? "bg-blue-500 text-white"
-                : "border"
-            }`}>
-            Tất cả
-          </button>
-          <button
-            onClick={() => setUsedForFinancialReporting("1")}
-            className={`flex-1 px-3 py-2 rounded-lg text-sm ${
-              usedForFinancialReporting === "1"
-                ? "bg-blue-500 text-white"
-                : "border"
-            }`}>
-            Có
-          </button>
-          <button
-            onClick={() => setUsedForFinancialReporting("0")}
-            className={`flex-1 px-3 py-2 rounded-lg text-sm ${
-              usedForFinancialReporting === "0"
-                ? "bg-blue-500 text-white"
-                : "border"
-            }`}>
-            Không
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">Người tạo</label>
-        <select
-          value={creatorId}
-          onChange={(e) => setCreatorId(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg text-sm">
-          <option value="">Chọn người tạo</option>
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">Người nộp/nhận</label>
-        <select
-          value={partnerType}
-          onChange={(e) => setPartnerType(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg text-sm mb-2">
-          {PARTNER_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder="Tên, mã người nộp/nhận"
-          value={partnerName}
-          onChange={(e) => setPartnerName(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg text-sm mb-2"
-        />
-        <input
-          type="text"
-          placeholder="Số điện thoại"
-          value={contactNumber}
-          onChange={(e) => setContactNumber(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg text-sm"
-        />
-      </div>
-    </div>
+    </aside>
   );
 }
