@@ -507,7 +507,7 @@ export function ProductsTable({ filters, codeFilter }: ProductsTableProps) {
         <table className="w-full text-sm" style={{ minWidth: "max-content" }}>
           <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
-              <th className="px-4 py-2.5 text-left sticky left-0 bg-gray-50">
+              <th className="px-4 py-2.5 text-left w-10 sticky left-0 bg-gray-50">
                 <input
                   type="checkbox"
                   checked={
@@ -530,7 +530,7 @@ export function ProductsTable({ filters, codeFilter }: ProductsTableProps) {
                   {col.label}
                 </th>
               ))}
-              <th className="px-4 py-2.5 w-10" />
+              <th className="px-4 py-2.5 w-8" />
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
