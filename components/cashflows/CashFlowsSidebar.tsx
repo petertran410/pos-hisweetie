@@ -471,19 +471,11 @@ export function CashFlowsSidebar({
     const timer = setTimeout(() => {
       const f: any = {};
       if (branchId) f.branchIds = [parseInt(branchId)];
+
       if (selectedType === "receipt") f.isReceipt = true;
       else if (selectedType === "payment") f.isReceipt = false;
 
-      // Trạng thái: "0_receipt" = status 0 + isReceipt true, "0_payment" = status 0 + isReceipt false, "2" = status 2
-      if (selectedStatus === "0_receipt") {
-        f.status = 0;
-        f.isReceipt = true;
-      } else if (selectedStatus === "0_payment") {
-        f.status = 0;
-        f.isReceipt = false;
-      } else if (selectedStatus === "2") {
-        f.status = 2;
-      }
+      if (selectedStatus) f.status = parseInt(selectedStatus);
 
       if (selectedMethod) f.method = [selectedMethod];
       if (creatorId) f.userId = parseInt(creatorId);
@@ -704,8 +696,7 @@ export function CashFlowsSidebar({
           </label>
           <SimpleDropdown
             options={[
-              { value: "0_receipt", label: "Đã thanh toán" },
-              { value: "0_payment", label: "Đã chi" },
+              { value: "0", label: "Đã thanh toán" },
               { value: "2", label: "Đã hủy" },
             ]}
             value={selectedStatus}
