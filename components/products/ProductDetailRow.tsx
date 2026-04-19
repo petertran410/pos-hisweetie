@@ -73,14 +73,7 @@ export function ProductDetailRow({
     setWidth();
     const ro = new ResizeObserver(setWidth);
     ro.observe(scrollEl);
-    const onScroll = () => {
-      el.style.transform = `translateX(${scrollEl!.scrollLeft}px)`;
-    };
-    scrollEl.addEventListener("scroll", onScroll);
-    return () => {
-      ro.disconnect();
-      scrollEl?.removeEventListener("scroll", onScroll);
-    };
+    return () => ro.disconnect();
   }, [product]);
 
   if (isLoading || !product) {
@@ -213,9 +206,10 @@ export function ProductDetailRow({
     <tr>
       <td
         colSpan={colSpan}
-        className="border-b-2 border-l-2 border-r-2 border-blue-500 p-0">
-        <div ref={wrapperRef}>
-          <div className="p-5">
+        className="border-b-2 border-l-2 border-r-2 border-blue-500 p-0"
+        style={{ width: 0 }}>
+        <div ref={wrapperRef} className="sticky left-0">
+          <div className="px-5 pb-5">
             {/* ── Tabs ── */}
             <div className="flex gap-1 mb-4">
               {TABS.map((t) => (
