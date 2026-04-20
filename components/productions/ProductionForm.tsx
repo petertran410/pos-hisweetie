@@ -494,35 +494,45 @@ export function ProductionForm({
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-2 text-sm text-right">
+                          {/* Thực tế dùng */}
+                          <td className="px-4 py-3 text-sm text-right">
                             <div className="flex items-center justify-end gap-1">
                               <input
                                 type="number"
                                 min={0}
                                 step="any"
-                                value={req.actualG}
-                                onChange={(e) =>
+                                value={
+                                  req.weightInGrams > 0
+                                    ? req.actualUnitsToDeduct
+                                    : req.actualG
+                                }
+                                onChange={(e) => {
+                                  const inputVal = Number(e.target.value);
+                                  const newGrams =
+                                    req.weightInGrams > 0
+                                      ? inputVal * req.weightInGrams
+                                      : inputVal;
                                   setActualGrams((prev) => ({
                                     ...prev,
-                                    [req.componentProductId]: Number(
-                                      e.target.value
-                                    ),
-                                  }))
-                                }
+                                    [req.componentProductId]: newGrams,
+                                  }));
+                                }}
                                 disabled={isFormDisabled}
                                 className="w-24 border rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                               />
-                              <span className="text-xs text-gray-400">g</span>
+                              <span className="text-xs text-gray-400">
+                                {req.weightInGrams > 0 ? req.unit || "đv" : "g"}
+                              </span>
                             </div>
-                            <div className="text-xs text-gray-400 text-right mt-0.5">
-                              ≈{" "}
-                              {req.actualUnitsToDeduct.toLocaleString("vi-VN", {
-                                maximumFractionDigits: 3,
-                              })}
-                              {req.unit && (
-                                <span className="ml-1">{req.unit}</span>
-                              )}
-                            </div>
+                            {req.weightInGrams > 0 && (
+                              <div className="text-xs text-gray-400 text-right mt-0.5">
+                                ≈{" "}
+                                {req.actualG.toLocaleString("vi-VN", {
+                                  maximumFractionDigits: 0,
+                                })}{" "}
+                                g
+                              </div>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-sm text-right">
                             {req.availableStock.toLocaleString("vi-VN")}
