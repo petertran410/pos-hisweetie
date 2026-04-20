@@ -230,7 +230,7 @@ export function ProductForm({
         stockQuantity: Number(data.stockQuantity) || 0,
         minStockAlert: Number(data.minStockAlert) || 0,
         maxStockAlert: Number(data.maxStockAlert) || 0,
-        weight: weightValue,
+        weight: data.isPieceUnit ? undefined : weightValue || undefined,
         weightUnit: data.weightUnit,
         unit: data.unit || undefined,
         conversionValue: data.conversionValue
@@ -242,6 +242,7 @@ export function ProductForm({
             : undefined,
         imageUrls: uploadedUrls,
         isDirectSale: Boolean(data.isDirectSale),
+        isPieceUnit: Boolean(data.isPieceUnit),
         isActive: Boolean(data.isActive),
         branchId: selectedBranch?.id,
       };

@@ -695,12 +695,22 @@ export function ManufacturingProductForm({
                                     )
                                   }
                                   onBlur={() => {
-                                    if (comp.quantity === 0) {
-                                      setQuantityInputs((prev) => ({
-                                        ...prev,
-                                        [comp.componentProductId]: "",
-                                      }));
-                                    }
+                                    setQuantityInputs((prev) => {
+                                      const currentVal =
+                                        prev[comp.componentProductId];
+                                      // Chỉ reset nếu field thực sự rỗng (user đã xóa hết)
+                                      // prev là state mới nhất, không bị stale closure
+                                      if (
+                                        currentVal === "" ||
+                                        currentVal === undefined
+                                      ) {
+                                        return {
+                                          ...prev,
+                                          [comp.componentProductId]: "",
+                                        };
+                                      }
+                                      return prev; // Có giá trị → không reset
+                                    });
                                   }}
                                   className="w-20 border rounded px-2 py-1 text-sm"
                                   placeholder="0"
