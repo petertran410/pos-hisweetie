@@ -6,6 +6,7 @@ import { useBranches } from "@/lib/hooks/useBranches";
 import { useProducts, useProduct } from "@/lib/hooks/useProducts";
 import {
   useCreateProduction,
+  useProduction,
   useUpdateProduction,
 } from "@/lib/hooks/useProductions";
 import type { Production } from "@/lib/api/productions";
@@ -48,6 +49,7 @@ export function ProductionForm({
   const { data: branches } = useBranches();
   const { data: productsData } = useProducts({ type: 4 });
   const { data: productDetail } = useProduct(production?.productId || 0);
+  const { data: freshProduction } = useProduction(production?.id || 0);
   const { mutate: createProduction, isPending: isCreating } =
     useCreateProduction();
   const { mutate: updateProduction, isPending: isUpdating } =
@@ -93,13 +95,14 @@ export function ProductionForm({
   useEffect(() => {
     if (!selectedProduct?.comboComponents) return;
 
-    const hasSaved = production?.components && production.components.length > 0;
+    const hasSaved =
+      freshProduction?.components && freshProduction.components.length > 0;
     const useSaved = hasSaved && !initializedFromSavedRef.current;
 
     const defaults: { [id: number]: number } = {};
     selectedProduct.comboComponents.forEach((comp) => {
       if (useSaved) {
-        const savedComp = production!.components!.find(
+        const savedComp = freshProduction!.components!.find(
           (c) => c.componentProductId === comp.componentProductId
         );
         defaults[comp.componentProductId] = savedComp
@@ -112,7 +115,7 @@ export function ProductionForm({
 
     if (useSaved) initializedFromSavedRef.current = true;
     setActualGrams(defaults);
-  }, [selectedProduct, quantity]);
+  }, [selectedProduct, quantity, freshProduction]);
 
   const calculateComponentRequirements = () => {
     if (!selectedProduct || !selectedProduct.comboComponents) return [];
