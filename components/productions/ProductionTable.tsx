@@ -1,43 +1,153 @@
 "use client";
 
-import { useState, useMemo, Fragment } from "react";
-import { Settings2, Plus } from "lucide-react";
+import { useState, useEffect, Fragment, useMemo, useRef } from "react";
+import { useProductions } from "@/lib/hooks/useProductions";
+import {
+  Plus,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+} from "lucide-react";
+import type { Production } from "@/lib/api/productions";
+import { ProductionDetailRow } from "./ProductionDetailRow";
 import { SelectBranchModal } from "./SelectBranchModal";
 import { ProductionForm } from "./ProductionForm";
-import { ProductionDetailRow } from "./ProductionDetailRow";
-import type { Production } from "@/lib/api/productions";
 import { Can } from "../permissions/Can";
 
-interface ProductionTableProps {
-  productions: Production[];
-  isLoading: boolean;
-  total: number;
-  page: number;
-  limit: number;
-  onPageChange: (page: number) => void;
-  onLimitChange: (limit: number) => void;
-  onEdit: (production: Production) => void;
-}
-
-interface Column {
+interface ColumnConfig {
   key: string;
   label: string;
+  visible: boolean;
+  width?: string;
   render: (production: Production) => React.ReactNode;
 }
 
-export function ProductionTable({
-  productions,
-  isLoading,
-  total,
-  page,
-  limit,
-  onPageChange,
-  onLimitChange,
-  onEdit,
-}: ProductionTableProps) {
+interface ProductionTableProps {
+  filters: any;
+}
+
+const STATUS_TABS = [
+  { value: "all", label: "Tất cả" },
+  { value: "1", label: "Phiếu tạm" },
+  { value: "2", label: "Hoàn thành" },
+  { value: "3", label: "Đã hủy" },
+];
+
+const STATUS_COLOR: Record<number, string> = {
+  1: "bg-yellow-100 text-yellow-700",
+  2: "bg-green-100 text-green-700",
+  3: "bg-red-100 text-red-700",
+};
+
+const STATUS_TEXT: Record<number, string> = {
+  1: "Phiếu tạm",
+  2: "Hoàn thành",
+  3: "Đã hủy",
+};
+
+const formatDateTime = (d?: string) =>
+  d ? new Date(d).toLocaleString("vi-VN") : "-";
+
+const DEFAULT_COLUMNS: ColumnConfig[] = [
+  {
+    key: "code",
+    label: "Mã sản xuất",
+    visible: true,
+    width: "140px",
+    render: (prod) => (
+      <span className="font-medium text-blue-600">{prod.code}</span>
+    ),
+  },
+  {
+    key: "manufacturedDate",
+    label: "Thời gian SX",
+    visible: true,
+    width: "160px",
+    render: (prod) => formatDateTime(prod.manufacturedDate),
+  },
+  {
+    key: "productName",
+    label: "Tên sản phẩm",
+    visible: true,
+    width: "200px",
+    render: (prod) => prod.productName,
+  },
+  {
+    key: "productCode",
+    label: "Mã hàng",
+    visible: false,
+    width: "120px",
+    render: (prod) => prod.productCode,
+  },
+  {
+    key: "sourceBranchName",
+    label: "Kho đầu vào",
+    visible: true,
+    width: "160px",
+    render: (prod) => prod.sourceBranchName,
+  },
+  {
+    key: "destinationBranchName",
+    label: "Kho đầu ra",
+    visible: true,
+    width: "160px",
+    render: (prod) => prod.destinationBranchName,
+  },
+  {
+    key: "quantity",
+    label: "Số lượng",
+    visible: true,
+    width: "100px",
+    render: (prod) => String(prod.quantity),
+  },
+  {
+    key: "createdByName",
+    label: "Người tạo",
+    visible: true,
+    width: "140px",
+    render: (prod) => prod.createdByName,
+  },
+  {
+    key: "status",
+    label: "Trạng thái",
+    visible: true,
+    width: "130px",
+    render: (prod) => (
+      <span
+        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+          STATUS_COLOR[prod.status] ?? "bg-gray-100 text-gray-700"
+        }`}>
+        {STATUS_TEXT[prod.status] ?? "-"}
+      </span>
+    ),
+  },
+  {
+    key: "note",
+    label: "Ghi chú",
+    visible: false,
+    width: "200px",
+    render: (prod) => prod.note || "-",
+  },
+  {
+    key: "createdAt",
+    label: "Ngày tạo",
+    visible: false,
+    width: "160px",
+    render: (prod) => formatDateTime(prod.createdAt),
+  },
+];
+
+export function ProductionTable({ filters }: ProductionTableProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [showColumnDropdown, setShowColumnDropdown] = useState(false);
-  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [showColumnModal, setShowColumnModal] = useState(false);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(15);
+  const [activeStatusTab, setActiveStatusTab] = useState("all");
+
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showProductionForm, setShowProductionForm] = useState(false);
   const [selectedSourceBranch, setSelectedSourceBranch] = useState<
@@ -48,116 +158,117 @@ export function ProductionTable({
   >(null);
   const [selectedProduction, setSelectedProduction] =
     useState<Production | null>(null);
-  const [expandedProductionId, setExpandedProductionId] = useState<
-    number | null
-  >(null);
 
-  const toggleExpand = (productionId: number) => {
-    setExpandedProductionId(
-      expandedProductionId === productionId ? null : productionId
-    );
-  };
+  const columnModalRef = useRef<HTMLDivElement>(null);
 
-  const allColumns: Column[] = useMemo(
-    () => [
-      {
-        key: "code",
-        label: "Mã sản xuất",
-        render: (prod) => (
-          <span className="font-medium text-blue-600">{prod.code}</span>
-        ),
-      },
-      {
-        key: "manufacturedDate",
-        label: "Thời gian",
-        render: (prod) =>
-          prod.manufacturedDate
-            ? new Date(prod.manufacturedDate).toLocaleString("vi-VN", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "-",
-      },
-      {
-        key: "productCode",
-        label: "Mã hàng",
-        render: (prod) => prod.productCode,
-      },
-      {
-        key: "productName",
-        label: "Tên hàng",
-        render: (prod) => prod.productName,
-      },
-      {
-        key: "quantity",
-        label: "Số lượng",
-        render: (prod) => Number(prod.quantity).toLocaleString("vi-VN"),
-      },
-      {
-        key: "note",
-        label: "Ghi chú",
-        render: (prod) => prod.note || "-",
-      },
-      {
-        key: "status",
-        label: "Trạng thái",
-        render: (prod) => {
-          const statusConfig = {
-            1: { label: "Phiếu tạm", color: "bg-gray-100 text-gray-700" },
-            2: { label: "Hoàn thành", color: "bg-green-100 text-green-700" },
-            3: { label: "Đã hủy", color: "bg-red-100 text-red-700" },
-          };
-          const config = statusConfig[prod.status as keyof typeof statusConfig];
-          return (
-            <span className={`px-2 py-1 rounded text-xs ${config?.color}`}>
-              {config?.label}
-            </span>
-          );
-        },
-      },
-    ],
-    []
-  );
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  const visibleColumns = allColumns.filter(
-    (col) => !hiddenColumns.includes(col.key)
-  );
+  // Reset page on filter/search/tab change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filters, activeStatusTab]);
 
-  const totalPages = Math.ceil(total / limit);
+  // Sync tab with sidebar status filter
+  useEffect(() => {
+    const s = filters.status?.[0];
+    if (s != null && String(s) !== activeStatusTab)
+      setActiveStatusTab(String(s));
+    else if (s == null && activeStatusTab !== "all") setActiveStatusTab("all");
+  }, [filters.status]);
 
-  const toggleSelectAll = () => {
-    if (selectedIds.length === productions.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(productions.map((p) => p.id));
+  // Close column modal on outside click
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (
+        columnModalRef.current &&
+        !columnModalRef.current.contains(e.target as Node)
+      )
+        setShowColumnModal(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  // Columns with localStorage persist
+  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("productionTableColumns");
+      if (saved) {
+        try {
+          const savedCols = JSON.parse(saved);
+          return DEFAULT_COLUMNS.map((col) => ({
+            ...col,
+            visible:
+              savedCols.find((s: any) => s.key === col.key)?.visible ??
+              col.visible,
+          }));
+        } catch {
+          return DEFAULT_COLUMNS;
+        }
+      }
     }
-  };
+    return DEFAULT_COLUMNS;
+  });
 
-  const toggleSelect = (id: number) => {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("productionTableColumns", JSON.stringify(columns));
+    }
+  }, [columns]);
+
+  // Effective filters: tab overrides sidebar status
+  const effectiveFilters = useMemo(() => {
+    const f = { ...filters };
+    if (activeStatusTab !== "all") f.status = [Number(activeStatusTab)];
+    return f;
+  }, [filters, activeStatusTab]);
+
+  const { data, isLoading } = useProductions({
+    pageSize: limit,
+    currentItem: (page - 1) * limit,
+    search: debouncedSearch || undefined,
+    ...effectiveFilters,
+  });
+
+  const productions = data?.data || [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  const visibleColumns = useMemo(
+    () => columns.filter((c) => c.visible),
+    [columns]
+  );
+  const colSpan = visibleColumns.length + 1;
+
+  const toggleColumnVisibility = (key: string) =>
+    setColumns((prev) =>
+      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
+    );
+
+  const toggleSelectAll = () =>
+    setSelectedIds(
+      selectedIds.length === productions.length
+        ? []
+        : productions.map((p) => p.id)
+    );
+
+  const toggleSelect = (id: number) =>
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
-  };
 
-  const toggleColumn = (key: string) => {
-    setHiddenColumns((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-  };
+  const toggleExpand = (id: number) =>
+    setExpandedId((prev) => (prev === id ? null : id));
 
-  const handleCreateProduction = () => {
-    setShowBranchModal(true);
-  };
+  const handleCreateProduction = () => setShowBranchModal(true);
 
-  const handleBranchConfirm = (
-    sourceBranchId: number,
-    destinationBranchId: number
-  ) => {
-    setSelectedSourceBranch(sourceBranchId);
-    setSelectedDestinationBranch(destinationBranchId);
+  const handleBranchConfirm = (srcId: number, dstId: number) => {
+    setSelectedSourceBranch(srcId);
+    setSelectedDestinationBranch(dstId);
     setShowBranchModal(false);
     setShowProductionForm(true);
   };
@@ -176,68 +287,91 @@ export function ProductionTable({
     setSelectedDestinationBranch(null);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Đang tải...</div>
-      </div>
-    );
-  }
-
   return (
     <Can resource="productions" action="view">
-      <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
-        <div className="border-b p-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold">Sản xuất</h1>
+      <div className="flex-1 flex flex-col overflow-y-auto bg-white m-4 border rounded-xl">
+        {/* Header */}
+        <div className="border-b px-4 py-3 flex items-center justify-between gap-3 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-gray-900 whitespace-nowrap">
+              Sản xuất
+            </h1>
+            {/* Search */}
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Tìm mã, tên sản phẩm..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCreateProduction}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              <Plus className="w-4 h-4" />
-              Sản xuất
-            </button>
-
-            <div className="relative">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Can resource="productions" action="create">
               <button
-                onClick={() => setShowColumnDropdown(!showColumnDropdown)}
-                className="flex items-center gap-2 px-4 py-2 border rounded hover:bg-gray-50">
-                <Settings2 className="w-4 h-4" />
+                onClick={handleCreateProduction}
+                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+                <Plus className="w-4 h-4" />
+                Sản xuất
+              </button>
+            </Can>
+
+            {/* Column toggle */}
+            <div ref={columnModalRef} className="relative">
+              <button
+                onClick={() => setShowColumnModal((o) => !o)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <Settings className="w-4 h-4" />
                 Tùy chỉnh cột
               </button>
-
-              {showColumnDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
-                  <div className="p-2">
-                    {allColumns.map((col) => (
-                      <label
-                        key={col.key}
-                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={!hiddenColumns.includes(col.key)}
-                          onChange={() => toggleColumn(col.key)}
-                          className="rounded"
-                        />
-                        <span className="text-sm">{col.label}</span>
-                      </label>
-                    ))}
-                  </div>
+              {showColumnModal && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-2">
+                  {columns.map((col) => (
+                    <label
+                      key={col.key}
+                      className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={col.visible}
+                        onChange={() => toggleColumnVisibility(col.key)}
+                        className="rounded"
+                      />
+                      <span className="text-sm text-gray-700">{col.label}</span>
+                    </label>
+                  ))}
                 </div>
               )}
             </div>
           </div>
         </div>
 
+        {/* STATUS_TABS */}
+        <div className="flex items-center gap-1 px-4 border-b overflow-x-auto flex-shrink-0">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveStatusTab(tab.value)}
+              className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                activeStatusTab === tab.value
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Table */}
         <div className="flex-1 overflow-auto">
           <table
             className="w-full border-collapse"
             style={{ minWidth: "max-content" }}>
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 text-left sticky left-0 bg-gray-50">
+                <th className="px-4 py-3 sticky left-0 bg-gray-50">
                   <input
                     type="checkbox"
                     checked={
@@ -251,31 +385,47 @@ export function ProductionTable({
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
-                    className="px-4 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">
+                    className="px-4 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap"
+                    style={{ width: col.width, minWidth: col.width }}>
                     {col.label}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {productions.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={colSpan} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-2 text-gray-400">
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                      <span className="text-xs">Đang tải...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : productions.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={visibleColumns.length + 1}
-                    className="px-4 py-8 text-center text-gray-500">
-                    Chưa có phiếu sản xuất nào
+                    colSpan={colSpan}
+                    className="py-20 text-center text-gray-400">
+                    <div className="text-sm">Không có phiếu sản xuất nào</div>
                   </td>
                 </tr>
               ) : (
                 productions.map((production) => (
                   <Fragment key={production.id}>
                     <tr
-                      className={`border-b hover:bg-gray-50 cursor-pointer ${
-                        expandedProductionId === production.id ? "bg-white" : ""
+                      className={`cursor-pointer transition-colors ${
+                        expandedId === production.id
+                          ? "bg-blue-50"
+                          : "border-b hover:bg-gray-50"
                       }`}
                       onClick={() => toggleExpand(production.id)}>
                       <td
-                        className="px-4 py-3 sticky left-0 bg-white"
+                        className={`px-4 py-2.5 sticky left-0 z-10 ${
+                          expandedId === production.id
+                            ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
+                            : "bg-white"
+                        }`}
                         onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
@@ -287,15 +437,26 @@ export function ProductionTable({
                       {visibleColumns.map((col) => (
                         <td
                           key={col.key}
-                          className="px-4 py-3 text-sm whitespace-nowrap">
+                          className={`px-4 py-2.5 text-sm ${
+                            expandedId === production.id
+                              ? "border-t-2 border-blue-500"
+                              : ""
+                          }`}
+                          style={{
+                            width: col.width,
+                            minWidth: col.width,
+                            maxWidth: col.width,
+                            wordWrap: "break-word",
+                            whiteSpace: "normal",
+                          }}>
                           {col.render(production)}
                         </td>
                       ))}
                     </tr>
-                    {expandedProductionId === production.id && (
+                    {expandedId === production.id && (
                       <ProductionDetailRow
                         productionId={production.id}
-                        colSpan={visibleColumns.length + 1}
+                        colSpan={colSpan}
                         onEdit={() => handleEditProduction(production)}
                       />
                     )}
@@ -306,36 +467,42 @@ export function ProductionTable({
           </table>
         </div>
 
-        <div className="border-t p-4 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-2">
+        {/* Pagination */}
+        <div className="border-t px-4 py-3 flex items-center justify-between bg-white flex-shrink-0">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
             <span>Hiển thị</span>
             <select
-              className="border rounded px-2 py-1"
+              className="border border-gray-200 rounded px-2 py-1 text-sm"
               value={limit}
-              onChange={(e) => onLimitChange(Number(e.target.value))}>
-              <option value={15}>15</option>
-              <option value={20}>20</option>
-              <option value={30}>30</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}>
+              {[15, 20, 30, 50, 100].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
             </select>
-            <span>trên tổng {total} phiếu sản xuất</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              className="px-3 py-1 border rounded disabled:opacity-50"
-              disabled={page === 1}
-              onClick={() => onPageChange(page - 1)}>
-              Trước
-            </button>
             <span>
-              Trang {page} / {totalPages || 1}
+              trên tổng <strong>{total}</strong> phiếu
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              className="p-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}>
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-3 text-sm text-gray-700">
+              {page} / {totalPages || 1}
             </span>
             <button
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              className="p-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors"
               disabled={page >= totalPages}
-              onClick={() => onPageChange(page + 1)}>
-              Sau
+              onClick={() => setPage((p) => p + 1)}>
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>

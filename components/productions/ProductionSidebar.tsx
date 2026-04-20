@@ -1,396 +1,713 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Check,
+  Calendar,
+} from "lucide-react";
+import { createPortal } from "react-dom";
 
 interface ProductionSidebarProps {
-  selectedBranches: number[];
-  selectedStatuses: number[];
-  timeMode: "preset" | "custom";
-  selectedPreset: string;
-  fromDate: Date | null;
-  toDate: Date | null;
-  onBranchesChange: (branches: number[]) => void;
-  onStatusesChange: (statuses: number[]) => void;
-  onTimeModeChange: (mode: "preset" | "custom") => void;
-  onPresetChange: (preset: string) => void;
-  onDateRangeChange: (from: Date | null, to: Date | null) => void;
-  onClearAll: () => void;
+  filters: any;
+  onFiltersChange: (filters: any) => void;
 }
 
-export function ProductionSidebar({
-  selectedBranches,
-  selectedStatuses,
-  timeMode,
-  selectedPreset,
-  fromDate,
-  toDate,
-  onBranchesChange,
-  onStatusesChange,
-  onTimeModeChange,
-  onPresetChange,
-  onDateRangeChange,
-  onClearAll,
-}: ProductionSidebarProps) {
-  const { data: branches } = useBranches();
-  const [showBranchDropdown, setShowBranchDropdown] = useState(false);
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+const STATUS_OPTIONS = [
+  {
+    value: 1,
+    label: "Phiếu tạm",
+    color: "bg-yellow-100 text-yellow-700",
+    dot: "bg-yellow-400",
+  },
+  {
+    value: 2,
+    label: "Hoàn thành",
+    color: "bg-green-100 text-green-700",
+    dot: "bg-green-500",
+  },
+  {
+    value: 3,
+    label: "Đã hủy",
+    color: "bg-red-100 text-red-700",
+    dot: "bg-red-400",
+  },
+];
 
-  const STATUS_OPTIONS = [
-    { value: 1, label: "Phiếu tạm", color: "bg-gray-100 text-gray-600" },
-    { value: 2, label: "Hoàn thành", color: "bg-green-100 text-green-600" },
-    { value: 3, label: "Đã hủy", color: "bg-red-100 text-red-600" },
-  ];
+const PRESET_GROUPS = [
+  {
+    label: "Hôm nay / Hôm qua",
+    options: [
+      { value: "today", label: "Hôm nay" },
+      { value: "yesterday", label: "Hôm qua" },
+    ],
+  },
+  {
+    label: "Tuần",
+    options: [
+      { value: "this_week", label: "Tuần này" },
+      { value: "last_week", label: "Tuần trước" },
+    ],
+  },
+  {
+    label: "Tháng",
+    options: [
+      { value: "this_month", label: "Tháng này" },
+      { value: "last_month", label: "Tháng trước" },
+    ],
+  },
+  {
+    label: "Khác",
+    options: [
+      { value: "last_7_days", label: "7 ngày qua" },
+      { value: "last_30_days", label: "30 ngày qua" },
+    ],
+  },
+];
 
-  const TIME_PRESETS = [
-    { value: "today", label: "Hôm nay" },
-    { value: "yesterday", label: "Hôm qua" },
-    { value: "this_week", label: "Tuần này" },
-    { value: "last_week", label: "Tuần trước" },
-    { value: "this_month", label: "Tháng này" },
-    { value: "last_month", label: "Tháng trước" },
-    { value: "7_days", label: "7 ngày qua" },
-    { value: "30_days", label: "30 ngày qua" },
-  ];
+const MONTH_NAMES = [
+  "Tháng 1",
+  "Tháng 2",
+  "Tháng 3",
+  "Tháng 4",
+  "Tháng 5",
+  "Tháng 6",
+  "Tháng 7",
+  "Tháng 8",
+  "Tháng 9",
+  "Tháng 10",
+  "Tháng 11",
+  "Tháng 12",
+];
+const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
-  const applyTimePreset = (preset: string) => {
-    const now = new Date();
-    let from: Date, to: Date;
-
-    switch (preset) {
-      case "today":
-        from = new Date(now.setHours(0, 0, 0, 0));
-        to = new Date(now.setHours(23, 59, 59, 999));
-        break;
-      case "yesterday":
-        from = new Date(now.setDate(now.getDate() - 1));
-        from.setHours(0, 0, 0, 0);
-        to = new Date(from);
-        to.setHours(23, 59, 59, 999);
-        break;
-      case "this_week":
-        from = new Date(now.setDate(now.getDate() - now.getDay()));
-        from.setHours(0, 0, 0, 0);
-        to = new Date();
-        break;
-      case "last_week":
-        from = new Date(now.setDate(now.getDate() - now.getDay() - 7));
-        from.setHours(0, 0, 0, 0);
-        to = new Date(from);
-        to.setDate(to.getDate() + 6);
-        to.setHours(23, 59, 59, 999);
-        break;
-      case "this_month":
-        from = new Date(now.getFullYear(), now.getMonth(), 1);
-        to = new Date();
-        break;
-      case "last_month":
-        from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        to = new Date(now.getFullYear(), now.getMonth(), 0);
-        break;
-      case "7_days":
-        from = new Date(now.setDate(now.getDate() - 7));
-        from.setHours(0, 0, 0, 0);
-        to = new Date();
-        break;
-      case "30_days":
-        from = new Date(now.setDate(now.getDate() - 30));
-        from.setHours(0, 0, 0, 0);
-        to = new Date();
-        break;
-      default:
-        return;
+const getDateRangeFromPreset = (preset: string) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (preset) {
+    case "today":
+      return { from: today, to: now };
+    case "yesterday": {
+      const y = new Date(today.getTime() - 86400000);
+      return { from: y, to: new Date(y.getTime() + 86400000 - 1) };
     }
+    case "this_week": {
+      const s = new Date(today);
+      s.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      return { from: s, to: now };
+    }
+    case "last_week": {
+      const e = new Date(today);
+      e.setDate(today.getDate() - ((today.getDay() + 6) % 7) - 1);
+      const s = new Date(e);
+      s.setDate(e.getDate() - 6);
+      return { from: s, to: e };
+    }
+    case "last_7_days":
+      return { from: new Date(today.getTime() - 7 * 86400000), to: now };
+    case "this_month":
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+    case "last_month":
+      return {
+        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+        to: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59),
+      };
+    case "last_30_days":
+      return { from: new Date(today.getTime() - 30 * 86400000), to: now };
+    default:
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+  }
+};
 
-    onPresetChange(preset);
-    onDateRangeChange(from, to);
-    setShowTimeDropdown(false);
-  };
+// ─── PresetPanel (portal) ────────────────────────────────────────────────────
+function PresetPanel({
+  groups,
+  selected,
+  onSelect,
+  onClose,
+  anchorRect,
+  triggerRef,
+}: {
+  groups: typeof PRESET_GROUPS;
+  selected: string;
+  onSelect: (v: string) => void;
+  onClose: () => void;
+  anchorRect: DOMRect | null;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (panelRef.current?.contains(t) || triggerRef.current?.contains(t))
+        return;
+      onClose();
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [onClose, triggerRef]);
 
-  const toggleBranch = (branchId: number) => {
-    const newBranches = selectedBranches.includes(branchId)
-      ? selectedBranches.filter((id) => id !== branchId)
-      : [...selectedBranches, branchId];
-    onBranchesChange(newBranches);
-  };
+  if (!anchorRect) return null;
+  const top = anchorRect.bottom + 6;
+  const left = Math.max(8, anchorRect.right - 320);
 
-  const toggleStatus = (status: number) => {
-    const newStatuses = selectedStatuses.includes(status)
-      ? selectedStatuses.filter((s) => s !== status)
-      : [...selectedStatuses, status];
-    onStatusesChange(newStatuses);
-  };
+  return createPortal(
+    <div
+      ref={panelRef}
+      style={{ position: "fixed", top, left, width: 320, zIndex: 1000 }}
+      className="bg-white border border-gray-200 rounded-xl shadow-2xl p-3 space-y-2">
+      {groups.map((g) => (
+        <div key={g.label}>
+          <div className="text-[11px] font-semibold text-gray-400 uppercase mb-1.5 px-1">
+            {g.label}
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {g.options.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onSelect(opt.value);
+                  onClose();
+                }}
+                className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors text-left ${
+                  selected === opt.value
+                    ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
+                    : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                }`}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>,
+    document.body
+  );
+}
 
-  const hasActiveFilters =
-    selectedBranches.length > 0 ||
-    selectedStatuses.length > 0 ||
-    fromDate ||
-    toDate;
+// ─── MiniCalendar ────────────────────────────────────────────────────────────
+function MiniCalendar({
+  value,
+  onChange,
+  onClose,
+  minDate,
+}: {
+  value: string;
+  onChange: (d: string) => void;
+  onClose: () => void;
+  minDate?: string;
+}) {
+  const todayObj = new Date();
+  const init = value ? new Date(value + "T00:00:00") : todayObj;
+  const [vy, setVy] = useState(init.getFullYear());
+  const [vm, setVm] = useState(init.getMonth());
+
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
+  const startOffset = (new Date(vy, vm, 1).getDay() + 6) % 7;
+  const cells: (number | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const fmt = (d: number) =>
+    `${vy}-${String(vm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const prev = () =>
+    vm === 0 ? (setVm(11), setVy((y) => y - 1)) : setVm((m) => m - 1);
+  const next = () =>
+    vm === 11 ? (setVm(0), setVy((y) => y + 1)) : setVm((m) => m + 1);
 
   return (
-    <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
-      <div>
-        <label className="block text-sm font-medium mb-2">Chi nhánh</label>
-        <div className="relative">
-          <button
-            onClick={() => setShowBranchDropdown(!showBranchDropdown)}
-            className="w-full px-3 py-2 border rounded bg-white text-left flex items-center justify-between">
-            <span className="text-sm text-gray-600">
-              {selectedBranches.length > 0
-                ? `Đã chọn ${selectedBranches.length} chi nhánh`
-                : "Chọn chi nhánh"}
-            </span>
-            <ChevronDown className="w-4 h-4" />
-          </button>
-
-          {showBranchDropdown && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-10 max-h-60 overflow-y-auto">
-              {branches?.map((branch) => (
-                <label
-                  key={branch.id}
-                  className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedBranches.includes(branch.id)}
-                    onChange={() => toggleBranch(branch.id)}
-                    className="rounded"
-                  />
-                  <span className="text-sm">{branch.name}</span>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {selectedBranches.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
-            {selectedBranches.map((branchId) => {
-              const branch = branches?.find((b) => b.id === branchId);
-              return (
-                <span
-                  key={branchId}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                  {branch?.name}
-                  <button
-                    onClick={() => toggleBranch(branchId)}
-                    className="hover:bg-blue-200 rounded">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              );
-            })}
+    <div className="mt-2 bg-white border border-gray-200 rounded-xl p-3 shadow-sm select-none">
+      <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          onClick={prev}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-semibold text-gray-800">
+          {MONTH_NAMES[vm]} {vy}
+        </span>
+        <button
+          type="button"
+          onClick={next}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {DAY_NAMES.map((d) => (
+          <div
+            key={d}
+            className="text-center text-[10px] font-medium text-gray-400 py-0.5">
+            {d}
           </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} className="aspect-square" />;
+          const ds = fmt(day);
+          const isSel = value === ds;
+          const isToday =
+            todayObj.getFullYear() === vy &&
+            todayObj.getMonth() === vm &&
+            todayObj.getDate() === day;
+          const isDisabled = minDate ? ds < minDate : false;
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => {
+                onChange(ds);
+                onClose();
+              }}
+              className={`aspect-square flex items-center justify-center text-xs rounded-lg transition-colors ${
+                isSel
+                  ? "bg-blue-600 text-white font-semibold"
+                  : isToday
+                    ? "border border-blue-400 text-blue-600 font-medium hover:bg-blue-50"
+                    : isDisabled
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "hover:bg-gray-100 text-gray-700"
+              }`}>
+              {day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── SimpleDropdown (single select) ─────────────────────────────────────────
+function SimpleDropdown({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  const selected = options.find((o) => o.value === value);
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+          value
+            ? "border-blue-300 bg-blue-50 text-gray-800"
+            : "border-gray-200 text-gray-400"
+        } ${open ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+        <span className="truncate">{selected?.label || label}</span>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+          {options.map((opt, idx) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value === value ? "" : opt.value);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                opt.value === value
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "hover:bg-gray-50 text-gray-700"
+              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+              <span className="truncate">{opt.label}</span>
+              {opt.value === value && (
+                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────────
+export function ProductionSidebar({
+  filters,
+  onFiltersChange,
+}: ProductionSidebarProps) {
+  const { data: branches } = useBranches();
+
+  const [branchIds, setBranchIds] = useState<number[]>([]);
+  const [statusList, setStatusList] = useState<number[]>([]);
+  const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
+  const [selectedPreset, setSelectedPreset] = useState("this_month");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  const [showBranchDropdown, setShowBranchDropdown] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showPresetPanel, setShowPresetPanel] = useState(false);
+  const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
+  const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
+
+  const presetRowRef = useRef<HTMLDivElement>(null);
+  const branchDropRef = useRef<HTMLDivElement>(null);
+  const statusDropRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (
+        branchDropRef.current &&
+        !branchDropRef.current.contains(e.target as Node)
+      )
+        setShowBranchDropdown(false);
+      if (
+        statusDropRef.current &&
+        !statusDropRef.current.contains(e.target as Node)
+      )
+        setShowStatusDropdown(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  // Debounce emit filters
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const f: any = {};
+      if (branchIds.length > 0) f.branchIds = branchIds;
+      if (statusList.length > 0) f.status = statusList;
+
+      const range =
+        dateMode === "preset"
+          ? getDateRangeFromPreset(selectedPreset)
+          : fromDate && toDate
+            ? {
+                from: new Date(fromDate + "T00:00:00"),
+                to: new Date(toDate + "T23:59:59"),
+              }
+            : getDateRangeFromPreset("this_month");
+
+      f.fromManufacturedDate = range.from.toISOString();
+      f.toManufacturedDate = range.to.toISOString();
+
+      onFiltersChange(f);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [branchIds, statusList, dateMode, selectedPreset, fromDate, toDate]);
+
+  const activeFilterCount = useMemo(
+    () =>
+      [
+        branchIds.length > 0,
+        statusList.length > 0,
+        dateMode === "custom" && !!(fromDate && toDate),
+      ].filter(Boolean).length,
+    [branchIds, statusList, dateMode, fromDate, toDate]
+  );
+
+  const clearAll = () => {
+    setBranchIds([]);
+    setStatusList([]);
+    setDateMode("preset");
+    setSelectedPreset("this_month");
+    setFromDate("");
+    setToDate("");
+    onFiltersChange({});
+  };
+
+  const toggleBranch = (id: number) =>
+    setBranchIds((prev) =>
+      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
+    );
+
+  const toggleStatus = (s: number) =>
+    setStatusList((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+    );
+
+  const presetLabel =
+    PRESET_GROUPS.flatMap((g) => g.options).find(
+      (o) => o.value === selectedPreset
+    )?.label ?? "Chọn nhanh";
+
+  return (
+    <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-xl">
+        <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
+        {activeFilterCount > 0 && (
+          <button
+            onClick={clearAll}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            Xóa tất cả
+          </button>
         )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-2">
-          Thời gian <span className="text-red-500">*</span>
-        </label>
-        <div className="space-y-2">
-          <div className="relative">
+      <div className="p-4 space-y-3 overflow-y-auto flex-1">
+        {/* ── Chi nhánh ── */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Chi nhánh
+          </label>
+          <div ref={branchDropRef} className="relative">
             <button
-              onClick={() => {
-                onTimeModeChange("preset");
-                setShowTimeDropdown(!showTimeDropdown);
-              }}
-              className={`w-full px-3 py-2 border rounded bg-white text-left flex items-center justify-between text-sm ${
-                timeMode === "preset" ? "border-blue-500" : ""
-              }`}>
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={timeMode === "preset"}
-                  readOnly
-                  className="cursor-pointer"
-                />
-                <span>
-                  {TIME_PRESETS.find((p) => p.value === selectedPreset)
-                    ?.label || "Tháng này"}
-                </span>
-              </div>
-              {timeMode === "preset" && <ChevronDown className="w-4 h-4" />}
+              type="button"
+              onClick={() => setShowBranchDropdown((o) => !o)}
+              className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                branchIds.length > 0
+                  ? "border-blue-300 bg-blue-50 text-gray-800"
+                  : "border-gray-200 text-gray-400"
+              } ${showBranchDropdown ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+              <span className="truncate">
+                {branchIds.length > 0
+                  ? `${branchIds.length} chi nhánh`
+                  : "Tất cả chi nhánh"}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${showBranchDropdown ? "rotate-180" : ""}`}
+              />
             </button>
-
-            {showTimeDropdown && timeMode === "preset" && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-10 max-h-60 overflow-y-auto">
-                <div className="py-1">
-                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
-                    Theo ngày
-                  </div>
-                  {TIME_PRESETS.slice(0, 2).map((preset) => (
-                    <button
-                      key={preset.value}
-                      onClick={() => applyTimePreset(preset.value)}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
-                        selectedPreset === preset.value
-                          ? "bg-blue-50 text-blue-600"
-                          : ""
-                      }`}>
-                      {preset.label}
-                    </button>
-                  ))}
-
-                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 mt-1">
-                    Theo tuần
-                  </div>
-                  {TIME_PRESETS.slice(2, 4).map((preset) => (
-                    <button
-                      key={preset.value}
-                      onClick={() => applyTimePreset(preset.value)}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
-                        selectedPreset === preset.value
-                          ? "bg-blue-50 text-blue-600"
-                          : ""
-                      }`}>
-                      {preset.label}
-                    </button>
-                  ))}
-
-                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 mt-1">
-                    Theo tháng
-                  </div>
-                  {TIME_PRESETS.slice(4, 6).map((preset) => (
-                    <button
-                      key={preset.value}
-                      onClick={() => applyTimePreset(preset.value)}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
-                        selectedPreset === preset.value
-                          ? "bg-blue-50 text-blue-600"
-                          : ""
-                      }`}>
-                      {preset.label}
-                    </button>
-                  ))}
-
-                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 mt-1">
-                    Khác
-                  </div>
-                  {TIME_PRESETS.slice(6).map((preset) => (
-                    <button
-                      key={preset.value}
-                      onClick={() => applyTimePreset(preset.value)}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
-                        selectedPreset === preset.value
-                          ? "bg-blue-50 text-blue-600"
-                          : ""
-                      }`}>
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
+            {showBranchDropdown && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
+                {(branches || []).map((branch: any) => (
+                  <button
+                    key={branch.id}
+                    type="button"
+                    onClick={() => toggleBranch(branch.id)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 text-left">
+                    <input
+                      type="checkbox"
+                      checked={branchIds.includes(branch.id)}
+                      readOnly
+                      className="rounded"
+                    />
+                    <span className="truncate">{branch.name}</span>
+                  </button>
+                ))}
               </div>
             )}
           </div>
-
-          <button
-            onClick={() => onTimeModeChange("custom")}
-            className={`w-full px-3 py-2 border rounded bg-white text-left flex items-center gap-2 text-sm ${
-              timeMode === "custom" ? "border-blue-500" : ""
-            }`}>
-            <input
-              type="radio"
-              checked={timeMode === "custom"}
-              readOnly
-              className="cursor-pointer"
-            />
-            <span>Tùy chỉnh</span>
-          </button>
-
-          {timeMode === "custom" && (
-            <div className="space-y-2 pl-6">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">
-                  Từ ngày
-                </label>
-                <input
-                  type="date"
-                  value={fromDate ? fromDate.toISOString().split("T")[0] : ""}
-                  onChange={(e) =>
-                    onDateRangeChange(new Date(e.target.value), toDate)
-                  }
-                  className="w-full border rounded px-2 py-1 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">
-                  Đến ngày
-                </label>
-                <input
-                  type="date"
-                  value={toDate ? toDate.toISOString().split("T")[0] : ""}
-                  onChange={(e) =>
-                    onDateRangeChange(fromDate, new Date(e.target.value))
-                  }
-                  className="w-full border rounded px-2 py-1 text-sm"
-                />
-              </div>
+          {branchIds.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {branchIds.map((id) => {
+                const b = (branches || []).find((x: any) => x.id === id);
+                return b ? (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                    {b.name}
+                    <button onClick={() => toggleBranch(id)}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ) : null;
+              })}
             </div>
           )}
         </div>
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-2">
-          Trạng thái <span className="text-red-500">*</span>
-        </label>
-
-        {selectedStatuses.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {selectedStatuses.map((status) => {
-              const option = STATUS_OPTIONS.find((opt) => opt.value === status);
-              return (
-                <span
-                  key={status}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${option?.color}`}>
-                  {option?.label}
+        {/* ── Trạng thái ── */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Trạng thái
+          </label>
+          <div ref={statusDropRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setShowStatusDropdown((o) => !o)}
+              className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                statusList.length > 0
+                  ? "border-blue-300 bg-blue-50 text-gray-800"
+                  : "border-gray-200 text-gray-400"
+              } ${showStatusDropdown ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+              <span className="truncate">
+                {statusList.length > 0
+                  ? STATUS_OPTIONS.filter((o) => statusList.includes(o.value))
+                      .map((o) => o.label)
+                      .join(", ")
+                  : "Tất cả trạng thái"}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${showStatusDropdown ? "rotate-180" : ""}`}
+              />
+            </button>
+            {showStatusDropdown && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                {STATUS_OPTIONS.map((opt) => (
                   <button
-                    onClick={() => toggleStatus(status)}
-                    className="hover:opacity-70">
-                    <X className="w-3 h-3" />
+                    key={opt.value}
+                    type="button"
+                    onClick={() => toggleStatus(opt.value)}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-gray-50 text-left">
+                    <input
+                      type="checkbox"
+                      checked={statusList.includes(opt.value)}
+                      readOnly
+                      className="rounded"
+                    />
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${opt.color}`}>
+                      {opt.label}
+                    </span>
                   </button>
-                </span>
-              );
-            })}
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
-        <div className="relative">
-          <button
-            onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-            className="w-full px-3 py-2 border rounded bg-white text-left text-sm text-gray-600">
-            Chọn trạng thái
-          </button>
-
-          {showStatusDropdown && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-10">
-              {STATUS_OPTIONS.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedStatuses.includes(option.value)}
-                    onChange={() => toggleStatus(option.value)}
-                    className="rounded"
-                  />
-                  <span className="text-sm">{option.label}</span>
-                </label>
-              ))}
+        {/* ── Thời gian ── */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Thời gian sản xuất
+          </label>
+          <div className="space-y-1.5">
+            {/* Preset row */}
+            <div
+              ref={presetRowRef}
+              onClick={() => {
+                setDateMode("preset");
+                setOpenCal(null);
+                if (showPresetPanel) {
+                  setShowPresetPanel(false);
+                } else {
+                  setPanelAnchorRect(
+                    presetRowRef.current?.getBoundingClientRect() ?? null
+                  );
+                  setShowPresetPanel(true);
+                }
+              }}
+              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
+                dateMode === "preset"
+                  ? "border-blue-300 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <input
+                type="radio"
+                readOnly
+                checked={dateMode === "preset"}
+                className="accent-blue-600 flex-shrink-0"
+              />
+              <span
+                className={`text-sm truncate flex-1 ${dateMode === "preset" ? "text-blue-700 font-medium" : "text-gray-500"}`}>
+                {dateMode === "preset" ? presetLabel : "Chọn nhanh"}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
             </div>
-          )}
+
+            {/* Custom date range row */}
+            <div
+              onClick={() => {
+                setDateMode("custom");
+                setShowPresetPanel(false);
+              }}
+              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
+                dateMode === "custom"
+                  ? "border-blue-300 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <input
+                type="radio"
+                readOnly
+                checked={dateMode === "custom"}
+                className="accent-blue-600 flex-shrink-0"
+              />
+              <span
+                className={`text-sm ${dateMode === "custom" ? "text-blue-700 font-medium" : "text-gray-500"}`}>
+                Tùy chỉnh
+              </span>
+            </div>
+
+            {/* Date pickers (only when custom) */}
+            {dateMode === "custom" && (
+              <div className="space-y-2 pt-1">
+                {(["from", "to"] as const).map((field) => {
+                  const val = field === "from" ? fromDate : toDate;
+                  const label = field === "from" ? "Từ ngày" : "Đến ngày";
+                  const setVal = field === "from" ? setFromDate : setToDate;
+                  const isOpen = openCal === field;
+                  return (
+                    <div key={field}>
+                      <span className="text-xs text-gray-500 mb-1 block">
+                        {label}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setOpenCal(isOpen ? null : field)}
+                        className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                          val
+                            ? "border-blue-300 bg-blue-50 text-gray-800"
+                            : "border-gray-200 text-gray-400"
+                        } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                        <span>
+                          {val
+                            ? new Date(val + "T00:00:00").toLocaleDateString(
+                                "vi-VN",
+                                {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                }
+                              )
+                            : "Chọn ngày"}
+                        </span>
+                        <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      </button>
+                      {isOpen && (
+                        <MiniCalendar
+                          value={val}
+                          onChange={setVal}
+                          onClose={() => setOpenCal(null)}
+                          minDate={field === "to" ? fromDate : undefined}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {hasActiveFilters && (
-        <button
-          onClick={onClearAll}
-          className="w-full px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded">
-          Xóa bộ lọc
-        </button>
+      {/* PresetPanel portal */}
+      {showPresetPanel && (
+        <PresetPanel
+          groups={PRESET_GROUPS}
+          selected={selectedPreset}
+          onSelect={(v) => {
+            setSelectedPreset(v);
+            setDateMode("preset");
+          }}
+          onClose={() => setShowPresetPanel(false)}
+          anchorRect={panelAnchorRect}
+          triggerRef={presetRowRef}
+        />
       )}
-    </div>
+    </aside>
   );
 }

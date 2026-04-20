@@ -3,7 +3,7 @@ export function formatCurrency(amount: number | string): string {
   return new Intl.NumberFormat("en-US").format(num);
 }
 
-export function formatDate(date: string | Date): string {
+export function formatDate(date: string | Date | undefined): string {
   if (!date) return "-";
   return new Date(date).toLocaleString("vi-VN");
 }
