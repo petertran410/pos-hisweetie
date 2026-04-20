@@ -22,6 +22,12 @@ export interface Production {
   updatedAt: string;
 }
 
+export interface ProductionComponentData {
+  componentProductId: number;
+  formulaGrams: number;
+  actualGrams: number;
+}
+
 export interface ProductionQueryParams {
   branchIds?: number[];
   status?: number[];
@@ -42,6 +48,7 @@ export interface CreateProductionData {
   status?: number;
   manufacturedDate?: string;
   autoDeductComponents?: boolean;
+  components?: ProductionComponentData[];
 }
 
 export const productionsApi = {

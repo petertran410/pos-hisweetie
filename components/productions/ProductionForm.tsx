@@ -39,6 +39,9 @@ export function ProductionForm({
   const [note, setNote] = useState("");
   const [autoDeductComponents, setAutoDeductComponents] = useState(true);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [actualGrams, setActualGrams] = useState<{
+    [componentProductId: number]: number;
+  }>({});
 
   const { data: branches } = useBranches();
   const { data: productsData } = useProducts({ type: 4 });
@@ -82,6 +85,16 @@ export function ProductionForm({
     }
   }, [production, productDetail, selectedProduct]);
 
+  // Reset actualGrams về công thức khi đổi sản phẩm hoặc số lượng
+  useEffect(() => {
+    if (!selectedProduct?.comboComponents) return;
+    const defaults: { [id: number]: number } = {};
+    selectedProduct.comboComponents.forEach((comp) => {
+      defaults[comp.componentProductId] = Number(comp.quantity) * quantity;
+    });
+    setActualGrams(defaults);
+  }, [selectedProduct, quantity]);
+
   const calculateComponentRequirements = () => {
     if (!selectedProduct || !selectedProduct.comboComponents) return [];
 
@@ -102,21 +115,29 @@ export function ProductionForm({
         unitsToDeduct = totalRequiredGrams / weightInGrams;
       }
 
+      // Dùng actualGrams nếu có, không thì fallback về công thức
+      const actualG =
+        actualGrams[comp.componentProductId] ?? totalRequiredGrams;
+      const actualUnitsToDeduct =
+        weightInGrams > 0 ? actualG / weightInGrams : 0;
+
       const inventory = componentProduct?.inventories?.find(
         (inv) => inv.branchId === sourceBranchId
       );
-
       const availableStock = inventory ? Number(inventory.onHand) : 0;
-      const isInsufficient = availableStock < unitsToDeduct;
+      const isInsufficient = availableStock < actualUnitsToDeduct; // ← dùng actual
 
       return {
+        componentProductId: comp.componentProductId, // ← thêm
         productCode: componentProduct?.code || "",
         productName: componentProduct?.name || "",
         unit: componentProduct?.unit || "",
         requiredGramsPerUnit,
-        totalRequiredGrams,
+        totalRequiredGrams, // gram công thức
         weightInGrams,
-        unitsToDeduct,
+        unitsToDeduct, // đơn vị công thức (readonly)
+        actualG, // gram thực tế
+        actualUnitsToDeduct, // đơn vị thực tế
         availableStock,
         isInsufficient,
       };
@@ -151,6 +172,16 @@ export function ProductionForm({
       return;
     }
 
+    // Build components array khi hoàn thành
+    const components =
+      status === 2
+        ? componentRequirements.map((req) => ({
+            componentProductId: req.componentProductId,
+            formulaGrams: req.totalRequiredGrams,
+            actualGrams: req.actualG,
+          }))
+        : undefined;
+
     const data = {
       code: code || undefined,
       sourceBranchId: Number(sourceBranchId),
@@ -161,6 +192,7 @@ export function ProductionForm({
       status: Number(status),
       manufacturedDate: manufacturedDate.toISOString(),
       autoDeductComponents: Boolean(autoDeductComponents),
+      components, // ← thêm
     };
 
     if (production) {
@@ -479,7 +511,10 @@ export function ProductionForm({
                           Tổng cần (g)
                         </th>
                         <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                          Cần dùng
+                          Công thức
+                        </th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
+                          Thực tế dùng
                         </th>
                         <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
                           Tồn kho
@@ -504,7 +539,9 @@ export function ProductionForm({
                           <td className="px-4 py-3 text-sm text-right">
                             {req.totalRequiredGrams.toLocaleString("vi-VN")}
                           </td>
-                          <td className="px-4 py-3 text-sm text-right">
+
+                          {/* Công thức — readonly */}
+                          <td className="px-4 py-3 text-sm text-right text-gray-500">
                             {req.unitsToDeduct.toLocaleString("vi-VN", {
                               maximumFractionDigits: 3,
                             })}
@@ -514,6 +551,40 @@ export function ProductionForm({
                               </span>
                             )}
                           </td>
+
+                          {/* Thực tế dùng — editable */}
+                          <td className="px-4 py-3 text-sm text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                min={0}
+                                step="any"
+                                value={req.actualG}
+                                onChange={(e) =>
+                                  setActualGrams((prev) => ({
+                                    ...prev,
+                                    [req.componentProductId]: Number(
+                                      e.target.value
+                                    ),
+                                  }))
+                                }
+                                disabled={isFormDisabled}
+                                className="w-24 border rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                              />
+                              <span className="text-xs text-gray-400">g</span>
+                            </div>
+                            <div className="text-xs text-gray-400 text-right mt-0.5">
+                              ≈{" "}
+                              {req.actualUnitsToDeduct.toLocaleString("vi-VN", {
+                                maximumFractionDigits: 3,
+                              })}
+                              {req.unit && (
+                                <span className="ml-1">{req.unit}</span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Tồn kho */}
                           <td className="px-4 py-3 text-sm text-right">
                             {req.availableStock.toLocaleString("vi-VN")}
                             {req.unit && (
@@ -522,6 +593,8 @@ export function ProductionForm({
                               </span>
                             )}
                           </td>
+
+                          {/* Trạng thái dựa trên actual */}
                           <td className="px-4 py-3 text-center">
                             {req.isInsufficient ? (
                               <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-700">
