@@ -144,6 +144,7 @@ export function ManufacturingProductForm({
     currentBranchInventory ? Number(currentBranchInventory.cost) : 0
   );
   const costManuallyEdited = useRef(false);
+  const justLoadedFromProduct = useRef(false);
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
@@ -195,6 +196,15 @@ export function ManufacturingProductForm({
   };
 
   useEffect(() => {
+    // Bỏ qua khi product tồn tại nhưng components chưa load (empty initial state)
+    if (product && components.length === 0) return;
+
+    // Bỏ qua ngay sau khi setComponents từ product load
+    if (justLoadedFromProduct.current) {
+      justLoadedFromProduct.current = false;
+      return;
+    }
+
     if (!costManuallyEdited.current) {
       purchasePrice.reset(calculateTotalPurchasePrice());
     }
@@ -202,11 +212,12 @@ export function ManufacturingProductForm({
 
   useEffect(() => {
     if (product?.comboComponents) {
+      justLoadedFromProduct.current = true;
       const loadedComponents = product.comboComponents.map((comp) => ({
         id: comp.id,
         componentProductId: comp.componentProductId,
         componentProduct: comp.componentProduct,
-        quantity: Number(comp.quantity), // luôn là gram
+        quantity: Number(comp.quantity),
       }));
       setComponents(loadedComponents);
 
