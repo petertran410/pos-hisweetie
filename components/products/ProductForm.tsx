@@ -219,7 +219,7 @@ export function ProductForm({
         minStockAlert: Number(data.minStockAlert) || 0,
         maxStockAlert: Number(data.maxStockAlert) || 0,
         weight: weight.value || undefined,
-        weightUnit: data.weightUnit || undefined,
+        weightUnit: data.weightUnit,
         unit: data.unit || undefined,
         conversionValue: data.conversionValue
           ? Number(data.conversionValue)

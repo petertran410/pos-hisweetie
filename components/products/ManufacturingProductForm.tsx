@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import type { Product } from "@/lib/api/products";
 import {
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { TrademarkDropdown } from "./TrademarkDropdown";
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 import { API_URL } from "@/lib/config/api";
+import { formatNumberInput } from "@/lib/utils";
 
 interface ManufacturingComponent {
   id?: number;
@@ -139,6 +140,10 @@ export function ManufacturingProductForm({
   const maxStockAlert = useFormattedNumber(
     currentBranchInventory ? Number(currentBranchInventory.maxQuality) : 0
   );
+  const purchasePrice = useFormattedNumber(
+    currentBranchInventory ? Number(currentBranchInventory.cost) : 0
+  );
+  const costManuallyEdited = useRef(false);
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
@@ -163,15 +168,11 @@ export function ManufacturingProductForm({
   const watchedWeightUnit = watch("weightUnit");
 
   const hasCostChanged = (): boolean => {
-    const newCost = calculateTotalPurchasePrice();
-
-    if (!product) return newCost > 0;
-
+    if (!product) return purchasePrice.value > 0;
     const currentCost =
       product.inventories?.find((inv) => inv.branchId === selectedBranch?.id)
         ?.cost || 0;
-
-    return Number(currentCost) !== newCost;
+    return Number(currentCost) !== purchasePrice.value;
   };
 
   const submitProduct = async (formData: any) => {
@@ -192,6 +193,12 @@ export function ManufacturingProductForm({
       setPendingFormData(null);
     }
   };
+
+  useEffect(() => {
+    if (!costManuallyEdited.current) {
+      purchasePrice.reset(calculateTotalPurchasePrice());
+    }
+  }, [components, selectedBranch?.id]);
 
   useEffect(() => {
     if (product?.comboComponents) {
@@ -382,8 +389,6 @@ export function ManufacturingProductForm({
         }
       }
 
-      const manufacturingCost = calculateTotalPurchasePrice();
-
       const formData = {
         code: data.code,
         name: data.name,
@@ -395,7 +400,7 @@ export function ManufacturingProductForm({
         childName: data.childName || undefined,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
         basePrice: basePrice.value,
-        purchasePrice: manufacturingCost,
+        purchasePrice: purchasePrice.value,
         stockQuantity: stockQuantity.value,
         minStockAlert: minStockAlert.value,
         maxStockAlert: maxStockAlert.value,
@@ -810,15 +815,23 @@ export function ManufacturingProductForm({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Giá vốn (tự động tính)
+                  Giá vốn
                 </label>
                 <input
                   type="text"
-                  value={calculateTotalPurchasePrice().toLocaleString("en-US")}
-                  readOnly
-                  className="w-full border rounded px-3 py-2 bg-gray-50 cursor-not-allowed"
+                  value={purchasePrice.displayValue}
+                  onChange={(e) => {
+                    costManuallyEdited.current = true;
+                    purchasePrice.handleChange(e);
+                  }}
+                  onBlur={purchasePrice.handleBlur}
+                  className="w-full border rounded px-3 py-2"
                   placeholder="0"
                 />
+                <p className="text-xs text-gray-400 mt-1">
+                  Tự động tính:{" "}
+                  {calculateTotalPurchasePrice().toLocaleString("vi-VN")} đ
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -826,7 +839,7 @@ export function ManufacturingProductForm({
                 </label>
                 <input
                   type="text"
-                  value={basePrice.displayValue}
+                  value={formatNumberInput(basePrice.displayValue)}
                   onChange={basePrice.handleChange}
                   onBlur={basePrice.handleBlur}
                   className="w-full border rounded px-3 py-2"
@@ -947,7 +960,7 @@ export function ManufacturingProductForm({
               <textarea
                 {...register("description")}
                 maxLength={1000}
-                className="w-full border rounded px-3 py-2 h-24"
+                className="w-full border rounded px-3 py-2 h-24 resize-none"
                 placeholder="Nhập mô tả sản phẩm"
               />
             </div>
@@ -959,7 +972,7 @@ export function ManufacturingProductForm({
               <textarea
                 {...register("orderTemplate")}
                 maxLength={1000}
-                className="w-full border rounded px-3 py-2 h-24"
+                className="w-full border rounded px-3 py-2 h-24 resize-none"
                 placeholder="Nhập ghi chú đơn hàng"
               />
             </div>

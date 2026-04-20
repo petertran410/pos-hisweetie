@@ -280,7 +280,7 @@ export function BankAccountFormModal({
                     onChange={(e) =>
                       setFormData({ ...formData, note: e.target.value })
                     }
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-3 py-2 border rounded-lg resize-none"
                     rows={3}
                     placeholder="Nhập ghi chú"
                   />
