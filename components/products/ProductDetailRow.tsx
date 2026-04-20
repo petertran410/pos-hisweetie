@@ -378,7 +378,7 @@ export function ProductDetailRow({
                                 Tên hàng
                               </th>
                               <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">
-                                Số lượng
+                                Trọng lượng (Gram/kg)
                               </th>
                               <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
                                 Giá vốn
@@ -418,7 +418,7 @@ export function ProductDetailRow({
                                     {cp?.name || "-"}
                                   </td>
                                   <td className="px-4 py-2 text-sm text-center">
-                                    {Number(comp.quantity)}
+                                    {Number(comp.quantity)} gram
                                   </td>
                                   <td className="px-4 py-2 text-sm text-right">
                                     {cost.toLocaleString()}

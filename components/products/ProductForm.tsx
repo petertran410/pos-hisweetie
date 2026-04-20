@@ -34,7 +34,6 @@ export function ProductForm({
   onClose,
   onSuccess,
 }: ProductFormProps) {
-  const [showUnitModal, setShowUnitModal] = useState(false);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [showCostConfirmation, setShowCostConfirmation] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<any>(null);
@@ -482,38 +481,97 @@ export function ProductForm({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Đơn vị tính
-                </label>
-                <div className="flex gap-2">
+              {/* Đơn vị tính — input thẳng, không cần modal */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Đơn vị tính
+                  </label>
                   <input
                     {...register("unit")}
-                    className="flex-1 border rounded px-3 py-2"
-                    placeholder="Cái, hộp, thùng..."
-                    readOnly
-                    onClick={() => setShowUnitModal(true)}
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="cái, hộp, thùng..."
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowUnitModal(true)}
-                    className="px-3 py-2 border rounded hover:bg-gray-50">
-                    ...
-                  </button>
                 </div>
               </div>
             </div>
 
+            {/* Thuộc tính — inline, không cần modal */}
             <div>
-              <h3 className="font-semibold mb-3">
-                Quản lý theo đơn vị tính và thuộc tính
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowUnitModal(true)}
-                className="text-blue-600 hover:underline">
-                Xem chi tiết
-              </button>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">Thuộc tính</h3>
+                <div className="flex gap-2">
+                  {["Vị", "Loại", "Màu sắc", "Kích cỡ"].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() =>
+                        setAttributes((prev) => [
+                          ...prev,
+                          { name: preset, value: "" },
+                        ])
+                      }
+                      className="px-2 py-1 text-xs border rounded hover:bg-gray-50 text-blue-600">
+                      + {preset}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAttributes((prev) => [
+                        ...prev,
+                        { name: "", value: "" },
+                      ])
+                    }
+                    className="px-2 py-1 text-xs border rounded hover:bg-gray-50">
+                    + Tùy chỉnh
+                  </button>
+                </div>
+              </div>
+
+              {attributes.length > 0 && (
+                <div className="space-y-2">
+                  {attributes.map((attr, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <input
+                        value={attr.name}
+                        onChange={(e) =>
+                          setAttributes((prev) =>
+                            prev.map((a, i) =>
+                              i === idx ? { ...a, name: e.target.value } : a
+                            )
+                          )
+                        }
+                        className="w-32 border rounded px-2 py-1.5 text-sm"
+                        placeholder="Tên thuộc tính"
+                      />
+                      <span className="text-gray-400">:</span>
+                      <input
+                        value={attr.value}
+                        onChange={(e) =>
+                          setAttributes((prev) =>
+                            prev.map((a, i) =>
+                              i === idx ? { ...a, value: e.target.value } : a
+                            )
+                          )
+                        }
+                        className="flex-1 border rounded px-2 py-1.5 text-sm"
+                        placeholder="Giá trị"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAttributes((prev) =>
+                            prev.filter((_, i) => i !== idx)
+                          )
+                        }
+                        className="text-red-500 hover:text-red-700 text-sm">
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
@@ -593,19 +651,6 @@ export function ProductForm({
           </div>
         </form>
       </div>
-
-      {showUnitModal && (
-        <UnitAttributeModal
-          unit={watch("unit")}
-          attributes={attributes}
-          onSave={(unit, attrs) => {
-            setValue("unit", unit);
-            setAttributes(attrs);
-            setShowUnitModal(false);
-          }}
-          onClose={() => setShowUnitModal(false)}
-        />
-      )}
 
       {showCostConfirmation && (
         <CostConfirmationModal

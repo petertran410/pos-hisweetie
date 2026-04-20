@@ -543,7 +543,7 @@ export function ManufacturingProductForm({
                           Tồn kho
                         </th>
                         <th className="px-3 py-2 text-left text-sm font-medium">
-                          Gram / {watchedUnit || "sp"}{" "}
+                          Số lượng / Gram / {watchedUnit || "sp"}{" "}
                         </th>
                         <th className="px-3 py-2 text-left text-sm font-medium">
                           Giá vốn theo định lượng
