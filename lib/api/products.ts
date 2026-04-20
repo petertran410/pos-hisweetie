@@ -134,10 +134,14 @@ export const productsApi = {
 
   getInventoryLogs: async (
     productId: number,
-    branchId?: number
-  ): Promise<InventoryLog[]> => {
+    branchId?: number,
+    page = 1,
+    limit = 5
+  ): Promise<{ data: InventoryLog[]; total: number }> => {
     const params = new URLSearchParams();
     if (branchId) params.append("branchId", branchId.toString());
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
     return apiClient.get(
       `/products/${productId}/inventory-logs?${params.toString()}`
     );

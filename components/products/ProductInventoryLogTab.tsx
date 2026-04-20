@@ -1,12 +1,15 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useProductInventoryLogs } from "@/lib/hooks/useProducts";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Props {
   productId: number;
   branchId?: number;
 }
+
+const PAGE_SIZE = 5;
 
 const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   PURCHASE: "Nhập hàng",
@@ -24,20 +27,40 @@ const formatMoney = (v: number | null | undefined) => {
   return new Intl.NumberFormat("en-US").format(v);
 };
 
-const formatDateTime = (s: string) => {
-  return new Date(s).toLocaleString("vi-VN", {
+const formatDateTime = (s: string) =>
+  new Date(s).toLocaleString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
-};
+
+// Tính sliding window: tối đa 5 nút, căn giữa quanh currentPage
+function getPageNumbers(currentPage: number, totalPages: number): number[] {
+  const maxVisible = 5;
+  const half = Math.floor(maxVisible / 2);
+  let start = Math.max(1, currentPage - half);
+  let end = Math.min(totalPages, start + maxVisible - 1);
+  if (end - start < maxVisible - 1) {
+    start = Math.max(1, end - maxVisible + 1);
+  }
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
 
 export function ProductInventoryLogTab({ productId, branchId }: Props) {
-  const { data: logs, isLoading } = useProductInventoryLogs(
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset về trang 1 khi đổi sản phẩm hoặc chi nhánh
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [productId, branchId]);
+
+  const { data, isLoading } = useProductInventoryLogs(
     productId,
-    branchId
+    branchId,
+    currentPage,
+    PAGE_SIZE
   );
 
   if (isLoading) {
@@ -48,7 +71,11 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
     );
   }
 
-  if (!logs || logs.length === 0) {
+  const logs = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  if (total === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
         Chưa có dữ liệu thẻ kho
@@ -56,13 +83,17 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
     );
   }
 
+  const pageNumbers = getPageNumbers(currentPage, totalPages);
+  const startRow = (currentPage - 1) * PAGE_SIZE + 1;
+  const endRow = Math.min(currentPage * PAGE_SIZE, total);
+
   return (
     <div className="border rounded overflow-hidden">
       <table className="w-full text-sm">
         <thead className="bg-gray-50">
           <tr>
             <th className="px-4 py-3 text-left font-medium text-gray-700">
-              Chứng từ
+              Mã liên quan
             </th>
             <th className="px-4 py-3 text-left font-medium text-gray-700">
               Thời gian
@@ -88,7 +119,7 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
           {logs.map((log) => (
             <tr key={log.id} className="border-t hover:bg-gray-50">
               <td className="px-4 py-3">
-                <span className={`font-medium text-blue-600`}>
+                <span className="font-medium text-blue-600">
                   {log.refCode || "-"}
                 </span>
               </td>
@@ -110,15 +141,76 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
               <td className="px-4 py-3 text-right">
                 {formatMoney(log.costPrice)}
               </td>
-              <td
-                className={`px-4 py-3 text-right font-medium ${Number(log.quantity) >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {Number(log.quantity) > 0 ? "+" : ""}
-                {Number(log.quantity).toLocaleString()}
+              <td className="px-4 py-3 text-right font-medium">
+                {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {/* Pagination footer */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+          <span className="text-xs text-gray-500">
+            {startRow}–{endRow} / {total} dòng
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {pageNumbers[0] > 1 && (
+              <>
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  className="w-7 h-7 rounded text-xs font-medium hover:bg-gray-200 text-gray-700">
+                  1
+                </button>
+                {pageNumbers[0] > 2 && (
+                  <span className="text-xs text-gray-400 px-1">…</span>
+                )}
+              </>
+            )}
+
+            {pageNumbers.map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-7 h-7 rounded text-xs font-medium transition-colors ${
+                  page === currentPage
+                    ? "bg-blue-600 text-white"
+                    : "hover:bg-gray-200 text-gray-700"
+                }`}>
+                {page}
+              </button>
+            ))}
+
+            {pageNumbers[pageNumbers.length - 1] < totalPages && (
+              <>
+                {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
+                  <span className="text-xs text-gray-400 px-1">…</span>
+                )}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="w-7 h-7 rounded text-xs font-medium hover:bg-gray-200 text-gray-700">
+                  {totalPages}
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-1 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

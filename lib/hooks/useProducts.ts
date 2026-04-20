@@ -82,10 +82,16 @@ export function useUpdateProductRetailPrice() {
   });
 }
 
-export function useProductInventoryLogs(productId: number, branchId?: number) {
+export function useProductInventoryLogs(
+  productId: number,
+  branchId?: number,
+  page = 1,
+  limit = 5
+) {
   return useQuery({
-    queryKey: ["product-inventory-logs", productId, branchId],
-    queryFn: () => productsApi.getInventoryLogs(productId, branchId),
+    queryKey: ["product-inventory-logs", productId, branchId, page, limit],
+    queryFn: () =>
+      productsApi.getInventoryLogs(productId, branchId, page, limit),
     enabled: !!productId,
   });
 }
