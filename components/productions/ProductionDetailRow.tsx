@@ -2,8 +2,9 @@
 
 import { useLayoutEffect, useRef } from "react";
 import { useProduction } from "@/lib/hooks/useProductions";
-import { Loader2 } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import Link from "next/link";
 
 interface ProductionDetailRowProps {
   productionId: number;
@@ -104,81 +105,99 @@ export function ProductionDetailRow({
               {/* Header */}
               <div className="border-b border-gray-200 pb-4 mb-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex flex-col gap-2">
-                    <p className="text-xl font-bold">{production.code}</p>
-                    <h3 className="text-md text-gray-500">
-                      Sản phẩm: {production.productName}
-                    </h3>
+                  <div className="flex gap-2 items-center">
+                    <p className="text-md font-bold">{production.code}</p>
+                    <span className="text-gray-300">-</span>
+                    <span className="text-md text-gray-700">
+                      {production.productName}
+                    </span>
+                    <span className="text-gray-300">-</span>
+                    <Link
+                      href={`/san-pham/danh-sach?Code=${production.productCode}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-md text-blue-600 hover:underline font-medium"
+                      onClick={(e) => e.stopPropagation()}>
+                      {production.productCode}
+                    </Link>
+                    <Link
+                      href={`/san-pham/danh-sach?Code=${production.productCode}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-400 hover:text-blue-600 transition-colors"
+                      onClick={(e) => e.stopPropagation()}>
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(production.status)}`}>
+                      {getStatusText(production.status)}
+                    </span>
                   </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(production.status)}`}>
-                    {getStatusText(production.status)}
-                  </span>
                 </div>
               </div>
 
               {/* Body */}
-              <div className="space-y-6">
-                <div className="grid grid-cols-4 gap-6">
-                  <div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-x-8 border-gray-200 pb-2 mb-2">
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Người tạo:
                     </label>
-                    <span className="w-full px-3 py-2 text-md border rounded bg-gray-50 block">
+                    <span className="block text-sm text-gray-800">
                       {production.createdByName || "-"}
                     </span>
                   </div>
 
-                  <div>
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Thời gian sản xuất:
                     </label>
-                    <span className="w-full px-3 py-2 text-md border rounded bg-white block">
+                    <span className="block text-sm text-gray-800">
                       {formatDate(production.manufacturedDate)}
                     </span>
                   </div>
 
-                  <div>
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Kho đầu vào:
                     </label>
-                    <span className="w-full px-3 py-2 text-md border rounded bg-gray-50 block">
+                    <span className="block text-sm text-gray-800">
                       {production.sourceBranchName}
                     </span>
                   </div>
 
-                  <div>
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Kho đầu ra:
                     </label>
-                    <span className="w-full px-3 py-2 text-md border rounded bg-white block">
+                    <span className="block text-sm text-gray-800">
                       {production.destinationBranchName}
                     </span>
                   </div>
 
-                  <div>
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Mã hàng:
                     </label>
-                    <span className="w-full px-3 py-2 text-md border rounded bg-gray-50 block">
+                    <span className="block text-sm text-gray-800">
                       {production.productCode}
                     </span>
                   </div>
 
-                  <div>
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Số lượng sản xuất:
                     </label>
-                    <span className="w-full px-3 py-2 text-md border rounded bg-white font-semibold block">
+                    <span className="block text-sm text-gray-800">
                       {production.quantity}
                     </span>
                   </div>
 
-                  <div>
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Ngày tạo:
                     </label>
-                    <span className="w-full px-3 py-2 text-md border rounded bg-gray-50 block">
+                    <span className="block text-sm text-gray-800">
                       {formatDate(production.createdAt)}
                     </span>
                   </div>

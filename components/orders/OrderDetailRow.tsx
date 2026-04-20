@@ -302,8 +302,8 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
                   <div className="space-y-3">
                     {/* Info grid — 3 cols */}
-                    <div className="grid grid-cols-3 gap-x-8 border-b border-gray-200 pb-4 mb-4">
-                      <div className="flex items-center gap-2 mb-2">
+                    <div className="grid grid-cols-3 gap-x-8 pb-4 mb-4">
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                         <label className="block text-sm text-gray-500">
                           Người tạo:
                         </label>
@@ -312,7 +312,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                         <label className="block text-sm text-gray-500">
                           Người nhận đặt:
                         </label>
@@ -321,7 +321,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                         <label className="block text-sm text-gray-500">
                           Ngày đặt:
                         </label>
@@ -354,7 +354,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                 onClick={() =>
                                   setShowStatusDropdown((prev) => !prev)
                                 }
-                                className="w-[200px] px-2.5 py-1.5 border border-gray-200 rounded bg-white text-left flex items-center justify-between hover:border-blue-400 transition-colors">
+                                className="w-[200px] px-2 py-1 border border-gray-200 rounded bg-white text-left flex items-center justify-between hover:border-blue-400 transition-colors">
                                 <span
                                   className={`px-2 py-0.5 rounded text-xs font-medium ${getOrderStatusBadgeColor(
                                     isManualEditable
@@ -377,25 +377,22 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                               </button>
 
                               {showStatusDropdown && (
-                                <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg overflow-hidden">
+                                <div className="absolute z-20 mt-1 w-[200px] bg-white border rounded-lg shadow-lg overflow-hidden">
                                   <button
                                     type="button"
                                     onClick={() => {
                                       setSelectedStatus(ORDER_STATUS.PENDING);
                                       setShowStatusDropdown(false);
                                     }}
-                                    className={`w-full px-4 py-2.5 text-sm text-left flex items-center gap-2 hover:bg-gray-50 transition-colors ${
-                                      selectedStatus === ORDER_STATUS.PENDING
-                                        ? "bg-yellow-50"
-                                        : ""
+                                    className={`w-[200px] py-2 text-sm text-left flex items-center gap-2 hover:bg-gray-50 transition-colors
                                     }`}>
-                                    <span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" />
+                                    <span className="w-1 h-1 rounded-full shrink-0" />
                                     <span className="font-medium">
                                       Phiếu tạm
                                     </span>
                                     {selectedStatus ===
                                       ORDER_STATUS.PENDING && (
-                                      <span className="ml-auto text-blue-500 text-xs">
+                                      <span className="text-blue-500 text-xs">
                                         ✓
                                       </span>
                                     )}
@@ -406,18 +403,15 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                       setSelectedStatus(ORDER_STATUS.CONFIRMED);
                                       setShowStatusDropdown(false);
                                     }}
-                                    className={`w-full px-4 py-2.5 text-sm text-left flex items-center gap-2 hover:bg-gray-50 transition-colors border-t ${
-                                      selectedStatus === ORDER_STATUS.CONFIRMED
-                                        ? "bg-teal-50"
-                                        : ""
+                                    className={`w-[200px] py-2 text-sm flex gap-2 hover:bg-gray-50 transition-colors border-t
                                     }`}>
-                                    <span className="w-2 h-2 rounded-full bg-teal-400 shrink-0" />
+                                    <span className="w-1 h-1 rounded-full shrink-0" />
                                     <span className="font-medium">
                                       Đã xác nhận
                                     </span>
                                     {selectedStatus ===
                                       ORDER_STATUS.CONFIRMED && (
-                                      <span className="ml-auto text-blue-500 text-xs">
+                                      <span className="text-blue-500 text-xs">
                                         ✓
                                       </span>
                                     )}
@@ -429,7 +423,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                         <label className="block text-sm text-gray-500">
                           Bảng giá:
                         </label>
@@ -438,7 +432,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                         <label className="block text-sm text-gray-500">
                           Chi nhánh xử lý:
                         </label>
