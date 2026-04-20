@@ -102,6 +102,7 @@ export function ProductForm({
       weightUnit: product?.weightUnit || "kg",
       unit: product?.unit || "",
       isDirectSale: product?.isDirectSale || false,
+      isPieceUnit: product?.isPieceUnit ?? false,
       isActive: product?.isActive ?? true,
       allowsSale: product?.allowsSale ?? true,
       isRewardPoint: product?.isRewardPoint ?? false,
@@ -479,16 +480,36 @@ export function ProductForm({
                     type="text"
                     value={weightDisplay}
                     onChange={handleWeightChange}
-                    className="flex-1 border rounded px-3 py-2"
+                    disabled={!!watch("isPieceUnit")}
+                    className={`flex-1 border rounded px-3 py-2 ${
+                      watch("isPieceUnit")
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : ""
+                    }`}
                     placeholder="0"
                   />
                   <select
                     {...register("weightUnit")}
-                    className="border rounded px-3 py-2 w-24">
+                    disabled={!!watch("isPieceUnit")}
+                    className={`border rounded px-3 py-2 w-24 ${
+                      watch("isPieceUnit")
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : ""
+                    }`}>
                     <option value="kg">kg</option>
                     <option value="g">g</option>
                   </select>
                 </div>
+                <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    {...register("isPieceUnit")}
+                    className="w-4 h-4 accent-orange-500"
+                  />
+                  <span className="text-xs text-orange-600">
+                    Tính theo chiếc (không dùng gram/kg trong sản xuất)
+                  </span>
+                </label>
               </div>
 
               {/* Đơn vị tính — input thẳng, không cần modal */}

@@ -230,7 +230,8 @@ export function ManufacturingProductForm({
         const savedMode =
           (product.comboComponents!.find(
             (c) => c.componentProductId === comp.componentProductId
-          )?.inputMode as "gram" | "quantity" | "piece") ?? "gram";
+          )?.inputMode as "gram" | "quantity" | "piece") ??
+          (comp.componentProduct?.isPieceUnit ? "piece" : "gram");
 
         initialModes[comp.componentProductId] = savedMode;
 
@@ -305,7 +306,8 @@ export function ManufacturingProductForm({
       const w = selectedProduct.weight ? Number(selectedProduct.weight) : 0;
       const wu = selectedProduct.weightUnit || "g";
       const wg = wu === "kg" ? w * 1000 : w;
-      const defaultMode: "gram" | "piece" = wg === 0 ? "piece" : "gram";
+      const defaultMode: "gram" | "piece" =
+        selectedProduct.isPieceUnit === true || wg === 0 ? "piece" : "gram";
 
       setComponents([
         ...components,

@@ -62,6 +62,7 @@ export interface Product {
   attributesText?: string;
   isActive: boolean;
   isDirectSale: boolean;
+  isPieceUnit?: boolean;
   isRewardPoint?: boolean;
   allowsSale?: boolean;
   createdAt: string;
