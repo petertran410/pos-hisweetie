@@ -340,17 +340,17 @@ export function ProductForm({
                   placeholder="Tự động"
                 />
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Tên hàng <span className="text-red-500">*</span>
-              </label>
-              <input
-                {...register("name", { required: true })}
-                className="w-full border rounded px-3 py-2"
-                placeholder="Nhập tên hàng"
-              />
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Tên hàng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  {...register("name", { required: true })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Nhập tên hàng"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">

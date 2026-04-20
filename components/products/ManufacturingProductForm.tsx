@@ -120,6 +120,9 @@ export function ManufacturingProductForm({
     },
   });
 
+  const watchedUnit = watch("unit");
+  const watchedWeightUnit = watch("weightUnit");
+
   const hasCostChanged = (): boolean => {
     const newCost = calculateTotalPurchasePrice();
 
@@ -388,6 +391,16 @@ export function ManufacturingProductForm({
     currentPage * itemsPerPage
   );
 
+  const totalComponentGrams = components.reduce(
+    (sum, comp) => sum + comp.quantity,
+    0
+  );
+  const productWeightInGrams =
+    weight.value * (watchedWeightUnit === "kg" ? 1000 : 1);
+  const isWeightMatch =
+    productWeightInGrams > 0 &&
+    Math.abs(totalComponentGrams - productWeightInGrams) < 0.01;
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
       <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col rounded-lg">
@@ -530,7 +543,7 @@ export function ManufacturingProductForm({
                           Tồn kho
                         </th>
                         <th className="px-3 py-2 text-left text-sm font-medium">
-                          Định lượng
+                          Gram / {watchedUnit || "sp"}{" "}
                         </th>
                         <th className="px-3 py-2 text-left text-sm font-medium">
                           Giá vốn theo định lượng
@@ -559,37 +572,52 @@ export function ManufacturingProductForm({
                             <td className="px-3 py-2 text-sm">
                               {comp.componentProduct?.name}
                             </td>
-                            <td className="px-3 py-2 text-sm">{stock}</td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={
-                                  quantityInputs[comp.componentProductId] !==
-                                  undefined
-                                    ? quantityInputs[comp.componentProductId]
-                                    : comp.quantity.toString()
-                                }
-                                onChange={(e) =>
-                                  handleQuantityChange(
-                                    comp.componentProductId,
-                                    e.target.value
-                                  )
-                                }
-                                onBlur={() => {
-                                  if (
-                                    comp.quantity === 0 ||
-                                    !quantityInputs[comp.componentProductId]
-                                  ) {
-                                    setQuantityInputs((prev) => ({
-                                      ...prev,
-                                      [comp.componentProductId]: "",
-                                    }));
-                                  }
-                                }}
-                                className="w-24 border rounded px-2 py-1 text-sm"
-                                placeholder="0"
-                              />
+
+                            {/* ← Sửa cell tồn kho: thêm đơn vị */}
+                            <td className="px-3 py-2 text-sm">
+                              {stock.toLocaleString()}
+                              {comp.componentProduct?.unit && (
+                                <span className="text-gray-400 ml-1 text-xs">
+                                  {comp.componentProduct.unit}
+                                </span>
+                              )}
                             </td>
+
+                            {/* ← Sửa cell định lượng: thêm nhãn "g" */}
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  value={
+                                    quantityInputs[comp.componentProductId] !==
+                                    undefined
+                                      ? quantityInputs[comp.componentProductId]
+                                      : comp.quantity.toString()
+                                  }
+                                  onChange={(e) =>
+                                    handleQuantityChange(
+                                      comp.componentProductId,
+                                      e.target.value
+                                    )
+                                  }
+                                  onBlur={() => {
+                                    if (
+                                      comp.quantity === 0 ||
+                                      !quantityInputs[comp.componentProductId]
+                                    ) {
+                                      setQuantityInputs((prev) => ({
+                                        ...prev,
+                                        [comp.componentProductId]: "",
+                                      }));
+                                    }
+                                  }}
+                                  className="w-24 border rounded px-2 py-1 text-sm"
+                                  placeholder="0"
+                                />
+                                <span className="text-xs text-gray-400">g</span>
+                              </div>
+                            </td>
+
                             <td className="px-3 py-2 text-sm">
                               {costByQuantity.toLocaleString()} đ
                             </td>
@@ -606,6 +634,37 @@ export function ManufacturingProductForm({
                           </tr>
                         );
                       })}
+
+                      {/* ← Thêm footer row tổng gram */}
+                      {components.length > 0 && (
+                        <tr className="border-t bg-gray-50">
+                          <td
+                            colSpan={3}
+                            className="px-3 py-2 text-sm text-right text-gray-600 font-medium">
+                            Tổng gram / {watchedUnit || "sp"}:
+                          </td>
+                          <td className="px-3 py-2 text-sm font-medium">
+                            <span
+                              className={
+                                productWeightInGrams === 0
+                                  ? "text-gray-700"
+                                  : isWeightMatch
+                                    ? "text-green-600"
+                                    : "text-red-500"
+                              }>
+                              {totalComponentGrams.toLocaleString()} g
+                              {productWeightInGrams > 0 && (
+                                <span className="ml-2 text-xs font-normal">
+                                  {isWeightMatch
+                                    ? "✓ khớp trọng lượng"
+                                    : `(cần ${productWeightInGrams.toLocaleString()} g)`}
+                                </span>
+                              )}
+                            </span>
+                          </td>
+                          <td colSpan={2} />
+                        </tr>
+                      )}
                     </tbody>
                   </table>
 

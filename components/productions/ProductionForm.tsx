@@ -112,6 +112,7 @@ export function ProductionForm({
       return {
         productCode: componentProduct?.code || "",
         productName: componentProduct?.name || "",
+        unit: componentProduct?.unit || "",
         requiredGramsPerUnit,
         totalRequiredGrams,
         weightInGrams,
@@ -478,7 +479,7 @@ export function ProductionForm({
                           Tổng cần (g)
                         </th>
                         <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                          Quy đổi (units)
+                          Cần dùng
                         </th>
                         <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
                           Tồn kho
@@ -505,11 +506,21 @@ export function ProductionForm({
                           </td>
                           <td className="px-4 py-3 text-sm text-right">
                             {req.unitsToDeduct.toLocaleString("vi-VN", {
-                              maximumFractionDigits: 2,
+                              maximumFractionDigits: 3,
                             })}
+                            {req.unit && (
+                              <span className="text-gray-400 ml-1 text-xs">
+                                {req.unit}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-sm text-right">
                             {req.availableStock.toLocaleString("vi-VN")}
+                            {req.unit && (
+                              <span className="text-gray-400 ml-1 text-xs">
+                                {req.unit}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-center">
                             {req.isInsufficient ? (
