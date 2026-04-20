@@ -63,7 +63,17 @@ export function ProductForm({
       : 0
   );
   const basePrice = useFormattedNumber(product?.basePrice || 0);
-  const weight = useFormattedNumber(product?.weight || 0);
+  const [weightValue, setWeightValue] = useState<number>(product?.weight ?? 0);
+  const [weightDisplay, setWeightDisplay] = useState<string>(
+    product?.weight != null ? String(product.weight) : ""
+  );
+
+  const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^\d.]/g, "");
+    setWeightDisplay(raw);
+    const num = parseFloat(raw);
+    setWeightValue(isNaN(num) ? 0 : num);
+  };
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
@@ -184,7 +194,8 @@ export function ProductForm({
         currentBranchInventory ? Number(currentBranchInventory.cost) : 0
       );
       basePrice.reset(product.basePrice || 0);
-      weight.reset(product.weight || 0);
+      setWeightValue(product.weight ?? 0);
+      setWeightDisplay(product.weight != null ? String(product.weight) : "");
     }
   }, [product, selectedBranch]);
 
@@ -218,7 +229,7 @@ export function ProductForm({
         stockQuantity: Number(data.stockQuantity) || 0,
         minStockAlert: Number(data.minStockAlert) || 0,
         maxStockAlert: Number(data.maxStockAlert) || 0,
-        weight: weight.value || undefined,
+        weight: weightValue,
         weightUnit: data.weightUnit,
         unit: data.unit || undefined,
         conversionValue: data.conversionValue
@@ -466,9 +477,8 @@ export function ProductForm({
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={weight.displayValue}
-                    onChange={weight.handleChange}
-                    onBlur={weight.handleBlur}
+                    value={weightDisplay}
+                    onChange={handleWeightChange}
                     className="flex-1 border rounded px-3 py-2"
                     placeholder="0"
                   />
