@@ -145,6 +145,7 @@ export function ManufacturingProductForm({
   );
   const costManuallyEdited = useRef(false);
   const justLoadedFromProduct = useRef(false);
+  const hasLoadedFromProduct = useRef(false);
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
@@ -211,7 +212,8 @@ export function ManufacturingProductForm({
   }, [components, selectedBranch?.id]);
 
   useEffect(() => {
-    if (product?.comboComponents) {
+    if (product?.comboComponents && !hasLoadedFromProduct.current) {
+      hasLoadedFromProduct.current = true;
       justLoadedFromProduct.current = true;
       costManuallyEdited.current = true;
 
