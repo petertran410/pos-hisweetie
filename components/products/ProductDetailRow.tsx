@@ -378,7 +378,7 @@ export function ProductDetailRow({
                                 Tên hàng
                               </th>
                               <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">
-                                Trọng lượng (Gram/kg)
+                                Số lượng / Gram
                               </th>
                               <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
                                 Giá vốn
@@ -418,7 +418,31 @@ export function ProductDetailRow({
                                     {cp?.name || "-"}
                                   </td>
                                   <td className="px-4 py-2 text-sm text-center">
-                                    {Number(comp.quantity)} gram
+                                    {(() => {
+                                      const mode = comp.inputMode;
+                                      const qty = Number(comp.quantity);
+
+                                      // Piece mode → hiển thị số chiếc + đơn vị của sản phẩm
+                                      if (mode === "piece") {
+                                        return `${qty} ${cp?.unit || "chiếc"}`;
+                                      }
+
+                                      // Quantity mode → convert gram về số lượng để hiển thị
+                                      if (mode === "quantity") {
+                                        const w = cp?.weight
+                                          ? Number(cp.weight)
+                                          : 0;
+                                        const wu = cp?.weightUnit || "g";
+                                        const wg = wu === "kg" ? w * 1000 : w;
+                                        if (wg > 0) {
+                                          const units = qty / wg;
+                                          return `${units.toLocaleString("vi-VN", { maximumFractionDigits: 3 })} ${cp?.unit || "đv"}`;
+                                        }
+                                      }
+
+                                      // Gram mode (default) → hiển thị gram
+                                      return `${qty} gram`;
+                                    })()}
                                   </td>
                                   <td className="px-4 py-2 text-sm text-right">
                                     {cost.toLocaleString()}

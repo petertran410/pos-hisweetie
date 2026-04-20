@@ -118,13 +118,13 @@ export function ManufacturingProductForm({
     if (!isNaN(numValue)) {
       const mode = inputModes[productId] ?? "gram";
       if (mode === "gram" || mode === "piece") {
-        // gram: lưu grams; piece: lưu số chiếc trực tiếp
         updateComponentQuantity(productId, numValue);
       } else {
         // quantity mode → convert sang gram
         const comp = components.find((c) => c.componentProductId === productId);
         const wg = getWeightInGrams(comp!);
-        updateComponentQuantity(productId, numValue * wg);
+        // ← THÊM guard: nếu wg = 0 thì lưu trực tiếp như piece mode
+        updateComponentQuantity(productId, wg > 0 ? numValue * wg : numValue);
       }
     }
   };
@@ -235,10 +235,17 @@ export function ManufacturingProductForm({
           )?.inputMode as "gram" | "quantity" | "piece") ??
           (comp.componentProduct?.isPieceUnit ? "piece" : "gram");
 
-        initialModes[comp.componentProductId] = savedMode;
+        // ← THÊM: override về "piece" nếu sản phẩm isPieceUnit hoặc không có weight
+        const wg = getWeightInGrams(comp);
+        const effectiveMode: "gram" | "quantity" | "piece" =
+          (savedMode === "quantity" || savedMode === "gram") &&
+          (comp.componentProduct?.isPieceUnit === true || wg === 0)
+            ? "piece"
+            : savedMode;
 
-        if (savedMode === "quantity") {
-          const wg = getWeightInGrams(comp);
+        initialModes[comp.componentProductId] = effectiveMode; // ← dùng effectiveMode thay savedMode
+
+        if (effectiveMode === "quantity") {
           const displayCount = wg > 0 ? comp.quantity / wg : comp.quantity;
           initialInputs[comp.componentProductId] = displayCount
             .toFixed(4)
