@@ -62,7 +62,7 @@ export function CustomerDebtsTab({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full table-fixed">
+          <table className="w-full">
             <thead>
               <tr className="border-b bg-gray-50">
                 <th className="px-4 py-3 text-left text-md font-medium">

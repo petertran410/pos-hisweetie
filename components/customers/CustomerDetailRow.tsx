@@ -45,27 +45,19 @@ export function CustomerDetailRow({
     }
     if (!scrollEl) return;
 
-    // Set initial width
-    el.style.width = `${scrollEl.clientWidth}px`;
-
-    let rafId: number;
-    const ro = new ResizeObserver((entries) => {
-      // Dùng entry.contentRect thay vì đọc scrollEl.clientWidth trong callback
-      // → tránh forced layout → tránh oscillation loop
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const entry = entries[entries.length - 1];
-        const w =
-          entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
-        el.style.width = `${w}px`;
-      });
-    });
-
-    ro.observe(scrollEl);
-    return () => {
-      ro.disconnect();
-      cancelAnimationFrame(rafId);
+    const update = () => {
+      el.style.width = `${scrollEl!.clientWidth}px`;
     };
+    update();
+
+    // ✅ Observe PARENT của scrollEl, không phải scrollEl
+    // → Khi vertical scrollbar trên scrollEl xuất hiện/biến mất (làm clientWidth ±15px),
+    //   parent KHÔNG resize → callback không fire → phá vỡ feedback loop
+    // → Chỉ fire khi window/sidebar thực sự thay đổi size (parent mới resize)
+    const ro = new ResizeObserver(update);
+    ro.observe(scrollEl.parentElement ?? scrollEl);
+
+    return () => ro.disconnect();
   }, [customer]);
 
   const handleStatusToggle = () => {
