@@ -122,6 +122,38 @@ export function ProductionForm({
 
     return selectedProduct.comboComponents.map((comp) => {
       const componentProduct = comp.componentProduct;
+
+      // ─── PIECE MODE ───────────────────────────────────────────────
+      if (comp.inputMode === "piece") {
+        const requiredPiecesPerUnit = Number(comp.quantity);
+        const totalRequiredPieces = requiredPiecesPerUnit * quantity;
+        const actualG =
+          actualGrams[comp.componentProductId] ?? totalRequiredPieces;
+
+        const inventory = componentProduct?.inventories?.find(
+          (inv) => inv.branchId === sourceBranchId
+        );
+        const availableStock = inventory ? Number(inventory.onHand) : 0;
+        const isInsufficient = availableStock < actualG;
+
+        return {
+          componentProductId: comp.componentProductId,
+          productCode: componentProduct?.code || "",
+          productName: componentProduct?.name || "",
+          unit: componentProduct?.unit || "chiếc",
+          requiredGramsPerUnit: requiredPiecesPerUnit,
+          totalRequiredGrams: totalRequiredPieces,
+          weightInGrams: 0,
+          unitsToDeduct: totalRequiredPieces, // công thức: pieces
+          actualG, // actual pieces
+          actualUnitsToDeduct: actualG, // trừ kho đúng số chiếc
+          availableStock,
+          isInsufficient,
+        };
+      }
+      // ─────────────────────────────────────────────────────────────
+
+      // GRAM MODE (logic gốc)
       const requiredGramsPerUnit = Number(comp.quantity);
       const totalRequiredGrams = requiredGramsPerUnit * quantity;
 
@@ -137,7 +169,6 @@ export function ProductionForm({
         unitsToDeduct = totalRequiredGrams / weightInGrams;
       }
 
-      // Dùng actualGrams nếu có, không thì fallback về công thức
       const actualG =
         actualGrams[comp.componentProductId] ?? totalRequiredGrams;
       const actualUnitsToDeduct =
@@ -147,19 +178,19 @@ export function ProductionForm({
         (inv) => inv.branchId === sourceBranchId
       );
       const availableStock = inventory ? Number(inventory.onHand) : 0;
-      const isInsufficient = availableStock < actualUnitsToDeduct; // ← dùng actual
+      const isInsufficient = availableStock < actualUnitsToDeduct;
 
       return {
-        componentProductId: comp.componentProductId, // ← thêm
+        componentProductId: comp.componentProductId,
         productCode: componentProduct?.code || "",
         productName: componentProduct?.name || "",
         unit: componentProduct?.unit || "",
         requiredGramsPerUnit,
-        totalRequiredGrams, // gram công thức
+        totalRequiredGrams,
         weightInGrams,
-        unitsToDeduct, // đơn vị công thức (readonly)
-        actualG, // gram thực tế
-        actualUnitsToDeduct, // đơn vị thực tế
+        unitsToDeduct,
+        actualG,
+        actualUnitsToDeduct,
         availableStock,
         isInsufficient,
       };

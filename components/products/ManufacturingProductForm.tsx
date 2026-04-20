@@ -68,7 +68,7 @@ export function ManufacturingProductForm({
     [key: number]: string;
   }>({});
   const [inputModes, setInputModes] = useState<{
-    [componentProductId: number]: "gram" | "quantity";
+    [componentProductId: number]: "gram" | "quantity" | "piece";
   }>({});
 
   const getWeightInGrams = (comp: ManufacturingComponent): number => {
@@ -79,23 +79,22 @@ export function ManufacturingProductForm({
     return wu === "kg" ? w * 1000 : w;
   };
 
-  // Toggle mode: gram ↔ quantity
   const toggleInputMode = (productId: number) => {
+    const currentMode = inputModes[productId] ?? "gram";
+    // piece mode là cố định, không cho toggle
+    if (currentMode === "piece") return;
+
     const comp = components.find((c) => c.componentProductId === productId);
     if (!comp) return;
     const wg = getWeightInGrams(comp);
     if (wg === 0) return;
 
-    const currentMode = inputModes[productId] ?? "gram";
     const newMode = currentMode === "gram" ? "quantity" : "gram";
 
-    // Tính lại display value khi đổi mode
     let newDisplay: string;
     if (newMode === "quantity") {
-      // gram → quantity: chia cho weight/unit
       newDisplay = (comp.quantity / wg).toFixed(4).replace(/\.?0+$/, "");
     } else {
-      // quantity → gram: comp.quantity đã là gram rồi
       newDisplay = comp.quantity.toString();
     }
 
@@ -118,10 +117,11 @@ export function ManufacturingProductForm({
     const numValue = parseFloat(cleaned);
     if (!isNaN(numValue)) {
       const mode = inputModes[productId] ?? "gram";
-      if (mode === "gram") {
+      if (mode === "gram" || mode === "piece") {
+        // gram: lưu grams; piece: lưu số chiếc trực tiếp
         updateComponentQuantity(productId, numValue);
       } else {
-        // quantity mode → convert sang gram trước khi lưu
+        // quantity mode → convert sang gram
         const comp = components.find((c) => c.componentProductId === productId);
         const wg = getWeightInGrams(comp!);
         updateComponentQuantity(productId, numValue * wg);
@@ -222,13 +222,13 @@ export function ManufacturingProductForm({
       setComponents(loadedComponents);
 
       const initialInputs: { [key: number]: string } = {};
-      const initialModes: { [key: number]: "gram" | "quantity" } = {};
+      const initialModes: { [key: number]: "gram" | "quantity" | "piece" } = {};
 
       loadedComponents.forEach((comp) => {
         const savedMode =
           (product.comboComponents!.find(
             (c) => c.componentProductId === comp.componentProductId
-          )?.inputMode as "gram" | "quantity") ?? "gram";
+          )?.inputMode as "gram" | "quantity" | "piece") ?? "gram"; // ← thêm "piece"
 
         initialModes[comp.componentProductId] = savedMode;
 
@@ -239,6 +239,7 @@ export function ManufacturingProductForm({
             .toFixed(4)
             .replace(/\.?0+$/, "");
         } else {
+          // "gram" hoặc "piece" đều hiển thị trực tiếp comp.quantity
           initialInputs[comp.componentProductId] = comp.quantity.toString();
         }
       });
@@ -300,6 +301,12 @@ export function ManufacturingProductForm({
       (c) => c.componentProductId === selectedProduct.id
     );
     if (!exists) {
+      const w = selectedProduct.weight ? Number(selectedProduct.weight) : 0;
+      const wu = selectedProduct.weightUnit || "g";
+      const wg = wu === "kg" ? w * 1000 : w;
+      // Nếu không có trọng lượng → tự động là piece mode
+      const defaultMode: "gram" | "piece" = wg === 0 ? "piece" : "gram";
+
       setComponents([
         ...components,
         {
@@ -308,6 +315,8 @@ export function ManufacturingProductForm({
           quantity: 1,
         },
       ]);
+      setInputModes((prev) => ({ ...prev, [selectedProduct.id]: defaultMode }));
+      setQuantityInputs((prev) => ({ ...prev, [selectedProduct.id]: "1" }));
       setSearchQuery("");
       setShowSearchResults(false);
     }
@@ -337,10 +346,16 @@ export function ManufacturingProductForm({
       (inv) => inv.branchId === selectedBranch?.id
     );
     const cost = inventory ? Number(inventory.cost) : 0;
+    const mode = inputModes[comp.componentProductId] ?? "gram";
+
+    // Piece mode: cost = giá vốn/chiếc × số chiếc
+    if (mode === "piece") {
+      return cost * comp.quantity;
+    }
+
     const weight = componentProduct.weight
       ? Number(componentProduct.weight)
       : 0;
-
     if (weight === 0) return 0;
 
     const weightInGrams =
@@ -467,10 +482,11 @@ export function ManufacturingProductForm({
     currentPage * itemsPerPage
   );
 
-  const totalComponentGrams = components.reduce(
-    (sum, comp) => sum + comp.quantity,
-    0
-  );
+  const totalComponentGrams = components.reduce((sum, comp) => {
+    const mode = inputModes[comp.componentProductId] ?? "gram";
+    if (mode === "piece") return sum; // không tính chiếc vào gram
+    return sum + comp.quantity;
+  }, 0);
   const productWeightInGrams =
     weight.value * (watchedWeightUnit === "kg" ? 1000 : 1);
   const isWeightMatch =
@@ -690,35 +706,49 @@ export function ManufacturingProductForm({
                                   className="w-20 border rounded px-2 py-1 text-sm"
                                   placeholder="0"
                                 />
-                                {/* Toggle mode button */}
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    toggleInputMode(comp.componentProductId)
+                                {/* Toggle / label button */}
+                                {(() => {
+                                  const mode =
+                                    inputModes[comp.componentProductId] ??
+                                    "gram";
+                                  if (mode === "piece") {
+                                    // Piece mode: label cố định, không toggle
+                                    return (
+                                      <span className="px-2 py-1 text-xs rounded border bg-orange-50 text-orange-600 border-orange-300">
+                                        {comp.componentProduct?.unit || "chiếc"}
+                                      </span>
+                                    );
                                   }
-                                  title={
-                                    (inputModes[comp.componentProductId] ??
-                                      "gram") === "gram"
-                                      ? "Đang nhập gram — click để nhập theo số lượng"
-                                      : "Đang nhập số lượng — click để nhập theo gram"
-                                  }
-                                  className={`px-2 py-1 text-xs rounded border transition-colors ${
-                                    (inputModes[comp.componentProductId] ??
-                                      "gram") === "gram"
-                                      ? "bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200"
-                                      : "bg-blue-50 text-blue-600 border-blue-300 hover:bg-blue-100"
-                                  }`}>
-                                  {(inputModes[comp.componentProductId] ??
-                                    "gram") === "gram"
-                                    ? "g"
-                                    : comp.componentProduct?.unit || "sl"}
-                                </button>
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        toggleInputMode(comp.componentProductId)
+                                      }
+                                      title={
+                                        mode === "gram"
+                                          ? "Đang nhập gram — click để nhập theo số lượng"
+                                          : "Đang nhập số lượng — click để nhập theo gram"
+                                      }
+                                      className={`px-2 py-1 text-xs rounded border transition-colors ${
+                                        mode === "gram"
+                                          ? "bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200"
+                                          : "bg-blue-50 text-blue-600 border-blue-300 hover:bg-blue-100"
+                                      }`}>
+                                      {mode === "gram"
+                                        ? "g"
+                                        : comp.componentProduct?.unit || "sl"}
+                                    </button>
+                                  );
+                                })()}
                               </div>
                               {/* Hint quy đổi */}
                               {(() => {
                                 const wg = getWeightInGrams(comp);
                                 const mode =
                                   inputModes[comp.componentProductId] ?? "gram";
+                                // Piece mode không cần hint gram
+                                if (mode === "piece") return null;
                                 if (wg === 0) return null;
                                 if (mode === "gram") {
                                   const count = comp.quantity / wg;
