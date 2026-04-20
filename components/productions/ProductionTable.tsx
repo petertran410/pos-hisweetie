@@ -6,6 +6,7 @@ import { SelectBranchModal } from "./SelectBranchModal";
 import { ProductionForm } from "./ProductionForm";
 import { ProductionDetailRow } from "./ProductionDetailRow";
 import type { Production } from "@/lib/api/productions";
+import { Can } from "../permissions/Can";
 
 interface ProductionTableProps {
   productions: Production[];
@@ -184,7 +185,7 @@ export function ProductionTable({
   }
 
   return (
-    <>
+    <Can resource="productions" action="view">
       <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
         <div className="border-b p-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -357,6 +358,6 @@ export function ProductionTable({
             onClose={handleCloseForm}
           />
         )}
-    </>
+    </Can>
   );
 }
