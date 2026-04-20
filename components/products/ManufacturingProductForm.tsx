@@ -401,6 +401,7 @@ export function ManufacturingProductForm({
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
         basePrice: basePrice.value,
         purchasePrice: purchasePrice.value,
+        manualCostOverride: costManuallyEdited.current,
         stockQuantity: stockQuantity.value,
         minStockAlert: minStockAlert.value,
         maxStockAlert: maxStockAlert.value,
