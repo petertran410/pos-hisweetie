@@ -371,7 +371,7 @@ export function ProductionTable({ filters }: ProductionTableProps) {
             style={{ minWidth: "max-content" }}>
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 sticky left-0 bg-gray-50">
+                <th className="px-4 py-3 text-left w-10 sticky left-0 bg-gray-50">
                   <input
                     type="checkbox"
                     checked={
@@ -390,6 +390,7 @@ export function ProductionTable({ filters }: ProductionTableProps) {
                     {col.label}
                   </th>
                 ))}
+                <th />
               </tr>
             </thead>
             <tbody>

@@ -92,88 +92,93 @@ export function ProductionDetailRow({
 
   return (
     <tr>
-      <td colSpan={colSpan} className="p-0 bg-gray-50">
-        <div ref={wrapperRef} style={{ overflow: "hidden" }}>
-          <div className="px-6 py-4">
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <td
+        colSpan={colSpan}
+        className="border-b-2 border-l-2 border-r-2 border-blue-500 p-0 bg-gray-50">
+        <div
+          ref={wrapperRef}
+          className="sticky left-0 bg-gray-50"
+          style={{ width: 0 }}>
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="p-4">
               {/* Header */}
-              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {production.code}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    Sản phẩm: {production.productName}
-                  </p>
+              <div className="border-b border-gray-200 pb-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xl font-bold">{production.code}</p>
+                    <h3 className="text-md text-gray-500">
+                      Sản phẩm: {production.productName}
+                    </h3>
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(production.status)}`}>
+                    {getStatusText(production.status)}
+                  </span>
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(production.status)}`}>
-                  {getStatusText(production.status)}
-                </span>
               </div>
 
               {/* Body */}
-              <div className="p-6 space-y-6">
+              <div className="space-y-6">
                 <div className="grid grid-cols-4 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1.5">
+                    <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Người tạo:
                     </label>
-                    <span className="w-full px-3 py-2 text-sm border rounded-lg bg-gray-50 block">
+                    <span className="w-full px-3 py-2 text-md border rounded bg-gray-50 block">
                       {production.createdByName || "-"}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1.5">
+                    <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Thời gian sản xuất:
                     </label>
-                    <span className="w-full px-3 py-2 text-sm border rounded-lg bg-white block">
+                    <span className="w-full px-3 py-2 text-md border rounded bg-white block">
                       {formatDate(production.manufacturedDate)}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1.5">
+                    <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Kho đầu vào:
                     </label>
-                    <span className="w-full px-3 py-2 text-sm border rounded-lg bg-gray-50 block">
+                    <span className="w-full px-3 py-2 text-md border rounded bg-gray-50 block">
                       {production.sourceBranchName}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1.5">
+                    <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Kho đầu ra:
                     </label>
-                    <span className="w-full px-3 py-2 text-sm border rounded-lg bg-white block">
+                    <span className="w-full px-3 py-2 text-md border rounded bg-white block">
                       {production.destinationBranchName}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1.5">
+                    <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Mã hàng:
                     </label>
-                    <span className="w-full px-3 py-2 text-sm border rounded-lg bg-gray-50 block">
+                    <span className="w-full px-3 py-2 text-md border rounded bg-gray-50 block">
                       {production.productCode}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1.5">
+                    <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Số lượng sản xuất:
                     </label>
-                    <span className="w-full px-3 py-2 text-sm border rounded-lg bg-white font-semibold block">
+                    <span className="w-full px-3 py-2 text-md border rounded bg-white font-semibold block">
                       {production.quantity}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1.5">
+                    <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Ngày tạo:
                     </label>
-                    <span className="w-full px-3 py-2 text-sm border rounded-lg bg-gray-50 block">
+                    <span className="w-full px-3 py-2 text-md border rounded bg-gray-50 block">
                       {formatDate(production.createdAt)}
                     </span>
                   </div>
@@ -181,22 +186,22 @@ export function ProductionDetailRow({
 
                 {production.note && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1.5">
+                    <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Ghi chú:
                     </label>
-                    <p className="px-3 py-2 text-sm border rounded-lg bg-gray-50 text-gray-700">
+                    <p className="px-3 py-2 text-md border rounded bg-gray-50 text-gray-700">
                       {production.note}
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Footer actions */}
-              <div className="flex items-center justify-end px-6 py-4 border-t border-gray-200 bg-gray-50">
+              {/* Footer */}
+              <div className="flex items-center justify-end pt-4 mt-4 border-t border-gray-200">
                 {onEdit && production.status !== 3 && (
                   <button
                     onClick={onEdit}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                    className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors">
                     Chỉnh sửa
                   </button>
                 )}
