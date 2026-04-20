@@ -1,5 +1,15 @@
 import { apiClient } from "@/lib/config/api";
 
+export interface SavedProductionComponent {
+  id: number;
+  componentProductId: number;
+  componentCode: string;
+  componentName: string;
+  formulaGrams: number;
+  actualGrams: number;
+  unitsDeducted: number;
+}
+
 export interface Production {
   id: number;
   code: string;
@@ -20,6 +30,7 @@ export interface Production {
   manufacturedDate?: string;
   createdAt: string;
   updatedAt: string;
+  components?: SavedProductionComponent[];
 }
 
 export interface ProductionComponentData {

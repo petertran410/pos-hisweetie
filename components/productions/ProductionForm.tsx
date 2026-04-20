@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, Search, Calendar } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Search, Calendar, Minus, Plus } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useProducts, useProduct } from "@/lib/hooks/useProducts";
 import {
@@ -41,6 +41,9 @@ export function ProductionForm({
   const [actualGrams, setActualGrams] = useState<{
     [componentProductId: number]: number;
   }>({});
+  const [actualUnitInputs, setActualUnitInputs] = useState<{
+    [componentProductId: number]: string;
+  }>({});
 
   const { data: branches } = useBranches();
   const { data: productsData } = useProducts({ type: 4 });
@@ -63,6 +66,8 @@ export function ProductionForm({
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.code.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const initializedFromSavedRef = useRef(false);
 
   useEffect(() => {
     if (production) {
@@ -87,10 +92,25 @@ export function ProductionForm({
   // Reset actualGrams về công thức khi đổi sản phẩm hoặc số lượng
   useEffect(() => {
     if (!selectedProduct?.comboComponents) return;
+
+    const hasSaved = production?.components && production.components.length > 0;
+    const useSaved = hasSaved && !initializedFromSavedRef.current;
+
     const defaults: { [id: number]: number } = {};
     selectedProduct.comboComponents.forEach((comp) => {
-      defaults[comp.componentProductId] = Number(comp.quantity) * quantity;
+      if (useSaved) {
+        const savedComp = production!.components!.find(
+          (c) => c.componentProductId === comp.componentProductId
+        );
+        defaults[comp.componentProductId] = savedComp
+          ? Number(savedComp.actualGrams)
+          : Number(comp.quantity) * quantity;
+      } else {
+        defaults[comp.componentProductId] = Number(comp.quantity) * quantity;
+      }
     });
+
+    if (useSaved) initializedFromSavedRef.current = true;
     setActualGrams(defaults);
   }, [selectedProduct, quantity]);
 
@@ -172,14 +192,11 @@ export function ProductionForm({
     }
 
     // Build components array khi hoàn thành
-    const components =
-      status === 2
-        ? componentRequirements.map((req) => ({
-            componentProductId: req.componentProductId,
-            formulaGrams: req.totalRequiredGrams,
-            actualGrams: req.actualG,
-          }))
-        : undefined;
+    const components = componentRequirements.map((req) => ({
+      componentProductId: req.componentProductId,
+      formulaGrams: req.totalRequiredGrams,
+      actualGrams: req.actualG,
+    }));
 
     const data = {
       code: code || undefined,
@@ -458,7 +475,7 @@ export function ProductionForm({
                         <th className="px-3 py-2 text-right text-sm font-medium text-gray-700">
                           Công thức
                         </th>
-                        <th className="px-3 py-2 text-right text-sm font-medium text-gray-700">
+                        <th className="px-3 py-2 text-center text-sm font-medium text-gray-700">
                           Thực tế dùng
                         </th>
                         <th className="px-3 py-2 text-right text-sm font-medium text-gray-700">
@@ -495,37 +512,118 @@ export function ProductionForm({
                             )}
                           </td>
                           {/* Thực tế dùng */}
-                          <td className="px-4 py-3 text-sm text-right">
+                          <td className="px-3 py-2 text-sm text-center">
                             <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                min={0}
-                                step="any"
-                                value={
-                                  req.weightInGrams > 0
-                                    ? req.actualUnitsToDeduct
-                                    : req.actualG
-                                }
-                                onChange={(e) => {
-                                  const inputVal = Number(e.target.value);
+                              {/* Nút giảm */}
+                              <button
+                                type="button"
+                                disabled={isFormDisabled}
+                                onClick={() => {
+                                  const current =
+                                    req.weightInGrams > 0
+                                      ? req.actualUnitsToDeduct
+                                      : req.actualG;
+                                  const next = Math.max(0, current - 1);
                                   const newGrams =
                                     req.weightInGrams > 0
-                                      ? inputVal * req.weightInGrams
-                                      : inputVal;
+                                      ? next * req.weightInGrams
+                                      : next;
+                                  setActualUnitInputs((prev) => {
+                                    const updated = { ...prev };
+                                    delete updated[req.componentProductId];
+                                    return updated;
+                                  });
                                   setActualGrams((prev) => ({
                                     ...prev,
                                     [req.componentProductId]: newGrams,
                                   }));
                                 }}
+                                className="w-6 h-6 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-500">
+                                <Minus className="w-3 h-3" />
+                              </button>
+
+                              {/* Text input */}
+                              <input
+                                type="text"
+                                value={
+                                  actualUnitInputs[req.componentProductId] !==
+                                  undefined
+                                    ? actualUnitInputs[req.componentProductId]
+                                    : (req.weightInGrams > 0
+                                        ? req.actualUnitsToDeduct
+                                        : req.actualG
+                                      ).toLocaleString("vi-VN", {
+                                        maximumFractionDigits: 3,
+                                      })
+                                }
+                                onChange={(e) =>
+                                  setActualUnitInputs((prev) => ({
+                                    ...prev,
+                                    [req.componentProductId]: e.target.value,
+                                  }))
+                                }
+                                onBlur={(e) => {
+                                  // Parse cả "," lẫn "." làm dấu thập phân
+                                  const raw = e.target.value
+                                    .replace(/\./g, "")
+                                    .replace(",", ".");
+                                  const parsed = parseFloat(raw);
+                                  if (!isNaN(parsed) && parsed >= 0) {
+                                    const newGrams =
+                                      req.weightInGrams > 0
+                                        ? parsed * req.weightInGrams
+                                        : parsed;
+                                    setActualGrams((prev) => ({
+                                      ...prev,
+                                      [req.componentProductId]: newGrams,
+                                    }));
+                                  }
+                                  // Xóa input string → trả về computed display
+                                  setActualUnitInputs((prev) => {
+                                    const updated = { ...prev };
+                                    delete updated[req.componentProductId];
+                                    return updated;
+                                  });
+                                }}
                                 disabled={isFormDisabled}
-                                className="w-24 border rounded px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                className="w-20 border rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                               />
-                              <span className="text-xs text-gray-400">
+
+                              {/* <span className="text-xs text-gray-400 w-6 text-left">
                                 {req.weightInGrams > 0 ? req.unit || "đv" : "g"}
-                              </span>
+                              </span> */}
+
+                              {/* Nút tăng */}
+                              <button
+                                type="button"
+                                disabled={isFormDisabled}
+                                onClick={() => {
+                                  const current =
+                                    req.weightInGrams > 0
+                                      ? req.actualUnitsToDeduct
+                                      : req.actualG;
+                                  const next = current + 1;
+                                  const newGrams =
+                                    req.weightInGrams > 0
+                                      ? next * req.weightInGrams
+                                      : next;
+                                  setActualUnitInputs((prev) => {
+                                    const updated = { ...prev };
+                                    delete updated[req.componentProductId];
+                                    return updated;
+                                  });
+                                  setActualGrams((prev) => ({
+                                    ...prev,
+                                    [req.componentProductId]: newGrams,
+                                  }));
+                                }}
+                                className="w-6 h-6 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-500">
+                                <Plus className="w-3 h-3" />
+                              </button>
                             </div>
+                            {/* Hint gram bên dưới */}
                             {req.weightInGrams > 0 && (
-                              <div className="text-xs text-gray-400 text-right mt-0.5">
+                              <div className="text-xs text-gray-400 text-right mt-0.5 pr-7">
                                 ≈{" "}
                                 {req.actualG.toLocaleString("vi-VN", {
                                   maximumFractionDigits: 0,
