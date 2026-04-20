@@ -119,39 +119,37 @@ export default function ProductionsPage() {
   }, [selectedBranches, selectedStatuses, fromDate, toDate, limit]);
 
   return (
-    <PagePermissionGuard resource="inventory" action="adjust">
-      <div className="flex h-full border-t bg-gray-50 w-screen">
-        <ProductionSidebar
-          selectedBranches={selectedBranches}
-          selectedStatuses={selectedStatuses}
-          timeMode={timeMode}
-          selectedPreset={selectedPreset}
-          fromDate={fromDate}
-          toDate={toDate}
-          onBranchesChange={setSelectedBranches}
-          onStatusesChange={setSelectedStatuses}
-          onTimeModeChange={setTimeMode}
-          onPresetChange={setSelectedPreset}
-          onDateRangeChange={(from, to) => {
-            setFromDate(from);
-            setToDate(to);
-          }}
-          onClearAll={clearAllFilters}
-        />
+    <div className="flex h-full border-t bg-gray-50 w-screen">
+      <ProductionSidebar
+        selectedBranches={selectedBranches}
+        selectedStatuses={selectedStatuses}
+        timeMode={timeMode}
+        selectedPreset={selectedPreset}
+        fromDate={fromDate}
+        toDate={toDate}
+        onBranchesChange={setSelectedBranches}
+        onStatusesChange={setSelectedStatuses}
+        onTimeModeChange={setTimeMode}
+        onPresetChange={setSelectedPreset}
+        onDateRangeChange={(from, to) => {
+          setFromDate(from);
+          setToDate(to);
+        }}
+        onClearAll={clearAllFilters}
+      />
 
-        <ProductionTable
-          productions={data?.data || []}
-          isLoading={isLoading}
-          total={data?.total || 0}
-          page={page}
-          limit={limit}
-          onPageChange={setPage}
-          onLimitChange={setLimit}
-          onEdit={(production) => {
-            return production;
-          }}
-        />
-      </div>
-    </PagePermissionGuard>
+      <ProductionTable
+        productions={data?.data || []}
+        isLoading={isLoading}
+        total={data?.total || 0}
+        page={page}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+        onEdit={(production) => {
+          return production;
+        }}
+      />
+    </div>
   );
 }
