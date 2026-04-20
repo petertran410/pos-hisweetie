@@ -5,6 +5,7 @@ export interface ProductComponent {
   comboProductId: number;
   componentProductId: number;
   quantity: number;
+  inputMode?: string;
   componentProduct: Product;
 }
 

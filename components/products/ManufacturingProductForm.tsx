@@ -66,17 +66,48 @@ export function ManufacturingProductForm({
   const [quantityInputs, setQuantityInputs] = useState<{
     [key: number]: string;
   }>({});
+  const [inputModes, setInputModes] = useState<{
+    [componentProductId: number]: "gram" | "quantity";
+  }>({});
+
+  const getWeightInGrams = (comp: ManufacturingComponent): number => {
+    const w = comp.componentProduct?.weight
+      ? Number(comp.componentProduct.weight)
+      : 0;
+    const wu = comp.componentProduct?.weightUnit || "g";
+    return wu === "kg" ? w * 1000 : w;
+  };
+
+  // Toggle mode: gram ↔ quantity
+  const toggleInputMode = (productId: number) => {
+    const comp = components.find((c) => c.componentProductId === productId);
+    if (!comp) return;
+    const wg = getWeightInGrams(comp);
+    if (wg === 0) return;
+
+    const currentMode = inputModes[productId] ?? "gram";
+    const newMode = currentMode === "gram" ? "quantity" : "gram";
+
+    // Tính lại display value khi đổi mode
+    let newDisplay: string;
+    if (newMode === "quantity") {
+      // gram → quantity: chia cho weight/unit
+      newDisplay = (comp.quantity / wg).toFixed(4).replace(/\.?0+$/, "");
+    } else {
+      // quantity → gram: comp.quantity đã là gram rồi
+      newDisplay = comp.quantity.toString();
+    }
+
+    setInputModes((prev) => ({ ...prev, [productId]: newMode }));
+    setQuantityInputs((prev) => ({ ...prev, [productId]: newDisplay }));
+  };
 
   const handleQuantityChange = (productId: number, inputValue: string) => {
     const cleaned = inputValue.replace(/[^\d.]/g, "");
-
     const dotCount = (cleaned.match(/\./g) || []).length;
     if (dotCount > 1) return;
 
-    setQuantityInputs((prev) => ({
-      ...prev,
-      [productId]: cleaned,
-    }));
+    setQuantityInputs((prev) => ({ ...prev, [productId]: cleaned }));
 
     if (cleaned === "" || cleaned === ".") {
       updateComponentQuantity(productId, 0);
@@ -85,7 +116,15 @@ export function ManufacturingProductForm({
 
     const numValue = parseFloat(cleaned);
     if (!isNaN(numValue)) {
-      updateComponentQuantity(productId, numValue);
+      const mode = inputModes[productId] ?? "gram";
+      if (mode === "gram") {
+        updateComponentQuantity(productId, numValue);
+      } else {
+        // quantity mode → convert sang gram trước khi lưu
+        const comp = components.find((c) => c.componentProductId === productId);
+        const wg = getWeightInGrams(comp!);
+        updateComponentQuantity(productId, numValue * wg);
+      }
     }
   };
 
@@ -160,15 +199,34 @@ export function ManufacturingProductForm({
         id: comp.id,
         componentProductId: comp.componentProductId,
         componentProduct: comp.componentProduct,
-        quantity: Number(comp.quantity),
+        quantity: Number(comp.quantity), // luôn là gram
       }));
       setComponents(loadedComponents);
 
       const initialInputs: { [key: number]: string } = {};
+      const initialModes: { [key: number]: "gram" | "quantity" } = {};
+
       loadedComponents.forEach((comp) => {
-        initialInputs[comp.componentProductId] = comp.quantity.toString();
+        const savedMode =
+          (product.comboComponents!.find(
+            (c) => c.componentProductId === comp.componentProductId
+          )?.inputMode as "gram" | "quantity") ?? "gram";
+
+        initialModes[comp.componentProductId] = savedMode;
+
+        if (savedMode === "quantity") {
+          const wg = getWeightInGrams(comp);
+          const displayCount = wg > 0 ? comp.quantity / wg : comp.quantity;
+          initialInputs[comp.componentProductId] = displayCount
+            .toFixed(4)
+            .replace(/\.?0+$/, "");
+        } else {
+          initialInputs[comp.componentProductId] = comp.quantity.toString();
+        }
       });
+
       setQuantityInputs(initialInputs);
+      setInputModes(initialModes);
     }
   }, [product]);
 
@@ -350,6 +408,7 @@ export function ManufacturingProductForm({
         components: components.map((comp) => ({
           componentProductId: comp.componentProductId,
           quantity: comp.quantity,
+          inputMode: inputModes[comp.componentProductId] ?? "gram",
         })),
         branchId: selectedBranch?.id,
       };
@@ -611,11 +670,62 @@ export function ManufacturingProductForm({
                                       }));
                                     }
                                   }}
-                                  className="w-24 border rounded px-2 py-1 text-sm"
+                                  className="w-20 border rounded px-2 py-1 text-sm"
                                   placeholder="0"
                                 />
-                                <span className="text-xs text-gray-400">g</span>
+                                {/* Toggle mode button */}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    toggleInputMode(comp.componentProductId)
+                                  }
+                                  title={
+                                    (inputModes[comp.componentProductId] ??
+                                      "gram") === "gram"
+                                      ? "Đang nhập gram — click để nhập theo số lượng"
+                                      : "Đang nhập số lượng — click để nhập theo gram"
+                                  }
+                                  className={`px-2 py-1 text-xs rounded border transition-colors ${
+                                    (inputModes[comp.componentProductId] ??
+                                      "gram") === "gram"
+                                      ? "bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200"
+                                      : "bg-blue-50 text-blue-600 border-blue-300 hover:bg-blue-100"
+                                  }`}>
+                                  {(inputModes[comp.componentProductId] ??
+                                    "gram") === "gram"
+                                    ? "g"
+                                    : comp.componentProduct?.unit || "sl"}
+                                </button>
                               </div>
+                              {/* Hint quy đổi */}
+                              {(() => {
+                                const wg = getWeightInGrams(comp);
+                                const mode =
+                                  inputModes[comp.componentProductId] ?? "gram";
+                                if (wg === 0) return null;
+                                if (mode === "gram") {
+                                  const count = comp.quantity / wg;
+                                  return (
+                                    <div className="text-xs text-gray-400 mt-0.5">
+                                      ≈{" "}
+                                      {count.toLocaleString("vi-VN", {
+                                        maximumFractionDigits: 3,
+                                      })}{" "}
+                                      {comp.componentProduct?.unit || "đv"}
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <div className="text-xs text-gray-400 mt-0.5">
+                                      ={" "}
+                                      {comp.quantity.toLocaleString("vi-VN", {
+                                        maximumFractionDigits: 1,
+                                      })}{" "}
+                                      g
+                                    </div>
+                                  );
+                                }
+                              })()}
                             </td>
 
                             <td className="px-3 py-2 text-sm">
