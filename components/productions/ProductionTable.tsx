@@ -295,6 +295,7 @@ export function ProductionTable({
                       <ProductionDetailRow
                         productionId={production.id}
                         colSpan={visibleColumns.length + 1}
+                        onEdit={() => handleEditProduction(production)}
                       />
                     )}
                   </Fragment>

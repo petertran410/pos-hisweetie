@@ -6,11 +6,8 @@ import { Loader2 } from "lucide-react";
 interface ProductionDetailRowProps {
   productionId: number;
   colSpan: number;
+  onEdit?: () => void;
 }
-
-const formatMoney = (value: number) => {
-  return new Intl.NumberFormat("en-US").format(value);
-};
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return "-";
@@ -47,6 +44,7 @@ const getStatusText = (status: number) => {
 export function ProductionDetailRow({
   productionId,
   colSpan,
+  onEdit,
 }: ProductionDetailRowProps) {
   const { data: production, isLoading } = useProduction(productionId);
 
@@ -190,6 +188,19 @@ export function ProductionDetailRow({
                 )}
               </div>
             </div>
+
+            {production.status === 1 && onEdit && (
+              <div className="flex justify-end pt-4 border-t border-gray-100 mt-4">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                  Chỉnh sửa
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </td>
