@@ -213,6 +213,8 @@ export function ManufacturingProductForm({
   useEffect(() => {
     if (product?.comboComponents) {
       justLoadedFromProduct.current = true;
+      costManuallyEdited.current = true;
+
       const loadedComponents = product.comboComponents.map((comp) => ({
         id: comp.id,
         componentProductId: comp.componentProductId,
@@ -228,7 +230,7 @@ export function ManufacturingProductForm({
         const savedMode =
           (product.comboComponents!.find(
             (c) => c.componentProductId === comp.componentProductId
-          )?.inputMode as "gram" | "quantity" | "piece") ?? "gram"; // ← thêm "piece"
+          )?.inputMode as "gram" | "quantity" | "piece") ?? "gram";
 
         initialModes[comp.componentProductId] = savedMode;
 
@@ -239,7 +241,6 @@ export function ManufacturingProductForm({
             .toFixed(4)
             .replace(/\.?0+$/, "");
         } else {
-          // "gram" hoặc "piece" đều hiển thị trực tiếp comp.quantity
           initialInputs[comp.componentProductId] = comp.quantity.toString();
         }
       });
@@ -304,7 +305,6 @@ export function ManufacturingProductForm({
       const w = selectedProduct.weight ? Number(selectedProduct.weight) : 0;
       const wu = selectedProduct.weightUnit || "g";
       const wg = wu === "kg" ? w * 1000 : w;
-      // Nếu không có trọng lượng → tự động là piece mode
       const defaultMode: "gram" | "piece" = wg === 0 ? "piece" : "gram";
 
       setComponents([
@@ -693,10 +693,7 @@ export function ManufacturingProductForm({
                                     )
                                   }
                                   onBlur={() => {
-                                    if (
-                                      comp.quantity === 0 ||
-                                      !quantityInputs[comp.componentProductId]
-                                    ) {
+                                    if (comp.quantity === 0) {
                                       setQuantityInputs((prev) => ({
                                         ...prev,
                                         [comp.componentProductId]: "",
