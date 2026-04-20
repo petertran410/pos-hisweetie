@@ -45,14 +45,27 @@ export function CustomerDetailRow({
     }
     if (!scrollEl) return;
 
-    const update = () => {
-      el.style.width = `${scrollEl!.clientWidth}px`;
-    };
-    update();
+    // Set initial width
+    el.style.width = `${scrollEl.clientWidth}px`;
 
-    const ro = new ResizeObserver(update);
+    let rafId: number;
+    const ro = new ResizeObserver((entries) => {
+      // Dùng entry.contentRect thay vì đọc scrollEl.clientWidth trong callback
+      // → tránh forced layout → tránh oscillation loop
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const entry = entries[entries.length - 1];
+        const w =
+          entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+        el.style.width = `${w}px`;
+      });
+    });
+
     ro.observe(scrollEl);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(rafId);
+    };
   }, [customer]);
 
   const handleStatusToggle = () => {
