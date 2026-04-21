@@ -46,7 +46,7 @@ export function OrderItemsList({
 }: CartItemsListProps) {
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
   const [quantityDisplays, setQuantityDisplays] = useState<
-    Record<number, string>
+    Record<string, string>
   >({});
   const [discountType, setDiscountType] = useState<"amount" | "ratio">(
     "amount"
@@ -61,39 +61,45 @@ export function OrderItemsList({
   const [selectedItemForDiscount, setSelectedItemForDiscount] =
     useState<CartItem | null>(null);
 
+  const getCartItemKey = (item: CartItem): string =>
+    `${item.product.id}_${item.conditionType || "normal"}`;
+
   const getQuantityDisplay = (item: CartItem): string => {
-    return quantityDisplays[item.product.id] ?? String(item.quantity);
+    return quantityDisplays[getCartItemKey(item)] ?? String(item.quantity);
   };
 
-  const handleQuantityChange = (productId: number, value: string) => {
+  const handleQuantityChange = (item: CartItem, value: string) => {
+    const key = getCartItemKey(item);
     const onlyNumbers = value.replace(/[^\d]/g, "");
-    setQuantityDisplays((prev) => ({ ...prev, [productId]: onlyNumbers }));
+    setQuantityDisplays((prev) => ({ ...prev, [key]: onlyNumbers }));
     if (onlyNumbers !== "" && onlyNumbers !== "0") {
       const parsed = parseInt(onlyNumbers, 10);
-      onUpdateItem(productId, { quantity: parsed });
+      onUpdateItem(item.product.id, { quantity: parsed }, item.conditionType);
     }
   };
 
-  const handleQuantityBlur = (productId: number, currentQuantity: number) => {
-    const display = quantityDisplays[productId];
+  const handleQuantityBlur = (item: CartItem) => {
+    const key = getCartItemKey(item);
+    const display = quantityDisplays[key];
     if (display === undefined) return;
     const parsed = parseInt(display, 10);
     const validQty =
       !display || isNaN(parsed) || parsed < 1
-        ? currentQuantity
+        ? item.quantity
         : Math.max(1, parsed);
-    onUpdateItem(productId, { quantity: validQty });
+    onUpdateItem(item.product.id, { quantity: validQty }, item.conditionType);
     setQuantityDisplays((prev) => {
       const next = { ...prev };
-      delete next[productId];
+      delete next[key];
       return next;
     });
   };
 
-  const clearQuantityDisplay = (productId: number) => {
+  const clearQuantityDisplay = (item: CartItem) => {
+    const key = getCartItemKey(item);
     setQuantityDisplays((prev) => {
       const next = { ...prev };
-      delete next[productId];
+      delete next[key];
       return next;
     });
   };
@@ -105,7 +111,11 @@ export function OrderItemsList({
 
   const handleSaveItemDiscount = (discount: number) => {
     if (selectedItemForDiscount) {
-      onUpdateItem(selectedItemForDiscount.product.id, { discount });
+      onUpdateItem(
+        selectedItemForDiscount.product.id,
+        { discount },
+        selectedItemForDiscount.conditionType
+      );
     }
   };
 
@@ -282,7 +292,9 @@ export function OrderItemsList({
 
                 {hoveredItemId === item.product.id && (
                   <button
-                    onClick={() => onRemoveItem(item.product.id)}
+                    onClick={() =>
+                      onRemoveItem(item.product.id, item.conditionType)
+                    }
                     className="text-red-500 hover:text-red-700 p-1">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -300,7 +312,7 @@ export function OrderItemsList({
                         },
                         item.conditionType
                       );
-                      clearQuantityDisplay(item.product.id);
+                      clearQuantityDisplay(item);
                     }}
                     className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Minus className="w-3 h-3" />
@@ -308,12 +320,8 @@ export function OrderItemsList({
                   <input
                     type="text"
                     value={getQuantityDisplay(item)}
-                    onChange={(e) =>
-                      handleQuantityChange(item.product.id, e.target.value)
-                    }
-                    onBlur={() =>
-                      handleQuantityBlur(item.product.id, item.quantity)
-                    }
+                    onChange={(e) => handleQuantityChange(item, e.target.value)}
+                    onBlur={() => handleQuantityBlur(item)}
                     className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                   />
@@ -326,7 +334,7 @@ export function OrderItemsList({
                         },
                         item.conditionType
                       );
-                      clearQuantityDisplay(item.product.id);
+                      clearQuantityDisplay(item);
                     }}
                     className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Plus className="w-3 h-3" />
