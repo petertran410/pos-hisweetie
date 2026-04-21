@@ -777,6 +777,93 @@ export function InvoicesTable({
             </div>
           </div>
         )}
+
+        {/* ── Advanced Search Modal ── */}
+        {showAdvancedSearch && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center pt-20">
+            <div
+              className="absolute inset-0 bg-black/30"
+              onClick={() => setShowAdvancedSearch(false)}
+            />
+            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold text-gray-900">
+                  Tìm kiếm nâng cao
+                </h3>
+                <button
+                  onClick={() => setShowAdvancedSearch(false)}
+                  className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Theo mã hóa đơn"
+                  value={tempAdvanced.invoiceCodeSearch}
+                  onChange={(e) =>
+                    setTempAdvanced((p) => ({
+                      ...p,
+                      invoiceCodeSearch: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Theo mã, tên hàng"
+                  value={tempAdvanced.productSearch}
+                  onChange={(e) =>
+                    setTempAdvanced((p) => ({
+                      ...p,
+                      productSearch: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Theo mã, tên, số điện thoại khách hàng"
+                  value={tempAdvanced.customerSearch}
+                  onChange={(e) =>
+                    setTempAdvanced((p) => ({
+                      ...p,
+                      customerSearch: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  onClick={() => {
+                    const empty = {
+                      invoiceCodeSearch: "",
+                      productSearch: "",
+                      customerSearch: "",
+                    };
+                    setTempAdvanced(empty);
+                    setAdvancedSearch(empty);
+                    setShowAdvancedSearch(false);
+                  }}
+                  className="px-4 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                  Mở rộng
+                </button>
+                <button
+                  onClick={() => {
+                    setAdvancedSearch({ ...tempAdvanced });
+                    setShowAdvancedSearch(false);
+                    setPage(1);
+                  }}
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                  Tìm kiếm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Can>
   );
