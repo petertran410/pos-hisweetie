@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Search, Calendar, Minus, Plus } from "lucide-react";
+import {
+  X,
+  Search,
+  Calendar,
+  Minus,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+} from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useProducts, useProduct } from "@/lib/hooks/useProducts";
 import {
@@ -18,6 +27,180 @@ interface ProductionFormProps {
   destinationBranchId: number;
   production?: Production | null;
   onClose: () => void;
+}
+
+// ── Constants ────────────────────────────────────────────────────────────────
+const MONTH_NAMES = [
+  "Tháng 1",
+  "Tháng 2",
+  "Tháng 3",
+  "Tháng 4",
+  "Tháng 5",
+  "Tháng 6",
+  "Tháng 7",
+  "Tháng 8",
+  "Tháng 9",
+  "Tháng 10",
+  "Tháng 11",
+  "Tháng 12",
+];
+const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+
+// ── MiniCalendar ─────────────────────────────────────────────────────────────
+function MiniCalendar({
+  value,
+  onChange,
+  onClose,
+}: {
+  value: string;
+  onChange: (d: string) => void;
+  onClose: () => void;
+}) {
+  const todayObj = new Date();
+  const init = value ? new Date(value + "T00:00:00") : todayObj;
+  const [vy, setVy] = useState(init.getFullYear());
+  const [vm, setVm] = useState(init.getMonth());
+
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
+  const startOffset = (new Date(vy, vm, 1).getDay() + 6) % 7;
+  const cells: (number | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const fmt = (d: number) =>
+    `${vy}-${String(vm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+  const prev = () =>
+    vm === 0 ? (setVm(11), setVy((y) => y - 1)) : setVm((m) => m - 1);
+  const next = () =>
+    vm === 11 ? (setVm(0), setVy((y) => y + 1)) : setVm((m) => m + 1);
+
+  return (
+    <div className="absolute top-full left-0 z-50 mt-1 bg-white border border-gray-200 rounded-xl p-3 shadow-lg select-none w-64">
+      <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          onClick={prev}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-semibold text-gray-800">
+          {MONTH_NAMES[vm]} {vy}
+        </span>
+        <button
+          type="button"
+          onClick={next}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {DAY_NAMES.map((d) => (
+          <div
+            key={d}
+            className="text-center text-[10px] font-medium text-gray-400 py-0.5">
+            {d}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} className="aspect-square" />;
+          const ds = fmt(day);
+          const isSel = value === ds;
+          const isToday =
+            todayObj.getFullYear() === vy &&
+            todayObj.getMonth() === vm &&
+            todayObj.getDate() === day;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => {
+                onChange(ds);
+                onClose();
+              }}
+              className={`aspect-square flex items-center justify-center text-xs rounded-lg transition-colors ${
+                isSel
+                  ? "bg-blue-600 text-white font-semibold"
+                  : isToday
+                    ? "border border-blue-400 text-blue-600 font-medium hover:bg-blue-50"
+                    : "text-gray-700 hover:bg-gray-100"
+              }`}>
+              {day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── TimePicker ───────────────────────────────────────────────────────────────
+function TimePicker({
+  hour,
+  minute,
+  onChange,
+  onClose,
+}: {
+  hour: number;
+  minute: number;
+  onChange: (h: number, m: number) => void;
+  onClose: () => void;
+}) {
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const minutes = Array.from({ length: 12 }, (_, i) => i * 5);
+
+  return (
+    <div className="absolute top-full left-0 z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-52">
+      <p className="text-xs font-semibold text-gray-500 mb-2">
+        Chọn giờ : phút
+      </p>
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <p className="text-[10px] text-gray-400 mb-1 text-center">Giờ</p>
+          <div className="max-h-40 overflow-y-auto space-y-0.5">
+            {hours.map((h) => (
+              <button
+                key={h}
+                type="button"
+                onClick={() => onChange(h, minute)}
+                className={`w-full text-center py-0.5 text-sm rounded transition-colors ${
+                  hour === h
+                    ? "bg-blue-600 text-white font-medium"
+                    : "hover:bg-gray-100 text-gray-700"
+                }`}>
+                {String(h).padStart(2, "0")}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex-1">
+          <p className="text-[10px] text-gray-400 mb-1 text-center">Phút</p>
+          <div className="max-h-40 overflow-y-auto space-y-0.5">
+            {minutes.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => {
+                  onChange(hour, m);
+                  onClose();
+                }}
+                className={`w-full text-center py-0.5 text-sm rounded transition-colors ${
+                  minute === m
+                    ? "bg-blue-600 text-white font-medium"
+                    : "hover:bg-gray-100 text-gray-700"
+                }`}>
+                {String(m).padStart(2, "0")}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function ProductionForm({
@@ -46,6 +229,29 @@ export function ProductionForm({
   const [actualUnitInputs, setActualUnitInputs] = useState<{
     [componentProductId: number]: string;
   }>({});
+  // ── Date picker state (thay thế datetime-local) ──
+  const [dateStr, setDateStr] = useState(() => {
+    const d = production?.manufacturedDate
+      ? new Date(production.manufacturedDate)
+      : new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [hour, setHour] = useState(() => {
+    const d = production?.manufacturedDate
+      ? new Date(production.manufacturedDate)
+      : new Date();
+    return d.getHours();
+  });
+  const [minute, setMinute] = useState(() => {
+    const d = production?.manufacturedDate
+      ? new Date(production.manufacturedDate)
+      : new Date();
+    return d.getMinutes();
+  });
+  const [showCal, setShowCal] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const calRef = useRef<HTMLDivElement>(null);
+  const timePickerRef = useRef<HTMLDivElement>(null);
 
   const { data: branches } = useBranches();
   const { data: productsData } = useProducts({ type: 4 });
@@ -81,7 +287,13 @@ export function ProductionForm({
       setNote(production.note || "");
       setAutoDeductComponents(production.autoDeductComponents);
       if (production.manufacturedDate) {
-        setManufacturedDate(new Date(production.manufacturedDate));
+        const d = new Date(production.manufacturedDate);
+        setManufacturedDate(d);
+        setDateStr(
+          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+        );
+        setHour(d.getHours());
+        setMinute(d.getMinutes());
       }
     }
   }, [production]);
@@ -91,6 +303,21 @@ export function ProductionForm({
       setSelectedProduct(productDetail);
     }
   }, [production, productDetail, selectedProduct]);
+
+  // Click outside để đóng calendar / time picker
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (calRef.current && !calRef.current.contains(e.target as Node))
+        setShowCal(false);
+      if (
+        timePickerRef.current &&
+        !timePickerRef.current.contains(e.target as Node)
+      )
+        setShowTimePicker(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // Reset actualGrams về công thức khi đổi sản phẩm hoặc số lượng
   useEffect(() => {
@@ -233,6 +460,11 @@ export function ProductionForm({
       actualGrams: req.actualG,
     }));
 
+    const mfDate = new Date(dateStr + "T00:00:00");
+    mfDate.setHours(hour);
+    mfDate.setMinutes(minute);
+    mfDate.setSeconds(0);
+
     const data = {
       code: code || undefined,
       sourceBranchId: Number(sourceBranchId),
@@ -241,7 +473,7 @@ export function ProductionForm({
       quantity: Number(quantity),
       note: note || undefined,
       status: Number(status),
-      manufacturedDate: manufacturedDate.toISOString(),
+      manufacturedDate: mfDate.toISOString(),
       autoDeductComponents: Boolean(autoDeductComponents),
       components, // ← thêm
     };
@@ -409,17 +641,76 @@ export function ProductionForm({
                 <label className="block text-sm font-medium mb-1">
                   Thời gian sản xuất
                 </label>
-                <div className="relative">
-                  <input
-                    type="datetime-local"
-                    value={manufacturedDate.toISOString().slice(0, 16)}
-                    onChange={(e) =>
-                      setManufacturedDate(new Date(e.target.value))
-                    }
-                    className="text-sm w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    disabled={isFormDisabled}
-                  />
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <div className="flex gap-2">
+                  {/* Date trigger */}
+                  <div ref={calRef} className="relative flex-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isFormDisabled) {
+                          setShowCal((v) => !v);
+                          setShowTimePicker(false);
+                        }
+                      }}
+                      disabled={isFormDisabled}
+                      className={`w-full flex items-center justify-between px-2 py-1 border rounded text-sm transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                        showCal
+                          ? "border-blue-400 ring-2 ring-blue-100"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}>
+                      <span className="text-gray-800">
+                        {dateStr
+                          ? dateStr.split("-").reverse().join("/")
+                          : "Chọn ngày"}
+                      </span>
+                      <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    </button>
+                    {showCal && (
+                      <MiniCalendar
+                        value={dateStr}
+                        onChange={(d) => {
+                          setDateStr(d);
+                          setShowCal(false);
+                        }}
+                        onClose={() => setShowCal(false)}
+                      />
+                    )}
+                  </div>
+
+                  {/* Time trigger */}
+                  <div ref={timePickerRef} className="relative w-24">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isFormDisabled) {
+                          setShowTimePicker((v) => !v);
+                          setShowCal(false);
+                        }
+                      }}
+                      disabled={isFormDisabled}
+                      className={`w-full flex items-center justify-between px-2 py-1 border rounded text-sm transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                        showTimePicker
+                          ? "border-blue-400 ring-2 ring-blue-100"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}>
+                      <span className="text-gray-800">
+                        {String(hour).padStart(2, "0")}:
+                        {String(minute).padStart(2, "0")}
+                      </span>
+                      <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    </button>
+                    {showTimePicker && (
+                      <TimePicker
+                        hour={hour}
+                        minute={minute}
+                        onChange={(h, m) => {
+                          setHour(h);
+                          setMinute(m);
+                        }}
+                        onClose={() => setShowTimePicker(false)}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
