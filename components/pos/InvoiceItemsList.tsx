@@ -104,6 +104,33 @@ export function InvoiceItemsList({
     });
   };
 
+  const getConditionLabel = (conditionType?: string) => {
+    switch (conditionType) {
+      case "damaged":
+        return {
+          text: "Bục rách",
+          className: "bg-red-50 text-red-600 border-red-200",
+        };
+      case "near_expiry":
+        return {
+          text: "Cận date",
+          className: "bg-amber-50 text-amber-600 border-amber-200",
+        };
+      default:
+        return null;
+    }
+  };
+
+  const isFirstOfGroup = (index: number) => {
+    if (index === 0) return true;
+    return cartItems[index].product.id !== cartItems[index - 1].product.id;
+  };
+
+  const isLastOfGroup = (index: number) => {
+    if (index === cartItems.length - 1) return true;
+    return cartItems[index].product.id !== cartItems[index + 1].product.id;
+  };
+
   const handleOpenDiscountModal = (item: CartItem) => {
     setSelectedItemForDiscount(item);
     setShowDiscountModal(true);
@@ -252,11 +279,15 @@ export function InvoiceItemsList({
   return (
     <div className="w-[60%] bg-white flex flex-col">
       <div className="flex-1 p-3 overflow-y-auto">
-        <div className="space-y-2">
-          {cartItems.map((item) => (
+        <div>
+          {cartItems.map((item, index) => (
             <div
               key={`${item.product.id}_${item.conditionType || "normal"}`}
-              className="border rounded-lg p-3 hover:shadow-md transition-shadow"
+              className={`border p-3 hover:shadow-md transition-shadow ${
+                isFirstOfGroup(index) ? "rounded-t-lg mt-2" : "border-t-0"
+              } ${isLastOfGroup(index) ? "rounded-b-lg" : ""} ${
+                isFirstOfGroup(index) && index === 0 ? "mt-0" : ""
+              }`}
               onMouseEnter={() => setHoveredItemId(item.product.id)}
               onMouseLeave={() => setHoveredItemId(null)}>
               <div className="flex items-start justify-between gap-3">
@@ -268,6 +299,16 @@ export function InvoiceItemsList({
                     <span className="text-md font-semibold text-gray-900">
                       {item.product.name}
                     </span>
+                    {(() => {
+                      const label = getConditionLabel(item.conditionType);
+                      if (!label) return null;
+                      return (
+                        <span
+                          className={`px-1.5 py-0.5 text-xs rounded-full border ${label.className}`}>
+                          {label.text}
+                        </span>
+                      );
+                    })()}
                     <ProductPriceHistory
                       customerId={selectedCustomerId}
                       productId={item.product.id}
