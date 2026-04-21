@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import type { Product } from "@/lib/api/products";
-import { useDeleteProduct } from "@/lib/hooks/useProducts";
+import {
+  useDeleteProduct,
+  useUpdateProductCondition,
+} from "@/lib/hooks/useProducts";
 import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
@@ -24,6 +27,12 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
 
   const deleteProduct = useDeleteProduct();
   const { selectedBranch } = useBranchStore();
+  const updateCondition = useUpdateProductCondition();
+  const [editingCondition, setEditingCondition] = useState<number | null>(null);
+  const [conditionInputs, setConditionInputs] = useState<{
+    damaged: string;
+    nearExpiry: string;
+  }>({ damaged: "", nearExpiry: "" });
 
   if (!product) {
     throw new Error("Error");
@@ -36,6 +45,30 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
         onClose();
       },
     });
+  };
+
+  const handleStartEditCondition = (inv: any) => {
+    setEditingCondition(inv.branchId);
+    setConditionInputs({
+      damaged: String(Number(inv.damagedQuantity || 0)),
+      nearExpiry: String(Number(inv.nearExpiryQuantity || 0)),
+    });
+  };
+
+  const handleSaveCondition = (inv: any) => {
+    const damaged = parseInt(conditionInputs.damaged) || 0;
+    const nearExpiry = parseInt(conditionInputs.nearExpiry) || 0;
+
+    updateCondition.mutate(
+      {
+        productId: product.id,
+        branchId: inv.branchId,
+        data: { damagedQuantity: damaged, nearExpiryQuantity: nearExpiry },
+      },
+      {
+        onSuccess: () => setEditingCondition(null),
+      }
+    );
   };
 
   const getProductTypeLabel = (type: number) => {
@@ -441,6 +474,9 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                           <th className="p-3 text-left">Chi nhánh</th>
                           <th className="p-3 text-right">Giá vốn</th>
                           <th className="p-3 text-right">Tồn kho</th>
+                          <th className="p-3 text-right">Bục rách</th>
+                          <th className="p-3 text-right">Cận date</th>
+                          <th className="p-3 text-right">Hàng tốt</th>
                           <th className="p-3 text-right">Đã đặt</th>
                           <th className="p-3 text-right">Đang giao</th>
                           <th className="p-3 text-right">
@@ -449,37 +485,133 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                           <th className="p-3 text-right">
                             Định mức tồn nhiều nhất
                           </th>
+                          <th className="p-3 text-center w-[80px]"></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {product.inventories.map((inv) => (
-                          <tr key={inv.id} className="border-t">
-                            <td className="p-3 font-medium">
-                              {inv.branchName}
-                            </td>
-                            <td className="p-3 text-right">
-                              {calculateCostByBranch(
-                                inv.branchId
-                              ).toLocaleString()}{" "}
-                              đ
-                            </td>
-                            <td className="p-3 text-right">
-                              {Number(inv.onHand).toLocaleString()}
-                            </td>
-                            <td className="p-3 text-right">
-                              {Number(inv.onOrder).toLocaleString()}
-                            </td>
-                            <td className="p-3 text-right">
-                              {Number(inv.reserved).toLocaleString()}
-                            </td>
-                            <td className="p-3 text-right">
-                              {Number(inv.minQuality).toLocaleString()}
-                            </td>
-                            <td className="p-3 text-right">
-                              {Number(inv.maxQuality).toLocaleString()}
-                            </td>
-                          </tr>
-                        ))}
+                        {product.inventories.map((inv) => {
+                          const onHand = Number(inv.onHand);
+                          const damaged = Number(inv.damagedQuantity || 0);
+                          const nearExpiry = Number(
+                            inv.nearExpiryQuantity || 0
+                          );
+                          const goodStock = onHand - damaged - nearExpiry;
+                          const isEditing = editingCondition === inv.branchId;
+
+                          return (
+                            <tr key={inv.id} className="border-t">
+                              <td className="p-3 font-medium">
+                                {inv.branchName}
+                              </td>
+                              <td className="p-3 text-right">
+                                {calculateCostByBranch(
+                                  inv.branchId
+                                ).toLocaleString()}{" "}
+                                đ
+                              </td>
+                              <td className="p-3 text-right">
+                                {onHand.toLocaleString()}
+                              </td>
+                              <td className="p-3 text-right">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={conditionInputs.damaged}
+                                    onChange={(e) =>
+                                      setConditionInputs((prev) => ({
+                                        ...prev,
+                                        damaged: e.target.value.replace(
+                                          /[^\d]/g,
+                                          ""
+                                        ),
+                                      }))
+                                    }
+                                    className="w-20 border rounded px-2 py-1 text-right text-sm"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span
+                                    className={
+                                      damaged > 0
+                                        ? "text-red-600 font-medium"
+                                        : ""
+                                    }>
+                                    {damaged.toLocaleString()}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-right">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={conditionInputs.nearExpiry}
+                                    onChange={(e) =>
+                                      setConditionInputs((prev) => ({
+                                        ...prev,
+                                        nearExpiry: e.target.value.replace(
+                                          /[^\d]/g,
+                                          ""
+                                        ),
+                                      }))
+                                    }
+                                    className="w-20 border rounded px-2 py-1 text-right text-sm"
+                                  />
+                                ) : (
+                                  <span
+                                    className={
+                                      nearExpiry > 0
+                                        ? "text-orange-600 font-medium"
+                                        : ""
+                                    }>
+                                    {nearExpiry.toLocaleString()}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-right">
+                                <span className="text-green-700 font-medium">
+                                  {goodStock.toLocaleString()}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right">
+                                {Number(inv.onOrder).toLocaleString()}
+                              </td>
+                              <td className="p-3 text-right">
+                                {Number(inv.reserved).toLocaleString()}
+                              </td>
+                              <td className="p-3 text-right">
+                                {Number(inv.minQuality).toLocaleString()}
+                              </td>
+                              <td className="p-3 text-right">
+                                {Number(inv.maxQuality).toLocaleString()}
+                              </td>
+                              <td className="p-3 text-center">
+                                {isEditing ? (
+                                  <div className="flex gap-1 justify-center">
+                                    <button
+                                      onClick={() => handleSaveCondition(inv)}
+                                      disabled={updateCondition.isPending}
+                                      className="text-green-600 hover:text-green-800 text-xs font-medium">
+                                      Lưu
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingCondition(null)}
+                                      className="text-gray-500 hover:text-gray-700 text-xs">
+                                      Hủy
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() =>
+                                      handleStartEditCondition(inv)
+                                    }
+                                    className="text-blue-600 hover:text-blue-800 text-xs">
+                                    Sửa
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

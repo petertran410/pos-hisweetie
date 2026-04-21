@@ -35,6 +35,8 @@ export interface Inventory {
   minQuality: number;
   maxQuality: number;
   totalWeight?: number;
+  damagedQuantity: number;
+  nearExpiryQuantity: number;
   createdAt: string;
   updatedAt: string;
   branch?: { id: number; name: string };
@@ -146,6 +148,17 @@ export const productsApi = {
     params.append("limit", limit.toString());
     return apiClient.get(
       `/products/${productId}/inventory-logs?${params.toString()}`
+    );
+  },
+
+  updateProductCondition: (
+    productId: number,
+    branchId: number,
+    data: { damagedQuantity?: number; nearExpiryQuantity?: number }
+  ): Promise<any> => {
+    return apiClient.put(
+      `/inventories/${productId}/${branchId}/condition`,
+      data
     );
   },
 };

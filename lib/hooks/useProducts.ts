@@ -95,3 +95,27 @@ export function useProductInventoryLogs(
     enabled: !!productId,
   });
 }
+
+export function useUpdateProductCondition() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      productId,
+      branchId,
+      data,
+    }: {
+      productId: number;
+      branchId: number;
+      data: { damagedQuantity?: number; nearExpiryQuantity?: number };
+    }) => productsApi.updateProductCondition(productId, branchId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product"] });
+      toast.success("Cập nhật tình trạng hàng thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Cập nhật tình trạng hàng thất bại");
+    },
+  });
+}

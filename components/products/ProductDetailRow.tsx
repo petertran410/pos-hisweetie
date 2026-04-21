@@ -2,7 +2,11 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { useProduct, useDeleteProduct } from "@/lib/hooks/useProducts";
+import {
+  useProduct,
+  useDeleteProduct,
+  useUpdateProductCondition,
+} from "@/lib/hooks/useProducts";
 import { useBranchStore } from "@/lib/store/branch";
 import { Loader2 } from "lucide-react";
 import Swal from "sweetalert2";
@@ -43,6 +47,9 @@ export function ProductDetailRow({
   const { data: product, isLoading } = useProduct(productId);
   const deleteProduct = useDeleteProduct();
   const { selectedBranch } = useBranchStore();
+  const updateCondition = useUpdateProductCondition();
+
+  const itemsPerPage = 10;
 
   const canUpdate = usePermission("products", "update");
   const canDelete = usePermission("products", "delete");
@@ -52,7 +59,11 @@ export function ProductDetailRow({
   >("info");
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [editingCondition, setEditingCondition] = useState<number | null>(null);
+  const [conditionInputs, setConditionInputs] = useState<{
+    damaged: string;
+    nearExpiry: string;
+  }>({ damaged: "", nearExpiry: "" });
 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -134,6 +145,30 @@ export function ProductDetailRow({
       </tr>
     );
   }
+
+  const handleStartEditCondition = (inv: any) => {
+    setEditingCondition(inv.branchId);
+    setConditionInputs({
+      damaged: String(Number(inv.damagedQuantity || 0)),
+      nearExpiry: String(Number(inv.nearExpiryQuantity || 0)),
+    });
+  };
+
+  const handleSaveCondition = (inv: any) => {
+    const damaged = parseInt(conditionInputs.damaged) || 0;
+    const nearExpiry = parseInt(conditionInputs.nearExpiry) || 0;
+
+    updateCondition.mutate(
+      {
+        productId: product.id,
+        branchId: inv.branchId,
+        data: { damagedQuantity: damaged, nearExpiryQuantity: nearExpiry },
+      },
+      {
+        onSuccess: () => setEditingCondition(null),
+      }
+    );
+  };
 
   // ── Calculations ──
   const currentBranchInventory = product.inventories?.find(
@@ -548,6 +583,15 @@ export function ProductDetailRow({
                             Tồn kho
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                            Bục rách
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                            Cận date
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                            Hàng tốt
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
                             Đặt NCC
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
@@ -559,6 +603,7 @@ export function ProductDetailRow({
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
                             Định mức tồn
                           </th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 w-[80px]"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -570,6 +615,34 @@ export function ProductDetailRow({
                           <td className="px-4 py-2.5 text-sm text-right">
                             {product.inventories
                               .reduce((sum, inv) => sum + Number(inv.onHand), 0)
+                              .toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-sm text-right text-red-600">
+                            {product.inventories
+                              .reduce(
+                                (sum, inv) =>
+                                  sum + Number(inv.damagedQuantity || 0),
+                                0
+                              )
+                              .toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-sm text-right text-orange-600">
+                            {product.inventories
+                              .reduce(
+                                (sum, inv) =>
+                                  sum + Number(inv.nearExpiryQuantity || 0),
+                                0
+                              )
+                              .toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-sm text-right text-green-700">
+                            {product.inventories
+                              .reduce((sum, inv) => {
+                                const oh = Number(inv.onHand);
+                                const dm = Number(inv.damagedQuantity || 0);
+                                const ne = Number(inv.nearExpiryQuantity || 0);
+                                return sum + (oh - dm - ne);
+                              }, 0)
                               .toLocaleString()}
                           </td>
                           <td className="px-4 py-2.5 text-sm text-right">
@@ -590,33 +663,128 @@ export function ProductDetailRow({
                           </td>
                           <td className="px-4 py-2.5 text-sm text-right">-</td>
                           <td className="px-4 py-2.5 text-sm text-right">-</td>
+                          <td className="px-4 py-2.5"></td>
                         </tr>
-                        {/* Dòng từng chi nhánh */}
-                        {product.inventories.map((inv) => (
-                          <tr key={inv.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-2.5 text-sm text-gray-900 font-medium">
-                              {inv.branchName ||
-                                inv.branch?.name ||
-                                `Chi nhánh ${inv.branchId}`}
-                            </td>
-                            <td className="px-4 py-2.5 text-sm text-right">
-                              {Number(inv.onHand).toLocaleString()}
-                            </td>
-                            <td className="px-4 py-2.5 text-sm text-right">
-                              {Number(inv.onOrder).toLocaleString()}
-                            </td>
-                            <td className="px-4 py-2.5 text-sm text-right">
-                              {Number(inv.reserved).toLocaleString()}
-                            </td>
-                            <td className="px-4 py-2.5 text-sm text-right">
-                              {Number(inv.cost).toLocaleString()}
-                            </td>
-                            <td className="px-4 py-2.5 text-sm text-right">
-                              {Number(inv.minQuality).toLocaleString()} -{" "}
-                              {Number(inv.maxQuality).toLocaleString()}
-                            </td>
-                          </tr>
-                        ))}
+
+                        {/* Dòng chi tiết */}
+                        {product.inventories.map((inv) => {
+                          const onHand = Number(inv.onHand);
+                          const damaged = Number(inv.damagedQuantity || 0);
+                          const nearExpiry = Number(
+                            inv.nearExpiryQuantity || 0
+                          );
+                          const goodStock = onHand - damaged - nearExpiry;
+                          const isEditing = editingCondition === inv.branchId;
+
+                          return (
+                            <tr key={inv.id}>
+                              <td className="px-4 py-2.5 text-sm">
+                                {inv.branchName}
+                              </td>
+                              <td className="px-4 py-2.5 text-sm text-right">
+                                {onHand.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2.5 text-sm text-right">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={conditionInputs.damaged}
+                                    onChange={(e) =>
+                                      setConditionInputs((prev) => ({
+                                        ...prev,
+                                        damaged: e.target.value.replace(
+                                          /[^\d]/g,
+                                          ""
+                                        ),
+                                      }))
+                                    }
+                                    className="w-16 border rounded px-2 py-1 text-right text-xs"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span
+                                    className={
+                                      damaged > 0
+                                        ? "text-red-600 font-medium"
+                                        : ""
+                                    }>
+                                    {damaged.toLocaleString()}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2.5 text-sm text-right">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={conditionInputs.nearExpiry}
+                                    onChange={(e) =>
+                                      setConditionInputs((prev) => ({
+                                        ...prev,
+                                        nearExpiry: e.target.value.replace(
+                                          /[^\d]/g,
+                                          ""
+                                        ),
+                                      }))
+                                    }
+                                    className="w-16 border rounded px-2 py-1 text-right text-xs"
+                                  />
+                                ) : (
+                                  <span
+                                    className={
+                                      nearExpiry > 0
+                                        ? "text-orange-600 font-medium"
+                                        : ""
+                                    }>
+                                    {nearExpiry.toLocaleString()}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2.5 text-sm text-right">
+                                <span className="text-green-700 font-medium">
+                                  {goodStock.toLocaleString()}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2.5 text-sm text-right">
+                                {Number(inv.onOrder).toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2.5 text-sm text-right">
+                                {Number(inv.reserved).toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2.5 text-sm text-right">
+                                {Number(inv.cost).toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2.5 text-sm text-right">
+                                {Number(inv.minQuality).toLocaleString()} -{" "}
+                                {Number(inv.maxQuality).toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2.5 text-center">
+                                {isEditing ? (
+                                  <div className="flex gap-1 justify-center">
+                                    <button
+                                      onClick={() => handleSaveCondition(inv)}
+                                      disabled={updateCondition.isPending}
+                                      className="text-green-600 hover:text-green-800 text-xs font-medium">
+                                      Lưu
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingCondition(null)}
+                                      className="text-gray-500 hover:text-gray-700 text-xs">
+                                      Hủy
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() =>
+                                      handleStartEditCondition(inv)
+                                    }
+                                    className="text-blue-600 hover:text-blue-800 text-xs">
+                                    Sửa
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
