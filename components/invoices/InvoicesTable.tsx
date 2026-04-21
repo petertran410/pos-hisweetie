@@ -348,25 +348,30 @@ export function InvoicesTable({
   const [activeStatusTab, setActiveStatusTab] = useState("all");
   const [showBaoDonDropdown, setShowBaoDonDropdown] = useState(false);
   const baoDonRef = useRef<HTMLDivElement>(null);
-  // ── Advanced search modal ──
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const advancedRef = useRef<HTMLDivElement>(null);
   const [advancedSearch, setAdvancedSearch] = useState({
     invoiceCodeSearch: "",
     productSearch: "",
     customerSearch: "",
+    deliveryCodeSearch: "",
+    orderCodeSearch: "",
+    descriptionSearch: "",
+    productNoteSearch: "",
   });
   const [tempAdvanced, setTempAdvanced] = useState({
     invoiceCodeSearch: "",
     productSearch: "",
     customerSearch: "",
+    deliveryCodeSearch: "",
+    orderCodeSearch: "",
+    descriptionSearch: "",
+    productNoteSearch: "",
   });
 
   const advancedFilterCount = useMemo(() => {
-    let n = 0;
-    if (advancedSearch.invoiceCodeSearch) n++;
-    if (advancedSearch.productSearch) n++;
-    if (advancedSearch.customerSearch) n++;
-    return n;
+    return Object.values(advancedSearch).filter(Boolean).length;
   }, [advancedSearch]);
 
   // Debounce search
@@ -374,6 +379,20 @@ export function InvoicesTable({
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    if (!showAdvancedSearch) return;
+    const h = (e: MouseEvent) => {
+      if (
+        advancedRef.current &&
+        !advancedRef.current.contains(e.target as Node)
+      ) {
+        setShowAdvancedSearch(false);
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showAdvancedSearch]);
 
   // Reset page khi filter/search/tab đổi
   useEffect(() => {
@@ -429,6 +448,18 @@ export function InvoicesTable({
     }),
     ...(advancedSearch.customerSearch && {
       customerSearch: advancedSearch.customerSearch,
+    }),
+    ...(advancedSearch.deliveryCodeSearch && {
+      deliveryCodeSearch: advancedSearch.deliveryCodeSearch,
+    }),
+    ...(advancedSearch.orderCodeSearch && {
+      orderCodeSearch: advancedSearch.orderCodeSearch,
+    }),
+    ...(advancedSearch.descriptionSearch && {
+      descriptionSearch: advancedSearch.descriptionSearch,
+    }),
+    ...(advancedSearch.productNoteSearch && {
+      productNoteSearch: advancedSearch.productNoteSearch,
     }),
   });
 
@@ -494,32 +525,151 @@ export function InvoicesTable({
             <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
               Hóa đơn
             </h2>
-            <div className="relative flex items-center gap-1">
-              <input
-                type="text"
-                placeholder="Theo mã hóa đơn"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                onClick={() => {
-                  setTempAdvanced({ ...advancedSearch });
-                  setShowAdvancedSearch(true);
-                }}
-                className={`relative p-1.5 border rounded-lg transition-colors ${
-                  advancedFilterCount > 0
-                    ? "border-blue-500 bg-blue-50 text-blue-600"
-                    : "border-gray-300 text-gray-500 hover:bg-gray-50"
-                }`}
-                title="Tìm kiếm nâng cao">
-                <SlidersHorizontal className="w-4 h-4" />
-                {advancedFilterCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                    {advancedFilterCount}
-                  </span>
-                )}
-              </button>
+            <div ref={advancedRef} className="relative">
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  placeholder="Theo mã hóa đơn"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={() => {
+                    if (!showAdvancedSearch) {
+                      setTempAdvanced({ ...advancedSearch });
+                    }
+                    setShowAdvancedSearch((p) => !p);
+                  }}
+                  className={`relative p-1.5 border rounded-lg transition-colors ${
+                    advancedFilterCount > 0
+                      ? "border-blue-500 bg-blue-50 text-blue-600"
+                      : "border-gray-300 text-gray-500 hover:bg-gray-50"
+                  }`}
+                  title="Tìm kiếm nâng cao">
+                  <SlidersHorizontal className="w-4 h-4" />
+                  {advancedFilterCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      {advancedFilterCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* ── Advanced Search Dropdown ── */}
+              {showAdvancedSearch && (
+                <div className="absolute top-full left-0 mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-lg w-[420px] p-4">
+                  <div className="space-y-2.5">
+                    <input
+                      type="text"
+                      placeholder="Theo mã hóa đơn"
+                      value={tempAdvanced.invoiceCodeSearch}
+                      onChange={(e) =>
+                        setTempAdvanced((p) => ({
+                          ...p,
+                          invoiceCodeSearch: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Theo mã, tên hàng"
+                      value={tempAdvanced.productSearch}
+                      onChange={(e) =>
+                        setTempAdvanced((p) => ({
+                          ...p,
+                          productSearch: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Theo mã, tên, số điện thoại khách hàng"
+                      value={tempAdvanced.customerSearch}
+                      onChange={(e) =>
+                        setTempAdvanced((p) => ({
+                          ...p,
+                          customerSearch: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+
+                    {/* ── Expanded filters ── */}
+                    {isExpanded && (
+                      <>
+                        <input
+                          type="text"
+                          placeholder="Theo mã vận đơn"
+                          value={tempAdvanced.deliveryCodeSearch}
+                          onChange={(e) =>
+                            setTempAdvanced((p) => ({
+                              ...p,
+                              deliveryCodeSearch: e.target.value,
+                            }))
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Theo mã đặt hàng"
+                          value={tempAdvanced.orderCodeSearch}
+                          onChange={(e) =>
+                            setTempAdvanced((p) => ({
+                              ...p,
+                              orderCodeSearch: e.target.value,
+                            }))
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Theo ghi chú"
+                          value={tempAdvanced.descriptionSearch}
+                          onChange={(e) =>
+                            setTempAdvanced((p) => ({
+                              ...p,
+                              descriptionSearch: e.target.value,
+                            }))
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Theo ghi chú hàng hóa"
+                          value={tempAdvanced.productNoteSearch}
+                          onChange={(e) =>
+                            setTempAdvanced((p) => ({
+                              ...p,
+                              productNoteSearch: e.target.value,
+                            }))
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
+                    <button
+                      onClick={() => setIsExpanded((p) => !p)}
+                      className="px-4 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                      {isExpanded ? "Thu gọn" : "Mở rộng"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAdvancedSearch({ ...tempAdvanced });
+                        setShowAdvancedSearch(false);
+                        setPage(1);
+                      }}
+                      className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                      Tìm kiếm
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -773,93 +923,6 @@ export function InvoicesTable({
                     <span className="text-sm text-gray-700">{col.label}</span>
                   </label>
                 ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Advanced Search Modal ── */}
-        {showAdvancedSearch && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center pt-20">
-            <div
-              className="absolute inset-0 bg-black/30"
-              onClick={() => setShowAdvancedSearch(false)}
-            />
-            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-gray-900">
-                  Tìm kiếm nâng cao
-                </h3>
-                <button
-                  onClick={() => setShowAdvancedSearch(false)}
-                  className="text-gray-400 hover:text-gray-600">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Theo mã hóa đơn"
-                  value={tempAdvanced.invoiceCodeSearch}
-                  onChange={(e) =>
-                    setTempAdvanced((p) => ({
-                      ...p,
-                      invoiceCodeSearch: e.target.value,
-                    }))
-                  }
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Theo mã, tên hàng"
-                  value={tempAdvanced.productSearch}
-                  onChange={(e) =>
-                    setTempAdvanced((p) => ({
-                      ...p,
-                      productSearch: e.target.value,
-                    }))
-                  }
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Theo mã, tên, số điện thoại khách hàng"
-                  value={tempAdvanced.customerSearch}
-                  onChange={(e) =>
-                    setTempAdvanced((p) => ({
-                      ...p,
-                      customerSearch: e.target.value,
-                    }))
-                  }
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  onClick={() => {
-                    const empty = {
-                      invoiceCodeSearch: "",
-                      productSearch: "",
-                      customerSearch: "",
-                    };
-                    setTempAdvanced(empty);
-                    setAdvancedSearch(empty);
-                    setShowAdvancedSearch(false);
-                  }}
-                  className="px-4 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-                  Mở rộng
-                </button>
-                <button
-                  onClick={() => {
-                    setAdvancedSearch({ ...tempAdvanced });
-                    setShowAdvancedSearch(false);
-                    setPage(1);
-                  }}
-                  className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-                  Tìm kiếm
-                </button>
               </div>
             </div>
           </div>
