@@ -8,7 +8,7 @@ import {
   useDeleteDestruction,
 } from "@/lib/hooks/useDestructions";
 import { useRouter } from "next/navigation";
-import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { Can } from "@/components/permissions/Can";
 
 export default function DestructionsPage() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function DestructionsPage() {
   };
 
   return (
-    <PagePermissionGuard resource="inventory" action="adjust">
+    <Can resource="inventory" action="view">
       <div className="flex h-full border-t bg-gray-50">
         <DestructionsSidebar onFiltersChange={setFilters} />
 
@@ -51,6 +51,6 @@ export default function DestructionsPage() {
           onDelete={handleDelete}
         />
       </div>
-    </PagePermissionGuard>
+    </Can>
   );
 }

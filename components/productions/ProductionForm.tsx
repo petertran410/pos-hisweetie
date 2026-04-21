@@ -29,7 +29,6 @@ export function ProductionForm({
   const [code, setCode] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  console.log(selectedProduct);
   const [searchQuery, setSearchQuery] = useState("");
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [manufacturedDate, setManufacturedDate] = useState<Date>(new Date());
