@@ -24,7 +24,6 @@ import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
 import { priceBooksApi } from "@/lib/api";
-import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { queuePrintAfterRedirect } from "@/lib/utils/print";
 import {
   getDefaultAddress,
@@ -38,6 +37,7 @@ export interface CartItem {
   price: number;
   discount: number;
   note?: string;
+  conditionType?: string; // "normal" | "damaged" | "near_expiry"
 }
 
 export interface DeliveryInfo {
@@ -551,6 +551,7 @@ export default function BanHangPage() {
           price: Number(item.price),
           discount: Number(item.discount) || 0,
           note: item.note || "",
+          conditionType: item.conditionType || "normal",
         })) || [];
 
     const editTab: Tab = {
@@ -665,6 +666,7 @@ export default function BanHangPage() {
           price: Number(item.price),
           discount: Number(item.discount) || 0,
           note: item.note || "",
+          conditionType: item.conditionType || "normal",
         })) || [];
 
     const editTab: Tab = {
@@ -1104,7 +1106,7 @@ export default function BanHangPage() {
     });
   };
 
-  const addToCart = async (product: any) => {
+  const addToCart = async (product: any, conditionType: string = "normal") => {
     const selectedPriceBookId = activeTab.selectedPriceBookId;
 
     let productPrice = Number(product.basePrice);
@@ -1144,14 +1146,18 @@ export default function BanHangPage() {
       }
     }
 
+    // ← SỬA: composite key matching
     const existingItem = activeTab.cartItems.find(
-      (item) => item.product.id === product.id
+      (item) =>
+        item.product.id === product.id &&
+        (item.conditionType || "normal") === conditionType
     );
 
     if (existingItem) {
       updateActiveTab({
         cartItems: activeTab.cartItems.map((item) =>
-          item.product.id === product.id
+          item.product.id === product.id &&
+          (item.conditionType || "normal") === conditionType
             ? { ...item, quantity: item.quantity + 1 }
             : item
         ),
@@ -1165,24 +1171,39 @@ export default function BanHangPage() {
             quantity: 1,
             price: productPrice,
             discount: 0,
+            conditionType,
           },
         ],
       });
     }
   };
 
-  const updateCartItem = (productId: number, updates: Partial<CartItem>) => {
+  const updateCartItem = (
+    productId: number,
+    updates: Partial<CartItem>,
+    conditionType: string = "normal"
+  ) => {
     updateActiveTab({
       cartItems: activeTab.cartItems.map((item) =>
-        item.product.id === productId ? { ...item, ...updates } : item
+        item.product.id === productId &&
+        (item.conditionType || "normal") === conditionType
+          ? { ...item, ...updates }
+          : item
       ),
     });
   };
 
-  const removeFromCart = (productId: number) => {
+  const removeFromCart = (
+    productId: number,
+    conditionType: string = "normal"
+  ) => {
     updateActiveTab({
       cartItems: activeTab.cartItems.filter(
-        (item) => item.product.id !== productId
+        (item) =>
+          !(
+            item.product.id === productId &&
+            (item.conditionType || "normal") === conditionType
+          )
       ),
     });
   };
@@ -1481,6 +1502,7 @@ export default function BanHangPage() {
         discount: Number(item.discount) || 0,
         discountRatio: 0,
         note: item.note || "",
+        conditionType: item.conditionType || "normal",
       }));
       documentData.delivery = {
         receiver: activeTab.deliveryInfo.receiver,
@@ -1512,6 +1534,7 @@ export default function BanHangPage() {
           discountRatio: 0,
           totalPrice: quantity * price - discount,
           note: item.note || "",
+          conditionType: item.conditionType || "normal",
         };
       });
       documentData.delivery = {

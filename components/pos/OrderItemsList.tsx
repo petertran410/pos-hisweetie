@@ -17,8 +17,12 @@ import { ProductPriceHistory } from "./ProductPriceHistory";
 
 interface CartItemsListProps {
   cartItems: CartItem[];
-  onUpdateItem: (productId: number, updates: Partial<CartItem>) => void;
-  onRemoveItem: (productId: number) => void;
+  onUpdateItem: (
+    productId: number,
+    updates: Partial<CartItem>,
+    conditionType?: string
+  ) => void;
+  onRemoveItem: (productId: number, conditionType?: string) => void;
   discount: number;
   onDiscountChange: (discount: number) => void;
   discountRatio: number;
@@ -41,7 +45,6 @@ export function OrderItemsList({
   selectedCustomerId,
 }: CartItemsListProps) {
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
-  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
   const [quantityDisplays, setQuantityDisplays] = useState<
     Record<number, string>
   >({});
@@ -242,7 +245,7 @@ export function OrderItemsList({
         <div className="space-y-2">
           {cartItems.map((item) => (
             <div
-              key={item.product.id}
+              key={`${item.product.id}_${item.conditionType || "normal"}`}
               className="border rounded-lg p-3 hover:shadow-md transition-shadow"
               onMouseEnter={() => setHoveredItemId(item.product.id)}
               onMouseLeave={() => setHoveredItemId(null)}>
@@ -264,7 +267,13 @@ export function OrderItemsList({
 
                   <NoteDropdown
                     value={item.note || ""}
-                    onChange={(note) => onUpdateItem(item.product.id, { note })}
+                    onChange={(note) =>
+                      onUpdateItem(
+                        item.product.id,
+                        { note },
+                        item.conditionType
+                      )
+                    }
                     templates={noteTemplates}
                     onCreateTemplate={handleCreateTemplate}
                     onEditTemplate={handleEditTemplate}
@@ -284,9 +293,13 @@ export function OrderItemsList({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
-                      onUpdateItem(item.product.id, {
-                        quantity: Math.max(1, item.quantity - 1),
-                      });
+                      onUpdateItem(
+                        item.product.id,
+                        {
+                          quantity: Math.max(1, item.quantity - 1),
+                        },
+                        item.conditionType
+                      );
                       clearQuantityDisplay(item.product.id);
                     }}
                     className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
@@ -306,9 +319,13 @@ export function OrderItemsList({
                   />
                   <button
                     onClick={() => {
-                      onUpdateItem(item.product.id, {
-                        quantity: item.quantity + 1,
-                      });
+                      onUpdateItem(
+                        item.product.id,
+                        {
+                          quantity: item.quantity + 1,
+                        },
+                        item.conditionType
+                      );
                       clearQuantityDisplay(item.product.id);
                     }}
                     className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
