@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import type { Destruction } from "@/lib/api/destructions";
 import { formatDate, formatCurrency } from "../../lib/utils";
 import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
@@ -328,9 +328,8 @@ export function DestructionsTable({
               </tr>
             ) : (
               destructions.map((destruction) => (
-                <>
+                <Fragment key={destruction.id}>
                   <tr
-                    key={destruction.id}
                     className="border-b hover:bg-gray-50 cursor-pointer"
                     onClick={() => toggleExpand(destruction.id)}>
                     <td
@@ -363,7 +362,7 @@ export function DestructionsTable({
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))
             )}
           </tbody>
