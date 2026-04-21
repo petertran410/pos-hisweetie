@@ -1,8 +1,7 @@
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "../store/branch";
 
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3060/api";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const getAuthHeaders = (): HeadersInit => {
   const token = useAuthStore.getState().token;
@@ -78,7 +77,11 @@ export const apiClient = {
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          url.searchParams.append(key, String(value));
+          if (Array.isArray(value)) {
+            value.forEach((v) => url.searchParams.append(key, String(v)));
+          } else {
+            url.searchParams.append(key, String(value));
+          }
         }
       });
     }
