@@ -1,4 +1,3 @@
-// components/invoices/InvoicesTable.tsx
 "use client";
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
@@ -11,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  SlidersHorizontal,
 } from "lucide-react";
 import type { Invoice } from "@/lib/types/invoice";
 import { InvoiceDetailRow } from "./InvoiceDetailRow";
@@ -348,6 +348,26 @@ export function InvoicesTable({
   const [activeStatusTab, setActiveStatusTab] = useState("all");
   const [showBaoDonDropdown, setShowBaoDonDropdown] = useState(false);
   const baoDonRef = useRef<HTMLDivElement>(null);
+  // ── Advanced search modal ──
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [advancedSearch, setAdvancedSearch] = useState({
+    invoiceCodeSearch: "",
+    productSearch: "",
+    customerSearch: "",
+  });
+  const [tempAdvanced, setTempAdvanced] = useState({
+    invoiceCodeSearch: "",
+    productSearch: "",
+    customerSearch: "",
+  });
+
+  const advancedFilterCount = useMemo(() => {
+    let n = 0;
+    if (advancedSearch.invoiceCodeSearch) n++;
+    if (advancedSearch.productSearch) n++;
+    if (advancedSearch.customerSearch) n++;
+    return n;
+  }, [advancedSearch]);
 
   // Debounce search
   useEffect(() => {
@@ -358,7 +378,7 @@ export function InvoicesTable({
   // Reset page khi filter/search/tab đổi
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, filters, activeStatusTab]);
+  }, [debouncedSearch, filters, activeStatusTab, advancedSearch]);
 
   // Tab override sidebar status
   const effectiveFilters = useMemo(() => {
@@ -401,6 +421,15 @@ export function InvoicesTable({
     search: debouncedSearch,
     branchId: selectedBranch?.id,
     ...effectiveFilters,
+    ...(advancedSearch.invoiceCodeSearch && {
+      invoiceCodeSearch: advancedSearch.invoiceCodeSearch,
+    }),
+    ...(advancedSearch.productSearch && {
+      productSearch: advancedSearch.productSearch,
+    }),
+    ...(advancedSearch.customerSearch && {
+      customerSearch: advancedSearch.customerSearch,
+    }),
   });
 
   useEffect(() => {
@@ -465,13 +494,33 @@ export function InvoicesTable({
             <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
               Hóa đơn
             </h2>
-            <input
-              type="text"
-              placeholder="Tìm mã HĐ, khách hàng..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative flex items-center gap-1">
+              <input
+                type="text"
+                placeholder="Theo mã hóa đơn"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={() => {
+                  setTempAdvanced({ ...advancedSearch });
+                  setShowAdvancedSearch(true);
+                }}
+                className={`relative p-1.5 border rounded-lg transition-colors ${
+                  advancedFilterCount > 0
+                    ? "border-blue-500 bg-blue-50 text-blue-600"
+                    : "border-gray-300 text-gray-500 hover:bg-gray-50"
+                }`}
+                title="Tìm kiếm nâng cao">
+                <SlidersHorizontal className="w-4 h-4" />
+                {advancedFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    {advancedFilterCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Can resource="invoices" action="create">
