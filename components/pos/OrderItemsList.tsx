@@ -283,7 +283,7 @@ export function OrderItemsList({
         <div>
           {cartItems.map((item, index) => (
             <div
-              key={`${item.product.id}_${item.conditionType || "normal"}`}
+              key={`${item.product.id}_${item.conditionType || "normal"}_${index}`}
               className={`border p-3 hover:shadow-md transition-shadow ${
                 isFirstOfGroup(index) ? "rounded-t-lg mt-2" : "border-t-0"
               } ${isLastOfGroup(index) ? "rounded-b-lg" : ""} ${

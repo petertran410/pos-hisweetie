@@ -493,6 +493,7 @@ export default function BanHangPage() {
             price: Number(item.price),
             discount: Number(item.discount) || 0,
             note: item.note || "",
+            conditionType: item.conditionType || "normal",
           };
         })
         .filter(Boolean) as CartItem[];
@@ -794,6 +795,7 @@ export default function BanHangPage() {
           price: Number(item.price),
           discount: Number(item.discount) || 0,
           note: item.note || "",
+          conditionType: item.conditionType || "normal",
         };
       })
       .filter((item: CartItem) => item.quantity > 0);
@@ -882,6 +884,7 @@ export default function BanHangPage() {
             discountRatio: 0,
             totalPrice: (price - discount) * quantity,
             note: item.note || "",
+            conditionType: item.conditionType || "normal",
           };
         }),
       });
