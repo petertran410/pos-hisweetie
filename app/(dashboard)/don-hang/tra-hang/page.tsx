@@ -48,7 +48,7 @@ export default function TraHangPage() {
   };
 
   const handleViewClick = (item: ReturnOrder) => {
-    if (item.status === 1) {
+    if (item.status === 1 || item.status === 6) {
       setSelectedReturnOrderId(item.id);
       setModalType("confirm-stock");
     } else if (item.status === 2) {

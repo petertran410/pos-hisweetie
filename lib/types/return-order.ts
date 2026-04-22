@@ -13,6 +13,9 @@ export interface ReturnOrderDetail {
   returnPrice: number;
   totalAmount: number;
   note?: string;
+  goodQuantity: number;
+  damagedQuantity: number;
+  nearExpiryQuantity: number;
   product?: {
     id: number;
     code: string;
@@ -54,5 +57,7 @@ export interface ReturnOrder {
   branch?: any;
   creator?: any;
   receivedBy?: any;
+  images?: string;
+  stockImages?: string;
   details?: ReturnOrderDetail[];
 }

@@ -12,6 +12,7 @@ interface ReturnOrdersSidebarProps {
 
 const RETURN_STATUS_OPTIONS = [
   { value: 1, label: "Yêu cầu trả hàng", color: "bg-blue-100" },
+  { value: 6, label: "Đang nhập hàng (tạm)", color: "bg-purple-100" },
   { value: 2, label: "Nhập hàng trả", color: "bg-yellow-100" },
   { value: 3, label: "Yêu cầu hoàn tiền", color: "bg-orange-100" },
   { value: 4, label: "Hoàn thành", color: "bg-green-100" },

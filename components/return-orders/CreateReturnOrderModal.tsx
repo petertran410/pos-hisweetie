@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Search, ChevronDown } from "lucide-react";
+import { X, Search, ChevronDown, Camera } from "lucide-react";
 import { useInvoicesForReturnOrder } from "@/lib/hooks/useInvoices";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 import { invoicesApi } from "@/lib/api/invoices";
+import { API_URL } from "@/lib/config/api";
+import { useAuthStore } from "@/lib/store/auth";
 
 interface CreateReturnOrderModalProps {
   onClose: () => void;
@@ -55,12 +57,49 @@ export function CreateReturnOrderModal({
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [branchSearchTerm, setBranchSearchTerm] = useState("");
   const invoiceDropdownRef = useRef<HTMLDivElement>(null);
+  const [images, setImages] = useState<
+    { file?: File; preview: string; url?: string }[]
+  >([]);
 
   const { data: invoicesForReturn } = useInvoicesForReturnOrder({
     search: invoiceSearch,
     branchId: branchId > 0 ? branchId : undefined,
     limit: 20,
   });
+
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = useAuthStore.getState().token;
+    const res = await fetch(`${API_URL}/upload/image`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error("Upload failed");
+    const result = await res.json();
+    return result.url;
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) continue; // skip > 10MB
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImages((prev) => [
+          ...prev,
+          { file, preview: reader.result as string },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const availableInvoices = (invoicesForReturn || []).filter(
     (inv: any) => !selectedInvoices.find((s) => s.id === inv.id)
@@ -164,17 +203,27 @@ export function CreateReturnOrderModal({
     0
   );
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (selectedInvoices.length === 0 || !branchId) return;
-
     const validItems = returnItems.filter((item) => item.requestQuantity > 0);
     if (validItems.length === 0) return;
+
+    const uploadedUrls: string[] = [];
+    for (const img of images) {
+      if (img.file) {
+        const url = await uploadFile(img.file);
+        uploadedUrls.push(url);
+      } else if (img.url) {
+        uploadedUrls.push(img.url);
+      }
+    }
 
     onSubmit({
       invoiceIds: selectedInvoices.map((inv) => inv.id),
       branchId,
       customerId: selectedInvoices[0]?.customerId,
       note,
+      images: uploadedUrls.length > 0 ? uploadedUrls : undefined,
       details: validItems.map((item) => ({
         invoiceId: item.invoiceId,
         invoiceCode: item.invoiceCode,
@@ -432,6 +481,42 @@ export function CreateReturnOrderModal({
             className="w-full px-3 py-2 border rounded-lg resize-none"
             placeholder="Lý do trả hàng..."
           />
+        </div>
+
+        {/* Hình ảnh */}
+        <div className="px-4 py-3 border-t shrink-0">
+          <label className="block text-sm font-medium mb-2">
+            Hình ảnh sản phẩm trả hàng
+          </label>
+          <div className="flex flex-wrap gap-3">
+            {images.map((img, idx) => (
+              <div key={idx} className="relative w-20 h-20">
+                <img
+                  src={img.preview}
+                  alt=""
+                  className="w-full h-full object-cover rounded border"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                  ✕
+                </button>
+              </div>
+            ))}
+            <label className="w-20 h-20 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 text-gray-400">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                capture="environment"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+              <Camera className="w-5 h-5" />
+              <span className="text-[10px] mt-0.5">Thêm ảnh</span>
+            </label>
+          </div>
         </div>
 
         <div className="flex items-center justify-between p-4 border-t bg-gray-50 shrink-0 rounded-b-xl">
