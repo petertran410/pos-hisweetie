@@ -28,6 +28,10 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionDef> = {
   "/san-pham/danh-sach": { resource: "products", action: "view" },
   "/san-pham/thiet-lap-gia": { resource: "price_books", action: "view" },
   "/san-pham/chuyen-hang": { resource: "transfers", action: "view" },
+  "/san-pham/kiem-hang-loai-b": {
+    resource: "inventory_checks",
+    action: "view",
+  },
   "/san-pham/san-xuat": { resource: "productions", action: "view" },
   "/san-pham/xuat-huy": { resource: "destructions", action: "view" },
   "/san-pham/nha-cung-cap": { resource: "suppliers", action: "view" },

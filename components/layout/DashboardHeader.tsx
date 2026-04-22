@@ -43,9 +43,18 @@ export function DashboardHeader() {
             label: "Thiết lập giá",
             href: "/san-pham/thiet-lap-gia",
           },
+        ],
+      },
+      {
+        title: "Kiểm kho",
+        items: [
           {
             label: "Kiểm kho",
             href: "/san-pham/kiem-kho",
+          },
+          {
+            label: "Kiểm hàng loại B",
+            href: "/san-pham/kiem-hang-loai-b",
           },
         ],
       },
