@@ -7,6 +7,8 @@ import {
 } from "@/lib/hooks/useInventoryChecks";
 import { Loader2, Trash2 } from "lucide-react";
 import { usePermission } from "@/lib/hooks/usePermissions";
+import { check } from "zod/v4";
+import Link from "next/link";
 
 interface Props {
   checkId: number;
@@ -138,8 +140,15 @@ export function InventoryCheckDetailRow({ checkId, colSpan }: Props) {
 
                     return (
                       <tr key={d.id} className="border-t hover:bg-gray-50">
-                        <td className="px-3 py-2 font-mono text-xs">
-                          {d.productCode}
+                        <td className="px-3 py-2 text-xs">
+                          <Link
+                            href={`/san-pham/danh-sach?Code=${d.productCode}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium text-blue-600 hover:underline"
+                            onClick={(e) => e.stopPropagation()}>
+                            {d.productCode}
+                          </Link>
                         </td>
                         <td className="px-3 py-2">{d.productName}</td>
                         <td className="px-3 py-2 text-right">

@@ -147,7 +147,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                     }`}
                     onClick={() => toggleExpand(check.id)}>
                     <td
-                      className={`px-4 py-2.5 text-sm font-mono ${
+                      className={`px-4 py-2.5 text-sm ${
                         expandedId === check.id
                           ? "border-t-2 border-l-2 border-blue-500"
                           : ""

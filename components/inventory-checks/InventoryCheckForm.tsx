@@ -247,7 +247,7 @@ export function InventoryCheckForm({ onClose }: Props) {
 
                     return (
                       <tr key={item.productId} className="border-t">
-                        <td className="px-3 py-2 font-mono text-xs">
+                        <td className="px-3 py-2 text-xs">
                           {item.productCode}
                         </td>
                         <td className="px-3 py-2">{item.productName}</td>
@@ -335,22 +335,22 @@ export function InventoryCheckForm({ onClose }: Props) {
           )}
         </div>
 
-        <div className="mt-5 p-6">
-          <label className="block text-sm font-medium text-gray-700 ">
+        <div className="px-6 pb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Ghi chú
           </label>
-          <input
-            type="text"
+          <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Ghi chú cho phiếu kiểm..."
             maxLength={1000}
-            className="w-full border rounded px-3 py-2 h-24"
+            rows={3}
+            className="w-full border rounded px-3 py-2 resize-none text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
 
         {/* Footer */}
-        <div className="border-t px-4 py-3 flex items-center justify-between bg-gray-50">
+        <div className="border-t px-4 py-3 flex items-center justify-between bg-gray-50 rounded-b-lg">
           <span className="text-sm text-gray-500">{items.length} sản phẩm</span>
           <div className="flex items-center gap-2">
             <button
