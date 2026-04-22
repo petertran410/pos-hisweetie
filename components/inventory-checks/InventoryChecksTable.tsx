@@ -17,7 +17,7 @@ import { usePermission } from "@/lib/hooks/usePermissions";
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
 
-export function InventoryChecksTable() {
+export function InventoryChecksTable({ filters }: { filters?: any }) {
   const { selectedBranch } = useBranchStore();
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -41,7 +41,9 @@ export function InventoryChecksTable() {
     page,
     limit,
     search: debouncedSearch,
-    branchId: selectedBranch?.id,
+    branchId: filters?.branchId || selectedBranch?.id,
+    fromDate: filters?.fromDate,
+    toDate: filters?.toDate,
   });
 
   const checks = data?.data || [];
