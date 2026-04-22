@@ -22,6 +22,7 @@ export interface InventoryCheck {
   branchName: string;
   checkDate: string;
   note?: string;
+  status: number;
   createdById: number;
   createdByName: string;
   createdAt: string;
@@ -81,7 +82,7 @@ export const inventoryChecksApi = {
     return apiClient.post("/inventory-checks", data);
   },
 
-  remove: (id: number): Promise<{ message: string }> => {
-    return apiClient.delete(`/inventory-checks/${id}`);
+  cancel: (id: number): Promise<InventoryCheck> => {
+    return apiClient.put(`/inventory-checks/${id}/cancel`);
   },
 };

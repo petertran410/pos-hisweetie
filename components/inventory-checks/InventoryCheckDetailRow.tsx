@@ -1,13 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import {
   useInventoryCheck,
-  useDeleteInventoryCheck,
+  useCancelInventoryCheck,
 } from "@/lib/hooks/useInventoryChecks";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { usePermission } from "@/lib/hooks/usePermissions";
-import { check } from "zod/v4";
 import Link from "next/link";
 
 interface Props {
@@ -20,8 +19,8 @@ const formatDateTime = (d?: string) =>
 
 export function InventoryCheckDetailRow({ checkId, colSpan }: Props) {
   const { data: check, isLoading } = useInventoryCheck(checkId);
-  const deleteCheck = useDeleteInventoryCheck();
-  const canDelete = usePermission("inventory_checks", "delete");
+  const cancelCheck = useCancelInventoryCheck();
+  const canUpdate = usePermission("inventory_checks", "update");
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -58,13 +57,15 @@ export function InventoryCheckDetailRow({ checkId, colSpan }: Props) {
     );
   }
 
-  const handleDelete = () => {
+  const isCancelled = check.status === 2;
+
+  const handleCancel = () => {
     if (
       confirm(
-        "Xóa phiếu kiểm sẽ khôi phục lại giá trị hàng loại B / cận date trước đó. Bạn có chắc?"
+        "Hủy phiếu kiểm sẽ khôi phục lại giá trị hàng loại B / cận date trước đó. Bạn có chắc?"
       )
     ) {
-      deleteCheck.mutate(checkId);
+      cancelCheck.mutate(checkId);
     }
   };
 
@@ -74,44 +75,40 @@ export function InventoryCheckDetailRow({ checkId, colSpan }: Props) {
         colSpan={colSpan}
         className="p-0 border-b-2 border-l-2 border-r-2 border-blue-500">
         <div ref={wrapperRef}>
-          <div className="p-4 bg-blue-50/30">
+          <div className="px-5 pb-5 bg-blue-50/30">
             {/* Header info */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="grid grid-cols-4 gap-4 text-sm flex-1">
-                <div>
-                  <span className="text-gray-500">Mã phiếu:</span>
-                  <p className="font-semibold">{check.code}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Chi nhánh:</span>
-                  <p className="font-medium">{check.branchName}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Người kiểm:</span>
-                  <p className="font-medium">{check.createdByName}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Ngày kiểm:</span>
-                  <p className="font-medium">
-                    {formatDateTime(check.checkDate)}
-                  </p>
-                </div>
+            <div className="grid grid-cols-4 gap-4 text-sm mb-4 pt-4">
+              <div>
+                <span className="text-gray-500">Mã phiếu:</span>
+                <p className="font-semibold">{check.code}</p>
               </div>
-              {canDelete && (
-                <button
-                  onClick={handleDelete}
-                  disabled={deleteCheck.isPending}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 disabled:opacity-50">
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Xóa phiếu
-                </button>
-              )}
+              <div>
+                <span className="text-gray-500">Chi nhánh:</span>
+                <p className="font-medium">{check.branchName}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">Người kiểm:</span>
+                <p className="font-medium">{check.createdByName}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">Ngày kiểm:</span>
+                <p className="font-medium">{formatDateTime(check.checkDate)}</p>
+              </div>
             </div>
 
             {check.note && (
               <div className="mb-4 text-sm">
                 <span className="text-gray-500">Ghi chú: </span>
                 <span>{check.note}</span>
+              </div>
+            )}
+
+            {/* Status badge */}
+            {isCancelled && (
+              <div className="mb-4">
+                <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">
+                  Đã hủy
+                </span>
               </div>
             )}
 
@@ -140,7 +137,7 @@ export function InventoryCheckDetailRow({ checkId, colSpan }: Props) {
 
                     return (
                       <tr key={d.id} className="border-t hover:bg-gray-50">
-                        <td className="px-3 py-2 text-xs">
+                        <td className="px-3 py-2">
                           <Link
                             href={`/san-pham/danh-sach?Code=${d.productCode}`}
                             target="_blank"
@@ -176,6 +173,21 @@ export function InventoryCheckDetailRow({ checkId, colSpan }: Props) {
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {/* Footer - giống ProductDetailRow */}
+            <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
+              <div>
+                {canUpdate && !isCancelled && (
+                  <button
+                    onClick={handleCancel}
+                    disabled={cancelCheck.isPending}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50">
+                    {cancelCheck.isPending ? "Đang hủy..." : "Hủy phiếu"}
+                  </button>
+                )}
+              </div>
+              <div />
             </div>
           </div>
         </div>

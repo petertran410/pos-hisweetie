@@ -115,7 +115,10 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
               <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
                 Ghi chú
               </th>
-              <th className="px-4 py-2.5 w-8"></th>
+              <th className="px-4 py-2.5 text-center text-xs font-medium text-gray-500">
+                Trạng thái
+              </th>
+              {/* <th className="px-4 py-2.5 w-8"></th> */}
             </tr>
           </thead>
           <tbody>
@@ -195,6 +198,17 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                       {check.note || "-"}
                     </td>
                     <td
+                      className={`px-4 py-2.5 text-sm text-center ${expandedId === check.id ? "border-t-2 border-blue-500" : ""}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          check.status === 2
+                            ? "bg-red-100 text-red-700"
+                            : "bg-green-100 text-green-700"
+                        }`}>
+                        {check.status === 2 ? "Đã hủy" : "Hoàn thành"}
+                      </span>
+                    </td>
+                    {/* <td
                       className={`px-4 py-2.5 ${
                         expandedId === check.id
                           ? "border-t-2 border-r-2 border-blue-500"
@@ -205,7 +219,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                           expandedId === check.id ? "rotate-180" : ""
                         }`}
                       />
-                    </td>
+                    </td> */}
                   </tr>
                   {expandedId === check.id && (
                     <InventoryCheckDetailRow
