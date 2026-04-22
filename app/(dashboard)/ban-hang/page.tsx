@@ -1109,7 +1109,11 @@ export default function BanHangPage() {
     });
   };
 
-  const addToCart = async (product: any, conditionType: string = "normal") => {
+  const addToCart = async (
+    product: any,
+    conditionType: string = "normal",
+    quantity: number = 1
+  ) => {
     const selectedPriceBookId = activeTab.selectedPriceBookId;
 
     let productPrice = Number(product.basePrice);
@@ -1161,7 +1165,7 @@ export default function BanHangPage() {
         cartItems: activeTab.cartItems.map((item) =>
           item.product.id === product.id &&
           (item.conditionType || "normal") === conditionType
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + quantity }
             : item
         ),
       });
@@ -1171,7 +1175,7 @@ export default function BanHangPage() {
           ...activeTab.cartItems,
           {
             product,
-            quantity: 1,
+            quantity,
             price: productPrice,
             discount: 0,
             conditionType,
