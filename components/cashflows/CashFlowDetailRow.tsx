@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   useCashFlow,
   useRelatedInvoicePayments,
@@ -70,10 +70,66 @@ export function CashFlowDetailRow({
     (sum: number, d: any) => sum + Number(d.refundAmount),
     0
   );
+  const mergedInvoices = useMemo(() => {
+    const map = new Map<
+      number,
+      {
+        invoiceId: number;
+        invoiceCode: string;
+        grandTotal: number;
+        paidAmount: number;
+        debtAmount: number;
+        status: number;
+        latestDate: string;
+        payments: any[];
+        offsets: any[];
+      }
+    >();
+
+    for (const p of invoicePayments) {
+      const invId = p.invoice?.id;
+      if (!invId) continue;
+      if (!map.has(invId)) {
+        map.set(invId, {
+          invoiceId: invId,
+          invoiceCode: p.invoice.code,
+          grandTotal: Number(p.invoice.grandTotal || 0),
+          paidAmount: Number(p.invoice.paidAmount || 0),
+          debtAmount: Number(p.invoice.debtAmount || 0),
+          status: p.invoice.status,
+          latestDate: p.paymentDate,
+          payments: [],
+          offsets: [],
+        });
+      }
+      map.get(invId)!.payments.push(p);
+    }
+
+    for (const o of debtOffsets) {
+      const invId = o.invoice?.id;
+      if (!invId) continue;
+      if (!map.has(invId)) {
+        map.set(invId, {
+          invoiceId: invId,
+          invoiceCode: o.invoice.code,
+          grandTotal: Number(o.invoice.grandTotal || 0),
+          paidAmount: Number(o.invoice.paidAmount || 0),
+          debtAmount: Number(o.invoice.debtAmount || 0),
+          status: o.invoice.status,
+          latestDate: o.refundConfirmedAt,
+          payments: [],
+          offsets: [],
+        });
+      }
+      map.get(invId)!.offsets.push(o);
+    }
+
+    return Array.from(map.values());
+  }, [invoicePayments, debtOffsets]);
   const hasInvoicePayments =
     invoicePayments.length > 0 ||
     orderPayments.length > 0 ||
-    debtOffsets.length > 0; // ← SỬA: thêm debtOffsets
+    debtOffsets.length > 0;
   const cancelCashFlow = useCancelCashFlow();
   const { user } = useAuthStore();
 
@@ -81,8 +137,8 @@ export function CashFlowDetailRow({
   const [isPrinting, setIsPrinting] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const [visibleTooltipId, setVisibleTooltipId] = useState<string | null>(null);
 
-  // Sticky wrapper theo chiều ngang scroll
   useLayoutEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -409,16 +465,11 @@ export function CashFlowDetailRow({
                       </div>
                     ) : (
                       <>
-                        {/* Bảng gộp: Hóa đơn + CTN */}
-                        {(invoicePayments.length > 0 ||
-                          debtOffsets.length > 0) && (
+                        {mergedInvoices.length > 0 && (
                           <div className="border border-gray-200 rounded-lg overflow-hidden">
                             <table className="w-full">
                               <thead className="bg-gray-100 border-b border-gray-200">
                                 <tr>
-                                  <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 w-[140px]">
-                                    Mã phiếu
-                                  </th>
                                   <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 w-[120px]">
                                     Hóa đơn
                                   </th>
@@ -443,116 +494,143 @@ export function CashFlowDetailRow({
                                 </tr>
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-200">
-                                {invoicePayments.map((payment: any) => (
-                                  <tr
-                                    key={`ip-${payment.id}`}
-                                    className="hover:bg-gray-50">
-                                    <td className="px-4 py-3 text-md font-medium text-blue-600">
-                                      {payment.code}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                      <Link
-                                        className="text-md text-blue-600 hover:underline"
-                                        href={`/don-hang/hoa-don?Code=${payment.invoice?.code}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}>
-                                        {payment.invoice?.code}
-                                      </Link>
-                                    </td>
-                                    <td className="px-4 py-3 text-md text-gray-900">
-                                      {formatDateTime(payment.paymentDate)}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-md text-gray-900">
-                                      {formatCurrency(
-                                        Number(payment.invoice?.grandTotal || 0)
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-md text-gray-900">
-                                      {formatCurrency(
-                                        Number(
-                                          payment.invoice?.paidAmount || 0
-                                        ) - Number(payment.amount)
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-md font-medium text-green-600">
-                                      {formatCurrency(Number(payment.amount))}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-md text-gray-900">
-                                      {formatCurrency(
-                                        Number(payment.invoice?.debtAmount || 0)
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                      <span
-                                        className={`px-2 py-1 rounded text-xs font-medium ${
-                                          payment.invoice?.status === 1
-                                            ? "bg-green-100 text-green-700"
-                                            : "bg-yellow-100 text-yellow-700"
-                                        }`}>
-                                        {payment.invoice?.status === 1
-                                          ? "Hoàn thành"
-                                          : "Đang xử lý"}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ))}
-                                {debtOffsets.map((offset: any) => (
-                                  <tr
-                                    key={`ctn-${offset.id}`}
-                                    className="hover:bg-gray-50 bg-blue-50/30">
-                                    <td className="px-4 py-3 text-md font-medium text-blue-600">
-                                      {offset.code}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                      <Link
-                                        className="text-md text-blue-600 hover:underline"
-                                        href={`/don-hang/hoa-don?Code=${offset.invoice?.code}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}>
-                                        {offset.invoice?.code || "-"}
-                                      </Link>
-                                    </td>
-                                    <td className="px-4 py-3 text-md text-gray-900">
-                                      {offset.refundConfirmedAt
-                                        ? new Date(
-                                            offset.refundConfirmedAt
-                                          ).toLocaleString("vi-VN")
-                                        : "-"}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-md text-gray-900">
-                                      {formatCurrency(
-                                        Number(offset.invoice?.grandTotal || 0)
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-md text-gray-400">
-                                      -
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-md font-medium text-green-600">
-                                      {formatCurrency(
-                                        Number(offset.refundAmount)
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-md text-gray-900">
-                                      {formatCurrency(
-                                        Number(offset.invoice?.debtAmount || 0)
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                      <span
-                                        className={`px-2 py-1 rounded text-xs font-medium ${
-                                          offset.status === 5
-                                            ? "bg-red-100 text-red-700"
-                                            : "bg-green-100 text-green-700"
-                                        }`}>
-                                        {offset.status === 5
-                                          ? "Đã hủy"
-                                          : "Hoàn thành"}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ))}
+                                {mergedInvoices.map((row) => {
+                                  const totalPayment = row.payments.reduce(
+                                    (s: number, p: any) => s + Number(p.amount),
+                                    0
+                                  );
+                                  const totalOffset = row.offsets.reduce(
+                                    (s: number, o: any) =>
+                                      s + Number(o.refundAmount),
+                                    0
+                                  );
+                                  const hasPayments = row.payments.length > 0;
+                                  const hasOffsets = row.offsets.length > 0;
+                                  const paymentCodes = row.payments
+                                    .map((p: any) => p.code)
+                                    .join(", ");
+                                  const offsetCodes = row.offsets
+                                    .map((o: any) => o.code)
+                                    .join(", ");
+
+                                  // "Đã thu trước": nếu có CTN → hiện CTN amount, không → paidAmount - totalPayment
+                                  const daThutruoc = hasOffsets
+                                    ? totalOffset
+                                    : row.paidAmount - totalPayment;
+
+                                  return (
+                                    <tr
+                                      key={`merged-${row.invoiceId}`}
+                                      className="hover:bg-gray-50">
+                                      {/* Hóa đơn */}
+                                      <td className="px-4 py-3">
+                                        <Link
+                                          className="text-md text-blue-600 hover:underline"
+                                          href={`/don-hang/hoa-don?Code=${row.invoiceCode}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}>
+                                          {row.invoiceCode}
+                                        </Link>
+                                      </td>
+
+                                      {/* Thời gian */}
+                                      <td className="px-4 py-3 text-md text-gray-900">
+                                        {formatDateTime(row.latestDate)}
+                                      </td>
+
+                                      {/* Giá trị HĐ */}
+                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                        {formatCurrency(row.grandTotal)}
+                                      </td>
+
+                                      {/* Đã thu trước — nếu có CTN thì hover/click hiện mã CTN */}
+                                      <td className="px-4 py-3 text-right text-md">
+                                        {hasOffsets ? (
+                                          <div className="relative inline-block">
+                                            <span
+                                              className="cursor-pointer font-medium text-green-600 hover:underline decoration-dotted"
+                                              title={offsetCodes}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setVisibleTooltipId(
+                                                  visibleTooltipId ===
+                                                    `ctn-${row.invoiceId}`
+                                                    ? null
+                                                    : `ctn-${row.invoiceId}`
+                                                );
+                                              }}>
+                                              {formatCurrency(daThutruoc)}
+                                            </span>
+                                            {visibleTooltipId ===
+                                              `ctn-${row.invoiceId}` && (
+                                              <div className="absolute z-10 bottom-full right-0 mb-1 px-2.5 py-1.5 bg-gray-800 text-white text-xs rounded shadow-lg whitespace-nowrap">
+                                                {offsetCodes}
+                                                <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800" />
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-900">
+                                            {formatCurrency(daThutruoc)}
+                                          </span>
+                                        )}
+                                      </td>
+
+                                      {/* Giá trị — nếu có TTHD thì hover/click hiện mã TTHD */}
+                                      <td className="px-4 py-3 text-right text-md">
+                                        {hasPayments ? (
+                                          <div className="relative inline-block">
+                                            <span
+                                              className="cursor-pointer font-medium text-green-600 hover:underline decoration-dotted"
+                                              title={paymentCodes}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setVisibleTooltipId(
+                                                  visibleTooltipId ===
+                                                    `ip-${row.invoiceId}`
+                                                    ? null
+                                                    : `ip-${row.invoiceId}`
+                                                );
+                                              }}>
+                                              {formatCurrency(totalPayment)}
+                                            </span>
+                                            {visibleTooltipId ===
+                                              `ip-${row.invoiceId}` && (
+                                              <div className="absolute z-10 bottom-full right-0 mb-1 px-2.5 py-1.5 bg-gray-800 text-white text-xs rounded shadow-lg whitespace-nowrap">
+                                                {paymentCodes}
+                                                <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800" />
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-400">
+                                            -
+                                          </span>
+                                        )}
+                                      </td>
+
+                                      {/* Còn cần thu */}
+                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                        {formatCurrency(row.debtAmount)}
+                                      </td>
+
+                                      {/* Trạng thái */}
+                                      <td className="px-4 py-3 text-center">
+                                        <span
+                                          className={`px-2 py-1 rounded text-xs font-medium ${
+                                            row.status === 1
+                                              ? "bg-green-100 text-green-700"
+                                              : "bg-yellow-100 text-yellow-700"
+                                          }`}>
+                                          {row.status === 1
+                                            ? "Hoàn thành"
+                                            : "Đang xử lý"}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
                               </tbody>
                             </table>
                           </div>
