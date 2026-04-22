@@ -218,6 +218,23 @@ export function InvoiceDetailRow({
     invoice.status !== INVOICE_STATUS.CANCELLED &&
     invoice.status !== INVOICE_STATUS.COMPLETED;
 
+  const getConditionLabel = (conditionType?: string) => {
+    switch (conditionType) {
+      case "damaged":
+        return {
+          text: "Bục rách",
+          className: "bg-red-50 text-red-600 border-red-200",
+        };
+      case "near_expiry":
+        return {
+          text: "Cận date",
+          className: "bg-amber-50 text-amber-600 border-amber-200",
+        };
+      default:
+        return null;
+    }
+  };
+
   return (
     <tr>
       <td
@@ -409,62 +426,79 @@ export function InvoiceDetailRow({
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {invoice.details?.map((item: InvoiceDetail) => {
-                            return (
-                              <tr
-                                key={item.id}
-                                className="hover:bg-gray-50 transition-colors">
-                                <td className="px-[10px] py-2">
-                                  {item.product?.code || item.productCode ? (
-                                    <>
-                                      <Link
-                                        href={`/san-pham/danh-sach?Code=${item.product?.code || item.productCode}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm font-medium text-blue-600 hover:underline"
-                                        onClick={(e) => e.stopPropagation()}>
-                                        {item.product?.code || item.productCode}
-                                      </Link>
-                                    </>
-                                  ) : (
-                                    <span>-</span>
-                                  )}
-                                </td>
-                                <td className="px-[10px] py-2">
-                                  <p className="text-sm font-medium text-gray-900">
-                                    {item.product?.name || item.productName}
-                                  </p>
-                                  {item.note && (
-                                    <p className="text-sm text-gray-500 mt-1 italic">
-                                      {item.note}
+                          {invoice.details?.map(
+                            (item: InvoiceDetail, index: number) => {
+                              console.log(item);
+                              return (
+                                <tr
+                                  key={index}
+                                  className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-[10px] py-2">
+                                    {item.product?.code || item.productCode ? (
+                                      <>
+                                        <Link
+                                          href={`/san-pham/danh-sach?Code=${item.product?.code || item.productCode}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-sm font-medium text-blue-600 hover:underline"
+                                          onClick={(e) => e.stopPropagation()}>
+                                          {item.product?.code ||
+                                            item.productCode}
+                                        </Link>
+
+                                        {(() => {
+                                          const label = getConditionLabel(
+                                            item.conditionType
+                                          );
+                                          if (!label) return null;
+                                          return (
+                                            <span
+                                              className={`px-1.5 ml-1 py-0.5 text-xs rounded-full border ${label.className}`}>
+                                              {label.text}
+                                            </span>
+                                          );
+                                        })()}
+                                      </>
+                                    ) : (
+                                      <span>-</span>
+                                    )}
+                                  </td>
+                                  <td className="px-[10px] py-2">
+                                    <p className="text-sm font-medium text-gray-900">
+                                      {item.product?.name || item.productName}
                                     </p>
-                                  )}
-                                </td>
-                                <td className="px-[10px] py-2 text-center">
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {item.quantity}
-                                  </span>
-                                </td>
-                                <td className="px-[10px] py-2 text-right">
-                                  <span className="text-md text-gray-900">
-                                    {formatCurrency(Number(item.price))}
-                                  </span>
-                                </td>
-                                <td className="px-[10px] py-2 text-right">
-                                  <span className="text-md text-gray-900">
-                                    {item.discount
-                                      ? formatCurrency(Number(item.discount))
-                                      : "-"}
-                                  </span>
-                                </td>
-                                <td className="px-[10px] py-2 text-right">
-                                  <span className="text-md font-semibold text-blue-600">
-                                    {formatCurrency(Number(item.totalPrice))}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
+                                    {item.note && (
+                                      <p className="text-sm text-gray-500 mt-1 italic">
+                                        {item.note}
+                                      </p>
+                                    )}
+                                  </td>
+                                  <td className="px-[10px] py-2 text-center">
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {item.quantity}
+                                    </span>
+                                  </td>
+                                  <td className="px-[10px] py-2 text-right">
+                                    <span className="text-md text-gray-900">
+                                      {formatCurrency(Number(item.price))}
+                                    </span>
+                                  </td>
+                                  <td className="px-[10px] py-2 text-right">
+                                    <span className="text-md text-gray-900">
+                                      {item.discount
+                                        ? formatCurrency(Number(item.discount))
+                                        : "-"}
+                                    </span>
+                                  </td>
+                                  <td className="px-[10px] py-2 text-right">
+                                    <span className="text-md font-semibold text-blue-600">
+                                      {formatCurrency(Number(item.totalPrice))}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            }
+                          )}
                         </tbody>
                       </table>
                     </div>

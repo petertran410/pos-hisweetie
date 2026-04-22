@@ -45,6 +45,7 @@ export interface InvoiceDetail {
   note?: string;
   serialNumbers?: string;
   product?: any;
+  conditionType?: string;
 }
 
 export const INVOICE_STATUS = {

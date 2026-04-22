@@ -245,6 +245,23 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
   const isStatusEditable = !isFinalState && !hasDeliveryInvoice;
 
+  const getConditionLabel = (conditionType?: string) => {
+    switch (conditionType) {
+      case "damaged":
+        return {
+          text: "Bục rách",
+          className: "bg-red-50 text-red-600 border-red-200",
+        };
+      case "near_expiry":
+        return {
+          text: "Cận date",
+          className: "bg-amber-50 text-amber-600 border-amber-200",
+        };
+      default:
+        return null;
+    }
+  };
+
   return (
     <>
       <tr>
@@ -500,6 +517,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
                             {order.items?.map((item: any, index: number) => {
+                              console.log(item);
                               return (
                                 <tr
                                   key={index}
@@ -516,6 +534,19 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                           {item.product?.code ||
                                             item.productCode}
                                         </Link>
+
+                                        {(() => {
+                                          const label = getConditionLabel(
+                                            item.conditionType
+                                          );
+                                          if (!label) return null;
+                                          return (
+                                            <span
+                                              className={`px-1.5 ml-1 py-0.5 text-xs rounded-full border ${label.className}`}>
+                                              {label.text}
+                                            </span>
+                                          );
+                                        })()}
                                       </>
                                     ) : (
                                       <span>-</span>

@@ -678,13 +678,15 @@ export function ProductDetailRow({
 
                           return (
                             <tr key={inv.id}>
-                              <td className="px-4 py-2.5 text-sm">
+                              <td className="px-3 py-2.5 text-sm whitespace-nowrap">
                                 {inv.branchName}
                               </td>
-                              <td className="px-4 py-2.5 text-sm text-right">
+
+                              <td className="px-3 py-2.5 text-sm text-right whitespace-nowrap">
                                 {onHand.toLocaleString()}
                               </td>
-                              <td className="px-4 py-2.5 text-sm text-right">
+
+                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
                                 {isEditing ? (
                                   <input
                                     type="text"
@@ -698,7 +700,7 @@ export function ProductDetailRow({
                                         ),
                                       }))
                                     }
-                                    className="w-16 border rounded px-2 py-1 text-right text-xs"
+                                    className="w-14 border border-gray-300 rounded-md px-2 py-1 text-right text-xs focus:outline-none focus:ring-2 focus:ring-red-200"
                                     autoFocus
                                   />
                                 ) : (
@@ -712,7 +714,8 @@ export function ProductDetailRow({
                                   </span>
                                 )}
                               </td>
-                              <td className="px-4 py-2.5 text-sm text-right">
+
+                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
                                 {isEditing ? (
                                   <input
                                     type="text"
@@ -726,7 +729,7 @@ export function ProductDetailRow({
                                         ),
                                       }))
                                     }
-                                    className="w-16 border rounded px-2 py-1 text-right text-xs"
+                                    className="w-14 border border-gray-300 rounded-md px-2 py-1 text-right text-xs focus:outline-none focus:ring-2 focus:ring-orange-200"
                                   />
                                 ) : (
                                   <span
@@ -739,36 +742,43 @@ export function ProductDetailRow({
                                   </span>
                                 )}
                               </td>
-                              <td className="px-4 py-2.5 text-sm text-right">
+
+                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
                                 <span className="text-green-700 font-medium">
                                   {goodStock.toLocaleString()}
                                 </span>
                               </td>
-                              <td className="px-4 py-2.5 text-sm text-right">
+
+                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
                                 {Number(inv.onOrder).toLocaleString()}
                               </td>
-                              <td className="px-4 py-2.5 text-sm text-right">
+
+                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
                                 {Number(inv.reserved).toLocaleString()}
                               </td>
-                              <td className="px-4 py-2.5 text-sm text-right">
+
+                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
                                 {Number(inv.cost).toLocaleString()}
                               </td>
-                              <td className="px-4 py-2.5 text-sm text-right">
+
+                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
                                 {Number(inv.minQuality).toLocaleString()} -{" "}
                                 {Number(inv.maxQuality).toLocaleString()}
                               </td>
-                              <td className="px-4 py-2.5 text-center">
+
+                              <td className="px-3 py-2.5 text-center min-w-[140px]">
                                 {isEditing ? (
-                                  <div className="flex gap-1 justify-center">
+                                  <div className="flex items-center justify-center gap-2">
                                     <button
                                       onClick={() => handleSaveCondition(inv)}
                                       disabled={updateCondition.isPending}
-                                      className="text-green-600 hover:text-green-800 text-xs font-medium">
+                                      className="inline-flex items-center justify-center rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 hover:border-green-300 disabled:opacity-50 disabled:cursor-not-allowed">
                                       Lưu
                                     </button>
+
                                     <button
                                       onClick={() => setEditingCondition(null)}
-                                      className="text-gray-500 hover:text-gray-700 text-xs">
+                                      className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 hover:border-gray-300">
                                       Hủy
                                     </button>
                                   </div>
@@ -777,7 +787,7 @@ export function ProductDetailRow({
                                     onClick={() =>
                                       handleStartEditCondition(inv)
                                     }
-                                    className="text-blue-600 hover:text-blue-800 text-xs">
+                                    className="inline-flex items-center justify-center rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-300">
                                     Sửa
                                   </button>
                                 )}
