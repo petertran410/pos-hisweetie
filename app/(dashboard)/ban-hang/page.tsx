@@ -1278,6 +1278,7 @@ export default function BanHangPage() {
           discount: Number(item.discount) || 0,
           discountRatio: 0,
           note: item.note || "",
+          conditionType: item.conditionType || "normal",
         })),
         delivery: {
           receiver: activeTab.deliveryInfo.receiver,
@@ -1401,6 +1402,7 @@ export default function BanHangPage() {
           discountRatio: 0,
           totalPrice: quantity * price - discount,
           note: item.note || "",
+          conditionType: item.conditionType || "normal",
         };
       }),
       delivery: {
