@@ -43,6 +43,10 @@ export function DashboardHeader() {
             label: "Thiết lập giá",
             href: "/san-pham/thiet-lap-gia",
           },
+          {
+            label: "Kiểm kho",
+            href: "/san-pham/kiem-kho",
+          },
         ],
       },
       {
