@@ -36,6 +36,10 @@ interface ImportRow {
   groups?: string;
   comments?: string;
   totalDebt?: number;
+  branchName?: string;
+  cccd?: string;
+  totalPurchased?: number;
+  totalRevenue?: number;
 }
 
 interface ImportResult {
@@ -77,6 +81,17 @@ const HEADER_MAP: Record<string, keyof ImportRow> = {
   "ghi chu": "comments",
   "dư nợ cuối": "totalDebt",
   "du no cuoi": "totalDebt",
+  "chi nhánh": "branchName",
+  "chi nhanh": "branchName",
+  cccd: "cccd",
+  "căn cước công dân": "cccd",
+  "can cuoc cong dan": "cccd",
+  "nợ cần thu hiện tại": "totalDebt",
+  "no can thu hien tai": "totalDebt",
+  "tổng bán": "totalPurchased",
+  "tong ban": "totalPurchased",
+  "tổng bán trừ trả hàng": "totalRevenue",
+  "tong ban tru tra hang": "totalRevenue",
 };
 
 const PREVIEW_COLUMNS = [
@@ -94,7 +109,11 @@ const PREVIEW_COLUMNS = [
   { key: "taxCode", label: "MST", width: "120px" },
   { key: "groups", label: "Nhóm KH", width: "150px" },
   { key: "comments", label: "Ghi chú", width: "150px" },
-  { key: "totalDebt", label: "Dư nợ cuối", width: "120px" },
+  { key: "cccd", label: "CCCD", width: "130px" },
+  { key: "totalDebt", label: "Nợ cần thu hiện tại", width: "150px" },
+  { key: "totalPurchased", label: "Tổng bán", width: "130px" },
+  { key: "totalRevenue", label: "Tổng bán trừ trả hàng", width: "180px" },
+  { key: "branchName", label: "Chi nhánh", width: "150px" },
 ] as const;
 
 function normalizeHeader(raw: string): keyof ImportRow | null {
@@ -131,7 +150,11 @@ function parseExcelFile(file: File): Promise<ImportRow[]> {
             let val = raw[rawKey];
             if (val === undefined || val === null || val === "") continue;
 
-            if (field === "totalDebt") {
+            if (
+              field === "totalDebt" ||
+              field === "totalPurchased" ||
+              field === "totalRevenue"
+            ) {
               const num = Number(String(val).replace(/[,.\s]/g, ""));
               if (!isNaN(num)) row[field] = num;
             } else if (field === "birthDate" && val instanceof Date) {
@@ -175,6 +198,11 @@ function downloadTemplate() {
     "Nhóm khách hàng",
     "Ghi chú",
     "Dư nợ cuối",
+    "CCCD",
+    "Nợ cần thu hiện tại",
+    "Tổng bán",
+    "Tổng bán trừ trả hàng",
+    "Chi nhánh",
   ];
 
   const sampleData = [
@@ -191,9 +219,13 @@ function downloadTemplate() {
       "Phường Bến Nghé",
       "Công ty ABC",
       "0312345678",
-      "VIP, Đại lý",
+      "VIP|Đại lý",
       "Khách quen",
+      "079123456789",
       500000,
+      15000000,
+      12000000,
+      "Chi nhánh HCM",
     ],
     [
       "",
@@ -210,7 +242,11 @@ function downloadTemplate() {
       "",
       "VIP",
       "",
+      "",
       0,
+      0,
+      0,
+      "Chi nhánh HN",
     ],
   ];
 
@@ -238,7 +274,11 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
   const validation = useMemo(() => {
     const errors: Record<number, string> = {};
     rows.forEach((r, i) => {
-      if (!r.name?.trim()) errors[i] = "Thiếu tên khách hàng";
+      if (!r.name?.trim()) {
+        errors[i] = "Thiếu tên khách hàng";
+      } else if (!r.contactNumber?.trim()) {
+        errors[i] = "Thiếu số điện thoại";
+      }
     });
     return errors;
   }, [rows]);
@@ -417,7 +457,8 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
                   />
                   <div>
                     <span className="text-sm font-medium text-gray-900">
-                      Cập nhật dư nợ cuối
+                      Cập nhật dữ liệu tài chính (Nợ cần thu, Tổng bán, Tổng bán
+                      trừ trả hàng)
                     </span>
                     <div className="flex items-start gap-1.5 mt-1">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
@@ -465,24 +506,34 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
                                   : "bg-gray-50/50"
                             }>
                             <td className="px-3 py-2 text-gray-400">{i + 2}</td>
-                            {PREVIEW_COLUMNS.map((col) => (
-                              <td
-                                key={col.key}
-                                className="px-3 py-2 whitespace-nowrap">
-                                {col.key === "name" && hasError ? (
-                                  <span className="text-red-600 italic">
-                                    {(row as any)[col.key] || "(trống)"}
-                                  </span>
-                                ) : col.key === "totalDebt" &&
-                                  (row as any)[col.key] != null ? (
-                                  Number((row as any)[col.key]).toLocaleString(
-                                    "vi-VN"
-                                  )
-                                ) : (
-                                  (row as any)[col.key] || ""
-                                )}
-                              </td>
-                            ))}
+                            {PREVIEW_COLUMNS.map((col) => {
+                              const isErrorField =
+                                hasError &&
+                                ((col.key === "name" && !row.name?.trim()) ||
+                                  (col.key === "contactNumber" &&
+                                    !row.contactNumber?.trim()));
+
+                              return (
+                                <td
+                                  key={col.key}
+                                  className="px-3 py-2 whitespace-nowrap">
+                                  {isErrorField ? (
+                                    <span className="text-red-600 italic">
+                                      {(row as any)[col.key] || "(trống)"}
+                                    </span>
+                                  ) : (col.key === "totalDebt" ||
+                                      col.key === "totalPurchased" ||
+                                      col.key === "totalRevenue") &&
+                                    (row as any)[col.key] != null ? (
+                                    Number(
+                                      (row as any)[col.key]
+                                    ).toLocaleString("vi-VN")
+                                  ) : (
+                                    (row as any)[col.key] || ""
+                                  )}
+                                </td>
+                              );
+                            })}
                           </tr>
                         );
                       })}

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { CustomersSidebar } from "@/components/customers/CustomersSidebar";
 import { CustomersTable } from "@/components/customers/CustomersTable";
 import { CustomerForm } from "@/components/customers/CustomerForm";
+import { CustomerImportModal } from "@/components/customers/CustomerImportModal";
 import { CustomerFilters, Customer } from "@/lib/types/customer";
 
 export default function CustomersPage() {
@@ -12,6 +13,7 @@ export default function CustomersPage() {
   const codeParam = searchParams.get("Code");
 
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [filters, setFilters] = useState<CustomerFilters>(() => ({
     pageSize: 15,
@@ -43,6 +45,7 @@ export default function CustomersPage() {
           filters={filters}
           onCreateClick={() => setShowCreateForm(true)}
           onEditClick={(customer) => setEditingCustomer(customer)}
+          onImportClick={() => setShowImportModal(true)}
         />
       </div>
 
@@ -59,6 +62,10 @@ export default function CustomersPage() {
           onClose={() => setEditingCustomer(null)}
           onSuccess={() => setEditingCustomer(null)}
         />
+      )}
+
+      {showImportModal && (
+        <CustomerImportModal onClose={() => setShowImportModal(false)} />
       )}
     </>
   );

@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Upload,
 } from "lucide-react";
 import type { Customer, CustomerFilters } from "@/lib/types/customer";
 import { CustomerDetailRow } from "./CustomerDetailRow";
@@ -28,6 +29,7 @@ interface CustomersTableProps {
   filters: CustomerFilters;
   onCreateClick: () => void;
   onEditClick: (customer: Customer) => void;
+  onImportClick: () => void;
 }
 
 const STATUS_TABS = [
@@ -227,6 +229,7 @@ export function CustomersTable({
   filters,
   onCreateClick,
   onEditClick,
+  onImportClick,
 }: CustomersTableProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedCustomerId, setExpandedCustomerId] = useState<number | null>(
@@ -357,6 +360,14 @@ export function CustomersTable({
                 className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
                 <Plus className="w-4 h-4" />
                 Tạo khách hàng
+              </button>
+            </Can>
+            <Can resource="customers" action="create">
+              <button
+                onClick={onImportClick}
+                className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600">
+                <Upload className="w-4 h-4" />
+                Import
               </button>
             </Can>
             <button
