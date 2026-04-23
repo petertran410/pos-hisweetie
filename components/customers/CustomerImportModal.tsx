@@ -40,6 +40,7 @@ interface ImportRow {
   cccd?: string;
   totalPurchased?: number;
   totalRevenue?: number;
+  createdAt?: string;
 }
 
 interface ImportResult {
@@ -92,6 +93,8 @@ const HEADER_MAP: Record<string, keyof ImportRow> = {
   "tong ban": "totalPurchased",
   "tổng bán trừ trả hàng": "totalRevenue",
   "tong ban tru tra hang": "totalRevenue",
+  "ngày tạo": "createdAt",
+  "ngay tao": "createdAt",
 };
 
 const PREVIEW_COLUMNS = [
@@ -113,6 +116,7 @@ const PREVIEW_COLUMNS = [
   { key: "totalDebt", label: "Nợ cần thu hiện tại", width: "150px" },
   { key: "totalPurchased", label: "Tổng bán", width: "130px" },
   { key: "totalRevenue", label: "Tổng bán trừ trả hàng", width: "180px" },
+  { key: "createdAt", label: "Ngày tạo", width: "160px" },
   { key: "branchName", label: "Chi nhánh", width: "150px" },
 ] as const;
 
@@ -157,9 +161,18 @@ function parseExcelFile(file: File): Promise<ImportRow[]> {
             ) {
               const num = Number(String(val).replace(/[,.\s]/g, ""));
               if (!isNaN(num)) row[field] = num;
-            } else if (field === "birthDate" && val instanceof Date) {
-              // XLSX đã parse thành Date object
+            } else if (
+              (field === "birthDate" || field === "createdAt") &&
+              val instanceof Date
+            ) {
               const d = val as Date;
+              if (field === "createdAt") {
+                row[field] =
+                  `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}  ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+              } else {
+                row[field] =
+                  `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+              }
               row[field] =
                 `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
             } else {
@@ -197,11 +210,11 @@ function downloadTemplate() {
     "Mã số thuế",
     "Nhóm khách hàng",
     "Ghi chú",
-    "Dư nợ cuối",
     "CCCD",
     "Nợ cần thu hiện tại",
     "Tổng bán",
     "Tổng bán trừ trả hàng",
+    "Ngày tạo",
     "Chi nhánh",
   ];
 
@@ -225,6 +238,7 @@ function downloadTemplate() {
       500000,
       15000000,
       12000000,
+      "23/04/2026  11:53:56",
       "Chi nhánh HCM",
     ],
     [
@@ -246,6 +260,7 @@ function downloadTemplate() {
       0,
       0,
       0,
+      "01/01/2025  08:00:00",
       "Chi nhánh HN",
     ],
   ];
