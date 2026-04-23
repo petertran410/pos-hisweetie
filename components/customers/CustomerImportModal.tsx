@@ -173,8 +173,6 @@ function parseExcelFile(file: File): Promise<ImportRow[]> {
                 row[field] =
                   `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
               }
-              row[field] =
-                `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
             } else {
               row[field] = String(val).trim();
             }
