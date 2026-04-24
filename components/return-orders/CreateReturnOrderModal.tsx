@@ -26,6 +26,9 @@ interface ReturnItem {
   requestQuantity: number;
   returnPrice: number;
   note: string;
+  saleGoodQuantity: number;
+  saleDamagedQuantity: number;
+  saleNearExpiryQuantity: number;
 }
 
 interface SelectedInvoice {
@@ -161,6 +164,9 @@ export function CreateReturnOrderModal({
           requestQuantity: Number(detail.quantity),
           returnPrice: Number(detail.price),
           note: "",
+          saleGoodQuantity: Number(detail.quantity),
+          saleDamagedQuantity: 0,
+          saleNearExpiryQuantity: 0,
         })
       );
 
@@ -192,7 +198,29 @@ export function CreateReturnOrderModal({
             Math.max(0, Number(value)),
             item.invoiceQuantity
           );
+          // Auto-adjust: saleGoodQuantity = requestQuantity - damaged - nearExpiry
+          const remaining =
+            updated.requestQuantity -
+            updated.saleDamagedQuantity -
+            updated.saleNearExpiryQuantity;
+          updated.saleGoodQuantity = Math.max(0, remaining);
         }
+
+        if (
+          field === "saleGoodQuantity" ||
+          field === "saleDamagedQuantity" ||
+          field === "saleNearExpiryQuantity"
+        ) {
+          updated[field] = Math.max(0, Number(value));
+          const total =
+            updated.saleGoodQuantity +
+            updated.saleDamagedQuantity +
+            updated.saleNearExpiryQuantity;
+          if (total > updated.requestQuantity) {
+            return item; // Không cho phép vượt
+          }
+        }
+
         return updated;
       })
     );
@@ -203,10 +231,10 @@ export function CreateReturnOrderModal({
     0
   );
 
-  const handleSubmit = async () => {
-    if (selectedInvoices.length === 0 || !branchId) return;
+  const buildSubmitData = async (isDraft: boolean) => {
+    if (selectedInvoices.length === 0 || !branchId) return null;
     const validItems = returnItems.filter((item) => item.requestQuantity > 0);
-    if (validItems.length === 0) return;
+    if (validItems.length === 0) return null;
 
     const uploadedUrls: string[] = [];
     for (const img of images) {
@@ -218,11 +246,12 @@ export function CreateReturnOrderModal({
       }
     }
 
-    onSubmit({
+    return {
       invoiceIds: selectedInvoices.map((inv) => inv.id),
       branchId,
       customerId: selectedInvoices[0]?.customerId,
       note,
+      isDraft,
       images: uploadedUrls.length > 0 ? uploadedUrls : undefined,
       details: validItems.map((item) => ({
         invoiceId: item.invoiceId,
@@ -235,8 +264,21 @@ export function CreateReturnOrderModal({
         requestQuantity: item.requestQuantity,
         returnPrice: item.returnPrice,
         note: item.note,
+        saleGoodQuantity: item.saleGoodQuantity,
+        saleDamagedQuantity: item.saleDamagedQuantity,
+        saleNearExpiryQuantity: item.saleNearExpiryQuantity,
       })),
-    });
+    };
+  };
+
+  const handleSubmit = async () => {
+    const data = await buildSubmitData(false);
+    if (data) onSubmit(data);
+  };
+
+  const handleSaveDraft = async () => {
+    const data = await buildSubmitData(true);
+    if (data) onSubmit(data);
   };
 
   const groupedByInvoice = selectedInvoices.map((inv) => ({
@@ -246,7 +288,7 @@ export function CreateReturnOrderModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-[950px] min-h-[70vh] max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl w-[1100px] min-h-[70vh] max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-lg font-semibold">Tạo phiếu trả hàng</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
@@ -393,14 +435,18 @@ export function CreateReturnOrderModal({
                 </span>
               </div>
               <table className="w-full text-sm">
-                <thead className="bg-gray-100">
+                <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-2 text-left">Sản phẩm</th>
-                    <th className="px-3 py-2 text-right w-20">SL HĐ</th>
-                    <th className="px-3 py-2 text-right w-24">SL trả</th>
-                    <th className="px-3 py-2 text-right w-28">Giá HĐ</th>
-                    <th className="px-3 py-2 text-right w-28">Giá nhập lại</th>
-                    <th className="px-3 py-2 text-right w-28">Thành tiền</th>
+                    <th className="px-2 py-2 text-left">Sản phẩm</th>
+                    <th className="px-2 py-2 text-right w-16">SL HĐ</th>
+                    <th className="px-2 py-2 text-right w-20">SL trả</th>
+                    <th className="px-2 py-2 text-right w-16">Hàng tốt</th>
+                    <th className="px-2 py-2 text-right w-16">Loại B</th>
+                    <th className="px-2 py-2 text-right w-16">Cận date</th>
+                    <th className="px-2 py-2 text-right w-20">Tổng PL</th>
+                    <th className="px-2 py-2 text-right w-24">Giá nhập lại</th>
+                    <th className="px-2 py-2 text-right w-28">Thành tiền</th>
+                    <th className="px-2 py-2 text-center w-12">✓</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -410,20 +456,26 @@ export function CreateReturnOrderModal({
                         ri.invoiceId === item.invoiceId &&
                         ri.productId === item.productId
                     );
+                    const saleTotal =
+                      item.saleGoodQuantity +
+                      item.saleDamagedQuantity +
+                      item.saleNearExpiryQuantity;
                     return (
                       <tr
                         key={`${item.invoiceId}-${item.productId}`}
                         className="border-t">
-                        <td className="px-3 py-2">
-                          <div className="font-medium">{item.productName}</div>
+                        <td className="px-2 py-2">
+                          <div className="font-medium text-sm">
+                            {item.productName}
+                          </div>
                           <div className="text-xs text-gray-500">
                             {item.productCode}
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-2 py-2 text-right text-sm">
                           {item.invoiceQuantity}
                         </td>
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-2 py-2 text-right">
                           <input
                             type="number"
                             min={0}
@@ -436,13 +488,58 @@ export function CreateReturnOrderModal({
                                 Number(e.target.value)
                               )
                             }
-                            className="w-20 px-2 py-1 border rounded text-right text-sm"
+                            className="w-16 px-1 py-1 border rounded text-right text-sm"
                           />
                         </td>
-                        <td className="px-3 py-2 text-right">
-                          {formatCurrency(item.invoicePrice)}
+                        <td className="px-2 py-2 text-right">
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.saleGoodQuantity}
+                            onChange={(e) =>
+                              updateReturnItem(
+                                globalIndex,
+                                "saleGoodQuantity",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-14 px-1 py-1 border rounded text-right text-sm"
+                          />
                         </td>
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-2 py-2 text-right">
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.saleDamagedQuantity}
+                            onChange={(e) =>
+                              updateReturnItem(
+                                globalIndex,
+                                "saleDamagedQuantity",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-14 px-1 py-1 border rounded text-right text-sm"
+                          />
+                        </td>
+                        <td className="px-2 py-2 text-right">
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.saleNearExpiryQuantity}
+                            onChange={(e) =>
+                              updateReturnItem(
+                                globalIndex,
+                                "saleNearExpiryQuantity",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-14 px-1 py-1 border rounded text-right text-sm"
+                          />
+                        </td>
+                        <td className="px-2 py-2 text-right text-sm font-medium">
+                          {saleTotal}
+                        </td>
+                        <td className="px-2 py-2 text-right">
                           <input
                             type="number"
                             min={0}
@@ -454,12 +551,19 @@ export function CreateReturnOrderModal({
                                 Number(e.target.value)
                               )
                             }
-                            className="w-24 px-2 py-1 border rounded text-right text-sm"
+                            className="w-20 px-1 py-1 border rounded text-right text-sm"
                           />
                         </td>
-                        <td className="px-3 py-2 text-right font-medium">
+                        <td className="px-2 py-2 text-right text-sm font-medium">
                           {formatCurrency(
                             item.returnPrice * item.requestQuantity
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-center">
+                          {saleTotal !== item.requestQuantity ? (
+                            <span className="text-orange-500 text-lg">⚠</span>
+                          ) : (
+                            <span className="text-green-500 text-lg">✓</span>
                           )}
                         </td>
                       </tr>
@@ -531,6 +635,16 @@ export function CreateReturnOrderModal({
               onClick={onClose}
               className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">
               Hủy
+            </button>
+            <button
+              onClick={handleSaveDraft}
+              disabled={
+                selectedInvoices.length === 0 ||
+                !branchId ||
+                returnItems.filter((i) => i.requestQuantity > 0).length === 0
+              }
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600 disabled:opacity-50">
+              Lưu phiếu tạm
             </button>
             <button
               onClick={handleSubmit}

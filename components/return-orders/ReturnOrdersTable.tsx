@@ -44,6 +44,8 @@ const getStatusColor = (status: number) => {
       return "bg-red-100 text-red-700";
     case 6:
       return "bg-purple-100 text-purple-700";
+    case 7:
+      return "bg-orange-100 text-orange-700";
     default:
       return "bg-gray-100 text-gray-700";
   }
@@ -63,6 +65,8 @@ const getStatusText = (status: number) => {
       return "Đã hủy";
     case 6:
       return "Đang nhập hàng (tạm)";
+    case 7:
+      return "Phiếu tạm (Sale)";
     default:
       return "Không xác định";
   }

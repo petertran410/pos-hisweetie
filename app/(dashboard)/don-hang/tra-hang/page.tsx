@@ -10,12 +10,18 @@ import {
   useCreateReturnOrder,
   useConfirmStockReceived,
   useConfirmRefund,
+  useUpdateStep1,
 } from "@/lib/hooks/useReturnOrders";
 import type { ReturnOrder } from "@/lib/types/return-order";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { useSearchParams } from "next/navigation";
 
-type ModalType = "create" | "confirm-stock" | "confirm-refund" | null;
+type ModalType =
+  | "create"
+  | "confirm-stock"
+  | "confirm-refund"
+  | "edit-step1"
+  | null;
 
 export default function TraHangPage() {
   const searchParams = useSearchParams();
@@ -42,18 +48,36 @@ export default function TraHangPage() {
   const createReturnOrder = useCreateReturnOrder();
   const confirmStock = useConfirmStockReceived();
   const confirmRefund = useConfirmRefund();
+  const updateStep1 = useUpdateStep1();
 
   const handleCreateClick = () => {
     setModalType("create");
   };
 
   const handleViewClick = (item: ReturnOrder) => {
-    if (item.status === 1 || item.status === 6) {
+    if (item.status === 7) {
+      setSelectedReturnOrderId(item.id);
+      setModalType("edit-step1");
+    } else if (item.status === 1 || item.status === 6) {
       setSelectedReturnOrderId(item.id);
       setModalType("confirm-stock");
     } else if (item.status === 2) {
       setSelectedReturnOrderId(item.id);
       setModalType("confirm-refund");
+    }
+  };
+
+  const handleUpdateStep1Submit = async (data: any) => {
+    if (!selectedReturnOrderId) return;
+    try {
+      await updateStep1.mutateAsync({
+        id: selectedReturnOrderId,
+        data,
+      });
+      setModalType(null);
+      setSelectedReturnOrderId(null);
+    } catch (error) {
+      // error handled by hook
     }
   };
 

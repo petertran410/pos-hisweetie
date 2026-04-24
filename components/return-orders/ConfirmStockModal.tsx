@@ -22,6 +22,9 @@ interface ConfirmItem {
   damagedQuantity: number;
   nearExpiryQuantity: number;
   returnPrice: number;
+  saleGoodQuantity: number;
+  saleDamagedQuantity: number;
+  saleNearExpiryQuantity: number;
 }
 
 export function ConfirmStockModal({
@@ -49,17 +52,49 @@ export function ConfirmStockModal({
   useEffect(() => {
     if (returnOrder?.details) {
       setConfirmItems(
-        returnOrder.details.map((d: any) => ({
-          detailId: d.id,
-          productCode: d.productCode,
-          productName: d.productName,
-          requestQuantity: Number(d.requestQuantity),
-          // Nếu đã có data draft (status=6), load lại
-          goodQuantity: Number(d.goodQuantity || d.requestQuantity),
-          damagedQuantity: Number(d.damagedQuantity || 0),
-          nearExpiryQuantity: Number(d.nearExpiryQuantity || 0),
-          returnPrice: Number(d.returnPrice),
-        }))
+        returnOrder.details.map((d: any) => {
+          const hasSaleData =
+            Number(d.saleGoodQuantity || 0) > 0 ||
+            Number(d.saleDamagedQuantity || 0) > 0 ||
+            Number(d.saleNearExpiryQuantity || 0) > 0;
+          const hasKhoData =
+            Number(d.goodQuantity || 0) > 0 ||
+            Number(d.damagedQuantity || 0) > 0 ||
+            Number(d.nearExpiryQuantity || 0) > 0;
+
+          let goodQty: number, damagedQty: number, nearExpiryQty: number;
+
+          if (returnOrder.status === 6 && hasKhoData) {
+            // Đã có draft kho → dùng giá trị đã lưu
+            goodQty = Number(d.goodQuantity);
+            damagedQty = Number(d.damagedQuantity);
+            nearExpiryQty = Number(d.nearExpiryQuantity);
+          } else if (hasSaleData) {
+            // Mới từ Step 1 → default kho = sale values
+            goodQty = Number(d.saleGoodQuantity);
+            damagedQty = Number(d.saleDamagedQuantity);
+            nearExpiryQty = Number(d.saleNearExpiryQuantity);
+          } else {
+            // Fallback
+            goodQty = Number(d.requestQuantity);
+            damagedQty = 0;
+            nearExpiryQty = 0;
+          }
+
+          return {
+            detailId: d.id,
+            productCode: d.productCode,
+            productName: d.productName,
+            requestQuantity: Number(d.requestQuantity),
+            goodQuantity: goodQty,
+            damagedQuantity: damagedQty,
+            nearExpiryQuantity: nearExpiryQty,
+            returnPrice: Number(d.returnPrice),
+            saleGoodQuantity: Number(d.saleGoodQuantity || 0),
+            saleDamagedQuantity: Number(d.saleDamagedQuantity || 0),
+            saleNearExpiryQuantity: Number(d.saleNearExpiryQuantity || 0),
+          };
+        })
       );
       setNote(returnOrder.note || "");
 
@@ -266,9 +301,9 @@ export function ConfirmStockModal({
                 <tr>
                   <th className="px-2 py-2 text-left">Sản phẩm</th>
                   <th className="px-2 py-2 text-right w-20">SL yêu cầu</th>
-                  <th className="px-2 py-2 text-right w-20">Hàng tốt</th>
-                  <th className="px-2 py-2 text-right w-20">Bục rách</th>
-                  <th className="px-2 py-2 text-right w-20">Cận date</th>
+                  <th className="px-2 py-2 text-center w-28">Hàng tốt</th>
+                  <th className="px-2 py-2 text-center w-28">Bục rách</th>
+                  <th className="px-2 py-2 text-center w-28">Cận date</th>
                   <th className="px-2 py-2 text-right w-24">Tổng thực nhận</th>
                   <th className="px-2 py-2 text-right w-24">Giá nhập lại</th>
                   <th className="px-2 py-2 text-right w-28">Thành tiền</th>
@@ -289,50 +324,68 @@ export function ConfirmStockModal({
                       <td className="px-2 py-2 text-right">
                         {item.requestQuantity}
                       </td>
-                      <td className="px-2 py-2 text-right">
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.goodQuantity}
-                          onChange={(e) =>
-                            updateItem(
-                              idx,
-                              "goodQuantity",
-                              Number(e.target.value)
-                            )
-                          }
-                          className="w-16 px-1 py-1 border rounded text-right text-sm"
-                        />
+                      <td className="px-2 py-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <span className="text-xs text-gray-400 w-6 text-right">
+                            {item.saleGoodQuantity}
+                          </span>
+                          <span className="text-gray-300">|</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.goodQuantity}
+                            onChange={(e) =>
+                              updateItem(
+                                idx,
+                                "goodQuantity",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-14 px-1 py-1 border rounded text-right text-sm"
+                          />
+                        </div>
                       </td>
-                      <td className="px-2 py-2 text-right">
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.damagedQuantity}
-                          onChange={(e) =>
-                            updateItem(
-                              idx,
-                              "damagedQuantity",
-                              Number(e.target.value)
-                            )
-                          }
-                          className="w-16 px-1 py-1 border rounded text-right text-sm"
-                        />
+                      <td className="px-2 py-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <span className="text-xs text-gray-400 w-6 text-right">
+                            {item.saleDamagedQuantity}
+                          </span>
+                          <span className="text-gray-300">|</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.damagedQuantity}
+                            onChange={(e) =>
+                              updateItem(
+                                idx,
+                                "damagedQuantity",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-14 px-1 py-1 border rounded text-right text-sm"
+                          />
+                        </div>
                       </td>
-                      <td className="px-2 py-2 text-right">
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.nearExpiryQuantity}
-                          onChange={(e) =>
-                            updateItem(
-                              idx,
-                              "nearExpiryQuantity",
-                              Number(e.target.value)
-                            )
-                          }
-                          className="w-16 px-1 py-1 border rounded text-right text-sm"
-                        />
+                      <td className="px-2 py-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <span className="text-xs text-gray-400 w-6 text-right">
+                            {item.saleNearExpiryQuantity}
+                          </span>
+                          <span className="text-gray-300">|</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.nearExpiryQuantity}
+                            onChange={(e) =>
+                              updateItem(
+                                idx,
+                                "nearExpiryQuantity",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-14 px-1 py-1 border rounded text-right text-sm"
+                          />
+                        </div>
                       </td>
                       <td className="px-2 py-2 text-right font-medium">
                         {totalConfirmed}

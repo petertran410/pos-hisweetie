@@ -16,6 +16,9 @@ export interface ReturnOrderDetail {
   goodQuantity: number;
   damagedQuantity: number;
   nearExpiryQuantity: number;
+  saleGoodQuantity: number;
+  saleDamagedQuantity: number;
+  saleNearExpiryQuantity: number;
   product?: {
     id: number;
     code: string;
