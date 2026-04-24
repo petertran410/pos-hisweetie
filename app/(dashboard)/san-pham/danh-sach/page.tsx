@@ -5,7 +5,7 @@ import { ProductsSidebar } from "@/components/products/ProductSidebar";
 import { ProductsTable } from "@/components/products/ProductTable";
 import { useSearchParams } from "next/navigation";
 import { Can } from "@/components/permissions/Can";
-import { ProductImportModal } from "@/components/products/Productimportmodal";
+import { ProductImportModal } from "@/components/products/ProductImportModal";
 
 export default function ProductListPage() {
   const searchParams = useSearchParams();

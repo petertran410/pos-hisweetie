@@ -124,7 +124,18 @@ const HEADER_MAP: Record<string, keyof PreviewRow> = {
 
 function normalizeHeader(raw: string): keyof PreviewRow | null {
   const key = raw.trim().toLowerCase().replace(/\s+/g, " ");
-  return HEADER_MAP[key] ?? null;
+
+  // Exact match từ HEADER_MAP
+  const exact = HEADER_MAP[key];
+  if (exact) return exact;
+
+  // Dynamic branch columns: "tồn kho - {branchName}" → onHand
+  if (key.startsWith("tồn kho -") || key.startsWith("ton kho -"))
+    return "onHand";
+  // Dynamic branch columns: "giá vốn - {branchName}" → cost
+  if (key.startsWith("giá vốn -") || key.startsWith("gia von -")) return "cost";
+
+  return null;
 }
 
 function parseExcelPreview(file: File): Promise<PreviewRow[]> {
@@ -278,9 +289,16 @@ export function ProductImportModal({ onClose }: ProductImportModalProps) {
   const downloadTemplate = async () => {
     try {
       const token = useAuthStore.getState().token;
-      const res = await fetch(`${API_URL}/import/templates/products`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const branchId = useBranchStore.getState().selectedBranch?.id;
+
+      const params = new URLSearchParams();
+      if (branchId) params.set("branchId", String(branchId));
+      const queryStr = params.toString();
+
+      const res = await fetch(
+        `${API_URL}/import/templates/products${queryStr ? `?${queryStr}` : ""}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       if (!res.ok) throw new Error("Download failed");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
