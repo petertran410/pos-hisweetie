@@ -65,6 +65,9 @@ export default function TraHangPage() {
     } else if (item.status === 2) {
       setSelectedReturnOrderId(item.id);
       setModalType("confirm-refund");
+    } else if (item.status === 4) {
+      setSelectedReturnOrderId(item.id);
+      setModalType("confirm-refund");
     }
   };
 

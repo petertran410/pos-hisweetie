@@ -136,46 +136,41 @@ export function CreateReturnOrderModal({
     b.name.toLowerCase().includes(branchSearchTerm.toLowerCase())
   );
 
-  const handleSelectInvoice = async (invoice: any) => {
-    try {
-      const fullInvoice = await invoicesApi.getInvoice(invoice.id);
+  const handleSelectInvoice = (invoice: any) => {
+    const newSelected: SelectedInvoice = {
+      id: invoice.id,
+      code: invoice.code,
+      customerId: invoice.customerId,
+      customer: invoice.customer,
+      soldBy: invoice.soldBy,
+      creator: invoice.creator,
+      grandTotal: Number(invoice.grandTotal),
+      details: invoice.details || [],
+    };
 
-      const newSelected: SelectedInvoice = {
-        id: fullInvoice.id,
-        code: fullInvoice.code,
-        customerId: fullInvoice.customerId,
-        customer: fullInvoice.customer,
-        soldBy: fullInvoice.soldBy,
-        creator: fullInvoice.creator,
-        grandTotal: Number(fullInvoice.grandTotal),
-        details: fullInvoice.details || [],
-      };
+    setSelectedInvoices((prev) => [...prev, newSelected]);
 
-      setSelectedInvoices((prev) => [...prev, newSelected]);
+    const newItems: ReturnItem[] = (invoice.details || []).map(
+      (detail: any) => ({
+        invoiceId: invoice.id,
+        invoiceCode: invoice.code,
+        productId: detail.productId,
+        productCode: detail.productCode || detail.product?.code || "",
+        productName: detail.productName || detail.product?.name || "",
+        invoiceQuantity: Number(detail.remainingQuantity ?? detail.quantity),
+        invoicePrice: Number(detail.price),
+        requestQuantity: 0,
+        returnPrice: Number(detail.price),
+        note: "",
+        saleGoodQuantity: 0,
+        saleDamagedQuantity: 0,
+        saleNearExpiryQuantity: 0,
+      })
+    );
 
-      const newItems: ReturnItem[] = (fullInvoice.details || []).map(
-        (detail: any) => ({
-          invoiceId: fullInvoice.id,
-          invoiceCode: fullInvoice.code,
-          productId: detail.productId,
-          productCode: detail.productCode || detail.product?.code || "",
-          productName: detail.productName || detail.product?.name || "",
-          invoiceQuantity: Number(detail.quantity),
-          invoicePrice: Number(detail.price),
-          requestQuantity: 0,
-          returnPrice: Number(detail.price),
-          note: "",
-          saleGoodQuantity: 0,
-          saleDamagedQuantity: 0,
-          saleNearExpiryQuantity: 0,
-        })
-      );
-
-      setReturnItems((prev) => [...prev, ...newItems]);
-      setInvoiceSearch("");
-    } catch (error) {
-      console.error("Error loading invoice:", error);
-    }
+    setReturnItems((prev) => [...prev, ...newItems]);
+    setInvoiceSearch("");
+    setShowInvoiceDropdown(false);
   };
 
   const handleRemoveInvoice = (invoiceId: number) => {
@@ -453,7 +448,7 @@ export function CreateReturnOrderModal({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-2 py-2 text-left">Sản phẩm</th>
-                    <th className="px-2 py-2 text-right w-16">SL HĐ</th>
+                    <th className="px-2 py-2 text-right w-16">SL còn lại</th>
                     <th className="px-2 py-2 text-right w-16">Hàng tốt</th>
                     <th className="px-2 py-2 text-right w-16">Loại B</th>
                     <th className="px-2 py-2 text-right w-16">Cận date</th>
