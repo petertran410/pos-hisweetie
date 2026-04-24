@@ -39,6 +39,7 @@ export function ConfirmStockModal({
     { file?: File; preview: string; url?: string }[]
   >([]);
   const [showStep1Images, setShowStep1Images] = useState(false);
+  const [displays, setDisplays] = useState<Record<string, string>>({});
 
   // Parse step 1 images
   const step1Images: string[] = (() => {
@@ -173,6 +174,33 @@ export function ConfirmStockModal({
 
   const removeStockImage = (index: number) => {
     setStockImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const getDisplay = (index: number, field: string, value: number): string => {
+    const key = `${index}_${field}`;
+    if (displays[key] !== undefined) return displays[key];
+    return value === 0 ? "" : String(value);
+  };
+
+  const handleFieldChange = (
+    index: number,
+    field: "goodQuantity" | "damagedQuantity" | "nearExpiryQuantity",
+    rawValue: string
+  ) => {
+    const key = `${index}_${field}`;
+    const onlyNumbers = rawValue.replace(/[^\d]/g, "");
+    setDisplays((prev) => ({ ...prev, [key]: onlyNumbers }));
+    const parsed = onlyNumbers === "" ? 0 : parseInt(onlyNumbers, 10);
+    updateItem(index, field, parsed);
+  };
+
+  const handleFieldBlur = (index: number, field: string) => {
+    const key = `${index}_${field}`;
+    setDisplays((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   };
 
   const buildSubmitData = async (isDraft: boolean) => {
@@ -331,16 +359,20 @@ export function ConfirmStockModal({
                           </span>
                           <span className="text-gray-300">|</span>
                           <input
-                            type="number"
-                            min={0}
-                            value={item.goodQuantity}
+                            type="text"
+                            value={getDisplay(
+                              idx,
+                              "goodQuantity",
+                              item.goodQuantity
+                            )}
                             onChange={(e) =>
-                              updateItem(
+                              handleFieldChange(
                                 idx,
                                 "goodQuantity",
-                                Number(e.target.value)
+                                e.target.value
                               )
                             }
+                            onBlur={() => handleFieldBlur(idx, "goodQuantity")}
                             className="w-14 px-1 py-1 border rounded text-right text-sm"
                           />
                         </div>
@@ -352,15 +384,21 @@ export function ConfirmStockModal({
                           </span>
                           <span className="text-gray-300">|</span>
                           <input
-                            type="number"
-                            min={0}
-                            value={item.damagedQuantity}
+                            type="text"
+                            value={getDisplay(
+                              idx,
+                              "damagedQuantity",
+                              item.damagedQuantity
+                            )}
                             onChange={(e) =>
-                              updateItem(
+                              handleFieldChange(
                                 idx,
                                 "damagedQuantity",
-                                Number(e.target.value)
+                                e.target.value
                               )
+                            }
+                            onBlur={() =>
+                              handleFieldBlur(idx, "damagedQuantity")
                             }
                             className="w-14 px-1 py-1 border rounded text-right text-sm"
                           />
@@ -373,15 +411,21 @@ export function ConfirmStockModal({
                           </span>
                           <span className="text-gray-300">|</span>
                           <input
-                            type="number"
-                            min={0}
-                            value={item.nearExpiryQuantity}
+                            type="text"
+                            value={getDisplay(
+                              idx,
+                              "nearExpiryQuantity",
+                              item.nearExpiryQuantity
+                            )}
                             onChange={(e) =>
-                              updateItem(
+                              handleFieldChange(
                                 idx,
                                 "nearExpiryQuantity",
-                                Number(e.target.value)
+                                e.target.value
                               )
+                            }
+                            onBlur={() =>
+                              handleFieldBlur(idx, "nearExpiryQuantity")
                             }
                             className="w-14 px-1 py-1 border rounded text-right text-sm"
                           />
