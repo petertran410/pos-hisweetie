@@ -32,4 +32,8 @@ export const returnOrdersApi = {
   cancel: (id: number): Promise<ReturnOrder> => {
     return apiClient.put(`/return-orders/${id}/cancel`, {});
   },
+
+  updateStep1: (id: number, data: any): Promise<ReturnOrder> => {
+    return apiClient.put(`/return-orders/${id}/update-step1`, data);
+  },
 };

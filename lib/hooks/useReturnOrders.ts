@@ -75,3 +75,18 @@ export function useCancelReturnOrder() {
     },
   });
 }
+
+export function useUpdateStep1() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      returnOrdersApi.updateStep1(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["return-orders"] });
+      toast.success("Cập nhật bước 1 thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || "Lỗi cập nhật bước 1");
+    },
+  });
+}
