@@ -31,7 +31,11 @@ export default function ProductListPage() {
           filters={filters}
           onFiltersChange={handleFiltersChange}
         />
-        <ProductsTable filters={filters} codeFilter={codeParam || undefined} />
+        <ProductsTable
+          filters={filters}
+          codeFilter={codeParam || undefined}
+          onImportClick={() => setShowImportModal(true)}
+        />
       </div>
 
       {showImportModal && (
