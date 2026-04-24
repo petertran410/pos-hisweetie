@@ -5,12 +5,14 @@ import { ProductsSidebar } from "@/components/products/ProductSidebar";
 import { ProductsTable } from "@/components/products/ProductTable";
 import { useSearchParams } from "next/navigation";
 import { Can } from "@/components/permissions/Can";
+import { ProductImportModal } from "@/components/products/Productimportmodal";
 
 export default function ProductListPage() {
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("Code");
 
   const [filters, setFilters] = useState<any>({});
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const handleFiltersChange = useCallback(
     (newFilters: any) => {
@@ -31,6 +33,10 @@ export default function ProductListPage() {
         />
         <ProductsTable filters={filters} codeFilter={codeParam || undefined} />
       </div>
+
+      {showImportModal && (
+        <ProductImportModal onClose={() => setShowImportModal(false)} />
+      )}
     </Can>
   );
 }

@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Upload,
 } from "lucide-react";
 import type { Product } from "@/lib/api/products";
 import { ProductDetailRow } from "./ProductDetailRow";
@@ -29,6 +30,7 @@ interface ColumnConfig {
 interface ProductsTableProps {
   filters: any;
   codeFilter?: string;
+  onImportClick?: () => void;
 }
 
 const STATUS_TABS = [
@@ -262,7 +264,11 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   },
 ];
 
-export function ProductsTable({ filters, codeFilter }: ProductsTableProps) {
+export function ProductsTable({
+  filters,
+  codeFilter,
+  onImportClick,
+}: ProductsTableProps) {
   const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedProductId, setExpandedProductId] = useState<number | null>(
@@ -443,6 +449,12 @@ export function ProductsTable({ filters, codeFilter }: ProductsTableProps) {
           />
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={onImportClick}
+            className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600">
+            <Upload className="w-4 h-4" />
+            Import
+          </button>
           <button className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm">
             Xuất file
           </button>
