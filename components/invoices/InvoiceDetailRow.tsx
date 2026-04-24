@@ -545,7 +545,25 @@ export function InvoiceDetailRow({
                             {formatCurrency(Number(invoice.grandTotal))}
                           </span>
                         </div>
+                        <div className="flex justify-between items-center text-md">
+                          <span className="text-gray-600">Trả hàng:</span>
+                          <span className="font-semibold text-orange-600">
+                            -
+                            {formatCurrency(
+                              Number((invoice as any).returnOrderAmount)
+                            )}
+                          </span>
+                        </div>
                         <div className="flex justify-between items-center text-md pt-2 border-t border-gray-200">
+                          <span className="text-gray-600">Còn lại:</span>
+                          <span className="text-md font-bold text-blue-600">
+                            {formatCurrency(
+                              Number(invoice.grandTotal) -
+                                Number((invoice as any).returnOrderAmount)
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-md">
                           <span className="text-gray-600">Khách đã trả:</span>
                           <span className="font-semibold text-green-600">
                             {formatCurrency(Number(invoice.paidAmount))}
@@ -556,7 +574,14 @@ export function InvoiceDetailRow({
                             Khách còn nợ:
                           </span>
                           <span className="text-lg font-bold text-red-600">
-                            {formatCurrency(Number(invoice.debtAmount))}
+                            {formatCurrency(
+                              Number((invoice as any).returnOrderAmount || 0) >
+                                0
+                                ? Number(invoice.grandTotal) -
+                                    Number((invoice as any).returnOrderAmount) -
+                                    Number(invoice.paidAmount)
+                                : Number(invoice.debtAmount)
+                            )}
                           </span>
                         </div>
                       </div>

@@ -1400,7 +1400,7 @@ export default function BanHangPage() {
           price: price,
           discount: discount,
           discountRatio: 0,
-          totalPrice: quantity * price - discount,
+          totalPrice: (price - discount) * quantity,
           note: item.note || "",
           conditionType: item.conditionType || "normal",
         };
@@ -1541,7 +1541,7 @@ export default function BanHangPage() {
           price: price,
           discount: discount,
           discountRatio: 0,
-          totalPrice: quantity * price - discount,
+          totalPrice: (price - discount) * quantity,
           note: item.note || "",
           conditionType: item.conditionType || "normal",
         };
