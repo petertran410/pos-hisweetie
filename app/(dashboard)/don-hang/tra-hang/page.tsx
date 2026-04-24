@@ -15,6 +15,7 @@ import {
 import type { ReturnOrder } from "@/lib/types/return-order";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { useSearchParams } from "next/navigation";
+import { EditStep1Modal } from "@/components/return-orders/EditStep1Modal";
 
 type ModalType =
   | "create"
@@ -153,6 +154,14 @@ export default function TraHangPage() {
             returnOrderId={selectedReturnOrderId}
             onClose={handleCloseModal}
             onSubmit={handleConfirmRefundSubmit}
+          />
+        )}
+
+        {modalType === "edit-step1" && selectedReturnOrderId && (
+          <EditStep1Modal
+            returnOrderId={selectedReturnOrderId}
+            onClose={handleCloseModal}
+            onSubmit={handleUpdateStep1Submit}
           />
         )}
       </div>

@@ -277,7 +277,7 @@ export function EditStep1Modal({
                       </td>
                       <td className="px-2 py-2 text-right">
                         <input
-                          type="number"
+                          type="text"
                           min={0}
                           max={item.invoiceQuantity}
                           value={item.requestQuantity}
@@ -293,7 +293,7 @@ export function EditStep1Modal({
                       </td>
                       <td className="px-2 py-2 text-right">
                         <input
-                          type="number"
+                          type="text"
                           min={0}
                           value={item.saleGoodQuantity}
                           onChange={(e) =>
@@ -308,7 +308,7 @@ export function EditStep1Modal({
                       </td>
                       <td className="px-2 py-2 text-right">
                         <input
-                          type="number"
+                          type="text"
                           min={0}
                           value={item.saleDamagedQuantity}
                           onChange={(e) =>
@@ -323,7 +323,7 @@ export function EditStep1Modal({
                       </td>
                       <td className="px-2 py-2 text-right">
                         <input
-                          type="number"
+                          type="text"
                           min={0}
                           value={item.saleNearExpiryQuantity}
                           onChange={(e) =>

@@ -5,7 +5,7 @@ import { X, Search, ChevronDown, Camera } from "lucide-react";
 import { useInvoicesForReturnOrder } from "@/lib/hooks/useInvoices";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranchStore } from "@/lib/store/branch";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumberInput } from "@/lib/utils";
 import { invoicesApi } from "@/lib/api/invoices";
 import { API_URL } from "@/lib/config/api";
 import { useAuthStore } from "@/lib/store/auth";
@@ -63,6 +63,7 @@ export function CreateReturnOrderModal({
   const [images, setImages] = useState<
     { file?: File; preview: string; url?: string }[]
   >([]);
+  const [displays, setDisplays] = useState<Record<string, string>>({});
 
   const { data: invoicesForReturn } = useInvoicesForReturnOrder({
     search: invoiceSearch,
@@ -161,10 +162,10 @@ export function CreateReturnOrderModal({
           productName: detail.productName || detail.product?.name || "",
           invoiceQuantity: Number(detail.quantity),
           invoicePrice: Number(detail.price),
-          requestQuantity: Number(detail.quantity),
+          requestQuantity: 0,
           returnPrice: Number(detail.price),
           note: "",
-          saleGoodQuantity: Number(detail.quantity),
+          saleGoodQuantity: 0,
           saleDamagedQuantity: 0,
           saleNearExpiryQuantity: 0,
         })
@@ -193,18 +194,6 @@ export function CreateReturnOrderModal({
       prev.map((item, i) => {
         if (i !== index) return item;
         const updated = { ...item, [field]: value };
-        if (field === "requestQuantity") {
-          updated.requestQuantity = Math.min(
-            Math.max(0, Number(value)),
-            item.invoiceQuantity
-          );
-          // Auto-adjust: saleGoodQuantity = requestQuantity - damaged - nearExpiry
-          const remaining =
-            updated.requestQuantity -
-            updated.saleDamagedQuantity -
-            updated.saleNearExpiryQuantity;
-          updated.saleGoodQuantity = Math.max(0, remaining);
-        }
 
         if (
           field === "saleGoodQuantity" ||
@@ -216,9 +205,8 @@ export function CreateReturnOrderModal({
             updated.saleGoodQuantity +
             updated.saleDamagedQuantity +
             updated.saleNearExpiryQuantity;
-          if (total > updated.requestQuantity) {
-            return item; // Không cho phép vượt
-          }
+          if (total > item.invoiceQuantity) return item;
+          updated.requestQuantity = total;
         }
 
         return updated;
@@ -230,6 +218,33 @@ export function CreateReturnOrderModal({
     (sum, item) => sum + item.returnPrice * item.requestQuantity,
     0
   );
+
+  const getDisplay = (index: number, field: string, value: number): string => {
+    const key = `${index}_${field}`;
+    if (displays[key] !== undefined) return displays[key];
+    return value === 0 ? "" : String(value);
+  };
+
+  const handleFieldChange = (
+    index: number,
+    field: keyof ReturnItem,
+    rawValue: string
+  ) => {
+    const key = `${index}_${field}`;
+    const onlyNumbers = rawValue.replace(/[^\d]/g, "");
+    setDisplays((prev) => ({ ...prev, [key]: onlyNumbers }));
+    const parsed = onlyNumbers === "" ? 0 : parseInt(onlyNumbers, 10);
+    updateReturnItem(index, field, parsed);
+  };
+
+  const handleFieldBlur = (index: number, field: string) => {
+    const key = `${index}_${field}`;
+    setDisplays((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
 
   const buildSubmitData = async (isDraft: boolean) => {
     if (selectedInvoices.length === 0 || !branchId) return null;
@@ -439,14 +454,12 @@ export function CreateReturnOrderModal({
                   <tr>
                     <th className="px-2 py-2 text-left">Sản phẩm</th>
                     <th className="px-2 py-2 text-right w-16">SL HĐ</th>
-                    <th className="px-2 py-2 text-right w-20">SL trả</th>
                     <th className="px-2 py-2 text-right w-16">Hàng tốt</th>
                     <th className="px-2 py-2 text-right w-16">Loại B</th>
                     <th className="px-2 py-2 text-right w-16">Cận date</th>
-                    <th className="px-2 py-2 text-right w-20">Tổng PL</th>
+                    <th className="px-2 py-2 text-right w-20">SL trả</th>
                     <th className="px-2 py-2 text-right w-24">Giá nhập lại</th>
                     <th className="px-2 py-2 text-right w-28">Thành tiền</th>
-                    <th className="px-2 py-2 text-center w-12">✓</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -477,45 +490,44 @@ export function CreateReturnOrderModal({
                         </td>
                         <td className="px-2 py-2 text-right">
                           <input
-                            type="number"
-                            min={0}
-                            max={item.invoiceQuantity}
-                            value={item.requestQuantity}
+                            type="text"
+                            value={getDisplay(
+                              globalIndex,
+                              "saleGoodQuantity",
+                              item.saleGoodQuantity
+                            )}
                             onChange={(e) =>
-                              updateReturnItem(
-                                globalIndex,
-                                "requestQuantity",
-                                Number(e.target.value)
-                              )
-                            }
-                            className="w-16 px-1 py-1 border rounded text-right text-sm"
-                          />
-                        </td>
-                        <td className="px-2 py-2 text-right">
-                          <input
-                            type="number"
-                            min={0}
-                            value={item.saleGoodQuantity}
-                            onChange={(e) =>
-                              updateReturnItem(
+                              handleFieldChange(
                                 globalIndex,
                                 "saleGoodQuantity",
-                                Number(e.target.value)
+                                e.target.value
                               )
+                            }
+                            onBlur={() =>
+                              handleFieldBlur(globalIndex, "saleGoodQuantity")
                             }
                             className="w-14 px-1 py-1 border rounded text-right text-sm"
                           />
                         </td>
                         <td className="px-2 py-2 text-right">
                           <input
-                            type="number"
-                            min={0}
-                            value={item.saleDamagedQuantity}
+                            type="text"
+                            value={getDisplay(
+                              globalIndex,
+                              "saleDamagedQuantity",
+                              item.saleDamagedQuantity
+                            )}
                             onChange={(e) =>
-                              updateReturnItem(
+                              handleFieldChange(
                                 globalIndex,
                                 "saleDamagedQuantity",
-                                Number(e.target.value)
+                                e.target.value
+                              )
+                            }
+                            onBlur={() =>
+                              handleFieldBlur(
+                                globalIndex,
+                                "saleDamagedQuantity"
                               )
                             }
                             className="w-14 px-1 py-1 border rounded text-right text-sm"
@@ -523,48 +535,56 @@ export function CreateReturnOrderModal({
                         </td>
                         <td className="px-2 py-2 text-right">
                           <input
-                            type="number"
-                            min={0}
-                            value={item.saleNearExpiryQuantity}
+                            type="text"
+                            value={getDisplay(
+                              globalIndex,
+                              "saleNearExpiryQuantity",
+                              item.saleNearExpiryQuantity
+                            )}
                             onChange={(e) =>
-                              updateReturnItem(
+                              handleFieldChange(
                                 globalIndex,
                                 "saleNearExpiryQuantity",
-                                Number(e.target.value)
+                                e.target.value
+                              )
+                            }
+                            onBlur={() =>
+                              handleFieldBlur(
+                                globalIndex,
+                                "saleNearExpiryQuantity"
                               )
                             }
                             className="w-14 px-1 py-1 border rounded text-right text-sm"
                           />
                         </td>
                         <td className="px-2 py-2 text-right text-sm font-medium">
-                          {saleTotal}
+                          {saleTotal || "-"}
                         </td>
                         <td className="px-2 py-2 text-right">
                           <input
-                            type="number"
-                            min={0}
-                            value={item.returnPrice}
-                            onChange={(e) =>
-                              updateReturnItem(
+                            type="text"
+                            value={formatNumberInput(
+                              getDisplay(
                                 globalIndex,
                                 "returnPrice",
-                                Number(e.target.value)
+                                item.returnPrice
                               )
+                            )}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                globalIndex,
+                                "returnPrice",
+                                e.target.value
+                              )
+                            }
+                            onBlur={() =>
+                              handleFieldBlur(globalIndex, "returnPrice")
                             }
                             className="w-20 px-1 py-1 border rounded text-right text-sm"
                           />
                         </td>
                         <td className="px-2 py-2 text-right text-sm font-medium">
-                          {formatCurrency(
-                            item.returnPrice * item.requestQuantity
-                          )}
-                        </td>
-                        <td className="px-2 py-2 text-center">
-                          {saleTotal !== item.requestQuantity ? (
-                            <span className="text-orange-500 text-lg">⚠</span>
-                          ) : (
-                            <span className="text-green-500 text-lg">✓</span>
-                          )}
+                          {formatCurrency(item.returnPrice * saleTotal)}
                         </td>
                       </tr>
                     );
