@@ -33,6 +33,7 @@ interface PriceBookTableProps {
   selectedPriceBooks: (PriceBook | { id: number; name: string })[];
   onAddProducts?: () => void;
   onCreateNew: () => void;
+  onImportClick?: () => void;
   selectedCategoryIds: number[];
   branchId?: number;
 }
@@ -41,6 +42,7 @@ export function PriceBookTable({
   selectedPriceBooks,
   onAddProducts,
   onCreateNew,
+  onImportClick,
   selectedCategoryIds,
   branchId,
 }: PriceBookTableProps) {
@@ -258,7 +260,9 @@ export function PriceBookTable({
                 + Bảng giá
               </button>
             )}
-            <button className="px-4 py-2 border rounded hover:bg-gray-50">
+            <button
+              onClick={onImportClick}
+              className="px-4 py-2 border rounded hover:bg-gray-50">
               Import
             </button>
             <button className="px-4 py-2 border rounded hover:bg-gray-50">

@@ -7,7 +7,8 @@ import { PriceBookTable } from "@/components/price-books/PriceBookTable";
 import { PriceBookForm } from "@/components/price-books/PriceBookForm";
 import { PriceBookProductSelector } from "@/components/price-books/PriceBookProductSelector";
 import { useBranchStore } from "@/lib/store/branch";
-import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { Can } from "@/components/permissions/Can";
+import { PriceBookImportModal } from "@/components/price-books/PriceBookImportModal";
 
 export default function PriceBooksPage() {
   const [selectedPriceBookIds, setSelectedPriceBookIds] = useState<number[]>([
@@ -16,6 +17,7 @@ export default function PriceBooksPage() {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [showProductSelector, setShowProductSelector] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const { selectedBranch } = useBranchStore();
 
   const { data: priceBooksData } = usePriceBooks({
@@ -32,7 +34,7 @@ export default function PriceBooksPage() {
   );
 
   return (
-    <PagePermissionGuard resource="price_books" action="view">
+    <Can resource="price_books" action="view">
       <div className="flex h-full border-t bg-gray-50">
         <div className="flex-1 flex overflow-hidden">
           <PriceBookSidebar
@@ -48,6 +50,7 @@ export default function PriceBooksPage() {
             selectedPriceBooks={selectedPriceBooks}
             onAddProducts={() => setShowProductSelector(true)}
             onCreateNew={() => setShowForm(true)}
+            onImportClick={() => setShowImportModal(true)}
             selectedCategoryIds={selectedCategoryIds}
             branchId={selectedBranch?.id}
           />
@@ -68,6 +71,10 @@ export default function PriceBooksPage() {
           />
         )}
       </div>
-    </PagePermissionGuard>
+
+      {showImportModal && (
+        <PriceBookImportModal onClose={() => setShowImportModal(false)} />
+      )}
+    </Can>
   );
 }
