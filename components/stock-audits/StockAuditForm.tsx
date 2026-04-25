@@ -217,7 +217,7 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
                         <td className="px-3 py-2 text-xs">
                           {item.productCode}
                         </td>
-                        <td className="px-3 py-2">{item.productName}</td>
+                        <td className="px-3 py-2 w-80">{item.productName}</td>
                         <td className="px-3 py-2 text-center text-gray-500">
                           {item.unit || "-"}
                         </td>
@@ -226,16 +226,21 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
                         </td>
                         <td className="px-3 py-2 text-center">
                           <input
-                            type="number"
+                            type="text"
+                            inputMode="decimal"
                             value={item.actualQuantity}
-                            onChange={(e) =>
-                              updateItem(
-                                item.productId,
-                                "actualQuantity",
-                                e.target.value
-                              )
-                            }
-                            min="0"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              // Chỉ cho phép số nguyên hoặc thập phân dương
+                              if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                                updateItem(
+                                  item.productId,
+                                  "actualQuantity",
+                                  val
+                                );
+                              }
+                            }}
+                            onFocus={(e) => e.target.select()}
                             className="w-20 border rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
                           />
                         </td>
