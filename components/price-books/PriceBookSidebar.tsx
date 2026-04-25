@@ -144,6 +144,17 @@ export function PriceBookSidebar({
     pb.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const allIds = useMemo(
+    () => [0, ...(priceBooks?.map((pb) => pb.id) || [])],
+    [priceBooks]
+  );
+
+  const isAllSelected =
+    allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
+
+  const selectAll = () => onSelectedIdsChange(allIds);
+  const deselectAll = () => onSelectedIdsChange([]);
+
   const activeFilterCount = [
     parentName,
     middleName,
@@ -232,7 +243,7 @@ export function PriceBookSidebar({
             </button>
 
             {showDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-90 overflow-y-auto">
                 <div className="p-2 border-b">
                   <input
                     type="text"
@@ -244,13 +255,14 @@ export function PriceBookSidebar({
                   />
                 </div>
 
-                <div className="p-2 border-b">
+                {/* Tạo mới + Select All */}
+                <div className="p-1 border-b flex items-center justify-between gap-2">
                   <button
                     onClick={() => {
                       onCreateNew();
                       setShowDropdown(false);
                     }}
-                    className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded">
+                    className="text-left px-2 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded">
                     + Tạo mới
                   </button>
                 </div>
@@ -286,6 +298,22 @@ export function PriceBookSidebar({
                       <span className="text-sm flex-1">{pb.name}</span>
                     </label>
                   ))}
+                </div>
+
+                <div className="p-1 border-b flex items-center justify-between gap-2">
+                  <button
+                    onClick={selectAll}
+                    disabled={isAllSelected}
+                    className="text-xs px-2 py-1 text-blue-600 hover:text-blue-700 disabled:opacity-40 disabled:cursor-not-allowed font-medium">
+                    Chọn tất cả
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button
+                    onClick={deselectAll}
+                    disabled={selectedIds.length === 0}
+                    className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-40 px-2 py-1 disabled:cursor-not-allowed font-medium">
+                    Bỏ chọn
+                  </button>
                 </div>
               </div>
             )}
