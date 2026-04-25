@@ -22,6 +22,7 @@ export function PriceBookDropdown({
   const { data: priceBooksData } = usePriceBooks({
     isActive: true,
     branchId: selectedBranch?.id,
+    limit: 1000,
   });
 
   const priceBooks = priceBooksData?.data || [];
