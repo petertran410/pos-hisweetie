@@ -3,8 +3,14 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useBranchStore } from "@/lib/store/branch";
 import { useProducts } from "@/lib/hooks/useProducts";
-import { useCreateStockAudit } from "@/lib/hooks/useStockAudits";
+import {
+  useCompleteStockAudit,
+  useCreateStockAudit,
+  useUpdateStockAudit,
+} from "@/lib/hooks/useStockAudits";
 import { Search, Trash2, Loader2, X } from "lucide-react";
+import { StockAudit } from "@/lib/types/stock-audit";
+import { formatNumberInput } from "@/lib/utils";
 
 interface AuditItem {
   productId: number;
@@ -17,15 +23,37 @@ interface AuditItem {
   note: string;
 }
 
-export function StockAuditForm({ onClose }: { onClose: () => void }) {
+interface StockAuditFormProps {
+  onClose: () => void;
+  audit?: StockAudit; // nếu có → edit mode
+}
+
+export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
   const { selectedBranch } = useBranchStore();
   const createAudit = useCreateStockAudit();
+  const updateAudit = useUpdateStockAudit();
+  const completeAudit = useCompleteStockAudit();
 
-  const [items, setItems] = useState<AuditItem[]>([]);
+  const isEditMode = !!audit;
+
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(audit?.note || "");
   const searchRef = useRef<HTMLDivElement>(null);
+
+  const [items, setItems] = useState<AuditItem[]>(() => {
+    if (!audit?.details?.length) return [];
+    return audit.details.map((d) => ({
+      productId: d.productId,
+      productCode: d.productCode,
+      productName: d.productName,
+      unit: d.unit || "",
+      onHand: Number(d.systemQuantity),
+      cost: Number(d.costAtCheck),
+      actualQuantity: String(Number(d.actualQuantity)),
+      note: d.note || "",
+    }));
+  });
 
   const { data: productsData } = useProducts({
     search: search.length >= 1 ? search : undefined,
@@ -34,6 +62,8 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
   });
 
   const products = productsData?.data || [];
+  const isBusy =
+    createAudit.isPending || updateAudit.isPending || completeAudit.isPending;
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -85,21 +115,65 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
     );
   };
 
-  const handleSubmit = () => {
-    if (!selectedBranch || items.length === 0) return;
+  const handleSubmit = async () => {
+    if (items.length === 0) return;
 
-    createAudit.mutate(
-      {
-        branchId: selectedBranch.id,
-        note: note || undefined,
-        items: items.map((i) => ({
-          productId: i.productId,
-          actualQuantity: parseFloat(i.actualQuantity) || 0,
-          note: i.note || undefined,
-        })),
-      },
-      { onSuccess: () => onClose() }
-    );
+    const itemsPayload = items.map((i) => ({
+      productId: i.productId,
+      actualQuantity: parseFloat(i.actualQuantity) || 0,
+      note: i.note || undefined,
+    }));
+
+    if (isEditMode) {
+      updateAudit.mutate(
+        {
+          id: audit!.id,
+          data: { note: note || undefined, items: itemsPayload },
+        },
+        { onSuccess: () => onClose() }
+      );
+    } else {
+      if (!selectedBranch) return;
+      createAudit.mutate(
+        {
+          branchId: selectedBranch.id,
+          note: note || undefined,
+          items: itemsPayload,
+        },
+        { onSuccess: () => onClose() }
+      );
+    }
+  };
+
+  const handleSubmitAndComplete = async () => {
+    if (items.length === 0) return;
+
+    const itemsPayload = items.map((i) => ({
+      productId: i.productId,
+      actualQuantity: parseFloat(i.actualQuantity) || 0,
+      note: i.note || undefined,
+    }));
+
+    try {
+      if (isEditMode) {
+        await updateAudit.mutateAsync({
+          id: audit!.id,
+          data: { note: note || undefined, items: itemsPayload },
+        });
+        await completeAudit.mutateAsync(audit!.id);
+      } else {
+        if (!selectedBranch) return;
+        const created = await createAudit.mutateAsync({
+          branchId: selectedBranch.id,
+          note: note || undefined,
+          items: itemsPayload,
+        });
+        await completeAudit.mutateAsync(created.id);
+      }
+      onClose();
+    } catch {
+      // toast handled in hooks
+    }
   };
 
   const totals = useMemo(() => {
@@ -120,11 +194,15 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
         {/* Header — hiển thị chi nhánh trực tiếp */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <div>
-            <h2 className="text-lg font-bold">Tạo phiếu kiểm kho</h2>
+            <h2 className="text-lg font-bold">
+              {isEditMode
+                ? `Chỉnh sửa phiếu ${audit!.code}`
+                : "Tạo phiếu kiểm kho"}
+            </h2>
             <span className="text-sm text-gray-500">
               Chi nhánh:{" "}
               <span className="font-medium text-gray-700">
-                {selectedBranch?.name}
+                {isEditMode ? audit!.branchName : selectedBranch?.name}
               </span>
             </span>
           </div>
@@ -228,7 +306,7 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={item.actualQuantity}
+                            value={formatNumberInput(item.actualQuantity)}
                             onChange={(e) => {
                               const val = e.target.value;
                               // Chỉ cho phép số nguyên hoặc thập phân dương
@@ -360,12 +438,21 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={items.length === 0 || createAudit.isPending}
+              disabled={items.length === 0 || isBusy}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-              {createAudit.isPending && (
+              {createAudit.isPending && !completeAudit.isPending && (
                 <Loader2 className="w-4 h-4 animate-spin" />
               )}
               Lưu tạm
+            </button>
+            <button
+              onClick={handleSubmitAndComplete}
+              disabled={items.length === 0 || isBusy}
+              className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              {completeAudit.isPending && (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              )}
+              Hoàn thành
             </button>
           </div>
         </div>

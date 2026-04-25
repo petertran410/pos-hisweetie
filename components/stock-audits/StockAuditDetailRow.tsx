@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import {
   useCompleteStockAudit,
   useCancelStockAudit,
 } from "@/lib/hooks/useStockAudits";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { StockAudit } from "@/lib/types/stock-audit";
+import { StockAuditForm } from "./StockAuditForm";
 
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
@@ -23,6 +24,7 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
   const completeAudit = useCompleteStockAudit();
   const cancelAudit = useCancelStockAudit();
   const canUpdate = usePermission("stock_audits", "update");
+  const [showEditForm, setShowEditForm] = useState(false);
 
   const isDraft = audit.status === 1;
   const isCompleted = audit.status === 2;
@@ -122,24 +124,6 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                 }`}>
                 {isDraft ? "Phiếu tạm" : isCompleted ? "Hoàn thành" : "Đã hủy"}
               </span>
-
-              {/* Action buttons */}
-              {canUpdate && isDraft && (
-                <button
-                  onClick={handleComplete}
-                  disabled={completeAudit.isPending}
-                  className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
-                  {completeAudit.isPending ? "Đang xử lý..." : "Hoàn thành"}
-                </button>
-              )}
-              {canUpdate && !isCancelled && (
-                <button
-                  onClick={handleCancel}
-                  disabled={cancelAudit.isPending}
-                  className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50">
-                  {cancelAudit.isPending ? "Đang xử lý..." : "Hủy phiếu"}
-                </button>
-              )}
             </div>
 
             {/* Details table */}
@@ -237,6 +221,45 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                 </tfoot>
               </table>
             </div>
+
+            {canUpdate && (
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
+                <div className="flex gap-2">
+                  {!isCancelled && (
+                    <button
+                      onClick={handleCancel}
+                      disabled={cancelAudit.isPending}
+                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      {cancelAudit.isPending ? "Đang xử lý..." : "Hủy phiếu"}
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {isDraft && canUpdate && (
+                    <button
+                      onClick={() => setShowEditForm(true)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors">
+                      Chỉnh sửa
+                    </button>
+                  )}
+                  {isDraft && canUpdate && (
+                    <button
+                      onClick={handleComplete}
+                      disabled={completeAudit.isPending}
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      {completeAudit.isPending ? "Đang xử lý..." : "Hoàn thành"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {showEditForm && (
+              <StockAuditForm
+                audit={audit}
+                onClose={() => setShowEditForm(false)}
+              />
+            )}
           </div>
         </div>
       </td>
