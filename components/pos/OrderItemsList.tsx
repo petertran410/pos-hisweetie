@@ -14,6 +14,7 @@ import { NoteDropdown } from "./NoteDropdown";
 import { NoteTemplateModal } from "./NoteTemplateModal";
 import { ItemDiscountModal } from "./ItemDiscountModal";
 import { ProductPriceHistory } from "./ProductPriceHistory";
+import { useBranchStore } from "@/lib/store/branch";
 
 interface CartItemsListProps {
   cartItems: CartItem[];
@@ -60,6 +61,23 @@ export function OrderItemsList({
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [selectedItemForDiscount, setSelectedItemForDiscount] =
     useState<CartItem | null>(null);
+  const { selectedBranch } = useBranchStore();
+
+  const getItemOnHand = (item: CartItem): number | null => {
+    if (!selectedBranch || !item.product.inventories) return null;
+    const inv = item.product.inventories.find(
+      (i: any) => i.branchId === selectedBranch.id
+    );
+    return inv ? Number(inv.onHand) : null;
+  };
+
+  const getStockWarning = (item: CartItem): string | null => {
+    const onHand = getItemOnHand(item);
+    if (onHand === null) return null;
+    if (onHand < 0) return `Tồn kho âm (${onHand})`;
+    if (item.quantity > onHand) return `Vượt tồn kho (tồn: ${onHand})`;
+    return null;
+  };
 
   const getCartItemKey = (item: CartItem): string =>
     `${item.product.id}_${item.conditionType || "normal"}`;
@@ -288,7 +306,7 @@ export function OrderItemsList({
                 isFirstOfGroup(index) ? "rounded-t-lg mt-2" : "border-t-0"
               } ${isLastOfGroup(index) ? "rounded-b-lg" : ""} ${
                 isFirstOfGroup(index) && index === 0 ? "mt-0" : ""
-              }`}
+              } ${getStockWarning(item) ? "border-red-400 bg-red-50/30" : ""}`}
               onMouseEnter={() => setHoveredItemId(item.product.id)}
               onMouseLeave={() => setHoveredItemId(null)}>
               <div className="flex items-start justify-between gap-3">
@@ -316,6 +334,16 @@ export function OrderItemsList({
                       documentType="order"
                     />
                   </div>
+
+                  {(() => {
+                    const warning = getStockWarning(item);
+                    if (!warning) return null;
+                    return (
+                      <div className="text-xs text-red-600 font-medium mt-0.5">
+                        ⚠ {warning}
+                      </div>
+                    );
+                  })()}
 
                   <NoteDropdown
                     value={item.note || ""}
