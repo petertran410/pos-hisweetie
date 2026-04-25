@@ -22,6 +22,7 @@ export default function PriceBooksPage() {
 
   const { data: priceBooksData } = usePriceBooks({
     branchId: selectedBranch?.id,
+    limit: 1000,
   });
 
   const allPriceBooks = [
