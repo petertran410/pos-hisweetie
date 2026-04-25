@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useBranchStore } from "@/lib/store/branch";
-import { useBranches } from "@/lib/hooks/useBranches";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useCreateStockAudit } from "@/lib/hooks/useStockAudits";
 import { Search, Trash2, Loader2, X } from "lucide-react";
@@ -20,11 +19,8 @@ interface AuditItem {
 
 export function StockAuditForm({ onClose }: { onClose: () => void }) {
   const { selectedBranch } = useBranchStore();
-  const { data: branches } = useBranches();
   const createAudit = useCreateStockAudit();
 
-  const [selectedBranchLocal, setSelectedBranchLocal] =
-    useState(selectedBranch);
   const [items, setItems] = useState<AuditItem[]>([]);
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -34,12 +30,11 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
   const { data: productsData } = useProducts({
     search: search.length >= 1 ? search : undefined,
     limit: 20,
-    branchId: selectedBranchLocal?.id,
+    branchId: selectedBranch?.id,
   });
 
   const products = productsData?.data || [];
 
-  // Close dropdown on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node))
@@ -53,7 +48,7 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
     if (items.some((i) => i.productId === product.id)) return;
 
     const inv = product.inventories?.find(
-      (i: any) => i.branchId === selectedBranchLocal?.id
+      (i: any) => i.branchId === selectedBranch?.id
     );
 
     setItems((prev) => [
@@ -65,7 +60,7 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
         unit: product.unit || "",
         onHand: inv ? Number(inv.onHand) : 0,
         cost: inv ? Number(inv.cost) : 0,
-        actualQuantity: String(inv ? Number(inv.onHand) : 0), // Default = tồn kho hiện tại
+        actualQuantity: String(inv ? Number(inv.onHand) : 0),
         note: "",
       },
     ]);
@@ -91,11 +86,11 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
   };
 
   const handleSubmit = () => {
-    if (!selectedBranchLocal || items.length === 0) return;
+    if (!selectedBranch || items.length === 0) return;
 
     createAudit.mutate(
       {
-        branchId: selectedBranchLocal.id,
+        branchId: selectedBranch.id,
         note: note || undefined,
         items: items.map((i) => ({
           productId: i.productId,
@@ -107,7 +102,6 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
     );
   };
 
-  // Tính tổng
   const totals = useMemo(() => {
     let totalDiff = 0;
     let totalDiffValue = 0;
@@ -123,35 +117,20 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col">
-        {/* Header */}
+        {/* Header — hiển thị chi nhánh trực tiếp */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-bold">Tạo phiếu kiểm kho</h2>
+          <div>
+            <h2 className="text-lg font-bold">Tạo phiếu kiểm kho</h2>
+            <span className="text-sm text-gray-500">
+              Chi nhánh:{" "}
+              <span className="font-medium text-gray-700">
+                {selectedBranch?.name}
+              </span>
+            </span>
+          </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
             <X className="w-5 h-5" />
           </button>
-        </div>
-
-        {/* Branch selector */}
-        <div className="px-6 py-3 border-b flex items-center gap-4">
-          <label className="text-sm font-medium text-gray-700">
-            Chi nhánh:
-          </label>
-          <select
-            value={selectedBranchLocal?.id || ""}
-            onChange={(e) => {
-              const b = branches?.find(
-                (b: any) => b.id === Number(e.target.value)
-              );
-              if (b) setSelectedBranchLocal(b);
-              setItems([]); // Reset items khi đổi branch
-            }}
-            className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-            {(branches || []).map((b: any) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
         </div>
 
         {/* Search */}
@@ -176,7 +155,7 @@ export function StockAuditForm({ onClose }: { onClose: () => void }) {
               {products.map((p: any) => {
                 const already = items.some((i) => i.productId === p.id);
                 const inv = p.inventories?.find(
-                  (i: any) => i.branchId === selectedBranchLocal?.id
+                  (i: any) => i.branchId === selectedBranch?.id
                 );
                 return (
                   <button

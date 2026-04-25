@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
-import { ChevronDown, Check, Calendar } from "lucide-react";
+import { ChevronDown, Calendar } from "lucide-react";
 
 interface StockAuditsSidebarProps {
   filters: any;
@@ -16,7 +16,7 @@ const STATUS_OPTIONS = [
   { value: "3", label: "Đã hủy", color: "bg-red-100 text-red-700" },
 ];
 
-// ─── Mini Calendar (copy từ InventoryChecksSidebar) ──────────────
+// ─── Mini Calendar (giống InventoryChecksSidebar) ────────────────
 function MiniCalendar({
   value,
   onChange,
@@ -137,80 +137,6 @@ function MiniCalendar({
   );
 }
 
-// ─── Dropdown Select ─────────────────────────────────────────────
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-  placeholder?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
-
-  const selected = options.find((o) => o.value === value);
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-        {label}
-      </label>
-      <div className="relative" ref={ref}>
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          className="w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm bg-white hover:border-blue-400 transition-colors">
-          <span className={selected ? "text-gray-900" : "text-gray-400"}>
-            {selected?.label || placeholder || "Chọn..."}
-          </span>
-          <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </button>
-        {open && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-20 max-h-48 overflow-y-auto">
-            {options.map((opt, idx) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => {
-                  onChange(value === opt.value ? "" : opt.value);
-                  setOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
-                  opt.value === value
-                    ? "bg-blue-50 text-blue-700 font-medium"
-                    : "hover:bg-gray-50 text-gray-700"
-                } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-                <span className="truncate">{opt.label}</span>
-                {opt.value === value && (
-                  <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── Main ────────────────────────────────────────────────────────
 export function StockAuditsSidebar({
   onFiltersChange,
@@ -282,7 +208,8 @@ export function StockAuditsSidebar({
   );
 
   return (
-    <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
+    <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col relative z-20">
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-xl">
         <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
         {activeFilterCount > 0 && (
@@ -294,8 +221,8 @@ export function StockAuditsSidebar({
         )}
       </div>
 
-      <div className="p-4 space-y-3 overflow-y-auto h-full">
-        {/* Trạng thái */}
+      <div className="p-4 space-y-4 overflow-y-auto h-full">
+        {/* ── Trạng thái ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Trạng thái
@@ -317,22 +244,43 @@ export function StockAuditsSidebar({
           </div>
         </div>
 
-        <FilterSelect
-          label="Chi nhánh"
-          value={branchId}
-          onChange={setBranchId}
-          options={branchOptions}
-          placeholder="Tất cả"
-        />
-        <FilterSelect
-          label="Người kiểm"
-          value={creatorId}
-          onChange={setCreatorId}
-          options={creatorOptions}
-          placeholder="Tất cả"
-        />
+        {/* ── Chi nhánh (native select giống InventoryChecksSidebar) ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Chi nhánh
+          </label>
+          <select
+            value={branchId}
+            onChange={(e) => setBranchId(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            <option value="">Tất cả</option>
+            {branchOptions.map((b) => (
+              <option key={b.value} value={b.value}>
+                {b.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        {/* Date range */}
+        {/* ── Người kiểm (native select) ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Người kiểm
+          </label>
+          <select
+            value={creatorId}
+            onChange={(e) => setCreatorId(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            <option value="">Tất cả</option>
+            {creatorOptions.map((u) => (
+              <option key={u.value} value={u.value}>
+                {u.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* ── Thời gian kiểm ── */}
         <div ref={calRef}>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Thời gian kiểm
@@ -342,14 +290,20 @@ export function StockAuditsSidebar({
               <button
                 type="button"
                 onClick={() => setOpenCal(openCal === "from" ? null : "from")}
-                className="w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm bg-white hover:border-blue-400">
+                className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm text-left transition-colors ${
+                  openCal === "from"
+                    ? "ring-1 ring-blue-500 border-blue-500"
+                    : ""
+                }`}>
                 <span className={fromDate ? "text-gray-900" : "text-gray-400"}>
-                  {fromDate || "Từ ngày"}
+                  {fromDate
+                    ? new Date(fromDate).toLocaleDateString("vi-VN")
+                    : "Từ ngày"}
                 </span>
                 <Calendar className="w-4 h-4 text-gray-400" />
               </button>
               {openCal === "from" && (
-                <div className="absolute top-full left-0 mt-1 z-30">
+                <div className="absolute top-full left-0 mt-1 z-[999]">
                   <MiniCalendar
                     value={fromDate}
                     onChange={setFromDate}
@@ -362,14 +316,18 @@ export function StockAuditsSidebar({
               <button
                 type="button"
                 onClick={() => setOpenCal(openCal === "to" ? null : "to")}
-                className="w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm bg-white hover:border-blue-400">
+                className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm text-left transition-colors ${
+                  openCal === "to" ? "ring-1 ring-blue-500 border-blue-500" : ""
+                }`}>
                 <span className={toDate ? "text-gray-900" : "text-gray-400"}>
-                  {toDate || "Đến ngày"}
+                  {toDate
+                    ? new Date(toDate).toLocaleDateString("vi-VN")
+                    : "Đến ngày"}
                 </span>
                 <Calendar className="w-4 h-4 text-gray-400" />
               </button>
               {openCal === "to" && (
-                <div className="absolute top-full left-0 mt-1 z-30">
+                <div className="absolute top-full left-0 mt-1 z-[9999]">
                   <MiniCalendar
                     value={toDate}
                     onChange={setToDate}
