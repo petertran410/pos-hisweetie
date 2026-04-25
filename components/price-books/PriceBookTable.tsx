@@ -36,6 +36,7 @@ interface PriceBookTableProps {
   onCreateNew: () => void;
   onImportClick?: () => void;
   selectedCategoryIds: number[];
+  filters: any;
   branchId?: number;
 }
 
@@ -45,6 +46,7 @@ export function PriceBookTable({
   onCreateNew,
   onImportClick,
   selectedCategoryIds,
+  filters,
   branchId,
 }: PriceBookTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,8 +95,11 @@ export function PriceBookTable({
     [realPriceBooks]
   );
 
-  const categoryIds =
-    selectedCategoryIds.length > 0 ? selectedCategoryIds.join(",") : undefined;
+  const categoryIds = filters.categoryIds || undefined;
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters, selectedPriceBooks]);
 
   const isDefaultOnly = hasDefaultPriceBook && realPriceBooks.length === 0;
 
@@ -104,6 +109,10 @@ export function PriceBookTable({
     page,
     limit,
     branchId,
+    parentName: filters.parentName,
+    middleName: filters.middleName,
+    childName: filters.childName,
+    stockStatus: filters.stockStatus,
   });
 
   const { data: productsWithPricesData, isLoading: isLoadingPrices } =
@@ -140,10 +149,6 @@ export function PriceBookTable({
   const totalPages = Math.ceil(total / limit) || 1;
 
   const isLoading = isDefaultOnly ? isLoadingAll : isLoadingPrices;
-
-  // === handleCellClick, handlePriceChange, handleBlur, handleKeyDown ===
-  // === toggleSelectAll, toggleSelect, handleAddProductToPriceBook ===
-  // (giữ nguyên toàn bộ — không thay đổi gì)
 
   const handleCellClick = (productId: number, priceBookId: number) => {
     if (!canUpdatePrice) {

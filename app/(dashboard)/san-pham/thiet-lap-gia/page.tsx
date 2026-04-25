@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { usePriceBooks } from "@/lib/hooks/usePriceBooks";
 import { PriceBookSidebar } from "@/components/price-books/PriceBookSidebar";
 import { PriceBookTable } from "@/components/price-books/PriceBookTable";
@@ -14,7 +14,7 @@ export default function PriceBooksPage() {
   const [selectedPriceBookIds, setSelectedPriceBookIds] = useState<number[]>([
     0,
   ]);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [filters, setFilters] = useState<any>({});
   const [showForm, setShowForm] = useState(false);
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -33,6 +33,10 @@ export default function PriceBooksPage() {
     selectedPriceBookIds.includes(pb.id)
   );
 
+  const handleFiltersChange = useCallback((newFilters: any) => {
+    setFilters(newFilters);
+  }, []);
+
   return (
     <Can resource="price_books" action="view">
       <div className="flex h-full border-t bg-gray-50">
@@ -42,8 +46,7 @@ export default function PriceBooksPage() {
             selectedIds={selectedPriceBookIds}
             onSelectedIdsChange={setSelectedPriceBookIds}
             onCreateNew={() => setShowForm(true)}
-            selectedCategoryIds={selectedCategoryIds}
-            onSelectedCategoryIdsChange={setSelectedCategoryIds}
+            onFiltersChange={handleFiltersChange}
           />
 
           <PriceBookTable
@@ -51,7 +54,7 @@ export default function PriceBooksPage() {
             onAddProducts={() => setShowProductSelector(true)}
             onCreateNew={() => setShowForm(true)}
             onImportClick={() => setShowImportModal(true)}
-            selectedCategoryIds={selectedCategoryIds}
+            filters={filters}
             branchId={selectedBranch?.id}
           />
         </div>

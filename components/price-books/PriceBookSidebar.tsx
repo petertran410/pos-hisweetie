@@ -1,33 +1,176 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useCategories } from "@/lib/hooks/useCategories";
+import { ChevronDown, Check } from "lucide-react";
 import type { PriceBook } from "@/lib/api/price-books";
-import type { Category } from "@/lib/api/categories";
 
+// ─── Props ───────────────────────────────────────────────────────────────────
 interface PriceBookSidebarProps {
   priceBooks?: PriceBook[];
   selectedIds: number[];
   onSelectedIdsChange: (ids: number[]) => void;
   onCreateNew: () => void;
-  selectedCategoryIds: number[];
-  onSelectedCategoryIdsChange: (ids: number[]) => void;
+  onFiltersChange: (filters: any) => void;
 }
 
+// ─── Constants ───────────────────────────────────────────────────────────────
+const STOCK_OPTIONS = [
+  { value: "instock", label: "Còn hàng" },
+  { value: "outstock", label: "Hết hàng" },
+];
+
+// ─── SimpleDropdown (giống ProductsSidebar) ──────────────────────────────────
+function SimpleDropdown({
+  options,
+  value,
+  placeholder,
+  onChange,
+}: {
+  options: { value: string; label: string }[];
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors">
+        <span className={selected ? "text-gray-900" : "text-gray-400"}>
+          {selected?.label || placeholder}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+          {value && (
+            <button
+              onClick={() => {
+                onChange("");
+                setOpen(false);
+              }}
+              className="w-full px-3 py-2.5 text-sm text-left text-gray-400 hover:bg-gray-50 border-b border-gray-50">
+              {placeholder}
+            </button>
+          )}
+          {options.map((opt, idx) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value === value ? "" : opt.value);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                opt.value === value
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "hover:bg-gray-50 text-gray-700"
+              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+              <span className="truncate">{opt.label}</span>
+              {opt.value === value && (
+                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────────
 export function PriceBookSidebar({
   priceBooks,
   selectedIds,
   onSelectedIdsChange,
   onCreateNew,
-  selectedCategoryIds,
-  onSelectedCategoryIdsChange,
+  onFiltersChange,
 }: PriceBookSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showCategorySelector, setShowCategorySelector] = useState(false);
+
+  // Filter states (giống ProductsSidebar)
+  const [parentName, setParentName] = useState("");
+  const [middleName, setMiddleName] = useState("");
+  const [childName, setChildName] = useState("");
+  const [stockStatus, setStockStatus] = useState("");
+
+  const { data: parentCategories } = useCategories("parent");
+  const { data: middleCategories } = useCategories("middle");
+  const { data: childCategories } = useCategories("child");
+
+  const parentOptions = useMemo(
+    () =>
+      (parentCategories || [])
+        .filter((c: any) => c.type === "parent")
+        .map((c: any) => ({ value: c.name, label: c.name })),
+    [parentCategories]
+  );
+
+  const middleOptions = useMemo(
+    () =>
+      (middleCategories || [])
+        .filter((c: any) => c.type === "middle")
+        .map((c: any) => ({ value: c.name, label: c.name })),
+    [middleCategories]
+  );
+
+  const childOptions = useMemo(
+    () =>
+      (childCategories || [])
+        .filter((c: any) => c.type === "child")
+        .map((c: any) => ({ value: c.name, label: c.name })),
+    [childCategories]
+  );
 
   const filteredPriceBooks = priceBooks?.filter((pb) =>
     pb.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const activeFilterCount = [
+    parentName,
+    middleName,
+    childName,
+    stockStatus,
+  ].filter(Boolean).length;
+
+  // Debounce emit filters
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const f: any = {};
+      if (parentName) f.parentName = parentName;
+      if (middleName) f.middleName = middleName;
+      if (childName) f.childName = childName;
+      if (stockStatus) f.stockStatus = stockStatus;
+      onFiltersChange(f);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [parentName, middleName, childName, stockStatus]);
+
+  const clearAll = () => {
+    setParentName("");
+    setMiddleName("");
+    setChildName("");
+    setStockStatus("");
+    onFiltersChange({});
+  };
 
   const togglePriceBook = (id: number) => {
     if (selectedIds.includes(id)) {
@@ -43,13 +186,11 @@ export function PriceBookSidebar({
     const hasDefaultPriceBook = selectedIds.includes(0);
     const realPriceBooks = selectedIds.filter((id) => id !== 0);
 
-    if (hasDefaultPriceBook && realPriceBooks.length === 0) {
+    if (hasDefaultPriceBook && realPriceBooks.length === 0)
       return "Bảng giá chung";
-    }
 
-    if (hasDefaultPriceBook && realPriceBooks.length > 0) {
+    if (hasDefaultPriceBook && realPriceBooks.length > 0)
       return `Bảng giá chung + ${realPriceBooks.length} bảng giá`;
-    }
 
     if (realPriceBooks.length === 1) {
       const selected = priceBooks?.find((pb) => pb.id === realPriceBooks[0]);
@@ -60,137 +201,149 @@ export function PriceBookSidebar({
   };
 
   return (
-    <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
-      <div>
-        <label className="block text-md font-medium mb-2">Bảng giá</label>
-        <div className="relative">
-          <div
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="w-full border rounded px-3 py-2 bg-white cursor-pointer flex items-center justify-between">
-            <span className="text-md">{getDisplayText()}</span>
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
+    <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
+      {/* Header — giống ProductsSidebar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-xl">
+        <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
+        {activeFilterCount > 0 && (
+          <button
+            onClick={clearAll}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            Xóa tất cả
+          </button>
+        )}
+      </div>
+
+      <div className="p-4 space-y-3 overflow-y-auto">
+        {/* ── Bảng giá (giữ nguyên logic multi-select) ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Bảng giá
+          </label>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors">
+              <span className="text-gray-900 truncate">{getDisplayText()}</span>
+              <ChevronDown
+                className={`w-4 h-4 text-gray-400 transition-transform ${showDropdown ? "rotate-180" : ""}`}
               />
-            </svg>
-          </div>
+            </button>
 
-          {showDropdown && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-10 max-h-80 overflow-y-auto">
-              <div className="p-2 border-b">
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full border rounded px-3 py-2 text-md"
-                  autoFocus
-                />
-              </div>
-
-              <div className="p-2 border-b">
-                <button
-                  onClick={() => {
-                    onCreateNew();
-                    setShowDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-md text-blue-600 hover:bg-blue-50 rounded">
-                  + Tạo mới
-                </button>
-              </div>
-
-              <div className="max-h-60 overflow-y-auto">
-                <label
-                  className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 border-b ${
-                    selectedIds.includes(0) ? "bg-blue-50" : ""
-                  }`}>
+            {showDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                <div className="p-2 border-b">
                   <input
-                    type="checkbox"
-                    checked={selectedIds.includes(0)}
-                    onChange={() => togglePriceBook(0)}
-                    className="rounded border-gray-300"
+                    type="text"
+                    placeholder="Tìm kiếm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    autoFocus
                   />
-                  <span className="text-md flex-1 font-medium">
-                    Bảng giá chung
-                  </span>
-                </label>
+                </div>
 
-                {filteredPriceBooks?.map((pb) => (
+                <div className="p-2 border-b">
+                  <button
+                    onClick={() => {
+                      onCreateNew();
+                      setShowDropdown(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded">
+                    + Tạo mới
+                  </button>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto">
                   <label
-                    key={pb.id}
-                    className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 ${
-                      selectedIds.includes(pb.id) ? "bg-blue-50" : ""
+                    className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 border-b ${
+                      selectedIds.includes(0) ? "bg-blue-50" : ""
                     }`}>
                     <input
                       type="checkbox"
-                      checked={selectedIds.includes(pb.id)}
-                      onChange={() => togglePriceBook(pb.id)}
+                      checked={selectedIds.includes(0)}
+                      onChange={() => togglePriceBook(0)}
                       className="rounded border-gray-300"
                     />
-                    <span className="text-md flex-1">{pb.name}</span>
+                    <span className="text-sm flex-1 font-medium">
+                      Bảng giá chung
+                    </span>
                   </label>
-                ))}
+
+                  {filteredPriceBooks?.map((pb) => (
+                    <label
+                      key={pb.id}
+                      className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 ${
+                        selectedIds.includes(pb.id) ? "bg-blue-50" : ""
+                      }`}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(pb.id)}
+                        onChange={() => togglePriceBook(pb.id)}
+                        className="rounded border-gray-300"
+                      />
+                      <span className="text-sm flex-1">{pb.name}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* ── Loại Hàng ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Loại Hàng
+          </label>
+          <SimpleDropdown
+            options={parentOptions}
+            value={parentName}
+            placeholder="Tất cả"
+            onChange={setParentName}
+          />
+        </div>
+
+        {/* ── Nguồn Gốc ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Nguồn Gốc
+          </label>
+          <SimpleDropdown
+            options={middleOptions}
+            value={middleName}
+            placeholder="Tất cả"
+            onChange={setMiddleName}
+          />
+        </div>
+
+        {/* ── Danh Mục ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Danh Mục
+          </label>
+          <SimpleDropdown
+            options={childOptions}
+            value={childName}
+            placeholder="Tất cả"
+            onChange={setChildName}
+          />
+        </div>
+
+        {/* ── Tồn kho ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tồn kho
+          </label>
+          <SimpleDropdown
+            options={STOCK_OPTIONS}
+            value={stockStatus}
+            placeholder="Tất cả"
+            onChange={setStockStatus}
+          />
         </div>
       </div>
-
-      {/* <div>
-        <label className="block text-md font-medium mb-2">Nhóm hàng</label>
-        <button
-          onClick={() => setShowCategorySelector(true)}
-          className="w-full border rounded px-3 py-2 text-left flex items-center justify-between hover:bg-gray-50 bg-white">
-          <span className="text-md">
-            {getSelectedCategoryNames() || "Chọn nhóm hàng"}
-          </span>
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </button>
-      </div> */}
-
-      <div>
-        <label className="block text-md font-medium mb-2">Tồn kho</label>
-        <select className="w-full border rounded px-3 py-2 bg-white text-md">
-          <option value="">Chọn điều kiện</option>
-          <option value="all">Tất cả</option>
-          <option value="instock">Còn hàng</option>
-          <option value="outofstock">Hết hàng</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-md font-medium mb-2">Giá bán</label>
-        <select className="w-full border rounded px-3 py-2 bg-white text-md">
-          <option value="">Chọn giá so sánh</option>
-        </select>
-      </div>
-
-      {/* {showCategorySelector && categories && (
-        <CategorySelectorModal
-          categories={categories}
-          selectedIds={selectedCategoryIds}
-          onApply={onSelectedCategoryIdsChange}
-          onClose={() => setShowCategorySelector(false)}
-        />
-      )} */}
-    </div>
+    </aside>
   );
 }
