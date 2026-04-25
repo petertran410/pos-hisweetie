@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { stockAuditsApi } from "@/lib/api/stock-audits";
+import { toast } from "sonner";
 import {
-  stockAuditsApi,
   StockAuditQueryParams,
   CreateStockAuditDto,
   UpdateStockAuditDto,
-} from "@/lib/api/stock-audits";
-import { toast } from "sonner";
+} from "../types/stock-audit";
 
 export function useStockAudits(params?: StockAuditQueryParams) {
   return useQuery({

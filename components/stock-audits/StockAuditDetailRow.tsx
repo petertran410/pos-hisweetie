@@ -6,7 +6,7 @@ import {
   useCancelStockAudit,
 } from "@/lib/hooks/useStockAudits";
 import { usePermission } from "@/lib/hooks/usePermissions";
-import type { StockAudit } from "@/lib/api/stock-audits";
+import { StockAudit } from "@/lib/types/stock-audit";
 
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
