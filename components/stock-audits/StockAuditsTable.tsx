@@ -7,6 +7,7 @@ import { Plus, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { StockAuditDetailRow } from "./StockAuditDetailRow";
 import { StockAuditForm } from "./StockAuditForm";
 import { usePermission } from "@/lib/hooks/usePermissions";
+import { formatCurrency } from "@/lib/utils";
 
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
@@ -48,16 +49,35 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
     fromDate: filters?.fromDate,
     toDate: filters?.toDate,
     creatorId: filters?.creatorId,
+    details: [],
   });
 
   const audits = data?.data || [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
 
+  const totalDiff = data?.data.map((item) =>
+    item.details.reduce((s, d) => s + Number(d.difference), 0)
+  );
+  const totalDiffValue = data?.data.map((item) =>
+    item.details.reduce((s, d) => s + Number(d.differenceValue), 0)
+  );
+  const totalActualQuantityValue = data?.data.map((item) =>
+    item.details.reduce((s, d) => s + Number(d.actualQuantity), 0)
+  );
+  const totalSystemQuantityValue = data?.data.map((item) =>
+    item.details.reduce((s, d) => s + Number(d.systemQuantity), 0)
+  );
+
+  console.log(totalDiff);
+  console.log(totalDiffValue);
+  console.log(totalActualQuantityValue);
+  console.log(totalSystemQuantityValue);
+
   const toggleExpand = (id: number) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
-  const colSpan = 8;
+  const colSpan = 10;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
@@ -103,13 +123,19 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
                 Ngày kiểm
               </th>
               <th className="px-4 py-2.5 text-right font-medium text-gray-600">
-                Số SP
+                Số sản phẩm
               </th>
               <th className="px-4 py-2.5 text-right font-medium text-gray-600">
-                Tổng lệch
+                Tổng tồn kho ban đầu
               </th>
-              <th className="px-4 py-2.5 text-left font-medium text-gray-600">
-                Ghi chú
+              <th className="px-4 py-2.5 text-right font-medium text-gray-600">
+                Tổng tồn kho thực tế
+              </th>
+              <th className="px-4 py-2.5 text-right font-medium text-gray-600">
+                Tổng số lượng lệch
+              </th>
+              <th className="px-4 py-2.5 text-right font-medium text-gray-600">
+                Tổng giá trị lệch
               </th>
               <th className="px-4 py-2.5 text-center font-medium text-gray-600">
                 Trạng thái
@@ -142,13 +168,6 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
                   : "";
                 const st = STATUS_MAP[audit.status] || STATUS_MAP[1];
 
-                // Tính tổng giá trị lệch
-                const totalDiffValue =
-                  audit.details?.reduce(
-                    (sum, d) => sum + Number(d.differenceValue),
-                    0
-                  ) || 0;
-
                 return (
                   <Fragment key={audit.id}>
                     <tr
@@ -173,20 +192,27 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
                         {audit.details?.length || 0}
                       </td>
                       <td
-                        className={`px-4 py-2.5 text-right font-medium ${borderCls} ${
-                          totalDiffValue < 0
-                            ? "text-red-600"
-                            : totalDiffValue > 0
-                              ? "text-green-600"
-                              : ""
-                        }`}>
-                        {totalDiffValue !== 0
-                          ? formatMoney(totalDiffValue)
+                        className={`px-4 py-2.5 text-right font-medium ${borderCls}`}>
+                        {totalSystemQuantityValue !== 0
+                          ? formatCurrency(totalSystemQuantityValue)
                           : "-"}
                       </td>
                       <td
-                        className={`px-4 py-2.5 text-gray-500 truncate max-w-[200px] ${borderCls}`}>
-                        {audit.note || "-"}
+                        className={`px-4 py-2.5 text-right font-medium ${borderCls}`}>
+                        {totalActualQuantityValue !== 0
+                          ? formatCurrency(totalActualQuantityValue)
+                          : "-"}
+                      </td>
+                      <td
+                        className={`px-4 py-2.5 text-right font-medium ${borderCls}`}>
+                        {totalDiff !== 0 ? formatCurrency(totalDiff) : "-"}
+                      </td>
+                      <td
+                        className={`px-4 py-2.5 text-right font-medium ${borderCls}`}>
+                        {totalDiffValue !== 0
+                          ? formatCurrency(totalDiffValue)
+                          : "-"}{" "}
+                        đ
                       </td>
                       <td className={`px-4 py-2.5 text-center ${borderCls}`}>
                         <span

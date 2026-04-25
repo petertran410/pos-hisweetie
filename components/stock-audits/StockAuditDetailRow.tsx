@@ -8,9 +8,7 @@ import {
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { StockAudit } from "@/lib/types/stock-audit";
 import { StockAuditForm } from "./StockAuditForm";
-
-const formatDateTime = (d?: string) =>
-  d ? new Date(d).toLocaleString("vi-VN") : "-";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 const formatMoney = (n: number) => n.toLocaleString("vi-VN") + " đ";
 
@@ -56,10 +54,17 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
     }
   };
 
-  // Tổng
   const totalDiff = audit.details.reduce((s, d) => s + Number(d.difference), 0);
   const totalDiffValue = audit.details.reduce(
     (s, d) => s + Number(d.differenceValue),
+    0
+  );
+  const totalActualQuantityValue = audit.details.reduce(
+    (s, d) => s + Number(d.actualQuantity),
+    0
+  );
+  const totalSystemQuantityValue = audit.details.reduce(
+    (s, d) => s + Number(d.systemQuantity),
     0
   );
 
@@ -86,7 +91,7 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
               </div>
               <div>
                 <span className="text-gray-500">Ngày kiểm:</span>
-                <p className="font-medium">{formatDateTime(audit.checkDate)}</p>
+                <p className="font-medium">{formatDate(audit.checkDate)}</p>
               </div>
             </div>
 
@@ -98,9 +103,7 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                 </div>
                 <div>
                   <span className="text-gray-500">Ngày hoàn thành:</span>
-                  <p className="font-medium">
-                    {formatDateTime(audit.completedAt)}
-                  </p>
+                  <p className="font-medium">{formatDate(audit.completedAt)}</p>
                 </div>
               </div>
             )}
@@ -133,11 +136,11 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                   <tr>
                     <th className="px-3 py-2 text-left">Mã hàng</th>
                     <th className="px-3 py-2 text-left">Tên hàng</th>
-                    <th className="px-3 py-2 text-center">ĐVT</th>
-                    <th className="px-3 py-2 text-right">Tồn kho HT</th>
-                    <th className="px-3 py-2 text-right">Thực tế</th>
-                    <th className="px-3 py-2 text-right">SL lệch</th>
-                    <th className="px-3 py-2 text-right">Giá trị lệch</th>
+                    <th className="px-3 py-2 text-center">Đơn vị tính</th>
+                    <th className="px-3 py-2 text-right">Tồn kho hiện tại</th>
+                    <th className="px-3 py-2 text-right">Tồn kho thực tế</th>
+                    <th className="px-3 py-2 text-right">Số lượng lệch</th>
+                    <th className="px-3 py-2 text-right">Giá trị lệch tổng</th>
                     <th className="px-3 py-2 text-left">Ghi chú</th>
                   </tr>
                 </thead>
@@ -180,7 +183,7 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                                 ? "text-green-600"
                                 : ""
                           }`}>
-                          {diffValue !== 0 ? formatMoney(diffValue) : "-"}
+                          {diffValue !== 0 ? formatCurrency(diffValue) : "-"}
                         </td>
                         <td className="px-3 py-2 text-gray-500">
                           {d.note || "-"}
@@ -191,8 +194,20 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                 </tbody>
                 <tfoot className="bg-gray-50 font-semibold">
                   <tr>
-                    <td colSpan={5} className="px-3 py-2 text-right">
+                    <td colSpan={1} className="px-3 py-2">
                       Tổng:
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td className={`px-3 py-2 text-right text-blue-600`}>
+                      {totalSystemQuantityValue > 0
+                        ? `${totalSystemQuantityValue.toLocaleString()}`
+                        : totalSystemQuantityValue.toLocaleString()}
+                    </td>
+                    <td className={`px-3 py-2 text-right text-green-600`}>
+                      {totalActualQuantityValue > 0
+                        ? `${totalActualQuantityValue.toLocaleString()}`
+                        : totalActualQuantityValue.toLocaleString()}
                     </td>
                     <td
                       className={`px-3 py-2 text-right ${
@@ -214,7 +229,9 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                             ? "text-green-600"
                             : ""
                       }`}>
-                      {totalDiffValue !== 0 ? formatMoney(totalDiffValue) : "-"}
+                      {totalDiffValue !== 0
+                        ? formatCurrency(totalDiffValue)
+                        : "-"}
                     </td>
                     <td></td>
                   </tr>

@@ -308,13 +308,13 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                             inputMode="decimal"
                             value={formatNumberInput(item.actualQuantity)}
                             onChange={(e) => {
-                              const val = e.target.value;
-                              // Chỉ cho phép số nguyên hoặc thập phân dương
-                              if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                              // Strip dấu phẩy trước khi validate
+                              const raw = e.target.value.replace(/,/g, "");
+                              if (raw === "" || /^\d*\.?\d*$/.test(raw)) {
                                 updateItem(
                                   item.productId,
                                   "actualQuantity",
-                                  val
+                                  raw
                                 );
                               }
                             }}
