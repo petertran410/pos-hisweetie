@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   useAddProductsToPriceBook,
   useProductsWithPrices,
@@ -17,6 +17,7 @@ import { useBranchStore } from "@/lib/store/branch";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { FieldGuard } from "../permissions/FieldGuard";
 import { usePermission } from "@/lib/hooks/usePermissions";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface TableProduct {
   id: number;
@@ -47,12 +48,15 @@ export function PriceBookTable({
   branchId,
 }: PriceBookTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
   const [editingCell, setEditingCell] = useState<{
     productId: number;
     priceBookId: number;
     value: string;
   } | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(15);
 
   const canCreate = usePermission("price_books", "create");
   const canUpdate = usePermission("price_books", "update");
@@ -64,6 +68,20 @@ export function PriceBookTable({
   const updateRetailPrice = useUpdateProductRetailPrice();
   const updateProductPrice = useUpdateProductPrice();
   const addProductsToPriceBook = useAddProductsToPriceBook();
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // Reset page khi filter đổi
+  useEffect(() => {
+    setPage(1);
+  }, [selectedCategoryIds, selectedPriceBooks]);
 
   const hasDefaultPriceBook = selectedPriceBooks.some((pb) => pb.id === 0);
   const realPriceBooks = selectedPriceBooks.filter(
@@ -81,18 +99,21 @@ export function PriceBookTable({
   const isDefaultOnly = hasDefaultPriceBook && realPriceBooks.length === 0;
 
   const { data: allProductsData, isLoading: isLoadingAll } = useProducts({
-    search: searchQuery,
+    search: debouncedSearch,
     categoryIds,
-    limit: 1000,
+    page,
+    limit,
     branchId,
   });
 
-  const { data: productsWithPrices, isLoading: isLoadingPrices } =
+  const { data: productsWithPricesData, isLoading: isLoadingPrices } =
     useProductsWithPrices({
       priceBookIds,
-      search: searchQuery,
-      categoryIds: categoryIds,
+      search: debouncedSearch,
+      categoryIds,
       branchId,
+      page,
+      limit,
     });
 
   const products = useMemo<TableProduct[] | undefined>(() => {
@@ -109,31 +130,33 @@ export function PriceBookTable({
         inventories: p.inventories,
       }));
     } else {
-      return productsWithPrices as TableProduct[] | undefined;
+      return productsWithPricesData?.data;
     }
-  }, [isDefaultOnly, allProductsData, productsWithPrices]);
+  }, [isDefaultOnly, allProductsData, productsWithPricesData]);
+
+  const total = isDefaultOnly
+    ? (allProductsData?.total ?? 0)
+    : (productsWithPricesData?.total ?? 0);
+  const totalPages = Math.ceil(total / limit) || 1;
 
   const isLoading = isDefaultOnly ? isLoadingAll : isLoadingPrices;
+
+  // === handleCellClick, handlePriceChange, handleBlur, handleKeyDown ===
+  // === toggleSelectAll, toggleSelect, handleAddProductToPriceBook ===
+  // (giữ nguyên toàn bộ — không thay đổi gì)
 
   const handleCellClick = (productId: number, priceBookId: number) => {
     if (!canUpdatePrice) {
       toast.error("Bạn không có quyền chỉnh sửa giá bán");
       return;
     }
-
     const product = products?.find((p) => p.id === productId);
     if (!product) return;
-
     const currentPrice =
       priceBookId === 0
         ? product.basePrice.toString()
         : (product.prices[priceBookId] || 0).toString();
-
-    setEditingCell({
-      productId,
-      priceBookId,
-      value: currentPrice,
-    });
+    setEditingCell({ productId, priceBookId, value: currentPrice });
   };
 
   const handlePriceChange = (
@@ -141,23 +164,17 @@ export function PriceBookTable({
     productId: number,
     priceBookId: number
   ) => {
-    setEditingCell({
-      productId,
-      priceBookId,
-      value: e.target.value,
-    });
+    setEditingCell({ productId, priceBookId, value: e.target.value });
   };
 
   const handleBlur = async () => {
     if (!editingCell) return;
-
     const newPrice = Number(editingCell.value);
     if (isNaN(newPrice) || newPrice < 0) {
       toast.error("Giá không hợp lệ");
       setEditingCell(null);
       return;
     }
-
     try {
       if (editingCell.priceBookId === 0) {
         await updateRetailPrice.mutateAsync({
@@ -181,11 +198,8 @@ export function PriceBookTable({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleBlur();
-    } else if (e.key === "Escape") {
-      setEditingCell(null);
-    }
+    if (e.key === "Enter") handleBlur();
+    else if (e.key === "Escape") setEditingCell(null);
   };
 
   const toggleSelectAll = () => {
@@ -200,6 +214,26 @@ export function PriceBookTable({
     setSelectedProductIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
+  };
+
+  const handleAddProductToPriceBook = async (
+    productId: number,
+    priceBookId: number,
+    initialPrice: number
+  ) => {
+    try {
+      await addProductsToPriceBook.mutateAsync({
+        priceBookId,
+        products: [{ productId, price: initialPrice }],
+      });
+      setEditingCell({
+        productId,
+        priceBookId,
+        value: initialPrice.toString(),
+      });
+    } catch (error: any) {
+      toast.error(error.message || "Có lỗi xảy ra");
+    }
   };
 
   if (selectedPriceBooks.length === 0) {
@@ -217,30 +251,10 @@ export function PriceBookTable({
     );
   }
 
-  const handleAddProductToPriceBook = async (
-    productId: number,
-    priceBookId: number,
-    initialPrice: number
-  ) => {
-    try {
-      await addProductsToPriceBook.mutateAsync({
-        priceBookId,
-        products: [{ productId, price: initialPrice }],
-      });
-
-      setEditingCell({
-        productId,
-        priceBookId,
-        value: initialPrice.toString(),
-      });
-    } catch (error: any) {
-      toast.error(error.message || "Có lỗi xảy ra");
-    }
-  };
-
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
-      <div className="border-b p-4 flex items-center justify-between">
+    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl">
+      {/* Header */}
+      <div className="border-b p-4 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4 w-[500px]">
           <h2 className="text-xl font-semibold w-[200px]">Thiết Lập Giá</h2>
           <input
@@ -272,8 +286,9 @@ export function PriceBookTable({
         </PermissionGate>
       </div>
 
+      {/* Selected bar */}
       {selectedProductIds.length > 0 && (
-        <div className="border-b p-4 bg-blue-50 flex items-center justify-between">
+        <div className="border-b p-4 bg-blue-50 flex items-center justify-between shrink-0">
           <span className="text-sm">
             Đã chọn {selectedProductIds.length} sản phẩm
           </span>
@@ -285,6 +300,7 @@ export function PriceBookTable({
         </div>
       )}
 
+      {/* Table */}
       <div className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
@@ -304,10 +320,10 @@ export function PriceBookTable({
             </div>
           </div>
         ) : (
-          <table className="w-full">
+          <table className="w-full text-sm" style={{ minWidth: "max-content" }}>
             <thead className="bg-gray-50 border-b sticky top-0 z-10">
               <tr>
-                <th className="p-3 text-left">
+                <th className="p-3 text-left sticky left-0 bg-gray-50 z-20">
                   <input
                     type="checkbox"
                     checked={
@@ -315,22 +331,30 @@ export function PriceBookTable({
                       selectedProductIds.length === products.length
                     }
                     onChange={toggleSelectAll}
+                    className="cursor-pointer"
                   />
                 </th>
-                <th className="p-3 text-left text-sm font-medium">Mã hàng</th>
-                <th className="p-3 text-left text-sm font-medium">Tên hàng</th>
-                <th className="p-3 text-right text-sm font-medium">Giá vốn</th>
+                <th className="p-3 text-left font-medium text-gray-700 whitespace-nowrap">
+                  Mã hàng
+                </th>
+                <th className="p-3 text-left font-medium text-gray-700 whitespace-nowrap">
+                  Tên hàng
+                </th>
+                <th className="p-3 text-right font-medium text-gray-700 whitespace-nowrap">
+                  Giá vốn
+                </th>
                 {selectedPriceBooks.map((pb) => (
                   <th
                     key={pb.id}
-                    className="p-3 text-right text-sm font-medium">
+                    className="p-3 text-right font-medium text-gray-700 whitespace-nowrap"
+                    style={{ minWidth: "140px" }}>
                     {pb.name}
                   </th>
                 ))}
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="bg-white divide-y divide-gray-100">
               {products.map((product) => {
                 const selectedBranchId =
                   useBranchStore.getState().selectedBranch?.id;
@@ -339,25 +363,24 @@ export function PriceBookTable({
                 );
                 const cost = inventory ? Number(inventory.cost) : 0;
                 return (
-                  <tr key={product.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">
+                  <tr key={product.id} className="hover:bg-gray-50">
+                    <td className="p-3 sticky left-0 bg-white z-10">
                       <input
                         type="checkbox"
                         checked={selectedProductIds.includes(product.id)}
                         onChange={() => toggleSelect(product.id)}
+                        className="cursor-pointer"
                       />
                     </td>
-                    <td className="p-3 text-sm">{product.code}</td>
-                    <td className="p-3 text-sm">{product.name}</td>
-                    <td className="p-3 text-sm text-right">
+                    <td className="p-3 whitespace-nowrap">{product.code}</td>
+                    <td className="p-3">{product.name}</td>
+                    <td className="p-3 text-right whitespace-nowrap">
                       {cost.toLocaleString()}
                     </td>
                     {selectedPriceBooks.map((pb) => {
                       const isEditing =
                         editingCell?.productId === product.id &&
                         editingCell?.priceBookId === pb.id;
-
-                      // Kiểm tra xem sản phẩm có trong bảng giá hay chưa
                       const priceExists =
                         pb.id === 0 || product.prices[pb.id] !== undefined;
                       const displayPrice =
@@ -366,7 +389,8 @@ export function PriceBookTable({
                       return (
                         <td
                           key={pb.id}
-                          className="p-3 text-sm text-right cursor-pointer hover:bg-blue-50"
+                          className="p-3 text-right cursor-pointer hover:bg-blue-50 whitespace-nowrap"
+                          style={{ minWidth: "140px" }}
                           onClick={() => {
                             if (pb.id !== 0 && !priceExists) {
                               handleAddProductToPriceBook(
@@ -395,14 +419,13 @@ export function PriceBookTable({
                               +
                             </button>
                           ) : canViewProduct ? (
-                            <span
-                              onClick={() =>
-                                handleCellClick(product.id, pb.id)
-                              }>
-                              {displayPrice.toLocaleString()}
+                            <span>
+                              {displayPrice !== undefined
+                                ? displayPrice.toLocaleString()
+                                : "-"}
                             </span>
                           ) : (
-                            <span>Không có quyền xem giá</span>
+                            <span>***</span>
                           )}
                         </td>
                       );
@@ -413,6 +436,65 @@ export function PriceBookTable({
             </tbody>
           </table>
         )}
+      </div>
+
+      {/* Pagination */}
+      <div className="border-t px-4 py-2.5 flex items-center justify-between bg-white shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">Hiển thị</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            {[10, 15, 20, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-gray-500">/ trang</span>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPage(Math.max(1, page - 1))}
+            disabled={page === 1}
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            const p = Math.min(
+              Math.max(page - 2 + i, i + 1),
+              totalPages - (Math.min(5, totalPages) - 1 - i)
+            );
+            return (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
+                  p === page
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "hover:bg-gray-50 text-gray-600 border-gray-200"
+                }`}>
+                {p}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setPage(Math.min(totalPages, page + 1))}
+            disabled={page >= totalPages}
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        <span className="text-xs text-gray-400">
+          Trang {page}/{totalPages}
+          {total > 0 ? ` • ${total} sản phẩm` : ""}
+        </span>
       </div>
     </div>
   );

@@ -184,16 +184,21 @@ export const priceBooksApi = {
     search?: string;
     categoryIds?: string;
     branchId?: number;
-  }): Promise<ProductWithPrices[]> => {
-    return apiClient
-      .get("/price-books/products-with-prices", {
-        priceBookIds: params.priceBookIds.join(","),
-        search: params.search,
-        categoryIds: params.categoryIds,
-        branchId: params.branchId,
-      })
-      .then((response) => {
-        return response;
-      });
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: ProductWithPrices[];
+    total: number;
+    page: number;
+    limit: number;
+  }> => {
+    return apiClient.get("/price-books/products-with-prices", {
+      priceBookIds: params.priceBookIds.join(","),
+      search: params.search,
+      categoryIds: params.categoryIds,
+      branchId: params.branchId,
+      page: params.page,
+      limit: params.limit,
+    });
   },
 };

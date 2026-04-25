@@ -224,6 +224,8 @@ export function useProductsWithPrices(params: {
   search?: string;
   categoryIds?: string;
   branchId?: number;
+  page?: number;
+  limit?: number;
 }) {
   return useQuery({
     queryKey: ["products-with-prices", params],
