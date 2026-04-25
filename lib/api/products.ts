@@ -19,6 +19,10 @@ export interface ProductQueryParams {
   branchIds?: number[];
   type?: number;
   types?: number[];
+  parentName?: string;
+  middleName?: string;
+  childName?: string;
+  stockStatus?: string;
 }
 
 export interface Inventory {

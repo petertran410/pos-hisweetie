@@ -15,7 +15,6 @@ import type { Inventory, Product } from "@/lib/api/products";
 import { toast } from "react-hot-toast";
 import { useBranchStore } from "@/lib/store/branch";
 import { PermissionGate } from "../permissions/PermissionGate";
-import { FieldGuard } from "../permissions/FieldGuard";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -27,7 +26,7 @@ interface TableProduct {
   unit?: string;
   prices: Record<number, number>;
   stockQuantity: number;
-  inventories?: Inventory[];
+  inventories?: { onHand: number; cost: number; branchId: number }[];
 }
 
 interface PriceBookTableProps {
@@ -35,7 +34,7 @@ interface PriceBookTableProps {
   onAddProducts?: () => void;
   onCreateNew: () => void;
   onImportClick?: () => void;
-  selectedCategoryIds: number[];
+  selectedCategoryIds?: number[];
   filters: any;
   branchId?: number;
 }
@@ -136,7 +135,11 @@ export function PriceBookTable({
         prices: {},
         stockQuantity:
           p.inventories?.reduce((sum, inv) => sum + Number(inv.onHand), 0) || 0,
-        inventories: p.inventories,
+        inventories: p.inventories?.map((inv) => ({
+          onHand: Number(inv.onHand),
+          cost: Number(inv.cost),
+          branchId: inv.branchId,
+        })),
       }));
     } else {
       return productsWithPricesData?.data;
