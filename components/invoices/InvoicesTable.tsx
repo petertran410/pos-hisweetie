@@ -11,11 +11,13 @@ import {
   ChevronRight,
   X,
   SlidersHorizontal,
+  Upload,
 } from "lucide-react";
 import type { Invoice } from "@/lib/types/invoice";
 import { InvoiceDetailRow } from "./InvoiceDetailRow";
 import { formatCurrency } from "@/lib/utils";
 import { Can } from "../permissions/Can";
+import { InvoiceImportModal } from "./InvoiceImportModal";
 
 interface ColumnConfig {
   key: string;
@@ -369,6 +371,7 @@ export function InvoicesTable({
     descriptionSearch: "",
     productNoteSearch: "",
   });
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const advancedFilterCount = useMemo(() => {
     return Object.values(advancedSearch).filter(Boolean).length;
@@ -682,6 +685,15 @@ export function InvoicesTable({
               </button>
             </Can>
 
+            <Can resource="invoices" action="create">
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5">
+                <Upload className="w-4 h-4" />
+                Import
+              </button>
+            </Can>
+
             {/* Báo đơn dropdown */}
             <div ref={baoDonRef} className="relative">
               <button
@@ -928,6 +940,10 @@ export function InvoicesTable({
           </div>
         )}
       </div>
+
+      {showImportModal && (
+        <InvoiceImportModal onClose={() => setShowImportModal(false)} />
+      )}
     </Can>
   );
 }
