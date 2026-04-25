@@ -235,7 +235,7 @@ export function PriceBookSidebar({
             <button
               type="button"
               onClick={() => setShowDropdown(!showDropdown)}
-              className="w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors">
+              className="w-full flex items-center justify-between border rounded-lg px-2 py-1 text-sm hover:bg-gray-50 transition-colors">
               <span className="text-gray-900 truncate">{getDisplayText()}</span>
               <ChevronDown
                 className={`w-4 h-4 text-gray-400 transition-transform ${showDropdown ? "rotate-180" : ""}`}
@@ -250,7 +250,7 @@ export function PriceBookSidebar({
                     placeholder="Tìm kiếm"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                     autoFocus
                   />
                 </div>
@@ -269,7 +269,7 @@ export function PriceBookSidebar({
 
                 <div className="max-h-60 overflow-y-auto">
                   <label
-                    className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 border-b ${
+                    className={`flex items-center gap-3 px-2 py-1 cursor-pointer hover:bg-gray-50 border-b ${
                       selectedIds.includes(0) ? "bg-blue-50" : ""
                     }`}>
                     <input
@@ -286,7 +286,7 @@ export function PriceBookSidebar({
                   {filteredPriceBooks?.map((pb) => (
                     <label
                       key={pb.id}
-                      className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 ${
+                      className={`flex items-center gap-3 px-2 py-1 cursor-pointer hover:bg-gray-50 ${
                         selectedIds.includes(pb.id) ? "bg-blue-50" : ""
                       }`}>
                       <input

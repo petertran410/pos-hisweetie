@@ -27,6 +27,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   bank_accounts: "Tài khoản ngân hàng",
   return_orders: "Trả hàng",
   debt_offsets: "Cấn trừ công nợ",
+  stock_audits: "Kiểm kho",
 };
 
 export const ACTION_LABELS: Record<string, string> = {
