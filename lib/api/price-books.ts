@@ -92,11 +92,11 @@ export interface ProductWithPrices {
   id: number;
   code: string;
   name: string;
-  purchasePrice: number;
-  retailPrice: number;
+  basePrice: number;
   stockQuantity: number;
   unit?: string;
   prices: Record<number, number>;
+  inventories?: { onHand: number; cost: number; branchId: number }[];
 }
 
 export const priceBooksApi = {
