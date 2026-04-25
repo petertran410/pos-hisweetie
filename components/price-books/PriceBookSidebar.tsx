@@ -214,7 +214,7 @@ export function PriceBookSidebar({
         )}
       </div>
 
-      <div className="p-4 space-y-3 overflow-y-auto">
+      <div className="p-4 space-y-3 overflow-y-auto h-[600px]">
         {/* ── Bảng giá (giữ nguyên logic multi-select) ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">

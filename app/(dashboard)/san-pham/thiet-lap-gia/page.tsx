@@ -40,40 +40,38 @@ export default function PriceBooksPage() {
   return (
     <Can resource="price_books" action="view">
       <div className="flex h-full border-t bg-gray-50">
-        <div className="flex-1 flex overflow-hidden">
-          <PriceBookSidebar
-            priceBooks={priceBooksData?.data}
-            selectedIds={selectedPriceBookIds}
-            onSelectedIdsChange={setSelectedPriceBookIds}
-            onCreateNew={() => setShowForm(true)}
-            onFiltersChange={handleFiltersChange}
-          />
+        <PriceBookSidebar
+          priceBooks={priceBooksData?.data}
+          selectedIds={selectedPriceBookIds}
+          onSelectedIdsChange={setSelectedPriceBookIds}
+          onCreateNew={() => setShowForm(true)}
+          onFiltersChange={handleFiltersChange}
+        />
 
-          <PriceBookTable
-            selectedPriceBooks={selectedPriceBooks}
-            onAddProducts={() => setShowProductSelector(true)}
-            onCreateNew={() => setShowForm(true)}
-            onImportClick={() => setShowImportModal(true)}
-            filters={filters}
-            branchId={selectedBranch?.id}
-          />
-        </div>
-
-        {showForm && (
-          <PriceBookForm
-            priceBook={null}
-            onClose={() => setShowForm(false)}
-            onSuccess={() => setShowForm(false)}
-          />
-        )}
-
-        {showProductSelector && selectedPriceBooks.length > 0 && (
-          <PriceBookProductSelector
-            priceBookId={selectedPriceBooks[0].id}
-            onClose={() => setShowProductSelector(false)}
-          />
-        )}
+        <PriceBookTable
+          selectedPriceBooks={selectedPriceBooks}
+          onAddProducts={() => setShowProductSelector(true)}
+          onCreateNew={() => setShowForm(true)}
+          onImportClick={() => setShowImportModal(true)}
+          filters={filters}
+          branchId={selectedBranch?.id}
+        />
       </div>
+
+      {showForm && (
+        <PriceBookForm
+          priceBook={null}
+          onClose={() => setShowForm(false)}
+          onSuccess={() => setShowForm(false)}
+        />
+      )}
+
+      {showProductSelector && selectedPriceBooks.length > 0 && (
+        <PriceBookProductSelector
+          priceBookId={selectedPriceBooks[0].id}
+          onClose={() => setShowProductSelector(false)}
+        />
+      )}
 
       {showImportModal && (
         <PriceBookImportModal onClose={() => setShowImportModal(false)} />
