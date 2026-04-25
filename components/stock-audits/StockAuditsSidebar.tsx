@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { ChevronDown, Calendar } from "lucide-react";
+import { createPortal } from "react-dom";
 
 interface StockAuditsSidebarProps {
   filters: any;
@@ -151,16 +152,39 @@ export function StockAuditsSidebar({
   const [toDate, setToDate] = useState("");
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
   const calRef = useRef<HTMLDivElement>(null);
+  const fromBtnRef = useRef<HTMLButtonElement>(null);
+  const toBtnRef = useRef<HTMLButtonElement>(null);
+  const [calPos, setCalPos] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!openCal) return;
     const h = (e: MouseEvent) => {
-      if (calRef.current && !calRef.current.contains(e.target as Node))
-        setOpenCal(null);
+      const target = e.target as Node;
+      const fromBtn = fromBtnRef.current;
+      const toBtn = toBtnRef.current;
+      if (fromBtn?.contains(target) || toBtn?.contains(target)) return;
+      setOpenCal(null);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [openCal]);
+
+  const openCalendar = (type: "from" | "to") => {
+    if (openCal === type) {
+      setOpenCal(null);
+      return;
+    }
+    const ref = type === "from" ? fromBtnRef : toBtnRef;
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setCalPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    }
+    setOpenCal(type);
+  };
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
@@ -281,15 +305,16 @@ export function StockAuditsSidebar({
         </div>
 
         {/* ── Thời gian kiểm ── */}
-        <div ref={calRef}>
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Thời gian kiểm
           </label>
           <div className="space-y-2">
             <div className="relative">
               <button
+                ref={fromBtnRef}
                 type="button"
-                onClick={() => setOpenCal(openCal === "from" ? null : "from")}
+                onClick={() => openCalendar("from")}
                 className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm text-left transition-colors ${
                   openCal === "from"
                     ? "ring-1 ring-blue-500 border-blue-500"
@@ -302,20 +327,12 @@ export function StockAuditsSidebar({
                 </span>
                 <Calendar className="w-4 h-4 text-gray-400" />
               </button>
-              {openCal === "from" && (
-                <div className="absolute top-full left-0 mt-1 z-[999]">
-                  <MiniCalendar
-                    value={fromDate}
-                    onChange={setFromDate}
-                    onClose={() => setOpenCal(null)}
-                  />
-                </div>
-              )}
             </div>
             <div className="relative">
               <button
+                ref={toBtnRef}
                 type="button"
-                onClick={() => setOpenCal(openCal === "to" ? null : "to")}
+                onClick={() => openCalendar("to")}
                 className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm text-left transition-colors ${
                   openCal === "to" ? "ring-1 ring-blue-500 border-blue-500" : ""
                 }`}>
@@ -326,20 +343,40 @@ export function StockAuditsSidebar({
                 </span>
                 <Calendar className="w-4 h-4 text-gray-400" />
               </button>
-              {openCal === "to" && (
-                <div className="absolute top-full left-0 mt-1 z-[9999]">
-                  <MiniCalendar
-                    value={toDate}
-                    onChange={setToDate}
-                    onClose={() => setOpenCal(null)}
-                    minDate={fromDate}
-                  />
-                </div>
-              )}
             </div>
           </div>
         </div>
       </div>
+
+      {openCal &&
+        calPos &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              top: calPos.top,
+              left: calPos.left,
+              zIndex: 9999,
+            }}>
+            {openCal === "from" && (
+              <MiniCalendar
+                value={fromDate}
+                onChange={setFromDate}
+                onClose={() => setOpenCal(null)}
+              />
+            )}
+            {openCal === "to" && (
+              <MiniCalendar
+                value={toDate}
+                onChange={setToDate}
+                onClose={() => setOpenCal(null)}
+                minDate={fromDate}
+              />
+            )}
+          </div>,
+          document.body
+        )}
     </aside>
   );
 }
