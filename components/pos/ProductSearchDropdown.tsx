@@ -42,7 +42,7 @@ export function ProductSearchDropdown({
 
   const { data: productsData } = useProducts({
     search: searchDebounced,
-    limit: 10,
+    limit: 100,
     branchId: selectedBranch?.id,
   });
 
