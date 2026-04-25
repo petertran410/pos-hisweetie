@@ -56,24 +56,6 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
 
-  const totalDiff = data?.data.map((item) =>
-    item.details.reduce((s, d) => s + Number(d.difference), 0)
-  );
-  const totalDiffValue = data?.data.map((item) =>
-    item.details.reduce((s, d) => s + Number(d.differenceValue), 0)
-  );
-  const totalActualQuantityValue = data?.data.map((item) =>
-    item.details.reduce((s, d) => s + Number(d.actualQuantity), 0)
-  );
-  const totalSystemQuantityValue = data?.data.map((item) =>
-    item.details.reduce((s, d) => s + Number(d.systemQuantity), 0)
-  );
-
-  console.log(totalDiff);
-  console.log(totalDiffValue);
-  console.log(totalActualQuantityValue);
-  console.log(totalSystemQuantityValue);
-
   const toggleExpand = (id: number) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
@@ -167,6 +149,27 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
                   ? "border-t-2 border-blue-500"
                   : "";
                 const st = STATUS_MAP[audit.status] || STATUS_MAP[1];
+
+                const totalSystemQuantityValue =
+                  audit.details?.reduce(
+                    (s, d) => s + Number(d.systemQuantity),
+                    0
+                  ) ?? 0;
+                const totalActualQuantityValue =
+                  audit.details?.reduce(
+                    (s, d) => s + Number(d.actualQuantity),
+                    0
+                  ) ?? 0;
+                const totalDiff =
+                  audit.details?.reduce(
+                    (s, d) => s + Number(d.difference),
+                    0
+                  ) ?? 0;
+                const totalDiffValue =
+                  audit.details?.reduce(
+                    (s, d) => s + Number(d.differenceValue),
+                    0
+                  ) ?? 0;
 
                 return (
                   <Fragment key={audit.id}>
