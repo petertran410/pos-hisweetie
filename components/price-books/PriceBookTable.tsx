@@ -11,12 +11,13 @@ import {
   useUpdateProductRetailPrice,
 } from "@/lib/hooks/useProducts";
 import type { PriceBook } from "@/lib/api/price-books";
-import type { Inventory, Product } from "@/lib/api/products";
-import { toast } from "react-hot-toast";
+import type { Product } from "@/lib/api/products";
+import { toast } from "sonner";
 import { useBranchStore } from "@/lib/store/branch";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { formatNumberInput } from "@/lib/utils";
 
 interface TableProduct {
   id: number;
@@ -172,7 +173,8 @@ export function PriceBookTable({
     productId: number,
     priceBookId: number
   ) => {
-    setEditingCell({ productId, priceBookId, value: e.target.value });
+    const raw = e.target.value.replace(/[^0-9]/g, "");
+    setEditingCell({ productId, priceBookId, value: raw });
   };
 
   const handleBlur = async () => {
@@ -412,15 +414,17 @@ export function PriceBookTable({
                           }}>
                           {isEditing && canUpdate ? (
                             <input
-                              type="number"
-                              value={editingCell.value}
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={formatNumberInput(editingCell.value)}
                               onChange={(e) =>
                                 handlePriceChange(e, product.id, pb.id)
                               }
                               onBlur={handleBlur}
                               onKeyDown={handleKeyDown}
                               autoFocus
-                              className="w-full border rounded px-2 py-1 text-right"
+                              className="w-full border rounded px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                           ) : pb.id !== 0 && !priceExists && canCreate ? (
                             <button className="text-blue-600 hover:text-blue-800 text-xl font-bold">
