@@ -1,23 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { CashFlowsTable } from "@/components/cashflows/CashFlowsTable";
 import { CashFlowsSidebar } from "@/components/cashflows/CashFlowsSidebar";
 
 export default function SoQuyPage() {
-  const [filters, setFilters] = useState({});
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code");
 
-  const handleCreateReceiptClick = () => {};
+  const [filters, setFilters] = useState<any>(() =>
+    codeParam ? { code: codeParam } : {}
+  );
 
-  const handleCreatePaymentClick = () => {};
+  const handleFiltersChange = useCallback(
+    (newFilters: any) => {
+      setFilters({
+        ...newFilters,
+        ...(codeParam ? { code: codeParam } : {}),
+      });
+    },
+    [codeParam]
+  );
 
   return (
     <div className="flex h-full border-t bg-gray-50">
-      <CashFlowsSidebar filters={filters} onFiltersChange={setFilters} />
+      <CashFlowsSidebar
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+      />
       <CashFlowsTable
         filters={filters}
-        onCreateReceiptClick={handleCreateReceiptClick}
-        onCreatePaymentClick={handleCreatePaymentClick}
+        onCreateReceiptClick={() => {}}
+        onCreatePaymentClick={() => {}}
       />
     </div>
   );
