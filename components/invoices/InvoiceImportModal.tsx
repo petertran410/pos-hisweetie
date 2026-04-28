@@ -226,6 +226,7 @@ export function InvoiceImportModal({ onClose }: InvoiceImportModalProps) {
   const [fileName, setFileName] = useState("");
   const [parseError, setParseError] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [recalculateDebt, setRecalculateDebt] = useState(false);
 
   // Validation preview
   const validation = useMemo(() => {
@@ -323,6 +324,7 @@ export function InvoiceImportModal({ onClose }: InvoiceImportModalProps) {
 
       const params = new URLSearchParams();
       if (branchId) params.set("branchId", String(branchId));
+      if (recalculateDebt) params.set("recalculateCustomerDebt", "true");
       const queryStr = params.toString();
 
       const url = `${API_URL}/import/invoices${queryStr ? `?${queryStr}` : ""}`;
@@ -385,6 +387,18 @@ export function InvoiceImportModal({ onClose }: InvoiceImportModalProps) {
           {/* Upload area */}
           {previewRows.length === 0 && !result && (
             <>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={recalculateDebt}
+                  onChange={(e) => setRecalculateDebt(e.target.checked)}
+                  className="accent-blue-600 w-4 h-4"
+                />
+                <span className="text-sm text-gray-700">
+                  Tính lại công nợ khách hàng sau khi import
+                </span>
+              </label>
+
               <div
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
