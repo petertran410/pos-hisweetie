@@ -23,7 +23,6 @@ export function CustomerDetailRow({
   onEditClick,
 }: CustomerDetailRowProps) {
   const { data: customer, isLoading } = useCustomer(customerId);
-  console.log(customer);
   const updateCustomer = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
   const [activeTab, setActiveTab] = useState<

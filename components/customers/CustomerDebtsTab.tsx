@@ -3,6 +3,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { CustomerPaymentModal } from "./CustomerPaymentModal";
+import Link from "next/link";
 
 interface CustomerDebtsTabProps {
   customerId: number;
@@ -105,17 +106,41 @@ export function CustomerDebtsTab({
                   const isInvoice = item.type === "invoice";
                   const isPayment = item.type === "payment";
                   const isDebtOffset = item.type === "debt_offset";
-                  const isReturnOrder = item.type === "return_order"; // THÊM
-                  const isExpense = item.type === "expense"; // THÊM
+                  const isReturnOrder = item.type === "return_order";
+                  const isExpense = item.type === "expense";
 
                   return (
                     <tr
                       key={`${item.type}-${item.id}`}
                       className="border-b hover:bg-gray-50">
                       <td className="px-4 py-3">
-                        <span className="text-blue-600 hover:underline cursor-pointer">
-                          {item.code}
-                        </span>
+                        {item.type === "invoice" ? (
+                          <>
+                            <Link
+                              href={`/don-hang/hoa-don?Code=${item.code}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-md font-medium text-blue-600 hover:underline"
+                              onClick={(e) => e.stopPropagation()}>
+                              {item.code}
+                            </Link>
+                          </>
+                        ) : item.type === "payment" ? (
+                          <>
+                            <Link
+                              href={`/so-quy?Code=${item.code}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-md font-medium text-blue-600 hover:underline"
+                              onClick={(e) => e.stopPropagation()}>
+                              {item.code}
+                            </Link>
+                          </>
+                        ) : (
+                          <span className="text-blue-600 hover:underline cursor-pointer">
+                            {item.code}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-md">
                         {new Date(item.date).toLocaleString("vi-VN")}
