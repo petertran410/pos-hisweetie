@@ -45,6 +45,7 @@ interface PreviewRow {
 interface ImportResult {
   total: number;
   imported: number;
+  updated: number;
   failed: number;
   errors: { row?: number; invoiceCode?: string; error: string }[];
 }
@@ -514,8 +515,9 @@ export function InvoiceImportModal({ onClose }: InvoiceImportModalProps) {
                       : "Import hoàn tất với lỗi"}
                   </p>
                   <p className="text-sm text-gray-600 mt-0.5">
-                    Tổng: {result.total} · Tạo mới: {result.imported} · Lỗi:{" "}
-                    {result.failed}
+                    Tổng: {result.total} · Tạo mới: {result.imported}
+                    {result.updated > 0 && ` · Cập nhật: ${result.updated}`}
+                    {result.failed > 0 && ` · Lỗi: ${result.failed}`}
                   </p>
                 </div>
               </div>
