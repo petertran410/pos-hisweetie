@@ -24,6 +24,7 @@ interface AuditLogsTableProps {
 const categoryNames: Record<string, string> = {
   order: "Đơn hàng",
   invoice: "Hóa đơn",
+  return_order: "Phiếu trả hàng",
   payment: "Thanh toán",
   product: "Sản phẩm",
   customer: "Khách hàng",

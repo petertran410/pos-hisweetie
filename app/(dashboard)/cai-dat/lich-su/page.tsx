@@ -11,6 +11,7 @@ const CATEGORY_OPTIONS = [
   { value: "", label: "Tất cả" },
   { value: "order", label: "Đơn hàng" },
   { value: "invoice", label: "Hóa đơn" },
+  { value: "return_order", label: "Phiếu trả hàng" },
   { value: "payment", label: "Thanh toán" },
   { value: "product", label: "Sản phẩm" },
   { value: "customer", label: "Khách hàng" },
