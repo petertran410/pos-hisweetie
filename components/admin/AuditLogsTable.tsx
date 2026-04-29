@@ -376,6 +376,95 @@ function renderSnapshot(entityType: string, snapshot: any): string {
     return lines.join("\n");
   }
 
+  if (entityType === "price_books") {
+    if (snapshot.priceBookName) {
+      lines.push(`Bảng giá: ${snapshot.priceBookName}`);
+    } else if (snapshot.name) {
+      lines.push(`Tên bảng giá: ${snapshot.name}`);
+    }
+    if (snapshot.isActive !== undefined)
+      lines.push(`Trạng thái: ${snapshot.isActive ? "Đang hoạt động" : "Tắt"}`);
+    if (snapshot.addedCount !== undefined)
+      lines.push(`Số sản phẩm thêm: ${snapshot.addedCount}`);
+    if (snapshot.removedCount !== undefined)
+      lines.push(`Số sản phẩm xóa: ${snapshot.removedCount}`);
+    if (snapshot.productName) lines.push(`Sản phẩm: ${snapshot.productName}`);
+    if (snapshot.oldPrice !== undefined)
+      lines.push(`Giá cũ: ${fmtCurrency(snapshot.oldPrice)}`);
+    if (snapshot.newPrice !== undefined)
+      lines.push(`Giá mới: ${fmtCurrency(snapshot.newPrice)}`);
+    return lines.join("\n");
+  }
+
+  if (entityType === "return_orders") {
+    lines.push(`Mã phiếu: ${snapshot.code || "N/A"}`);
+    if (snapshot.invoiceCodes) lines.push(`Hóa đơn: ${snapshot.invoiceCodes}`);
+    if (snapshot.customerName)
+      lines.push(`Khách hàng: ${snapshot.customerName}`);
+    if (snapshot.branchName) lines.push(`Chi nhánh: ${snapshot.branchName}`);
+    if (snapshot.totalReturnAmount !== undefined)
+      lines.push(`Tổng trả hàng: ${fmtCurrency(snapshot.totalReturnAmount)}`);
+    if (snapshot.refundAmount !== undefined)
+      lines.push(`Số tiền hoàn: ${fmtCurrency(snapshot.refundAmount)}`);
+    if (snapshot.actualCashRefund !== undefined)
+      lines.push(
+        `Tiền mặt thực hoàn: ${fmtCurrency(snapshot.actualCashRefund)}`
+      );
+    if (snapshot.refundType)
+      lines.push(
+        `Hình thức hoàn: ${
+          snapshot.refundType === "cash"
+            ? "Tiền mặt"
+            : snapshot.refundType === "debt_offset"
+              ? "Cấn trừ công nợ"
+              : snapshot.refundType === "manual_offset"
+                ? "Bù trừ thủ công"
+                : snapshot.refundType
+        }`
+      );
+    if (snapshot.status) lines.push(`Trạng thái: ${snapshot.status}`);
+    return lines.join("\n");
+  }
+
+  if (entityType === "settings") {
+    const before = snapshot.before || {};
+    const after = snapshot.after || {};
+
+    const settingLabels: Record<string, string> = {
+      managerCustomerByBranch: "Quản lý KH theo chi nhánh",
+      allowOrderWhenOutStock: "Cho phép đặt hàng khi hết kho",
+      allowSellWhenOrderOutStock: "Cho phép bán khi đơn hàng hết kho",
+      allowSellWhenOutStock: "Cho phép bán khi hết kho",
+    };
+
+    const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
+    const changed: string[] = [];
+    const unchanged: string[] = [];
+
+    allKeys.forEach((key) => {
+      const label = settingLabels[key] || key;
+      const oldVal =
+        before[key] !== undefined ? (before[key] ? "Bật" : "Tắt") : "N/A";
+      const newVal =
+        after[key] !== undefined ? (after[key] ? "Bật" : "Tắt") : "N/A";
+      if (before[key] !== after[key]) {
+        changed.push(`  ~ ${label}: ${oldVal} → ${newVal}`);
+      } else {
+        unchanged.push(`  ${label}: ${newVal}`);
+      }
+    });
+
+    if (changed.length > 0) {
+      lines.push("Thay đổi:");
+      changed.forEach((l) => lines.push(l));
+    }
+    if (unchanged.length > 0) {
+      lines.push("Không thay đổi:");
+      unchanged.forEach((l) => lines.push(l));
+    }
+    return lines.join("\n");
+  }
+
   if (entityType === "bank_accounts") {
     lines.push(`Ngân hàng: ${snapshot.bankName || "N/A"}`);
     lines.push(`Số TK: ${snapshot.accountNumber || "N/A"}`);
