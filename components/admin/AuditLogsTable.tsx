@@ -99,7 +99,7 @@ function renderSnapshot(entityType: string, snapshot: any): string {
     lines.push(`Công nợ: ${fmtCurrency(snapshot.debtAmount)}`);
     lines.push(`Chi nhánh: ${snapshot.branch?.name || "N/A"}`);
     if (entityType === "orders")
-      lines.push(`Người bán: ${snapshot.createdBy?.name.name || "N/A"}`);
+      lines.push(`Người bán: ${snapshot.createdBy?.name || "N/A"}`);
 
     lines.push(`Ghi chú: ${snapshot.description || "(trống)"}`);
 
@@ -273,16 +273,9 @@ function renderSnapshot(entityType: string, snapshot: any): string {
   }
 
   if (entityType === "order_suppliers" || entityType === "purchase_orders") {
-    console.log(snapshot);
     lines.push(`Mã: ${snapshot.code || "N/A"}`);
     lines.push(`NCC: ${snapshot.supplierName || "N/A"}`);
-    if (snapshot.branchId === 2) {
-      lines.push(`Chi nhánh: Kho Hà Nội`);
-    } else if (snapshot.branchId === 1) {
-      lines.push(`Chi nhánh: Kho Sài Gòn`);
-    } else if (snapshot.branchId === 3) {
-      lines.push(`Chi nhánh: Cửa Hàng Diệp Trà`);
-    }
+    if (snapshot.branchName) lines.push(`Chi nhánh: ${snapshot.branchName}`);
     lines.push(
       `Tổng tiền: ${fmtCurrency(snapshot.total || snapshot.grandTotal)}`
     );
