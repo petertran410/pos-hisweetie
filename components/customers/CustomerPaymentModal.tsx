@@ -23,6 +23,7 @@ import { createPortal } from "react-dom";
 interface CustomerPaymentModalProps {
   customerId: number;
   customerDebt: number;
+  includeChildren?: boolean;
   onClose: () => void;
 }
 
@@ -67,6 +68,7 @@ const parseDateTime = (value: string) => {
 export function CustomerPaymentModal({
   customerId,
   customerDebt,
+  includeChildren = false,
   onClose,
 }: CustomerPaymentModalProps) {
   const queryClient = useQueryClient();
@@ -115,7 +117,12 @@ export function CustomerPaymentModal({
   const { data: bankAccountsData } = useBankAccountsForPayment();
   const bankAccounts = bankAccountsData || [];
 
-  const allCustomerIds = useMemo(() => [customerId], [customerId]);
+  const allCustomerIds = useMemo(() => {
+    if (includeChildren && customer?.children?.length) {
+      return [customerId, ...customer.children.map((c: any) => c.id)];
+    }
+    return [customerId];
+  }, [customerId, includeChildren, customer?.children]);
 
   const { data: invoicesData, isLoading } = useQuery({
     queryKey: ["invoices", "customer", allCustomerIds, "unpaid"],

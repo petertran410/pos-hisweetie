@@ -256,6 +256,7 @@ export function CustomerDebtsTab({
         <CustomerPaymentModal
           customerId={customerId}
           customerDebt={customerDebt}
+          includeChildren={includeChildren}
           onClose={() => setShowPaymentModal(false)}
         />
       )}
