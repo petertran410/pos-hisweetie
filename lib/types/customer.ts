@@ -125,6 +125,11 @@ export interface CustomerSearchResult {
   phone?: string;
   email?: string;
   parentId?: number;
+  parent?: {
+    code: string;
+    name: string;
+  };
+
   addresses?: CustomerAddress[];
 }
 

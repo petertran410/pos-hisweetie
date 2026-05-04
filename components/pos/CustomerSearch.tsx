@@ -133,6 +133,12 @@ export function CustomerSearch({
                         {customer.contactNumber || "Chưa có SĐT"}
                       </span>
                     </div>
+                    {(customer as any).parent && (
+                      <div className="text-xs text-orange-600 mt-1">
+                        thuộc: {(customer as any).parent.code} -{" "}
+                        {(customer as any).parent.name}
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
