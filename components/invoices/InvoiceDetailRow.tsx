@@ -18,6 +18,7 @@ import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { printEntity } from "@/lib/utils/print";
 import Link from "next/link";
+import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 
 interface InvoiceDetailRowProps {
   invoiceId: number;
@@ -178,6 +179,40 @@ export function InvoiceDetailRow({
       await printEntity("invoice", invoice.id);
     } catch (e: any) {
       toast.error(e?.message || "In thất bại");
+    }
+  };
+
+  const handlePrintDelivery = async () => {
+    if (!invoice) return;
+    try {
+      await printEntity("invoice_delivery", invoice.id);
+    } catch (e: any) {
+      toast.error(e?.message || "In phiếu giao hàng thất bại");
+    }
+  };
+
+  const handleUpdateDeliveryAddress = async (
+    wardName: string,
+    cityName: string
+  ) => {
+    if (!invoice?.delivery) return;
+    try {
+      await updateInvoice.mutateAsync({
+        id: invoice.id,
+        data: {
+          delivery: {
+            receiver: invoice.delivery.receiver || "",
+            contactNumber: invoice.delivery.contactNumber || "",
+            address: invoice.delivery.address || "",
+            locationName: cityName,
+            wardName,
+            noteForDriver: invoice.delivery.noteForDriver,
+          },
+        },
+      });
+      toast.success("Đã cập nhật địa chỉ giao hàng");
+    } catch {
+      toast.error("Không thể cập nhật địa chỉ");
     }
   };
 
@@ -367,33 +402,23 @@ export function InvoiceDetailRow({
                   </div>
 
                   {/* Delivery info */}
-                  {invoice.delivery &&
-                    (invoice.delivery.address || invoice.delivery.receiver) && (
-                      <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                        <MapPin className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                        <div className="flex-1 min-w-0 text-sm">
-                          <div className="font-medium text-gray-800">
-                            {invoice.delivery.receiver || "-"}
-                            {invoice.delivery.contactNumber && (
-                              <span className="text-gray-500 ml-2">
-                                • {invoice.delivery.contactNumber}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-gray-600 mt-0.5">
-                            {invoice.delivery.address || "-"}
-                          </div>
-                          <p className="text-gray-600 mt-1">
-                            {[
-                              invoice.delivery.wardName,
-                              invoice.delivery.locationName,
-                            ]
-                              .filter(Boolean)
-                              .join(", ")}
-                          </p>
-                        </div>
+                  {invoice.delivery && (
+                    <div className="space-y-2">
+                      <DeliveryInfoCard
+                        delivery={invoice.delivery}
+                        customerAddresses={invoice.customer?.addresses}
+                        onUpdateToNewAddress={handleUpdateDeliveryAddress}
+                      />
+                      <div className="flex justify-end">
+                        <button
+                          onClick={handlePrintDelivery}
+                          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                          <Printer className="w-3.5 h-3.5" />
+                          In phiếu giao hàng
+                        </button>
                       </div>
-                    )}
+                    </div>
+                  )}
 
                   <div>
                     <div className="flex items-center justify-between mb-3">

@@ -26,6 +26,7 @@ import { useAuthStore } from "@/lib/store/auth";
 import { CancelOrderModal } from "./CancelOrderModal";
 import { printEntity } from "@/lib/utils/print";
 import Link from "next/link";
+import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 
 const getOrderStatusBadgeColor = (status: number) => {
   switch (status) {
@@ -52,6 +53,7 @@ interface OrderDetailRowProps {
 export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const router = useRouter();
   const { data: order, isLoading } = useOrder(orderId);
+  console.log(order);
   const updateOrder = useUpdateOrder();
   const [selectedStatus, setSelectedStatus] = useState<number>(
     ORDER_STATUS.PENDING
@@ -188,6 +190,40 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
       await printEntity("order", order.id);
     } catch (e: any) {
       toast.error(e?.message || "In thất bại");
+    }
+  };
+
+  const handlePrintDelivery = async () => {
+    if (!order) return;
+    try {
+      await printEntity("order_delivery", order.id);
+    } catch (e: any) {
+      toast.error(e?.message || "In phiếu giao hàng thất bại");
+    }
+  };
+
+  const handleUpdateDeliveryAddress = async (
+    wardName: string,
+    cityName: string
+  ) => {
+    if (!order?.delivery) return;
+    try {
+      await updateOrder.mutateAsync({
+        id: order.id,
+        data: {
+          delivery: {
+            receiver: order.delivery.receiver || "",
+            contactNumber: order.delivery.contactNumber || "",
+            address: order.delivery.address || "",
+            locationName: cityName,
+            wardName,
+            noteForDriver: order.delivery.noteForDriver,
+          },
+        },
+      });
+      toast.success("Đã cập nhật địa chỉ giao hàng");
+    } catch {
+      toast.error("Không thể cập nhật địa chỉ");
     }
   };
 
@@ -459,27 +495,24 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                       </div>
                     </div>
 
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <MapPin className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <label className="block text-md font-medium text-gray-700 mb-1">
-                            Tự giao đến:
-                          </label>
-                          <p className="text-md text-gray-900 font-medium">
-                            {order.delivery?.address || "-"}
-                          </p>
-                          <p className="text-md text-gray-600 mt-1">
-                            {[
-                              order.delivery?.wardName,
-                              order.delivery?.locationName,
-                            ]
-                              .filter(Boolean)
-                              .join(", ")}
-                          </p>
+                    {/* --- THAY THẾ BLOCK AMBER BOX CŨ --- */}
+                    {order.delivery && (
+                      <div className="space-y-2">
+                        <DeliveryInfoCard
+                          delivery={order.delivery}
+                          customerAddresses={order.customer?.addresses}
+                          onUpdateToNewAddress={handleUpdateDeliveryAddress}
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            onClick={handlePrintDelivery}
+                            className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                            <Printer className="w-3.5 h-3.5" />
+                            In phiếu giao hàng
+                          </button>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     <div>
                       <div className="flex items-center justify-between mb-3">
