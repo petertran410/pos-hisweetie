@@ -33,8 +33,16 @@ export const printTemplatesApi = {
     return res ?? {};
   },
 
-  renderPreview: async (templateId: number, entityId: number) => {
-    return apiClient.post("/print-templates/preview", { templateId, entityId });
+  renderPreview: async (
+    templateId: number,
+    entityId: number,
+    entityType?: string
+  ) => {
+    return apiClient.post("/print-templates/preview", {
+      templateId,
+      entityId,
+      ...(entityType && { entityType }),
+    });
   },
 
   getAllVariables: async (templateFor?: string) => {

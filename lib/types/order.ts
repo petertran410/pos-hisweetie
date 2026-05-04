@@ -1,3 +1,5 @@
+import { CustomerAddress } from "./customer";
+
 export const ORDER_STATUS = {
   PENDING: 1,
   CONFIRMED: 5,
@@ -61,6 +63,7 @@ export interface Order {
     cityName?: string;
     wardName?: string;
     birthDate?: string;
+    addresses?: CustomerAddress[];
   };
   branch?: {
     id: number;

@@ -24,7 +24,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { INVOICE_STATUS } from "@/lib/types/invoice";
 import { useAuthStore } from "@/lib/store/auth";
 import { CancelOrderModal } from "./CancelOrderModal";
-import { printEntity } from "@/lib/utils/print";
+import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 
@@ -196,7 +196,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const handlePrintDelivery = async () => {
     if (!order) return;
     try {
-      await printEntity("order_delivery", order.id);
+      await printDeliverySlip("order", order.id);
     } catch (e: any) {
       toast.error(e?.message || "In phiếu giao hàng thất bại");
     }
@@ -495,7 +495,6 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                       </div>
                     </div>
 
-                    {/* --- THAY THẾ BLOCK AMBER BOX CŨ --- */}
                     {order.delivery && (
                       <div className="space-y-2">
                         <DeliveryInfoCard

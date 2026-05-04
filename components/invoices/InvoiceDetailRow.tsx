@@ -16,7 +16,7 @@ import { InvoicePackingSlipsTab } from "./InvoicePackingSlipsTab";
 import { InvoicePaymentsTab } from "./InvoicePaymentsTab";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { printEntity } from "@/lib/utils/print";
+import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 
@@ -185,7 +185,7 @@ export function InvoiceDetailRow({
   const handlePrintDelivery = async () => {
     if (!invoice) return;
     try {
-      await printEntity("invoice_delivery", invoice.id);
+      await printDeliverySlip("invoice", invoice.id);
     } catch (e: any) {
       toast.error(e?.message || "In phiếu giao hàng thất bại");
     }

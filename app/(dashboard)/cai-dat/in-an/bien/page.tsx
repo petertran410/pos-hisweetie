@@ -12,6 +12,7 @@ import { ActionGuard } from "@/components/permissions/ActionGuard";
 const TABS: Array<{ key: string; label: string }> = [
   { key: "order", label: "Đặt hàng" },
   { key: "invoice", label: "Hóa đơn" },
+  { key: "delivery", label: "Phiếu giao hàng" },
   { key: "return_order", label: "Trả hàng" },
   { key: "order_supplier", label: "Đặt hàng nhập" },
   { key: "purchase_order", label: "Nhập hàng" },
