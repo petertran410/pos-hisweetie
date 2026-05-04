@@ -55,6 +55,20 @@ export interface Customer {
       name: string;
     };
   }>;
+  parentId?: number;
+  parent?: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  children?: Array<{
+    id: number;
+    code: string;
+    name: string;
+    contactNumber?: string;
+    totalDebt: number;
+    isActive: boolean;
+  }>;
 }
 
 export interface CustomerFilters {
