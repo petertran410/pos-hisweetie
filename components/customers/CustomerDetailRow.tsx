@@ -26,7 +26,14 @@ export function CustomerDetailRow({
   const updateCustomer = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
   const [activeTab, setActiveTab] = useState<
-    "info" | "addresses" | "invoices" | "orders" | "debts" | "points"
+    | "info"
+    | "addresses"
+    | "children"
+    | "invoices"
+    | "orders"
+    | "debts"
+    | "debts_total"
+    | "debts_own"
   >("info");
 
   // ─── Sticky width trick (giống OrderDetailRow) ───
@@ -110,12 +117,28 @@ export function CustomerDetailRow({
     );
   }
 
+  const isParent = (customer.children?.length ?? 0) > 0;
+  const isChild = !!customer.parentId;
+
   const TABS = [
     { key: "info", label: "Thông tin" },
     { key: "addresses", label: "Địa chỉ nhận hàng" },
+    ...(isParent
+      ? [
+          {
+            key: "children",
+            label: `Khách hàng con (${customer.children!.length})`,
+          },
+        ]
+      : []),
     { key: "invoices", label: "Lịch sử hóa đơn/trả hàng" },
     { key: "orders", label: "Lịch sử đơn hàng" },
-    { key: "debts", label: "Công nợ" },
+    ...(isParent
+      ? [
+          { key: "debts_total", label: "Công nợ tổng" },
+          { key: "debts_own", label: "Công nợ riêng" },
+        ]
+      : [{ key: "debts", label: "Công nợ" }]),
   ] as const;
 
   const groups =
@@ -140,6 +163,11 @@ export function CustomerDetailRow({
                     <span className="text-lg font-bold text-gray-900">
                       {customer.code}
                     </span>
+                    {customer.parent && (
+                      <span className="text-sm text-gray-500 ml-2">
+                        (thuộc {customer.parent.code} - {customer.parent.name})
+                      </span>
+                    )}
                     <span className="text-gray-400">-</span>
                     <span className="text-lg font-semibold text-gray-800">
                       {customer.name}
@@ -157,6 +185,29 @@ export function CustomerDetailRow({
                     {customer.branch?.name || "-"}
                   </span>
                 </div>
+
+                {isParent && (
+                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                    <span>
+                      Công nợ riêng:{" "}
+                      <span className="font-semibold text-red-600">
+                        {formatCurrency(customer.totalDebt)}
+                      </span>
+                    </span>
+                    <span>
+                      Công nợ tổng:{" "}
+                      <span className="font-semibold text-red-600">
+                        {formatCurrency(
+                          Number(customer.totalDebt) +
+                            (customer.children?.reduce(
+                              (sum, c) => sum + Number(c.totalDebt),
+                              0
+                            ) ?? 0)
+                        )}
+                      </span>
+                    </span>
+                  </div>
+                )}
 
                 {/* ── Tabs ── */}
                 <div className="flex gap-1 border-b border-gray-200 mb-4">
@@ -335,6 +386,81 @@ export function CustomerDetailRow({
                 <CustomerOrdersTab customerId={customer.id} />
               )}
               {activeTab === "debts" && (
+                <CustomerDebtsTab
+                  customerId={customer.id}
+                  customerDebt={customer.totalDebt}
+                />
+              )}
+
+              {activeTab === "children" && customer.children && (
+                <div>
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="px-4 py-3 text-left text-sm font-medium">
+                          Mã KH
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">
+                          Tên
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">
+                          Điện thoại
+                        </th>
+                        <th className="px-4 py-3 text-right text-sm font-medium">
+                          Công nợ
+                        </th>
+                        <th className="px-4 py-3 text-center text-sm font-medium">
+                          Trạng thái
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {customer.children.map((child) => (
+                        <tr
+                          key={child.id}
+                          className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm font-medium text-blue-600">
+                            {child.code}
+                          </td>
+                          <td className="px-4 py-3 text-sm">{child.name}</td>
+                          <td className="px-4 py-3 text-sm">
+                            {child.contactNumber || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right font-medium text-red-600">
+                            {formatCurrency(child.totalDebt)}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span
+                              className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                child.isActive
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}>
+                              {child.isActive ? "Hoạt động" : "Ngừng"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {activeTab === "debts_total" && (
+                <CustomerDebtsTab
+                  customerId={customer.id}
+                  customerDebt={
+                    Number(customer.totalDebt) +
+                    (customer.children?.reduce(
+                      (sum, c) => sum + Number(c.totalDebt),
+                      0
+                    ) ?? 0)
+                  }
+                  includeChildren
+                />
+              )}
+
+              {activeTab === "debts_own" && (
                 <CustomerDebtsTab
                   customerId={customer.id}
                   customerDebt={customer.totalDebt}

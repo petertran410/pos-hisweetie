@@ -124,6 +124,7 @@ export interface CustomerSearchResult {
   contactNumber?: string;
   phone?: string;
   email?: string;
+  parentId?: number;
   addresses?: CustomerAddress[];
 }
 

@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import {
   useCreateCustomer,
   useCustomerGroups,
+  useSearchCustomers,
   useUpdateCustomer,
 } from "@/lib/hooks/useCustomers";
 import { X, Calendar, Plus, Pencil, Star, Trash2 } from "lucide-react";
@@ -121,6 +122,22 @@ export function CustomerForm({
     "basic"
   );
 
+  const [selectedParent, setSelectedParent] = useState<{
+    id: number;
+    code: string;
+    name: string;
+  } | null>(null);
+  const [parentSearch, setParentSearch] = useState("");
+  const [showParentDropdown, setShowParentDropdown] = useState(false);
+  const parentDropdownRef = useRef<HTMLDivElement>(null);
+
+  const { data: parentSearchData } = useSearchCustomers(
+    parentSearch || undefined
+  );
+  const parentOptions = (parentSearchData?.data || []).filter(
+    (c) => !c.parentId && c.id !== customer?.id // Chỉ hiện khách cha (không có parentId) và không phải chính mình
+  );
+
   const [addrModal, setAddrModal] = useState<{
     open: boolean;
     mode: "create" | "edit";
@@ -231,6 +248,12 @@ export function CustomerForm({
       ) {
         setShowBirthDatePicker(false);
       }
+      if (
+        parentDropdownRef.current &&
+        !parentDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowParentDropdown(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -267,6 +290,10 @@ export function CustomerForm({
         );
       }
 
+      if (customer.parent) {
+        setSelectedParent(customer.parent);
+      }
+
       if (customer.addresses && customer.addresses.length > 0) {
         setAddresses(customer.addresses);
       } else {
@@ -296,15 +323,6 @@ export function CustomerForm({
     customerGroupsData?.data?.filter((group) =>
       selectedGroupIds.includes(group.id)
     ) || [];
-
-  // Handlers cho danh sách địa chỉ
-  const handleAddAddress = () => {
-    setAddresses((prev) => [...prev, createEmptyAddress(false)]);
-  };
-
-  const handleUpdateAddress = (index: number, addr: any) => {
-    setAddresses((prev) => prev.map((a, i) => (i === index ? addr : a)));
-  };
 
   const handleRemoveAddress = (index: number) => {
     setAddresses((prev) => {
@@ -407,6 +425,7 @@ export function CustomerForm({
       name: data.name || undefined,
       contactNumber: data.contactNumber || undefined,
       branchId: selectedBranch?.id,
+      parentId: selectedParent?.id || undefined,
       groupIds: selectedGroupIds.length > 0 ? selectedGroupIds : undefined,
       code: data.code || undefined,
       email: data.email || undefined,
@@ -503,6 +522,82 @@ export function CustomerForm({
           {/* ================= TAB 1: THÔNG TIN CƠ BẢN ================= */}
           <div
             className={activeFormTab === "basic" ? "p-6 space-y-6" : "hidden"}>
+            {/* ── Khách hàng cha ── */}
+            {!customer?.parentId /* Chỉ hiện khi tạo mới hoặc edit khách không phải con */ && (
+              <div className="mb-4" ref={parentDropdownRef}>
+                <label className="block text-sm font-medium mb-2">
+                  Khách hàng cha
+                  <span className="text-xs text-gray-400 font-normal ml-2">
+                    (nếu là khách hàng con / chuỗi cửa hàng)
+                  </span>
+                </label>
+                {selectedParent ? (
+                  <div className="flex items-center gap-2 px-3 py-2 border rounded bg-blue-50">
+                    <span className="text-sm font-medium text-blue-700">
+                      {selectedParent.code} - {selectedParent.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedParent(null)}
+                      className="ml-auto p-1 hover:bg-blue-100 rounded">
+                      <X className="w-3 h-3 text-blue-600" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Tìm khách hàng cha (mã, tên, SĐT)..."
+                      value={parentSearch}
+                      onChange={(e) => {
+                        setParentSearch(e.target.value);
+                        setShowParentDropdown(true);
+                      }}
+                      onFocus={() => setShowParentDropdown(true)}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                    {showParentDropdown && parentOptions.length > 0 && (
+                      <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {parentOptions.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedParent({
+                                id: c.id,
+                                code: c.code,
+                                name: c.name,
+                              });
+                              setParentSearch("");
+                              setShowParentDropdown(false);
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 flex items-center gap-2">
+                            <span className="font-medium">{c.code}</span>
+                            <span className="text-gray-400">-</span>
+                            <span>{c.name}</span>
+                            {c.contactNumber && (
+                              <span className="text-gray-400 ml-auto">
+                                {c.contactNumber}
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Nếu đang edit khách con → hiển thị info cha (read-only) */}
+            {customer?.parent && (
+              <div className="mb-4 px-3 py-2 border rounded bg-gray-50">
+                <span className="text-xs text-gray-500">Khách hàng cha: </span>
+                <span className="text-sm font-medium">
+                  {customer.parent.code} - {customer.parent.name}
+                </span>
+              </div>
+            )}
             {/* Section 1: Thông tin cá nhân (grid 2 cột, tất cả 7 field trong cùng 1 grid) */}
             <div className="grid grid-cols-2 gap-4">
               <div>

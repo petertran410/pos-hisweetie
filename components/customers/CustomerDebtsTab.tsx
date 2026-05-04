@@ -9,18 +9,23 @@ interface CustomerDebtsTabProps {
   customerId: number;
   customerDebt: number;
   hidePaymentButton?: boolean;
+  includeChildren?: boolean;
 }
 
 export function CustomerDebtsTab({
   customerId,
   customerDebt,
   hidePaymentButton = false,
+  includeChildren = false,
 }: CustomerDebtsTabProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [page, setPage] = useState(1);
   const limit = 10;
 
-  const { data, isLoading } = useCustomerDebtTimeline(customerId);
+  const { data, isLoading } = useCustomerDebtTimeline(
+    customerId,
+    includeChildren
+  );
 
   const timeline = data?.data || [];
   const totalPages = Math.ceil(timeline.length / limit);

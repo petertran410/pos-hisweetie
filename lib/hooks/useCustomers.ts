@@ -58,16 +58,21 @@ export function useCustomerGroups() {
   });
 }
 
-export function useCustomerDebtTimeline(customerId: number) {
+export function useCustomerDebtTimeline(
+  customerId: number,
+  includeChildren = false
+) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   return useQuery({
-    queryKey: ["customers", customerId, "debt-timeline"],
+    queryKey: ["customers", customerId, "debt-timeline", includeChildren],
     queryFn: async () => {
+      const params: any = {};
+      if (includeChildren) params.includeChildren = "true";
       const response = await apiClient.get<{
         data: any[];
-      }>(`/customers/${customerId}/debt-timeline`);
+      }>(`/customers/${customerId}/debt-timeline`, params);
       return response;
     },
     enabled: !!customerId && hasHydrated && isAuthenticated,
