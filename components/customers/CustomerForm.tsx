@@ -523,71 +523,73 @@ export function CustomerForm({
           <div
             className={activeFormTab === "basic" ? "p-6 space-y-6" : "hidden"}>
             {/* ── Khách hàng cha ── */}
-            {!customer?.parentId /* Chỉ hiện khi tạo mới hoặc edit khách không phải con */ && (
-              <div className="mb-4" ref={parentDropdownRef}>
-                <label className="block text-sm font-medium mb-2">
-                  Khách hàng cha
-                  <span className="text-xs text-gray-400 font-normal ml-2">
-                    (nếu là khách hàng con / chuỗi cửa hàng)
-                  </span>
-                </label>
-                {selectedParent ? (
-                  <div className="flex items-center gap-2 px-3 py-2 border rounded bg-blue-50">
-                    <span className="text-sm font-medium text-blue-700">
-                      {selectedParent.code} - {selectedParent.name}
+            {!customer?.parentId &&
+              !customer?.children
+                ?.length /* Chỉ hiện khi tạo mới hoặc edit khách không phải con */ && (
+                <div className="mb-4" ref={parentDropdownRef}>
+                  <label className="block text-sm font-medium mb-2">
+                    Khách hàng cha
+                    <span className="text-xs text-gray-400 font-normal ml-2">
+                      (nếu là khách hàng con / chuỗi cửa hàng)
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedParent(null)}
-                      className="ml-auto p-1 hover:bg-blue-100 rounded">
-                      <X className="w-3 h-3 text-blue-600" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Tìm khách hàng cha (mã, tên, SĐT)..."
-                      value={parentSearch}
-                      onChange={(e) => {
-                        setParentSearch(e.target.value);
-                        setShowParentDropdown(true);
-                      }}
-                      onFocus={() => setShowParentDropdown(true)}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                    {showParentDropdown && parentOptions.length > 0 && (
-                      <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {parentOptions.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedParent({
-                                id: c.id,
-                                code: c.code,
-                                name: c.name,
-                              });
-                              setParentSearch("");
-                              setShowParentDropdown(false);
-                            }}
-                            className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 flex items-center gap-2">
-                            <span className="font-medium">{c.code}</span>
-                            <span className="text-gray-400">-</span>
-                            <span>{c.name}</span>
-                            {c.contactNumber && (
-                              <span className="text-gray-400 ml-auto">
-                                {c.contactNumber}
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+                  </label>
+                  {selectedParent ? (
+                    <div className="flex items-center gap-2 px-3 py-2 border rounded bg-blue-50">
+                      <span className="text-sm font-medium text-blue-700">
+                        {selectedParent.code} - {selectedParent.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedParent(null)}
+                        className="ml-auto p-1 hover:bg-blue-100 rounded">
+                        <X className="w-3 h-3 text-blue-600" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Tìm khách hàng cha (mã, tên, SĐT)..."
+                        value={parentSearch}
+                        onChange={(e) => {
+                          setParentSearch(e.target.value);
+                          setShowParentDropdown(true);
+                        }}
+                        onFocus={() => setShowParentDropdown(true)}
+                        className="w-full border rounded px-3 py-2"
+                      />
+                      {showParentDropdown && parentOptions.length > 0 && (
+                        <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          {parentOptions.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedParent({
+                                  id: c.id,
+                                  code: c.code,
+                                  name: c.name,
+                                });
+                                setParentSearch("");
+                                setShowParentDropdown(false);
+                              }}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 flex items-center gap-2">
+                              <span className="font-medium">{c.code}</span>
+                              <span className="text-gray-400">-</span>
+                              <span>{c.name}</span>
+                              {c.contactNumber && (
+                                <span className="text-gray-400 ml-auto">
+                                  {c.contactNumber}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
             {/* Nếu đang edit khách con → hiển thị info cha (read-only) */}
             {customer?.parent && (

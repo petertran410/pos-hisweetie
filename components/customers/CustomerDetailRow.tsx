@@ -214,7 +214,7 @@ export function CustomerDetailRow({
                   {TABS.map((tab) => (
                     <button
                       key={tab.key}
-                      onClick={() => setActiveTab(tab.key)}
+                      onClick={() => setActiveTab(tab.key as typeof activeTab)}
                       className={`px-4 py-2 text-md font-medium border-b-2 transition-colors ${
                         activeTab === tab.key
                           ? "border-blue-600 text-blue-600"
