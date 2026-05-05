@@ -13,7 +13,7 @@ export default function OrderSuppliersPage() {
   });
 
   return (
-    <PagePermissionGuard resource="suppliers" action="create">
+    <PagePermissionGuard resource="order_suppliers" action="view">
       <div className="flex h-full border-t bg-gray-50">
         <OrderSupplierSidebar filters={filters} setFilters={setFilters} />
         <OrderSuppliersTable filters={filters} onFiltersChange={setFilters} />

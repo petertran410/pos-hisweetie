@@ -6,6 +6,7 @@ import { ProductsTable } from "@/components/products/ProductTable";
 import { useSearchParams } from "next/navigation";
 import { ProductImportModal } from "@/components/products/ProductImportModal";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function ProductListPage() {
   const searchParams = useSearchParams();
@@ -25,7 +26,7 @@ export default function ProductListPage() {
   );
 
   return (
-    <PermissionGate resource="products" action="view">
+    <PagePermissionGuard resource="products" action="view">
       <div className="flex h-full border-t bg-gray-50">
         <ProductsSidebar
           filters={filters}
@@ -41,6 +42,6 @@ export default function ProductListPage() {
       {showImportModal && (
         <ProductImportModal onClose={() => setShowImportModal(false)} />
       )}
-    </PermissionGate>
+    </PagePermissionGuard>
   );
 }

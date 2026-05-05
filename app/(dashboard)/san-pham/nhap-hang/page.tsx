@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PurchaseOrderSidebar } from "@/components/purchase-orders/PurchaseOrderSidebar";
 import { PurchaseOrdersTable } from "@/components/purchase-orders/PurchaseOrdersTable";
 import type { PurchaseOrderFilters } from "@/lib/types/purchase-order";
+import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function PurchaseOrdersPage() {
   const [filters, setFilters] = useState<PurchaseOrderFilters>({
@@ -12,9 +13,11 @@ export default function PurchaseOrdersPage() {
   });
 
   return (
-    <div className="flex h-full border-t bg-gray-50">
-      <PurchaseOrderSidebar filters={filters} setFilters={setFilters} />
-      <PurchaseOrdersTable filters={filters} onFiltersChange={setFilters} />
-    </div>
+    <PagePermissionGuard resource="purchase_orders" action="view">
+      <div className="flex h-full border-t bg-gray-50">
+        <PurchaseOrderSidebar filters={filters} setFilters={setFilters} />
+        <PurchaseOrdersTable filters={filters} onFiltersChange={setFilters} />
+      </div>
+    </PagePermissionGuard>
   );
 }

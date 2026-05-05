@@ -26,6 +26,7 @@ import type { PackingSlip } from "@/lib/types/packing-slip";
 import type { PackingHang } from "@/lib/types/packing-hang";
 import type { PackingLoading } from "@/lib/types/packing-loading";
 import { toast } from "sonner";
+import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 type FormType = "giao-hang" | "dong-hang" | "loading" | null;
 
@@ -173,46 +174,48 @@ export default function BaoDonPage() {
   };
 
   return (
-    <div className="flex h-full border-t bg-gray-50">
-      <PackingSlipsSidebar onFiltersChange={setFilters} />
-      <PackingSlipsTable
-        packingSlips={data?.data || []}
-        isLoading={isLoading}
-        total={data?.total || 0}
-        page={page}
-        limit={limit}
-        onPageChange={setPage}
-        onLimitChange={setLimit}
-        onCreateClick={handleCreateGiaoHangClick}
-        onCreatePackingHangClick={handleCreateDongHangClick}
-        onCreatePackingLoadingClick={handleCreateLoadingClick}
-        onEditClick={handleEditClick}
-        onDeleteClick={handleDelete}
-      />
-
-      {formType === "giao-hang" && (
-        <PackingSlipForm
-          packingSlip={editingPackingSlip || undefined}
-          onClose={handleCloseForm}
-          onSubmit={handleGiaoHangSubmit}
+    <PagePermissionGuard resource="packing_slips" action="view">
+      <div className="flex h-full border-t bg-gray-50">
+        <PackingSlipsSidebar onFiltersChange={setFilters} />
+        <PackingSlipsTable
+          packingSlips={data?.data || []}
+          isLoading={isLoading}
+          total={data?.total || 0}
+          page={page}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+          onCreateClick={handleCreateGiaoHangClick}
+          onCreatePackingHangClick={handleCreateDongHangClick}
+          onCreatePackingLoadingClick={handleCreateLoadingClick}
+          onEditClick={handleEditClick}
+          onDeleteClick={handleDelete}
         />
-      )}
 
-      {formType === "dong-hang" && (
-        <PackingHangForm
-          packingHang={editingPackingHang || undefined}
-          onClose={handleCloseForm}
-          onSubmit={handleDongHangSubmit}
-        />
-      )}
+        {formType === "giao-hang" && (
+          <PackingSlipForm
+            packingSlip={editingPackingSlip || undefined}
+            onClose={handleCloseForm}
+            onSubmit={handleGiaoHangSubmit}
+          />
+        )}
 
-      {formType === "loading" && (
-        <PackingLoadingForm
-          packingLoading={editingPackingLoading || undefined}
-          onClose={handleCloseForm}
-          onSubmit={handleLoadingSubmit}
-        />
-      )}
-    </div>
+        {formType === "dong-hang" && (
+          <PackingHangForm
+            packingHang={editingPackingHang || undefined}
+            onClose={handleCloseForm}
+            onSubmit={handleDongHangSubmit}
+          />
+        )}
+
+        {formType === "loading" && (
+          <PackingLoadingForm
+            packingLoading={editingPackingLoading || undefined}
+            onClose={handleCloseForm}
+            onSubmit={handleLoadingSubmit}
+          />
+        )}
+      </div>
+    </PagePermissionGuard>
   );
 }

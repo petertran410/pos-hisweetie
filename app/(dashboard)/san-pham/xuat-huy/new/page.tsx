@@ -1,12 +1,12 @@
 "use client";
 
 import { DestructionForm } from "@/components/destructions/DestructionForm";
-import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function NewDestructionPage() {
   return (
-    <PermissionGate resource="inventory" action="view">
+    <PagePermissionGuard resource="destructions" action="create">
       <DestructionForm />
-    </PermissionGate>
+    </PagePermissionGuard>
   );
 }
