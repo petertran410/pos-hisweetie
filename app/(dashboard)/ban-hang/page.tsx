@@ -1415,6 +1415,7 @@ export default function BanHangPage() {
         length: Number(activeTab.deliveryInfo.length) || 10,
         width: Number(activeTab.deliveryInfo.width) || 10,
         height: Number(activeTab.deliveryInfo.height) || 10,
+        noteForDriver: activeTab.deliveryInfo.noteForDriver,
       },
     };
 
@@ -1556,6 +1557,7 @@ export default function BanHangPage() {
         length: Number(activeTab.deliveryInfo.length) || 10,
         width: Number(activeTab.deliveryInfo.width) || 10,
         height: Number(activeTab.deliveryInfo.height) || 10,
+        noteForDriver: activeTab.deliveryInfo.noteForDriver,
       };
     }
 
