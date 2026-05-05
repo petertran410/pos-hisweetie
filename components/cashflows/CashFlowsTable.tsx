@@ -1,4 +1,3 @@
-// components/cashflows/CashFlowsTable.tsx
 "use client";
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
@@ -15,8 +14,8 @@ import {
 import type { CashFlow } from "@/lib/types/cashflow";
 import { CashFlowDetailRow } from "./CashFlowDetailRow";
 import { formatCurrency } from "@/lib/utils";
-import { Can } from "../permissions/Can";
 import { CreateCashFlowModal } from "./CreateCashFlowModal";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 interface ColumnConfig {
   key: string;
@@ -329,7 +328,7 @@ export function CashFlowsTable({
   };
 
   return (
-    <Can resource="cash_flows" action="view">
+    <PermissionGate resource="cash_flows" action="view">
       <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
         {/* Toolbar */}
         <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
@@ -346,7 +345,7 @@ export function CashFlowsTable({
             />
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Can resource="cash_flows" action="create">
+            <PermissionGate resource="cash_flows" action="create">
               {/* Nút Phiếu thu */}
               <div ref={receiptDropdownRef} className="relative">
                 <button
@@ -420,7 +419,7 @@ export function CashFlowsTable({
                   </div>
                 )}
               </div>
-            </Can>
+            </PermissionGate>
             <button
               onClick={() => setShowColumnModal(true)}
               className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
@@ -612,6 +611,6 @@ export function CashFlowsTable({
           />
         )}
       </div>
-    </Can>
+    </PermissionGate>
   );
 }

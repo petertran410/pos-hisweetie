@@ -4,8 +4,8 @@ import { useState, useCallback } from "react";
 import { ProductsSidebar } from "@/components/products/ProductSidebar";
 import { ProductsTable } from "@/components/products/ProductTable";
 import { useSearchParams } from "next/navigation";
-import { Can } from "@/components/permissions/Can";
 import { ProductImportModal } from "@/components/products/ProductImportModal";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export default function ProductListPage() {
   const searchParams = useSearchParams();
@@ -25,7 +25,7 @@ export default function ProductListPage() {
   );
 
   return (
-    <Can resource="products" action="view">
+    <PermissionGate resource="products" action="view">
       <div className="flex h-full border-t bg-gray-50">
         <ProductsSidebar
           filters={filters}
@@ -41,6 +41,6 @@ export default function ProductListPage() {
       {showImportModal && (
         <ProductImportModal onClose={() => setShowImportModal(false)} />
       )}
-    </Can>
+    </PermissionGate>
   );
 }

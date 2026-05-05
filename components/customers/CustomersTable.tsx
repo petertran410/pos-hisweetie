@@ -1,4 +1,3 @@
-// components/customers/CustomersTable.tsx
 "use client";
 
 import { useState, useEffect, Fragment, useMemo } from "react";
@@ -15,7 +14,7 @@ import {
 import type { Customer, CustomerFilters } from "@/lib/types/customer";
 import { CustomerDetailRow } from "./CustomerDetailRow";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Can } from "../permissions/Can";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 interface ColumnConfig {
   key: string;
@@ -337,7 +336,7 @@ export function CustomersTable({
     setExpandedCustomerId((prev) => (prev === id ? null : id));
 
   return (
-    <Can resource="orders" action="view">
+    <PermissionGate resource="orders" action="view">
       <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
         {/* ── Header ── */}
         <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
@@ -354,22 +353,22 @@ export function CustomersTable({
             />
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Can resource="customers" action="create">
+            <PermissionGate resource="customers" action="create">
               <button
                 onClick={onCreateClick}
                 className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
                 <Plus className="w-4 h-4" />
                 Tạo khách hàng
               </button>
-            </Can>
-            <Can resource="customers" action="create">
+            </PermissionGate>
+            <PermissionGate resource="customers" action="create">
               <button
                 onClick={onImportClick}
                 className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600">
                 <Upload className="w-4 h-4" />
                 Import
               </button>
-            </Can>
+            </PermissionGate>
             <button
               onClick={() => setShowColumnModal(true)}
               className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
@@ -593,6 +592,6 @@ export function CustomersTable({
           </div>
         </div>
       )}
-    </Can>
+    </PermissionGate>
   );
 }

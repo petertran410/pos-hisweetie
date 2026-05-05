@@ -16,8 +16,8 @@ import {
 import type { Invoice } from "@/lib/types/invoice";
 import { InvoiceDetailRow } from "./InvoiceDetailRow";
 import { formatCurrency } from "@/lib/utils";
-import { Can } from "../permissions/Can";
 import { InvoiceImportModal } from "./InvoiceImportModal";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 interface ColumnConfig {
   key: string;
@@ -520,7 +520,7 @@ export function InvoicesTable({
   const colSpan = visibleColumns.length + 2;
 
   return (
-    <Can resource="invoices" action="view">
+    <PermissionGate resource="invoices" action="view">
       <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
         {/* Toolbar */}
         <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
@@ -676,23 +676,23 @@ export function InvoicesTable({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Can resource="invoices" action="create">
+            <PermissionGate resource="invoices" action="create">
               <button
                 onClick={onCreateClick}
                 className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
                 <Plus className="w-4 h-4" />
                 Tạo hóa đơn
               </button>
-            </Can>
+            </PermissionGate>
 
-            <Can resource="invoices" action="create">
+            <PermissionGate resource="invoices" action="create">
               <button
                 onClick={() => setShowImportModal(true)}
                 className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5">
                 <Upload className="w-4 h-4" />
                 Import
               </button>
-            </Can>
+            </PermissionGate>
 
             {/* Báo đơn dropdown */}
             <div ref={baoDonRef} className="relative">
@@ -944,6 +944,6 @@ export function InvoicesTable({
       {showImportModal && (
         <InvoiceImportModal onClose={() => setShowImportModal(false)} />
       )}
-    </Can>
+    </PermissionGate>
   );
 }

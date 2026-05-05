@@ -7,8 +7,8 @@ import { PriceBookTable } from "@/components/price-books/PriceBookTable";
 import { PriceBookForm } from "@/components/price-books/PriceBookForm";
 import { PriceBookProductSelector } from "@/components/price-books/PriceBookProductSelector";
 import { useBranchStore } from "@/lib/store/branch";
-import { Can } from "@/components/permissions/Can";
 import { PriceBookImportModal } from "@/components/price-books/PriceBookImportModal";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export default function PriceBooksPage() {
   const [selectedPriceBookIds, setSelectedPriceBookIds] = useState<number[]>([
@@ -39,7 +39,7 @@ export default function PriceBooksPage() {
   }, []);
 
   return (
-    <Can resource="price_books" action="view">
+    <PermissionGate resource="price_books" action="view">
       <div className="flex h-full border-t bg-gray-50">
         <PriceBookSidebar
           priceBooks={priceBooksData?.data}
@@ -77,6 +77,6 @@ export default function PriceBooksPage() {
       {showImportModal && (
         <PriceBookImportModal onClose={() => setShowImportModal(false)} />
       )}
-    </Can>
+    </PermissionGate>
   );
 }

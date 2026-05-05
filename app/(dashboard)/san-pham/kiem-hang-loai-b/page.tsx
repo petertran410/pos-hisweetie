@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { InventoryChecksTable } from "@/components/inventory-checks/InventoryChecksTable";
 import { InventoryChecksSidebar } from "@/components/inventory-checks/InventoryChecksSidebar";
-import { Can } from "@/components/permissions/Can";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export default function InventoryCheckPage() {
   const [filters, setFilters] = useState<any>({});
@@ -13,7 +13,7 @@ export default function InventoryCheckPage() {
   }, []);
 
   return (
-    <Can resource="inventory_checks" action="view">
+    <PermissionGate resource="inventory_checks" action="view">
       <div className="flex h-full border-t bg-gray-50">
         <InventoryChecksSidebar
           filters={filters}
@@ -21,6 +21,6 @@ export default function InventoryCheckPage() {
         />
         <InventoryChecksTable filters={filters} />
       </div>
-    </Can>
+    </PermissionGate>
   );
 }

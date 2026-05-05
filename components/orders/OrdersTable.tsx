@@ -14,7 +14,7 @@ import {
 import type { Order } from "@/lib/types/order";
 import { OrderDetailRow } from "./OrderDetailRow";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Can } from "../permissions/Can";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 interface ColumnConfig {
   key: string;
@@ -362,7 +362,7 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
   const colSpan = visibleColumns.length + 2; // checkbox + chevron
 
   return (
-    <Can resource="orders" action="view">
+    <PermissionGate resource="orders" action="view">
       <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
         {/* ── Toolbar ── */}
         <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
@@ -379,14 +379,14 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
             />
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Can resource="orders" action="create">
+            <PermissionGate resource="orders" action="create">
               <button
                 onClick={onCreateClick}
                 className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
                 <Plus className="w-4 h-4" />
                 Tạo đơn
               </button>
-            </Can>
+            </PermissionGate>
             <button
               onClick={() => setShowColumnModal(true)}
               className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
@@ -606,6 +606,6 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
           </div>
         </div>
       )}
-    </Can>
+    </PermissionGate>
   );
 }

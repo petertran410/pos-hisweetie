@@ -13,7 +13,7 @@ import type { Production } from "@/lib/api/productions";
 import { ProductionDetailRow } from "./ProductionDetailRow";
 import { SelectBranchModal } from "./SelectBranchModal";
 import { ProductionForm } from "./ProductionForm";
-import { Can } from "../permissions/Can";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 interface ColumnConfig {
   key: string;
@@ -288,7 +288,7 @@ export function ProductionTable({ filters }: ProductionTableProps) {
   };
 
   return (
-    <Can resource="productions" action="view">
+    <PermissionGate resource="productions" action="view">
       <div className="flex-1 flex flex-col overflow-y-auto bg-white m-4 border rounded-xl">
         {/* Header */}
         <div className="border-b px-4 py-3 flex items-center justify-between gap-3 flex-shrink-0">
@@ -310,14 +310,14 @@ export function ProductionTable({ filters }: ProductionTableProps) {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Can resource="productions" action="create">
+            <PermissionGate resource="productions" action="create">
               <button
                 onClick={handleCreateProduction}
                 className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
                 <Plus className="w-4 h-4" />
                 Sản xuất
               </button>
-            </Can>
+            </PermissionGate>
 
             {/* Column toggle */}
             <div ref={columnModalRef} className="relative">
@@ -526,6 +526,6 @@ export function ProductionTable({ filters }: ProductionTableProps) {
             onClose={handleCloseForm}
           />
         )}
-    </Can>
+    </PermissionGate>
   );
 }

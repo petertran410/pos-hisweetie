@@ -5,7 +5,7 @@ import { useReturnOrders } from "@/lib/hooks/useReturnOrders";
 import { useBranchStore } from "@/lib/store/branch";
 import { Plus, Settings } from "lucide-react";
 import type { ReturnOrder } from "@/lib/types/return-order";
-import { Can } from "../permissions/Can";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 interface ColumnConfig {
   key: string;
@@ -243,7 +243,7 @@ export function ReturnOrdersTable({
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <Can resource="return_orders" action="view">
+    <PermissionGate resource="return_orders" action="view">
       <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
         <div className="flex items-center justify-between p-4 border-b bg-white">
           <div className="flex items-center gap-2">
@@ -383,6 +383,6 @@ export function ReturnOrdersTable({
           </div>
         )}
       </div>
-    </Can>
+    </PermissionGate>
   );
 }
