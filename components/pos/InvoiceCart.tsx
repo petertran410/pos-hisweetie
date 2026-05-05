@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { MultiPaymentModal } from "./MultiPaymentModal";
 import { DeliveryAddressDropdown } from "./DeliveryAddressDropdown";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { UnitPicker } from "./UnitPicker";
 
 interface InvoiceCartProps {
   cartItems: CartItem[];
@@ -392,12 +393,16 @@ export function InvoiceCart({
                     handleDeliveryChange("weight", Number(e.target.value))
                   }
                   placeholder="500"
-                  className="w-14 text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-16 text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
-                <select className="text-md bg-transparent outline-none">
-                  <option>gram</option>
-                  <option>kg</option>
-                </select>
+                <UnitPicker
+                  value={deliveryInfo.weightUnit || "g"}
+                  options={[
+                    { value: "g", label: "gram" },
+                    { value: "kg", label: "kg" },
+                  ]}
+                  onChange={(v) => handleDeliveryChange("weightUnit", v)}
+                />
                 <input
                   type="number"
                   value={deliveryInfo.length || 10}

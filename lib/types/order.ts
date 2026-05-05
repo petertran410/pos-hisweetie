@@ -92,6 +92,7 @@ export interface Order {
     locationName?: string;
     wardName?: string;
     weight?: number;
+    weightUnit?: string;
     length?: number;
     width?: number;
     height?: number;

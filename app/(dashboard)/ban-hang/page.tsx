@@ -47,6 +47,7 @@ export interface DeliveryInfo {
   locationName: string;
   wardName: string;
   weight: number;
+  weightUnit: string;
   length: number;
   width: number;
   height: number;
@@ -109,6 +110,7 @@ const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
     locationName: "",
     wardName: "",
     weight: 0,
+    weightUnit: "g",
     length: 10,
     width: 10,
     height: 10,
@@ -219,6 +221,7 @@ export default function BanHangPage() {
                 locationName: "",
                 wardName: "",
                 weight: 0,
+                weightUnit: "g",
                 length: 10,
                 width: 10,
                 height: 10,
@@ -524,6 +527,7 @@ export default function BanHangPage() {
           locationName: existingOrder.delivery?.locationName || "",
           wardName: existingOrder.delivery?.wardName || "",
           weight: Number(existingOrder.delivery?.weight) || 0,
+          weightUnit: existingOrder.delivery?.weightUnit || "g",
           length: Number(existingOrder.delivery?.length) || 10,
           width: Number(existingOrder.delivery?.width) || 10,
           height: Number(existingOrder.delivery?.height) || 10,
@@ -589,6 +593,7 @@ export default function BanHangPage() {
             locationName: existingOrder.delivery?.locationName || "",
             wardName: existingOrder.delivery?.wardName || "",
             weight: Number(existingOrder.delivery?.weight) || 0,
+            weightUnit: existingOrder.delivery?.weightUnit || "g",
             length: Number(existingOrder.delivery?.length) || 10,
             width: Number(existingOrder.delivery?.width) || 10,
             height: Number(existingOrder.delivery?.height) || 10,
@@ -707,6 +712,7 @@ export default function BanHangPage() {
               locationName: existingInvoice.delivery.locationName || "",
               wardName: existingInvoice.delivery.wardName || "",
               weight: Number(existingInvoice.delivery.weight) || 0,
+              weightUnit: existingInvoice.delivery?.weightUnit || "g",
               length: Number(existingInvoice.delivery.length) || 10,
               width: Number(existingInvoice.delivery.width) || 10,
               height: Number(existingInvoice.delivery.height) || 10,
@@ -1015,6 +1021,7 @@ export default function BanHangPage() {
           locationName: "",
           wardName: "",
           weight: 0,
+          weightUnit: "g",
           length: 10,
           width: 10,
           height: 10,
@@ -1076,6 +1083,7 @@ export default function BanHangPage() {
           locationName: "",
           wardName: "",
           weight: 0,
+          weightUnit: "g",
           length: 10,
           width: 10,
           height: 10,
@@ -1287,6 +1295,7 @@ export default function BanHangPage() {
           locationName: activeTab.deliveryInfo.locationName,
           wardName: activeTab.deliveryInfo.wardName,
           weight: Number(activeTab.deliveryInfo.weight) || 0,
+          weightUnit: activeTab.deliveryInfo.weightUnit || "g",
           length: Number(activeTab.deliveryInfo.length) || 10,
           width: Number(activeTab.deliveryInfo.width) || 10,
           height: Number(activeTab.deliveryInfo.height) || 10,
@@ -1412,6 +1421,7 @@ export default function BanHangPage() {
         locationName: activeTab.deliveryInfo.locationName,
         wardName: activeTab.deliveryInfo.wardName,
         weight: Number(activeTab.deliveryInfo.weight) || 0,
+        weightUnit: activeTab.deliveryInfo.weightUnit || "g",
         length: Number(activeTab.deliveryInfo.length) || 10,
         width: Number(activeTab.deliveryInfo.width) || 10,
         height: Number(activeTab.deliveryInfo.height) || 10,
@@ -1521,6 +1531,7 @@ export default function BanHangPage() {
         locationName: activeTab.deliveryInfo.locationName,
         wardName: activeTab.deliveryInfo.wardName,
         weight: Number(activeTab.deliveryInfo.weight) || 0,
+        weightUnit: activeTab.deliveryInfo.weightUnit || "g",
         length: Number(activeTab.deliveryInfo.length) || 10,
         width: Number(activeTab.deliveryInfo.width) || 10,
         height: Number(activeTab.deliveryInfo.height) || 10,
@@ -1554,6 +1565,7 @@ export default function BanHangPage() {
         locationName: activeTab.deliveryInfo.locationName,
         wardName: activeTab.deliveryInfo.wardName,
         weight: Number(activeTab.deliveryInfo.weight) || 0,
+        weightUnit: activeTab.deliveryInfo.weightUnit || "g",
         length: Number(activeTab.deliveryInfo.length) || 10,
         width: Number(activeTab.deliveryInfo.width) || 10,
         height: Number(activeTab.deliveryInfo.height) || 10,
