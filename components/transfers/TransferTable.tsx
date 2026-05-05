@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import type { Transfer } from "@/lib/api/transfers";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Printer, Trash2 } from "lucide-react";
+import { printEntity } from "@/lib/utils/print";
+import { toast } from "sonner";
 
 interface ColumnConfig {
   key: string;
@@ -367,6 +369,20 @@ export function TransferTable({
                     className="px-4 py-3 text-center"
                     onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await printEntity("transfer", transfer.id);
+                          } catch (e: any) {
+                            toast.error(
+                              e?.message || "In phiếu chuyển hàng thất bại"
+                            );
+                          }
+                        }}
+                        className="p-1 hover:bg-gray-200 rounded"
+                        title="In phiếu">
+                        <Printer className="w-4 h-4 text-gray-600" />
+                      </button>
                       <button
                         onClick={() => onEdit(transfer)}
                         className="p-1 hover:bg-gray-200 rounded"
