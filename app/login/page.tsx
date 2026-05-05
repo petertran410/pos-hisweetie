@@ -17,6 +17,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const { setAuth, isAuthenticated, _hasHydrated } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
 
   const returnUrl = searchParams.get("returnUrl") || "/";
 
@@ -31,6 +32,14 @@ export default function LoginPage() {
       router.replace(returnUrl);
     }
   }, [isAuthenticated, _hasHydrated, router, returnUrl]);
+
+  useEffect(() => {
+    const error = sessionStorage.getItem("auth-error");
+    if (error) {
+      setAuthError(error);
+      sessionStorage.removeItem("auth-error");
+    }
+  }, []);
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
@@ -70,6 +79,12 @@ export default function LoginPage() {
           </p>
           <p className="text-center">Mật khẩu đăng nhập admin: Dieptra@123</p> */}
         </div>
+
+        {authError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            {authError}
+          </div>
+        )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">

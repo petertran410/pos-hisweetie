@@ -24,11 +24,26 @@ const getAuthHeaders = (): HeadersInit => {
 
 const handleApiError = async (res: Response) => {
   if (res.status === 401) {
+    let errorMessage = "Phiên đăng nhập đã hết hạn";
+
+    try {
+      const errorJson = await res.clone().json();
+      const msg = errorJson?.message;
+      if (typeof msg === "string" && msg.length > 0) {
+        errorMessage = msg;
+      } else if (typeof msg === "object" && typeof msg?.message === "string") {
+        errorMessage = msg.message;
+      }
+    } catch {}
+
     useAuthStore.getState().clearAuth();
+
     if (typeof window !== "undefined") {
+      sessionStorage.setItem("auth-error", errorMessage);
       window.location.href = "/login";
     }
-    throw new Error("Phiên đăng nhập đã hết hạn");
+
+    throw new Error(errorMessage);
   }
 
   if (res.status === 403) {
