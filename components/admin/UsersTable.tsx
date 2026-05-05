@@ -6,6 +6,7 @@ import { ActionGuard } from "@/components/permissions/ActionGuard";
 import { useState } from "react";
 import { UserPermissionModal } from "./UserPermissionModal";
 import { Shield } from "lucide-react";
+import { useAuthStore } from "@/lib/store/auth";
 
 interface UsersTableProps {
   users: any[];
@@ -31,6 +32,8 @@ export function UsersTable({
   const deleteUser = useDeleteUser();
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [permissionUserId, setPermissionUserId] = useState<number | null>(null);
+  const currentUser = useAuthStore((s) => s.user);
+  const isSuperAdmin = currentUser?.roles?.includes("Super Admin") ?? false;
 
   const handleDelete = async (id: number) => {
     if (!confirm("Bạn có chắc chắn muốn xóa người dùng này?")) return;
@@ -144,12 +147,14 @@ export function UsersTable({
                     </button>
                   </ActionGuard>
 
-                  <button
-                    onClick={() => setPermissionUserId(user.id)}
-                    className="p-1 hover:bg-gray-200 rounded"
-                    title="Phân quyền">
-                    <Shield className="w-4 h-4 text-blue-600" />
-                  </button>
+                  {(isSuperAdmin || user.id !== currentUser?.id) && (
+                    <button
+                      onClick={() => setPermissionUserId(user.id)}
+                      className="p-1 hover:bg-gray-200 rounded"
+                      title="Phân quyền">
+                      <Shield className="w-4 h-4 text-blue-600" />
+                    </button>
+                  )}
                 </div>
               </td>
             </tr>
