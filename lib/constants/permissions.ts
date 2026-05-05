@@ -28,6 +28,8 @@ export const RESOURCE_LABELS: Record<string, string> = {
   return_orders: "Trả hàng",
   debt_offsets: "Cấn trừ công nợ",
   stock_audits: "Kiểm kho",
+  inventory_checks: "Kiểm hàng loại B",
+  settings: "Cài đặt hệ thống",
 };
 
 export const ACTION_LABELS: Record<string, string> = {
@@ -53,7 +55,7 @@ export const CATEGORY_ICONS: Record<string, string> = {
   "Bán hàng": "🛒",
   "Khách hàng": "👥",
   "Nhà cung cấp": "🏢",
-  "Báo đơn": "🚚",
+  "Giao hàng": "🚚",
   "Tài chính": "💰",
   "Báo cáo": "📊",
   "Quản trị": "⚙️",

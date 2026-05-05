@@ -21,7 +21,7 @@ export function BankAccountsTable({
   const canCreate = usePermission("bank_accounts", "create");
   const canView = usePermission("bank_accounts", "view");
   const canUpdate = usePermission("bank_accounts", "update");
-  const canDelete = usePermission("bank_accounts", "update");
+  const canDelete = usePermission("bank_accounts", "delete");
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiClient.delete(`/bank-accounts/${id}`),
