@@ -1,14 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { X, ChevronDown, ChevronUp, Building2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X } from "lucide-react";
 import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
-import { useRoles } from "@/lib/hooks/useRoles";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { authApi } from "@/lib/api/auth";
-import { useAuthStore } from "@/lib/store/auth";
-import { BranchPermissionEditor } from "./BranchPermissionEditor";
-import { UserPermissionMatrix } from "./UserPermissionMatrix";
 
 interface UserFormModalProps {
   userId: number | null;
@@ -32,7 +27,6 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
   const { data: user, isLoading: isLoadingUser } = useUser(userId || 0);
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
-  const { data: roles } = useRoles();
   const { data: branches } = useBranches();
 
   useEffect(() => {
@@ -71,25 +65,6 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
           updateData.password = formData.password;
         }
         await updateUser.mutateAsync({ id: userId, data: updateData });
-
-        const currentUser = useAuthStore.getState().user;
-        if (currentUser && currentUser.id === userId) {
-          const token = useAuthStore.getState().token;
-          if (token) {
-            try {
-              const profile = await authApi.getProfile(token);
-              useAuthStore.getState().setAuth(
-                {
-                  ...currentUser,
-                  permissions: profile.permissions,
-                  roles: profile.roles,
-                  branchIds: profile.branchIds,
-                },
-                token
-              );
-            } catch {}
-          }
-        }
       } else {
         await createUser.mutateAsync(formData);
       }
