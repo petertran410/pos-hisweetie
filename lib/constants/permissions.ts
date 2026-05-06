@@ -37,6 +37,12 @@ export const RESOURCE_LABELS: Record<string, string> = {
   pos_discount: "Giảm giá (POS)",
   pos_seller: "Người bán (POS)",
   pos_payment: "Thanh toán (POS)",
+  view_cost_price: "Xem giá vốn",
+  view_profit: "Xem lợi nhuận",
+  view_other_staff: "Xem của NV khác",
+  view_balance: "Xem số dư",
+  view_debt: "Xem công nợ",
+  view_price: "Xem giá nhập",
 };
 
 export const ACTION_LABELS: Record<string, string> = {

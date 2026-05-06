@@ -65,6 +65,8 @@ export function InvoiceDetailRow({
   const hasPermCancel = useCan("invoices", "cancel");
   const hasPermUpdate = useCan("invoices", "update");
   const hasPermPrint = useCan("invoices", "print");
+  const canViewCostPrice = useCan("invoices", "view_cost_price");
+  const canViewProfit = useCan("invoices", "view_profit");
 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
