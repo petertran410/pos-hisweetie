@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranchStore } from "@/lib/store/branch";
-import { useBranches } from "@/lib/hooks/useBranches";
 import { useAuthStore } from "@/lib/store/auth";
 import { authApi } from "@/lib/api/auth";
-import { Branch } from "@/lib/api/branches";
+import { Branch, branchesApi } from "@/lib/api/branches";
+import { useQuery } from "@tanstack/react-query";
 
 export function BranchSelector() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,7 +14,10 @@ export function BranchSelector() {
 
   const { selectedBranch, setSelectedBranch } = useBranchStore();
   const { user } = useAuthStore();
-  const { data: allBranches } = useBranches();
+  const { data: allBranches } = useQuery({
+    queryKey: ["my-branches"],
+    queryFn: () => branchesApi.getMyBranches(),
+  });
 
   const branches = useMemo(() => {
     if (!allBranches) return [];
