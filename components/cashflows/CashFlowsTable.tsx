@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
-import { useCashFlows } from "@/lib/hooks/useCashflows";
+import { useCashFlows, useOpeningBalance } from "@/lib/hooks/useCashflows";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -16,6 +16,7 @@ import { CashFlowDetailRow } from "./CashFlowDetailRow";
 import { formatCurrency } from "@/lib/utils";
 import { CreateCashFlowModal } from "./CreateCashFlowModal";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface ColumnConfig {
   key: string;
@@ -292,6 +293,41 @@ export function CashFlowsTable({
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
 
+  const canViewBalance = useCan("cash_flows", "view_balance");
+
+  const { data: openingBalance } = useOpeningBalance(
+    canViewBalance ? effectiveFilters : null
+  );
+
+  const totalReceipt = useMemo(
+    () =>
+      cashFlows
+        .filter((cf) => cf.isReceipt && cf.status !== 2)
+        .reduce(
+          (sum, cf) =>
+            sum + Number(cf.amount) + Number((cf as any).debtOffsetTotal || 0),
+          0
+        ),
+    [cashFlows]
+  );
+
+  const totalPayment = useMemo(
+    () =>
+      cashFlows
+        .filter((cf) => !cf.isReceipt && cf.status !== 2)
+        .reduce(
+          (sum, cf) =>
+            sum + Number(cf.amount) + Number((cf as any).debtOffsetTotal || 0),
+          0
+        ),
+    [cashFlows]
+  );
+
+  const closingBalance = useMemo(
+    () => Number(openingBalance || 0) + totalReceipt - totalPayment,
+    [openingBalance, totalReceipt, totalPayment]
+  );
+
   const visibleColumns = useMemo(
     () => columns.filter((c) => c.visible),
     [columns]
@@ -428,6 +464,35 @@ export function CashFlowsTable({
             </button>
           </div>
         </div>
+
+        {canViewBalance && (
+          <div className="px-4 py-2 border-b bg-blue-50 flex items-center gap-6 text-sm shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">Tồn đầu kỳ:</span>
+              <span className="font-semibold text-gray-800">
+                {formatCurrency(Number(openingBalance || 0))}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">Tổng thu:</span>
+              <span className="font-semibold text-green-600">
+                +{formatCurrency(totalReceipt)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">Tổng chi:</span>
+              <span className="font-semibold text-red-600">
+                -{formatCurrency(totalPayment)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">Tồn cuối kỳ:</span>
+              <span className="font-semibold text-blue-600">
+                {formatCurrency(closingBalance)}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         <div className="flex-1 overflow-auto">
