@@ -50,6 +50,9 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionDef> = {
   "/cai-dat/chi-nhanh": { resource: "branches", action: "view" },
   "/cai-dat/so-quy": { resource: "bank_accounts", action: "view" },
   "/cai-dat/lich-su": { resource: "audit_logs", action: "view" },
+  "/san-pham/kiem-kho": { resource: "stock_audits", action: "view" },
+  "/san-pham/tra-hang-nhap": { resource: "purchase_orders", action: "view" },
+  "/cai-dat/in-an": { resource: "print_templates", action: "view" },
 };
 
 export const NAV_CONFIG: NavSection[] = [
