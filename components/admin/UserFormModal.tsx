@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useAuthStore } from "@/lib/store/auth";
 
 interface UserFormModalProps {
   userId: number | null;
@@ -23,6 +24,9 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
     branchIds: [] as number[],
     isActive: true,
   });
+
+  const currentUser = useAuthStore((s) => s.user);
+  const isSelfEdit = userId !== null && currentUser?.id === userId;
 
   const { data: user, isLoading: isLoadingUser } = useUser(userId || 0);
   const createUser = useCreateUser();
@@ -56,11 +60,13 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
           phone: formData.phone,
           branchId: formData.branchId || undefined,
           isActive: formData.isActive,
-          roleIds: formData.roleIds,
-          permissionIds: formData.permissionIds,
-          denyPermissionIds: formData.denyPermissionIds,
-          branchIds: formData.branchIds,
         };
+        if (!isSelfEdit) {
+          updateData.roleIds = formData.roleIds;
+          updateData.permissionIds = formData.permissionIds;
+          updateData.denyPermissionIds = formData.denyPermissionIds;
+          updateData.branchIds = formData.branchIds;
+        }
         if (formData.password) {
           updateData.password = formData.password;
         }
@@ -72,29 +78,6 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
     } catch (error) {
       console.error(error);
     }
-  };
-
-  const handleRoleToggle = (roleId: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      roleIds: prev.roleIds.includes(roleId)
-        ? prev.roleIds.filter((id) => id !== roleId)
-        : [...prev.roleIds, roleId],
-    }));
-  };
-
-  const handlePermissionsChange = (activeIds: number[]) => {
-    const fromRole = (user?.rolePermissions || []).map((p: any) => p.id);
-
-    const grantIds = activeIds.filter((id) => !fromRole.includes(id));
-
-    const denyIds = fromRole.filter((id: any) => !activeIds.includes(id));
-
-    setFormData((prev) => ({
-      ...prev,
-      permissionIds: grantIds,
-      denyPermissionIds: denyIds,
-    }));
   };
 
   if (userId && isLoadingUser) {

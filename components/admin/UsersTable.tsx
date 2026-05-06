@@ -33,7 +33,6 @@ export function UsersTable({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [permissionUserId, setPermissionUserId] = useState<number | null>(null);
   const currentUser = useAuthStore((s) => s.user);
-  const isSuperAdmin = currentUser?.roles?.includes("Super Admin") ?? false;
 
   const handleDelete = async (id: number) => {
     if (!confirm("Bạn có chắc chắn muốn xóa người dùng này?")) return;
@@ -147,7 +146,7 @@ export function UsersTable({
                     </button>
                   </ActionGuard>
 
-                  {(isSuperAdmin || user.id !== currentUser?.id) && (
+                  {user.id !== currentUser?.id && (
                     <button
                       onClick={() => setPermissionUserId(user.id)}
                       className="p-1 hover:bg-gray-200 rounded"
