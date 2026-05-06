@@ -19,6 +19,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface InvoiceDetailRowProps {
   invoiceId: number;
@@ -55,13 +56,15 @@ export function InvoiceDetailRow({
   const router = useRouter();
   const { data: invoice, isLoading } = useInvoice(invoiceId);
   const updateInvoice = useUpdateInvoice();
-  const { user } = useAuthStore();
-
   const [isSaving, setIsSaving] = useState(false);
   const [description, setDescription] = useState("");
   const [activeTab, setActiveTab] = useState<
     "info" | "deliveries" | "payments"
   >("info");
+
+  const hasPermCancel = useCan("invoices", "cancel");
+  const hasPermUpdate = useCan("invoices", "update");
+  const hasPermPrint = useCan("invoices", "print");
 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -625,7 +628,7 @@ export function InvoiceDetailRow({
               {/* Action footer */}
               <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
                 <div className="flex gap-2">
-                  {canCancel && (
+                  {canCancel && hasPermCancel && (
                     <button
                       onClick={handleCancel}
                       disabled={isSaving}
@@ -633,7 +636,7 @@ export function InvoiceDetailRow({
                       {isSaving ? "Đang xử lý..." : "Hủy"}
                     </button>
                   )}
-                  {canProcess && (
+                  {canProcess && hasPermUpdate && (
                     <button
                       onClick={handleProcessInvoice}
                       disabled={isSaving}
@@ -648,12 +651,14 @@ export function InvoiceDetailRow({
                     disabled={
                       isSaving || invoice.status === INVOICE_STATUS.CANCELLED
                     }
+                    hidden={!hasPermUpdate}
                     className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {isSaving ? "Đang lưu..." : "Lưu"}
                   </button>
                   <button
                     onClick={handlePrint}
                     disabled={invoice.status === INVOICE_STATUS.CANCELLED}
+                    hidden={!hasPermPrint}
                     className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50">
                     <Printer className="w-4 h-4" />
                     In

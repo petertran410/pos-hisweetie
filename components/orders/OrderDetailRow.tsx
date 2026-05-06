@@ -27,6 +27,7 @@ import { CancelOrderModal } from "./CancelOrderModal";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
+import { useCan } from "@/lib/hooks/useCan";
 
 const getOrderStatusBadgeColor = (status: number) => {
   switch (status) {
@@ -65,6 +66,10 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const cancelOrder = useCancelOrder();
   const { user } = useAuthStore();
+
+  const hasPermCancel = useCan("orders", "cancel");
+  const hasPermUpdate = useCan("orders", "update");
+  const hasPermPrint = useCan("orders", "print");
 
   const isAdmin = user?.roles?.some(
     (role: string) => role === "Admin" || role === "Super Admin"
@@ -725,7 +730,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
                     <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                       <div className="flex gap-2">
-                        {canCancelOrder && (
+                        {canCancelOrder && hasPermCancel && (
                           <button
                             onClick={handleCancelClick}
                             disabled={isSaving}
@@ -736,6 +741,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         <button
                           onClick={handleProcessOrder}
                           hidden={
+                            !hasPermUpdate ||
                             isSaving ||
                             (order.status !== ORDER_STATUS.PENDING &&
                               order.status !==
@@ -750,17 +756,21 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         <button
                           onClick={handleSave}
                           disabled={isSaving}
+                          hidden={!hasPermUpdate}
                           className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                           {isSaving ? "Đang lưu..." : "Lưu"}
                         </button>
                         <button
                           onClick={handlePrint}
-                          disabled={order.status === ORDER_STATUS.CANCELLED}
+                          // disabled={order.status === ORDER_STATUS.CANCELLED}
+                          hidden={!hasPermPrint}
                           className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50">
                           <Printer className="w-4 h-4" />
                           In
                         </button>
-                        <button className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                        <button
+                          className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                          hidden={!hasPermUpdate}>
                           Kết thúc
                         </button>
                       </div>

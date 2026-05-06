@@ -14,6 +14,7 @@ import Swal from "sweetalert2";
 import { useAuthStore } from "@/lib/store/auth";
 import Link from "next/link";
 import { EditCashFlowModal } from "./EditCashFlowModal";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface CashFlowDetailRowProps {
   cashFlowId: number;
@@ -70,6 +71,11 @@ export function CashFlowDetailRow({
     (sum: number, d: any) => sum + Number(d.refundAmount),
     0
   );
+
+  const canUpdateCashFlow = useCan("cash_flows", "update");
+  const canDeleteCashFlow = useCan("cash_flows", "delete");
+  const canPrintCashFlow = useCan("cash_flows", "print");
+
   const mergedInvoices = useMemo(() => {
     const map = new Map<
       number,
@@ -742,7 +748,7 @@ export function CashFlowDetailRow({
                 {/* ── Footer actions ── */}
                 <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-200">
                   <div className="flex gap-2">
-                    {canCancel && (
+                    {canCancel && canDeleteCashFlow && (
                       <button
                         onClick={handleCancel}
                         disabled={cancelCashFlow.isPending}
@@ -753,7 +759,7 @@ export function CashFlowDetailRow({
                   </div>
                   <div className="flex gap-2">
                     {/* THÊM NÚT CHỈNH SỬA */}
-                    {!isCancelled && (
+                    {!isCancelled && canUpdateCashFlow && (
                       <button
                         onClick={() => setShowEditModal(true)}
                         className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2">
@@ -761,13 +767,15 @@ export function CashFlowDetailRow({
                         Chỉnh sửa
                       </button>
                     )}
-                    <button
-                      onClick={handlePrint}
-                      disabled={isPrinting || isCancelled}
-                      className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                      <Printer className="w-4 h-4" />
-                      {isPrinting ? "Đang in..." : "In"}
-                    </button>
+                    {canPrintCashFlow && (
+                      <button
+                        onClick={handlePrint}
+                        disabled={isPrinting || isCancelled}
+                        className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <Printer className="w-4 h-4" />
+                        {isPrinting ? "Đang in..." : "In"}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
