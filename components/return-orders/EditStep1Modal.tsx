@@ -6,6 +6,7 @@ import { useReturnOrder } from "@/lib/hooks/useReturnOrders";
 import { formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store/auth";
 import { API_URL } from "@/lib/config/api";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface EditStep1ModalProps {
   returnOrderId: number;
@@ -37,6 +38,8 @@ export function EditStep1Modal({
   const [images, setImages] = useState<
     { file?: File; preview: string; url?: string }[]
   >([]);
+
+  const canViewReturnPrice = useCan("return_orders_price", "view");
 
   useEffect(() => {
     if (returnOrder?.details) {
@@ -255,9 +258,15 @@ export function EditStep1Modal({
                   <th className="px-2 py-2 text-right w-16">Hàng tốt</th>
                   <th className="px-2 py-2 text-right w-16">Loại B</th>
                   <th className="px-2 py-2 text-right w-16">Cận date</th>
-                  <th className="px-2 py-2 text-right w-20">Tổng PL</th>
-                  <th className="px-2 py-2 text-right w-24">Giá nhập lại</th>
-                  <th className="px-2 py-2 text-right w-28">Thành tiền</th>
+                  <th className="px-2 py-2 text-right w-16">Tổng PL</th>
+                  {canViewReturnPrice && (
+                    <>
+                      <th className="px-2 py-2 text-right w-24">
+                        Giá nhập lại
+                      </th>
+                      <th className="px-2 py-2 text-right w-28">Thành tiền</th>
+                    </>
+                  )}
                   <th className="px-2 py-2 text-center w-12">✓</th>
                 </tr>
               </thead>
@@ -339,26 +348,30 @@ export function EditStep1Modal({
                       <td className="px-2 py-2 text-right font-medium">
                         {saleTotal}
                       </td>
-                      <td className="px-2 py-2 text-right">
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.returnPrice}
-                          onChange={(e) =>
-                            updateItem(
-                              idx,
-                              "returnPrice",
-                              Number(e.target.value)
-                            )
-                          }
-                          className="w-20 px-1 py-1 border rounded text-right text-sm"
-                        />
-                      </td>
-                      <td className="px-2 py-2 text-right font-medium">
-                        {formatCurrency(
-                          item.requestQuantity * item.returnPrice
-                        )}
-                      </td>
+                      {canViewReturnPrice && (
+                        <>
+                          <td className="px-2 py-2 text-right">
+                            <input
+                              type="number"
+                              min={0}
+                              value={item.returnPrice}
+                              onChange={(e) =>
+                                updateItem(
+                                  idx,
+                                  "returnPrice",
+                                  Number(e.target.value)
+                                )
+                              }
+                              className="w-20 px-1 py-1 border rounded text-right text-sm"
+                            />
+                          </td>
+                          <td className="px-2 py-2 text-right font-medium">
+                            {formatCurrency(
+                              item.requestQuantity * item.returnPrice
+                            )}
+                          </td>
+                        </>
+                      )}
                       <td className="px-2 py-2 text-center">
                         {saleTotal !== item.requestQuantity ? (
                           <span className="text-orange-500 text-lg">⚠</span>
@@ -425,10 +438,16 @@ export function EditStep1Modal({
         {/* Footer */}
         <div className="flex items-center justify-between p-4 border-t bg-gray-50 shrink-0 rounded-b-xl">
           <div className="text-sm">
-            <span className="text-gray-500">Tổng tiền trả: </span>
-            <span className="text-lg font-bold text-red-600">
-              {formatCurrency(totalRefund)}
-            </span>
+            {canViewReturnPrice ? (
+              <>
+                <span className="text-gray-500">Tổng tiền trả: </span>
+                <span className="text-lg font-bold text-red-600">
+                  {formatCurrency(totalRefund)}
+                </span>
+              </>
+            ) : (
+              <span className="text-gray-400 text-sm">—</span>
+            )}
           </div>
           <div className="flex gap-2">
             <button
