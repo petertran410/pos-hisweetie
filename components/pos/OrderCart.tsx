@@ -47,6 +47,9 @@ interface OrderCartProps {
   selectedAddressId?: number | null;
   soldById: number | null;
   onSellerChange: (id: number | null) => void;
+  canEditSeller?: boolean;
+  canViewPayment?: boolean;
+  canEditPayment?: boolean;
 }
 
 function SellerDropdown({
@@ -172,6 +175,9 @@ export function OrderCart({
   selectedAddressId,
   soldById,
   onSellerChange,
+  canEditSeller = true,
+  canViewPayment = true,
+  canEditPayment = true,
 }: OrderCartProps) {
   const { data: usersForFilter = [] } = useUsersForFilter();
   const { user } = useAuthStore();
@@ -291,13 +297,17 @@ export function OrderCart({
         <div className="pl-3 pr-3 pt-3 pb-1 space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <SellerDropdown
-                users={usersForFilter}
-                soldById={soldById}
-                currentUserId={user?.id ?? 0}
-                currentUserName={user?.name ?? ""}
-                onChange={onSellerChange}
-              />
+              {canEditSeller ? (
+                <SellerDropdown
+                  users={usersForFilter}
+                  soldById={soldById}
+                  currentUserId={user?.id ?? 0}
+                  currentUserName={user?.name ?? ""}
+                  onChange={onSellerChange}
+                />
+              ) : (
+                <span className="text-sm text-gray-600">{user?.name}</span>
+              )}
             </div>
             <div className="text-xs text-gray-600">{formatDate()}</div>
           </div>
@@ -454,30 +464,35 @@ export function OrderCart({
           </span>
         </div>
 
-        <div className="flex items-center justify-between text-md">
-          <div className="flex items-center gap-2">
-            <span>Khách thanh toán</span>
-            <button
-              onClick={() => setShowMultiPaymentModal(true)}
-              className="p-2 hover:bg-gray-100 rounded-lg">
-              <MoreVertical className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-1">
-              <input
-                type="text"
-                value={paymentDisplayValue}
-                onChange={handlePaymentInputChange}
-                onBlur={handlePaymentInputBlur}
-                placeholder="Nhập số tiền"
-                className="border rounded-xl px-3 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32"
-              />
+        {canViewPayment && (
+          <div className="flex items-center justify-between text-md">
+            <div className="flex items-center gap-2">
+              <span>Khách thanh toán</span>
+              {canEditPayment && (
+                <button
+                  onClick={() => setShowMultiPaymentModal(true)}
+                  className="p-2 hover:bg-gray-100 rounded-lg">
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              )}
+              {canEditPayment ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={paymentDisplayValue}
+                    onChange={handlePaymentInputChange}
+                    onBlur={handlePaymentInputBlur}
+                    placeholder="Nhập số tiền"
+                    className="border rounded-xl px-3 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32"
+                  />
+                </div>
+              ) : null}
             </div>
+            <span className="font-semibold">
+              {paymentAmount.toLocaleString()}
+            </span>
           </div>
-
-          <span className="font-semibold">
-            {paymentAmount.toLocaleString()}
-          </span>
-        </div>
+        )}
 
         {isEditMode && existingOrder && (
           <div className="flex items-center justify-between text-md">
@@ -534,13 +549,14 @@ export function OrderCart({
           </button>
         )}
       </div>
-
-      <MultiPaymentModal
-        isOpen={showMultiPaymentModal}
-        onClose={() => setShowMultiPaymentModal(false)}
-        totalAmount={calculateTotal()}
-        onConfirm={handleMultiPaymentConfirm}
-      />
+      {showMultiPaymentModal && canEditPayment && (
+        <MultiPaymentModal
+          isOpen={showMultiPaymentModal}
+          onClose={() => setShowMultiPaymentModal(false)}
+          totalAmount={calculateTotal()}
+          onConfirm={handleMultiPaymentConfirm}
+        />
+      )}
     </div>
   );
 }

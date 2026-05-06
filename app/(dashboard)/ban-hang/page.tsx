@@ -30,6 +30,7 @@ import {
   addressToDeliveryInfo,
 } from "@/lib/utils/customer-address";
 import { useAuthStore } from "@/lib/store/auth";
+import { useCan } from "@/lib/hooks/useCan";
 
 export interface CartItem {
   product: any;
@@ -127,7 +128,24 @@ export default function BanHangPage() {
   const { selectedBranch } = useBranchStore();
   const { user } = useAuthStore();
 
-  const [tabs, setTabs] = useState<Tab[]>([getDefaultTab("order", "tab-1")]);
+  const canCreateOrder = useCan("orders", "create");
+  const canCreateInvoice = useCan("invoices", "create");
+  const canEditPrice = useCan("pos_price", "update");
+  const canEditDiscount = useCan("pos_discount", "update");
+  const canEditSeller = useCan("pos_seller", "update");
+  const canViewInventory = useCan("pos_inventory", "view");
+  const canViewPayment = useCan("pos_payment", "view");
+  const canEditPayment = useCan("pos_payment", "update");
+
+  const createOrder = useCreateOrder();
+  const updateOrder = useUpdateOrder();
+  const createInvoice = useCreateInvoice();
+  const updateInvoice = useUpdateInvoice();
+  const createOrderPayment = useCreateOrderPayment();
+  const createInvoicePayment = useCreateInvoicePayment();
+  const createInvoiceFromOrder = useCreateInvoiceFromOrder();
+
+  const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState("tab-1");
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -301,14 +319,6 @@ export default function BanHangPage() {
     });
   };
 
-  const createOrder = useCreateOrder();
-  const updateOrder = useUpdateOrder();
-  const createInvoice = useCreateInvoice();
-  const updateInvoice = useUpdateInvoice();
-  const createOrderPayment = useCreateOrderPayment();
-  const createInvoicePayment = useCreateInvoicePayment();
-  const createInvoiceFromOrder = useCreateInvoiceFromOrder();
-
   const { data: existingOrder, isLoading: isLoadingOrder } = useOrder(
     orderId ? Number(orderId) : 0
   );
@@ -350,6 +360,11 @@ export default function BanHangPage() {
     if (uniqueTabs.length > 0) {
       setTabs(uniqueTabs);
       setActiveTabId(uniqueTabs[0].id);
+    } else {
+      const defaultType: TabType = canCreateOrder ? "order" : "invoice";
+      const defaultTab = getDefaultTab(defaultType, "tab-1");
+      setTabs([defaultTab]);
+      setActiveTabId(defaultTab.id);
     }
 
     setIsInitialized(true);
@@ -910,6 +925,9 @@ export default function BanHangPage() {
 
   const handleAddTab = () => {
     const currentType = activeTab.type;
+    if (currentType === "order" && !canCreateOrder) return;
+    if (currentType === "invoice" && !canCreateInvoice) return;
+
     const tabsOfSameType = tabs.filter((t) => t.type === currentType);
     const newTabNumber = tabsOfSameType.length + 1;
 
@@ -976,6 +994,10 @@ export default function BanHangPage() {
   const handleToggleType = () => {
     const currentType = activeTab.type;
     const newType: TabType = currentType === "order" ? "invoice" : "order";
+
+    if (newType === "order" && !canCreateOrder) return;
+    if (newType === "invoice" && !canCreateInvoice) return;
+
     const tabsOfNewType = tabs.filter((t) => t.type === newType);
     const newTabNumber = tabsOfNewType.length + 1;
 
@@ -1619,6 +1641,21 @@ export default function BanHangPage() {
     }
   };
 
+  if (!canCreateOrder && !canCreateInvoice) {
+    return (
+      <div className="flex items-center justify-center h-full bg-gray-50">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">
+            Không có quyền truy cập
+          </h2>
+          <p className="text-gray-500">
+            Bạn chưa được cấp quyền tạo đơn hàng hoặc hóa đơn.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if ((isLoadingOrder && orderId) || (isLoadingInvoice && invoiceId)) {
     return (
       <div className="h-full flex items-center justify-center bg-blue-600">
@@ -1670,11 +1707,13 @@ export default function BanHangPage() {
                 <Plus className="w-5 h-5" />
               </button>
 
-              <button
-                onClick={handleToggleType}
-                className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium">
-                <ArrowLeftRight className="w-5 h-5" />
-              </button>
+              {canCreateOrder && canCreateInvoice && (
+                <button
+                  onClick={handleToggleType}
+                  className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium">
+                  <ArrowLeftRight className="w-5 h-5" />
+                </button>
+              )}
             </>
           )}
         </div>
@@ -1696,6 +1735,9 @@ export default function BanHangPage() {
               orderNote={activeTab.orderNote}
               onOrderNoteChange={(orderNote) => updateActiveTab({ orderNote })}
               selectedCustomerId={activeTab.selectedCustomer?.id}
+              canEditPrice={canEditPrice}
+              canEditDiscount={canEditDiscount}
+              canViewInventory={canViewInventory}
             />
             <OrderCart
               cartItems={activeTab.cartItems}
@@ -1728,6 +1770,9 @@ export default function BanHangPage() {
               selectedAddressId={activeTab.selectedAddressId}
               soldById={activeTab.soldById}
               onSellerChange={(soldById) => updateActiveTab({ soldById })}
+              canEditSeller={canEditSeller}
+              canViewPayment={canViewPayment}
+              canEditPayment={canEditPayment}
             />
           </>
         ) : (
@@ -1745,6 +1790,9 @@ export default function BanHangPage() {
               orderNote={activeTab.orderNote}
               onOrderNoteChange={(orderNote) => updateActiveTab({ orderNote })}
               selectedCustomerId={activeTab.selectedCustomer?.id}
+              canEditPrice={canEditPrice}
+              canEditDiscount={canEditDiscount}
+              canViewInventory={canViewInventory}
             />
             <InvoiceCart
               cartItems={activeTab.cartItems}
@@ -1778,6 +1826,9 @@ export default function BanHangPage() {
               selectedAddressId={activeTab.selectedAddressId}
               soldById={activeTab.soldById}
               onSellerChange={(soldById) => updateActiveTab({ soldById })}
+              canEditSeller={canEditSeller}
+              canViewPayment={canViewPayment}
+              canEditPayment={canEditPayment}
             />
           </>
         )}

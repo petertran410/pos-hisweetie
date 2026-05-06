@@ -14,15 +14,19 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!_hasHydrated || !isAuthenticated || !user) return;
-
     if (user.roles?.includes(SUPER_ADMIN_ROLE)) return;
 
     const required = getRoutePermission(pathname);
     if (!required) return;
 
-    const key = `${required.resource}:${required.action}`;
-    if (!user.permissions?.includes(key)) {
-      router.replace("/");
+    if (Array.isArray(required)) {
+      const hasAny = required.some((def) =>
+        user.permissions?.includes(`${def.resource}:${def.action}`)
+      );
+      if (!hasAny) router.replace("/");
+    } else {
+      const key = `${required.resource}:${required.action}`;
+      if (!user.permissions?.includes(key)) router.replace("/");
     }
   }, [pathname, user, isAuthenticated, _hasHydrated, router]);
 

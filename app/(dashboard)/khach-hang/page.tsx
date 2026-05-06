@@ -7,6 +7,7 @@ import { CustomersTable } from "@/components/customers/CustomersTable";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { CustomerImportModal } from "@/components/customers/CustomerImportModal";
 import { CustomerFilters, Customer } from "@/lib/types/customer";
+import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function CustomersPage() {
   const searchParams = useSearchParams();
@@ -35,7 +36,7 @@ export default function CustomersPage() {
   );
 
   return (
-    <>
+    <PagePermissionGuard resource="customers" action="view">
       <div className="flex h-full border-t bg-gray-50 w-screen">
         <CustomersSidebar
           filters={filters}
@@ -67,6 +68,6 @@ export default function CustomersPage() {
       {showImportModal && (
         <CustomerImportModal onClose={() => setShowImportModal(false)} />
       )}
-    </>
+    </PagePermissionGuard>
   );
 }

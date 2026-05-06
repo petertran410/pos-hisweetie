@@ -31,6 +31,9 @@ interface InvoiceItemsListProps {
   orderNote: string;
   onOrderNoteChange: (note: string) => void;
   selectedCustomerId?: number;
+  canEditPrice?: boolean;
+  canEditDiscount?: boolean;
+  canViewInventory?: boolean;
 }
 
 export function InvoiceItemsList({
@@ -44,6 +47,9 @@ export function InvoiceItemsList({
   orderNote,
   onOrderNoteChange,
   selectedCustomerId,
+  canEditPrice = true,
+  canEditDiscount = true,
+  canViewInventory = true,
 }: InvoiceItemsListProps) {
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
   const [quantityDisplays, setQuantityDisplays] = useState<
@@ -327,22 +333,25 @@ export function InvoiceItemsList({
                         </span>
                       );
                     })()}
-                    <ProductPriceHistory
-                      customerId={selectedCustomerId}
-                      productId={item.product.id}
-                      documentType="invoice"
-                    />
+                    {canEditPrice && (
+                      <ProductPriceHistory
+                        customerId={selectedCustomerId}
+                        productId={item.product.id}
+                        documentType="invoice"
+                      />
+                    )}
                   </div>
 
-                  {(() => {
-                    const warning = getStockWarning(item);
-                    if (!warning) return null;
-                    return (
-                      <div className="text-xs text-red-600 font-medium mt-0.5">
-                        ⚠ {warning}
-                      </div>
-                    );
-                  })()}
+                  {canViewInventory &&
+                    (() => {
+                      const warning = getStockWarning(item);
+                      if (!warning) return null;
+                      return (
+                        <div className="text-xs text-red-600 font-medium mt-0.5">
+                          ⚠ {warning}
+                        </div>
+                      );
+                    })()}
 
                   <NoteDropdown
                     value={item.note || ""}
@@ -421,7 +430,12 @@ export function InvoiceItemsList({
                       Chiết khấu
                     </span>
                     <span
-                      className={`text-md ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}>
+                      className={`text-md ${canEditDiscount ? "cursor-pointer hover:text-blue-600" : ""} ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}
+                      onClick={
+                        canEditDiscount
+                          ? () => handleOpenDiscountModal(item)
+                          : undefined
+                      }>
                       {item.discount > 0
                         ? `-${item.discount.toLocaleString()}`
                         : "0"}
@@ -485,39 +499,40 @@ export function InvoiceItemsList({
               {discountType === "ratio" && ` (${discountValue}%)`}
             </span>
           </div>
-
-          <div className="flex items-center justify-between w-full">
-            <input
-              type="text"
-              value={displayValue}
-              onChange={handleInputChange}
-              onBlur={handleInputBlur}
-              placeholder={
-                discountType === "amount" ? "Nhập số tiền" : "Nhập %"
-              }
-              className="text-center border rounded-xl px-3 py-1.5 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleDiscountTypeChange("amount")}
-                className={`px-3 py-1 text-md rounded transition-colors ${
-                  discountType === "amount"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}>
-                Số tiền
-              </button>
-              <button
-                onClick={() => handleDiscountTypeChange("ratio")}
-                className={`px-3 py-1 text-md rounded transition-colors ${
-                  discountType === "ratio"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}>
-                %
-              </button>
+          {canEditDiscount ? (
+            <div className="flex items-center justify-between w-full">
+              <input
+                type="text"
+                value={displayValue}
+                onChange={handleInputChange}
+                onBlur={handleInputBlur}
+                placeholder={
+                  discountType === "amount" ? "Nhập số tiền" : "Nhập %"
+                }
+                className="text-center border rounded-xl px-3 py-1.5 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDiscountTypeChange("amount")}
+                  className={`px-3 py-1 text-md rounded transition-colors ${
+                    discountType === "amount"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}>
+                  Số tiền
+                </button>
+                <button
+                  onClick={() => handleDiscountTypeChange("ratio")}
+                  className={`px-3 py-1 text-md rounded transition-colors ${
+                    discountType === "ratio"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}>
+                  %
+                </button>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
         <div className="flex items-center justify-between font-semibold text-lg pt-1 border-t">
@@ -535,7 +550,7 @@ export function InvoiceItemsList({
         initialValue={editingTemplate?.content || ""}
         mode={noteModalMode}
       />
-      {selectedItemForDiscount && (
+      {selectedItemForDiscount && canEditDiscount && (
         <ItemDiscountModal
           isOpen={showDiscountModal}
           onClose={() => setShowDiscountModal(false)}

@@ -24,7 +24,10 @@ export interface NavItem {
   permission: PermissionDef;
 }
 
-export const ROUTE_PERMISSIONS: Record<string, PermissionDef> = {
+export const ROUTE_PERMISSIONS: Record<
+  string,
+  PermissionDef | PermissionDef[]
+> = {
   "/san-pham/danh-sach": { resource: "products", action: "view" },
   "/san-pham/thiet-lap-gia": { resource: "price_books", action: "view" },
   "/san-pham/chuyen-hang": { resource: "transfers", action: "view" },
@@ -44,7 +47,10 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionDef> = {
   "/don-hang/bao-don": { resource: "packing_slips", action: "view" },
   "/khach-hang": { resource: "customers", action: "view" },
   "/so-quy": { resource: "cash_flows", action: "view" },
-  "/ban-hang": { resource: "orders", action: "create" },
+  "/ban-hang": [
+    { resource: "orders", action: "create" },
+    { resource: "invoices", action: "create" },
+  ],
   "/cai-dat/nguoi-dung": { resource: "users", action: "view" },
   "/cai-dat/vai-tro": { resource: "roles", action: "view" },
   "/cai-dat/chi-nhanh": { resource: "branches", action: "view" },
@@ -192,7 +198,9 @@ export const POS_ACTIONS: NavItem[] = [
   },
 ];
 
-export function getRoutePermission(path: string): PermissionDef | null {
+export function getRoutePermission(
+  path: string
+): PermissionDef | PermissionDef[] | null {
   if (ROUTE_PERMISSIONS[path]) return ROUTE_PERMISSIONS[path];
   const match = Object.entries(ROUTE_PERMISSIONS).find(([route]) =>
     path.startsWith(route)

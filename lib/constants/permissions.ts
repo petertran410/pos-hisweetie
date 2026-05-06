@@ -32,6 +32,11 @@ export const RESOURCE_LABELS: Record<string, string> = {
   settings: "Cài đặt hệ thống",
   return_orders_price: "Giá nhập lại trả hàng",
   return_orders_total_prices: "Tổng tiền hàng trả hàng",
+  pos_inventory: "Tồn kho (POS)",
+  pos_price: "Đơn giá (POS)",
+  pos_discount: "Giảm giá (POS)",
+  pos_seller: "Người bán (POS)",
+  pos_payment: "Thanh toán (POS)",
 };
 
 export const ACTION_LABELS: Record<string, string> = {
