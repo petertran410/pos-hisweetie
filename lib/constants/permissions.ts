@@ -60,6 +60,12 @@ export const ACTION_LABELS: Record<string, string> = {
   financial: "Báo cáo tài chính",
   customer: "Báo cáo khách hàng",
   assign_permissions: "Phân quyền",
+  view_cost_price: "Xem giá vốn",
+  view_profit: "Xem lợi nhuận",
+  view_other_staff: "Xem dữ liệu NV khác",
+  view_balance: "Xem số dư",
+  view_debt: "Xem công nợ",
+  view_price: "Xem giá nhập",
 };
 
 export const CATEGORY_ICONS: Record<string, string> = {

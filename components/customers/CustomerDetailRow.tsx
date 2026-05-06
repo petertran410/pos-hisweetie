@@ -1,7 +1,7 @@
 // components/customers/CustomerDetailRow.tsx
 "use client";
 
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { useCustomer } from "@/lib/hooks/useCustomers";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Pencil, Trash2, Loader2, ExternalLink, MapPin } from "lucide-react";
@@ -39,6 +39,7 @@ export function CustomerDetailRow({
 
   const canUpdateCustomer = useCan("customers", "update");
   const canDeleteCustomer = useCan("customers", "delete");
+  const canViewDebt = useCan("customers", "view_debt");
 
   // ─── Sticky width trick (giống OrderDetailRow) ───
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -69,6 +70,15 @@ export function CustomerDetailRow({
 
     return () => ro.disconnect();
   }, [customer]);
+
+  useEffect(() => {
+    if (
+      !canViewDebt &&
+      ["debts", "debts_total", "debts_own"].includes(activeTab)
+    ) {
+      setActiveTab("info");
+    }
+  }, [canViewDebt]);
 
   const handleStatusToggle = () => {
     if (!customer) return;
@@ -137,12 +147,14 @@ export function CustomerDetailRow({
       : []),
     { key: "invoices", label: "Lịch sử hóa đơn/trả hàng" },
     { key: "orders", label: "Lịch sử đơn hàng" },
-    ...(isParent
-      ? [
-          { key: "debts_total", label: "Công nợ tổng" },
-          { key: "debts_own", label: "Công nợ riêng" },
-        ]
-      : [{ key: "debts", label: "Công nợ" }]),
+    ...(canViewDebt
+      ? isParent
+        ? [
+            { key: "debts_total", label: "Công nợ (bao gồm con)" },
+            { key: "debts_own", label: "Công nợ (chỉ KH này)" },
+          ]
+        : [{ key: "debts", label: "Công nợ" }]
+      : []),
   ] as const;
 
   const groups =

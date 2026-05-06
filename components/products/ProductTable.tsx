@@ -287,6 +287,7 @@ export function ProductsTable({
   const createDropdownRef = useRef<HTMLDivElement>(null);
 
   const canCreate = usePermission("products", "create");
+  const canViewCostPrice = usePermission("products", "view_cost_price");
 
   // Debounce search
   useEffect(() => {
@@ -339,6 +340,14 @@ export function ProductsTable({
     return DEFAULT_COLUMNS;
   });
 
+  const displayColumns = useMemo(
+    () =>
+      canViewCostPrice
+        ? columns
+        : columns.filter((c) => c.key !== "inventory.cost"),
+    [columns, canViewCostPrice]
+  );
+
   const { data, isLoading } = useProducts({
     page,
     limit,
@@ -371,8 +380,8 @@ export function ProductsTable({
   const totalPages = Math.ceil(total / limit) || 1;
 
   const visibleColumns = useMemo(
-    () => columns.filter((c) => c.visible),
-    [columns]
+    () => displayColumns.filter((c) => c.visible),
+    [displayColumns]
   );
 
   const colSpan = visibleColumns.length + 2; // +checkbox +chevron
@@ -496,7 +505,7 @@ export function ProductsTable({
               </button>
             </div>
             <div className="space-y-2">
-              {columns.map((col) => (
+              {displayColumns.map((col) => (
                 <label
                   key={col.key}
                   className="flex items-center gap-2 cursor-pointer">

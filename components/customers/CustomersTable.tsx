@@ -15,6 +15,7 @@ import type { Customer, CustomerFilters } from "@/lib/types/customer";
 import { CustomerDetailRow } from "./CustomerDetailRow";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface ColumnConfig {
   key: string;
@@ -30,12 +31,6 @@ interface CustomersTableProps {
   onEditClick: (customer: Customer) => void;
   onImportClick: () => void;
 }
-
-const STATUS_TABS = [
-  { value: "all", label: "Tất cả" },
-  { value: "active", label: "Đang hoạt động" },
-  { value: "inactive", label: "Ngừng hoạt động" },
-];
 
 const formatDateTime = (date?: string) => {
   if (!date) return "-";
@@ -241,6 +236,8 @@ export function CustomersTable({
   const [limit, setLimit] = useState(15);
   const [activeStatusTab, setActiveStatusTab] = useState("all");
 
+  const canViewDebt = useCan("customers", "view_debt");
+
   // Debounce search 300ms
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -281,6 +278,14 @@ export function CustomersTable({
     return DEFAULT_COLUMNS;
   });
 
+  const DEBT_KEYS = ["debtAmount", "debtDays"];
+
+  const displayColumns = useMemo(
+    () =>
+      canViewDebt ? columns : columns.filter((c) => !DEBT_KEYS.includes(c.key)),
+    [columns, canViewDebt]
+  );
+
   const { data, isLoading } = useCustomers({
     ...effectiveFilters,
     name: debouncedSearch || undefined,
@@ -299,20 +304,8 @@ export function CustomersTable({
   const totalPages = Math.ceil(total / limit) || 1;
 
   const visibleColumns = useMemo(
-    () => columns.filter((c) => c.visible),
-    [columns]
-  );
-
-  const pageSummary = useMemo(
-    () => ({
-      totalPurchased: customers.reduce(
-        (s, c) => s + Number(c.totalPurchased),
-        0
-      ),
-      totalDebt: customers.reduce((s, c) => s + Number(c.totalDebt), 0),
-      totalRevenue: customers.reduce((s, c) => s + Number(c.totalRevenue), 0),
-    }),
-    [customers]
+    () => displayColumns.filter((c) => c.visible),
+    [displayColumns]
   );
 
   const colSpan = visibleColumns.length + 2;
@@ -571,7 +564,7 @@ export function CustomersTable({
               </button>
             </div>
             <div className="space-y-0.5 max-h-80 overflow-y-auto">
-              {columns
+              {displayColumns
                 .filter(
                   (c) => c.key !== "discount" && c.key !== "discountRatio"
                 )
