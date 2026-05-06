@@ -10,6 +10,7 @@ import { CustomerInvoicesTab } from "./CustomerInvoicesTab";
 import { CustomerOrdersTab } from "./CustomerOrdersTab";
 import { CustomerDebtsTab } from "./CustomerDebtsTab";
 import { CustomerAddressesTab } from "../pos/CustomerAddressesTab";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface CustomerDetailRowProps {
   customerId: number;
@@ -35,6 +36,9 @@ export function CustomerDetailRow({
     | "debts_total"
     | "debts_own"
   >("info");
+
+  const canUpdateCustomer = useCan("customers", "update");
+  const canDeleteCustomer = useCan("customers", "delete");
 
   // ─── Sticky width trick (giống OrderDetailRow) ───
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -470,24 +474,30 @@ export function CustomerDetailRow({
               {/* ── Action footer (giống OrderDetailRow) ── */}
               <div className="flex items-center justify-between pt-4 border-t border-gray-200 mt-4">
                 <div className="flex gap-2">
-                  <button
-                    onClick={handleDelete}
-                    className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors">
-                    <Trash2 className="w-4 h-4 inline mr-1" />
-                    Xóa
-                  </button>
-                  <button
-                    onClick={handleStatusToggle}
-                    className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                    {customer.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
-                  </button>
+                  {canDeleteCustomer && (
+                    <button
+                      onClick={handleDelete}
+                      className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors">
+                      <Trash2 className="w-4 h-4 inline mr-1" />
+                      Xóa
+                    </button>
+                  )}
+                  {canUpdateCustomer && (
+                    <button
+                      onClick={handleStatusToggle}
+                      className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                      {customer.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
+                    </button>
+                  )}
                 </div>
-                <button
-                  onClick={() => onEditClick(customer)}
-                  className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm">
-                  <Pencil className="w-4 h-4 inline mr-1" />
-                  Chỉnh sửa
-                </button>
+                {canUpdateCustomer && (
+                  <button
+                    onClick={() => onEditClick(customer)}
+                    className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm">
+                    <Pencil className="w-4 h-4 inline mr-1" />
+                    Chỉnh sửa
+                  </button>
+                )}
               </div>
             </div>
           </div>

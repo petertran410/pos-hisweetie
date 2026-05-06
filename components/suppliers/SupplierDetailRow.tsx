@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSupplier, useDeleteSupplier } from "@/lib/hooks/useSuppliers";
 import { formatCurrency } from "@/lib/utils";
 import { SupplierForm } from "./SupplierForm";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface SupplierDetailRowProps {
   supplierId: number;
@@ -31,6 +32,9 @@ export function SupplierDetailRow({
   const [showInvoiceInfo, setShowInvoiceInfo] = useState(false);
   const [showGroupsModal, setShowGroupsModal] = useState(false);
   const deleteSupplier = useDeleteSupplier();
+
+  const canUpdateSupplier = useCan("suppliers", "update");
+  const canDeleteSupplier = useCan("suppliers", "delete");
 
   const handleDelete = async () => {
     if (!supplier) return;
@@ -226,23 +230,31 @@ export function SupplierDetailRow({
                 )}
 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                  <button
-                    onClick={handleDelete}
-                    className="px-3 py-1.5 text-red-600 border border-red-600 rounded hover:bg-red-50 ">
-                    Xóa
-                  </button>
+                  {canDeleteSupplier && (
+                    <button
+                      onClick={handleDelete}
+                      className="px-3 py-1.5 text-red-600 border border-red-600 rounded hover:bg-red-50">
+                      Xóa
+                    </button>
+                  )}
 
                   <div className="flex items-end gap-2">
-                    <button
-                      onClick={() => setShowEditModal(true)}
-                      className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 ">
-                      Chỉnh sửa
-                    </button>
-                    <button
-                      onClick={handleToggleStatus}
-                      className="px-3 py-1.5 border rounded hover:bg-gray-50 ">
-                      {supplier.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
-                    </button>
+                    {canUpdateSupplier && (
+                      <button
+                        onClick={() => setShowEditModal(true)}
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        Chỉnh sửa
+                      </button>
+                    )}
+                    {canUpdateSupplier && (
+                      <button
+                        onClick={handleToggleStatus}
+                        className="px-3 py-1.5 border rounded hover:bg-gray-50">
+                        {supplier.isActive
+                          ? "Ngừng hoạt động"
+                          : "Kích hoạt lại"}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

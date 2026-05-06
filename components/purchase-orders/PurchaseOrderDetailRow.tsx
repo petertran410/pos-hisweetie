@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface PurchaseOrderDetailRowProps {
   purchaseOrderId: number;
@@ -36,6 +37,9 @@ export function PurchaseOrderDetailRow({
 
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [showPurchaseByDropdown, setShowPurchaseByDropdown] = useState(false);
+
+  const canUpdatePO = useCan("purchase_orders", "update");
+  const canDeletePO = useCan("purchase_orders", "delete");
 
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const purchaseByDropdownRef = useRef<HTMLDivElement>(null);
@@ -461,7 +465,7 @@ export function PurchaseOrderDetailRow({
             </div>
 
             <div className="flex items-center gap-3 justify-between">
-              {purchaseOrder.status !== 2 && (
+              {canDeletePO && purchaseOrder.status !== 2 && (
                 <button
                   onClick={handleCancelPurchaseOrder}
                   className="px-4 py-2 text-sm border rounded hover:bg-gray-50">
@@ -469,12 +473,14 @@ export function PurchaseOrderDetailRow({
                 </button>
               )}
               <div className="space-x-2">
-                <button
-                  onClick={handleOpenPurchaseOrder}
-                  className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
-                  Mở phiếu
-                </button>
-                {purchaseOrder.status !== 2 && (
+                {canUpdatePO && (
+                  <button
+                    onClick={handleOpenPurchaseOrder}
+                    className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
+                    Mở phiếu
+                  </button>
+                )}
+                {canUpdatePO && purchaseOrder.status !== 2 && (
                   <button
                     onClick={handleSave}
                     className="px-4 py-2 text-sm border rounded hover:bg-gray-50">

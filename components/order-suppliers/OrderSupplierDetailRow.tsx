@@ -9,8 +9,8 @@ import {
 import { useOrderSupplierPayments } from "@/lib/hooks/useOrderSuppliers";
 import { Loader2, FileText, Save } from "lucide-react";
 import { toast } from "sonner";
-import { tr } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface OrderSupplierDetailRowProps {
   orderSupplierId: number;
@@ -89,6 +89,10 @@ export function OrderSupplierDetailRow({
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const { data: payments } = useOrderSupplierPayments(orderSupplierId);
+
+  const canUpdateOS = useCan("order_suppliers", "update");
+  const canDeleteOS = useCan("order_suppliers", "delete");
+  const canCreatePO = useCan("purchase_orders", "create");
 
   useState(() => {
     if (orderSupplier?.description) {
@@ -464,7 +468,7 @@ export function OrderSupplierDetailRow({
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        {canCancel && (
+                        {canCancel && canDeleteOS && (
                           <button
                             onClick={handleCancel}
                             disabled={isSaving}
@@ -474,35 +478,41 @@ export function OrderSupplierDetailRow({
                         )}
                       </div>
                       <div className="flex gap-2">
-                        <button
-                          onClick={handleCreatePurchaseOrder}
-                          disabled={isSaving}
-                          className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                          <FileText className="w-4 h-4" />
-                          Tạo phiếu nhập hàng
-                        </button>
-                        <button
-                          onClick={handleOpenForm}
-                          disabled={isSaving}
-                          className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                          Mở phiếu
-                        </button>
-                        <button
-                          onClick={handleSave}
-                          disabled={isSaving}
-                          className="px-4 py-2 text-md font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                          {isSaving ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Đang lưu...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="w-4 h-4" />
-                              Lưu
-                            </>
-                          )}
-                        </button>
+                        {canCreatePO && (
+                          <button
+                            onClick={handleCreatePurchaseOrder}
+                            disabled={isSaving}
+                            className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <FileText className="w-4 h-4" />
+                            Tạo phiếu nhập hàng
+                          </button>
+                        )}
+                        {canUpdateOS && (
+                          <button
+                            onClick={handleOpenForm}
+                            disabled={isSaving}
+                            className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            Mở phiếu
+                          </button>
+                        )}
+                        {canUpdateOS && (
+                          <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="px-4 py-2 text-md font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            {isSaving ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Đang lưu...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-4 h-4" />
+                                Lưu
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
