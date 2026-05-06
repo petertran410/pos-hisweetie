@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useReturnOrders } from "@/lib/hooks/useReturnOrders";
 import { useBranchStore } from "@/lib/store/branch";
 import { Plus, Settings } from "lucide-react";
 import type { ReturnOrder } from "@/lib/types/return-order";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface ColumnConfig {
   key: string;
@@ -194,6 +195,8 @@ export function ReturnOrdersTable({
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
 
+  const canViewTotalPrices = useCan("return_orders_total_prices", "view");
+
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("returnOrderTableColumns");
@@ -214,6 +217,20 @@ export function ReturnOrdersTable({
     return DEFAULT_COLUMNS;
   });
 
+  const TOTAL_PRICE_KEYS = [
+    "invoiceTotalAmount",
+    "totalReturnAmount",
+    "refundedAmount",
+  ];
+
+  const displayColumns = useMemo(
+    () =>
+      canViewTotalPrices
+        ? columns
+        : columns.filter((c) => !TOTAL_PRICE_KEYS.includes(c.key)),
+    [columns, canViewTotalPrices]
+  );
+
   const { data, isLoading } = useReturnOrders({
     page,
     limit,
@@ -230,7 +247,10 @@ export function ReturnOrdersTable({
 
   const returnOrders = data?.data || [];
   const total = data?.total || 0;
-  const visibleColumns = columns.filter((col) => col.visible);
+  const visibleColumns = useMemo(
+    () => displayColumns.filter((c) => c.visible),
+    [displayColumns]
+  );
 
   const toggleColumnVisibility = (key: string) => {
     setColumns((prev) =>
@@ -361,7 +381,7 @@ export function ReturnOrdersTable({
             <div className="bg-white rounded-xl p-6 w-96 max-h-[80vh] overflow-y-auto">
               <h3 className="font-semibold mb-4">Cấu hình cột hiển thị</h3>
               <div className="space-y-2">
-                {columns.map((col) => (
+                {displayColumns.map((col) => (
                   <label
                     key={col.key}
                     className="flex items-center gap-2 cursor-pointer">

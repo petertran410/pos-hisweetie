@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Fragment, useEffect } from "react";
+import { useState, Fragment, useEffect, useMemo } from "react";
 import { usePurchaseOrders } from "@/lib/hooks/usePurchaseOrders";
 import type {
   PurchaseOrder,
@@ -10,6 +10,7 @@ import { PurchaseOrderDetailRow } from "./PurchaseOrderDetailRow";
 import { Plus, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getStatusLabel } from "@/lib/types/purchase-order";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface ColumnConfig {
   key: string;
@@ -170,6 +171,8 @@ export function PurchaseOrdersTable({
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [search, setSearch] = useState("");
 
+  const canViewPrice = useCan("purchase_orders", "view_price");
+
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("purchaseOrderTableColumns");
@@ -190,6 +193,21 @@ export function PurchaseOrdersTable({
     return DEFAULT_COLUMNS;
   });
 
+  const PRICE_COLUMN_KEYS = [
+    "discount",
+    "totalPayForSupplier",
+    "needToPay",
+    "paidAmount",
+  ];
+
+  const displayColumns = useMemo(
+    () =>
+      canViewPrice
+        ? columns
+        : columns.filter((c) => !PRICE_COLUMN_KEYS.includes(c.key)),
+    [columns, canViewPrice]
+  );
+
   const { data, isLoading } = usePurchaseOrders({
     ...filters,
   });
@@ -205,7 +223,10 @@ export function PurchaseOrdersTable({
 
   const purchaseOrders = data?.data || [];
   const total = data?.total || 0;
-  const visibleColumns = columns.filter((col) => col.visible);
+  const visibleColumns = useMemo(
+    () => displayColumns.filter((c) => c.visible),
+    [displayColumns]
+  );
 
   const currentItem = filters.currentItem ?? 0;
   const pageSize = filters.pageSize ?? 15;
@@ -397,7 +418,7 @@ export function PurchaseOrdersTable({
               </button>
             </div>
             <div className="space-y-2">
-              {columns.map((col) => (
+              {displayColumns.map((col) => (
                 <label
                   key={col.key}
                   className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded">

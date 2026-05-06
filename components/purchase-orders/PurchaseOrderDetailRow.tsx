@@ -40,6 +40,7 @@ export function PurchaseOrderDetailRow({
 
   const canUpdatePO = useCan("purchase_orders", "update");
   const canDeletePO = useCan("purchase_orders", "delete");
+  const canViewPrice = useCan("purchase_orders", "view_price");
 
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const purchaseByDropdownRef = useRef<HTMLDivElement>(null);
@@ -356,18 +357,22 @@ export function PurchaseOrderDetailRow({
                     <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
                       Số lượng
                     </th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                      Đơn giá
-                    </th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                      Giá nhập
-                    </th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                      Giảm giá
-                    </th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                      Thành tiền
-                    </th>
+                    {canViewPrice && (
+                      <>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
+                          Đơn giá
+                        </th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
+                          Giá nhập
+                        </th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
+                          Giảm giá
+                        </th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
+                          Thành tiền
+                        </th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-white">
@@ -383,20 +388,25 @@ export function PurchaseOrderDetailRow({
                         <td className="px-4 py-3 text-sm text-right">
                           {item.quantity}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          {formatCurrency(item.price)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          {formatCurrency(item.price - item.discount)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          {formatCurrency(item.discount)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right font-medium">
-                          {formatCurrency(
-                            item.quantity * (item.price - (item.discount || 0))
-                          )}
-                        </td>
+                        {canViewPrice && (
+                          <>
+                            <td className="px-4 py-3 text-sm text-right">
+                              {formatCurrency(item.price)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right">
+                              {formatCurrency(item.price - item.discount)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right">
+                              {formatCurrency(item.discount)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right font-medium">
+                              {formatCurrency(
+                                item.quantity *
+                                  (item.price - (item.discount || 0))
+                              )}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))
                   ) : (
@@ -411,45 +421,46 @@ export function PurchaseOrderDetailRow({
                 </tbody>
               </table>
             </div>
-
-            <div className="flex justify-end mb-6">
-              <div className="w-80 border rounded-lg p-4 bg-gray-50">
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Số lượng mặt hàng</span>
-                    <span className="font-medium">{itemCount}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">
-                      Tổng tiền hàng ({totalQuantity})
-                    </span>
-                    <span className="font-medium">
-                      {formatCurrency(purchaseOrder.total)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Giảm giá</span>
-                    <span className="font-medium">
-                      {formatCurrency(purchaseOrder.discount)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm pt-3 border-t">
-                    <span className="text-gray-700 font-medium">
-                      Cần trả NCC
-                    </span>
-                    <span className="font-bold">
-                      {formatCurrency(purchaseOrder.totalAmount)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Tiền đã trả NCC</span>
-                    <span className="font-medium">
-                      {formatCurrency(purchaseOrder.paidAmount)}
-                    </span>
+            {canViewPrice && (
+              <div className="flex justify-end mb-6">
+                <div className="w-80 border rounded-lg p-4 bg-gray-50">
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Số lượng mặt hàng</span>
+                      <span className="font-medium">{itemCount}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">
+                        Tổng tiền hàng ({totalQuantity})
+                      </span>
+                      <span className="font-medium">
+                        {formatCurrency(purchaseOrder.total)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Giảm giá</span>
+                      <span className="font-medium">
+                        {formatCurrency(purchaseOrder.discount)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-3 border-t">
+                      <span className="text-gray-700 font-medium">
+                        Cần trả NCC
+                      </span>
+                      <span className="font-bold">
+                        {formatCurrency(purchaseOrder.totalAmount)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Tiền đã trả NCC</span>
+                      <span className="font-medium">
+                        {formatCurrency(purchaseOrder.paidAmount)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="mb-6">
               <textarea
