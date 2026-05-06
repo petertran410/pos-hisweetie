@@ -65,7 +65,7 @@ export function useFilteredPosActions(): NavItem[] {
 
 export function useFilteredMenuItems<T extends { href: string }>(
   items: T[],
-  routePermissions: Record<string, PermissionDef>
+  routePermissions: Record<string, PermissionDef | PermissionDef[]>
 ): T[] {
   const { user } = useAuthStore();
   const permissions = user?.permissions || [];
@@ -77,14 +77,21 @@ export function useFilteredMenuItems<T extends { href: string }>(
     return items.filter((item) => {
       const def = routePermissions[item.href];
       if (!def) return true;
+      if (Array.isArray(def)) {
+        return def.some((d) =>
+          permissions.includes(`${d.resource}:${d.action}`)
+        );
+      }
       return permissions.includes(`${def.resource}:${def.action}`);
     });
   }, [items, permissions, superAdmin]);
 }
-
 export function useFilteredSections<
   T extends { title: string; items: Array<{ href: string }> },
->(sections: T[], routePermissions: Record<string, PermissionDef>): T[] {
+>(
+  sections: T[],
+  routePermissions: Record<string, PermissionDef | PermissionDef[]>
+): T[] {
   const { user } = useAuthStore();
   const permissions = user?.permissions || [];
   const superAdmin = isSuperAdmin(user?.roles);
@@ -97,6 +104,11 @@ export function useFilteredSections<
         const filtered = section.items.filter((item) => {
           const def = routePermissions[item.href];
           if (!def) return true;
+          if (Array.isArray(def)) {
+            return def.some((d) =>
+              permissions.includes(`${d.resource}:${d.action}`)
+            );
+          }
           return permissions.includes(`${def.resource}:${def.action}`);
         });
         if (filtered.length === 0) return null;
