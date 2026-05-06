@@ -7,13 +7,12 @@ import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
 import { BranchSelector } from "./BranchSelector";
 import {
-  useFilteredNav,
   useFilteredPosActions,
   useFilteredSections,
   useFilteredMenuItems,
-  useCan,
 } from "@/lib/hooks/useCan";
 import { ROUTE_PERMISSIONS } from "@/lib/permissions/registry";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 export function DashboardHeader() {
   const router = useRouter();
@@ -21,7 +20,6 @@ export function DashboardHeader() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, clearAuth } = useAuthStore();
 
-  const navSections = useFilteredNav();
   const posActions = useFilteredPosActions();
 
   const handleLogout = () => {
@@ -130,8 +128,6 @@ export function DashboardHeader() {
     orderSubmenu,
     ROUTE_PERMISSIONS
   );
-  const canViewCustomers = useCan("customers", "view");
-  const canViewCashflows = useCan("cash_flows", "view");
 
   return (
     <header className="text-black">
@@ -209,21 +205,21 @@ export function DashboardHeader() {
               </div>
             )}
 
-            {canViewCustomers && (
+            <PermissionGate resource="customers" action="view">
               <Link
                 href="/khach-hang"
                 className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
                 Khách hàng
               </Link>
-            )}
+            </PermissionGate>
 
-            {canViewCashflows && (
+            <PermissionGate resource="cash_flows" action="view">
               <Link
                 href="/so-quy"
                 className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
                 Sổ quỹ
               </Link>
-            )}
+            </PermissionGate>
           </nav>
         </div>
 
