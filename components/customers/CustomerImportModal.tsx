@@ -555,10 +555,24 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
 
         {/* ── Body ── */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {/* Upload area + Template download */}
-          {/* Mode toggle */}
+          {/* Upload area — chỉ 1 block duy nhất */}
           {rows.length === 0 && cbRows.length === 0 && !result && (
             <>
+              {/* Mode toggle */}
+              <label className="flex items-center gap-2 cursor-pointer w-fit">
+                <input
+                  type="checkbox"
+                  checked={isCBMode}
+                  onChange={(e) => {
+                    setIsCBMode(e.target.checked);
+                    handleReset();
+                  }}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium">Import cân bằng nợ</span>
+              </label>
+
+              {/* Drag & drop */}
               <div
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
@@ -581,45 +595,12 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
                 />
               </div>
 
-              {/* Chỗ 2: Sửa nút download template */}
+              {/* Download template — tự động đổi theo mode */}
               <button
                 onClick={isCBMode ? downloadCBTemplate : downloadTemplate}
                 className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
                 <Download className="w-4 h-4" />
                 {isCBMode ? "Tải file mẫu Cân bằng nợ" : "Tải file mẫu Import"}
-              </button>
-            </>
-          )}
-
-          {rows.length === 0 && !result && (
-            <>
-              <div
-                onDrop={handleDrop}
-                onDragOver={(e) => e.preventDefault()}
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
-                <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                <p className="text-sm text-gray-600 mb-1">
-                  Kéo thả file Excel vào đây hoặc{" "}
-                  <span className="text-blue-600 font-medium">
-                    nhấn để chọn file
-                  </span>
-                </p>
-                <p className="text-xs text-gray-400">Hỗ trợ .xlsx, .xls</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleInputChange}
-                  className="hidden"
-                />
-              </div>
-
-              <button
-                onClick={downloadTemplate}
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
-                <Download className="w-4 h-4" />
-                Tải file mẫu Import
               </button>
             </>
           )}
