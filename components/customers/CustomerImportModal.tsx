@@ -421,41 +421,44 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
   const cbValidCount = cbRows.length - Object.keys(cbValidation).length;
 
   // ── File handling ──
-  const handleFile = useCallback(async (file: File) => {
-    const ext = file.name.split(".").pop()?.toLowerCase();
-    if (!ext || !["xlsx", "xls"].includes(ext)) {
-      setParseError("Chỉ hỗ trợ file .xlsx hoặc .xls");
-      return;
-    }
-
-    setParseError("");
-    setFileName(file.name);
-    setResult(null);
-
-    try {
-      if (isCBMode) {
-        const parsed = await parseCBExcelFile(file);
-        setCbRows(parsed);
-        if (parsed.length === 0) {
-          setParseError(
-            "File không có dữ liệu hợp lệ (cần có cột 'Số điện thoại')"
-          );
-        }
-      } else {
-        const parsed = await parseExcelFile(file);
-        setRows(parsed);
-        if (parsed.length === 0) {
-          setParseError(
-            "File không có dữ liệu hợp lệ (cần có cột 'Tên khách hàng')"
-          );
-        }
+  const handleFile = useCallback(
+    async (file: File) => {
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      if (!ext || !["xlsx", "xls"].includes(ext)) {
+        setParseError("Chỉ hỗ trợ file .xlsx hoặc .xls");
+        return;
       }
-    } catch (err: any) {
-      setParseError(err.message);
-      setRows([]);
-      setCbRows([]);
-    }
-  }, []);
+
+      setParseError("");
+      setFileName(file.name);
+      setResult(null);
+
+      try {
+        if (isCBMode) {
+          const parsed = await parseCBExcelFile(file);
+          setCbRows(parsed);
+          if (parsed.length === 0) {
+            setParseError(
+              "File không có dữ liệu hợp lệ (cần có cột 'Số điện thoại')"
+            );
+          }
+        } else {
+          const parsed = await parseExcelFile(file);
+          setRows(parsed);
+          if (parsed.length === 0) {
+            setParseError(
+              "File không có dữ liệu hợp lệ (cần có cột 'Tên khách hàng')"
+            );
+          }
+        }
+      } catch (err: any) {
+        setParseError(err.message);
+        setRows([]);
+        setCbRows([]);
+      }
+    },
+    [isCBMode]
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
