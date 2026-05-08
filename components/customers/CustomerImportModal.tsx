@@ -120,6 +120,111 @@ const PREVIEW_COLUMNS = [
   { key: "branchName", label: "Chi nhánh", width: "150px" },
 ] as const;
 
+interface CBRow {
+  contactNumber?: string;
+  code?: string;
+  transDate?: string;
+  type?: string;
+  amount?: number;
+}
+
+const CB_HEADER_MAP: Record<string, keyof CBRow> = {
+  "số điện thoại": "contactNumber",
+  "so dien thoai": "contactNumber",
+  "điện thoại": "contactNumber",
+  "dien thoai": "contactNumber",
+  "mã giao dịch": "code",
+  "ma giao dich": "code",
+  "thời gian": "transDate",
+  "thoi gian": "transDate",
+  "loại giao dịch": "type",
+  "loai giao dich": "type",
+  "giá trị": "amount",
+  "gia tri": "amount",
+};
+
+const CB_PREVIEW_COLUMNS = [
+  { key: "contactNumber", label: "SĐT", width: "130px" },
+  { key: "code", label: "Mã giao dịch", width: "140px" },
+  { key: "transDate", label: "Thời gian", width: "160px" },
+  { key: "type", label: "Loại", width: "100px" },
+  { key: "amount", label: "Giá trị", width: "150px" },
+] as const;
+
+function normalizeCBHeader(raw: string): keyof CBRow | null {
+  const key = raw.trim().toLowerCase().replace(/\s+/g, " ");
+  return CB_HEADER_MAP[key] ?? null;
+}
+
+function parseCBExcelFile(file: File): Promise<CBRow[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        if (!ws) return reject(new Error("File Excel trống"));
+
+        const jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, {
+          defval: "",
+        });
+        if (jsonRows.length === 0) return reject(new Error("Không có dữ liệu"));
+
+        const rawHeaders = Object.keys(jsonRows[0]);
+        const fieldMap: Record<string, keyof CBRow> = {};
+        for (const h of rawHeaders) {
+          const mapped = normalizeCBHeader(h);
+          if (mapped) fieldMap[h] = mapped;
+        }
+
+        const rows: CBRow[] = jsonRows.map((raw) => {
+          const row: any = {};
+          for (const [rawKey, field] of Object.entries(fieldMap)) {
+            let val = raw[rawKey];
+            if (val === undefined || val === null || val === "") continue;
+            if (field === "amount") {
+              const num = Number(String(val).replace(/,/g, ""));
+              if (!isNaN(num)) row[field] = num;
+            } else if (field === "transDate" && val instanceof Date) {
+              row[field] =
+                `${String(val.getDate()).padStart(2, "0")}/${String(val.getMonth() + 1).padStart(2, "0")}/${val.getFullYear()} ${String(val.getHours()).padStart(2, "0")}:${String(val.getMinutes()).padStart(2, "0")}`;
+            } else {
+              row[field] = String(val).trim();
+            }
+          }
+          return row;
+        });
+
+        resolve(rows.filter((r) => r.contactNumber?.trim() || r.code?.trim()));
+      } catch (err: any) {
+        reject(new Error(err.message || "Không thể đọc file Excel"));
+      }
+    };
+    reader.onerror = () => reject(new Error("Lỗi đọc file"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function downloadCBTemplate() {
+  const headers = [
+    "Số điện thoại",
+    "Mã giao dịch",
+    "Thời gian",
+    "Loại giao dịch",
+    "Giá trị",
+  ];
+  const sampleData = [
+    ["0901234567", "CB000001", "16/06/2025 00:00", "Điều chỉnh", 4993795206],
+    ["0912345678", "CB000002", "20/06/2025 10:30", "Điều chỉnh", -500000],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
+  ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 4, 15) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Cân bằng nợ");
+  XLSX.writeFile(wb, "Mau_Import_CanBangNo.xlsx");
+}
+
 function normalizeHeader(raw: string): keyof ImportRow | null {
   const key = raw.trim().toLowerCase().replace(/\s+/g, " ");
   return HEADER_MAP[key] ?? null;
@@ -282,6 +387,8 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
   const [parseError, setParseError] = useState("");
   const [updateDebt, setUpdateDebt] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [isCBMode, setIsCBMode] = useState(false);
+  const [cbRows, setCbRows] = useState<CBRow[]>([]);
 
   // ── Validate preview ──
   const validation = useMemo(() => {
@@ -297,6 +404,21 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
   }, [rows]);
 
   const validCount = rows.length - Object.keys(validation).length;
+  const cbValidation = useMemo(() => {
+    const errors: Record<number, string> = {};
+    cbRows.forEach((r, i) => {
+      if (!r.contactNumber?.trim()) {
+        errors[i] = "Thiếu số điện thoại";
+      } else if (!r.code?.trim()) {
+        errors[i] = "Thiếu mã giao dịch";
+      } else if (r.amount === undefined || r.amount === 0) {
+        errors[i] = "Giá trị không hợp lệ";
+      }
+    });
+    return errors;
+  }, [cbRows]);
+
+  const cbValidCount = cbRows.length - Object.keys(cbValidation).length;
 
   // ── File handling ──
   const handleFile = useCallback(async (file: File) => {
@@ -311,16 +433,27 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
     setResult(null);
 
     try {
-      const parsed = await parseExcelFile(file);
-      setRows(parsed);
-      if (parsed.length === 0) {
-        setParseError(
-          "File không có dữ liệu hợp lệ (cần có cột 'Tên khách hàng')"
-        );
+      if (isCBMode) {
+        const parsed = await parseCBExcelFile(file);
+        setCbRows(parsed);
+        if (parsed.length === 0) {
+          setParseError(
+            "File không có dữ liệu hợp lệ (cần có cột 'Số điện thoại')"
+          );
+        }
+      } else {
+        const parsed = await parseExcelFile(file);
+        setRows(parsed);
+        if (parsed.length === 0) {
+          setParseError(
+            "File không có dữ liệu hợp lệ (cần có cột 'Tên khách hàng')"
+          );
+        }
       }
     } catch (err: any) {
       setParseError(err.message);
       setRows([]);
+      setCbRows([]);
     }
   }, []);
 
@@ -360,12 +493,37 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
     },
   });
 
-  const handleImport = () => {
-    if (validCount === 0) return;
+  const cbImportMutation = useMutation({
+    mutationFn: (data: { rows: CBRow[] }) =>
+      apiClient.post<ImportResult>(
+        "/customers/import-balance-adjustments",
+        data
+      ),
+    onSuccess: (data) => {
+      setResult(data);
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["cashflows"] });
+      if (data.errors.length === 0) {
+        toast.success(data.message);
+      } else {
+        toast.warning(`Import hoàn tất với ${data.errors.length} lỗi`);
+      }
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Import thất bại");
+    },
+  });
 
-    // Chỉ gửi rows hợp lệ
-    const validRows = rows.filter((_, i) => !validation[i]);
-    importMutation.mutate({ rows: validRows, updateDebt });
+  const handleImport = () => {
+    if (isCBMode) {
+      if (cbValidCount === 0) return;
+      const validRows = cbRows.filter((_, i) => !cbValidation[i]);
+      cbImportMutation.mutate({ rows: validRows });
+    } else {
+      if (validCount === 0) return;
+      const validRows = rows.filter((_, i) => !validation[i]);
+      importMutation.mutate({ rows: validRows, updateDebt });
+    }
   };
 
   const handleReset = () => {
@@ -374,17 +532,22 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
     setParseError("");
     setResult(null);
     setUpdateDebt(false);
+    setCbRows([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const isImporting = importMutation.isPending;
+  const isImporting = importMutation.isPending || cbImportMutation.isPending;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] flex flex-col m-4">
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
-          <h2 className="text-lg font-semibold">Import khách hàng từ Excel</h2>
+          <h2 className="text-lg font-semibold">
+            {isCBMode
+              ? "Import cân bằng nợ từ Excel"
+              : "Import khách hàng từ Excel"}
+          </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
             <X className="w-5 h-5" />
           </button>
@@ -393,6 +556,22 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
         {/* ── Body ── */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {/* Upload area + Template download */}
+          {/* Mode toggle */}
+          {rows.length === 0 && cbRows.length === 0 && !result && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isCBMode}
+                onChange={(e) => {
+                  setIsCBMode(e.target.checked);
+                  handleReset();
+                }}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium">Import cân bằng nợ</span>
+            </label>
+          )}
+
           {rows.length === 0 && !result && (
             <>
               <div

@@ -16,7 +16,7 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
     queryFn: () =>
       ordersApi.getOrders({
         customerId,
-        limit: 100,
+        limit: 1000,
       }),
   });
 

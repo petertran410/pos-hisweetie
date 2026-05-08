@@ -197,6 +197,7 @@ export function CustomerPaymentModal({
         .filter((invoice: any) => {
           const debtAmount = Number(invoice.debtAmount);
           if (debtAmount <= 0) return false;
+          if (invoice.status === 2) return false;
           // Loại invoice đã bị trả hàng đủ số lượng ở bước 2 (returnOrderAmount >= debtAmount)
           const returnOrderAmount = Number(
             (invoice as any).returnOrderAmount || 0
@@ -856,6 +857,26 @@ export function CustomerPaymentModal({
                   </tr>
                 </thead>
                 <tbody>
+                  {unpaidInvoices.length > 0 && (
+                    <tr className="bg-gray-50 border-t font-semibold">
+                      <td
+                        colSpan={4}
+                        className="px-4 py-2 text-right text-xs text-gray-600">
+                        Tổng còn cần thu
+                      </td>
+                      <td className="px-4 py-2 text-right text-xs text-red-600">
+                        {formatCurrency(
+                          unpaidInvoices.reduce(
+                            (sum: number, inv: any) =>
+                              sum + Number(inv.debtAmount),
+                            0
+                          )
+                        )}
+                      </td>
+                      {availableCredit > 0 && <td />}
+                      <td />
+                    </tr>
+                  )}
                   {isLoading ? (
                     <tr>
                       <td

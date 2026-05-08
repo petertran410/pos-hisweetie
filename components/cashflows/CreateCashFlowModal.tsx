@@ -169,6 +169,7 @@ export function CreateCashFlowModal({
       .filter((invoice: any) => {
         const debtAmount = Number(invoice.debtAmount);
         if (debtAmount <= 0) return false;
+        if (invoice.status === 2) return false;
         const returnOrderAmount = Number(
           (invoice as any).returnOrderAmount || 0
         );

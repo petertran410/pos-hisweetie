@@ -112,7 +112,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
     queryFn: () =>
       invoicesApi.getInvoices({
         customerIds: [customerId],
-        limit: 100,
+        limit: 1000,
       }),
   });
 
@@ -123,7 +123,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
     queryFn: () =>
       returnOrdersApi.getAll({
         customerId,
-        limit: 100,
+        limit: 1000,
       }),
   });
 
