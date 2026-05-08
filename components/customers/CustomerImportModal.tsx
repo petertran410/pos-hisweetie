@@ -558,18 +558,37 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
           {/* Upload area + Template download */}
           {/* Mode toggle */}
           {rows.length === 0 && cbRows.length === 0 && !result && (
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isCBMode}
-                onChange={(e) => {
-                  setIsCBMode(e.target.checked);
-                  handleReset();
-                }}
-                className="w-4 h-4"
-              />
-              <span className="text-sm font-medium">Import cân bằng nợ</span>
-            </label>
+            <>
+              <div
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+                <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                <p className="text-sm text-gray-600 mb-1">
+                  Kéo thả file Excel vào đây hoặc{" "}
+                  <span className="text-blue-600 font-medium">
+                    nhấn để chọn file
+                  </span>
+                </p>
+                <p className="text-xs text-gray-400">Hỗ trợ .xlsx, .xls</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleInputChange}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Chỗ 2: Sửa nút download template */}
+              <button
+                onClick={isCBMode ? downloadCBTemplate : downloadTemplate}
+                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
+                <Download className="w-4 h-4" />
+                {isCBMode ? "Tải file mẫu Cân bằng nợ" : "Tải file mẫu Import"}
+              </button>
+            </>
           )}
 
           {rows.length === 0 && !result && (
@@ -610,6 +629,93 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
               <XCircle className="w-4 h-4 shrink-0" />
               {parseError}
             </div>
+          )}
+
+          {/* CB Mode Preview */}
+          {isCBMode && cbRows.length > 0 && !result && (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileSpreadsheet className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium">{fileName}</p>
+                    <p className="text-xs text-gray-500">
+                      {cbRows.length} dòng dữ liệu — {cbValidCount} hợp lệ
+                      {Object.keys(cbValidation).length > 0 && (
+                        <span className="text-red-500 ml-1">
+                          ({Object.keys(cbValidation).length} lỗi)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleReset}
+                  className="text-sm text-gray-500 hover:text-red-600">
+                  Xóa file
+                </button>
+              </div>
+
+              <div className="overflow-auto border rounded-lg max-h-[400px]">
+                <table className="text-sm border-collapse min-w-full">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600 border-b w-10">
+                        #
+                      </th>
+                      {CB_PREVIEW_COLUMNS.map((col) => (
+                        <th
+                          key={col.key}
+                          className="px-3 py-2 text-left font-medium text-gray-600 border-b whitespace-nowrap"
+                          style={{ minWidth: col.width }}>
+                          {col.label}
+                        </th>
+                      ))}
+                      <th className="px-3 py-2 text-left font-medium text-gray-600 border-b">
+                        Trạng thái
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cbRows.map((row, i) => {
+                      const err = cbValidation[i];
+                      return (
+                        <tr
+                          key={i}
+                          className={err ? "bg-red-50" : "hover:bg-gray-50"}>
+                          <td className="px-3 py-2 text-gray-400 border-b">
+                            {i + 1}
+                          </td>
+                          {CB_PREVIEW_COLUMNS.map((col) => (
+                            <td
+                              key={col.key}
+                              className="px-3 py-2 border-b whitespace-nowrap text-gray-800">
+                              {col.key === "amount"
+                                ? (row[col.key]?.toLocaleString("vi-VN") ?? "")
+                                : ((row[col.key as keyof CBRow] as string) ??
+                                  "")}
+                            </td>
+                          ))}
+                          <td className="px-3 py-2 border-b">
+                            {err ? (
+                              <span className="flex items-center gap-1 text-red-600 text-xs">
+                                <AlertTriangle className="w-3 h-3" />
+                                {err}
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-green-600 text-xs">
+                                <CheckCircle2 className="w-3 h-3" />
+                                Hợp lệ
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
           {/* Preview */}
@@ -834,7 +940,8 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
                   className="px-4 py-2 border rounded-lg hover:bg-gray-50 text-sm">
                   Hủy
                 </button>
-                {rows.length > 0 && (
+                {/* Regular mode */}
+                {!isCBMode && rows.length > 0 && (
                   <button
                     onClick={handleImport}
                     disabled={isImporting || validCount === 0}
@@ -845,6 +952,20 @@ export function CustomerImportModal({ onClose }: CustomerImportModalProps) {
                     {isImporting
                       ? "Đang import..."
                       : `Import ${validCount} khách hàng`}
+                  </button>
+                )}
+                {/* CB mode */}
+                {isCBMode && cbRows.length > 0 && (
+                  <button
+                    onClick={handleImport}
+                    disabled={isImporting || cbValidCount === 0}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 flex items-center gap-2">
+                    {isImporting && (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    )}
+                    {isImporting
+                      ? "Đang import..."
+                      : `Import ${cbValidCount} bản ghi cân bằng nợ`}
                   </button>
                 )}
               </>
