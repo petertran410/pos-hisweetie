@@ -1115,9 +1115,11 @@ export default function BanHangPage() {
     if (!activeTab) return;
 
     const totalWeight = activeTab.cartItems.reduce((sum, item) => {
-      const productWeight = Number(item.product.weight) || 0;
+      const productWeight = Number(item.product?.weight) || 0;
       const weightInGrams =
-        item.product.weightUnit === "kg" ? productWeight * 1000 : productWeight;
+        item.product?.weightUnit === "kg"
+          ? productWeight * 1000
+          : productWeight;
       return sum + weightInGrams * item.quantity;
     }, 0);
 
@@ -1290,7 +1292,7 @@ export default function BanHangPage() {
       cartItems: activeTab.cartItems.filter(
         (item) =>
           !(
-            item.product.id === productId &&
+            item.product?.id === productId &&
             (item.conditionType || "normal") === conditionType
           )
       ),

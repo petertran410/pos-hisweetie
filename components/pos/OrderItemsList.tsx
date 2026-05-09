@@ -70,7 +70,7 @@ export function OrderItemsList({
   const { selectedBranch } = useBranchStore();
 
   const getItemOnHand = (item: CartItem): number | null => {
-    if (!selectedBranch || !item.product.inventories) return null;
+    if (!selectedBranch || !item.product?.inventories) return null;
     const inv = item.product.inventories.find(
       (i: any) => i.branchId === selectedBranch.id
     );
@@ -290,22 +290,40 @@ export function OrderItemsList({
     }
   };
 
-  // Nhóm items: cùng productId sẽ không có gap
   const isFirstOfGroup = (index: number) => {
     if (index === 0) return true;
-    return cartItems[index].product.id !== cartItems[index - 1].product.id;
+    return (
+      normalizedItems[index].product.id !==
+      normalizedItems[index - 1].product.id
+    );
   };
 
   const isLastOfGroup = (index: number) => {
-    if (index === cartItems.length - 1) return true;
-    return cartItems[index].product.id !== cartItems[index + 1].product.id;
+    if (index === normalizedItems.length - 1) return true;
+    return (
+      normalizedItems[index].product.id !==
+      normalizedItems[index + 1].product.id
+    );
   };
+
+  const normalizedItems = cartItems.map((item) => {
+    if (item.product?.id !== undefined) return item;
+    return {
+      ...item,
+      product: {
+        id: (item as any).productId,
+        code: (item as any).productCode || "—",
+        name: (item as any).productName || "—",
+        ...(item.product || {}),
+      },
+    };
+  });
 
   return (
     <div className="w-[60%] bg-white flex flex-col">
       <div className="flex-1 p-3 overflow-y-auto">
         <div>
-          {cartItems.map((item, index) => (
+          {normalizedItems.map((item, index) => (
             <div
               key={`${item.product.id}_${item.conditionType || "normal"}_${index}`}
               className={`border p-3 hover:shadow-md transition-shadow ${
@@ -319,10 +337,10 @@ export function OrderItemsList({
                 <div className="flex-1 min-w-0">
                   <div className="flex gap-2 mb-1">
                     <span className="text-md font-medium text-gray-600">
-                      {item.product.code}
+                      {item.product?.code || (item as any).productCode || "—"}
                     </span>
                     <span className="text-md font-semibold text-gray-900">
-                      {item.product.name}
+                      {item.product?.name || (item as any).productName || "—"}
                     </span>
                     {(() => {
                       const label = getConditionLabel(item.conditionType);
@@ -337,7 +355,7 @@ export function OrderItemsList({
                     {canEditPrice && (
                       <ProductPriceHistory
                         customerId={selectedCustomerId}
-                        productId={item.product.id}
+                        productId={item.product?.id}
                         documentType="order"
                       />
                     )}
@@ -358,7 +376,7 @@ export function OrderItemsList({
                     value={item.note || ""}
                     onChange={(note) =>
                       onUpdateItem(
-                        item.product.id,
+                        item.product?.id,
                         { note },
                         item.conditionType
                       )
@@ -442,7 +460,7 @@ export function OrderItemsList({
                           : undefined
                       }>
                       {item.discount > 0
-                        ? `-${item.discount.toLocaleString()}`
+                        ? `-${item.discount?.toLocaleString()}`
                         : "0"}
                     </span>
                   </div>
@@ -452,7 +470,7 @@ export function OrderItemsList({
                       Đơn giá
                     </span>
                     <span className="text-md text-gray-500">
-                      {item.price.toLocaleString()}
+                      {item.price?.toLocaleString()}
                     </span>
                   </div>
 
