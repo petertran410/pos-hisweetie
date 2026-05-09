@@ -13,6 +13,9 @@ import {
 } from "@/lib/hooks/useCan";
 import { ROUTE_PERMISSIONS } from "@/lib/permissions/registry";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { useSandboxSync } from "@/lib/hooks/useSandboxSync";
+import { useSandboxStore } from "@/lib/store/sandbox";
+import { FlaskConical } from "lucide-react";
 
 export function DashboardHeader() {
   const router = useRouter();
@@ -21,6 +24,8 @@ export function DashboardHeader() {
   const { user, clearAuth } = useAuthStore();
 
   const posActions = useFilteredPosActions();
+  const { isSandbox, toggleSandbox } = useSandboxStore();
+  useSandboxSync();
 
   const handleLogout = () => {
     clearAuth();
@@ -249,6 +254,20 @@ export function DashboardHeader() {
               )}
             </div>
           )}
+
+          <button
+            onClick={toggleSandbox}
+            title={
+              isSandbox ? "Đang ở chế độ Sandbox" : "Chuyển sang chế độ Sandbox"
+            }
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              isSandbox
+                ? "bg-amber-400 text-amber-900 hover:bg-amber-500"
+                : "bg-white/10 text-gray-600 hover:bg-gray-200"
+            }`}>
+            <FlaskConical className="w-4 h-4" />
+            {isSandbox ? "Sandbox" : "Live"}
+          </button>
 
           <BranchSelector />
 
