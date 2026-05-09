@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/auth";
 import { API_URL } from "../config/api";
+import { useSandboxStore } from "../store/sandbox";
+import { useSandboxDataStore } from "../store/sandbox-data";
 
 export function usePackingLoadings(params?: any) {
   const token = useAuthStore((state) => state.token);
@@ -46,9 +48,17 @@ export function usePackingLoading(id: number) {
 export function useCreatePackingLoading() {
   const token = useAuthStore((state) => state.token);
   const queryClient = useQueryClient();
+  const isSandbox = useSandboxStore((s) => s.isSandbox);
 
   return useMutation({
     mutationFn: async (data: any) => {
+      if (isSandbox) {
+        return useSandboxDataStore.getState().addEntity("packings", {
+          ...data,
+          type: "packing-loading",
+          typeLabel: "Loading",
+        });
+      }
       const res = await fetch(`${API_URL}/packing-loadings`, {
         method: "POST",
         headers: {
@@ -62,6 +72,7 @@ export function useCreatePackingLoading() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packing-loadings"] });
+      queryClient.invalidateQueries({ queryKey: ["all-packing"] });
     },
   });
 }
@@ -69,9 +80,14 @@ export function useCreatePackingLoading() {
 export function useUpdatePackingLoading() {
   const token = useAuthStore((state) => state.token);
   const queryClient = useQueryClient();
+  const isSandbox = useSandboxStore((s) => s.isSandbox);
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      if (isSandbox) {
+        useSandboxDataStore.getState().updateEntity("packings", id, data);
+        return data;
+      }
       const res = await fetch(`${API_URL}/packing-loadings/${id}`, {
         method: "PUT",
         headers: {
@@ -85,6 +101,7 @@ export function useUpdatePackingLoading() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packing-loadings"] });
+      queryClient.invalidateQueries({ queryKey: ["all-packing"] });
     },
   });
 }
@@ -92,9 +109,14 @@ export function useUpdatePackingLoading() {
 export function useDeletePackingLoading() {
   const token = useAuthStore((state) => state.token);
   const queryClient = useQueryClient();
+  const isSandbox = useSandboxStore((s) => s.isSandbox);
 
   return useMutation({
     mutationFn: async (id: number) => {
+      if (isSandbox) {
+        useSandboxDataStore.getState().removeEntity("packings", id);
+        return {};
+      }
       const res = await fetch(`${API_URL}/packing-loadings/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
@@ -104,6 +126,7 @@ export function useDeletePackingLoading() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packing-loadings"] });
+      queryClient.invalidateQueries({ queryKey: ["all-packing"] });
     },
   });
 }

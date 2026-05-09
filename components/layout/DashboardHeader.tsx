@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import { PermissionGate } from "../permissions/PermissionGate";
 import { useSandboxSync } from "@/lib/hooks/useSandboxSync";
 import { useSandboxStore } from "@/lib/store/sandbox";
 import { FlaskConical } from "lucide-react";
+import { useSandboxDataStore } from "@/lib/store/sandbox-data";
 
 export function DashboardHeader() {
   const router = useRouter();
@@ -26,6 +27,8 @@ export function DashboardHeader() {
   const posActions = useFilteredPosActions();
   const { isSandbox, toggleSandbox } = useSandboxStore();
   useSandboxSync();
+  const { seedDemoData, clearAllSandboxData } = useSandboxDataStore();
+  const [showSandboxMenu, setShowSandboxMenu] = useState(false);
 
   const handleLogout = () => {
     clearAuth();
@@ -133,6 +136,13 @@ export function DashboardHeader() {
     orderSubmenu,
     ROUTE_PERMISSIONS
   );
+
+  useEffect(() => {
+    if (!showSandboxMenu) return;
+    const handler = (e: MouseEvent) => setShowSandboxMenu(false);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showSandboxMenu]);
 
   return (
     <header className="text-black">
@@ -255,19 +265,56 @@ export function DashboardHeader() {
             </div>
           )}
 
-          <button
-            onClick={toggleSandbox}
-            title={
-              isSandbox ? "Đang ở chế độ Sandbox" : "Chuyển sang chế độ Sandbox"
-            }
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              isSandbox
-                ? "bg-amber-400 text-amber-900 hover:bg-amber-500"
-                : "bg-white/10 text-gray-600 hover:bg-gray-200"
-            }`}>
-            <FlaskConical className="w-4 h-4" />
-            {isSandbox ? "Sandbox" : "Live"}
-          </button>
+          <div className="relative">
+            <button
+              onClick={toggleSandbox}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                if (isSandbox) setShowSandboxMenu(!showSandboxMenu);
+              }}
+              title={
+                isSandbox
+                  ? "Click: tắt sandbox | Chuột phải: menu sandbox"
+                  : "Chuyển sang chế độ Sandbox"
+              }
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                isSandbox
+                  ? "bg-amber-400 text-amber-900 hover:bg-amber-500"
+                  : "bg-white/10 text-gray-600 hover:bg-gray-200"
+              }`}>
+              <FlaskConical className="w-4 h-4" />
+              {isSandbox ? "Sandbox" : "Live"}
+            </button>
+
+            {showSandboxMenu && isSandbox && (
+              <div className="absolute top-full right-0 mt-1 bg-white border rounded-lg shadow-lg min-w-[180px] z-50 py-1">
+                <button
+                  onClick={() => {
+                    seedDemoData();
+                    setShowSandboxMenu(false);
+                    toast.success("Đã tạo dữ liệu demo sandbox");
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
+                  🧪 Tạo dữ liệu demo
+                </button>
+                <button
+                  onClick={() => {
+                    clearAllSandboxData();
+                    setShowSandboxMenu(false);
+                    toast.success("Đã xóa toàn bộ dữ liệu sandbox");
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                  🗑️ Xóa dữ liệu sandbox
+                </button>
+                <div className="border-t my-1" />
+                <button
+                  onClick={() => setShowSandboxMenu(false)}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-100">
+                  Đóng
+                </button>
+              </div>
+            )}
+          </div>
 
           <BranchSelector />
 
