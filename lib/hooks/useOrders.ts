@@ -21,9 +21,19 @@ export function useOrders(params?: any) {
 }
 
 export function useOrder(id: number) {
+  const isSandbox = useSandboxStore((s) => s.isSandbox);
+
   return useQuery({
-    queryKey: ["orders", id],
-    queryFn: () => ordersApi.getOrder(id),
+    queryKey: ["orders", id, isSandbox],
+    queryFn: () => {
+      if (isSandbox) {
+        const items = useSandboxDataStore.getState().getEntities("orders");
+        const found = items.find((o: any) => o.id === id);
+        if (!found) throw new Error("Không tìm thấy đơn hàng sandbox");
+        return found;
+      }
+      return ordersApi.getOrder(id);
+    },
     enabled: !!id,
   });
 }
@@ -65,7 +75,7 @@ export function useCreateOrder() {
           items: data.items || [],
           payments: [],
         });
-        return Promise.resolve(newOrder);
+        return Promise.resolve({ order: newOrder, warnings: [] });
       }
       return ordersApi.createOrder(data);
     },

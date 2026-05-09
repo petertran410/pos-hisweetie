@@ -22,9 +22,19 @@ export function useInvoices(params?: any) {
 }
 
 export function useInvoice(id: number) {
+  const isSandbox = useSandboxStore((s) => s.isSandbox);
+
   return useQuery({
-    queryKey: ["invoices", id],
-    queryFn: () => invoicesApi.getInvoice(id),
+    queryKey: ["invoices", id, isSandbox],
+    queryFn: () => {
+      if (isSandbox) {
+        const items = useSandboxDataStore.getState().getEntities("invoices");
+        const found = items.find((inv: any) => inv.id === id);
+        if (!found) throw new Error("Không tìm thấy hóa đơn sandbox");
+        return found;
+      }
+      return invoicesApi.getInvoice(id);
+    },
     enabled: !!id,
   });
 }
@@ -105,6 +115,8 @@ export function useDeleteInvoice() {
 
 export function useCreateInvoiceFromOrder() {
   const queryClient = useQueryClient();
+  const isSandbox = useSandboxStore((s) => s.isSandbox);
+
   return useMutation({
     mutationFn: ({
       orderId,
@@ -116,13 +128,59 @@ export function useCreateInvoiceFromOrder() {
       additionalPayment?: number;
       items?: any[];
       payments?: Array<{ method: string; amount: number }>;
-    }) =>
-      invoicesApi.createInvoiceFromOrder(
+    }) => {
+      if (isSandbox) {
+        // Tìm order sandbox → tạo invoice sandbox từ dữ liệu order
+        const orders = useSandboxDataStore.getState().getEntities("orders");
+        const order = orders.find((o: any) => o.id === orderId);
+        const total =
+          items?.reduce((sum, i) => sum + (Number(i.totalPrice) || 0), 0) ||
+          Number(order?.grandTotal) ||
+          0;
+        const paid = additionalPayment || 0;
+
+        const newInvoice = useSandboxDataStore
+          .getState()
+          .addEntity("invoices", {
+            customerId: order?.customerId,
+            branchId: order?.branchId,
+            soldById: order?.soldById,
+            purchaseDate: new Date().toISOString(),
+            totalAmount: total,
+            discount: 0,
+            discountRatio: 0,
+            grandTotal: total,
+            paidAmount: paid,
+            debtAmount: total - paid,
+            status: paid >= total ? 1 : 3,
+            statusValue: paid >= total ? "Hoàn thành" : "Đang xử lý",
+            usingCod: false,
+            customer: order?.customer,
+            branch: order?.branch,
+            soldBy: order?.soldBy,
+            creator: order?.creator,
+            details: items || order?.items || [],
+            payments: [],
+          });
+
+        // Cập nhật trạng thái order
+        useSandboxDataStore.getState().updateEntity("orders", orderId, {
+          status: 3,
+          statusValue: "Hoàn thành",
+          orderStatus: "completed",
+          invoiceId: newInvoice.id,
+          invoiceCode: newInvoice.code,
+        });
+
+        return Promise.resolve(newInvoice);
+      }
+      return invoicesApi.createInvoiceFromOrder(
         orderId,
         additionalPayment,
         items,
         payments
-      ),
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });

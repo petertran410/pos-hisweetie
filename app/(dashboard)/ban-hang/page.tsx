@@ -31,6 +31,7 @@ import {
 } from "@/lib/utils/customer-address";
 import { useAuthStore } from "@/lib/store/auth";
 import { useCan } from "@/lib/hooks/useCan";
+import { useSandboxStore } from "@/lib/store/sandbox";
 
 export interface CartItem {
   product: any;
@@ -136,6 +137,7 @@ export default function BanHangPage() {
   const canViewInventory = useCan("pos_inventory", "view");
   const canViewPayment = useCan("pos_payment", "view");
   const canEditPayment = useCan("pos_payment", "update");
+  const isSandbox = useSandboxStore((s) => s.isSandbox);
 
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
@@ -1354,7 +1356,9 @@ export default function BanHangPage() {
         setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
 
         // QUEUE PRINT
-        queuePrintAfterRedirect("order", activeTab.documentId);
+        if (!isSandbox) {
+          queuePrintAfterRedirect("order", activeTab.documentId);
+        }
 
         toast.success("Lưu đơn hàng thành công");
         router.push("/don-hang/dat-hang");
@@ -1480,10 +1484,12 @@ export default function BanHangPage() {
       setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
 
       // QUEUE PRINT — dùng ID từ response (invoice mới nếu items thay đổi)
-      queuePrintAfterRedirect(
-        "invoice",
-        updatedInvoice?.id ?? activeTab.documentId
-      );
+      if (!isSandbox) {
+        queuePrintAfterRedirect(
+          "invoice",
+          updatedInvoice?.id ?? activeTab.documentId
+        );
+      }
 
       toast.success("Lưu hóa đơn thành công");
       router.push("/don-hang/hoa-don");
@@ -1616,14 +1622,14 @@ export default function BanHangPage() {
         }
 
         // QUEUE PRINT
-        if (result?.order?.id) {
+        if (result?.order?.id && !isSandbox) {
           queuePrintAfterRedirect("order", result.order.id);
         }
       } else {
         const result = await createInvoice.mutateAsync(documentData);
 
         // QUEUE PRINT
-        if (result?.id) {
+        if (result?.id && !isSandbox) {
           queuePrintAfterRedirect("invoice", result.id);
         }
       }

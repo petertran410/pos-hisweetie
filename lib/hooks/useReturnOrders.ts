@@ -23,9 +23,21 @@ export function useReturnOrders(params?: any) {
 }
 
 export function useReturnOrder(id: number) {
+  const isSandbox = useSandboxStore((s) => s.isSandbox);
+
   return useQuery({
-    queryKey: ["return-orders", id],
-    queryFn: () => returnOrdersApi.getById(id),
+    queryKey: ["return-orders", id, isSandbox],
+    queryFn: () => {
+      if (isSandbox) {
+        const items = useSandboxDataStore
+          .getState()
+          .getEntities("returnOrders");
+        const found = items.find((r: any) => r.id === id);
+        if (!found) throw new Error("Không tìm thấy phiếu trả hàng sandbox");
+        return found;
+      }
+      return returnOrdersApi.getById(id);
+    },
     enabled: !!id,
   });
 }
