@@ -120,6 +120,56 @@ const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   },
 });
 
+const buildSandboxEnrichment = (
+  cartItems: CartItem[],
+  discount: number,
+  selectedCustomer: any,
+  branch: any,
+  currentUser: any,
+  actualPayment?: number,
+  isInvoice?: boolean
+) => {
+  const enrichedItems = cartItems.map((item) => {
+    const price = Number(item.price);
+    const qty = Number(item.quantity);
+    const disc = Number(item.discount) || 0;
+    return {
+      productId: item.product.id,
+      productCode: item.product.code,
+      productName: item.product.name,
+      quantity: qty,
+      price,
+      unitPrice: price,
+      appliedPrice: price - disc,
+      discount: disc,
+      discountRatio: 0,
+      totalPrice: (price - disc) * qty,
+      note: item.note || "",
+      conditionType: item.conditionType || "normal",
+      product: item.product,
+    };
+  });
+
+  const totalAmount = enrichedItems.reduce((sum, i) => sum + i.totalPrice, 0);
+  const grandTotal = Math.max(0, totalAmount - (Number(discount) || 0));
+
+  return {
+    items: enrichedItems,
+    grandTotal,
+    totalAmount,
+    discount: Number(discount) || 0,
+    paidAmount: isInvoice ? Number(actualPayment) || 0 : 0,
+    _customer: selectedCustomer,
+    _branch: branch,
+    _soldBy: currentUser
+      ? { id: currentUser.id, name: currentUser.name }
+      : null,
+    _creator: currentUser
+      ? { id: currentUser.id, name: currentUser.name }
+      : null,
+  };
+};
+
 export default function BanHangPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
@@ -1327,6 +1377,19 @@ export default function BanHangPage() {
         },
       };
 
+      if (isSandbox) {
+        Object.assign(
+          orderData,
+          buildSandboxEnrichment(
+            activeTab.cartItems,
+            activeTab.discount,
+            activeTab.selectedCustomer,
+            selectedBranch,
+            user
+          )
+        );
+      }
+
       try {
         if (actualPayment > 0) {
           const payments =
@@ -1454,6 +1517,21 @@ export default function BanHangPage() {
         noteForDriver: activeTab.deliveryInfo.noteForDriver,
       },
     };
+
+    if (isSandbox) {
+      Object.assign(
+        invoiceData,
+        buildSandboxEnrichment(
+          activeTab.cartItems,
+          activeTab.discount,
+          activeTab.selectedCustomer,
+          selectedBranch,
+          user,
+          actualPayment,
+          true
+        )
+      );
+    }
 
     try {
       if (actualPayment > 0) {
@@ -1599,6 +1677,21 @@ export default function BanHangPage() {
         height: Number(activeTab.deliveryInfo.height) || 10,
         noteForDriver: activeTab.deliveryInfo.noteForDriver,
       };
+    }
+
+    if (isSandbox) {
+      Object.assign(
+        documentData,
+        buildSandboxEnrichment(
+          activeTab.cartItems,
+          activeTab.discount,
+          activeTab.selectedCustomer,
+          selectedBranch,
+          user,
+          actualPayment,
+          activeTab.type === "invoice"
+        )
+      );
     }
 
     try {
