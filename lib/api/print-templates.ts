@@ -45,6 +45,12 @@ export const printTemplatesApi = {
     });
   },
 
+  renderWithData: async (templateId: number, entityData: any) => {
+    return apiClient.post(`/print-templates/${templateId}/render-with-data`, {
+      data: entityData,
+    });
+  },
+
   getAllVariables: async (templateFor?: string) => {
     const res = await apiClient.get<any>(
       "/print-templates/variables",
