@@ -54,10 +54,10 @@ export const useSandboxDataStore = create<SandboxDataState>()(
         const col = get()[key];
         const id = col.nextId;
         const codePrefix: Record<EntityKey, string> = {
-          orders: "SB-DH",
-          invoices: "SB-HD",
-          returnOrders: "SB-TH",
-          packings: "SB-BD",
+          orders: "DH",
+          invoices: "HD",
+          returnOrders: "TH",
+          packings: "BD",
         };
 
         const newItem = {
@@ -118,7 +118,7 @@ export const useSandboxDataStore = create<SandboxDataState>()(
           const paid = i < 2 ? total : Math.round(total * 0.5);
           return {
             id,
-            code: generateCode("SB-DH", id),
+            code: generateCode("DH", id),
             customerId: 1,
             branchId: 1,
             orderDate: new Date(
@@ -159,7 +159,7 @@ export const useSandboxDataStore = create<SandboxDataState>()(
           const paid = i < 3 ? total : Math.round(total * 0.3);
           return {
             id,
-            code: generateCode("SB-HD", id),
+            code: generateCode("HD", id),
             customerId: 1,
             branchId: 1,
             purchaseDate: new Date(
@@ -202,7 +202,7 @@ export const useSandboxDataStore = create<SandboxDataState>()(
           const s = statusMap[i];
           return {
             id,
-            code: generateCode("SB-TH", id),
+            code: generateCode("TH", id),
             invoiceId: 10001 + i,
             customerId: 1,
             branchId: 1,
@@ -220,7 +220,7 @@ export const useSandboxDataStore = create<SandboxDataState>()(
             updatedAt: new Date(
               baseTime.getTime() - i * 86400000
             ).toISOString(),
-            invoice: { id: 10001 + i, code: generateCode("SB-HD", 10001 + i) },
+            invoice: { id: 10001 + i, code: generateCode("HD", 10001 + i) },
             customer: { id: 1, name: `Khách sandbox ${i + 1}` },
             branch: { id: 1, name: "Chi nhánh sandbox" },
             creator: { id: 1, name: "NV sandbox" },
@@ -235,7 +235,7 @@ export const useSandboxDataStore = create<SandboxDataState>()(
           const typeLabels = ["Giao hàng", "Đóng hàng", "Loading"];
           return {
             id,
-            code: generateCode("SB-BD", id),
+            code: generateCode("BD", id),
             type: types[i],
             typeLabel: typeLabels[i],
             branchId: 1,

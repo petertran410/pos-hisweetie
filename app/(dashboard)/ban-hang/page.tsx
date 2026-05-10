@@ -135,8 +135,8 @@ const buildSandboxEnrichment = (
     const disc = Number(item.discount) || 0;
     return {
       productId: item.product.id,
-      productCode: item.product.code,
-      productName: item.product.name,
+      productCode: item.product?.code,
+      productName: item.product?.name,
       quantity: qty,
       price,
       unitPrice: price,
@@ -152,13 +152,19 @@ const buildSandboxEnrichment = (
 
   const totalAmount = enrichedItems.reduce((sum, i) => sum + i.totalPrice, 0);
   const grandTotal = Math.max(0, totalAmount - (Number(discount) || 0));
+  const paidAmount = isInvoice ? Number(actualPayment) || 0 : 0;
 
   return {
     items: enrichedItems,
     grandTotal,
     totalAmount,
     discount: Number(discount) || 0,
-    paidAmount: isInvoice ? Number(actualPayment) || 0 : 0,
+    paidAmount,
+    debtAmount: Math.max(0, grandTotal - paidAmount),
+    returnOrderAmount: 0,
+    remainingAmount: Math.max(0, grandTotal - paidAmount),
+    cashRefundAmount: 0,
+    debtOffsetAmount: 0,
     _customer: selectedCustomer,
     _branch: branch,
     _soldBy: currentUser

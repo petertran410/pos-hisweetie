@@ -61,6 +61,10 @@ export function useCreateInvoice() {
             creator: data._creator || null,
             details: data.items || [],
             payments: [],
+            returnOrderAmount: 0,
+            cashRefundAmount: 0,
+            debtOffsetAmount: 0,
+            remainingAmount: (data.grandTotal || 0) - (data.paidAmount || 0),
           });
         return Promise.resolve(newInvoice);
       }
@@ -161,6 +165,10 @@ export function useCreateInvoiceFromOrder() {
             creator: order?.creator,
             details: items || order?.items || [],
             payments: [],
+            returnOrderAmount: 0,
+            cashRefundAmount: 0,
+            debtOffsetAmount: 0,
+            remainingAmount: total - paid,
           });
 
         // Cập nhật trạng thái order
