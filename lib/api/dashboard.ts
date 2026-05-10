@@ -11,6 +11,16 @@ export interface DashboardStats {
   outOfStockProducts: number;
 }
 
+export interface TodayStats {
+  todayRevenue: number;
+  todayOrders: number;
+  todayReturns: number;
+  todayReturnCount: number;
+  todayNetRevenue: number;
+  todayInvoiceRevenue: number;
+  todayInvoiceCount: number;
+}
+
 export interface RevenueChartItem {
   month: string;
   revenue: number;
@@ -25,6 +35,14 @@ export interface TopCustomer {
   totalDebt: number;
   orderCount: number;
   customerType: string;
+}
+
+export interface TopProduct {
+  productId: number;
+  code: string;
+  name: string;
+  totalQuantity: number;
+  totalRevenue: number;
 }
 
 export interface LowStockProduct {
@@ -51,17 +69,33 @@ export interface RecentOrder {
   paymentStatus: string;
 }
 
+export interface RecentActivity {
+  id: number;
+  code: string;
+  customerName: string;
+  grandTotal: number;
+  createdAt: string;
+}
+
 export const dashboardApi = {
   getStats: (): Promise<DashboardStats> => {
     return apiClient.get("/dashboard/stats");
+  },
+
+  getTodayStats: (): Promise<TodayStats> => {
+    return apiClient.get("/dashboard/today-stats");
   },
 
   getRevenueChart: (months = 6): Promise<RevenueChartItem[]> => {
     return apiClient.get("/dashboard/revenue-chart", { months });
   },
 
-  getTopCustomers: (limit = 5): Promise<TopCustomer[]> => {
+  getTopCustomers: (limit = 10): Promise<TopCustomer[]> => {
     return apiClient.get("/dashboard/top-customers", { limit });
+  },
+
+  getTopProducts: (limit = 10): Promise<TopProduct[]> => {
+    return apiClient.get("/dashboard/top-products", { limit });
   },
 
   getLowStock: (limit = 10): Promise<LowStockProduct[]> => {
@@ -70,5 +104,9 @@ export const dashboardApi = {
 
   getRecentOrders: (limit = 10): Promise<RecentOrder[]> => {
     return apiClient.get("/dashboard/recent-orders", { limit });
+  },
+
+  getRecentActivities: (limit = 15): Promise<RecentActivity[]> => {
+    return apiClient.get("/dashboard/recent-activities", { limit });
   },
 };
