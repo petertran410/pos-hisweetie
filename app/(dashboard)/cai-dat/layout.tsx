@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Shield, Building2, Clock, Wallet, Printer } from "lucide-react";
+import {
+  Users,
+  Shield,
+  Building2,
+  Clock,
+  Wallet,
+  Printer,
+  RefreshCw,
+} from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export default function SettingsLayout({
@@ -48,6 +56,12 @@ export default function SettingsLayout({
       label: "Lịch sử thao tác",
       icon: Clock,
       permission: { resource: "audit_logs", action: "view" },
+    },
+    {
+      href: "/cai-dat/dong-bo",
+      label: "Đồng bộ dữ liệu",
+      icon: RefreshCw,
+      permission: { resource: "settings", action: "update" },
     },
   ];
 
