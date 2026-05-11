@@ -220,6 +220,11 @@ export function DashboardHeader() {
                 Sổ quỹ
               </Link>
             </PermissionGate>
+            <Link
+              href="/bao-cao/khach-hang"
+              className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+              Báo cáo
+            </Link>
           </nav>
         </div>
 
