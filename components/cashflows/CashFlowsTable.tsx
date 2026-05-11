@@ -258,7 +258,9 @@ export function CashFlowsTable({
   const { data, isLoading } = useCashFlows({
     pageSize: limit,
     currentItem: (page - 1) * limit,
-    branchIds: selectedBranch?.id ? [selectedBranch.id] : undefined,
+    ...(effectiveFilters.code
+      ? {}
+      : { branchIds: selectedBranch?.id ? [selectedBranch.id] : undefined }),
     ...(debouncedSearch ? { search: debouncedSearch } : {}),
     ...effectiveFilters,
   });

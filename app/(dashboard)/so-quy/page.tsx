@@ -16,10 +16,13 @@ export default function SoQuyPage() {
 
   const handleFiltersChange = useCallback(
     (newFilters: any) => {
-      setFilters({
-        ...newFilters,
-        ...(codeParam ? { code: codeParam } : {}),
-      });
+      if (codeParam) {
+        // Khi đang filter theo code: bỏ qua toàn bộ sidebar filters
+        // để queryKey không thay đổi, tránh React Query refetch gây mất data
+        setFilters({ code: codeParam });
+        return;
+      }
+      setFilters(newFilters);
     },
     [codeParam]
   );
