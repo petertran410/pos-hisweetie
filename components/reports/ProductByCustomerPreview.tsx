@@ -135,7 +135,7 @@ export function ProductByCustomerPreview({ filters }: Props) {
                   SL
                 </th>
                 <th className="px-3 py-2 text-right font-medium text-gray-600 whitespace-nowrap">
-                  Đơn giá
+                  Giá bán
                 </th>
                 <th className="px-3 py-2 text-right font-medium text-gray-600 whitespace-nowrap">
                   Thành tiền
@@ -175,7 +175,7 @@ export function ProductByCustomerPreview({ filters }: Props) {
                     {formatCurrency(row.quantity)}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    {formatCurrency(row.price)}
+                    {formatCurrency(row.sellingPrice)}
                   </td>
                   <td className="px-3 py-2 text-right font-medium text-blue-700">
                     {formatCurrency(row.totalPrice)}

@@ -62,8 +62,7 @@ export interface ProductByCustomerRow {
   productName: string;
   unit: string;
   quantity: number;
-  price: number;
-  discount: number;
+  sellingPrice: number;
   totalPrice: number;
   conditionType: string;
 }
