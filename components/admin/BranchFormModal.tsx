@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import { apiClient } from "@/lib/config/api";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface BranchFormModalProps {
   branch?: any;
@@ -17,6 +20,27 @@ export function BranchFormModal({ branch, onClose }: BranchFormModalProps) {
     email: "",
     address: "",
     isActive: true,
+  });
+
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (data: typeof formData) => {
+      if (branch) {
+        return apiClient.put(`/branches/${branch.id}`, data);
+      }
+      return apiClient.post("/branches", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["branches"] });
+      toast.success(
+        branch ? "Cập nhật chi nhánh thành công" : "Tạo chi nhánh thành công"
+      );
+      onClose();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Lưu chi nhánh thất bại");
+    },
   });
 
   useEffect(() => {
@@ -35,7 +59,7 @@ export function BranchFormModal({ branch, onClose }: BranchFormModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onClose();
+    mutation.mutate(formData);
   };
 
   return (
@@ -156,8 +180,13 @@ export function BranchFormModal({ branch, onClose }: BranchFormModalProps) {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              {branch ? "Cập nhật" : "Tạo mới"}
+              disabled={mutation.isPending}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              {mutation.isPending
+                ? "Đang lưu..."
+                : branch
+                  ? "Cập nhật"
+                  : "Tạo mới"}
             </button>
           </div>
         </form>
