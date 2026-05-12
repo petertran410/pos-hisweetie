@@ -32,4 +32,19 @@ export const rolesApi = {
   assignPermissions: (id: number, permissionIds: number[]) => {
     return apiClient.put(`/roles/${id}/permissions`, { permissionIds });
   },
+
+  getRoleBranchPermissions: (
+    roleId: number,
+    branchId: number
+  ): Promise<number[]> =>
+    apiClient.get(`/roles/${roleId}/branch-permissions/${branchId}`),
+
+  assignRoleBranchPermissions: (
+    roleId: number,
+    branchId: number,
+    permissionIds: number[]
+  ): Promise<void> =>
+    apiClient.put(`/roles/${roleId}/branch-permissions/${branchId}`, {
+      permissionIds,
+    }),
 };

@@ -83,3 +83,35 @@ export function useAssignPermissions() {
     },
   });
 }
+
+export function useRoleBranchPermissions(roleId: number, branchId: number) {
+  return useQuery({
+    queryKey: ["role-branch-permissions", roleId, branchId],
+    queryFn: () => rolesApi.getRoleBranchPermissions(roleId, branchId),
+    enabled: !!roleId && !!branchId,
+  });
+}
+
+export function useAssignRoleBranchPermissions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      roleId,
+      branchId,
+      permissionIds,
+    }: {
+      roleId: number;
+      branchId: number;
+      permissionIds: number[];
+    }) => rolesApi.assignRoleBranchPermissions(roleId, branchId, permissionIds),
+    onSuccess: (_, { roleId, branchId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["role-branch-permissions", roleId, branchId],
+      });
+      toast.success("Cập nhật quyền chi nhánh thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Cập nhật quyền chi nhánh thất bại");
+    },
+  });
+}
