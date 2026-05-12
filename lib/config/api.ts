@@ -147,7 +147,17 @@ export const apiClient = {
       await handleApiError(res);
     }
 
-    return res.json();
+    const text = await res.text();
+    if (!text || text.trim() === "") {
+      return null as T;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("Failed to parse JSON:", text);
+      return null as T;
+    }
   },
 
   delete: async <T = any>(endpoint: string, data?: any): Promise<T> => {

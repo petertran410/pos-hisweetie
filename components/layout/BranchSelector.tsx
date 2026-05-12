@@ -19,12 +19,14 @@ export function BranchSelector() {
     queryFn: () => branchesApi.getMyBranches(),
   });
 
-  const branches = useMemo(() => {
-    if (!allBranches) return [];
-    const userBranchIds = user?.branchIds || [];
-    if (userBranchIds.length === 0) return allBranches;
-    return allBranches.filter((b) => userBranchIds.includes(b.id));
-  }, [allBranches, user?.branchIds]);
+  // const branches = useMemo(() => {
+  //   if (!allBranches) return [];
+  //   const userBranchIds = user?.branchIds || [];
+  //   if (userBranchIds.length === 0) return allBranches;
+  //   return allBranches.filter((b) => userBranchIds.includes(b.id));
+  // }, [allBranches, user?.branchIds]);
+
+  const branches = allBranches ?? [];
 
   useEffect(() => {
     if (!selectedBranch && branches && branches.length > 0) {
