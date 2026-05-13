@@ -19,6 +19,7 @@ interface ReturnOrdersTableProps {
   filters: any;
   onCreateClick: () => void;
   onViewClick: (item: ReturnOrder) => void;
+  initialSearch?: string;
 }
 
 const formatMoney = (value: number) => {
@@ -188,10 +189,11 @@ export function ReturnOrdersTable({
   filters,
   onCreateClick,
   onViewClick,
+  initialSearch,
 }: ReturnOrdersTableProps) {
   const { selectedBranch } = useBranchStore();
   const [showColumnModal, setShowColumnModal] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch ?? "");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
 

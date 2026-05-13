@@ -33,10 +33,8 @@ export default function TraHangPage() {
 
   const handleFiltersChange = useCallback(
     (newFilters: any) => {
-      setFilters({
-        ...newFilters,
-        ...(codeParam ? { search: codeParam } : {}),
-      });
+      if (codeParam) return;
+      setFilters(newFilters);
     },
     [codeParam]
   );
@@ -135,6 +133,7 @@ export default function TraHangPage() {
           filters={filters}
           onCreateClick={handleCreateClick}
           onViewClick={handleViewClick}
+          initialSearch={codeParam ?? undefined}
         />
 
         {modalType === "create" && (
