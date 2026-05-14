@@ -5,6 +5,7 @@ import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import { Plus, X } from "lucide-react";
 import { PriceBookDropdown } from "./PriceBookDropdown";
 import { CustomerDetailModal } from "./CustomerDetailModal";
+import { CustomerForm } from "../customers/CustomerForm";
 
 interface CustomerSearchProps {
   selectedCustomer: any;
@@ -24,6 +25,7 @@ export function CustomerSearch({
   const [showDropdown, setShowDropdown] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [modalCustomerId, setModalCustomerId] = useState<number | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -145,7 +147,10 @@ export function CustomerSearch({
             )}
           </div>
 
-          <button className="p-2 border rounded-md hover:bg-gray-50">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            title="Tạo khách hàng mới"
+            className="p-2 border rounded-md hover:bg-gray-50">
             <Plus className="w-3.5 h-3.5" />
           </button>
           <PriceBookDropdown
@@ -154,6 +159,18 @@ export function CustomerSearch({
           />
         </div>
       </div>
+
+      {showCreateModal && (
+        <CustomerForm
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={(createdCustomer) => {
+            setShowCreateModal(false);
+            if (createdCustomer) {
+              onSelectCustomer(createdCustomer);
+            }
+          }}
+        />
+      )}
 
       {showDetailModal && modalCustomerId && (
         <CustomerDetailModal

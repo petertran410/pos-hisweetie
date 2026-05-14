@@ -19,7 +19,7 @@ import { CustomerAddressFormModal } from "../pos/CustomerAddressFormModal";
 interface CustomerFormProps {
   customer?: Customer;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (customer?: any) => void;
 }
 
 interface City {
@@ -471,8 +471,8 @@ export function CustomerForm({
       );
     } else {
       createCustomer.mutate(formattedData as any, {
-        onSuccess: () => {
-          onSuccess?.();
+        onSuccess: (createdCustomer) => {
+          onSuccess?.(createdCustomer);
           onClose();
         },
         onError: (error: any) => {
