@@ -22,6 +22,12 @@ const getAuthHeaders = (): HeadersInit => {
   return headers;
 };
 
+const createApiError = (message: string, status: number): Error => {
+  const err = new Error(message) as any;
+  err.status = status;
+  return err;
+};
+
 const handleApiError = async (res: Response) => {
   if (res.status === 401) {
     let errorMessage = "Phiên đăng nhập đã hết hạn";
@@ -43,7 +49,7 @@ const handleApiError = async (res: Response) => {
       window.location.href = "/login";
     }
 
-    throw new Error(errorMessage);
+    throw createApiError(errorMessage, 401);
   }
 
   if (res.status === 403) {
@@ -57,11 +63,7 @@ const handleApiError = async (res: Response) => {
       }
     } catch {}
 
-    if (typeof window !== "undefined") {
-      const { toast } = await import("sonner");
-      toast.error(errorMessage);
-    }
-    throw new Error(errorMessage);
+    throw createApiError(errorMessage, 403);
   }
 
   const errorText = await res.text();
@@ -80,7 +82,7 @@ const handleApiError = async (res: Response) => {
     errorMessage = errorText || "Có lỗi xảy ra";
   }
 
-  throw new Error(errorMessage);
+  throw createApiError(errorMessage, res.status);
 };
 
 export const apiClient = {

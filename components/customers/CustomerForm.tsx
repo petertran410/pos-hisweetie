@@ -464,9 +464,6 @@ export function CustomerForm({
             onSuccess?.();
             onClose();
           },
-          onError: (error: any) => {
-            toast.error(error.message || "Có lỗi xảy ra");
-          },
         }
       );
     } else {
@@ -474,9 +471,6 @@ export function CustomerForm({
         onSuccess: (createdCustomer) => {
           onSuccess?.(createdCustomer);
           onClose();
-        },
-        onError: (error: any) => {
-          toast.error(error.message || "Có lỗi xảy ra");
         },
       });
     }
