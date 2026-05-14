@@ -140,6 +140,7 @@ export const priceBooksApi = {
     branchId?: number;
     customerId?: number;
     userId?: number;
+    priceBookId?: number;
   }): Promise<ProductPriceInfo> => {
     return apiClient.get("/price-books/product-price", params);
   },

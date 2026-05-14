@@ -296,6 +296,7 @@ export default function BanHangPage() {
             const priceInfo = await priceBooksApi.getPriceForProduct({
               productId: item.product.id,
               branchId: selectedBranch?.id,
+              priceBookId: priceBookId ?? undefined,
             });
 
             if (priceInfo.priceBookId === priceBookId) {
@@ -1154,6 +1155,7 @@ export default function BanHangPage() {
         const priceInfo = await priceBooksApi.getPriceForProduct({
           productId: product.id,
           branchId: selectedBranch?.id,
+          priceBookId: selectedPriceBookId ?? undefined,
         });
 
         if (priceInfo.priceBookId === selectedPriceBookId) {
