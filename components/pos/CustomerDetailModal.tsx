@@ -9,6 +9,7 @@ import { CustomerDebtsTab } from "../customers/CustomerDebtsTab";
 import { CustomerInfoTab } from "./CustomerInfoTab";
 import { CustomerInvoiceInfoTab } from "./CustomerInvoiceInfoTab";
 import { formatCurrency } from "@/lib/utils";
+import { CustomerAddressesTab } from "./CustomerAddressesTab";
 
 interface CustomerDetailModalProps {
   isOpen: boolean;
@@ -17,7 +18,7 @@ interface CustomerDetailModalProps {
   onCustomerUpdate?: (customer: any) => void;
 }
 
-type TabType = "info" | "invoiceInfo" | "invoices" | "orders" | "debts";
+type TabType = "info" | "invoiceInfo" | "addresses" | "invoices" | "orders";
 
 export function CustomerDetailModal({
   isOpen,
@@ -90,6 +91,15 @@ export function CustomerDetailModal({
               Thông tin xuất hóa đơn
             </button>
             <button
+              onClick={() => setActiveTab("addresses")}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "addresses"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+              }`}>
+              Địa chỉ nhận hàng
+            </button>
+            <button
               onClick={() => setActiveTab("invoices")}
               className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "invoices"
@@ -107,7 +117,7 @@ export function CustomerDetailModal({
               }`}>
               Lịch sử đặt hàng
             </button>
-            <button
+            {/* <button
               onClick={() => setActiveTab("debts")}
               className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "debts"
@@ -115,7 +125,7 @@ export function CustomerDetailModal({
                   : "border-transparent text-gray-600 hover:text-gray-900"
               }`}>
               Dư nợ
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -138,19 +148,25 @@ export function CustomerDetailModal({
                   onUpdate={handleCustomerUpdate}
                 />
               )}
+              {activeTab === "addresses" && (
+                <CustomerAddressesTab
+                  customer={customer}
+                  onUpdate={handleCustomerUpdate}
+                />
+              )}
               {activeTab === "invoices" && (
                 <CustomerInvoicesTab customerId={customer.id} />
               )}
               {activeTab === "orders" && (
                 <CustomerOrdersTab customerId={customer.id} />
               )}
-              {activeTab === "debts" && (
+              {/* {activeTab === "debts" && (
                 <CustomerDebtsTab
                   customerId={customer.id}
                   customerDebt={customer.totalDebt}
                   hidePaymentButton={true}
                 />
-              )}
+              )} */}
             </>
           ) : (
             <div className="text-center py-8 text-gray-500">
