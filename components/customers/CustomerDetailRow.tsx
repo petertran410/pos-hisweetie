@@ -276,7 +276,7 @@ export function CustomerDetailRow({
                         {customer.contactNumber || "Chưa có"}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                    {/* <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Sinh nhật:
                       </label>
@@ -285,8 +285,8 @@ export function CustomerDetailRow({
                           ? formatDate(customer.birthDate)
                           : "Chưa có"}
                       </div>
-                    </div>
-                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                    </div> */}
+                    {/* <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Giới tính:
                       </label>
@@ -297,9 +297,9 @@ export function CustomerDetailRow({
                             ? "Nữ"
                             : "Chưa có"}
                       </div>
-                    </div>
+                    </div> */}
 
-                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                    {/* <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                       <label className="block text-sm text-gray-500">
                         Email:
                       </label>
@@ -313,7 +313,7 @@ export function CustomerDetailRow({
                       </label>
                       <div className="block text-sm text-gray-900">Chưa có</div>
                     </div>
-                    <div />
+                    <div /> */}
                   </div>
 
                   {/* ── Địa chỉ ── */}
@@ -343,33 +343,33 @@ export function CustomerDetailRow({
                   })()} */}
 
                   {/* ── Thông tin xuất hóa đơn ── */}
-                  {(customer.invoiceBuyerName ||
+                  {/* {(customer.invoiceBuyerName ||
                     customer.invoiceAddress ||
                     customer.invoiceCccdCmnd ||
                     customer.invoiceBankAccount ||
                     customer.invoiceEmail ||
-                    customer.invoicePhone) && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                      <h4 className="text-sm font-semibold text-gray-800 mb-2">
-                        Thông tin xuất hóa đơn
-                      </h4>
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        {[
-                          customer.invoiceBuyerName,
-                          customer.invoiceCccdCmnd,
-                          customer.invoiceAddress,
-                          [customer.invoiceWardName, customer.invoiceCityName]
-                            .filter(Boolean)
-                            .join(", "),
-                          customer.invoiceEmail,
-                          customer.invoicePhone,
-                          customer.invoiceBankAccount,
-                        ]
+                    customer.invoicePhone) && ( */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                      Thông tin xuất hóa đơn
+                    </h4>
+                    <div className="text-sm text-gray-700 leading-relaxed">
+                      {[
+                        customer.invoiceBuyerName,
+                        customer.invoiceCccdCmnd,
+                        customer.invoiceAddress,
+                        [customer.invoiceWardName, customer.invoiceCityName]
                           .filter(Boolean)
-                          .join(" / ")}
-                      </div>
+                          .join(", "),
+                        customer.invoiceEmail,
+                        customer.invoicePhone,
+                        customer.invoiceBankAccount,
+                      ]
+                        .filter(Boolean)
+                        .join(" / ")}
                     </div>
-                  )}
+                  </div>
+                  {/* )} */}
 
                   {/* ── Ghi chú ── */}
                   {customer.comments && (
