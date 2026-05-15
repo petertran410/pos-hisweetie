@@ -12,7 +12,11 @@ import {
   useSetUserBranchRole,
 } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { useRoles, useRole, useRoleBranchPermissions } from "@/lib/hooks/useRoles";
+import {
+  useRoles,
+  useRole,
+  useRoleBranchPermissions,
+} from "@/lib/hooks/useRoles";
 import { X, Check, ChevronDown, ChevronUp, Search, Save } from "lucide-react";
 import { ACTION_LABELS, getPermissionLabel } from "@/lib/constants/permissions";
 import { toast } from "sonner";
@@ -72,15 +76,17 @@ export function UserPermissionModal({
     selectedBranchId
   );
 
-  // ── Computed: branches mà user được gán ───────────────────────────────────
   const userBranches = useMemo(() => {
     if (!user || !allBranches) return [];
     const assignedIds = user.assignedBranches?.map((b: any) => b.id) || [];
     if (user.branchId && !assignedIds.includes(user.branchId)) {
       assignedIds.push(user.branchId);
     }
-    if (assignedIds.length === 0) return allBranches;
-    return allBranches.filter((b: any) => assignedIds.includes(b.id));
+    if (assignedIds.length === 0)
+      return allBranches.filter((b: any) => b.isActive);
+    return allBranches.filter(
+      (b: any) => assignedIds.includes(b.id) && b.isActive
+    );
   }, [user, allBranches]);
 
   // ── Computed: tên role của branch đang chọn ───────────────────────────────
@@ -106,7 +112,7 @@ export function UserPermissionModal({
 
       // roleBranchPerms = [] → fallback về global rolePermissions (mirror backend)
       if (!selectedBranchRoleData) return []; // chờ role data
-      return (selectedBranchRoleData.rolePermissions as any[] || []).map(
+      return ((selectedBranchRoleData.rolePermissions as any[]) || []).map(
         (rp: any) => rp.permission?.id ?? rp.id
       );
     }
@@ -166,7 +172,13 @@ export function UserPermissionModal({
 
     // Guard: chờ roleBranchPerms load; nếu rỗng thì chờ thêm selectedBranchRoleData (fallback global)
     if (selectedBranchRoleId && roleBranchPerms === undefined) return;
-    if (selectedBranchRoleId && Array.isArray(roleBranchPerms) && roleBranchPerms.length === 0 && !selectedBranchRoleData) return;
+    if (
+      selectedBranchRoleId &&
+      Array.isArray(roleBranchPerms) &&
+      roleBranchPerms.length === 0 &&
+      !selectedBranchRoleData
+    )
+      return;
 
     if (!branchPerms) {
       setLocalActive([...basePermissionIds]);
