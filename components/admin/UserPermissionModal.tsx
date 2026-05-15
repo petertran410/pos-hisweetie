@@ -141,15 +141,17 @@ export function UserPermissionModal({
     }
   }, [userBranches, selectedBranchId]);
 
-  // Recalculate localActive khi branch hoặc branchPerms thay đổi
+  // Thay đổi useEffect "Recalculate localActive khi branch hoặc branchPerms thay đổi"
   useEffect(() => {
     if (!allPermissions) return;
-
     if (selectedBranchId === 0) {
       setLocalActive([...basePermissionIds]);
       setHasChanges(false);
       return;
     }
+
+    // Guard: nếu branch có role nhưng role data chưa load → chờ, không reset
+    if (selectedBranchRoleId && !selectedBranchRoleData) return;
 
     if (!branchPerms) {
       setLocalActive([...basePermissionIds]);
@@ -167,7 +169,14 @@ export function UserPermissionModal({
 
     setLocalActive(result);
     setHasChanges(false);
-  }, [branchPerms, basePermissionIds, selectedBranchId, allPermissions]);
+  }, [
+    branchPerms,
+    basePermissionIds,
+    selectedBranchId,
+    allPermissions,
+    selectedBranchRoleId,
+    selectedBranchRoleData,
+  ]);
 
   // Click-outside để đóng role dropdown
   useEffect(() => {
