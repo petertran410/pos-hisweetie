@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Eye, EyeOff, X } from "lucide-react";
 import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useAuthStore } from "@/lib/store/auth";
@@ -27,11 +27,16 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
 
   const currentUser = useAuthStore((s) => s.user);
   const isSelfEdit = userId !== null && currentUser?.id === userId;
+  const [showPassword, setShowPassword] = useState(false);
 
   const { data: user, isLoading: isLoadingUser } = useUser(userId || 0);
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const { data: branches } = useBranches();
+  const activeBranches = useMemo(
+    () => (branches || []).filter((b: any) => b.isActive),
+    [branches]
+  );
 
   useEffect(() => {
     if (user) {
@@ -145,18 +150,32 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 <label className="block text-sm font-medium mb-1">
                   Mật khẩu {!userId && <span className="text-red-500">*</span>}
                 </label>
-                <input
-                  type="password"
-                  required={!userId}
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder={
-                    userId ? "Để trống nếu không đổi mật khẩu" : "Nhập mật khẩu"
-                  }
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required={!userId}
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    className="w-full px-3 py-2 pr-10 border rounded-lg"
+                    placeholder={
+                      userId
+                        ? "Để trống nếu không đổi mật khẩu"
+                        : "Nhập mật khẩu"
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -186,7 +205,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 }
                 className="w-full px-3 py-2 border rounded-lg">
                 <option value={0}>Chọn chi nhánh</option>
-                {branches?.map((branch: any) => (
+                {activeBranches?.map((branch: any) => (
                   <option key={branch.id} value={branch.id}>
                     {branch.name}
                   </option>
@@ -203,7 +222,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 cả chi nhánh.
               </p>
               <div className="border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1">
-                {branches?.map((branch: any) => (
+                {activeBranches?.map((branch: any) => (
                   <label
                     key={branch.id}
                     className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">

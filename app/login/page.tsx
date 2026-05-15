@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
+import { EyeOff, Eye } from "lucide-react";
 
 interface LoginForm {
   email: string;
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const { setAuth, isAuthenticated, _hasHydrated } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const returnUrl = searchParams.get("returnUrl") || "/";
 
@@ -119,14 +121,26 @@ export default function LoginPage() {
                 className="block text-sm font-medium text-gray-700">
                 Mật khẩu
               </label>
-              <input
-                {...register("password", {
-                  required: "Mật khẩu là bắt buộc",
-                })}
-                type="password"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="••••••••"
-              />
+              <div className="relative mt-1">
+                <input
+                  {...register("password", {
+                    required: "Mật khẩu là bắt buộc",
+                  })}
+                  type={showPassword ? "text" : "password"}
+                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.password.message}
