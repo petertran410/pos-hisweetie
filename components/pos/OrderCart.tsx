@@ -50,6 +50,7 @@ interface OrderCartProps {
   canEditSeller?: boolean;
   canViewPayment?: boolean;
   canEditPayment?: boolean;
+  canCreateInvoice?: boolean;
 }
 
 function SellerDropdown({
@@ -178,6 +179,7 @@ export function OrderCart({
   canEditSeller = true,
   canViewPayment = true,
   canEditPayment = true,
+  canCreateInvoice = true,
 }: OrderCartProps) {
   const { data: usersForFilter = [] } = useUsersForFilter();
   const { user } = useAuthStore();
@@ -512,12 +514,14 @@ export function OrderCart({
 
         {isEditMode ? (
           <div className="flex gap-4">
-            <button
-              onClick={onCreateInvoice}
-              disabled={cartItems.length === 0}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
-              TẠO HÓA ĐƠN
-            </button>
+            {canCreateInvoice && (
+              <button
+                onClick={onCreateInvoice}
+                disabled={cartItems.length === 0}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
+                TẠO HÓA ĐƠN
+              </button>
+            )}
             <button
               onClick={() =>
                 onSaveOrder(

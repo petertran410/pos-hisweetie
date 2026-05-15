@@ -1775,6 +1775,7 @@ export default function BanHangPage() {
               canEditSeller={canEditSeller}
               canViewPayment={canViewPayment}
               canEditPayment={canEditPayment}
+              canCreateInvoice={canCreateInvoice}
             />
           </>
         ) : (
