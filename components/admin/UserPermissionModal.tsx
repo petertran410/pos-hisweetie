@@ -8,16 +8,14 @@ import {
   useUserBranchPermissions,
   useAssignBranchPermissions,
   useUpdateUser,
+  useUserBranchRoles,
+  useSetUserBranchRole,
 } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useRoles, useRole } from "@/lib/hooks/useRoles";
 import { X, Check, ChevronDown, ChevronUp, Search, Save } from "lucide-react";
-import {
-  RESOURCE_LABELS,
-  ACTION_LABELS,
-  getPermissionLabel,
-} from "@/lib/constants/permissions";
+import { ACTION_LABELS, getPermissionLabel } from "@/lib/constants/permissions";
 import { toast } from "sonner";
-import { useRoles } from "@/lib/hooks/useRoles";
 
 interface UserPermissionModalProps {
   userId: number;
@@ -28,16 +26,24 @@ export function UserPermissionModal({
   userId,
   onClose,
 }: UserPermissionModalProps) {
+  // ── Data fetching ──────────────────────────────────────────────────────────
   const { data: user, isLoading: isLoadingUser } = useUser(userId);
   const { data: allPermissions } = useQuery({
     queryKey: ["permissions"],
     queryFn: () => permissionsApi.getAll(),
   });
   const { data: allBranches } = useBranches();
+  const { data: allRoles } = useRoles();
+  const { data: userBranchRoles } = useUserBranchRoles(userId);
+
+  // ── Mutations ──────────────────────────────────────────────────────────────
+  const assignBranchPerms = useAssignBranchPermissions();
+  const updateUser = useUpdateUser();
+  const setUserBranchRoleMutation = useSetUserBranchRole();
+
+  // ── UI state ───────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<"role" | "other">("role");
   const [canViewOtherStaff, setCanViewOtherStaff] = useState(false);
-  const updateUser = useUpdateUser();
-
   const [selectedBranchId, setSelectedBranchId] = useState<number>(0);
   const [localActive, setLocalActive] = useState<number[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
@@ -48,13 +54,21 @@ export function UserPermissionModal({
   const [activeCategory, setActiveCategory] = useState<string>("");
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const assignBranchPerms = useAssignBranchPermissions();
-  const { data: allRoles } = useRoles();
-  const [localRoleIds, setLocalRoleIds] = useState<number[]>([]);
-  const [roleHasChanges, setRoleHasChanges] = useState(false);
+  // ── Per-branch role state ──────────────────────────────────────────────────
+  const [localBranchRoles, setLocalBranchRoles] = useState<
+    Record<number, number | null>
+  >({});
+  const [changedBranchRoles, setChangedBranchRoles] = useState<Set<number>>(
+    new Set()
+  );
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
 
+  // ── Derived: role của branch đang chọn ────────────────────────────────────
+  const selectedBranchRoleId = localBranchRoles[selectedBranchId] ?? null;
+  const { data: selectedBranchRoleData } = useRole(selectedBranchRoleId || 0);
+
+  // ── Computed: branches mà user được gán ───────────────────────────────────
   const userBranches = useMemo(() => {
     if (!user || !allBranches) return [];
     const assignedIds = user.assignedBranches?.map((b: any) => b.id) || [];
@@ -65,30 +79,24 @@ export function UserPermissionModal({
     return allBranches.filter((b: any) => assignedIds.includes(b.id));
   }, [user, allBranches]);
 
-  const userRoleNames = useMemo(() => {
-    if (!user?.roles) return "";
-    return user.roles.map((r: any) => r.name).join(", ");
-  }, [user]);
+  // ── Computed: tên role của branch đang chọn ───────────────────────────────
+  const selectedBranchRoleName = useMemo(() => {
+    if (!selectedBranchRoleId || !allRoles) return "Chưa có vai trò";
+    return (
+      (allRoles as any[]).find((r) => r.id === selectedBranchRoleId)?.name ||
+      "Chưa có vai trò"
+    );
+  }, [selectedBranchRoleId, allRoles]);
 
-  const localRoleNames = useMemo(() => {
-    if (!allRoles || localRoleIds.length === 0) return "Chưa có vai trò";
-    return (allRoles as any[])
-      .filter((r) => localRoleIds.includes(r.id))
-      .map((r) => r.name)
-      .join(", ");
-  }, [allRoles, localRoleIds]);
-
-  const handleRoleToggle = (roleId: number) => {
-    setLocalRoleIds((prev) => {
-      const next = prev.includes(roleId)
-        ? prev.filter((id) => id !== roleId)
-        : [...prev, roleId];
-      setRoleHasChanges(true);
-      return next;
-    });
-  };
-
+  // ── Computed: base permissions cho branch đang chọn ───────────────────────
   const basePermissionIds = useMemo(() => {
+    // Nếu branch có role riêng → dùng permissions của role đó
+    if (selectedBranchRoleId && selectedBranchRoleData?.rolePermissions) {
+      return (selectedBranchRoleData.rolePermissions as any[]).map(
+        (rp) => rp.permission.id
+      );
+    }
+    // Fallback: dùng global role permissions của user
     if (!user) return [];
     const fromRole = (user.rolePermissions || []).map((p: any) => p.id);
     const fromGrant = (user.individualPermissions || []).map((p: any) => p.id);
@@ -96,33 +104,44 @@ export function UserPermissionModal({
     return [...new Set([...fromRole, ...fromGrant])].filter(
       (id) => !denyIds.has(id)
     );
-  }, [user]);
+  }, [selectedBranchRoleId, selectedBranchRoleData, user]);
 
+  // ── Data fetching: branch permissions hiện tại ────────────────────────────
   const { data: branchPerms, isLoading: isLoadingBranch } =
     useUserBranchPermissions(
       userId,
       selectedBranchId > 0 ? selectedBranchId : 0
     );
 
+  // ── Effects ────────────────────────────────────────────────────────────────
+
+  // Sync canViewOtherStaff
   useEffect(() => {
     if (user) {
       setCanViewOtherStaff(user.canViewOtherStaffData || false);
     }
   }, [user]);
 
+  // Sync localBranchRoles từ server
   useEffect(() => {
-    if (user) {
-      setLocalRoleIds(user.roles?.map((r: any) => r.id) || []);
-      setRoleHasChanges(false);
+    if (userBranchRoles) {
+      const initial: Record<number, number | null> = {};
+      for (const ubr of userBranchRoles as any[]) {
+        initial[ubr.branchId] = ubr.roleId;
+      }
+      setLocalBranchRoles(initial);
+      setChangedBranchRoles(new Set());
     }
-  }, [user]);
+  }, [userBranchRoles]);
 
+  // Auto-select branch đầu tiên
   useEffect(() => {
     if (userBranches.length > 0 && selectedBranchId === 0) {
       setSelectedBranchId(userBranches[0].id);
     }
   }, [userBranches, selectedBranchId]);
 
+  // Recalculate localActive khi branch hoặc branchPerms thay đổi
   useEffect(() => {
     if (!allPermissions) return;
 
@@ -150,6 +169,7 @@ export function UserPermissionModal({
     setHasChanges(false);
   }, [branchPerms, basePermissionIds, selectedBranchId, allPermissions]);
 
+  // Click-outside để đóng role dropdown
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -163,6 +183,7 @@ export function UserPermissionModal({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ── Permission grouping ────────────────────────────────────────────────────
   const groupedPermissions = useMemo(() => {
     if (!allPermissions) return {};
     return allPermissions.reduce((acc: any, perm: any) => {
@@ -205,6 +226,8 @@ export function UserPermissionModal({
     }
   }, [categories, activeCategory]);
 
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
   const handleToggle = (permId: number) => {
     setLocalActive((prev) =>
       prev.includes(permId)
@@ -218,7 +241,6 @@ export function UserPermissionModal({
     const resourcePerms = Object.values(filteredPermissions)
       .flatMap((cat: any) => cat[resource] || [])
       .map((p: any) => p.id);
-
     const allSelected = resourcePerms.every((id) => localActive.includes(id));
     if (allSelected) {
       setLocalActive((prev) =>
@@ -233,17 +255,14 @@ export function UserPermissionModal({
   const toggleExpand = (resource: string) => {
     setExpandedResources((prev) => {
       const next = new Set(prev);
-      if (next.has(resource)) {
-        next.delete(resource);
-      } else {
-        next.add(resource);
-      }
+      if (next.has(resource)) next.delete(resource);
+      else next.add(resource);
       return next;
     });
   };
 
   const handleBranchChange = (branchId: number) => {
-    if (hasChanges) {
+    if (hasChanges || changedBranchRoles.size > 0) {
       if (
         !confirm("Bạn có thay đổi chưa lưu. Chuyển chi nhánh sẽ mất thay đổi.")
       )
@@ -251,6 +270,12 @@ export function UserPermissionModal({
     }
     setSelectedBranchId(branchId);
     setSearchQuery("");
+  };
+
+  const handleBranchRoleChange = (roleId: number | null) => {
+    setLocalBranchRoles((prev) => ({ ...prev, [selectedBranchId]: roleId }));
+    setChangedBranchRoles((prev) => new Set([...prev, selectedBranchId]));
+    setShowRoleDropdown(false);
   };
 
   const handleSave = async () => {
@@ -266,12 +291,15 @@ export function UserPermissionModal({
 
     const tasks: Promise<any>[] = [];
 
-    if (roleHasChanges) {
+    // Lưu role thay đổi cho từng branch
+    for (const branchId of changedBranchRoles) {
+      const roleId = localBranchRoles[branchId] ?? null;
       tasks.push(
-        updateUser.mutateAsync({ id: userId, data: { roleIds: localRoleIds } })
+        setUserBranchRoleMutation.mutateAsync({ userId, branchId, roleId })
       );
     }
 
+    // Lưu branch permission overrides nếu có
     if (hasChanges && selectedBranchId !== 0) {
       const grantPermissionIds = localActive.filter(
         (id) => !basePermissionIds.includes(id)
@@ -292,7 +320,7 @@ export function UserPermissionModal({
     if (tasks.length === 0) return;
     await Promise.all(tasks);
     setHasChanges(false);
-    setRoleHasChanges(false);
+    setChangedBranchRoles(new Set());
   };
 
   const scrollToCategory = (category: string) => {
@@ -305,6 +333,7 @@ export function UserPermissionModal({
     }
   };
 
+  // ── Loading state ──────────────────────────────────────────────────────────
   if (isLoadingUser) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -315,9 +344,11 @@ export function UserPermissionModal({
     );
   }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col">
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
           <h2 className="text-lg font-bold">Sửa phân quyền của {user?.name}</h2>
           <button
@@ -327,6 +358,7 @@ export function UserPermissionModal({
           </button>
         </div>
 
+        {/* Tabs */}
         <div className="flex border-b flex-shrink-0">
           <button
             onClick={() => setActiveTab("role")}
@@ -347,8 +379,11 @@ export function UserPermissionModal({
             Phân quyền khác
           </button>
         </div>
+
+        {/* Tab content */}
         {activeTab === "role" ? (
           <div className="flex flex-1 min-h-0">
+            {/* Left panel — danh sách chi nhánh */}
             <div className="w-56 border-r bg-gray-50 flex-shrink-0 overflow-y-auto">
               {userBranches.map((branch: any) => (
                 <button
@@ -360,62 +395,84 @@ export function UserPermissionModal({
                       : "hover:bg-gray-100 border-l-4 border-l-transparent"
                   }`}>
                   <div
-                    className={`text-sm font-medium ${selectedBranchId === branch.id ? "text-blue-600" : "text-gray-900"}`}>
+                    className={`text-sm font-medium ${
+                      selectedBranchId === branch.id
+                        ? "text-blue-600"
+                        : "text-gray-900"
+                    }`}>
                     {branch.name}
                   </div>
+                  {/* Hiển thị role của từng branch */}
                   <div className="text-xs text-gray-500 mt-0.5">
-                    Quyền theo chi nhánh
+                    {(() => {
+                      const roleId = localBranchRoles[branch.id];
+                      if (!roleId || !allRoles) return "Chưa có vai trò";
+                      return (
+                        (allRoles as any[]).find((r) => r.id === roleId)
+                          ?.name || "Chưa có vai trò"
+                      );
+                    })()}
                   </div>
                 </button>
               ))}
             </div>
 
+            {/* Right panel — permission matrix */}
             <div className="flex-1 flex flex-col min-w-0">
+              {/* Top bar: role dropdown + search */}
               <div className="px-6 py-3 border-b bg-white flex items-center gap-4 flex-shrink-0">
                 <span className="text-sm text-gray-500">Vai trò</span>
+
+                {/* Role dropdown cho branch đang chọn */}
                 <div ref={roleDropdownRef} className="relative">
                   <button
                     type="button"
                     onClick={() => setShowRoleDropdown((v) => !v)}
                     className="flex items-center gap-2 px-3 py-1.5 border rounded-lg bg-gray-50 text-sm hover:bg-gray-100 transition-colors">
                     <span
-                      className={
-                        localRoleIds.length === 0 ? "text-gray-400" : ""
-                      }>
-                      {localRoleNames}
+                      className={!selectedBranchRoleId ? "text-gray-400" : ""}>
+                      {selectedBranchRoleName}
                     </span>
+                    {selectedBranchRoleId && (
+                      <X
+                        className="w-3 h-3 text-gray-400 hover:text-red-500 cursor-pointer flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleBranchRoleChange(null);
+                        }}
+                      />
+                    )}
                     <ChevronDown className="w-3 h-3 text-gray-400 flex-shrink-0" />
                   </button>
+
                   {showRoleDropdown && (
                     <div className="absolute top-full left-0 mt-1 w-56 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                       {((allRoles as any[]) || []).map((role) => {
-                        const isSelected = localRoleIds.includes(role.id);
+                        const isSelected = selectedBranchRoleId === role.id;
                         return (
-                          <label
+                          <button
                             key={role.id}
-                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
-                            <div
-                              onClick={() => handleRoleToggle(role.id)}
-                              className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 cursor-pointer ${
-                                isSelected
-                                  ? "bg-blue-600 border-blue-600"
-                                  : "border-gray-300"
-                              }`}>
+                            type="button"
+                            onClick={() => handleBranchRoleChange(role.id)}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm flex items-center gap-2 ${
+                              isSelected ? "text-blue-600 font-medium" : ""
+                            }`}>
+                            <div className="w-4 flex-shrink-0">
                               {isSelected && (
-                                <Check className="w-3 h-3 text-white" />
+                                <Check className="w-3.5 h-3.5 text-blue-600" />
                               )}
                             </div>
-                            <span className="text-sm">{role.name}</span>
-                          </label>
+                            <span>{role.name}</span>
+                          </button>
                         );
                       })}
                     </div>
                   )}
                 </div>
-                <span className="text-xs text-gray-400 italic">
-                  (áp dụng cho tất cả chi nhánh)
-                </span>
+
                 <div className="flex-1" />
+
+                {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
@@ -428,6 +485,7 @@ export function UserPermissionModal({
                 </div>
               </div>
 
+              {/* Permission matrix */}
               <div className="flex flex-1 min-h-0">
                 <div
                   ref={contentRef}
@@ -490,21 +548,16 @@ export function UserPermissionModal({
                                         allSelected
                                           ? "bg-blue-600 border-blue-600"
                                           : someSelected
-                                            ? "bg-blue-100 border-blue-600"
+                                            ? "bg-blue-200 border-blue-400"
                                             : "border-gray-300"
                                       }`}>
-                                      {allSelected && (
+                                      {(allSelected || someSelected) && (
                                         <Check className="w-3 h-3 text-white" />
                                       )}
-                                      {someSelected && !allSelected && (
-                                        <div className="w-2.5 h-0.5 bg-blue-600 rounded" />
-                                      )}
                                     </button>
-
-                                    <span className="font-medium text-sm flex-1">
-                                      {RESOURCE_LABELS[resource] || resource}
+                                    <span className="text-sm font-medium flex-1">
+                                      {resource}
                                     </span>
-
                                     <button
                                       type="button"
                                       onClick={() => toggleExpand(resource)}
@@ -618,6 +671,7 @@ export function UserPermissionModal({
                   )}
                 </div>
 
+                {/* Category sidebar */}
                 <div className="w-44 border-l flex-shrink-0 overflow-y-auto py-4 px-3">
                   {categories.map((category) => (
                     <button
@@ -636,12 +690,12 @@ export function UserPermissionModal({
             </div>
           </div>
         ) : (
+          /* Tab "Phân quyền khác" */
           <div className="flex-1 overflow-y-auto p-6">
             <div className="max-w-2xl">
               <h3 className="text-base font-bold text-gray-900 mb-4">
                 Phân quyền khác
               </h3>
-
               <div className="border rounded-lg p-4">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
@@ -670,6 +724,7 @@ export function UserPermissionModal({
           </div>
         )}
 
+        {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50 flex-shrink-0">
           <button
             onClick={onClose}
@@ -679,13 +734,21 @@ export function UserPermissionModal({
           <button
             onClick={handleSave}
             disabled={
-              (!hasChanges && !roleHasChanges) ||
+              (activeTab === "role" &&
+                !hasChanges &&
+                changedBranchRoles.size === 0) ||
+              (activeTab === "other" && !hasChanges) ||
               assignBranchPerms.isPending ||
-              updateUser.isPending
+              updateUser.isPending ||
+              setUserBranchRoleMutation.isPending
             }
             className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm">
             <Save className="w-4 h-4" />
-            {assignBranchPerms.isPending ? "Đang lưu..." : "Lưu"}
+            {assignBranchPerms.isPending ||
+            updateUser.isPending ||
+            setUserBranchRoleMutation.isPending
+              ? "Đang lưu..."
+              : "Lưu"}
           </button>
         </div>
       </div>
