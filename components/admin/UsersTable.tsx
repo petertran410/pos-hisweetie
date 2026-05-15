@@ -172,14 +172,21 @@ export function UsersTable({
           <span className="text-sm text-gray-600">Hiển thị</span>
           <select
             value={limit}
-            onChange={(e) => onLimitChange(Number(e.target.value))}
+            onChange={(e) => {
+              onLimitChange(Number(e.target.value));
+              onPageChange(1);
+            }}
             className="px-3 py-1 border rounded">
             <option value={10}>10</option>
             <option value={20}>20</option>
             <option value={50}>50</option>
             <option value={100}>100</option>
           </select>
-          <span className="text-sm text-gray-600">trên tổng số {total}</span>
+          <span className="text-sm text-gray-600">
+            {total > 0
+              ? `${(page - 1) * limit + 1}–${Math.min(page * limit, total)} / ${total} người dùng`
+              : "0 người dùng"}
+          </span>
         </div>
 
         <div className="flex items-center gap-2">

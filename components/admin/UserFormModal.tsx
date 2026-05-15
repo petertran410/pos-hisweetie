@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { Eye, EyeOff, X } from "lucide-react";
 import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useAuthStore } from "@/lib/store/auth";
@@ -27,6 +27,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
 
   const currentUser = useAuthStore((s) => s.user);
   const isSelfEdit = userId !== null && currentUser?.id === userId;
+  const [showPassword, setShowPassword] = useState(false);
 
   const { data: user, isLoading: isLoadingUser } = useUser(userId || 0);
   const createUser = useCreateUser();
@@ -145,18 +146,32 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 <label className="block text-sm font-medium mb-1">
                   Mật khẩu {!userId && <span className="text-red-500">*</span>}
                 </label>
-                <input
-                  type="password"
-                  required={!userId}
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder={
-                    userId ? "Để trống nếu không đổi mật khẩu" : "Nhập mật khẩu"
-                  }
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required={!userId}
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    className="w-full px-3 py-2 pr-10 border rounded-lg"
+                    placeholder={
+                      userId
+                        ? "Để trống nếu không đổi mật khẩu"
+                        : "Nhập mật khẩu"
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div>
