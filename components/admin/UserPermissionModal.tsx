@@ -17,6 +17,7 @@ import {
   getPermissionLabel,
 } from "@/lib/constants/permissions";
 import { toast } from "sonner";
+import { useRoles } from "@/lib/hooks/useRoles";
 
 interface UserPermissionModalProps {
   userId: number;
@@ -48,6 +49,11 @@ export function UserPermissionModal({
   const contentRef = useRef<HTMLDivElement>(null);
 
   const assignBranchPerms = useAssignBranchPermissions();
+  const { data: allRoles } = useRoles();
+  const [localRoleIds, setLocalRoleIds] = useState<number[]>([]);
+  const [roleHasChanges, setRoleHasChanges] = useState(false);
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
 
   const userBranches = useMemo(() => {
     if (!user || !allBranches) return [];
@@ -63,6 +69,24 @@ export function UserPermissionModal({
     if (!user?.roles) return "";
     return user.roles.map((r: any) => r.name).join(", ");
   }, [user]);
+
+  const localRoleNames = useMemo(() => {
+    if (!allRoles || localRoleIds.length === 0) return "Chưa có vai trò";
+    return (allRoles as any[])
+      .filter((r) => localRoleIds.includes(r.id))
+      .map((r) => r.name)
+      .join(", ");
+  }, [allRoles, localRoleIds]);
+
+  const handleRoleToggle = (roleId: number) => {
+    setLocalRoleIds((prev) => {
+      const next = prev.includes(roleId)
+        ? prev.filter((id) => id !== roleId)
+        : [...prev, roleId];
+      setRoleHasChanges(true);
+      return next;
+    });
+  };
 
   const basePermissionIds = useMemo(() => {
     if (!user) return [];
@@ -87,6 +111,13 @@ export function UserPermissionModal({
   }, [user]);
 
   useEffect(() => {
+    if (user) {
+      setLocalRoleIds(user.roles?.map((r: any) => r.id) || []);
+      setRoleHasChanges(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
     if (userBranches.length > 0 && selectedBranchId === 0) {
       setSelectedBranchId(userBranches[0].id);
     }
@@ -106,6 +137,20 @@ export function UserPermissionModal({
       setHasChanges(false);
       return;
     }
+
+    useEffect(() => {
+      const handleClickOutside = (e: MouseEvent) => {
+        if (
+          roleDropdownRef.current &&
+          !roleDropdownRef.current.contains(e.target as Node)
+        ) {
+          setShowRoleDropdown(false);
+        }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const grantIds = new Set(branchPerms.grants.map((p: any) => p.id));
     const denyIds = new Set(branchPerms.denies.map((p: any) => p.id));
@@ -220,22 +265,35 @@ export function UserPermissionModal({
       return;
     }
 
-    if (selectedBranchId === 0) return;
+    const tasks: Promise<any>[] = [];
 
-    const grantPermissionIds = localActive.filter(
-      (id) => !basePermissionIds.includes(id)
-    );
-    const denyPermissionIds = basePermissionIds.filter(
-      (id) => !localActive.includes(id)
-    );
+    if (roleHasChanges) {
+      tasks.push(
+        updateUser.mutateAsync({ id: userId, data: { roleIds: localRoleIds } })
+      );
+    }
 
-    await assignBranchPerms.mutateAsync({
-      userId,
-      branchId: selectedBranchId,
-      grantPermissionIds,
-      denyPermissionIds,
-    });
+    if (hasChanges && selectedBranchId !== 0) {
+      const grantPermissionIds = localActive.filter(
+        (id) => !basePermissionIds.includes(id)
+      );
+      const denyPermissionIds = basePermissionIds.filter(
+        (id) => !localActive.includes(id)
+      );
+      tasks.push(
+        assignBranchPerms.mutateAsync({
+          userId,
+          branchId: selectedBranchId,
+          grantPermissionIds,
+          denyPermissionIds,
+        })
+      );
+    }
+
+    if (tasks.length === 0) return;
+    await Promise.all(tasks);
     setHasChanges(false);
+    setRoleHasChanges(false);
   };
 
   const scrollToCategory = (category: string) => {
@@ -307,7 +365,7 @@ export function UserPermissionModal({
                     {branch.name}
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">
-                    {userRoleNames || "Chưa có vai trò"}
+                    {localRoleNames}
                   </div>
                 </button>
               ))}
@@ -316,8 +374,44 @@ export function UserPermissionModal({
             <div className="flex-1 flex flex-col min-w-0">
               <div className="px-6 py-3 border-b bg-white flex items-center gap-4 flex-shrink-0">
                 <span className="text-sm text-gray-500">Vai trò</span>
-                <div className="flex items-center gap-2 px-3 py-1.5 border rounded-lg bg-gray-50 text-sm">
-                  {userRoleNames || "Chưa có vai trò"}
+                <div ref={roleDropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowRoleDropdown((v) => !v)}
+                    className="flex items-center gap-2 px-3 py-1.5 border rounded-lg bg-gray-50 text-sm hover:bg-gray-100 transition-colors">
+                    <span
+                      className={
+                        localRoleIds.length === 0 ? "text-gray-400" : ""
+                      }>
+                      {localRoleNames}
+                    </span>
+                    <ChevronDown className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                  </button>
+                  {showRoleDropdown && (
+                    <div className="absolute top-full left-0 mt-1 w-56 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                      {((allRoles as any[]) || []).map((role) => {
+                        const isSelected = localRoleIds.includes(role.id);
+                        return (
+                          <label
+                            key={role.id}
+                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
+                            <div
+                              onClick={() => handleRoleToggle(role.id)}
+                              className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 cursor-pointer ${
+                                isSelected
+                                  ? "bg-blue-600 border-blue-600"
+                                  : "border-gray-300"
+                              }`}>
+                              {isSelected && (
+                                <Check className="w-3 h-3 text-white" />
+                              )}
+                            </div>
+                            <span className="text-sm">{role.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1" />
                 <div className="relative">
