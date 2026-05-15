@@ -21,7 +21,7 @@ export const usersApi = {
     page?: number;
     limit?: number;
   }) => {
-    return apiClient.get("/users", { params });
+    return apiClient.get("/users", params);
   },
 
   getUsers: (): Promise<User[]> => {

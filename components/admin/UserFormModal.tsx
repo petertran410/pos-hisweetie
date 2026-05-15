@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
 import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
@@ -33,6 +33,10 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const { data: branches } = useBranches();
+  const activeBranches = useMemo(
+    () => (branches || []).filter((b: any) => b.isActive),
+    [branches]
+  );
 
   useEffect(() => {
     if (user) {
@@ -201,7 +205,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 }
                 className="w-full px-3 py-2 border rounded-lg">
                 <option value={0}>Chọn chi nhánh</option>
-                {branches?.map((branch: any) => (
+                {activeBranches?.map((branch: any) => (
                   <option key={branch.id} value={branch.id}>
                     {branch.name}
                   </option>
@@ -218,7 +222,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 cả chi nhánh.
               </p>
               <div className="border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1">
-                {branches?.map((branch: any) => (
+                {activeBranches?.map((branch: any) => (
                   <label
                     key={branch.id}
                     className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
