@@ -138,20 +138,6 @@ export function UserPermissionModal({
       return;
     }
 
-    useEffect(() => {
-      const handleClickOutside = (e: MouseEvent) => {
-        if (
-          roleDropdownRef.current &&
-          !roleDropdownRef.current.contains(e.target as Node)
-        ) {
-          setShowRoleDropdown(false);
-        }
-      };
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
     const grantIds = new Set(branchPerms.grants.map((p: any) => p.id));
     const denyIds = new Set(branchPerms.denies.map((p: any) => p.id));
 
@@ -163,6 +149,19 @@ export function UserPermissionModal({
     setLocalActive(result);
     setHasChanges(false);
   }, [branchPerms, basePermissionIds, selectedBranchId, allPermissions]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        roleDropdownRef.current &&
+        !roleDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowRoleDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const groupedPermissions = useMemo(() => {
     if (!allPermissions) return {};
@@ -365,7 +364,7 @@ export function UserPermissionModal({
                     {branch.name}
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">
-                    {localRoleNames}
+                    Quyền theo chi nhánh
                   </div>
                 </button>
               ))}
@@ -413,6 +412,9 @@ export function UserPermissionModal({
                     </div>
                   )}
                 </div>
+                <span className="text-xs text-gray-400 italic">
+                  (áp dụng cho tất cả chi nhánh)
+                </span>
                 <div className="flex-1" />
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -676,7 +678,11 @@ export function UserPermissionModal({
           </button>
           <button
             onClick={handleSave}
-            disabled={!hasChanges || assignBranchPerms.isPending}
+            disabled={
+              (!hasChanges && !roleHasChanges) ||
+              assignBranchPerms.isPending ||
+              updateUser.isPending
+            }
             className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm">
             <Save className="w-4 h-4" />
             {assignBranchPerms.isPending ? "Đang lưu..." : "Lưu"}
