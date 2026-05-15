@@ -241,9 +241,9 @@ export function PackingLoadingForm({
     .join(", ");
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b">
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-4 py-4 sm:p-6 border-b">
           <h2 className="text-xl font-semibold">
             {packingLoading ? "Cập nhật loading" : "Tạo loading"}
           </h2>
@@ -254,7 +254,9 @@ export function PackingLoadingForm({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-4">
             <div ref={loadingByDropdownRef} className="relative">
               <label className="block text-sm font-medium mb-2">
@@ -288,7 +290,7 @@ export function PackingLoadingForm({
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Mã loading
@@ -426,7 +428,7 @@ export function PackingLoadingForm({
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Tên khách hàng
@@ -461,7 +463,7 @@ export function PackingLoadingForm({
                   const value = parseFormattedNumber(e.target.value);
                   setNumberOfPackages(value);
                 }}
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm"
               />
             </div>
 
@@ -471,7 +473,7 @@ export function PackingLoadingForm({
                 value={note}
                 onChange={(e) => setNote(e.target.value.slice(0, 1000))}
                 maxLength={1000}
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm"
                 rows={3}
               />
             </div>
@@ -514,7 +516,7 @@ export function PackingLoadingForm({
                 )}
 
                 {images.length > 0 && (
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {images.map((url, index) => (
                       <div key={index} className="relative group">
                         <img
@@ -536,7 +538,7 @@ export function PackingLoadingForm({
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+          <div className="flex gap-3 mt-6 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}

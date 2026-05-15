@@ -231,9 +231,9 @@ export function PackingSlipForm({
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b">
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-4 py-4 sm:p-6 border-b">
           <h2 className="text-xl font-semibold">
             {packingSlip ? "Cập nhật báo đơn" : "Tạo báo đơn"}
           </h2>
@@ -244,9 +244,11 @@ export function PackingSlipForm({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Mã báo đơn
@@ -393,7 +395,7 @@ export function PackingSlipForm({
                   const value = parseFormattedNumber(e.target.value);
                   setNumberOfPackages(value);
                 }}
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm"
                 min="1"
                 required
               />
@@ -489,7 +491,7 @@ export function PackingSlipForm({
                       const value = parseFormattedNumber(e.target.value);
                       setCashAmount(value);
                     }}
-                    className="w-full border rounded px-3 py-2"
+                    className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm"
                     min="0"
                   />
                 </div>
@@ -527,7 +529,7 @@ export function PackingSlipForm({
                       const value = parseFormattedNumber(e.target.value);
                       setFeeGuiBen(value);
                     }}
-                    className="w-full border rounded px-3 py-2"
+                    className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm"
                     placeholder="Nhập số tiền phí gửi bến"
                     min="0"
                   />
@@ -552,7 +554,7 @@ export function PackingSlipForm({
                       const value = parseFormattedNumber(e.target.value);
                       setFeeGrab(value);
                     }}
-                    className="w-full border rounded px-3 py-2"
+                    className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm"
                     placeholder="Nhập số tiền phí Grab"
                     min="0"
                   />
@@ -575,7 +577,7 @@ export function PackingSlipForm({
                       const value = parseFormattedNumber(e.target.value);
                       setCuocGuiHang(value);
                     }}
-                    className="w-full border rounded px-3 py-2"
+                    className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm"
                     placeholder="Nhập cước gửi hàng"
                     min="0"
                   />
@@ -585,16 +587,16 @@ export function PackingSlipForm({
           </div>
         </form>
 
-        <div className="border-t p-4 flex justify-end gap-2">
+        <div className="border-t p-4 flex gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border rounded hover:bg-gray-50">
+            className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-base sm:text-sm border rounded hover:bg-gray-50">
             Hủy
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-base sm:text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
             {packingSlip ? "Cập nhật" : "Tạo mới"}
           </button>
         </div>

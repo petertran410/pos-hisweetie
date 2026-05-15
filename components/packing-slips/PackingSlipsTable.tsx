@@ -501,7 +501,7 @@ export function PackingSlipsTable({
 
       {viewingInvoices && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4"
           onClick={() => setViewingInvoices(null)}>
           <div
             className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
