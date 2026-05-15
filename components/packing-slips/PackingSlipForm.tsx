@@ -164,36 +164,6 @@ export function PackingSlipForm({
     }
   };
 
-  const handleCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      const video = document.createElement("video");
-      video.srcObject = stream;
-      video.play();
-
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-
-      video.addEventListener("loadedmetadata", () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context?.drawImage(video, 0, 0);
-
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            const file = new File([blob], `camera-${Date.now()}.jpg`, {
-              type: "image/jpeg",
-            });
-            await handleImageUpload(file);
-          }
-          stream.getTracks().forEach((track) => track.stop());
-        }, "image/jpeg");
-      });
-    } catch (error) {
-      toast.error("Không thể truy cập camera");
-    }
-  };
-
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
   };
@@ -461,14 +431,19 @@ export function PackingSlipForm({
                   <span className="text-xs text-gray-400 mt-1">Upload</span>
                 </label>
 
-                <button
-                  type="button"
-                  onClick={handleCamera}
-                  disabled={isUploading}
-                  className="w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 disabled:opacity-50">
+                <label
+                  className={`w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 ${isUploading ? "opacity-50 pointer-events-none" : ""}`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    disabled={isUploading}
+                  />
                   <Camera className="w-6 h-6 text-gray-400" />
                   <span className="text-xs text-gray-400 mt-1">Chụp</span>
-                </button>
+                </label>
               </div>
               {isUploading && (
                 <p className="text-sm text-gray-500 mt-2">Đang upload...</p>

@@ -141,36 +141,6 @@ export function PackingHangForm({
     }
   };
 
-  const handleCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      const video = document.createElement("video");
-      video.srcObject = stream;
-      video.play();
-
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-
-      video.addEventListener("loadedmetadata", () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context?.drawImage(video, 0, 0);
-
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            const file = new File([blob], `camera-${Date.now()}.jpg`, {
-              type: "image/jpeg",
-            });
-            await handleImageUpload(file);
-          }
-          stream.getTracks().forEach((track) => track.stop());
-        }, "image/jpeg");
-      });
-    } catch (error) {
-      toast.error("Không thể truy cập camera");
-    }
-  };
-
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
   };
@@ -467,13 +437,18 @@ export function PackingHangForm({
                       className="hidden"
                     />
                   </label>
-                  <button
-                    type="button"
-                    onClick={handleCamera}
-                    className="flex-1 border-2 border-dashed rounded-lg p-4 text-center hover:bg-gray-50">
+                  <label className="flex-1 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={isUploading}
+                    />
                     <Camera className="w-6 h-6 mx-auto mb-2 text-gray-400" />
                     <span className="text-sm text-gray-600">Chụp hình</span>
-                  </button>
+                  </label>
                 </div>
 
                 {isUploading && (
