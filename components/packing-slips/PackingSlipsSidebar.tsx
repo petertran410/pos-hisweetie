@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranchStore } from "@/lib/store/branch";
 import { ChevronDown } from "lucide-react";
@@ -25,6 +25,10 @@ export function PackingSlipsSidebar({
   const [type, setType] = useState("all");
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
+  const activeBranches = useMemo(
+    () => (branches || []).filter((b) => b.isActive),
+    [branches]
+  );
 
   useEffect(() => {
     if (selectedBranch) {
@@ -107,7 +111,7 @@ export function PackingSlipsSidebar({
           onChange={(e) => setBranchId(e.target.value)}
           className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Chọn chi nhánh</option>
-          {branches?.map((branch) => (
+          {activeBranches?.map((branch) => (
             <option key={branch.id} value={branch.id}>
               {branch.name}
             </option>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PackingSlipsTable } from "@/components/packing-slips/PackingSlipsTable";
 import { PackingSlipsSidebar } from "@/components/packing-slips/PackingSlipsSidebar";
 import { PackingSlipForm } from "@/components/packing-slips/PackingSlipForm";
@@ -27,6 +27,7 @@ import type { PackingHang } from "@/lib/types/packing-hang";
 import type { PackingLoading } from "@/lib/types/packing-loading";
 import { toast } from "sonner";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { useSearchParams } from "next/navigation";
 
 type FormType = "giao-hang" | "dong-hang" | "loading" | null;
 
@@ -35,6 +36,9 @@ export default function BaoDonPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [formType, setFormType] = useState<FormType>(null);
+  const searchParams = useSearchParams();
+  const [formKey, setFormKey] = useState(0);
+
   const [editingPackingSlip, setEditingPackingSlip] =
     useState<PackingSlip | null>(null);
   const [editingPackingHang, setEditingPackingHang] =
@@ -96,12 +100,13 @@ export default function BaoDonPage() {
           data: formData,
         });
         toast.success("Cập nhật giao hàng thành công");
+        setFormType(null);
+        setEditingPackingSlip(null);
       } else {
         await createPackingSlip.mutateAsync(formData);
         toast.success("Tạo giao hàng thành công");
+        setFormKey((k) => k + 1);
       }
-      setFormType(null);
-      setEditingPackingSlip(null);
     } catch (error) {
       toast.error(
         editingPackingSlip
@@ -119,12 +124,13 @@ export default function BaoDonPage() {
           data: formData,
         });
         toast.success("Cập nhật đóng hàng thành công");
+        setFormType(null);
+        setEditingPackingHang(null);
       } else {
         await createPackingHang.mutateAsync(formData);
         toast.success("Tạo đóng hàng thành công");
+        setFormKey((k) => k + 1);
       }
-      setFormType(null);
-      setEditingPackingHang(null);
     } catch (error) {
       toast.error(
         editingPackingHang
@@ -142,12 +148,13 @@ export default function BaoDonPage() {
           data: formData,
         });
         toast.success("Cập nhật loading thành công");
+        setFormType(null);
+        setEditingPackingLoading(null);
       } else {
         await createPackingLoading.mutateAsync(formData);
         toast.success("Tạo loading thành công");
+        setFormKey((k) => k + 1);
       }
-      setFormType(null);
-      setEditingPackingLoading(null);
     } catch (error) {
       toast.error(
         editingPackingLoading
@@ -173,6 +180,13 @@ export default function BaoDonPage() {
     setEditingPackingLoading(null);
   };
 
+  useEffect(() => {
+    const form = searchParams.get("form");
+    if (form === "giao-hang" || form === "dong-hang" || form === "loading") {
+      setFormType(form as FormType);
+    }
+  }, [searchParams]);
+
   return (
     <PagePermissionGuard resource="packing_slips" action="view">
       <div className="flex h-full border-t bg-gray-50">
@@ -194,6 +208,7 @@ export default function BaoDonPage() {
 
         {formType === "giao-hang" && (
           <PackingSlipForm
+            key={formKey}
             packingSlip={editingPackingSlip || undefined}
             onClose={handleCloseForm}
             onSubmit={handleGiaoHangSubmit}
@@ -202,6 +217,7 @@ export default function BaoDonPage() {
 
         {formType === "dong-hang" && (
           <PackingHangForm
+            key={formKey}
             packingHang={editingPackingHang || undefined}
             onClose={handleCloseForm}
             onSubmit={handleDongHangSubmit}
@@ -210,6 +226,7 @@ export default function BaoDonPage() {
 
         {formType === "loading" && (
           <PackingLoadingForm
+            key={formKey}
             packingLoading={editingPackingLoading || undefined}
             onClose={handleCloseForm}
             onSubmit={handleLoadingSubmit}

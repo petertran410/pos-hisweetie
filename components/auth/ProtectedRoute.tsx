@@ -1,20 +1,23 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { isAuthenticated, _hasHydrated } = useAuthStore();
 
   useEffect(() => {
     if (_hasHydrated && !isAuthenticated) {
-      const returnUrl = encodeURIComponent(pathname);
+      const search = searchParams.toString();
+      const fullPath = search ? `${pathname}?${search}` : pathname;
+      const returnUrl = encodeURIComponent(fullPath);
       router.replace(`/login?returnUrl=${returnUrl}`);
     }
-  }, [isAuthenticated, _hasHydrated, router, pathname]);
+  }, [isAuthenticated, _hasHydrated, router, pathname, searchParams]);
 
   if (!_hasHydrated) {
     return (

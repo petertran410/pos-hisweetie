@@ -60,6 +60,10 @@ export function PackingHangForm({
 
   const availableInvoices = invoicesData?.data || [];
   const selectedBranch = branches?.find((b) => b.id === branchId);
+  const activeBranches = useMemo(
+    () => (branches || []).filter((b) => b.isActive),
+    [branches]
+  );
 
   const isEditing = !!packingHang;
 
@@ -289,7 +293,7 @@ export function PackingHangForm({
 
                 {showBranchDropdown && (
                   <div className="absolute z-50 left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {branches?.map((branch) => (
+                    {activeBranches.map((branch) => (
                       <div
                         key={branch.id}
                         onClick={() => {

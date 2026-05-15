@@ -83,6 +83,10 @@ export function PackingSlipForm({
 
   const availableInvoices = invoicesData?.data || [];
   const selectedBranch = branches?.find((b) => b.id === branchId);
+  const activeBranches = useMemo(
+    () => (branches || []).filter((b) => b.isActive),
+    [branches]
+  );
 
   const isEditing = !!packingSlip;
 
@@ -302,7 +306,7 @@ export function PackingSlipForm({
 
                   {showBranchDropdown && (
                     <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {branches?.map((branch) => (
+                      {activeBranches?.map((branch) => (
                         <div
                           key={branch.id}
                           onClick={() => {
