@@ -12,7 +12,7 @@ import {
   useSetUserBranchRole,
 } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { useRoles, useRole } from "@/lib/hooks/useRoles";
+import { useRoles, useRole, useRoleBranchPermissions } from "@/lib/hooks/useRoles";
 import { X, Check, ChevronDown, ChevronUp, Search, Save } from "lucide-react";
 import { ACTION_LABELS, getPermissionLabel } from "@/lib/constants/permissions";
 import { toast } from "sonner";
@@ -67,6 +67,10 @@ export function UserPermissionModal({
   // ── Derived: role của branch đang chọn ────────────────────────────────────
   const selectedBranchRoleId = localBranchRoles[selectedBranchId] ?? null;
   const { data: selectedBranchRoleData } = useRole(selectedBranchRoleId || 0);
+  const { data: roleBranchPerms } = useRoleBranchPermissions(
+    selectedBranchRoleId || 0,
+    selectedBranchId
+  );
 
   // ── Computed: branches mà user được gán ───────────────────────────────────
   const userBranches = useMemo(() => {
@@ -89,14 +93,24 @@ export function UserPermissionModal({
   }, [selectedBranchRoleId, allRoles]);
 
   // ── Computed: base permissions cho branch đang chọn ───────────────────────
+  // Mirror backend logic: branchPerms.length > 0 ? branchPerms : rolePermissions (global fallback)
   const basePermissionIds = useMemo(() => {
-    // Nếu branch có role riêng → dùng permissions của role đó
-    if (selectedBranchRoleId && selectedBranchRoleData?.rolePermissions) {
-      return (selectedBranchRoleData.rolePermissions as any[]).map(
-        (rp) => rp.permission.id
+    if (selectedBranchRoleId) {
+      // Chưa load roleBranchPerms → chờ
+      if (roleBranchPerms === undefined) return [];
+
+      // Có branch-specific permissions → dùng luôn
+      if (roleBranchPerms.length > 0) {
+        return roleBranchPerms as number[];
+      }
+
+      // roleBranchPerms = [] → fallback về global rolePermissions (mirror backend)
+      if (!selectedBranchRoleData) return []; // chờ role data
+      return (selectedBranchRoleData.rolePermissions as any[] || []).map(
+        (rp: any) => rp.permission?.id ?? rp.id
       );
     }
-    // Fallback: dùng global role permissions của user
+    // Không có role: dùng global permissions của user
     if (!user) return [];
     const fromRole = (user.rolePermissions || []).map((p: any) => p.id);
     const fromGrant = (user.individualPermissions || []).map((p: any) => p.id);
@@ -104,7 +118,7 @@ export function UserPermissionModal({
     return [...new Set([...fromRole, ...fromGrant])].filter(
       (id) => !denyIds.has(id)
     );
-  }, [selectedBranchRoleId, selectedBranchRoleData, user]);
+  }, [selectedBranchRoleId, roleBranchPerms, selectedBranchRoleData, user]);
 
   // ── Data fetching: branch permissions hiện tại ────────────────────────────
   const { data: branchPerms, isLoading: isLoadingBranch } =
@@ -150,8 +164,9 @@ export function UserPermissionModal({
       return;
     }
 
-    // Guard: nếu branch có role nhưng role data chưa load → chờ, không reset
-    if (selectedBranchRoleId && !selectedBranchRoleData) return;
+    // Guard: chờ roleBranchPerms load; nếu rỗng thì chờ thêm selectedBranchRoleData (fallback global)
+    if (selectedBranchRoleId && roleBranchPerms === undefined) return;
+    if (selectedBranchRoleId && Array.isArray(roleBranchPerms) && roleBranchPerms.length === 0 && !selectedBranchRoleData) return;
 
     if (!branchPerms) {
       setLocalActive([...basePermissionIds]);
@@ -175,6 +190,7 @@ export function UserPermissionModal({
     selectedBranchId,
     allPermissions,
     selectedBranchRoleId,
+    roleBranchPerms,
     selectedBranchRoleData,
   ]);
 
