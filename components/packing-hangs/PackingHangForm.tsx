@@ -246,7 +246,7 @@ export function PackingHangForm({
                   type="text"
                   value={packingHang?.code || "Tự động tạo"}
                   disabled
-                  className="w-full border rounded px-3 py-2 bg-gray-50 text-gray-500"
+                  className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm bg-gray-50 text-gray-500"
                 />
               </div>
 
@@ -384,7 +384,7 @@ export function PackingHangForm({
                   type="text"
                   value={uniqueCustomerNames || ""}
                   disabled
-                  className="w-full border rounded px-3 py-2 bg-gray-50 text-gray-500"
+                  className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm bg-gray-50 text-gray-500"
                 />
               </div>
 
@@ -394,7 +394,7 @@ export function PackingHangForm({
                   type="text"
                   value={purchaseDates || ""}
                   disabled
-                  className="w-full border rounded px-3 py-2 bg-gray-50 text-gray-500"
+                  className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm bg-gray-50 text-gray-500"
                 />
               </div>
             </div>
@@ -486,12 +486,12 @@ export function PackingHangForm({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border rounded hover:bg-gray-50">
+              className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-base sm:text-sm border rounded hover:bg-gray-50">
               Hủy
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+              className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-base sm:text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
               {packingHang ? "Cập nhật" : "Tạo mới"}
             </button>
           </div>
