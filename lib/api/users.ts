@@ -110,4 +110,12 @@ export const usersApi = {
       denyPermissionIds,
     });
   },
+
+  getUserBranchRoles: (id: number) =>
+    apiClient.get(`/users/${id}/branch-roles`),
+
+  setUserBranchRole: (
+    id: number,
+    data: { branchId: number; roleId: number | null }
+  ) => apiClient.put(`/users/${id}/branch-roles`, data),
 };

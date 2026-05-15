@@ -144,3 +144,35 @@ export function useAssignBranchPermissions() {
     },
   });
 }
+
+export function useUserBranchRoles(userId: number) {
+  return useQuery({
+    queryKey: ["user-branch-roles", userId],
+    queryFn: () => usersApi.getUserBranchRoles(userId),
+    enabled: !!userId,
+  });
+}
+
+export function useSetUserBranchRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      userId,
+      branchId,
+      roleId,
+    }: {
+      userId: number;
+      branchId: number;
+      roleId: number | null;
+    }) => usersApi.setUserBranchRole(userId, { branchId, roleId }),
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["user-branch-roles", userId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["users", userId] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Cập nhật vai trò thất bại");
+    },
+  });
+}
