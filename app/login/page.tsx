@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/store/auth";
-import { useBranchStore } from "@/lib/store/branch";
 import { toast } from "sonner";
 import { EyeOff, Eye } from "lucide-react";
 
@@ -18,7 +17,6 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuth, isAuthenticated, _hasHydrated } = useAuthStore();
-  const { setSelectedBranch } = useBranchStore();
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -50,21 +48,16 @@ export default function LoginPage() {
     try {
       const response = await authApi.login(data);
 
-      // ✅ FIX: Nếu user có branchId chính, gọi getProfile với branchId
-      // để permissions branch-level được tính đúng ngay từ lần đầu login
+      // ✅ Nếu user có branchId chính, fetch lại profile với branchId
+      // để permissions branch-level được tính đúng ngay từ lần đầu login.
+      // KHÔNG gọi setSelectedBranch ở đây — để BranchSelector tự
+      // auto-select từ danh sách branches đầy đủ (có name) qua useEffect của nó.
       if (response.user.branchId) {
         const profile = await authApi.getProfile(
           response.accessToken,
           response.user.branchId
         );
         setAuth(profile, response.accessToken);
-
-        // Sync useBranchStore với chi nhánh chính của user
-        setSelectedBranch({
-          id: response.user.branchId,
-          name: profile.branchName || "",
-          isActive: true,
-        });
       } else {
         setAuth(response.user, response.accessToken);
       }
