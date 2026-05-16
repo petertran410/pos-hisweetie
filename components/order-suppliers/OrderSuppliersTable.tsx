@@ -1,16 +1,27 @@
 "use client";
 
-import { useState, Fragment, useEffect } from "react";
+import { useState, useEffect, Fragment, useMemo } from "react";
 import { useOrderSuppliers } from "@/lib/hooks/useOrderSuppliers";
 import type {
   OrderSupplier,
   OrderSupplierFilters,
 } from "@/lib/types/order-supplier";
+import {
+  getStatusLabel,
+  ORDER_SUPPLIER_STATUS,
+} from "@/lib/types/order-supplier";
 import { OrderSupplierDetailRow } from "./OrderSupplierDetailRow";
-import { Plus, Settings } from "lucide-react";
+import {
+  Plus,
+  Settings,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { getStatusLabel } from "@/lib/types/order-supplier";
-import { formatCurrency, formatNumberInput } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 interface ColumnConfig {
   key: string;
@@ -20,10 +31,30 @@ interface ColumnConfig {
   render: (os: OrderSupplier) => React.ReactNode;
 }
 
-const formatDateTime = (date?: string) => {
-  if (!date) return "-";
-  return new Date(date).toLocaleString("vi-VN");
+interface OrderSuppliersTableProps {
+  filters: OrderSupplierFilters;
+  onFiltersChange: (filters: Partial<OrderSupplierFilters>) => void;
+}
+
+const STATUS_TABS = [
+  { value: "all", label: "Tất cả" },
+  { value: String(ORDER_SUPPLIER_STATUS.DRAFT), label: "Phiếu tạm" },
+  { value: String(ORDER_SUPPLIER_STATUS.CONFIRMED), label: "Đã xác nhận NCC" },
+  { value: String(ORDER_SUPPLIER_STATUS.PARTIAL), label: "Nhập một phần" },
+  { value: String(ORDER_SUPPLIER_STATUS.COMPLETED), label: "Hoàn thành" },
+  { value: String(ORDER_SUPPLIER_STATUS.CANCELLED), label: "Đã hủy" },
+];
+
+const STATUS_COLOR: Record<number, string> = {
+  [ORDER_SUPPLIER_STATUS.DRAFT]: "bg-gray-100 text-gray-700",
+  [ORDER_SUPPLIER_STATUS.CONFIRMED]: "bg-blue-100 text-blue-700",
+  [ORDER_SUPPLIER_STATUS.PARTIAL]: "bg-yellow-100 text-yellow-700",
+  [ORDER_SUPPLIER_STATUS.COMPLETED]: "bg-green-100 text-green-700",
+  [ORDER_SUPPLIER_STATUS.CANCELLED]: "bg-red-100 text-red-700",
 };
+
+const formatDateTime = (date?: string) =>
+  date ? new Date(date).toLocaleString("vi-VN") : "-";
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
@@ -31,39 +62,39 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã đặt hàng nhập",
     visible: true,
     width: "180px",
-    render: (os) => os.code,
+    render: (os) => (
+      <span className="font-medium text-blue-600">{os.code}</span>
+    ),
   },
   {
     key: "purchaseOrderCode",
     label: "Mã nhập hàng",
     visible: true,
     width: "250px",
-    render: (os) => {
-      if (!os.purchaseOrders || os.purchaseOrders.length === 0) {
-        return "-";
-      }
-      return os.purchaseOrders.map((po) => po.code).join(" | ");
-    },
+    render: (os) =>
+      os.purchaseOrders?.length
+        ? os.purchaseOrders.map((po) => po.code).join(" | ")
+        : "-",
   },
   {
     key: "orderDate",
     label: "Ngày đặt",
     visible: true,
-    width: "200px",
+    width: "170px",
     render: (os) => formatDateTime(os.orderDate),
   },
   {
     key: "createdDate",
     label: "Ngày tạo",
     visible: true,
-    width: "200px",
+    width: "170px",
     render: (os) => formatDateTime(os.createdAt),
   },
   {
-    key: "upadatedDate",
+    key: "updatedDate",
     label: "Ngày cập nhật",
-    visible: true,
-    width: "200px",
+    visible: false,
+    width: "170px",
     render: (os) => formatDateTime(os.updatedAt),
   },
   {
@@ -92,7 +123,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Người đặt",
     visible: false,
     width: "150px",
-    render: (os) => os.user?.name,
+    render: (os) => os.user?.name || "-",
   },
   {
     key: "creator",
@@ -105,15 +136,15 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "totalQuantity",
     label: "Tổng số lượng",
     visible: false,
-    width: "180px",
-    render: (os) => formatCurrency(os.totalQty) || "-",
+    width: "150px",
+    render: (os) => String(os.totalQty ?? "-"),
   },
   {
-    key: "productQuantitt",
-    label: "Số lượng mặt hàng",
+    key: "productQty",
+    label: "Số mặt hàng",
     visible: false,
-    width: "180px",
-    render: (os) => os.productQty || "-",
+    width: "150px",
+    render: (os) => String(os.productQty ?? "-"),
   },
   {
     key: "discount",
@@ -121,13 +152,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: false,
     width: "120px",
     render: (os) => formatCurrency(os.discount),
-  },
-  {
-    key: "totalPayForSupplier",
-    label: "Chi phí nhập trả NCC",
-    visible: false,
-    width: "220px",
-    render: (os) => formatCurrency(os.total),
   },
   {
     key: "subTotal",
@@ -147,30 +171,17 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "status",
     label: "Trạng thái",
     visible: true,
-    width: "200px",
+    width: "170px",
     render: (os) => (
       <span
-        className={`px-2 py-1 rounded text-xs font-medium ${
-          os.status === 0
-            ? "bg-gray-100 text-gray-800"
-            : os.status === 1
-              ? "bg-blue-100 text-blue-800"
-              : os.status === 2
-                ? "bg-yellow-100 text-yellow-800"
-                : os.status === 3
-                  ? "bg-green-100 text-green-800"
-                  : "bg-red-100 text-red-800"
+        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+          STATUS_COLOR[os.status] ?? "bg-gray-100 text-gray-700"
         }`}>
         {getStatusLabel(os.status)}
       </span>
     ),
   },
 ];
-
-interface OrderSuppliersTableProps {
-  filters: OrderSupplierFilters;
-  onFiltersChange: (filters: Partial<OrderSupplierFilters>) => void;
-}
 
 export function OrderSuppliersTable({
   filters,
@@ -181,17 +192,53 @@ export function OrderSuppliersTable({
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(15);
+  const [activeStatusTab, setActiveStatusTab] = useState("all");
+
+  // Debounce search 300ms
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Reset trang 1 khi filter/search/tab thay đổi
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filters, activeStatusTab]);
+
+  // Sync tab từ sidebar (chỉ sync khi sidebar chọn đúng 1 status)
+  useEffect(() => {
+    if (filters.status && filters.status.length === 1) {
+      setActiveStatusTab(String(filters.status[0]));
+    } else if (!filters.status || filters.status.length === 0) {
+      setActiveStatusTab("all");
+    } else {
+      // multi-select → reset tab về "all"
+      setActiveStatusTab("all");
+    }
+  }, [filters.status]);
+
+  // effectiveFilters: tab override sidebar status
+  const effectiveFilters = useMemo(() => {
+    const f = { ...filters };
+    if (activeStatusTab !== "all") {
+      f.status = [Number(activeStatusTab)];
+    }
+    return f;
+  }, [filters, activeStatusTab]);
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("orderSupplierTableColumns");
       if (saved) {
         try {
-          const savedColumns = JSON.parse(saved);
+          const savedCols = JSON.parse(saved);
           return DEFAULT_COLUMNS.map((col) => ({
             ...col,
             visible:
-              savedColumns.find((s: any) => s.key === col.key)?.visible ??
+              savedCols.find((s: any) => s.key === col.key)?.visible ??
               col.visible,
           }));
         } catch {
@@ -203,9 +250,12 @@ export function OrderSuppliersTable({
   });
 
   const { data, isLoading } = useOrderSuppliers({
-    ...filters,
+    ...effectiveFilters,
+    pageSize: limit,
+    currentItem: (page - 1) * limit,
   });
 
+  // Persist columns to localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem(
@@ -217,220 +267,297 @@ export function OrderSuppliersTable({
 
   const orderSuppliers = data?.data || [];
   const total = data?.total || 0;
-  const visibleColumns = columns.filter((col) => col.visible);
+  const totalPages = Math.ceil(total / limit) || 1;
 
-  const currentItem = filters.currentItem ?? 0;
-  const pageSize = filters.pageSize ?? 15;
+  const visibleColumns = useMemo(
+    () => columns.filter((c) => c.visible),
+    [columns]
+  );
 
-  const toggleColumnVisibility = (key: string) => {
+  const colSpan = visibleColumns.length + 2; // checkbox + chevron
+
+  const toggleColumnVisibility = (key: string) =>
     setColumns((prev) =>
-      prev.map((col) =>
-        col.key === key ? { ...col, visible: !col.visible } : col
-      )
+      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
     );
-  };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.length === orderSuppliers.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(orderSuppliers.map((os) => os.id));
-    }
-  };
+  const toggleSelectAll = () =>
+    setSelectedIds(
+      selectedIds.length === orderSuppliers.length
+        ? []
+        : orderSuppliers.map((os) => os.id)
+    );
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: number) =>
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
-  };
 
-  const toggleExpand = (id: number) => {
+  const toggleExpand = (id: number) =>
     setExpandedId((prev) => (prev === id ? null : id));
-  };
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
-      <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4 w-[500px]">
-          <h1 className="text-xl font-semibold w-[250px]">Đặt hàng nhập</h1>
-          <input
-            type="text"
-            placeholder="Theo mã phiếu đặt hàng nhập"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+    <PermissionGate resource="order_suppliers" action="view">
+      <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
+        {/* ── Toolbar ── */}
+        <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+              Đặt hàng nhập
+            </h2>
+            <input
+              type="text"
+              placeholder="Tìm mã đặt hàng, nhà cung cấp..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <PermissionGate resource="order_suppliers" action="create">
+              <button
+                onClick={() => router.push("/san-pham/dat-hang-nhap/new")}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
+                <Plus className="w-4 h-4" />
+                Tạo phiếu
+              </button>
+            </PermissionGate>
+            <button
+              onClick={() => setShowColumnModal(true)}
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
+              <Settings className="w-4 h-4" />
+              Cột
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => router.push("/san-pham/dat-hang-nhap/new")}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            <span>Đặt hàng nhập</span>
-          </button>
-          <button className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
-            Xuất file
-          </button>
-          <button
-            onClick={() => setShowColumnModal(true)}
-            className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Cột Hiển Thị
-          </button>
-        </div>
-      </div>
 
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-md">
-          <thead className="sticky top-0 z-10 bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left sticky left-0 bg-gray-50">
-                <input
-                  type="checkbox"
-                  checked={
-                    orderSuppliers.length > 0 &&
-                    selectedIds.length === orderSuppliers.length
-                  }
-                  onChange={toggleSelectAll}
-                  className="cursor-pointer"
-                />
-              </th>
-              {visibleColumns.map((col) => (
-                <th
-                  key={col.key}
-                  className="px-6 py-3 text-left font-medium text-gray-700 whitespace-nowrap"
-                  style={{
-                    minWidth: col.width,
-                    maxWidth: col.width,
-                    width: col.width,
-                  }}>
-                  {col.label}
+        {/* ── Status Tabs ── */}
+        <div className="flex items-center gap-1 px-4 border-b overflow-x-auto shrink-0">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveStatusTab(tab.value)}
+              className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                activeStatusTab === tab.value
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Table ── */}
+        <div className="flex-1 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 sticky top-0 z-10">
+              <tr>
+                <th className="px-4 py-2.5 text-left w-10 sticky left-0 bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedIds.length === orderSuppliers.length &&
+                      orderSuppliers.length > 0
+                    }
+                    onChange={toggleSelectAll}
+                    className="cursor-pointer"
+                  />
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {isLoading ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length + 1}
-                  className="p-8 text-center text-gray-500">
-                  Đang tải...
-                </td>
+                {visibleColumns.map((col) => (
+                  <th
+                    key={col.key}
+                    className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide"
+                    style={{ width: col.width, minWidth: col.width }}>
+                    {col.label}
+                  </th>
+                ))}
+                <th className="px-4 py-2.5 w-8" />
               </tr>
-            ) : orderSuppliers.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length + 1}
-                  className="p-8 text-center text-gray-500">
-                  Không có phiếu đặt hàng nhập nào
-                </td>
-              </tr>
-            ) : (
-              orderSuppliers.map((os) => (
-                <Fragment key={os.id}>
-                  <tr
-                    className={`border-b cursor-pointer ${
-                      expandedId === os.id ? "" : ""
-                    }`}
-                    onClick={() => toggleExpand(os.id)}>
-                    <td
-                      className="px-6 py-3 sticky left-0 bg-white"
-                      onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(os.id)}
-                        onChange={() => toggleSelect(os.id)}
-                        className="cursor-pointer"
-                      />
-                    </td>
-                    {visibleColumns.map((col) => (
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={colSpan} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-2 text-gray-400">
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                      <span className="text-xs">Đang tải...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : orderSuppliers.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={colSpan}
+                    className="py-20 text-center text-gray-400">
+                    <div className="text-sm">
+                      Không có phiếu đặt hàng nhập nào
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                orderSuppliers.map((os) => (
+                  <Fragment key={os.id}>
+                    <tr
+                      className={`cursor-pointer transition-colors ${
+                        expandedId === os.id
+                          ? "bg-blue-50"
+                          : "border-b hover:bg-gray-50"
+                      }`}
+                      onClick={() => toggleExpand(os.id)}>
                       <td
-                        key={col.key}
-                        className="px-6 py-3 text-md"
-                        style={{
-                          minWidth: col.width,
-                          maxWidth: col.width,
-                          width: col.width,
-                        }}>
-                        <div className="break-words">{col.render(os)}</div>
+                        className={`px-4 py-2.5 sticky left-0 z-10 ${
+                          expandedId === os.id
+                            ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
+                            : "bg-white"
+                        }`}
+                        onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(os.id)}
+                          onChange={() => toggleSelect(os.id)}
+                          className="cursor-pointer"
+                        />
                       </td>
-                    ))}
-                  </tr>
-                  {expandedId === os.id && (
-                    <OrderSupplierDetailRow
-                      orderSupplierId={os.id}
-                      colSpan={visibleColumns.length + 1}
-                    />
-                  )}
-                </Fragment>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                      {visibleColumns.map((col) => (
+                        <td
+                          key={col.key}
+                          className={`px-4 py-2.5 ${
+                            expandedId === os.id
+                              ? "border-t-2 border-blue-500"
+                              : ""
+                          }`}
+                          style={{
+                            width: col.width,
+                            minWidth: col.width,
+                            maxWidth: col.width,
+                            wordWrap: "break-word",
+                            whiteSpace: "normal",
+                          }}>
+                          {col.render(os)}
+                        </td>
+                      ))}
+                      <td
+                        className={`px-4 py-2.5 ${
+                          expandedId === os.id
+                            ? "border-t-2 border-r-2 border-blue-500"
+                            : ""
+                        }`}>
+                        <ChevronDown
+                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                            expandedId === os.id ? "rotate-180" : ""
+                          }`}
+                        />
+                      </td>
+                    </tr>
+                    {expandedId === os.id && (
+                      <OrderSupplierDetailRow
+                        orderSupplierId={os.id}
+                        colSpan={colSpan}
+                      />
+                    )}
+                  </Fragment>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      <div className="border-t px-4 py-3 flex items-center justify-between bg-white">
-        <div className="flex items-center gap-2">
-          <span className="text-md text-gray-600">
-            Hiển thị {currentItem + 1} -{" "}
-            {Math.min(currentItem + pageSize, total)} của {total}
+        {/* ── Pagination ── */}
+        <div className="border-t px-4 py-2.5 flex items-center justify-between bg-white shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Hiển thị</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+              {[10, 15, 20, 50].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-gray-500">/ trang</span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const p = Math.min(
+                Math.max(page - 2 + i, i + 1),
+                totalPages - (Math.min(5, totalPages) - 1 - i)
+              );
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
+                    p === page
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "hover:bg-gray-50 text-gray-600 border-gray-200"
+                  }`}>
+                  {p}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page >= totalPages}
+              className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <span className="text-xs text-gray-400">
+            Trang {page}/{totalPages}
+            {total > 0 ? ` · ${total.toLocaleString("vi-VN")} phiếu` : ""}
           </span>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              if (currentItem > 0) {
-                onFiltersChange({ currentItem: currentItem - pageSize });
-              }
-            }}
-            disabled={currentItem === 0}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-md">
-            Trước
-          </button>
-          <button
-            onClick={() => {
-              if (currentItem + pageSize < total) {
-                onFiltersChange({ currentItem: currentItem + pageSize });
-              }
-            }}
-            disabled={currentItem + pageSize >= total}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-md">
-            Sau
-          </button>
-        </div>
       </div>
 
+      {/* ── Column modal ── */}
       {showColumnModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+          onClick={() => setShowColumnModal(false)}>
+          <div
+            className="bg-white rounded-xl shadow-xl w-72 p-5"
+            onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Tùy chỉnh cột hiển thị</h3>
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="text-gray-500 hover:text-gray-700">
-                ✕
+              <h3 className="font-semibold text-gray-900 text-sm">
+                Cột hiển thị
+              </h3>
+              <button onClick={() => setShowColumnModal(false)}>
+                <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-0.5 max-h-80 overflow-y-auto">
               {columns.map((col) => (
                 <label
                   key={col.key}
-                  className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                  className="flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
                   <input
                     type="checkbox"
                     checked={col.visible}
                     onChange={() => toggleColumnVisibility(col.key)}
                     className="cursor-pointer"
                   />
-                  <span className="text-md">{col.label}</span>
+                  <span className="text-sm text-gray-700">{col.label}</span>
                 </label>
               ))}
             </div>
           </div>
         </div>
       )}
-    </div>
+    </PermissionGate>
   );
 }

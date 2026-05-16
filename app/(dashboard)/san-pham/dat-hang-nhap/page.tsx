@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { OrderSupplierSidebar } from "@/components/order-suppliers/OrderSupplierSidebar";
 import { OrderSuppliersTable } from "@/components/order-suppliers/OrderSuppliersTable";
 import type { OrderSupplierFilters } from "@/lib/types/order-supplier";
@@ -12,11 +12,24 @@ export default function OrderSuppliersPage() {
     currentItem: 0,
   });
 
+  const handleFiltersChange = useCallback(
+    (newFilters: Partial<OrderSupplierFilters>) => {
+      setFilters((prev) => ({ ...prev, ...newFilters }));
+    },
+    []
+  );
+
   return (
     <PagePermissionGuard resource="order_suppliers" action="view">
       <div className="flex h-full border-t bg-gray-50">
-        <OrderSupplierSidebar filters={filters} setFilters={setFilters} />
-        <OrderSuppliersTable filters={filters} onFiltersChange={setFilters} />
+        <OrderSupplierSidebar
+          filters={filters}
+          setFilters={handleFiltersChange}
+        />
+        <OrderSuppliersTable
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+        />
       </div>
     </PagePermissionGuard>
   );
