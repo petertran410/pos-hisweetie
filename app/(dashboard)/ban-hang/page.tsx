@@ -918,7 +918,7 @@ export default function BanHangPage() {
 
       handleCloseTab(activeTabId);
       toast.success("Tạo hóa đơn thành công");
-      router.push(`/don-hang/hoa-don`);
+      router.push(`/don-hang/don-hang`);
     } catch (error: any) {
       toast.error(error.message || "Không thể tạo hóa đơn");
     }
