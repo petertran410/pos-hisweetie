@@ -95,7 +95,7 @@ export interface OrderSupplierExpensesOther {
 export interface OrderSupplierFilters {
   branchId?: number;
   supplierId?: number;
-  status?: number;
+  status?: number[];
   createdById?: number;
   userId?: number;
   createdDateFrom?: string;
