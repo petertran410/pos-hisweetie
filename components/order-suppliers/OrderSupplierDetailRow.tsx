@@ -1,26 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   useOrderSupplier,
   useUpdateOrderSupplier,
+  useOrderSupplierPayments,
 } from "@/lib/hooks/useOrderSuppliers";
-import { useOrderSupplierPayments } from "@/lib/hooks/useOrderSuppliers";
-import { Loader2, FileText, Save } from "lucide-react";
+import { ExternalLink, FileText, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { useCan } from "@/lib/hooks/useCan";
+import Link from "next/link";
 
 interface OrderSupplierDetailRowProps {
   orderSupplierId: number;
   colSpan: number;
 }
 
-const formatDateTime = (dateString: string) => {
+const formatDateTime = (dateString?: string) => {
   if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleString("vi-VN", {
+  return new Date(dateString).toLocaleString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -49,17 +49,17 @@ const getStatusLabel = (status: number) => {
 const getStatusColor = (status: number) => {
   switch (status) {
     case 0:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-700";
     case 1:
-      return "bg-blue-100 text-blue-800";
+      return "bg-blue-100 text-blue-700";
     case 2:
-      return "bg-yellow-100 text-yellow-800";
+      return "bg-yellow-100 text-yellow-700";
     case 3:
-      return "bg-green-100 text-green-800";
+      return "bg-green-100 text-green-700";
     case 4:
-      return "bg-red-100 text-red-800";
+      return "bg-red-100 text-red-700";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-700";
   }
 };
 
@@ -69,10 +69,21 @@ const getPaymentMethodLabel = (method: string) => {
       return "Tiền mặt";
     case "transfer":
       return "Chuyển khoản";
-    // case "card":
-    //   return "Thẻ";
     default:
       return method;
+  }
+};
+
+const getPurchaseOrderStatusLabel = (status: number) => {
+  switch (status) {
+    case 0:
+      return { label: "Phiếu tạm", cls: "bg-gray-100 text-gray-700" };
+    case 1:
+      return { label: "Hoàn thành", cls: "bg-green-100 text-green-700" };
+    case 2:
+      return { label: "Đã hủy", cls: "bg-red-100 text-red-700" };
+    default:
+      return { label: "Không xác định", cls: "bg-gray-100 text-gray-700" };
   }
 };
 
@@ -83,58 +94,70 @@ export function OrderSupplierDetailRow({
   const router = useRouter();
   const { data: orderSupplier, isLoading } = useOrderSupplier(orderSupplierId);
   const updateOrderSupplier = useUpdateOrderSupplier();
+  const { data: payments } = useOrderSupplierPayments(orderSupplierId);
+
   const [activeTab, setActiveTab] = useState("info");
   const [productCodeSearch, setProductCodeSearch] = useState("");
   const [productNameSearch, setProductNameSearch] = useState("");
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const { data: payments } = useOrderSupplierPayments(orderSupplierId);
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const canUpdateOS = useCan("order_suppliers", "update");
-  const canDeleteOS = useCan("order_suppliers", "delete");
   const canCreatePO = useCan("purchase_orders", "create");
 
-  useState(() => {
-    if (orderSupplier?.description) {
-      setNotes(orderSupplier.description);
+  // Sticky width — giống OrderDetailRow
+  useLayoutEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    let scrollEl: HTMLElement | null = el.parentElement;
+    while (scrollEl) {
+      const ox = getComputedStyle(scrollEl).overflowX;
+      if (ox === "auto" || ox === "scroll") break;
+      scrollEl = scrollEl.parentElement;
     }
-  });
+    if (!scrollEl) return;
+    const update = () => {
+      el.style.width = `${scrollEl!.clientWidth}px`;
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(scrollEl);
+    return () => ro.disconnect();
+  }, [orderSupplier]);
+
+  // Sync notes khi data load
+  useEffect(() => {
+    if (orderSupplier?.description !== undefined) {
+      setNotes(orderSupplier.description ?? "");
+    }
+  }, [orderSupplier?.id]);
 
   const handleCancel = async () => {
     if (!orderSupplier) return;
-
-    if (confirm("Bạn có chắc chắn muốn hủy phiếu đặt hàng nhập này?")) {
-      try {
-        setIsSaving(true);
-        await updateOrderSupplier.mutateAsync({
-          id: orderSupplierId,
-          data: {
-            status: 4,
-          },
-        });
-        toast.success("Hủy phiếu thành công");
-      } catch (error: any) {
-        toast.error(error.message || "Không thể hủy phiếu");
-      } finally {
-        setIsSaving(false);
-      }
-    }
-  };
-
-  const handleOpenForm = () => {
-    router.push(`/san-pham/dat-hang-nhap/${orderSupplierId}`);
-  };
-
-  const handleSave = async () => {
-    if (!orderSupplier) return;
-
+    if (!confirm("Bạn có chắc chắn muốn hủy phiếu đặt hàng nhập này?")) return;
     try {
       setIsSaving(true);
       await updateOrderSupplier.mutateAsync({
         id: orderSupplierId,
-        data: {
-          description: notes,
-        },
+        data: { status: 4 },
+      });
+      toast.success("Hủy phiếu thành công");
+    } catch (error: any) {
+      toast.error(error.message || "Không thể hủy phiếu");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!orderSupplier) return;
+    try {
+      setIsSaving(true);
+      await updateOrderSupplier.mutateAsync({
+        id: orderSupplierId,
+        data: { description: notes },
       });
       toast.success("Lưu ghi chú thành công");
     } catch (error: any) {
@@ -144,25 +167,36 @@ export function OrderSupplierDetailRow({
     }
   };
 
-  const handleCreatePurchaseOrder = () => {
+  const handleOpenForm = () =>
+    router.push(`/san-pham/dat-hang-nhap/${orderSupplierId}`);
+  const handleCreatePurchaseOrder = () =>
     router.push(`/san-pham/nhap-hang/new?orderSupplierId=${orderSupplierId}`);
-  };
 
+  // ── Loading ──
   if (isLoading) {
     return (
-      <tr>
-        <td colSpan={colSpan} className="p-6 bg-gray-50">
-          <div className="flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-            <span className="ml-2 text-gray-500">Đang tải...</span>
+      <tr className="bg-blue-50">
+        <td colSpan={colSpan} className="px-6 py-8">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <span className="text-gray-600">
+              Đang tải thông tin phiếu đặt hàng nhập...
+            </span>
           </div>
         </td>
       </tr>
     );
   }
 
+  // ── Not found ──
   if (!orderSupplier) {
-    return null;
+    return (
+      <tr className="bg-red-50">
+        <td colSpan={colSpan} className="px-6 py-4 text-center text-red-600">
+          Không tìm thấy thông tin phiếu đặt hàng nhập
+        </td>
+      </tr>
+    );
   }
 
   const filteredItems = orderSupplier.items?.filter((item: any) => {
@@ -182,465 +216,449 @@ export function OrderSupplierDetailRow({
   const canCancel = orderSupplier.status === 0 || orderSupplier.status === 1;
 
   const receivedQuantities: Record<number, number> = {};
-  orderSupplier.purchaseOrders?.forEach((po) => {
+  orderSupplier.purchaseOrders?.forEach((po: any) => {
     po.items?.forEach((item: any) => {
       receivedQuantities[item.productId] =
         (receivedQuantities[item.productId] || 0) + Number(item.quantity);
     });
   });
 
-  return (
-    <tr>
-      <td colSpan={colSpan} className="py-2 bg-gray-50">
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1090px] 2xl:max-w-[1545px]">
-          <div className="p-6">
-            <div className="flex gap-4 mb-4 border-b">
-              <button
-                onClick={() => setActiveTab("info")}
-                className={`px-4 py-2 text-md font-medium ${
-                  activeTab === "info"
-                    ? "border-b-2 border-blue-600 text-blue-600"
-                    : "text-gray-600"
-                }`}>
-                Thông tin
-              </button>
-              <button
-                onClick={() => setActiveTab("history")}
-                className={`px-4 py-2 text-md font-medium ${
-                  activeTab === "history"
-                    ? "border-b-2 border-blue-600 text-blue-600"
-                    : "text-gray-600"
-                }`}>
-                Lịch sử nhập hàng
-              </button>
-              <button
-                onClick={() => setActiveTab("payment")}
-                className={`px-4 py-2 text-md font-medium ${
-                  activeTab === "payment"
-                    ? "border-b-2 border-blue-600 text-blue-600"
-                    : "text-gray-600"
-                }`}>
-                Lịch sử thanh toán
-              </button>
-            </div>
+  const TABS = [
+    { value: "info", label: "Thông tin" },
+    { value: "history", label: "Lịch sử nhập hàng" },
+    { value: "payment", label: "Lịch sử thanh toán" },
+  ];
 
-            {activeTab === "info" && (
-              <div className="border-b border-gray-200 pb-4 mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-4">
-                    <p className="text-xl font-bold">{orderSupplier.code}</p>
-                    <span
-                      className={`px-3 py-1 rounded text-md font-medium ${getStatusColor(
-                        orderSupplier.status
-                      )}`}>
-                      {getStatusLabel(orderSupplier.status)}
+  return (
+    <>
+      <tr>
+        <td
+          colSpan={colSpan}
+          className="border-b-2 border-l-2 border-r-2 border-blue-500 bg-gray-50">
+          <div
+            ref={wrapperRef}
+            className="sticky left-0 bg-gray-50"
+            style={{ width: 0 }}>
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="p-4">
+                {/* ── Header ── */}
+                <div className="border-b border-gray-200 pb-3 mb-4">
+                  <div className="flex border-b pb-2 items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-gray-900">
+                        {orderSupplier.code}
+                      </span>
+                      <span className="text-gray-400">-</span>
+                      {orderSupplier.supplier ? (
+                        <>
+                          <Link
+                            href={`/san-pham/nha-cung-cap?id=${orderSupplier.supplier.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-lg font-semibold text-blue-600 hover:underline"
+                            onClick={(e) => e.stopPropagation()}>
+                            {orderSupplier.supplier.name}
+                          </Link>
+                          <Link
+                            href={`/san-pham/nha-cung-cap?id=${orderSupplier.supplier.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                            onClick={(e) => e.stopPropagation()}>
+                            <ExternalLink className="w-4 h-4" />
+                          </Link>
+                          <span
+                            className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(orderSupplier.status)}`}>
+                            {getStatusLabel(orderSupplier.status)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-lg font-semibold text-gray-800">
+                          Chưa có nhà cung cấp
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm text-gray-600 font-medium">
+                      {orderSupplier.branch?.name || "-"}
                     </span>
                   </div>
-                  <span className="text-md text-gray-600">
-                    {orderSupplier.branch?.name || "-"}
-                  </span>
+
+                  {/* ── Tabs ── */}
+                  <div className="flex items-center gap-1">
+                    {TABS.map((tab) => (
+                      <button
+                        key={tab.value}
+                        onClick={() => setActiveTab(tab.value)}
+                        className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                          activeTab === tab.value
+                            ? "border-blue-600 text-blue-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                        }`}>
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="grid grid-cols-4 gap-6">
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Người tạo:
-                      </label>
-                      <span className="w-full px-3 py-2 text-md border rounded bg-gray-50">
-                        {orderSupplier.creator?.name || "-"}
-                      </span>
-                    </div>
-
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Người đặt:
-                      </label>
-                      <span className="w-full px-3 py-2 text-md border rounded bg-white">
-                        {orderSupplier.creator?.name || "-"}
-                      </span>
-                    </div>
-
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Ngày đặt:
-                      </label>
-                      <span className="w-full px-3 py-2 text-md border rounded bg-gray-50">
-                        {formatDateTime(orderSupplier.orderDate)}
-                      </span>
-                    </div>
-
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Dự kiến nhập:
-                      </label>
-                      <span className="w-full px-3 py-2 text-md border rounded bg-white">
-                        {orderSupplier.orderDate
-                          ? new Date(
-                              orderSupplier.orderDate
-                            ).toLocaleDateString("vi-VN")
-                          : "-"}
-                      </span>
-                    </div>
-
-                    <div>
-                      <label className="block text-md font-medium text-gray-500 mb-1.5">
-                        Tên NCC:
-                      </label>
-                      <span className="w-full px-3 py-2 text-md border rounded bg-gray-50">
-                        {orderSupplier.supplier?.name || "-"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="border rounded-lg overflow-hidden mb-4">
-                    <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 border-b">
-                      <div>
-                        <input
-                          type="text"
-                          placeholder="Tìm mã hàng"
-                          value={productCodeSearch}
-                          onChange={(e) => setProductCodeSearch(e.target.value)}
-                          className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                {/* ── Tab: Thông tin ── */}
+                {activeTab === "info" && (
+                  <div className="space-y-4">
+                    {/* Info grid */}
+                    <div className="grid grid-cols-3 gap-x-8 pb-4 mb-2">
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="text-sm text-gray-500">
+                          Người tạo:
+                        </label>
+                        <span className="text-sm text-gray-900">
+                          {orderSupplier.creator?.name || "-"}
+                        </span>
                       </div>
-                      <input
-                        type="text"
-                        placeholder="Tìm tên hàng"
-                        value={productNameSearch}
-                        onChange={(e) => setProductNameSearch(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="text-sm text-gray-500">
+                          Người nhận đặt:
+                        </label>
+                        <span className="text-sm text-gray-900">
+                          {orderSupplier.user?.name || "-"}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="text-sm text-gray-500">
+                          Ngày đặt:
+                        </label>
+                        <span className="text-sm text-gray-900">
+                          {formatDateTime(orderSupplier.orderDate)}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="text-sm text-gray-500">
+                          Ngày tạo:
+                        </label>
+                        <span className="text-sm text-gray-900">
+                          {formatDateTime(orderSupplier.createdAt)}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="text-sm text-gray-500">
+                          Tổng tiền hàng:
+                        </label>
+                        <span className="text-sm text-gray-900 font-medium">
+                          {formatCurrency(orderSupplier.total)}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="text-sm text-gray-500">
+                          Cần trả NCC:
+                        </label>
+                        <span className="text-sm text-gray-900 font-medium">
+                          {formatCurrency(orderSupplier.supplierDebt)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="text-sm text-gray-500 mb-1.5 block">
+                        Ghi chú:
+                      </label>
+                      <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        disabled={!canUpdateOS}
+                        rows={2}
+                        placeholder="Nhập ghi chú..."
+                        className="w-full text-sm px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
                       />
                     </div>
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-gray-100 border-b border-gray-200">
-                          <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Mã hàng
-                          </th>
-                          <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Tên hàng
-                          </th>
-                          <th className="px-4 py-3 text-center text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Số lượng
-                          </th>
-                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Đơn giá
-                          </th>
-                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Giá nhập
-                          </th>
-                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Giảm giá
-                          </th>
-                          <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 uppercase tracking-wider">
-                            Thành tiền
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredItems?.map((item: any, index: number) => (
-                          <tr
-                            key={index}
-                            className="hover:bg-gray-50 transition-colors">
-                            <td className="px-4 py-3">
-                              <span className="text-md font-medium text-blue-600">
-                                {item.productCode}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div>
-                                <p className="text-md font-medium text-gray-900">
-                                  {item.productName}
-                                </p>
-                                {item.note && (
-                                  <p className="text-md text-gray-500 mt-1 italic">
-                                    {item.note}
-                                  </p>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <span className="text-md font-medium text-gray-900">
-                                {item.quantity} |{" "}
-                                {receivedQuantities[item.productId] || 0}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <span className="text-md text-gray-900">
-                                {formatCurrency(Number(item.price))}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <span className="text-md font-medium text-gray-900">
-                                {formatCurrency(
-                                  Number(item.price) -
-                                    Number(item.discount || 0)
-                                )}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <span className="text-md text-gray-900">
-                                {item.discount
-                                  ? formatCurrency(Number(item.discount))
-                                  : "-"}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <span className="text-md font-semibold text-blue-600">
-                                {formatCurrency(
-                                  Number(item.quantity) *
-                                    (Number(item.price) -
-                                      Number(item.discount || 0))
-                                )}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
 
-                  <div className="flex justify-end gap-6">
-                    <div className="w-96">
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-                        <div className="flex justify-between items-center text-md">
-                          <span className="text-gray-600">
-                            Số lượng mặt hàng:
+                    {/* Products table */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-700">
+                          Danh sách sản phẩm
+                          <span className="ml-2 text-gray-400 font-normal">
+                            ({filteredItems?.length ?? 0} mặt hàng)
                           </span>
-                          <span className="font-semibold text-gray-900">
-                            {orderSupplier.items?.length || 0}
-                          </span>
+                        </h4>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Tìm mã hàng..."
+                            value={productCodeSearch}
+                            onChange={(e) =>
+                              setProductCodeSearch(e.target.value)
+                            }
+                            className="text-xs border rounded-lg px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Tìm tên hàng..."
+                            value={productNameSearch}
+                            onChange={(e) =>
+                              setProductNameSearch(e.target.value)
+                            }
+                            className="text-xs border rounded-lg px-2 py-1 w-32 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
                         </div>
+                      </div>
 
-                        <div className="flex justify-between items-center text-md">
-                          <span className="text-gray-600">
-                            Tổng tiền hàng ({orderSupplier.totalQuantity || 0}):
-                          </span>
-                          <span className="font-semibold text-gray-900">
-                            {formatCurrency(Number(orderSupplier.total))}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-md">
-                          <span className="text-gray-600">Giảm giá:</span>
-                          <span className="font-semibold text-red-600">
-                            {formatCurrency(Number(orderSupplier.discount))}
-                          </span>
-                        </div>
-
-                        <div className="border-t border-gray-300 pt-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-md font-bold text-gray-900">
-                              Cần trả NCC:
-                            </span>
-                            <span className="text-md font-bold text-blue-600">
-                              {formatCurrency(
-                                Number(orderSupplier.supplierDebt)
-                              )}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-between items-center text-md pt-2 border-t border-gray-200">
-                          <span className="text-gray-600">
-                            Tiền đã trả NCC:
-                          </span>
-                          <span className="font-semibold text-green-600">
-                            {formatCurrency(Number(orderSupplier.paidAmount))}
-                          </span>
-                        </div>
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-gray-100 border-b border-gray-200">
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Mã hàng
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Tên hàng
+                              </th>
+                              <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                SL đặt
+                              </th>
+                              <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Đã nhập
+                              </th>
+                              <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Đơn giá
+                              </th>
+                              <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Giảm giá
+                              </th>
+                              <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Thành tiền
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100">
+                            {filteredItems?.length ? (
+                              filteredItems.map((item: any, idx: number) => {
+                                const received =
+                                  receivedQuantities[item.productId] ?? 0;
+                                const ordered = Number(item.quantity);
+                                const isFullyReceived = received >= ordered;
+                                return (
+                                  <tr
+                                    key={idx}
+                                    className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-3 py-2">
+                                      <Link
+                                        href={`/san-pham/danh-sach?Code=${item.productCode}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm font-medium text-blue-600 hover:underline"
+                                        onClick={(e) => e.stopPropagation()}>
+                                        {item.productCode}
+                                      </Link>
+                                    </td>
+                                    <td className="px-3 py-2 text-sm text-gray-800">
+                                      {item.productName}
+                                    </td>
+                                    <td className="px-3 py-2 text-center text-sm text-gray-700">
+                                      {ordered}
+                                    </td>
+                                    <td className="px-3 py-2 text-center">
+                                      <span
+                                        className={`text-sm font-medium ${isFullyReceived ? "text-green-600" : received > 0 ? "text-yellow-600" : "text-gray-400"}`}>
+                                        {received}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2 text-right text-sm text-gray-700">
+                                      {formatCurrency(item.price)}
+                                    </td>
+                                    <td className="px-3 py-2 text-right text-sm text-gray-700">
+                                      {formatCurrency(item.discount ?? 0)}
+                                    </td>
+                                    <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
+                                      {formatCurrency(item.subTotal)}
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            ) : (
+                              <tr>
+                                <td
+                                  colSpan={7}
+                                  className="px-3 py-6 text-center text-sm text-gray-400">
+                                  Không có sản phẩm
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value.slice(0, 1000))}
-                      maxLength={1000}
-                      placeholder="Ghi chú..."
-                      className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        {canCancel && canDeleteOS && (
-                          <button
-                            onClick={handleCancel}
-                            disabled={isSaving}
-                            className="px-4 py-2 text-md font-medium text-red-600 bg-white border border-red-300 rounded hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                            Hủy
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        {canCreatePO && (
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                      {canUpdateOS && (
+                        <button
+                          onClick={handleSave}
+                          disabled={isSaving}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                          <Save className="w-4 h-4" />
+                          {isSaving ? "Đang lưu..." : "Lưu ghi chú"}
+                        </button>
+                      )}
+                      {canUpdateOS && (
+                        <button
+                          onClick={handleOpenForm}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                          <FileText className="w-4 h-4" />
+                          Chỉnh sửa
+                        </button>
+                      )}
+                      {canCreatePO &&
+                        orderSupplier.status !== 3 &&
+                        orderSupplier.status !== 4 && (
                           <button
                             onClick={handleCreatePurchaseOrder}
-                            disabled={isSaving}
-                            className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
                             <FileText className="w-4 h-4" />
                             Tạo phiếu nhập hàng
                           </button>
                         )}
-                        {canUpdateOS && (
-                          <button
-                            onClick={handleOpenForm}
-                            disabled={isSaving}
-                            className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                            Mở phiếu
-                          </button>
-                        )}
-                        {canUpdateOS && (
-                          <button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="px-4 py-2 text-md font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                            {isSaving ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Đang lưu...
-                              </>
-                            ) : (
-                              <>
-                                <Save className="w-4 h-4" />
-                                Lưu
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
+                      {canUpdateOS && canCancel && (
+                        <button
+                          onClick={handleCancel}
+                          disabled={isSaving}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50">
+                          Hủy phiếu
+                        </button>
+                      )}
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {activeTab === "history" && (
-              <div>
-                {orderSupplier.purchaseOrders &&
-                orderSupplier.purchaseOrders.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-md">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">
-                            Mã phiếu
-                          </th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">
-                            Thời gian
-                          </th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">
-                            Người tạo
-                          </th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">
-                            Trạng thái
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {orderSupplier.purchaseOrders.map((po) => (
-                          <tr key={po.id}>
-                            <td className="px-4 py-3">
-                              <a
-                                href={`/san-pham/nhap-hang/${po.id}`}
-                                className="text-blue-600 hover:underline">
-                                {po.code}
-                              </a>
-                            </td>
-                            <td className="px-4 py-3 text-gray-600">
-                              {formatDateTime(po.purchaseDate)}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600">admin</td>
-                            <td className="px-4 py-3">
-                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">
-                                Hoàn thành
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {/* ── Tab: Lịch sử nhập hàng ── */}
+                {activeTab === "history" && (
+                  <div>
+                    {orderSupplier.purchaseOrders?.length ? (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-gray-100 border-b border-gray-200">
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Mã phiếu
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Thời gian
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Người tạo
+                              </th>
+                              <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Tổng tiền
+                              </th>
+                              <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Trạng thái
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100">
+                            {orderSupplier.purchaseOrders.map((po: any) => {
+                              const st = getPurchaseOrderStatusLabel(
+                                po.status ?? 1
+                              );
+                              return (
+                                <tr
+                                  key={po.id}
+                                  className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-3 py-2">
+                                    <Link
+                                      href={`/san-pham/nhap-hang/${po.id}`}
+                                      className="text-sm font-medium text-blue-600 hover:underline"
+                                      onClick={(e) => e.stopPropagation()}>
+                                      {po.code}
+                                    </Link>
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-600">
+                                    {formatDateTime(po.purchaseDate)}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-600">
+                                    {po.creator?.name ||
+                                      po.createdByName ||
+                                      "-"}
+                                  </td>
+                                  <td className="px-3 py-2 text-right text-sm text-gray-700">
+                                    {formatCurrency(po.total ?? 0)}
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    <span
+                                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.cls}`}>
+                                      {st.label}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-center text-sm text-gray-400 py-8">
+                        Chưa có lịch sử nhập hàng
+                      </p>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-center text-gray-500">
-                    Chưa có lịch sử nhập hàng
-                  </p>
+                )}
+
+                {/* ── Tab: Lịch sử thanh toán ── */}
+                {activeTab === "payment" && (
+                  <div>
+                    {payments && payments.length > 0 ? (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-gray-100 border-b border-gray-200">
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Thời gian
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Phương thức
+                              </th>
+                              <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Số tiền
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Ghi chú
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100">
+                            {payments.map((payment: any) => (
+                              <tr
+                                key={payment.id}
+                                className="hover:bg-gray-50 transition-colors">
+                                <td className="px-3 py-2 text-sm text-gray-600">
+                                  {formatDateTime(
+                                    payment.paymentDate || payment.createdAt
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-700">
+                                  {getPaymentMethodLabel(payment.method)}
+                                </td>
+                                <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
+                                  {formatCurrency(payment.amount)}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-500">
+                                  {payment.note || "-"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-center text-sm text-gray-400 py-8">
+                        Chưa có lịch sử thanh toán
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-
-            {activeTab === "payment" && (
-              <div className="">
-                {payments && payments.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-md">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">
-                            Mã phiếu
-                          </th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">
-                            Thời gian
-                          </th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">
-                            Người tạo
-                          </th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">
-                            Phương thức
-                          </th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">
-                            Trạng thái
-                          </th>
-                          <th className="px-4 py-3 text-right font-medium text-gray-700">
-                            Tiền chi
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {payments.map((payment) => (
-                          <tr key={payment.id}>
-                            <td className="px-4 py-3">
-                              <a
-                                href="#"
-                                className="text-blue-600 hover:underline">
-                                {payment.code}
-                              </a>
-                            </td>
-                            <td className="px-4 py-3 text-gray-600">
-                              {formatDateTime(payment.paymentDate)}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600">admin</td>
-                            <td className="px-4 py-3 text-gray-600">
-                              {getPaymentMethodLabel(payment.paymentMethod)}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">
-                                {payment.statusValue || "Đã thanh toán"}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right text-gray-900">
-                              {formatCurrency(payment.amount)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-center text-gray-500">
-                    Chưa có lịch sử thanh toán
-                  </p>
-                )}
-              </div>
-            )}
+            </div>
           </div>
-        </div>
-      </td>
-    </tr>
+        </td>
+      </tr>
+    </>
   );
 }
