@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/store/auth";
+import { useBranchStore } from "@/lib/store/branch";
 import { toast } from "sonner";
 import { EyeOff, Eye } from "lucide-react";
 
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuth, isAuthenticated, _hasHydrated } = useAuthStore();
+  const { setSelectedBranch } = useBranchStore();
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -47,7 +49,26 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const response = await authApi.login(data);
-      setAuth(response.user, response.accessToken);
+
+      // ✅ FIX: Nếu user có branchId chính, gọi getProfile với branchId
+      // để permissions branch-level được tính đúng ngay từ lần đầu login
+      if (response.user.branchId) {
+        const profile = await authApi.getProfile(
+          response.accessToken,
+          response.user.branchId
+        );
+        setAuth(profile, response.accessToken);
+
+        // Sync useBranchStore với chi nhánh chính của user
+        setSelectedBranch({
+          id: response.user.branchId,
+          name: profile.branchName || "",
+          isActive: true,
+        });
+      } else {
+        setAuth(response.user, response.accessToken);
+      }
+
       toast.success("Đăng nhập thành công!");
       router.replace(returnUrl);
     } catch (error: any) {
@@ -75,11 +96,6 @@ export default function LoginPage() {
           <p className="mt-2 text-center text-sm text-gray-600">
             Hệ thống quản lý bán hàng HiSweetie
           </p>
-
-          {/* <p className="text-center">
-            Tài khoản đăng nhập admin: dieptra.sg@gmail.com
-          </p>
-          <p className="text-center">Mật khẩu đăng nhập admin: Dieptra@123</p> */}
         </div>
 
         {authError && (
@@ -127,8 +143,8 @@ export default function LoginPage() {
                     required: "Mật khẩu là bắt buộc",
                   })}
                   type={showPassword ? "text" : "password"}
-                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="••••••••"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Nhập mật khẩu"
                 />
                 <button
                   type="button"

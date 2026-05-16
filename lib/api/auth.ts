@@ -16,6 +16,8 @@ export interface LoginResponse {
     roles: string[];
     permissions: string[];
     branchIds?: number[];
+    branchId?: number;
+    branchName?: string;
   };
 }
 
