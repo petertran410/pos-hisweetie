@@ -1,22 +1,69 @@
 "use client";
 
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   usePurchaseOrder,
   useUpdatePurchaseOrder,
 } from "@/lib/hooks/usePurchaseOrders";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
-import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import {
+  ChevronDown,
+  ExternalLink,
+  FileText,
+  Loader2,
+  Save,
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
-import { ChevronDown } from "lucide-react";
 import { useCan } from "@/lib/hooks/useCan";
+import {
+  getStatusLabel,
+  PURCHASE_ORDER_STATUS,
+  PurchaseOrderPayment,
+} from "@/lib/types/purchase-order";
+import Link from "next/link";
 
 interface PurchaseOrderDetailRowProps {
   purchaseOrderId: number;
   colSpan: number;
 }
+
+const formatDateTime = (dateString?: string) => {
+  if (!dateString) return "-";
+  return new Date(dateString).toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const getStatusColor = (status: number) => {
+  switch (status) {
+    case PURCHASE_ORDER_STATUS.DRAFT:
+      return "bg-gray-100 text-gray-700";
+    case PURCHASE_ORDER_STATUS.COMPLETED:
+      return "bg-green-100 text-green-700";
+    case PURCHASE_ORDER_STATUS.CANCELLED:
+      return "bg-red-100 text-red-700";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+};
+
+const getPaymentMethodLabel = (method: string) => {
+  switch (method) {
+    case "cash":
+      return "Tiền mặt";
+    case "transfer":
+      return "Chuyển khoản";
+    default:
+      return method;
+  }
+};
 
 export function PurchaseOrderDetailRow({
   purchaseOrderId,
@@ -28,133 +75,73 @@ export function PurchaseOrderDetailRow({
   const { data: users } = useUsersForFilter();
   const updatePurchaseOrder = useUpdatePurchaseOrder();
 
+  const [activeTab, setActiveTab] = useState("info");
   const [productCodeSearch, setProductCodeSearch] = useState("");
   const [productNameSearch, setProductNameSearch] = useState("");
   const [editedSupplierId, setEditedSupplierId] = useState<number>(0);
   const [editedPurchaseById, setEditedPurchaseById] = useState<number>(0);
   const [editedPurchaseDate, setEditedPurchaseDate] = useState<string>("");
   const [editedDescription, setEditedDescription] = useState<string>("");
-
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [showPurchaseByDropdown, setShowPurchaseByDropdown] = useState(false);
 
   const canUpdatePO = useCan("purchase_orders", "update");
-  const canDeletePO = useCan("purchase_orders", "delete");
   const canViewPrice = useCan("purchase_orders", "view_price");
 
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const purchaseByDropdownRef = useRef<HTMLDivElement>(null);
 
-  const selectedSupplier = suppliersData?.data?.find(
-    (s) => s.id === editedSupplierId
-  );
-  const selectedUser = users?.find((u) => u.id === editedPurchaseById);
+  // Sticky width — giống OrderSupplierDetailRow
+  useLayoutEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    let scrollEl: HTMLElement | null = el.parentElement;
+    while (scrollEl) {
+      const ox = getComputedStyle(scrollEl).overflowX;
+      if (ox === "auto" || ox === "scroll") break;
+      scrollEl = scrollEl.parentElement;
+    }
+    if (!scrollEl) return;
+    const update = () => {
+      el.style.width = `${scrollEl!.clientWidth}px`;
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(scrollEl);
+    return () => ro.disconnect();
+  }, [purchaseOrder]);
 
+  // Sync edited fields khi data load
   useEffect(() => {
     if (purchaseOrder) {
       setEditedSupplierId(purchaseOrder.supplierId);
       setEditedPurchaseById(purchaseOrder.purchaseById || 0);
-      setEditedPurchaseDate(purchaseOrder.purchaseDate);
+      setEditedPurchaseDate(purchaseOrder.purchaseDate?.split("T")[0] ?? "");
       setEditedDescription(purchaseOrder.description || "");
     }
-  }, [purchaseOrder]);
+  }, [purchaseOrder?.id]);
 
+  // Đóng dropdown khi click ngoài
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const h = (e: MouseEvent) => {
       if (
         supplierDropdownRef.current &&
-        !supplierDropdownRef.current.contains(event.target as Node)
-      ) {
+        !supplierDropdownRef.current.contains(e.target as Node)
+      )
         setShowSupplierDropdown(false);
-      }
       if (
         purchaseByDropdownRef.current &&
-        !purchaseByDropdownRef.current.contains(event.target as Node)
-      ) {
+        !purchaseByDropdownRef.current.contains(e.target as Node)
+      )
         setShowPurchaseByDropdown(false);
-      }
     };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  if (isLoading) {
-    return (
-      <tr>
-        <td colSpan={colSpan} className="p-4">
-          <div className="text-center text-gray-500">Đang tải...</div>
-        </td>
-      </tr>
-    );
-  }
-
-  if (!purchaseOrder) {
-    return (
-      <tr>
-        <td colSpan={colSpan} className="p-4">
-          <div className="text-center text-red-500">
-            Không tìm thấy phiếu nhập hàng
-          </div>
-        </td>
-      </tr>
-    );
-  }
-
-  const filteredItems = purchaseOrder.items?.filter((item: any) => {
-    const matchCode = productCodeSearch
-      ? item.productCode.toLowerCase().includes(productCodeSearch.toLowerCase())
-      : true;
-    const matchName = productNameSearch
-      ? item.productName.toLowerCase().includes(productNameSearch.toLowerCase())
-      : true;
-    return matchCode && matchName;
-  });
-
-  const handleOpenPurchaseOrder = () => {
-    router.push(`/san-pham/nhap-hang/${purchaseOrder.id}`);
-  };
-
-  const handleCancelPurchaseOrder = async () => {
-    if (window.confirm("Bạn có chắc chắn muốn hủy phiếu nhập hàng này?")) {
-      try {
-        await updatePurchaseOrder.mutateAsync({
-          id: purchaseOrder.id,
-          data: {
-            supplierId: purchaseOrder.supplierId,
-            items: purchaseOrder.items?.map(
-              (item: {
-                productId: any;
-                quantity: any;
-                price: any;
-                discount: any;
-                description: any;
-              }) => ({
-                productId: item.productId,
-                quantity: item.quantity,
-                price: item.price,
-                discount: item.discount || 0,
-                description: item.description,
-              })
-            ),
-            isDraft: false,
-            purchaseDate: purchaseOrder.purchaseDate,
-          },
-        });
-
-        await updatePurchaseOrder.mutateAsync({
-          id: purchaseOrder.id,
-          data: { status: 2 },
-        });
-
-        toast.success("Đã hủy phiếu nhập hàng");
-      } catch (error: any) {
-        toast.error(error.message || "Không thể hủy phiếu nhập hàng");
-      }
-    }
-  };
-
   const handleSave = async () => {
+    if (!purchaseOrder) return;
     try {
       await updatePurchaseOrder.mutateAsync({
         id: purchaseOrder.id,
@@ -171,338 +158,481 @@ export function PurchaseOrderDetailRow({
     }
   };
 
-  const totalQuantity =
-    filteredItems?.reduce(
-      (sum: number, item: any) => sum + Number(item.quantity),
-      0
-    ) || 0;
+  const handleOpenPurchaseOrder = () => {
+    router.push(`/san-pham/nhap-hang/${purchaseOrder?.id}`);
+  };
 
-  const itemCount = filteredItems?.length || 0;
+  const handleCancelPurchaseOrder = async () => {
+    if (!purchaseOrder) return;
+    if (!window.confirm("Bạn có chắc chắn muốn hủy phiếu nhập hàng này?"))
+      return;
+    try {
+      await updatePurchaseOrder.mutateAsync({
+        id: purchaseOrder.id,
+        data: {
+          supplierId: purchaseOrder.supplierId,
+          items: purchaseOrder.items?.map((item: any) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            discount: item.discount || 0,
+            description: item.description,
+          })),
+          isDraft: false,
+          purchaseDate: purchaseOrder.purchaseDate,
+        },
+      });
+      await updatePurchaseOrder.mutateAsync({
+        id: purchaseOrder.id,
+        data: { status: 2 },
+      });
+      toast.success("Đã hủy phiếu nhập hàng");
+    } catch (error: any) {
+      toast.error(error.message || "Không thể hủy phiếu nhập hàng");
+    }
+  };
+
+  // ── Loading ──
+  if (isLoading) {
+    return (
+      <tr className="bg-blue-50">
+        <td colSpan={colSpan} className="px-6 py-8">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <span className="text-gray-600">
+              Đang tải thông tin phiếu nhập hàng...
+            </span>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  // ── Not found ──
+  if (!purchaseOrder) {
+    return (
+      <tr className="bg-red-50">
+        <td colSpan={colSpan} className="px-6 py-4 text-center text-red-600">
+          Không tìm thấy thông tin phiếu nhập hàng
+        </td>
+      </tr>
+    );
+  }
+
+  const filteredItems = purchaseOrder.items?.filter((item: any) => {
+    const matchCode = productCodeSearch
+      ? item.productCode
+          ?.toLowerCase()
+          .includes(productCodeSearch.toLowerCase())
+      : true;
+    const matchName = productNameSearch
+      ? item.productName
+          ?.toLowerCase()
+          .includes(productNameSearch.toLowerCase())
+      : true;
+    return matchCode && matchName;
+  });
+
+  const selectedSupplier = suppliersData?.data?.find(
+    (s: any) => s.id === editedSupplierId
+  );
+  const selectedUser = users?.find((u: any) => u.id === editedPurchaseById);
+
+  const canCancel = purchaseOrder.status === PURCHASE_ORDER_STATUS.DRAFT;
+
+  const TABS = [
+    { value: "info", label: "Thông tin" },
+    { value: "payment", label: "Lịch sử thanh toán" },
+  ];
 
   return (
-    <tr>
-      <td colSpan={colSpan} className="py-2 bg-gray-50">
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1090px] 2xl:max-w-[1540px]">
-          <div className="p-6">
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl font-bold">{purchaseOrder.code}</span>
-                <span
-                  className={`px-3 py-1 text-sm rounded ${
-                    purchaseOrder.status === 0
-                      ? "bg-orange-100 text-orange-600"
-                      : purchaseOrder.status === 1
-                        ? "bg-green-100 text-green-600"
-                        : "bg-gray-100 text-gray-600"
-                  }`}>
-                  {purchaseOrder.status === 0
-                    ? "Phiếu tạm"
-                    : purchaseOrder.status === 1
-                      ? "Đã nhập hàng"
-                      : "Đã hủy"}
-                </span>
-                <span className="text-sm text-gray-500 ml-auto">
-                  {purchaseOrder.branch?.name || "-"}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-4 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">
-                    Người tạo:
-                  </label>
-                  <input
-                    type="text"
-                    value={purchaseOrder.creator?.name || "admin"}
-                    disabled
-                    className="w-full px-3 py-2 text-sm border rounded bg-gray-50"
-                  />
-                </div>
-
-                <div ref={purchaseByDropdownRef}>
-                  <label className="block text-sm text-gray-500 mb-1.5">
-                    Người nhập:
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowPurchaseByDropdown(!showPurchaseByDropdown)
-                      }
-                      className="w-full px-3 py-2 text-sm border rounded bg-white flex items-center justify-between hover:bg-gray-50">
-                      <span>
-                        {selectedUser ? selectedUser.name : "Chọn người nhập"}
+    <>
+      <tr>
+        <td
+          colSpan={colSpan}
+          className="border-b-2 border-l-2 border-r-2 border-blue-500 bg-gray-50">
+          <div
+            ref={wrapperRef}
+            className="sticky left-0 bg-gray-50"
+            style={{ width: 0 }}>
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="p-4">
+                {/* ── Header ── */}
+                <div className="border-b border-gray-200 pb-3 mb-4">
+                  <div className="flex border-b pb-2 items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-gray-900">
+                        {purchaseOrder.code}
                       </span>
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
+                      <span className="text-gray-400">-</span>
+                      {purchaseOrder.supplier ? (
+                        <>
+                          <Link
+                            href={`/san-pham/nha-cung-cap?id=${purchaseOrder.supplier.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-lg font-semibold text-blue-600 hover:underline"
+                            onClick={(e) => e.stopPropagation()}>
+                            {purchaseOrder.supplier.name}
+                          </Link>
+                          <Link
+                            href={`/san-pham/nha-cung-cap?id=${purchaseOrder.supplier.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                            onClick={(e) => e.stopPropagation()}>
+                            <ExternalLink className="w-4 h-4" />
+                          </Link>
+                          <span
+                            className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(purchaseOrder.status)}`}>
+                            {getStatusLabel(purchaseOrder.status)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-lg font-semibold text-gray-800">
+                          Chưa có nhà cung cấp
+                        </span>
+                      )}
+                      {purchaseOrder.orderSupplier && (
+                        <Link
+                          href={`/san-pham/dat-hang-nhap/${purchaseOrder.orderSupplier.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-gray-500 hover:text-blue-600 transition-colors"
+                          onClick={(e) => e.stopPropagation()}>
+                          ({purchaseOrder.orderSupplier.code})
+                        </Link>
+                      )}
+                    </div>
+                    <span className="text-sm text-gray-600 font-medium">
+                      {purchaseOrder.branch?.name || "-"}
+                    </span>
+                  </div>
 
-                    {showPurchaseByDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditedPurchaseById(0);
-                            setShowPurchaseByDropdown(false);
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
-                          Chọn người nhập
-                        </button>
-                        {users?.map((user) => (
-                          <button
-                            key={user.id}
-                            type="button"
-                            onClick={() => {
-                              setEditedPurchaseById(user.id);
-                              setShowPurchaseByDropdown(false);
-                            }}
-                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
-                            {user.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  {/* ── Tabs ── */}
+                  <div className="flex items-center gap-1">
+                    {TABS.map((tab) => (
+                      <button
+                        key={tab.value}
+                        onClick={() => setActiveTab(tab.value)}
+                        className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                          activeTab === tab.value
+                            ? "border-blue-600 text-blue-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                        }`}>
+                        {tab.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-4 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">
-                    Ngày nhập:
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={
-                      editedPurchaseDate
-                        ? new Date(editedPurchaseDate)
-                            .toISOString()
-                            .slice(0, 16)
-                        : ""
-                    }
-                    onChange={(e) => setEditedPurchaseDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border rounded bg-white"
-                  />
-                </div>
-
-                <div ref={supplierDropdownRef}>
-                  <label className="block text-sm text-gray-500 mb-1.5">
-                    Tên NCC:
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowSupplierDropdown(!showSupplierDropdown)
-                      }
-                      className="w-full px-3 py-2 text-sm border rounded bg-white flex items-center justify-between hover:bg-gray-50">
-                      <span>
-                        {selectedSupplier
-                          ? selectedSupplier.name
-                          : "Chọn nhà cung cấp"}
-                      </span>
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-
-                    {showSupplierDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                        {suppliersData?.data?.map((supplier) => (
-                          <button
-                            key={supplier.id}
-                            type="button"
-                            onClick={() => {
-                              setEditedSupplierId(supplier.id);
-                              setShowSupplierDropdown(false);
-                            }}
-                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
-                            {supplier.name}
-                          </button>
-                        ))}
+                {/* ── Tab: Thông tin ── */}
+                {activeTab === "info" && (
+                  <div className="space-y-4">
+                    {/* Info grid */}
+                    <div className="grid grid-cols-3 gap-x-8 pb-2">
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="text-sm text-gray-500">
+                          Người tạo:
+                        </label>
+                        <span className="text-sm text-gray-900">
+                          {purchaseOrder.creator?.name || "-"}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            <div className="border rounded-lg overflow-hidden mb-4">
-              <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 border-b">
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Tìm mã hàng"
-                    value={productCodeSearch}
-                    onChange={(e) => setProductCodeSearch(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Tìm tên hàng"
-                    value={productNameSearch}
-                    onChange={(e) => setProductNameSearch(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 border-b">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                      Mã hàng
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                      Tên hàng
-                    </th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                      Số lượng
-                    </th>
-                    {canViewPrice && (
-                      <>
-                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                          Đơn giá
-                        </th>
-                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                          Giá nhập
-                        </th>
-                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                          Giảm giá
-                        </th>
-                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">
-                          Thành tiền
-                        </th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="bg-white">
-                  {filteredItems && filteredItems.length > 0 ? (
-                    filteredItems.map((item: any) => (
-                      <tr key={item.id} className="border-t">
-                        <td className="px-4 py-3 text-sm">
-                          {item.productCode}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {item.productName}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          {item.quantity}
-                        </td>
-                        {canViewPrice && (
-                          <>
-                            <td className="px-4 py-3 text-sm text-right">
-                              {formatCurrency(item.price)}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right">
-                              {formatCurrency(item.price - item.discount)}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right">
-                              {formatCurrency(item.discount)}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right font-medium">
-                              {formatCurrency(
-                                item.quantity *
-                                  (item.price - (item.discount || 0))
-                              )}
-                            </td>
-                          </>
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="text-sm text-gray-500">
+                          Người nhập hàng:
+                        </label>
+                        <span className="text-sm text-gray-900">
+                          {purchaseOrder.purchaseBy?.name || "-"}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="text-sm text-gray-500">
+                          Ngày nhập:
+                        </label>
+                        <span className="text-sm text-gray-900">
+                          {formatDateTime(purchaseOrder.purchaseDate)}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="text-sm text-gray-500">
+                          Nhà cung cấp:
+                        </label>
+                        <span className="text-sm text-gray-900">
+                          {purchaseOrder.supplier?.name || "-"}
+                        </span>
+                      </div>
+
+                      {/* Phiếu đặt hàng nhập */}
+                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                        <label className="text-sm text-gray-500">
+                          Phiếu đặt hàng nhập:
+                        </label>
+                        {purchaseOrder.orderSupplier ? (
+                          <Link
+                            href={`/san-pham/dat-hang-nhap/${purchaseOrder.orderSupplier.code}`}
+                            className="text-sm text-blue-600 hover:underline font-medium"
+                            onClick={(e) => e.stopPropagation()}>
+                            {purchaseOrder.orderSupplier.code}
+                          </Link>
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
                         )}
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="px-4 py-8 text-center text-gray-500 text-sm">
-                        Không có sản phẩm nào
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {canViewPrice && (
-              <div className="flex justify-end mb-6">
-                <div className="w-80 border rounded-lg p-4 bg-gray-50">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Số lượng mặt hàng</span>
-                      <span className="font-medium">{itemCount}</span>
+                      </div>
+
+                      {canViewPrice && (
+                        <>
+                          <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                            <label className="text-sm text-gray-500">
+                              Tổng tiền hàng:
+                            </label>
+                            <span className="text-sm font-medium text-gray-900">
+                              {formatCurrency(purchaseOrder.totalAmount)}
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                            <label className="text-sm text-gray-500">
+                              Cần trả NCC:
+                            </label>
+                            <span className="text-sm font-medium text-gray-900">
+                              {formatCurrency(purchaseOrder.debtAmount)}
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                            <label className="text-sm text-gray-500">
+                              Đã trả NCC:
+                            </label>
+                            <span className="text-sm font-medium text-gray-900">
+                              {formatCurrency(purchaseOrder.paidAmount)}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">
-                        Tổng tiền hàng ({totalQuantity})
-                      </span>
-                      <span className="font-medium">
-                        {formatCurrency(purchaseOrder.total)}
-                      </span>
+
+                    {/* Ghi chú */}
+                    <div>
+                      <label className="text-sm text-gray-500 mb-1.5 block">
+                        Ghi chú:
+                      </label>
+                      <textarea
+                        value={editedDescription}
+                        onChange={(e) => setEditedDescription(e.target.value)}
+                        disabled={!canUpdatePO}
+                        rows={2}
+                        placeholder="Nhập ghi chú..."
+                        className="w-full text-sm px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+                      />
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Giảm giá</span>
-                      <span className="font-medium">
-                        {formatCurrency(purchaseOrder.discount)}
-                      </span>
+
+                    {/* Products table */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-700">
+                          Danh sách sản phẩm
+                          <span className="ml-2 text-gray-400 font-normal">
+                            ({filteredItems?.length ?? 0} mặt hàng)
+                          </span>
+                        </h4>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Tìm mã hàng..."
+                            value={productCodeSearch}
+                            onChange={(e) =>
+                              setProductCodeSearch(e.target.value)
+                            }
+                            className="text-xs border rounded-lg px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Tìm tên hàng..."
+                            value={productNameSearch}
+                            onChange={(e) =>
+                              setProductNameSearch(e.target.value)
+                            }
+                            className="text-xs border rounded-lg px-2 py-1 w-32 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-gray-100 border-b border-gray-200">
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Mã hàng
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Tên hàng
+                              </th>
+                              <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Số lượng
+                              </th>
+                              {canViewPrice && (
+                                <>
+                                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    Đơn giá
+                                  </th>
+                                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    Giảm giá
+                                  </th>
+                                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    Thành tiền
+                                  </th>
+                                </>
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100">
+                            {filteredItems?.length ? (
+                              filteredItems.map((item: any, idx: number) => (
+                                <tr
+                                  key={idx}
+                                  className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-3 py-2">
+                                    <Link
+                                      href={`/san-pham/danh-sach?Code=${item.productCode}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sm font-medium text-blue-600 hover:underline"
+                                      onClick={(e) => e.stopPropagation()}>
+                                      {item.productCode}
+                                    </Link>
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-800">
+                                    {item.productName}
+                                  </td>
+                                  <td className="px-3 py-2 text-center text-sm text-gray-700">
+                                    {Number(item.quantity)}
+                                  </td>
+                                  {canViewPrice && (
+                                    <>
+                                      <td className="px-3 py-2 text-right text-sm text-gray-700">
+                                        {formatCurrency(item.price)}
+                                      </td>
+                                      <td className="px-3 py-2 text-right text-sm text-gray-700">
+                                        {formatCurrency(item.discount ?? 0)}
+                                      </td>
+                                      <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
+                                        {formatCurrency(item.totalPrice)}
+                                      </td>
+                                    </>
+                                  )}
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td
+                                  colSpan={canViewPrice ? 6 : 3}
+                                  className="px-3 py-6 text-center text-sm text-gray-400">
+                                  Không có sản phẩm
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm pt-3 border-t">
-                      <span className="text-gray-700 font-medium">
-                        Cần trả NCC
-                      </span>
-                      <span className="font-bold">
-                        {formatCurrency(purchaseOrder.totalAmount)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Tiền đã trả NCC</span>
-                      <span className="font-medium">
-                        {formatCurrency(purchaseOrder.paidAmount)}
-                      </span>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                      {canUpdatePO && (
+                        <button
+                          onClick={handleSave}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                          <Save className="w-4 h-4" />
+                          Lưu
+                        </button>
+                      )}
+                      {canUpdatePO && (
+                        <button
+                          onClick={handleOpenPurchaseOrder}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                          <FileText className="w-4 h-4" />
+                          Chỉnh sửa
+                        </button>
+                      )}
+                      {canUpdatePO && canCancel && (
+                        <button
+                          onClick={handleCancelPurchaseOrder}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors">
+                          Hủy phiếu
+                        </button>
+                      )}
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
-
-            <div className="mb-6">
-              <textarea
-                value={editedDescription}
-                onChange={(e) =>
-                  setEditedDescription(e.target.value.slice(0, 1000))
-                }
-                maxLength={1000}
-                className="w-full px-2 py-1.5 text-sm border rounded-md disabled:bg-gray-100 resize-none"
-                rows={3}
-                placeholder="Nhập ghi chú"
-              />
-            </div>
-
-            <div className="flex items-center gap-3 justify-between">
-              {canDeletePO && purchaseOrder.status !== 2 && (
-                <button
-                  onClick={handleCancelPurchaseOrder}
-                  className="px-4 py-2 text-sm border rounded hover:bg-gray-50">
-                  Hủy
-                </button>
-              )}
-              <div className="space-x-2">
-                {canUpdatePO && (
-                  <button
-                    onClick={handleOpenPurchaseOrder}
-                    className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
-                    Mở phiếu
-                  </button>
                 )}
-                {canUpdatePO && purchaseOrder.status !== 2 && (
-                  <button
-                    onClick={handleSave}
-                    className="px-4 py-2 text-sm border rounded hover:bg-gray-50">
-                    Lưu
-                  </button>
+
+                {/* ── Tab: Lịch sử thanh toán ── */}
+                {activeTab === "payment" && (
+                  <div>
+                    {purchaseOrder.payments &&
+                    purchaseOrder.payments.length > 0 ? (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-gray-100 border-b border-gray-200">
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Thời gian
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Phương thức
+                              </th>
+                              {canViewPrice && (
+                                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                  Số tiền
+                                </th>
+                              )}
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Ghi chú
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100">
+                            {purchaseOrder.payments.map(
+                              (payment: PurchaseOrderPayment) => (
+                                <tr
+                                  key={payment.id}
+                                  className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-3 py-2 text-sm text-gray-600">
+                                    {formatDateTime(payment.paymentDate)}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-700">
+                                    {getPaymentMethodLabel(
+                                      payment.paymentMethod
+                                    )}
+                                  </td>
+                                  {canViewPrice && (
+                                    <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
+                                      {formatCurrency(payment.amount)}
+                                    </td>
+                                  )}
+                                  <td className="px-3 py-2 text-sm text-gray-500">
+                                    {payment.description || "-"}
+                                  </td>
+                                </tr>
+                              )
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-center text-sm text-gray-400 py-8">
+                        Chưa có lịch sử thanh toán
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
           </div>
-        </div>
-      </td>
-    </tr>
+        </td>
+      </tr>
+    </>
   );
 }
