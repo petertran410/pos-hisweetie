@@ -333,24 +333,19 @@ function PresetPanel({
 
   if (!anchorRect) return null;
 
-  const style: React.CSSProperties = {
-    position: "fixed",
-    top: anchorRect.bottom + 4,
-    left: anchorRect.left,
-    width: 220,
-    zIndex: 9999,
-  };
+  const left = anchorRect.right + 8;
+  const top = anchorRect.top;
 
   return createPortal(
     <div
       ref={panelRef}
-      style={style}
-      className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden">
+      style={{ position: "fixed", top, left, zIndex: 9999 }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 flex gap-5">
       {groups.map((group) => (
-        <div key={group.label}>
-          <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-gray-50">
+        <div key={group.label} className="flex flex-col gap-1.5 min-w-[88px]">
+          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
             {group.label}
-          </div>
+          </span>
           {group.options.map((opt) => (
             <button
               key={opt.value}
@@ -359,15 +354,12 @@ function PresetPanel({
                 onSelect(opt.value);
                 onClose();
               }}
-              className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-sm border transition-all whitespace-nowrap text-left ${
                 selected === opt.value
-                  ? "bg-blue-50 text-blue-700 font-medium"
-                  : "hover:bg-gray-50 text-gray-700"
+                  ? "bg-blue-600 text-white border-blue-600 font-medium"
+                  : "bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
               }`}>
-              <span>{opt.label}</span>
-              {selected === opt.value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-              )}
+              {opt.label}
             </button>
           ))}
         </div>

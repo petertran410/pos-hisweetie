@@ -105,6 +105,7 @@ export interface PurchaseOrderFilters {
   createdDateTo?: string;
   pageSize?: number;
   currentItem?: number;
+  search?: string;
 }
 
 export const PURCHASE_ORDER_STATUS = {
