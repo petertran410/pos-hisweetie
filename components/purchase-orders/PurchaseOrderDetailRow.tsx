@@ -41,7 +41,8 @@ const formatDateTime = (dateString?: string) => {
   });
 };
 
-const getStatusColor = (status: number) => {
+const getStatusColor = (status: number, statusValue?: string) => {
+  // Ưu tiên map theo status number
   switch (status) {
     case PURCHASE_ORDER_STATUS.DRAFT:
       return "bg-gray-100 text-gray-700";
@@ -49,9 +50,16 @@ const getStatusColor = (status: number) => {
       return "bg-green-100 text-green-700";
     case PURCHASE_ORDER_STATUS.CANCELLED:
       return "bg-red-100 text-red-700";
-    default:
-      return "bg-gray-100 text-gray-700";
   }
+  // Fallback theo statusValue string (data sync từ KiotViet)
+  if (statusValue) {
+    const v = statusValue.toLowerCase();
+    if (v.includes("tạm")) return "bg-gray-100 text-gray-700";
+    if (v.includes("hoàn") || v.includes("nhập"))
+      return "bg-green-100 text-green-700";
+    if (v.includes("hủy")) return "bg-red-100 text-red-700";
+  }
+  return "bg-gray-100 text-gray-700";
 };
 
 const getPaymentMethodLabel = (method: string) => {
@@ -286,8 +294,9 @@ export function PurchaseOrderDetailRow({
                             <ExternalLink className="w-4 h-4" />
                           </Link>
                           <span
-                            className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(purchaseOrder.status)}`}>
-                            {getStatusLabel(purchaseOrder.status)}
+                            className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(purchaseOrder.status, purchaseOrder.statusValue)}`}>
+                            {purchaseOrder.statusValue ||
+                              getStatusLabel(purchaseOrder.status)}
                           </span>
                         </>
                       ) : (
