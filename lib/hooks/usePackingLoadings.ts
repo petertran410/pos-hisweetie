@@ -1,10 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/auth";
-import { API_URL } from "../config/api";
+import { API_URL, getAuthHeaders } from "../config/api";
 
 export function usePackingLoadings(params?: any) {
-  const token = useAuthStore((state) => state.token);
-
   return useQuery({
     queryKey: ["packing-loadings", params],
     queryFn: async () => {
@@ -18,7 +16,7 @@ export function usePackingLoadings(params?: any) {
       const res = await fetch(
         `${API_URL}/packing-loadings?${queryParams.toString()}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: getAuthHeaders(),
         }
       );
       if (!res.ok) throw new Error("Failed to fetch packing loadings");
@@ -28,13 +26,11 @@ export function usePackingLoadings(params?: any) {
 }
 
 export function usePackingLoading(id: number) {
-  const token = useAuthStore((state) => state.token);
-
   return useQuery({
     queryKey: ["packing-loading", id],
     queryFn: async () => {
       const res = await fetch(`${API_URL}/packing-loadings/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Failed to fetch packing loading");
       return res.json();
@@ -44,17 +40,12 @@ export function usePackingLoading(id: number) {
 }
 
 export function useCreatePackingLoading() {
-  const token = useAuthStore((state) => state.token);
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (data: any) => {
       const res = await fetch(`${API_URL}/packing-loadings`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create packing loading");
@@ -67,17 +58,12 @@ export function useCreatePackingLoading() {
 }
 
 export function useUpdatePackingLoading() {
-  const token = useAuthStore((state) => state.token);
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
       const res = await fetch(`${API_URL}/packing-loadings/${id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to update packing loading");
@@ -90,14 +76,12 @@ export function useUpdatePackingLoading() {
 }
 
 export function useDeletePackingLoading() {
-  const token = useAuthStore((state) => state.token);
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(`${API_URL}/packing-loadings/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Failed to delete packing loading");
       return res.json();
@@ -109,22 +93,15 @@ export function useDeletePackingLoading() {
 }
 
 export async function uploadPackingLoadingImage(file: File): Promise<string> {
+  const token = useAuthStore.getState().token;
   const formData = new FormData();
   formData.append("file", file);
-
-  const token = useAuthStore.getState().token;
   const res = await fetch(`${API_URL}/upload/image?subfolder=loading`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
-
-  if (!res.ok) {
-    throw new Error("Upload failed");
-  }
-
+  if (!res.ok) throw new Error("Upload failed");
   const result = await res.json();
   return result.url;
 }

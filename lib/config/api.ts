@@ -3,7 +3,7 @@ import { useBranchStore } from "../store/branch";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-const getAuthHeaders = (): HeadersInit => {
+export const getAuthHeaders = (): HeadersInit => {
   const token = useAuthStore.getState().token;
   const selectedBranch = useBranchStore.getState().selectedBranch;
 

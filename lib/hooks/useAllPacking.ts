@@ -1,10 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuthStore } from "../store/auth";
-import { API_URL } from "../config/api";
+import { API_URL, getAuthHeaders } from "../config/api";
 
 export function useAllPacking(params?: any) {
-  const token = useAuthStore((state) => state.token);
-
   return useQuery({
     queryKey: ["all-packing", params],
     queryFn: async () => {
@@ -19,7 +16,7 @@ export function useAllPacking(params?: any) {
       const res = await fetch(
         `${API_URL}/all-packing?${queryParams.toString()}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: getAuthHeaders(),
         }
       );
       if (!res.ok) throw new Error("Failed to fetch all packing");
