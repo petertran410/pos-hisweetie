@@ -233,10 +233,12 @@ export function PurchaseOrderDetailRow({
     return matchCode && matchName;
   });
 
-  const selectedSupplier = suppliersData?.data?.find(
-    (s: any) => s.id === editedSupplierId
-  );
-  const selectedUser = users?.find((u: any) => u.id === editedPurchaseById);
+  const totalQuantity =
+    filteredItems?.reduce(
+      (sum: number, item: any) => sum + Number(item.quantity),
+      0
+    ) || 0;
+  const itemCount = filteredItems?.length || 0;
 
   const canCancel = purchaseOrder.status === PURCHASE_ORDER_STATUS.DRAFT;
 
@@ -383,35 +385,6 @@ export function PurchaseOrderDetailRow({
                           <span className="text-sm text-gray-400">-</span>
                         )}
                       </div>
-
-                      {canViewPrice && (
-                        <>
-                          <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                            <label className="text-sm text-gray-500">
-                              Tổng tiền hàng:
-                            </label>
-                            <span className="text-sm font-medium text-gray-900">
-                              {formatCurrency(purchaseOrder.totalAmount)}
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                            <label className="text-sm text-gray-500">
-                              Cần trả NCC:
-                            </label>
-                            <span className="text-sm font-medium text-gray-900">
-                              {formatCurrency(purchaseOrder.debtAmount)}
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                            <label className="text-sm text-gray-500">
-                              Đã trả NCC:
-                            </label>
-                            <span className="text-sm font-medium text-gray-900">
-                              {formatCurrency(purchaseOrder.paidAmount)}
-                            </span>
-                          </div>
-                        </>
-                      )}
                     </div>
 
                     {/* Ghi chú */}
@@ -538,6 +511,53 @@ export function PurchaseOrderDetailRow({
                         </table>
                       </div>
                     </div>
+
+                    {canViewPrice && (
+                      <div className="flex justify-end">
+                        <div className="w-96 bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">
+                              Tổng tiền hàng:
+                            </span>
+                            <span className="font-semibold text-gray-900">
+                              {formatCurrency(purchaseOrder.total)}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Giảm giá:</span>
+                            <span className="font-semibold text-red-600">
+                              - {formatCurrency(purchaseOrder.discount)}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm border-t border-gray-300 pt-3">
+                            <span className="font-bold text-gray-900">
+                              Tổng cộng:
+                            </span>
+                            <span className="font-bold text-blue-600">
+                              {formatCurrency(purchaseOrder.totalAmount)}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm pt-2 border-t border-gray-200">
+                            <span className="text-gray-600">Đã trả NCC:</span>
+                            <span className="font-semibold text-green-600">
+                              {formatCurrency(purchaseOrder.paidAmount)}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center border-t-2 border-red-200 pt-2">
+                            <span className="text-base font-bold text-gray-900">
+                              Cần trả NCC:
+                            </span>
+                            <span className="text-base font-bold text-red-600">
+                              {formatCurrency(purchaseOrder.debtAmount)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Action buttons */}
                     <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
