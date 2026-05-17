@@ -77,7 +77,6 @@ function parseExcel(file: File): Promise<CBRow[]> {
               if (!isNaN(num)) row[field] = num;
             } else if (field === "transDate") {
               if (val instanceof Date) {
-                // cellDates: true path — XLSX trả Date theo UTC, phải dùng getUTC*
                 row[field] =
                   `${String(val.getUTCDate()).padStart(2, "0")}/${String(val.getUTCMonth() + 1).padStart(2, "0")}/${val.getUTCFullYear()} ${String(val.getUTCHours()).padStart(2, "0")}:${String(val.getUTCMinutes()).padStart(2, "0")}`;
               } else if (
@@ -85,14 +84,14 @@ function parseExcel(file: File): Promise<CBRow[]> {
                 val > 30000 &&
                 val < 60000
               ) {
-                // Excel serial float (46109.628...) — cell format là Number hoặc General
                 const d = new Date(Math.round((val - 25569) * 86400 * 1000));
                 row[field] =
                   `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()} ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
               } else {
-                // Text cell — pass through nguyên string
                 row[field] = String(val).trim();
               }
+            } else {
+              row[field] = String(val).trim(); // ← supplierCode, supplierName, code, type
             }
           }
           return row;
