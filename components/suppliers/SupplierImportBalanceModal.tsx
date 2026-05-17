@@ -52,7 +52,7 @@ function parseExcel(file: File): Promise<CBRow[]> {
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
+        const wb = XLSX.read(data, { type: "array", cellDates: true });
         const ws = wb.Sheets[wb.SheetNames[0]];
         if (!ws) return reject(new Error("File Excel trống"));
 
@@ -75,11 +75,24 @@ function parseExcel(file: File): Promise<CBRow[]> {
             if (field === "amount") {
               const num = Number(String(val).replace(/,/g, ""));
               if (!isNaN(num)) row[field] = num;
-            } else if (field === "transDate" && val instanceof Date) {
-              row[field] =
-                `${String(val.getDate()).padStart(2, "0")}/${String(val.getMonth() + 1).padStart(2, "0")}/${val.getFullYear()} ${String(val.getHours()).padStart(2, "0")}:${String(val.getMinutes()).padStart(2, "0")}`;
-            } else {
-              row[field] = String(val).trim();
+            } else if (field === "transDate") {
+              if (val instanceof Date) {
+                // cellDates: true path — XLSX trả Date theo UTC, phải dùng getUTC*
+                row[field] =
+                  `${String(val.getUTCDate()).padStart(2, "0")}/${String(val.getUTCMonth() + 1).padStart(2, "0")}/${val.getUTCFullYear()} ${String(val.getUTCHours()).padStart(2, "0")}:${String(val.getUTCMinutes()).padStart(2, "0")}`;
+              } else if (
+                typeof val === "number" &&
+                val > 30000 &&
+                val < 60000
+              ) {
+                // Excel serial float (46109.628...) — cell format là Number hoặc General
+                const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+                row[field] =
+                  `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()} ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+              } else {
+                // Text cell — pass through nguyên string
+                row[field] = String(val).trim();
+              }
             }
           }
           return row;
