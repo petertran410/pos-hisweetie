@@ -11,10 +11,9 @@ export default function OrderSuppliersPage() {
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("Code");
 
-  const [filters, setFilters] = useState<OrderSupplierFilters>({
-    pageSize: 15,
-    currentItem: 0,
-  });
+  const [filters, setFilters] = useState<OrderSupplierFilters>(() =>
+    codeParam ? { search: codeParam } : { pageSize: 15, currentItem: 0 }
+  );
 
   const handleFiltersChange = useCallback(
     (newFilters: Partial<OrderSupplierFilters>) => {

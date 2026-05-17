@@ -175,8 +175,8 @@ export function PurchaseOrdersTable({
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showColumnModal, setShowColumnModal] = useState(false);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [search, setSearch] = useState(filters.search || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.search || "");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [activeStatusTab, setActiveStatusTab] = useState("all");
