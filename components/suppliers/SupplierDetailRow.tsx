@@ -5,6 +5,7 @@ import { useSupplier, useDeleteSupplier } from "@/lib/hooks/useSuppliers";
 import { formatCurrency } from "@/lib/utils";
 import { SupplierForm } from "./SupplierForm";
 import { useCan } from "@/lib/hooks/useCan";
+import { SupplierDebtsTab } from "./SupplierDebtsTab";
 
 interface SupplierDetailRowProps {
   supplierId: number;
@@ -267,9 +268,10 @@ export function SupplierDetailRow({
             )}
 
             {activeTab === "debt" && (
-              <div className="text-center text-gray-500 py-8">
-                Chưa có thông tin công nợ
-              </div>
+              <SupplierDebtsTab
+                supplierId={supplierId}
+                supplierDebt={Number(supplier.debt || 0)}
+              />
             )}
           </div>
         </div>

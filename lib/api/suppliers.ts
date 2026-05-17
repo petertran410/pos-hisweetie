@@ -32,6 +32,9 @@ export const suppliersApi = {
   deleteSupplier: (id: number): Promise<void> => {
     return apiClient.delete(`/suppliers/${id}`);
   },
+
+  getDebtTimeline: (supplierId: number) =>
+    apiClient.get(`/suppliers/${supplierId}/debt-timeline`),
 };
 
 export const supplierGroupsApi = {

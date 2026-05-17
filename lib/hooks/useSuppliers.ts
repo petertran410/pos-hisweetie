@@ -139,3 +139,11 @@ export function useDeleteSupplierGroup() {
     },
   });
 }
+
+export function useSupplierDebtTimeline(supplierId: number) {
+  return useQuery({
+    queryKey: ["supplier-debt-timeline", supplierId],
+    queryFn: () => suppliersApi.getDebtTimeline(supplierId),
+    enabled: !!supplierId,
+  });
+}

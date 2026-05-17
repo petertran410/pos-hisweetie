@@ -564,7 +564,7 @@ export function OrderSupplierDetailRow({
                                   className="hover:bg-gray-50 transition-colors">
                                   <td className="px-3 py-2">
                                     <Link
-                                      href={`/san-pham/nhap-hang/${po.id}`}
+                                      href={`/san-pham/nhap-hang?Code=${po.code}`}
                                       className="text-sm font-medium text-blue-600 hover:underline"
                                       onClick={(e) => e.stopPropagation()}>
                                       {po.code}
