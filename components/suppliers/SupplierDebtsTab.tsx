@@ -75,6 +75,7 @@ export function SupplierDebtsTab({
               paginatedTimeline.map((item: any) => {
                 const isPurchase = item.type === "purchase";
                 const isPayment = item.type === "payment";
+                const isBalanceAdjustment = item.type === "balance_adjustment";
 
                 return (
                   <tr
@@ -105,7 +106,13 @@ export function SupplierDebtsTab({
                       {new Date(item.date).toLocaleString("vi-VN")}
                     </td>
                     <td className="px-4 py-3 text-md">
-                      {isPurchase ? "Nhập hàng" : "Thanh toán"}
+                      {isPurchase
+                        ? "Nhập hàng"
+                        : isPayment
+                          ? "Thanh toán"
+                          : isBalanceAdjustment
+                            ? "Cân bằng nợ"
+                            : "Khác"}
                     </td>
                     <td className="px-4 py-3 text-md">
                       {item.branch?.name || "-"}
@@ -113,9 +120,11 @@ export function SupplierDebtsTab({
                     <td className="px-4 py-3 text-md text-right">
                       <span
                         className={
-                          isPurchase ? "text-red-600" : "text-green-600"
+                          isPurchase || isBalanceAdjustment
+                            ? "text-red-600"
+                            : "text-green-600"
                         }>
-                        {isPurchase ? "+" : "-"}
+                        {isPurchase || isBalanceAdjustment ? "+" : "-"}
                         {formatCurrency(item.amount)}
                       </span>
                     </td>

@@ -147,3 +147,18 @@ export function useSupplierDebtTimeline(supplierId: number) {
     enabled: !!supplierId,
   });
 }
+
+export function useImportSupplierBalanceAdjustments() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { rows: any[] }) =>
+      suppliersApi.importBalanceAdjustments(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supplier-debt-timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Import thất bại");
+    },
+  });
+}

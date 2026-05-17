@@ -35,6 +35,9 @@ export const suppliersApi = {
 
   getDebtTimeline: (supplierId: number) =>
     apiClient.get(`/suppliers/${supplierId}/debt-timeline`),
+
+  importBalanceAdjustments: (data: { rows: any[] }) =>
+    apiClient.post("/suppliers/import-balance-adjustments", data),
 };
 
 export const supplierGroupsApi = {

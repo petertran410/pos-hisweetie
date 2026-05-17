@@ -5,8 +5,9 @@ import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { Supplier, SupplierFilters } from "@/lib/types/supplier";
 import { SupplierDetailRow } from "./SupplierDetailRow";
 import { SupplierForm } from "./SupplierForm";
-import { Plus, Settings } from "lucide-react";
+import { Plus, Settings, Upload } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { SupplierImportBalanceModal } from "./SupplierImportBalanceModal";
 
 interface ColumnConfig {
   key: string;
@@ -168,6 +169,7 @@ export function SuppliersTable({
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [search, setSearch] = useState("");
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
@@ -257,6 +259,12 @@ export function SuppliersTable({
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
             <Plus className="w-4 h-4" />
             <span>Tạo nhà cung cấp</span>
+          </button>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm text-gray-700">
+            <Upload className="w-4 h-4" />
+            Import cân bằng nợ
           </button>
           <button
             onClick={() => setShowColumnModal(true)}
@@ -419,6 +427,10 @@ export function SuppliersTable({
             </div>
           </div>
         </div>
+      )}
+
+      {showImportModal && (
+        <SupplierImportBalanceModal onClose={() => setShowImportModal(false)} />
       )}
     </div>
   );
