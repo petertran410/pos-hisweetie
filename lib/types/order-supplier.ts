@@ -102,6 +102,7 @@ export interface OrderSupplierFilters {
   createdDateTo?: string;
   pageSize?: number;
   currentItem?: number;
+  search?: string;
 }
 
 export interface OrderSupplierPayment {

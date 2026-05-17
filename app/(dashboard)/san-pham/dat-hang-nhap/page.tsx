@@ -5,8 +5,12 @@ import { OrderSupplierSidebar } from "@/components/order-suppliers/OrderSupplier
 import { OrderSuppliersTable } from "@/components/order-suppliers/OrderSuppliersTable";
 import type { OrderSupplierFilters } from "@/lib/types/order-supplier";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { useSearchParams } from "next/navigation";
 
 export default function OrderSuppliersPage() {
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code");
+
   const [filters, setFilters] = useState<OrderSupplierFilters>({
     pageSize: 15,
     currentItem: 0,
@@ -14,9 +18,13 @@ export default function OrderSuppliersPage() {
 
   const handleFiltersChange = useCallback(
     (newFilters: Partial<OrderSupplierFilters>) => {
-      setFilters((prev) => ({ ...prev, ...newFilters }));
+      setFilters((prev) => ({
+        ...prev,
+        ...newFilters,
+        ...(codeParam ? { search: codeParam } : {}),
+      }));
     },
-    []
+    [codeParam]
   );
 
   return (

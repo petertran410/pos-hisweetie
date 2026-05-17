@@ -251,6 +251,7 @@ export function OrderSuppliersTable({
 
   const { data, isLoading } = useOrderSuppliers({
     ...effectiveFilters,
+    search: debouncedSearch || undefined,
     pageSize: limit,
     currentItem: (page - 1) * limit,
   });
