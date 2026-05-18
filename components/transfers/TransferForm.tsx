@@ -1,7 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, Search, Plus, Minus, Trash2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import {
+  X,
+  Search,
+  Plus,
+  Minus,
+  Trash2,
+  Building2,
+  Check,
+  ChevronDown,
+} from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useProducts } from "@/lib/hooks/useProducts";
 import {
@@ -13,6 +22,7 @@ import { useBranchStore } from "@/lib/store/branch";
 import type { Transfer } from "@/lib/api/transfers";
 import { productsApi, type Product } from "@/lib/api/products";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils";
 
 interface TransferFormProps {
   transfer?: Transfer | null;
@@ -30,6 +40,109 @@ interface ProductItem {
   fromInventory: number;
   toInventory: number;
   note?: string;
+}
+
+// ─── BranchDropdown ───────────────────────────────────────────────────────────
+interface BranchOption {
+  id: number;
+  name: string;
+}
+
+function BranchDropdown({
+  value,
+  options,
+  placeholder,
+  disabled,
+  onChange,
+}: {
+  value: number;
+  options: BranchOption[];
+  placeholder: string;
+  disabled?: boolean;
+  onChange: (id: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const selected = options.find((o) => o.id === value);
+
+  if (disabled) {
+    return (
+      <div className="w-full flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50 text-gray-600 text-sm cursor-not-allowed">
+        <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <span className="truncate">{selected?.name ?? placeholder}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className={`w-full flex items-center gap-2 border rounded-lg px-3 py-2.5 text-sm transition-all bg-white ${
+          open
+            ? "border-blue-500 ring-2 ring-blue-100"
+            : "border-gray-300 hover:border-gray-400"
+        }`}>
+        <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <span
+          className={`flex-1 text-left truncate ${selected ? "text-gray-800" : "text-gray-400"}`}>
+          {selected?.name ?? placeholder}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
+          <button
+            type="button"
+            onClick={() => {
+              onChange(0);
+              setOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left transition-colors ${
+              value === 0
+                ? "bg-blue-50 text-blue-700 font-medium"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}>
+            <span className="flex-1">{placeholder}</span>
+            {value === 0 && <Check className="w-3.5 h-3.5 text-blue-500" />}
+          </button>
+          {options.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => {
+                onChange(opt.id);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left transition-colors border-t border-gray-50 ${
+                value === opt.id
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}>
+              <span className="flex-1 truncate">{opt.name}</span>
+              {value === opt.id && (
+                <Check className="w-3.5 h-3.5 text-blue-500" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function TransferForm({ transfer, onClose }: TransferFormProps) {
@@ -108,6 +221,13 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
       toast.error(error?.message || "Có lỗi xảy ra khi hủy phiếu");
     }
   };
+
+  const activeBranches = branches?.filter((b) => b.isActive) ?? [];
+  const fromBranchOptions = activeBranches.filter((b) => b.id !== toBranchId);
+  const toBranchOptions = activeBranches.filter((b) => b.id !== fromBranchId);
+
+  const totalSendQty = products.reduce((s, p) => s + p.sendQuantity, 0);
+  const totalValue = products.reduce((s, p) => s + p.sendQuantity * p.price, 0);
 
   useEffect(() => {
     if (transfer?.details && fromBranchId && toBranchId) {
@@ -512,110 +632,78 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-7xl max-h-[95vh] flex flex-col rounded-lg shadow-xl">
-        <div className="border-b px-6 py-4 flex items-center justify-between bg-gray-50">
+      <div className="w-[1280px] min-h-[90px] max-h-[130vh] bg-white flex flex-col shadow-2xl rounded-lg">
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-white shrink-0">
           <div>
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-lg font-bold text-gray-900">
               {transfer
-                ? "Chi tiết phiếu chuyển hàng"
+                ? isReceiver
+                  ? "Xác nhận nhận hàng"
+                  : "Chi tiết phiếu chuyển hàng"
                 : "Tạo phiếu chuyển hàng"}
             </h2>
             {transfer && (
-              <p className="text-sm text-gray-600 mt-1">
-                Mã phiếu: {transfer.code}
+              <p className="text-sm text-blue-600 font-medium mt-0.5">
+                {transfer.code}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition">
-            <X className="w-6 h-6" />
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* ── Body ── */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Chuyển từ <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={fromBranchId}
-                  onChange={(e) => setFromBranchId(Number(e.target.value))}
-                  disabled={!!transfer || isReadOnly}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-600">
-                  {transfer ? (
-                    <option value={transfer.fromBranchId}>
-                      {transfer.fromBranchName}
-                    </option>
-                  ) : (
-                    <>
-                      <option value={selectedBranch?.id}>
-                        {selectedBranch?.name || "Chọn chi nhánh"}
-                      </option>
-                      {branches
-                        ?.filter((b) => b.id !== toBranchId)
-                        .map((branch) => (
-                          <option key={branch.id} value={branch.id}>
-                            {branch.name}
-                          </option>
-                        ))}
-                    </>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Chuyển tới <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={toBranchId}
-                  onChange={(e) => setToBranchId(Number(e.target.value))}
-                  disabled={!!transfer || isReadOnly}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-600">
-                  {transfer ? (
-                    <option value={transfer.toBranchId}>
-                      {transfer.toBranchName}
-                    </option>
-                  ) : (
-                    <>
-                      <option value="">Chọn chi nhánh</option>
-                      {branches
-                        ?.filter((b) => b.id !== fromBranchId)
-                        .map((branch) => (
-                          <option key={branch.id} value={branch.id}>
-                            {branch.name}
-                          </option>
-                        ))}
-                    </>
-                  )}
-                </select>
+          <div className="p-6 space-y-5">
+            {/* ── Section: Chi nhánh ── */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+              <h3 className="text-sm font-semibold text-gray-700">
+                Thông tin chuyển hàng
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                    Chuyển từ <span className="text-red-500">*</span>
+                  </label>
+                  <BranchDropdown
+                    value={fromBranchId}
+                    options={fromBranchOptions}
+                    placeholder="Chọn chi nhánh"
+                    disabled={!!transfer || isReadOnly}
+                    onChange={setFromBranchId}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                    Chuyển tới <span className="text-red-500">*</span>
+                  </label>
+                  <BranchDropdown
+                    value={toBranchId}
+                    options={toBranchOptions}
+                    placeholder="Chọn chi nhánh"
+                    disabled={!!transfer || isReadOnly}
+                    onChange={setToBranchId}
+                  />
+                </div>
               </div>
             </div>
 
-            {/* TỔNG SỐ LƯỢNG */}
+            {/* ── Section: Tìm sản phẩm ── */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tổng số lượng
-              </label>
-              <div className="text-2xl font-bold text-gray-900">
-                {products.length}
-              </div>
-            </div>
-
-            {/* TÌM KIẾM SẢN PHẨM */}
-            <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tìm hàng hóa theo mã hoặc tên
+                Hàng hóa
               </label>
               <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder={
                     canEditProducts
-                      ? "Tìm kiếm sản phẩm..."
+                      ? "Tìm theo mã hoặc tên sản phẩm..."
                       : "Không thể thêm sản phẩm ở trạng thái này"
                   }
                   value={searchQuery}
@@ -629,303 +717,297 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                     setTimeout(() => setShowSearchResults(false), 200)
                   }
                   disabled={!canEditProducts}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full border border-gray-300 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                 />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              </div>
 
-              {/* KẾT QUẢ TÌM KIẾM */}
-              {showSearchResults && searchQuery && searchResults?.data && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto z-50">
-                  {searchResults.data.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500">
-                      Không tìm thấy sản phẩm
-                    </div>
-                  ) : (
-                    searchResults.data.map((product) => {
-                      const fromInventory = product.inventories?.find(
-                        (inv: any) => inv.branchId === fromBranchId
-                      );
-                      const toInventory = product.inventories?.find(
-                        (inv: any) => inv.branchId === toBranchId
-                      );
-
-                      return (
-                        <div
-                          key={product.id}
-                          onClick={() => handleAddProduct(product)}
-                          className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900">
-                                {product.code} - {product.name}
+                {showSearchResults && searchQuery && searchResults?.data && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-72 overflow-y-auto z-50">
+                    {searchResults.data.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-gray-500">
+                        Không tìm thấy sản phẩm
+                      </div>
+                    ) : (
+                      searchResults.data.map((product) => {
+                        const fromInv = product.inventories?.find(
+                          (inv: any) => inv.branchId === fromBranchId
+                        );
+                        const toInv = product.inventories?.find(
+                          (inv: any) => inv.branchId === toBranchId
+                        );
+                        return (
+                          <div
+                            key={product.id}
+                            onClick={() => handleAddProduct(product)}
+                            className="flex items-center justify-between px-4 py-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 transition-colors">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {product.code} — {product.name}
                               </div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Tồn kho chuyển:{" "}
-                                {Number(
-                                  fromInventory?.onHand || 0
-                                ).toLocaleString()}{" "}
-                                - Tồn kho nhận:{" "}
-                                {Number(
-                                  toInventory?.onHand || 0
-                                ).toLocaleString()}{" "}
-                                - Đơn giá:{" "}
-                                {Number(
-                                  fromInventory?.cost || 0
-                                ).toLocaleString()}{" "}
-                                đ
+                              <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-3">
+                                <span>
+                                  Tồn chuyển:{" "}
+                                  <span className="font-medium text-gray-700">
+                                    {Number(
+                                      fromInv?.onHand ?? 0
+                                    ).toLocaleString()}
+                                  </span>
+                                </span>
+                                <span>
+                                  Tồn nhận:{" "}
+                                  <span className="font-medium text-gray-700">
+                                    {Number(
+                                      toInv?.onHand ?? 0
+                                    ).toLocaleString()}
+                                  </span>
+                                </span>
+                                <span>
+                                  Giá:{" "}
+                                  <span className="font-medium text-blue-600">
+                                    {Number(
+                                      fromInv?.cost ?? 0
+                                    ).toLocaleString()}{" "}
+                                    đ
+                                  </span>
+                                </span>
                               </div>
                             </div>
+                            <Plus className="w-4 h-4 text-blue-500 flex-shrink-0" />
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
+            {/* ── Bảng sản phẩm ── */}
             {products.length > 0 && (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-10">
                           STT
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Mã hàng
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Tên hàng
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                          Tồn kho ({transfer?.fromBranchName || "Chuyển từ"})
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Tồn ({transfer?.fromBranchName ?? "Chuyển từ"})
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                          Tồn kho ({transfer?.toBranchName || "Chuyển tới"})
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Tồn ({transfer?.toBranchName ?? "Chuyển tới"})
                         </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           SL chuyển
                         </th>
-
                         {isReceiver && (
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             SL nhận
                           </th>
                         )}
-
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           {isReceiver ? "Đơn giá chuyển" : "Đơn giá"}
                         </th>
-
                         {isReceiver && (
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             Đơn giá nhận
                           </th>
                         )}
-
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           {isReceiver ? "Thành tiền chuyển" : "Thành tiền"}
                         </th>
-
-                        {isReceiver && (
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                            Thành tiền nhận
-                          </th>
-                        )}
-
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap"></th>
+                        {canEditProducts && <th className="px-4 py-3 w-10" />}
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {products.map((item, index) => {
-                        return (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                              {index + 1}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                              {item.productCode}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 min-w-[200px]">
-                              {item.productName}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                              {item.fromInventory.toLocaleString()}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                              {item.toInventory.toLocaleString()}
-                            </td>
+                    <tbody className="divide-y divide-gray-100">
+                      {products.map((item, index) => (
+                        <tr
+                          key={item.productId}
+                          className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 text-gray-500 text-center">
+                            {index + 1}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600">
+                            {item.productCode}
+                          </td>
+                          <td className="px-4 py-3 font-medium text-gray-900 max-w-[200px]">
+                            <div className="truncate">{item.productName}</div>
+                            {item.unit && (
+                              <div className="text-xs text-gray-400">
+                                {item.unit}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-600">
+                            {Number(item.fromInventory).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-600">
+                            {Number(item.toInventory).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3">
+                            {isSender && !transfer ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUpdateQuantity(index, -1);
+                                  }}
+                                  disabled={
+                                    isReadOnly ||
+                                    isReceived ||
+                                    item.sendQuantity <= 1
+                                  }
+                                  className="w-7 h-7 border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center">
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={item.sendQuantity}
+                                  onChange={(e) =>
+                                    handleChangeQuantity(index, e.target.value)
+                                  }
+                                  disabled={isReadOnly || isReceived}
+                                  className="w-16 border rounded-lg px-2 py-1 text-center text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUpdateQuantity(index, 1);
+                                  }}
+                                  disabled={isReadOnly || isReceived}
+                                  className="w-7 h-7 border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center">
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="text-center text-sm text-gray-900 font-medium">
+                                {item.sendQuantity.toLocaleString()}
+                              </div>
+                            )}
+                          </td>
 
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              {isSender && !isReadOnly && !isReceived ? (
+                          {isReceiver && (
+                            <td className="px-4 py-3">
+                              {isInTransit && !isCancelled ? (
                                 <div className="flex items-center justify-center gap-1">
                                   <button
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleUpdateQuantity(index, -1);
+                                      handleUpdateReceivedQuantity(index, -1);
                                     }}
                                     disabled={
                                       isReadOnly ||
-                                      isReceived ||
-                                      item.sendQuantity <= 1
+                                      isSender ||
+                                      item.receivedQuantity <= 1
                                     }
-                                    className="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
-                                    -
+                                    className="w-7 h-7 border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center">
+                                    <Minus className="w-3 h-3" />
                                   </button>
                                   <input
                                     type="text"
                                     inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    min="1"
-                                    value={item.sendQuantity}
+                                    value={item.receivedQuantity}
                                     onChange={(e) =>
-                                      handleChangeQuantity(
+                                      handleChangeReceivedQuantity(
                                         index,
                                         e.target.value
                                       )
                                     }
-                                    disabled={isReadOnly || isReceived}
-                                    className="w-20 border rounded px-2 py-1 text-center disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                    disabled={isReadOnly}
+                                    className="w-16 border rounded-lg px-2 py-1 text-center text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                                   />
                                   <button
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleUpdateQuantity(index, 1);
+                                      handleUpdateReceivedQuantity(index, 1);
                                     }}
-                                    disabled={isReadOnly || isReceived}
-                                    className="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
-                                    +
+                                    disabled={isReadOnly || isSender}
+                                    className="w-7 h-7 border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center">
+                                    <Plus className="w-3 h-3" />
                                   </button>
                                 </div>
                               ) : (
-                                <div className="text-center text-sm text-gray-900">
-                                  {item.sendQuantity.toLocaleString()}
+                                <div className="text-center text-sm text-gray-900 font-medium">
+                                  {item.receivedQuantity.toLocaleString()}
                                 </div>
                               )}
                             </td>
+                          )}
 
-                            {isReceiver && (
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                {isInTransit && !isCancelled ? (
-                                  <div className="flex items-center justify-center gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleUpdateReceivedQuantity(index, -1);
-                                      }}
-                                      disabled={
-                                        isReadOnly ||
-                                        isSender ||
-                                        item.receivedQuantity <= 1
-                                      }
-                                      className="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
-                                      -
-                                    </button>
-                                    <input
-                                      type="text"
-                                      inputMode="numeric"
-                                      pattern="[0-9]*"
-                                      min="1"
-                                      value={item.receivedQuantity}
-                                      onChange={(e) =>
-                                        handleChangeReceivedQuantity(
-                                          index,
-                                          e.target.value
-                                        )
-                                      }
-                                      disabled={isReadOnly}
-                                      className="w-20 border rounded px-2 py-1 text-center disabled:bg-gray-100 disabled:cursor-not-allowed"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleUpdateReceivedQuantity(index, 1);
-                                      }}
-                                      disabled={isReadOnly || isSender}
-                                      className="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white">
-                                      +
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="text-center text-sm text-gray-900">
-                                    {item.receivedQuantity.toLocaleString()}
-                                  </div>
-                                )}
-                              </td>
+                          <td className="px-4 py-3 text-right text-sm text-gray-700">
+                            {isSender && !transfer ? (
+                              <input
+                                type="text"
+                                value={formatCurrency(item.price)}
+                                onChange={(e) => {
+                                  const price = parseFloat(e.target.value) || 0;
+                                  setProducts((prev) => {
+                                    const updated = [...prev];
+                                    updated[index].price = price;
+                                    return updated;
+                                  });
+                                }}
+                                disabled={isReadOnly}
+                                className="w-28 border rounded-lg px-2 py-1 text-right text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                              />
+                            ) : (
+                              <span>
+                                {Number(item.price).toLocaleString()} đ
+                              </span>
                             )}
+                          </td>
 
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              {isSender && !transfer ? (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={item.price}
-                                  onChange={(e) =>
-                                    handleChangePrice(index, e.target.value)
-                                  }
-                                  disabled={isReadOnly || !isSender}
-                                  className="w-24 border rounded px-2 py-1 text-right disabled:bg-gray-100 disabled:cursor-not-allowed"
-                                />
-                              ) : (
-                                <div className="text-right text-sm text-gray-900">
-                                  {item.price.toLocaleString()} đ
-                                </div>
-                              )}
+                          {isReceiver && (
+                            <td className="px-4 py-3 text-right text-sm text-gray-700">
+                              {Number(item.price).toLocaleString()} đ
                             </td>
+                          )}
 
-                            {isReceiver && (
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                                {item.price.toLocaleString()} đ
-                              </td>
-                            )}
+                          <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                            {(item.sendQuantity * item.price).toLocaleString(
+                              "vi-VN"
+                            )}{" "}
+                            đ
+                          </td>
 
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">
-                              {(
-                                item.sendQuantity * item.price
-                              ).toLocaleString()}{" "}
-                              đ
+                          {canEditProducts && (
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setProducts((prev) =>
+                                    prev.filter((_, i) => i !== index)
+                                  )
+                                }
+                                className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </td>
-
-                            {isReceiver && (
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-green-600">
-                                {(
-                                  item.receivedQuantity * item.price
-                                ).toLocaleString()}{" "}
-                                đ
-                              </td>
-                            )}
-
-                            {isSender && isDraft && !isCancelled && (
-                              <td className="px-4 py-3 whitespace-nowrap text-center">
-                                <button
-                                  onClick={() => handleRemoveProduct(index)}
-                                  className="p-1 hover:bg-red-50 rounded transition text-red-600"
-                                  title="Xóa sản phẩm">
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      })}
+                          )}
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
               </div>
             )}
 
+            {/* ── Ghi chú ── */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {isReceiver ? "Ghi chú từ chi nhánh nhận" : "Ghi chú"}
               </label>
-
               {isReceiver ? (
                 <>
                   <textarea
@@ -937,14 +1019,14 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                     disabled={isCancelled}
                     placeholder="Nhập ghi chú từ chi nhánh nhận..."
                     rows={3}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
                   />
                   {transfer?.noteBySource && (
-                    <div className="mt-3 p-3 bg-gray-50 rounded border border-gray-200">
-                      <p className="text-xs text-gray-600 mb-1 font-medium">
+                    <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <p className="text-xs text-gray-500 mb-1 font-medium">
                         Ghi chú từ chi nhánh chuyển:
                       </p>
-                      <p className="text-sm text-gray-900">
+                      <p className="text-sm text-gray-800">
                         {transfer.noteBySource}
                       </p>
                     </div>
@@ -961,14 +1043,14 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                     disabled={isCancelled}
                     placeholder="Nhập ghi chú cho phiếu chuyển hàng..."
                     rows={3}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
                   />
                   {transfer?.noteByDestination && isInTransit && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                    <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
                       <p className="text-xs text-blue-600 mb-1 font-medium">
                         Ghi chú từ chi nhánh nhận:
                       </p>
-                      <p className="text-sm text-gray-900">
+                      <p className="text-sm text-gray-800">
                         {transfer.noteByDestination}
                       </p>
                     </div>
@@ -979,48 +1061,25 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
           </div>
         </div>
 
-        <div className="border-t px-6 py-4 bg-gray-50 flex items-center justify-between">
-          <div>
-            <button
-              onClick={onClose}
-              disabled={
-                createTransfer.isPending ||
-                updateTransfer.isPending ||
-                cancelTransfer.isPending
-              }
-              className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-              Đóng
-            </button>
-          </div>
+        {/* ── Footer ── */}
+        <div className="border-t px-6 py-4 bg-white shrink-0 flex items-center justify-between">
+          <button
+            onClick={onClose}
+            disabled={
+              createTransfer.isPending ||
+              updateTransfer.isPending ||
+              cancelTransfer.isPending
+            }
+            className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed">
+            Đóng
+          </button>
 
-          <div className="flex gap-3">
-            {/* ĐÃ HỦY: KHÔNG HIỂN THỊ BUTTON NÀO */}
-            {isCancelled && (
-              <div className="px-6 py-2.5 bg-red-50 text-red-700 rounded-lg font-medium border border-red-200">
-                Phiếu đã bị hủy
-              </div>
-            )}
-
-            {/* CHỈ CHI NHÁNH "CHUYỂN TỪ" MỚI THẤY CÁC NÚT (trừ khi đã hủy) */}
+          <div className="flex items-center gap-2">
+            {/* CHỦ YẾU CHI NHÁNH CHUYỂN ĐI */}
             {isSender && !isCancelled && (
               <>
-                {/* PHIẾU TẠM (status = 1): "Hủy" + "Lưu tạm" + "Đang chuyển" */}
                 {isDraft && (
                   <>
-                    <button
-                      onClick={() => setShowCancelConfirm(true)}
-                      disabled={cancelTransfer.isPending}
-                      className="px-6 py-2.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                      {cancelTransfer.isPending ? (
-                        <>
-                          <span className="w-4 h-4 border-2 border-red-700 border-t-transparent rounded-full animate-spin"></span>
-                          Đang hủy...
-                        </>
-                      ) : (
-                        "Hủy phiếu"
-                      )}
-                    </button>
-
                     <button
                       onClick={() => handleSubmit(true)}
                       disabled={
@@ -1028,17 +1087,16 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                         updateTransfer.isPending ||
                         cancelTransfer.isPending
                       }
-                      className="px-6 py-2.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                      className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                       {createTransfer.isPending || updateTransfer.isPending ? (
                         <>
-                          <span className="w-4 h-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></span>
+                          <span className="w-3.5 h-3.5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
                           Đang lưu...
                         </>
                       ) : (
                         "Lưu tạm"
                       )}
                     </button>
-
                     <button
                       onClick={() => handleSubmit(false)}
                       disabled={
@@ -1046,10 +1104,10 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                         updateTransfer.isPending ||
                         cancelTransfer.isPending
                       }
-                      className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                      className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                       {createTransfer.isPending || updateTransfer.isPending ? (
                         <>
-                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                           Đang xử lý...
                         </>
                       ) : (
@@ -1058,16 +1116,14 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                     </button>
                   </>
                 )}
-
-                {/* ĐANG CHUYỂN (status = 2) hoặc ĐÃ NHẬN (status = 3): CHỈ "Hủy" */}
                 {(isInTransit || isReceived) && (
                   <button
                     onClick={() => setShowCancelConfirm(true)}
                     disabled={cancelTransfer.isPending}
-                    className="px-6 py-2.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    className="px-5 py-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg hover:bg-red-100 text-sm font-medium transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                     {cancelTransfer.isPending ? (
                       <>
-                        <span className="w-4 h-4 border-2 border-red-700 border-t-transparent rounded-full animate-spin"></span>
+                        <span className="w-3.5 h-3.5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
                         Đang hủy...
                       </>
                     ) : (
@@ -1078,15 +1134,15 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
               </>
             )}
 
-            {/* CHI NHÁNH "CHUYỂN TỚI" - CHỈ HIỂN THỊ BUTTON "NHẬN HÀNG" KHI ĐANG CHUYỂN */}
+            {/* CHI NHÁNH NHẬN */}
             {isReceiver && !isCancelled && isInTransit && (
               <button
                 onClick={() => handleSubmit(false)}
                 disabled={updateTransfer.isPending || cancelTransfer.isPending}
-                className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                className="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                 {updateTransfer.isPending ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Đang xử lý...
                   </>
                 ) : (
@@ -1097,29 +1153,37 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
           </div>
         </div>
 
-        {/* MODAL XÁC NHẬN HỦY */}
+        {/* ── Modal xác nhận hủy ── */}
         {showCancelConfirm && (
           <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold mb-4">Xác nhận hủy phiếu</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Bạn có chắc chắn muốn hủy phiếu chuyển hàng này? Tồn kho sẽ được
-                hoàn trả về ban đầu.
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+              <h3 className="text-base font-semibold text-gray-900 mb-2">
+                Xác nhận hủy phiếu
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Bạn có chắc chắn muốn hủy phiếu chuyển hàng này?
               </p>
-              <div className="flex gap-3 justify-end">
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Lý do hủy (tùy chọn)..."
+                rows={3}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-300 mb-4"
+              />
+              <div className="flex justify-end gap-2">
                 <button
                   onClick={() => {
                     setShowCancelConfirm(false);
                     setCancelReason("");
                   }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 font-medium">
                   Đóng
                 </button>
                 <button
                   onClick={handleCancel}
                   disabled={cancelTransfer.isPending}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50">
-                  {cancelTransfer.isPending ? "Đang xử lý..." : "Xác nhận hủy"}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 font-medium disabled:opacity-50">
+                  {cancelTransfer.isPending ? "Đang hủy..." : "Xác nhận hủy"}
                 </button>
               </div>
             </div>
