@@ -56,7 +56,9 @@ export function DebtOffsetsSidebar({
   }, [selectedBranch]);
 
   useEffect(() => {
-    const filters: any = { refundType: "debt_offsets", status: 4 };
+    // Chỉ emit filter chi nhánh và thời gian, KHÔNG hardcode refundType/status
+    // Page sẽ tự thêm type-specific filters dựa theo tab active
+    const filters: any = {};
     if (branchId) filters.branchId = parseInt(branchId);
     if (enableDate) {
       const range = getDateRangeFromPreset(selectedPreset);
