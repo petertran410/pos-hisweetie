@@ -16,18 +16,9 @@ export default function SuppliersPage() {
     includeSupplierGroup: true,
   });
 
-  // Sidebar gửi full filters object (giống khach-hang/page.tsx)
   const handleSidebarFiltersChange = useCallback(
     (newFilters: SupplierFilters) => {
       setFilters(newFilters);
-    },
-    []
-  );
-
-  // Table gửi partial updates (pagination, search)
-  const handleTableFiltersChange = useCallback(
-    (partial: Partial<SupplierFilters>) => {
-      setFilters((prev) => ({ ...prev, ...partial }));
     },
     []
   );
@@ -39,10 +30,7 @@ export default function SuppliersPage() {
           filters={filters}
           onFiltersChange={handleSidebarFiltersChange}
         />
-        <SuppliersTable
-          filters={filters}
-          onFiltersChange={handleTableFiltersChange}
-        />
+        <SuppliersTable filters={filters} /> {/* ← xóa onFiltersChange */}
       </div>
     </PagePermissionGuard>
   );

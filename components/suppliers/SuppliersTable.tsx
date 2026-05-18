@@ -1,186 +1,146 @@
 "use client";
 
-import { useState, Fragment, useEffect } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
-import { Supplier, SupplierFilters } from "@/lib/types/supplier";
+import { SupplierFilters, Supplier } from "@/lib/types/supplier";
+import { formatCurrency } from "@/lib/utils";
+import { Plus, Upload, Settings } from "lucide-react";
 import { SupplierDetailRow } from "./SupplierDetailRow";
 import { SupplierForm } from "./SupplierForm";
-import { Plus, Settings, Upload } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
 import { SupplierImportBalanceModal } from "./SupplierImportBalanceModal";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type ColumnKey =
+  | "code"
+  | "name"
+  | "contactNumber"
+  | "groups"
+  | "branch"
+  | "debt"
+  | "totalInvoiced"
+  | "status";
 
 interface ColumnConfig {
-  key: string;
+  key: ColumnKey;
   label: string;
   visible: boolean;
   width: string;
   render: (supplier: Supplier) => React.ReactNode;
 }
 
-const formatDateTime = (date?: string) => {
-  if (!date) return "-";
-  return new Intl.DateTimeFormat("vi-VN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date));
-};
+interface SuppliersTableProps {
+  filters: SupplierFilters;
+}
 
+const formatDateTime = (date?: string) =>
+  date ? new Date(date).toLocaleString("vi-VN") : "-";
+
+// ─── Columns ──────────────────────────────────────────────────────────────────
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   {
     key: "code",
     label: "Mã nhà cung cấp",
     visible: true,
-    width: "180px",
-    render: (supplier) => supplier.code,
+    width: "160px",
+    render: (s) => <span className="font-medium text-blue-600">{s.code}</span>,
   },
   {
     key: "name",
     label: "Tên nhà cung cấp",
     visible: true,
     width: "200px",
-    render: (supplier) => supplier.name,
+    render: (s) => <span className="font-medium">{s.name}</span>,
   },
   {
     key: "contactNumber",
     label: "Điện thoại",
     visible: true,
-    width: "150px",
-    render: (supplier) => supplier.contactNumber || "-",
-  },
-  {
-    key: "groupName",
-    label: "Nhóm nhà cung cấp",
-    visible: true,
-    width: "220px",
-    render: (supplier) =>
-      supplier.groups ? supplier.groups.replace(/\|/g, ", ") : "-",
+    width: "140px",
+    render: (s) => s.contactNumber || "-",
   },
   {
     key: "branch",
     label: "Chi nhánh",
     visible: true,
-    width: "180px",
-    render: (supplier) => supplier.branch?.name || "-",
-  },
-  {
-    key: "email",
-    label: "Email",
-    visible: false,
-    width: "200px",
-    render: (supplier) => supplier.email || "-",
-  },
-  {
-    key: "address",
-    label: "Địa chỉ",
-    visible: false,
-    width: "250px",
-    render: (supplier) => supplier.address || "-",
-  },
-  {
-    key: "location",
-    label: "Khu vực",
-    visible: false,
-    width: "180px",
-    render: (supplier) => supplier.location || "-",
-  },
-  {
-    key: "wardName",
-    label: "Phường/Xã",
-    visible: false,
     width: "150px",
-    render: (supplier) => supplier.wardName || "-",
+    render: (s) => s.branch?.name || "-",
   },
   {
     key: "debt",
     label: "Nợ hiện tại",
     visible: true,
     width: "150px",
-    render: (supplier) => formatCurrency(supplier.debt),
+    render: (s) => formatCurrency(s.debt ?? 0),
   },
   {
     key: "totalInvoiced",
     label: "Tổng mua",
     visible: true,
     width: "150px",
-    render: (supplier) => formatCurrency(supplier.totalInvoiced),
+    render: (s) => formatCurrency(s.totalInvoiced ?? 0),
   },
   {
-    key: "totalInvoicedWithoutReturn",
-    label: "Tổng mua trừ trả hàng",
-    visible: false,
-    width: "220px",
-    render: (supplier) => formatCurrency(supplier.totalInvoicedWithoutReturn),
-  },
-  {
-    key: "taxCode",
-    label: "Mã số thuế",
-    visible: false,
-    width: "150px",
-    render: (supplier) => supplier.taxCode || "-",
-  },
-  {
-    key: "createdAt",
-    label: "Ngày tạo",
-    visible: false,
-    width: "180px",
-    render: (supplier) => formatDateTime(supplier.createdAt),
-  },
-  {
-    key: "updatedAt",
-    label: "Ngày cập nhật",
-    visible: false,
-    width: "180px",
-    render: (supplier) => formatDateTime(supplier.updatedAt),
-  },
-  {
-    key: "isActive",
+    key: "status",
     label: "Trạng thái",
     visible: true,
-    width: "150px",
-    render: (supplier) => (
+    width: "140px",
+    render: (s) => (
       <span
-        className={`px-2 py-1 rounded text-xs font-medium ${
-          supplier.isActive
-            ? "bg-green-100 text-green-800"
-            : "bg-gray-100 text-gray-800"
+        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+          s.isActive
+            ? "bg-green-100 text-green-700"
+            : "bg-gray-100 text-gray-600"
         }`}>
-        {supplier.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
+        {s.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
       </span>
     ),
   },
 ];
 
-interface SuppliersTableProps {
-  filters: SupplierFilters;
-  onFiltersChange: (filters: Partial<SupplierFilters>) => void;
-}
-
-export function SuppliersTable({
-  filters,
-  onFiltersChange,
-}: SuppliersTableProps) {
+// ─── Component ────────────────────────────────────────────────────────────────
+export function SuppliersTable({ filters }: SuppliersTableProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [expandedSupplierId, setExpandedSupplierId] = useState<number | null>(
-    null
-  );
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [search, setSearch] = useState("");
   const [showImportModal, setShowImportModal] = useState(false);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(15);
+  const [activeStatusTab, setActiveStatusTab] = useState("all");
+
+  // Debounce search 300ms
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Reset page khi filter/search/tab thay đổi
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filters, activeStatusTab]);
+
+  // Tab override sidebar isActive
+  const effectiveFilters = useMemo(() => {
+    const f = { ...filters };
+    if (activeStatusTab === "active") f.isActive = true;
+    else if (activeStatusTab === "inactive") f.isActive = false;
+    else if (activeStatusTab === "all") delete f.isActive;
+    return f;
+  }, [filters, activeStatusTab]);
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("supplierTableColumns");
       if (saved) {
         try {
-          const savedColumns = JSON.parse(saved);
+          const savedCols = JSON.parse(saved);
           return DEFAULT_COLUMNS.map((col) => ({
             ...col,
             visible:
-              savedColumns.find((s: any) => s.key === col.key)?.visible ??
+              savedCols.find((s: any) => s.key === col.key)?.visible ??
               col.visible,
           }));
         } catch {
@@ -192,96 +152,120 @@ export function SuppliersTable({
   });
 
   const { data, isLoading } = useSuppliers({
-    ...filters,
-    name: search || undefined,
+    ...effectiveFilters,
+    currentItem: (page - 1) * limit,
+    pageSize: limit,
+    name: debouncedSearch || undefined,
   });
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("supplierTableColumns", JSON.stringify(columns));
-    }
+    localStorage.setItem("supplierTableColumns", JSON.stringify(columns));
   }, [columns]);
 
-  const suppliers = data?.data || [];
-  const total = data?.total || 0;
-  const visibleColumns = columns.filter((col) => col.visible);
+  const suppliers: Supplier[] = data?.data || [];
+  const total: number = data?.total || 0;
+  const totalPages = Math.ceil(total / limit) || 1;
+  const visibleColumns = useMemo(
+    () => columns.filter((c) => c.visible),
+    [columns]
+  );
+  const colSpan = visibleColumns.length + 2; // checkbox + chevron
 
-  const currentItem = filters.currentItem ?? 0;
-  const pageSize = filters.pageSize ?? 15;
-
-  const toggleColumnVisibility = (key: string) => {
+  const toggleColumnVisibility = (key: ColumnKey) =>
     setColumns((prev) =>
-      prev.map((col) =>
-        col.key === key ? { ...col, visible: !col.visible } : col
-      )
+      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
     );
-  };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.length === suppliers.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(suppliers.map((s) => s.id));
-    }
-  };
+  const toggleSelectAll = () =>
+    setSelectedIds(
+      selectedIds.length === suppliers.length ? [] : suppliers.map((s) => s.id)
+    );
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: number) =>
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
-  };
 
-  const toggleExpand = (supplierId: number) => {
-    setExpandedSupplierId((prev) => (prev === supplierId ? null : supplierId));
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    onFiltersChange({ currentItem: 0 });
-  };
+  const toggleExpand = (id: number) =>
+    setExpandedId((prev) => (prev === id ? null : id));
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
-      <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4 w-[500px]">
-          <h1 className="text-xl font-semibold w-[200px]">Nhà cung cấp</h1>
+    <div className="flex-1 flex flex-col overflow-hidden bg-white">
+      {/* ── Toolbar ── */}
+      <div className="border-b px-4 py-3 flex items-center justify-between gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2">
           <input
             type="text"
             placeholder="Theo mã, tên, số điện thoại"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
           />
         </div>
         <div className="flex items-center gap-2">
+          <PermissionGate resource="suppliers" action="create">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
+              <Plus className="w-4 h-4" />
+              Tạo nhà cung cấp
+            </button>
+          </PermissionGate>
+          <PermissionGate resource="suppliers" action="create">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600">
+              <Upload className="w-4 h-4" />
+              Import cân bằng nợ
+            </button>
+          </PermissionGate>
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            <span>Tạo nhà cung cấp</span>
-          </button>
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm text-gray-700">
-            <Upload className="w-4 h-4" />
-            Import cân bằng nợ
-          </button>
-          <button
-            onClick={() => setShowColumnModal(true)}
-            className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
+            onClick={() => setShowColumnModal((v) => !v)}
+            className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600 relative">
             <Settings className="w-4 h-4" />
-            Cột Hiển Thị
+            Cột hiển thị
+            {/* Column modal */}
+            {showColumnModal && (
+              <div
+                className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-3 w-56 max-h-80 overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <span className="text-sm font-semibold text-gray-700">
+                    Hiển thị cột
+                  </span>
+                  <button
+                    onClick={() => setShowColumnModal(false)}
+                    className="text-gray-400 hover:text-gray-600 text-xs">
+                    ✕
+                  </button>
+                </div>
+                <div className="space-y-0.5">
+                  {columns.map((col) => (
+                    <label
+                      key={col.key}
+                      className="flex items-center gap-2 cursor-pointer px-2 py-1.5 hover:bg-gray-50 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={col.visible}
+                        onChange={() => toggleColumnVisibility(col.key)}
+                        className="cursor-pointer"
+                      />
+                      <span className="text-sm text-gray-700">{col.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </button>
         </div>
       </div>
 
+      {/* ── Table ── */}
       <div className="flex-1 overflow-auto">
-        <table className="w-full">
-          <thead className="sticky top-0 z-10 bg-gray-50">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
-              <th
-                className="px-6 py-3 text-left sticky left-0 bg-gray-50"
-                style={{ width: "60px" }}>
+              <th className="px-4 py-2.5 text-left w-10 sticky left-0 bg-gray-50">
                 <input
                   type="checkbox"
                   checked={
@@ -295,43 +279,44 @@ export function SuppliersTable({
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-6 py-3 text-left text-md font-semibold text-gray-700"
-                  style={{
-                    minWidth: col.width,
-                    maxWidth: col.width,
-                    width: col.width,
-                  }}>
+                  className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide"
+                  style={{ width: col.width, minWidth: col.width }}>
                   {col.label}
                 </th>
               ))}
+              <th className="px-4 py-2.5 w-8" />
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody>
             {isLoading ? (
               <tr>
-                <td
-                  colSpan={visibleColumns.length + 1}
-                  className="px-6 py-8 text-center text-gray-500">
-                  Đang tải...
+                <td colSpan={colSpan} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                    <span className="text-xs">Đang tải...</span>
+                  </div>
                 </td>
               </tr>
             ) : suppliers.length === 0 ? (
               <tr>
                 <td
-                  colSpan={visibleColumns.length + 1}
-                  className="px-6 py-8 text-center text-gray-500">
-                  Chưa có nhà cung cấp nào
+                  colSpan={colSpan}
+                  className="py-16 text-center text-gray-400 text-sm">
+                  Không có nhà cung cấp nào
                 </td>
               </tr>
             ) : (
               suppliers.map((supplier) => (
                 <Fragment key={supplier.id}>
                   <tr
-                    className="border-b cursor-pointer hover:bg-gray-50"
+                    className={`border-b hover:bg-gray-50 cursor-pointer transition-colors ${
+                      expandedId === supplier.id
+                        ? "bg-blue-50 hover:bg-blue-50"
+                        : ""
+                    }`}
                     onClick={() => toggleExpand(supplier.id)}>
                     <td
-                      className="px-6 py-3 sticky left-0"
-                      style={{ width: "60px" }}
+                      className="px-4 py-3 sticky left-0 bg-inherit"
                       onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
@@ -343,22 +328,22 @@ export function SuppliersTable({
                     {visibleColumns.map((col) => (
                       <td
                         key={col.key}
-                        className="px-6 py-3 text-md align-middle"
-                        style={{
-                          minWidth: col.width,
-                          maxWidth: col.width,
-                          width: col.width,
-                        }}>
-                        <div className="break-words">
-                          {col.render(supplier)}
-                        </div>
+                        className="px-4 py-3 text-gray-700"
+                        style={{ width: col.width, minWidth: col.width }}>
+                        {col.render(supplier)}
                       </td>
                     ))}
+                    <td className="px-4 py-3 text-right">
+                      <span
+                        className={`text-gray-400 transition-transform inline-block ${expandedId === supplier.id ? "rotate-90" : ""}`}>
+                        ›
+                      </span>
+                    </td>
                   </tr>
-                  {expandedSupplierId === supplier.id && (
+                  {expandedId === supplier.id && (
                     <SupplierDetailRow
                       supplierId={supplier.id}
-                      colSpan={visibleColumns.length + 1}
+                      colSpan={colSpan}
                     />
                   )}
                 </Fragment>
@@ -368,67 +353,35 @@ export function SuppliersTable({
         </table>
       </div>
 
-      <div className="border-t px-4 py-3 flex items-center justify-between">
-        <div className="text-md text-gray-600">
-          Hiển thị {currentItem + 1} - {Math.min(currentItem + pageSize, total)}{" "}
-          của {total} nhà cung cấp
+      {/* ── Pagination ── */}
+      <div className="border-t px-4 py-3 flex items-center justify-between flex-shrink-0">
+        <div className="text-sm text-gray-500">
+          Tổng: <span className="font-medium text-gray-700">{total}</span> nhà
+          cung cấp
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() =>
-              onFiltersChange({
-                currentItem: Math.max(0, currentItem - pageSize),
-              })
-            }
-            disabled={currentItem === 0}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50">
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
             Trước
           </button>
+          <span className="text-sm text-gray-600">
+            {page} / {totalPages}
+          </span>
           <button
-            onClick={() =>
-              onFiltersChange({ currentItem: currentItem + pageSize })
-            }
-            disabled={currentItem + pageSize >= total}
-            className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50">
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
             Sau
           </button>
         </div>
       </div>
 
+      {/* ── Modals ── */}
       {showCreateModal && (
         <SupplierForm onClose={() => setShowCreateModal(false)} />
       )}
-
-      {showColumnModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Tùy chỉnh cột hiển thị</h3>
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="text-gray-500 hover:text-gray-700">
-                ✕
-              </button>
-            </div>
-            <div className="space-y-2">
-              {columns.map((col) => (
-                <label
-                  key={col.key}
-                  className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded">
-                  <input
-                    type="checkbox"
-                    checked={col.visible}
-                    onChange={() => toggleColumnVisibility(col.key)}
-                    className="cursor-pointer"
-                  />
-                  <span className="text-sm">{col.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       {showImportModal && (
         <SupplierImportBalanceModal onClose={() => setShowImportModal(false)} />
       )}
