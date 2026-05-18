@@ -149,6 +149,108 @@ function getDateRangeFromPreset(
   }
 }
 
+// ─── SortDropdown ─────────────────────────────────────────────────────────────
+function SortDropdown({
+  value,
+  onChange,
+}: {
+  value: "none" | "desc" | "asc";
+  onChange: (v: "none" | "desc" | "asc") => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const OPTIONS = [
+    { value: "none" as const, label: "Mặc định" },
+    { value: "desc" as const, label: "Nhiều nhất" },
+    { value: "asc" as const, label: "Thấp nhất" },
+  ];
+  const selected = OPTIONS.find((o) => o.value === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border transition-all ${
+          value !== "none"
+            ? "border-blue-400 bg-blue-50 text-blue-700"
+            : "border-gray-200 text-gray-500 hover:border-gray-300"
+        }`}>
+        <span>{selected?.label}</span>
+        <ChevronDown
+          className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="absolute z-50 top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[110px] overflow-hidden">
+          {OPTIONS.map((opt, idx) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                opt.value === value
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-gray-700 hover:bg-gray-50"
+              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── StatusButtons ────────────────────────────────────────────────────────────
+function StatusButtons({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label}
+      </label>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              value === opt.value
+                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+            }`}>
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── SimpleDropdown ───────────────────────────────────────────────────────────
 interface SimpleOption {
   value: string;
@@ -410,22 +512,6 @@ function MiniCalendar({
   );
 }
 
-// ─── Sort options ─────────────────────────────────────────────────────────────
-const ORDER_BY_OPTIONS: SimpleOption[] = [
-  { value: "createdAt", label: "Ngày tạo" },
-  { value: "name", label: "Tên nhà cung cấp" },
-  { value: "debt", label: "Nợ hiện tại" },
-  { value: "totalInvoiced", label: "Tổng mua" },
-];
-const ORDER_DIR_OPTIONS: SimpleOption[] = [
-  { value: "desc", label: "Giảm dần" },
-  { value: "asc", label: "Tăng dần" },
-];
-const STATUS_OPTIONS: SimpleOption[] = [
-  { value: "true", label: "Đang hoạt động" },
-  { value: "false", label: "Ngừng hoạt động" },
-];
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 interface SuppliersSidebarProps {
   filters: SupplierFilters;
@@ -450,19 +536,15 @@ export function SuppliersSidebar({
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
 
   // Range inputs — local string state, applied on blur
-  const [totalInvoicedFrom, setTotalInvoicedFrom] = useState(
-    filters.totalInvoicedFrom !== undefined
-      ? String(filters.totalInvoicedFrom)
-      : ""
-  );
-  const [totalInvoicedTo, setTotalInvoicedTo] = useState(
-    filters.totalInvoicedTo !== undefined ? String(filters.totalInvoicedTo) : ""
-  );
-  const [debtFrom, setDebtFrom] = useState(
-    filters.debtFrom !== undefined ? String(filters.debtFrom) : ""
-  );
-  const [debtTo, setDebtTo] = useState(
-    filters.debtTo !== undefined ? String(filters.debtTo) : ""
+  const [totalInvoicedFrom, setTotalInvoicedFrom] = useState<
+    number | undefined
+  >();
+  const [totalInvoicedTo, setTotalInvoicedTo] = useState<number | undefined>();
+  const [debtFrom, setDebtFrom] = useState<number | undefined>();
+  const [debtTo, setDebtTo] = useState<number | undefined>();
+
+  const [isActive, setIsActive] = useState(
+    filters.isActive === false ? "false" : "true"
   );
 
   const presetRowRef = useRef<HTMLDivElement>(null);
@@ -476,6 +558,20 @@ export function SuppliersSidebar({
       })) ?? [],
     [groupsData]
   );
+
+  const [purchasedSort, setPurchasedSort] = useState<"none" | "desc" | "asc">(
+    "none"
+  );
+  const [debtSort, setDebtSort] = useState<"none" | "desc" | "asc">("none");
+
+  const handlePurchasedSort = (v: "none" | "desc" | "asc") => {
+    setPurchasedSort(v);
+    if (v !== "none") setDebtSort("none");
+  };
+  const handleDebtSort = (v: "none" | "desc" | "asc") => {
+    setDebtSort(v);
+    if (v !== "none") setPurchasedSort("none");
+  };
 
   // Đóng MiniCalendar khi click ngoài
   useEffect(() => {
@@ -505,27 +601,36 @@ export function SuppliersSidebar({
     let n = 0;
     if (filters.groupId) n++;
     if (filters.createdDateFrom) n++;
-    if (
-      filters.totalInvoicedFrom !== undefined ||
-      filters.totalInvoicedTo !== undefined
-    )
-      n++;
-    if (filters.debtFrom !== undefined || filters.debtTo !== undefined) n++;
-    if (filters.isActive !== true) n++;
-    if (filters.orderBy !== "createdAt" || filters.orderDirection !== "desc")
-      n++;
+    if (totalInvoicedFrom !== undefined || totalInvoicedTo !== undefined) n++;
+    if (debtFrom !== undefined || debtTo !== undefined) n++;
+    if (isActive !== "true") n++;
+    if (purchasedSort !== "none") n++;
+    if (debtSort !== "none") n++;
     return n;
-  }, [filters]);
+  }, [
+    filters.groupId,
+    filters.createdDateFrom,
+    totalInvoicedFrom,
+    totalInvoicedTo,
+    debtFrom,
+    debtTo,
+    isActive,
+    purchasedSort,
+    debtSort,
+  ]);
 
   const resetFilters = () => {
     setDateMode("preset");
     setSelectedPreset("all_time");
     setFromDate("");
     setToDate("");
-    setTotalInvoicedFrom("");
-    setTotalInvoicedTo("");
-    setDebtFrom("");
-    setDebtTo("");
+    setTotalInvoicedFrom(undefined);
+    setTotalInvoicedTo(undefined);
+    setDebtFrom(undefined);
+    setDebtTo(undefined);
+    setPurchasedSort("none");
+    setDebtSort("none");
+    setIsActive("true");
     onFiltersChange({
       pageSize: filters.pageSize ?? 15,
       currentItem: 0,
@@ -535,6 +640,52 @@ export function SuppliersSidebar({
       includeSupplierGroup: true,
     });
   };
+
+  // Debounce emit filters (giống CustomersSidebar)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const f: SupplierFilters = {
+        pageSize: filters.pageSize ?? 15,
+        currentItem: 0,
+        orderBy:
+          purchasedSort !== "none"
+            ? "totalInvoiced"
+            : debtSort !== "none"
+              ? "debt"
+              : "createdAt",
+        orderDirection:
+          purchasedSort !== "none"
+            ? purchasedSort
+            : debtSort !== "none"
+              ? debtSort
+              : "desc",
+        includeSupplierGroup: true,
+        // Giữ nguyên date filters từ filters prop (vẫn apply immediate)
+        createdDateFrom: filters.createdDateFrom,
+        createdDateTo: filters.createdDateTo,
+      };
+
+      if (filters.groupId) f.groupId = filters.groupId;
+      if (isActive === "true") f.isActive = true;
+      else if (isActive === "false") f.isActive = false;
+      if (totalInvoicedFrom !== undefined)
+        f.totalInvoicedFrom = totalInvoicedFrom;
+      if (totalInvoicedTo !== undefined) f.totalInvoicedTo = totalInvoicedTo;
+      if (debtFrom !== undefined) f.debtFrom = debtFrom;
+      if (debtTo !== undefined) f.debtTo = debtTo;
+
+      onFiltersChange(f);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [
+    isActive,
+    totalInvoicedFrom,
+    totalInvoicedTo,
+    debtFrom,
+    debtTo,
+    purchasedSort,
+    debtSort,
+  ]);
 
   return (
     <aside className="w-72 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
@@ -713,74 +864,40 @@ export function SuppliersSidebar({
 
         <div className="border-t border-gray-100" />
 
-        {/* ── Sắp xếp ── */}
-        <div>
-          <label className="text-sm font-medium text-gray-700 mb-2 block">
-            Sắp xếp
-          </label>
-          <div className="space-y-1.5">
-            <SimpleDropdown
-              options={ORDER_BY_OPTIONS}
-              value={filters.orderBy || "createdAt"}
-              placeholder="Ngày tạo"
-              onChange={(v) =>
-                onFiltersChange({
-                  ...filters,
-                  orderBy: v || "createdAt",
-                  currentItem: 0,
-                })
-              }
-            />
-            <SimpleDropdown
-              options={ORDER_DIR_OPTIONS}
-              value={filters.orderDirection || "desc"}
-              placeholder="Giảm dần"
-              onChange={(v) =>
-                onFiltersChange({
-                  ...filters,
-                  orderDirection: (v || "desc") as "asc" | "desc",
-                  currentItem: 0,
-                })
-              }
-            />
-          </div>
-        </div>
-
-        <div className="border-t border-gray-100" />
-
         {/* ── Tổng mua ── */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-2 block">
-            Tổng mua
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-700">
+              Tổng mua
+            </label>
+            <SortDropdown
+              value={purchasedSort}
+              onChange={handlePurchasedSort}
+            />
+          </div>
           <div className="flex gap-2">
-            {(["from", "to"] as const).map((f) => {
-              const isFrom = f === "from";
-              const val = isFrom ? totalInvoicedFrom : totalInvoicedTo;
-              const setVal = isFrom ? setTotalInvoicedFrom : setTotalInvoicedTo;
-              return (
-                <input
-                  key={f}
-                  type="number"
-                  placeholder={isFrom ? "Từ" : "Đến"}
-                  className="flex-1 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
-                  value={val}
-                  onChange={(e) => setVal(e.target.value)}
-                  onBlur={() =>
-                    onFiltersChange({
-                      ...filters,
-                      totalInvoicedFrom: totalInvoicedFrom
-                        ? Number(totalInvoicedFrom)
-                        : undefined,
-                      totalInvoicedTo: totalInvoicedTo
-                        ? Number(totalInvoicedTo)
-                        : undefined,
-                      currentItem: 0,
-                    })
-                  }
-                />
-              );
-            })}
+            <input
+              type="number"
+              placeholder="Từ"
+              className="w-1/2 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={totalInvoicedFrom ?? ""}
+              onChange={(e) =>
+                setTotalInvoicedFrom(
+                  e.target.value ? Number(e.target.value) : undefined
+                )
+              }
+            />
+            <input
+              type="number"
+              placeholder="Đến"
+              className="w-1/2 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={totalInvoicedTo ?? ""}
+              onChange={(e) =>
+                setTotalInvoicedTo(
+                  e.target.value ? Number(e.target.value) : undefined
+                )
+              }
+            />
           </div>
         </div>
 
@@ -788,63 +905,47 @@ export function SuppliersSidebar({
 
         {/* ── Nợ hiện tại ── */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-2 block">
-            Nợ hiện tại
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-700">
+              Nợ hiện tại
+            </label>
+            <SortDropdown value={debtSort} onChange={handleDebtSort} />
+          </div>
           <div className="flex gap-2">
-            {(["from", "to"] as const).map((f) => {
-              const isFrom = f === "from";
-              const val = isFrom ? debtFrom : debtTo;
-              const setVal = isFrom ? setDebtFrom : setDebtTo;
-              return (
-                <input
-                  key={f}
-                  type="number"
-                  placeholder={isFrom ? "Từ" : "Đến"}
-                  className="flex-1 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
-                  value={val}
-                  onChange={(e) => setVal(e.target.value)}
-                  onBlur={() =>
-                    onFiltersChange({
-                      ...filters,
-                      debtFrom: debtFrom ? Number(debtFrom) : undefined,
-                      debtTo: debtTo ? Number(debtTo) : undefined,
-                      currentItem: 0,
-                    })
-                  }
-                />
-              );
-            })}
+            <input
+              type="number"
+              placeholder="Từ"
+              className="w-1/2 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={debtFrom ?? ""}
+              onChange={(e) =>
+                setDebtFrom(e.target.value ? Number(e.target.value) : undefined)
+              }
+            />
+            <input
+              type="number"
+              placeholder="Đến"
+              className="w-1/2 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={debtTo ?? ""}
+              onChange={(e) =>
+                setDebtTo(e.target.value ? Number(e.target.value) : undefined)
+              }
+            />
           </div>
         </div>
 
         <div className="border-t border-gray-100" />
 
         {/* ── Trạng thái ── */}
-        <div>
-          <label className="text-sm font-medium text-gray-700 mb-2 block">
-            Trạng thái
-          </label>
-          <SimpleDropdown
-            options={STATUS_OPTIONS}
-            value={
-              filters.isActive === true
-                ? "true"
-                : filters.isActive === false
-                  ? "false"
-                  : ""
-            }
-            placeholder="Tất cả"
-            onChange={(v) =>
-              onFiltersChange({
-                ...filters,
-                isActive:
-                  v === "true" ? true : v === "false" ? false : undefined,
-                currentItem: 0,
-              })
-            }
-          />
-        </div>
+        <StatusButtons
+          label="Trạng thái"
+          options={[
+            { value: "true", label: "Đang hoạt động" },
+            { value: "false", label: "Ngừng HĐ" },
+            { value: "all", label: "Tất cả" },
+          ]}
+          value={isActive}
+          onChange={setIsActive}
+        />
       </div>
 
       {/* PresetPanel portal */}
