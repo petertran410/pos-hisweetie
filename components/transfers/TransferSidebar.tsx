@@ -47,6 +47,10 @@ const STATUS_OPTIONS = [
 
 const PRESET_GROUPS = [
   {
+    label: "Tất cả",
+    options: [{ value: "all_time", label: "Toàn thời gian" }],
+  },
+  {
     label: "Theo ngày",
     options: [
       { value: "today", label: "Hôm nay" },
@@ -84,6 +88,7 @@ const PRESET_GROUPS = [
 ];
 
 const PRESET_LABELS: Record<string, string> = {
+  all_time: "Toàn thời gian",
   today: "Hôm nay",
   yesterday: "Hôm qua",
   this_week: "Tuần này",
@@ -94,7 +99,6 @@ const PRESET_LABELS: Record<string, string> = {
   last_30_days: "30 ngày qua",
   this_year: "Năm nay",
   last_year: "Năm trước",
-  all_time: "Tất cả",
 };
 
 const MONTH_NAMES = [
@@ -114,10 +118,14 @@ const MONTH_NAMES = [
 const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const getDateRangeFromPreset = (preset: string): { from: Date; to: Date } => {
+const getDateRangeFromPreset = (
+  preset: string
+): { from: Date; to: Date } | null => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   switch (preset) {
+    case "all_time":
+      return null;
     case "today":
       return { from: today, to: now };
     case "yesterday": {
@@ -515,14 +523,14 @@ export function TransferSidebar({
   const [transferDateMode, setTransferDateMode] = useState<"preset" | "custom">(
     "preset"
   );
-  const [transferPreset, setTransferPreset] = useState("this_month");
+  const [transferPreset, setTransferPreset] = useState("all_time");
   const [transferFromDate, setTransferFromDate] = useState("");
   const [transferToDate, setTransferToDate] = useState("");
 
   const [receiveDateMode, setReceiveDateMode] = useState<"preset" | "custom">(
     "preset"
   );
-  const [receivePreset, setReceivePreset] = useState("this_month");
+  const [receivePreset, setReceivePreset] = useState("all_time");
   const [receiveFromDate, setReceiveFromDate] = useState("");
   const [receiveToDate, setReceiveToDate] = useState("");
 
@@ -585,9 +593,11 @@ export function TransferSidebar({
                 from: new Date(transferFromDate + "T00:00:00"),
                 to: new Date(transferToDate + "T23:59:59"),
               }
-            : getDateRangeFromPreset("this_month");
-      f.fromTransferDate = transferRange.from.toISOString();
-      f.toTransferDate = transferRange.to.toISOString();
+            : null;
+      if (transferRange) {
+        f.fromTransferDate = transferRange.from.toISOString();
+        f.toTransferDate = transferRange.to.toISOString();
+      }
 
       const receiveRange =
         receiveDateMode === "preset"
@@ -597,9 +607,11 @@ export function TransferSidebar({
                 from: new Date(receiveFromDate + "T00:00:00"),
                 to: new Date(receiveToDate + "T23:59:59"),
               }
-            : getDateRangeFromPreset("this_month");
-      f.fromReceivedDate = receiveRange.from.toISOString();
-      f.toReceivedDate = receiveRange.to.toISOString();
+            : null;
+      if (receiveRange) {
+        f.fromReceivedDate = receiveRange.from.toISOString();
+        f.toReceivedDate = receiveRange.to.toISOString();
+      }
 
       onFiltersChange(f);
     }, 300);

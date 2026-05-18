@@ -227,9 +227,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
   const fromBranchOptions = activeBranches.filter((b) => b.id !== toBranchId);
   const toBranchOptions = activeBranches.filter((b) => b.id !== fromBranchId);
 
-  const totalSendQty = products.reduce((s, p) => s + p.sendQuantity, 0);
-  const totalValue = products.reduce((s, p) => s + p.sendQuantity * p.price, 0);
-
   useEffect(() => {
     if (transfer?.details && fromBranchId && toBranchId) {
       const abortController = new AbortController();
@@ -460,25 +457,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
       updated[index].sendQuantity = quantity;
       return updated;
     });
-  };
-
-  const handleChangePrice = (index: number, value: string) => {
-    const price = parseFloat(value) || 0;
-
-    if (price < 0) {
-      toast.error("Đơn giá không được nhỏ hơn 0");
-      return;
-    }
-
-    setProducts((prev) => {
-      const updated = [...prev];
-      updated[index].price = price;
-      return updated;
-    });
-  };
-
-  const handleRemoveProduct = (index: number) => {
-    setProducts((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (isDraft: boolean) => {
@@ -958,11 +936,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                               <input
                                 type="text"
                                 inputMode="numeric"
-                                value={
-                                  item.price === 0
-                                    ? ""
-                                    : formatNumberInput(String(item.price))
-                                }
+                                value={formatCurrency(item.price)}
                                 placeholder="0"
                                 onChange={(e) => {
                                   const price = parseNumberInput(
@@ -1091,6 +1065,19 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
               <>
                 {isDraft && (
                   <>
+                    <button
+                      onClick={() => setShowCancelConfirm(true)}
+                      disabled={cancelTransfer.isPending}
+                      className="px-5 py-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg hover:bg-red-100 text-sm font-medium transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                      {cancelTransfer.isPending ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                          Đang hủy...
+                        </>
+                      ) : (
+                        "Hủy phiếu"
+                      )}
+                    </button>
                     <button
                       onClick={() => handleSubmit(true)}
                       disabled={
