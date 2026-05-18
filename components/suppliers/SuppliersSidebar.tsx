@@ -1,470 +1,867 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Check,
+  Calendar,
+} from "lucide-react";
 import { useSupplierGroups } from "@/lib/hooks/useSuppliers";
-import { SupplierFilters } from "@/lib/types/supplier";
+import { SupplierFilters, SupplierGroup } from "@/lib/types/supplier";
 import { SupplierGroupModal } from "./SupplierGroupModal";
-import { SupplierGroup } from "@/lib/types/supplier";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+const MONTH_NAMES = [
+  "Tháng 1",
+  "Tháng 2",
+  "Tháng 3",
+  "Tháng 4",
+  "Tháng 5",
+  "Tháng 6",
+  "Tháng 7",
+  "Tháng 8",
+  "Tháng 9",
+  "Tháng 10",
+  "Tháng 11",
+  "Tháng 12",
+];
+
+const PRESET_GROUPS = [
+  {
+    label: "Tất cả",
+    options: [{ label: "Toàn thời gian", value: "all_time" }],
+  },
+  {
+    label: "Theo ngày",
+    options: [
+      { label: "Hôm nay", value: "today" },
+      { label: "Hôm qua", value: "yesterday" },
+    ],
+  },
+  {
+    label: "Theo tuần",
+    options: [
+      { label: "Tuần này", value: "this_week" },
+      { label: "Tuần trước", value: "last_week" },
+    ],
+  },
+  {
+    label: "Theo tháng",
+    options: [
+      { label: "Tháng này", value: "this_month" },
+      { label: "Tháng trước", value: "last_month" },
+      { label: "30 ngày qua", value: "last_30_days" },
+    ],
+  },
+  {
+    label: "Theo quý",
+    options: [
+      { label: "Quý này", value: "this_quarter" },
+      { label: "Quý trước", value: "last_quarter" },
+    ],
+  },
+  {
+    label: "Theo năm",
+    options: [
+      { label: "Năm này", value: "this_year" },
+      { label: "Năm trước", value: "last_year" },
+    ],
+  },
+];
+
+const PRESET_LABELS: Record<string, string> = {
+  all_time: "Toàn thời gian",
+  today: "Hôm nay",
+  yesterday: "Hôm qua",
+  this_week: "Tuần này",
+  last_week: "Tuần trước",
+  this_month: "Tháng này",
+  last_month: "Tháng trước",
+  last_30_days: "30 ngày qua",
+  this_quarter: "Quý này",
+  last_quarter: "Quý trước",
+  this_year: "Năm này",
+  last_year: "Năm trước",
+};
+
+function getDateRangeFromPreset(
+  preset: string
+): { from: Date; to: Date } | null {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (preset) {
+    case "all_time":
+      return null;
+    case "today":
+      return { from: today, to: now };
+    case "yesterday": {
+      const y = new Date(today);
+      y.setDate(today.getDate() - 1);
+      return { from: y, to: new Date(y.getTime() + 86399999) };
+    }
+    case "this_week": {
+      const s = new Date(today);
+      s.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      return { from: s, to: now };
+    }
+    case "last_week": {
+      const e = new Date(today);
+      e.setDate(today.getDate() - ((today.getDay() + 6) % 7) - 1);
+      const s = new Date(e);
+      s.setDate(e.getDate() - 6);
+      return { from: s, to: e };
+    }
+    case "last_7_days":
+      return { from: new Date(today.getTime() - 7 * 86400000), to: now };
+    case "this_month":
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+    case "last_month":
+      return {
+        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+        to: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59),
+      };
+    case "last_30_days":
+      return { from: new Date(today.getTime() - 30 * 86400000), to: now };
+    case "this_quarter": {
+      const q = Math.floor(now.getMonth() / 3);
+      return { from: new Date(now.getFullYear(), q * 3, 1), to: now };
+    }
+    case "last_quarter": {
+      const q = Math.floor(now.getMonth() / 3);
+      return {
+        from: new Date(now.getFullYear(), (q - 1) * 3, 1),
+        to: new Date(now.getFullYear(), q * 3, 0, 23, 59, 59),
+      };
+    }
+    case "this_year":
+      return { from: new Date(now.getFullYear(), 0, 1), to: now };
+    case "last_year":
+      return {
+        from: new Date(now.getFullYear() - 1, 0, 1),
+        to: new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59),
+      };
+    default:
+      return null;
+  }
+}
+
+// ─── SimpleDropdown ───────────────────────────────────────────────────────────
+interface SimpleOption {
+  value: string;
+  label: string;
+}
+
+function SimpleDropdown({
+  options,
+  value,
+  placeholder,
+  onChange,
+}: {
+  options: SimpleOption[];
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = options.find((o) => o.value === value);
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all bg-white ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "hover:border-gray-400"
+        }`}>
+        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+            className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${!value ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-gray-50 text-gray-500"}`}>
+            <span>{placeholder}</span>
+            {!value && <Check className="w-3.5 h-3.5 text-blue-500" />}
+          </button>
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(value === opt.value ? "" : opt.value);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors border-t border-gray-50 ${
+                value === opt.value
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "hover:bg-gray-50 text-gray-700"
+              }`}>
+              <span className="truncate">{opt.label}</span>
+              {value === opt.value && (
+                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PresetPanel (portal) ─────────────────────────────────────────────────────
+function PresetPanel({
+  groups,
+  selected,
+  onSelect,
+  onClose,
+  anchorRect,
+  triggerRef,
+}: {
+  groups: typeof PRESET_GROUPS;
+  selected: string;
+  onSelect: (v: string) => void;
+  onClose: () => void;
+  anchorRect: DOMRect | null;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (
+        !ref.current?.contains(e.target as Node) &&
+        !triggerRef.current?.contains(e.target as Node)
+      )
+        onClose();
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [onClose, triggerRef]);
+
+  if (!anchorRect || typeof window === "undefined") return null;
+  return createPortal(
+    <div
+      ref={ref}
+      style={{
+        position: "fixed",
+        top: anchorRect.top,
+        left: anchorRect.right + 8,
+        zIndex: 9999,
+      }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 flex gap-5 animate-in fade-in zoom-in-95 duration-150">
+      {groups.map((group) => (
+        <div key={group.label} className="flex flex-col gap-1.5 min-w-[88px]">
+          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+            {group.label}
+          </span>
+          {group.options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onSelect(opt.value);
+                onClose();
+              }}
+              className={`px-3 py-1.5 rounded-full text-sm border transition-all whitespace-nowrap text-left ${
+                selected === opt.value
+                  ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
+                  : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+              }`}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
+// ─── MiniCalendar ─────────────────────────────────────────────────────────────
+function MiniCalendar({
+  value,
+  onChange,
+  onClose,
+  minDate,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onClose: () => void;
+  minDate?: string;
+}) {
+  const today = new Date();
+  const todayObj = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+  const [viewYear, setViewYear] = useState(
+    value ? new Date(value + "T00:00:00").getFullYear() : today.getFullYear()
+  );
+  const [viewMonth, setViewMonth] = useState(
+    value ? new Date(value + "T00:00:00").getMonth() : today.getMonth()
+  );
+
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const startOffset = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
+  const cells: (number | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const fmt = (d: number) =>
+    `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const prev = () =>
+    viewMonth === 0
+      ? (setViewMonth(11), setViewYear((y) => y - 1))
+      : setViewMonth((m) => m - 1);
+  const next = () =>
+    viewMonth === 11
+      ? (setViewMonth(0), setViewYear((y) => y + 1))
+      : setViewMonth((m) => m + 1);
+
+  return (
+    <div className="mt-2 bg-white border border-gray-200 rounded-xl p-3 shadow-sm select-none">
+      <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          onClick={prev}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-semibold text-gray-800">
+          {MONTH_NAMES[viewMonth]} {viewYear}
+        </span>
+        <button
+          type="button"
+          onClick={next}
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {DAY_NAMES.map((d) => (
+          <div
+            key={d}
+            className="text-center text-[10px] font-medium text-gray-400 py-0.5">
+            {d}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} className="aspect-square" />;
+          const ds = fmt(day);
+          const isSel = value === ds;
+          const isToday =
+            todayObj.getFullYear() === viewYear &&
+            todayObj.getMonth() === viewMonth &&
+            todayObj.getDate() === day;
+          const isDisabled = minDate ? ds < minDate : false;
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => {
+                onChange(ds);
+                onClose();
+              }}
+              className={`aspect-square rounded-full text-xs flex items-center justify-center transition-all ${
+                isSel
+                  ? "bg-blue-600 text-white font-semibold"
+                  : isToday
+                    ? "bg-blue-100 text-blue-700 font-semibold"
+                    : isDisabled
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-700 hover:bg-gray-100"
+              }`}>
+              {day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Sort options ─────────────────────────────────────────────────────────────
+const ORDER_BY_OPTIONS: SimpleOption[] = [
+  { value: "createdAt", label: "Ngày tạo" },
+  { value: "name", label: "Tên nhà cung cấp" },
+  { value: "debt", label: "Nợ hiện tại" },
+  { value: "totalInvoiced", label: "Tổng mua" },
+];
+const ORDER_DIR_OPTIONS: SimpleOption[] = [
+  { value: "desc", label: "Giảm dần" },
+  { value: "asc", label: "Tăng dần" },
+];
+const STATUS_OPTIONS: SimpleOption[] = [
+  { value: "true", label: "Đang hoạt động" },
+  { value: "false", label: "Ngừng hoạt động" },
+];
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 interface SuppliersSidebarProps {
   filters: SupplierFilters;
-  setFilters: (filters: Partial<SupplierFilters>) => void;
+  onFiltersChange: (filters: SupplierFilters) => void;
 }
 
 export function SuppliersSidebar({
   filters,
-  setFilters,
+  onFiltersChange,
 }: SuppliersSidebarProps) {
   const { data: groupsData } = useSupplierGroups();
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<SupplierGroup | undefined>();
-  const [showTimeOptions, setShowTimeOptions] = useState(false);
-  const [selectedTimeOption, setSelectedTimeOption] = useState<string>("all");
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [showGroupDropdown, setShowGroupDropdown] = useState(false);
+
+  // Date
+  const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
+  const [selectedPreset, setSelectedPreset] = useState("all_time");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [showPresetPanel, setShowPresetPanel] = useState(false);
+  const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
+  const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
+
+  // Range inputs — local string state, applied on blur
+  const [totalInvoicedFrom, setTotalInvoicedFrom] = useState(
+    filters.totalInvoicedFrom !== undefined
+      ? String(filters.totalInvoicedFrom)
+      : ""
+  );
+  const [totalInvoicedTo, setTotalInvoicedTo] = useState(
+    filters.totalInvoicedTo !== undefined ? String(filters.totalInvoicedTo) : ""
+  );
+  const [debtFrom, setDebtFrom] = useState(
+    filters.debtFrom !== undefined ? String(filters.debtFrom) : ""
+  );
+  const [debtTo, setDebtTo] = useState(
+    filters.debtTo !== undefined ? String(filters.debtTo) : ""
+  );
+
+  const presetRowRef = useRef<HTMLDivElement>(null);
+  const customDateRef = useRef<HTMLDivElement>(null);
+
+  const groupOptions = useMemo<SimpleOption[]>(
+    () =>
+      groupsData?.data?.map((g: SupplierGroup) => ({
+        value: String(g.id),
+        label: g.name,
+      })) ?? [],
+    [groupsData]
+  );
+
+  // Đóng MiniCalendar khi click ngoài
+  useEffect(() => {
+    if (!openCal) return;
+    const h = (e: MouseEvent) => {
+      if (
+        customDateRef.current &&
+        !customDateRef.current.contains(e.target as Node)
+      )
+        setOpenCal(null);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [openCal]);
+
+  const applyPreset = (preset: string) => {
+    const range = getDateRangeFromPreset(preset);
+    onFiltersChange({
+      ...filters,
+      createdDateFrom: range?.from.toISOString(),
+      createdDateTo: range?.to.toISOString(),
+      currentItem: 0,
+    });
+  };
+
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (filters.groupId) n++;
+    if (filters.createdDateFrom) n++;
+    if (
+      filters.totalInvoicedFrom !== undefined ||
+      filters.totalInvoicedTo !== undefined
+    )
+      n++;
+    if (filters.debtFrom !== undefined || filters.debtTo !== undefined) n++;
+    if (filters.isActive !== true) n++;
+    if (filters.orderBy !== "createdAt" || filters.orderDirection !== "desc")
+      n++;
+    return n;
+  }, [filters]);
 
   const resetFilters = () => {
-    setFilters({
-      pageSize: 15,
+    setDateMode("preset");
+    setSelectedPreset("all_time");
+    setFromDate("");
+    setToDate("");
+    setTotalInvoicedFrom("");
+    setTotalInvoicedTo("");
+    setDebtFrom("");
+    setDebtTo("");
+    onFiltersChange({
+      pageSize: filters.pageSize ?? 15,
       currentItem: 0,
       orderBy: "createdAt",
       orderDirection: "desc",
       isActive: true,
-      groupId: undefined,
-      createdDateFrom: undefined,
-      createdDateTo: undefined,
-      totalInvoicedFrom: undefined,
-      totalInvoicedTo: undefined,
-      debtFrom: undefined,
-      debtTo: undefined,
-    });
-    setSelectedTimeOption("all");
-    setDateFrom("");
-    setDateTo("");
-  };
-
-  const handleTimeOptionSelect = (option: string) => {
-    setSelectedTimeOption(option);
-    setShowTimeOptions(false);
-
-    const now = new Date();
-    let from: Date | undefined;
-    let to: Date | undefined;
-
-    switch (option) {
-      case "today":
-        from = new Date(now.setHours(0, 0, 0, 0));
-        to = new Date(now.setHours(23, 59, 59, 999));
-        break;
-      case "yesterday":
-        from = new Date(now.setDate(now.getDate() - 1));
-        from.setHours(0, 0, 0, 0);
-        to = new Date(from);
-        to.setHours(23, 59, 59, 999);
-        break;
-      case "thisWeek":
-        from = new Date(now.setDate(now.getDate() - now.getDay()));
-        from.setHours(0, 0, 0, 0);
-        to = new Date();
-        break;
-      case "lastWeek":
-        from = new Date(now.setDate(now.getDate() - now.getDay() - 7));
-        from.setHours(0, 0, 0, 0);
-        to = new Date(now.setDate(now.getDate() - now.getDay() - 1));
-        to.setHours(23, 59, 59, 999);
-        break;
-      case "last7Days":
-        from = new Date(now.setDate(now.getDate() - 7));
-        from.setHours(0, 0, 0, 0);
-        to = new Date();
-        break;
-      case "thisMonth":
-        from = new Date(now.getFullYear(), now.getMonth(), 1);
-        to = new Date();
-        break;
-      case "lastMonth":
-        from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        to = new Date(now.getFullYear(), now.getMonth(), 0);
-        to.setHours(23, 59, 59, 999);
-        break;
-      case "last30Days":
-        from = new Date(now.setDate(now.getDate() - 30));
-        from.setHours(0, 0, 0, 0);
-        to = new Date();
-        break;
-      case "thisQuarter":
-        const quarter = Math.floor(now.getMonth() / 3);
-        from = new Date(now.getFullYear(), quarter * 3, 1);
-        to = new Date();
-        break;
-      case "lastQuarter":
-        const lastQ = Math.floor(now.getMonth() / 3) - 1;
-        from = new Date(now.getFullYear(), lastQ * 3, 1);
-        to = new Date(now.getFullYear(), lastQ * 3 + 3, 0);
-        to.setHours(23, 59, 59, 999);
-        break;
-      case "thisYear":
-        from = new Date(now.getFullYear(), 0, 1);
-        to = new Date();
-        break;
-      case "lastYear":
-        from = new Date(now.getFullYear() - 1, 0, 1);
-        to = new Date(now.getFullYear() - 1, 11, 31);
-        to.setHours(23, 59, 59, 999);
-        break;
-      case "all":
-      default:
-        from = undefined;
-        to = undefined;
-        break;
-    }
-
-    setFilters({
-      createdDateFrom: from?.toISOString(),
-      createdDateTo: to?.toISOString(),
+      includeSupplierGroup: true,
     });
   };
-
-  const handleCustomDateApply = () => {
-    if (dateFrom && dateTo) {
-      const from = new Date(dateFrom);
-      from.setHours(0, 0, 0, 0);
-      const to = new Date(dateTo);
-      to.setHours(23, 59, 59, 999);
-
-      setFilters({
-        createdDateFrom: from.toISOString(),
-        createdDateTo: to.toISOString(),
-      });
-      setShowDatePicker(false);
-      setSelectedTimeOption("custom");
-    }
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowGroupDropdown(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   return (
-    <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-md font-medium">Nhóm nhà cung cấp</label>
+    <aside className="w-72 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-xl">
+        <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
+        {activeFilterCount > 0 && (
           <button
             onClick={resetFilters}
-            className="text-sm text-blue-600 hover:underline">
-            Tạo mới
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            Xóa tất cả
           </button>
-        </div>
-        <div className="flex gap-3">
-          <select
-            className="flex-1 border rounded-md px-3 py-2 text-sm"
-            value={filters.groupId || ""}
-            onChange={(e) =>
-              setFilters({
-                groupId: e.target.value ? Number(e.target.value) : undefined,
-              })
-            }>
-            <option value="">Tất cả các nhóm</option>
-            {groupsData?.data &&
-              Array.isArray(groupsData.data) &&
-              groupsData.data.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-          </select>
-          <button
-            onClick={() => setShowGroupModal(true)}
-            className="px-3 py-2 border rounded hover:bg-gray-50">
-            +
-          </button>
-        </div>
+        )}
       </div>
 
-      <div>
-        <label className="text-sm font-medium mb-2 block">Tổng mua</label>
-        <div className="space-y-2">
-          <input
-            type="number"
-            placeholder="Từ"
-            className="w-full border rounded px-3 py-2 text-sm"
-            value={filters.totalInvoicedFrom || ""}
-            onChange={(e) =>
-              setFilters({
-                totalInvoicedFrom: e.target.value
-                  ? Number(e.target.value)
-                  : undefined,
-              })
-            }
-          />
-          <input
-            type="number"
-            placeholder="Đến"
-            className="w-full border rounded px-3 py-2 text-sm"
-            value={filters.totalInvoicedTo || ""}
-            onChange={(e) =>
-              setFilters({
-                totalInvoicedTo: e.target.value
-                  ? Number(e.target.value)
-                  : undefined,
-              })
-            }
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="text-sm font-medium mb-2 block">Thời gian</label>
-        <div className="space-y-2">
-          <button
-            onClick={() => setShowTimeOptions(!showTimeOptions)}
-            className="w-full border rounded px-3 py-2 text-sm text-left hover:bg-gray-50 flex items-center justify-between">
-            <span>
-              {selectedTimeOption === "all" && "Toàn thời gian"}
-              {selectedTimeOption === "today" && "Hôm nay"}
-              {selectedTimeOption === "yesterday" && "Hôm qua"}
-              {selectedTimeOption === "thisWeek" && "Tuần này"}
-              {selectedTimeOption === "lastWeek" && "Tuần trước"}
-              {selectedTimeOption === "last7Days" && "7 ngày qua"}
-              {selectedTimeOption === "thisMonth" && "Tháng này"}
-              {selectedTimeOption === "lastMonth" && "Tháng trước"}
-              {selectedTimeOption === "last30Days" && "30 ngày qua"}
-              {selectedTimeOption === "thisQuarter" && "Quý này"}
-              {selectedTimeOption === "lastQuarter" && "Quý trước"}
-              {selectedTimeOption === "thisYear" && "Năm này"}
-              {selectedTimeOption === "lastYear" && "Năm trước"}
-              {selectedTimeOption === "custom" && `${dateFrom} - ${dateTo}`}
-            </span>
-            <svg
-              className={`w-4 h-4 transition-transform ${
-                showTimeOptions ? "rotate-180" : ""
-              }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
+      <div className="p-4 space-y-3 overflow-y-auto flex-1">
+        {/* ── Thời gian ── */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">
+            Thời gian tạo
+          </label>
+          <div className="space-y-1.5">
+            {/* Preset row */}
+            <div
+              ref={presetRowRef}
+              onClick={() => {
+                setDateMode("preset");
+                setOpenCal(null);
+                if (showPresetPanel) {
+                  setShowPresetPanel(false);
+                } else {
+                  setPanelAnchorRect(
+                    presetRowRef.current?.getBoundingClientRect() ?? null
+                  );
+                  setShowPresetPanel(true);
+                }
+              }}
+              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
+                dateMode === "preset"
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <div
+                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${dateMode === "preset" ? "border-blue-600" : "border-gray-300"}`}>
+                {dateMode === "preset" && (
+                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                )}
+              </div>
+              <span className="text-sm text-gray-700 flex-1 font-medium">
+                {PRESET_LABELS[selectedPreset] ?? "Chọn thời gian"}
+              </span>
+              <ChevronRight
+                className={`w-4 h-4 flex-shrink-0 ${showPresetPanel ? "text-blue-500" : "text-gray-400"}`}
               />
-            </svg>
-          </button>
-
-          {showTimeOptions && (
-            <div className="absolute z-10 w-56 bg-white border rounded-lg shadow-lg">
-              <div className="p-2 space-y-1">
-                <div className="font-medium text-xs text-gray-500 px-2 py-1">
-                  Theo ngày
-                </div>
-                <button
-                  onClick={() => handleTimeOptionSelect("today")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  Hôm nay
-                </button>
-                <button
-                  onClick={() => handleTimeOptionSelect("yesterday")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  Hôm qua
-                </button>
-
-                <div className="font-medium text-xs text-gray-500 px-2 py-1 mt-2">
-                  Theo tuần
-                </div>
-                <button
-                  onClick={() => handleTimeOptionSelect("thisWeek")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  Tuần này
-                </button>
-                <button
-                  onClick={() => handleTimeOptionSelect("lastWeek")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  Tuần trước
-                </button>
-                <button
-                  onClick={() => handleTimeOptionSelect("last7Days")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  7 ngày qua
-                </button>
-
-                <div className="font-medium text-xs text-gray-500 px-2 py-1 mt-2">
-                  Theo tháng
-                </div>
-                <button
-                  onClick={() => handleTimeOptionSelect("thisMonth")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  Tháng này
-                </button>
-                <button
-                  onClick={() => handleTimeOptionSelect("lastMonth")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  Tháng trước
-                </button>
-                <button
-                  onClick={() => handleTimeOptionSelect("last30Days")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  30 ngày qua
-                </button>
-
-                <div className="font-medium text-xs text-gray-500 px-2 py-1 mt-2">
-                  Theo quý
-                </div>
-                <button
-                  onClick={() => handleTimeOptionSelect("thisQuarter")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  Quý này
-                </button>
-                <button
-                  onClick={() => handleTimeOptionSelect("lastQuarter")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  Quý trước
-                </button>
-
-                <div className="font-medium text-xs text-gray-500 px-2 py-1 mt-2">
-                  Theo năm
-                </div>
-                <button
-                  onClick={() => handleTimeOptionSelect("thisYear")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  Năm này
-                </button>
-                <button
-                  onClick={() => handleTimeOptionSelect("lastYear")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded">
-                  Năm trước
-                </button>
-
-                <div className="border-t my-1"></div>
-                <button
-                  onClick={() => handleTimeOptionSelect("all")}
-                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-50 rounded font-medium">
-                  Toàn thời gian
-                </button>
-              </div>
             </div>
-          )}
 
-          <button
-            onClick={() => setShowDatePicker(!showDatePicker)}
-            className="w-full border rounded px-3 py-2 text-sm text-left hover:bg-gray-50">
-            Tùy chỉnh
-          </button>
-
-          {showDatePicker && (
-            <div className="border rounded p-3 space-y-2">
-              <div>
-                <label className="block text-xs font-medium mb-1">
-                  Từ ngày
-                </label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full border rounded px-2 py-1 text-sm"
-                />
+            {/* Tùy chỉnh row */}
+            <div
+              onClick={() => {
+                setDateMode("custom");
+                setShowPresetPanel(false);
+              }}
+              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
+                dateMode === "custom"
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <div
+                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${dateMode === "custom" ? "border-blue-600" : "border-gray-300"}`}>
+                {dateMode === "custom" && (
+                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                )}
               </div>
-              <div>
-                <label className="block text-xs font-medium mb-1">
-                  Đến ngày
-                </label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full border rounded px-2 py-1 text-sm"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowDatePicker(false)}
-                  className="flex-1 px-2 py-1 border rounded text-sm hover:bg-gray-50">
-                  Bỏ qua
-                </button>
-                <button
-                  onClick={handleCustomDateApply}
-                  className="flex-1 px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-                  Áp dụng
-                </button>
-              </div>
+              <span className="text-sm text-gray-700 flex-1 font-medium">
+                Tùy chỉnh
+              </span>
             </div>
-          )}
+
+            {dateMode === "custom" && (
+              <div className="space-y-1.5 pl-1" ref={customDateRef}>
+                {(["from", "to"] as const).map((field) => {
+                  const isFrom = field === "from";
+                  const val = isFrom ? fromDate : toDate;
+                  const setVal = isFrom ? setFromDate : setToDate;
+                  const isOpen = openCal === field;
+                  return (
+                    <div key={field}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenCal(isOpen ? null : field)}
+                        className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all ${
+                          val
+                            ? "border-blue-300 bg-blue-50 text-gray-800"
+                            : "border-gray-200 text-gray-400"
+                        } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                        <span>
+                          {val
+                            ? new Date(val + "T00:00:00").toLocaleDateString(
+                                "vi-VN",
+                                {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                }
+                              )
+                            : isFrom
+                              ? "Từ ngày"
+                              : "Đến ngày"}
+                        </span>
+                        <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      </button>
+                      {isOpen && (
+                        <MiniCalendar
+                          value={val}
+                          onChange={(v) => {
+                            setVal(v);
+                            const newFrom = isFrom ? v : fromDate;
+                            const newTo = isFrom ? toDate : v;
+                            if (newFrom && newTo) {
+                              onFiltersChange({
+                                ...filters,
+                                createdDateFrom: new Date(
+                                  newFrom + "T00:00:00"
+                                ).toISOString(),
+                                createdDateTo: new Date(
+                                  newTo + "T23:59:59"
+                                ).toISOString(),
+                                currentItem: 0,
+                              });
+                            }
+                          }}
+                          onClose={() => setOpenCal(null)}
+                          minDate={
+                            field === "to" ? fromDate || undefined : undefined
+                          }
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div>
-        <label className="text-sm font-medium mb-2 block">Nợ hiện tại</label>
-        <div className="space-y-2">
-          <input
-            type="number"
-            placeholder="Từ"
-            className="w-full border rounded px-3 py-2 text-sm"
-            value={filters.debtFrom || ""}
-            onChange={(e) =>
-              setFilters({
-                debtFrom: e.target.value ? Number(e.target.value) : undefined,
-              })
-            }
-          />
-          <input
-            type="number"
-            placeholder="Đến"
-            className="w-full border rounded px-3 py-2 text-sm"
-            value={filters.debtTo || ""}
-            onChange={(e) =>
-              setFilters({
-                debtTo: e.target.value ? Number(e.target.value) : undefined,
+        <div className="border-t border-gray-100" />
+
+        {/* ── Nhóm nhà cung cấp ── */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-700">
+              Nhóm nhà cung cấp
+            </label>
+            <button
+              onClick={() => {
+                setEditingGroup(undefined);
+                setShowGroupModal(true);
+              }}
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+              Quản lý
+            </button>
+          </div>
+          <SimpleDropdown
+            options={groupOptions}
+            value={filters.groupId ? String(filters.groupId) : ""}
+            placeholder="Tất cả nhóm"
+            onChange={(v) =>
+              onFiltersChange({
+                ...filters,
+                groupId: v ? Number(v) : undefined,
+                currentItem: 0,
               })
             }
           />
         </div>
-      </div>
 
-      <div>
-        <label className="text-sm font-medium mb-2 block">Trạng thái</label>
-        <div className="space-y-2">
-          <button
-            onClick={() => setFilters({ isActive: undefined })}
-            className={`w-full px-3 py-2 rounded text-sm text-left ${
-              filters.isActive === undefined
-                ? "bg-blue-50 text-blue-600"
-                : "hover:bg-gray-50"
-            }`}>
-            Tất cả
-          </button>
-          <button
-            onClick={() => setFilters({ isActive: true })}
-            className={`w-full px-3 py-2 rounded text-sm text-left ${
+        <div className="border-t border-gray-100" />
+
+        {/* ── Sắp xếp ── */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">
+            Sắp xếp
+          </label>
+          <div className="space-y-1.5">
+            <SimpleDropdown
+              options={ORDER_BY_OPTIONS}
+              value={filters.orderBy || "createdAt"}
+              placeholder="Ngày tạo"
+              onChange={(v) =>
+                onFiltersChange({
+                  ...filters,
+                  orderBy: v || "createdAt",
+                  currentItem: 0,
+                })
+              }
+            />
+            <SimpleDropdown
+              options={ORDER_DIR_OPTIONS}
+              value={filters.orderDirection || "desc"}
+              placeholder="Giảm dần"
+              onChange={(v) =>
+                onFiltersChange({
+                  ...filters,
+                  orderDirection: (v || "desc") as "asc" | "desc",
+                  currentItem: 0,
+                })
+              }
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* ── Tổng mua ── */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">
+            Tổng mua
+          </label>
+          <div className="flex gap-2">
+            {(["from", "to"] as const).map((f) => {
+              const isFrom = f === "from";
+              const val = isFrom ? totalInvoicedFrom : totalInvoicedTo;
+              const setVal = isFrom ? setTotalInvoicedFrom : setTotalInvoicedTo;
+              return (
+                <input
+                  key={f}
+                  type="number"
+                  placeholder={isFrom ? "Từ" : "Đến"}
+                  className="flex-1 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                  value={val}
+                  onChange={(e) => setVal(e.target.value)}
+                  onBlur={() =>
+                    onFiltersChange({
+                      ...filters,
+                      totalInvoicedFrom: totalInvoicedFrom
+                        ? Number(totalInvoicedFrom)
+                        : undefined,
+                      totalInvoicedTo: totalInvoicedTo
+                        ? Number(totalInvoicedTo)
+                        : undefined,
+                      currentItem: 0,
+                    })
+                  }
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* ── Nợ hiện tại ── */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">
+            Nợ hiện tại
+          </label>
+          <div className="flex gap-2">
+            {(["from", "to"] as const).map((f) => {
+              const isFrom = f === "from";
+              const val = isFrom ? debtFrom : debtTo;
+              const setVal = isFrom ? setDebtFrom : setDebtTo;
+              return (
+                <input
+                  key={f}
+                  type="number"
+                  placeholder={isFrom ? "Từ" : "Đến"}
+                  className="flex-1 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                  value={val}
+                  onChange={(e) => setVal(e.target.value)}
+                  onBlur={() =>
+                    onFiltersChange({
+                      ...filters,
+                      debtFrom: debtFrom ? Number(debtFrom) : undefined,
+                      debtTo: debtTo ? Number(debtTo) : undefined,
+                      currentItem: 0,
+                    })
+                  }
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* ── Trạng thái ── */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">
+            Trạng thái
+          </label>
+          <SimpleDropdown
+            options={STATUS_OPTIONS}
+            value={
               filters.isActive === true
-                ? "bg-blue-50 text-blue-600"
-                : "hover:bg-gray-50"
-            }`}>
-            Đang hoạt động
-          </button>
-          <button
-            onClick={() => setFilters({ isActive: false })}
-            className={`w-full px-3 py-2 rounded text-sm text-left ${
-              filters.isActive === false
-                ? "bg-blue-50 text-blue-600"
-                : "hover:bg-gray-50"
-            }`}>
-            Ngừng hoạt động
-          </button>
+                ? "true"
+                : filters.isActive === false
+                  ? "false"
+                  : ""
+            }
+            placeholder="Tất cả"
+            onChange={(v) =>
+              onFiltersChange({
+                ...filters,
+                isActive:
+                  v === "true" ? true : v === "false" ? false : undefined,
+                currentItem: 0,
+              })
+            }
+          />
         </div>
       </div>
+
+      {/* PresetPanel portal */}
+      {showPresetPanel && (
+        <PresetPanel
+          groups={PRESET_GROUPS}
+          selected={selectedPreset}
+          onSelect={(v) => {
+            setSelectedPreset(v);
+            setDateMode("preset");
+            applyPreset(v);
+          }}
+          onClose={() => setShowPresetPanel(false)}
+          anchorRect={panelAnchorRect}
+          triggerRef={presetRowRef}
+        />
+      )}
 
       {showGroupModal && (
         <SupplierGroupModal
@@ -475,6 +872,6 @@ export function SuppliersSidebar({
           }}
         />
       )}
-    </div>
+    </aside>
   );
 }

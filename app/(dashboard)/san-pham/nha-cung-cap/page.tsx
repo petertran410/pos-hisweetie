@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { SuppliersSidebar } from "@/components/suppliers/SuppliersSidebar";
 import { SuppliersTable } from "@/components/suppliers/SuppliersTable";
 import { SupplierFilters } from "@/lib/types/supplier";
@@ -16,11 +16,33 @@ export default function SuppliersPage() {
     includeSupplierGroup: true,
   });
 
+  // Sidebar gửi full filters object (giống khach-hang/page.tsx)
+  const handleSidebarFiltersChange = useCallback(
+    (newFilters: SupplierFilters) => {
+      setFilters(newFilters);
+    },
+    []
+  );
+
+  // Table gửi partial updates (pagination, search)
+  const handleTableFiltersChange = useCallback(
+    (partial: Partial<SupplierFilters>) => {
+      setFilters((prev) => ({ ...prev, ...partial }));
+    },
+    []
+  );
+
   return (
     <PagePermissionGuard resource="suppliers" action="view">
-      <div className="flex h-full border-t bg-gray-50">
-        <SuppliersSidebar filters={filters} setFilters={setFilters} />
-        <SuppliersTable filters={filters} onFiltersChange={setFilters} />
+      <div className="flex h-full border-t bg-gray-50 w-screen">
+        <SuppliersSidebar
+          filters={filters}
+          onFiltersChange={handleSidebarFiltersChange}
+        />
+        <SuppliersTable
+          filters={filters}
+          onFiltersChange={handleTableFiltersChange}
+        />
       </div>
     </PagePermissionGuard>
   );
