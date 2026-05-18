@@ -22,7 +22,11 @@ import { useBranchStore } from "@/lib/store/branch";
 import type { Transfer } from "@/lib/api/transfers";
 import { productsApi, type Product } from "@/lib/api/products";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatNumberInput,
+  parseNumberInput,
+} from "@/lib/utils";
 
 interface TransferFormProps {
   transfer?: Transfer | null;
@@ -188,10 +192,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
   const handleChangeReceivedQuantity = (index: number, value: string) => {
     const quantity = parseFloat(value) || 0;
 
-    if (quantity < 1) {
-      toast.error("Số lượng nhận không được nhỏ hơn 1");
-      return;
-    }
+    if (quantity < 0) return;
 
     if (quantity > products[index].sendQuantity) {
       toast.error(
@@ -445,10 +446,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
   const handleChangeQuantity = (index: number, value: string) => {
     const quantity = parseFloat(value) || 0;
 
-    if (quantity < 1) {
-      toast.error("Số lượng chuyển không được nhỏ hơn 1");
-      return;
-    }
+    if (quantity < 0) return;
 
     if (quantity > products[index].fromInventory) {
       toast.error(
@@ -862,7 +860,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                   disabled={
                                     isReadOnly ||
                                     isReceived ||
-                                    item.sendQuantity <= 1
+                                    item.sendQuantity <= 0
                                   }
                                   className="w-7 h-7 border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center">
                                   <Minus className="w-3 h-3" />
@@ -870,7 +868,12 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                 <input
                                   type="text"
                                   inputMode="numeric"
-                                  value={item.sendQuantity}
+                                  value={
+                                    item.sendQuantity === 0
+                                      ? ""
+                                      : item.sendQuantity
+                                  }
+                                  placeholder="0"
                                   onChange={(e) =>
                                     handleChangeQuantity(index, e.target.value)
                                   }
@@ -908,7 +911,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                     disabled={
                                       isReadOnly ||
                                       isSender ||
-                                      item.receivedQuantity <= 1
+                                      item.receivedQuantity <= 0
                                     }
                                     className="w-7 h-7 border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center">
                                     <Minus className="w-3 h-3" />
@@ -916,7 +919,12 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                   <input
                                     type="text"
                                     inputMode="numeric"
-                                    value={item.receivedQuantity}
+                                    value={
+                                      item.receivedQuantity === 0
+                                        ? ""
+                                        : item.receivedQuantity
+                                    }
+                                    placeholder="0"
                                     onChange={(e) =>
                                       handleChangeReceivedQuantity(
                                         index,
@@ -949,9 +957,17 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                             {isSender && !transfer ? (
                               <input
                                 type="text"
-                                value={formatCurrency(item.price)}
+                                inputMode="numeric"
+                                value={
+                                  item.price === 0
+                                    ? ""
+                                    : formatNumberInput(String(item.price))
+                                }
+                                placeholder="0"
                                 onChange={(e) => {
-                                  const price = parseFloat(e.target.value) || 0;
+                                  const price = parseNumberInput(
+                                    e.target.value
+                                  );
                                   setProducts((prev) => {
                                     const updated = [...prev];
                                     updated[index].price = price;
@@ -962,23 +978,18 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                                 className="w-28 border rounded-lg px-2 py-1 text-right text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                               />
                             ) : (
-                              <span>
-                                {Number(item.price).toLocaleString()} đ
-                              </span>
+                              <span>{formatCurrency(item.price)} đ</span>
                             )}
                           </td>
 
                           {isReceiver && (
                             <td className="px-4 py-3 text-right text-sm text-gray-700">
-                              {Number(item.price).toLocaleString()} đ
+                              {formatCurrency(item.price)} đ
                             </td>
                           )}
 
                           <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
-                            {(item.sendQuantity * item.price).toLocaleString(
-                              "vi-VN"
-                            )}{" "}
-                            đ
+                            {formatCurrency(item.sendQuantity * item.price)} đ
                           </td>
 
                           {canEditProducts && (
