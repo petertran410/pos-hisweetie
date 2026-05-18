@@ -13,6 +13,7 @@ import type { Transfer, TransferQueryParams } from "@/lib/api/transfers";
 import { TransferForm } from "./TransferForm";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { TransferDetailRow } from "./TransferDetailRow";
 
 interface ColumnConfig {
   key: string;
@@ -424,6 +425,17 @@ export function TransferTable({ filters }: TransferTableProps) {
                         />
                       </td>
                     </tr>
+                    {/* ── Expand row ── */}
+                    {expandedId === transfer.id && (
+                      <TransferDetailRow
+                        transferId={transfer.id}
+                        colSpan={colSpan}
+                        onEdit={(t) => {
+                          setSelectedTransfer(t);
+                          setShowForm(true);
+                        }}
+                      />
+                    )}
                   </Fragment>
                 ))
               )}
