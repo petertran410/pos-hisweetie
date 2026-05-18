@@ -511,18 +511,33 @@ export function TransferSidebar({
   const [fromBranchId, setFromBranchId] = useState("");
   const [toBranchId, setToBranchId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [enableTransferDate, setEnableTransferDate] = useState(true);
-  const [enableReceiveDate, setEnableReceiveDate] = useState(false);
-  const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
-  const [selectedPreset, setSelectedPreset] = useState("this_month");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [showPresetPanel, setShowPresetPanel] = useState(false);
-  const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
-  const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
 
-  const presetRowRef = useRef<HTMLDivElement>(null);
-  const customDateRef = useRef<HTMLDivElement>(null);
+  const [transferDateMode, setTransferDateMode] = useState<"preset" | "custom">(
+    "preset"
+  );
+  const [transferPreset, setTransferPreset] = useState("this_month");
+  const [transferFromDate, setTransferFromDate] = useState("");
+  const [transferToDate, setTransferToDate] = useState("");
+
+  const [receiveDateMode, setReceiveDateMode] = useState<"preset" | "custom">(
+    "preset"
+  );
+  const [receivePreset, setReceivePreset] = useState("this_month");
+  const [receiveFromDate, setReceiveFromDate] = useState("");
+  const [receiveToDate, setReceiveToDate] = useState("");
+
+  const [activePanel, setActivePanel] = useState<"transfer" | "receive" | null>(
+    null
+  );
+  const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
+  const [openCal, setOpenCal] = useState<
+    "transfer-from" | "transfer-to" | "receive-from" | "receive-to" | null
+  >(null);
+
+  const transferPresetRowRef = useRef<HTMLDivElement>(null);
+  const receivePresetRowRef = useRef<HTMLDivElement>(null);
+  const transferCustomDateRef = useRef<HTMLDivElement>(null);
+  const receiveCustomDateRef = useRef<HTMLDivElement>(null);
 
   const activeBranchOptions = useMemo<SimpleOption[]>(
     () =>
@@ -537,24 +552,17 @@ export function TransferSidebar({
     if (fromBranchId) n++;
     if (toBranchId) n++;
     if (selectedStatus) n++;
-    if (enableTransferDate || enableReceiveDate) n++;
     return n;
-  }, [
-    fromBranchId,
-    toBranchId,
-    selectedStatus,
-    enableTransferDate,
-    enableReceiveDate,
-  ]);
+  }, [fromBranchId, toBranchId, selectedStatus]);
 
   // Đóng MiniCalendar khi click ngoài
   useEffect(() => {
     if (!openCal) return;
+    const ref = openCal.startsWith("transfer")
+      ? transferCustomDateRef
+      : receiveCustomDateRef;
     const h = (e: MouseEvent) => {
-      if (
-        customDateRef.current &&
-        !customDateRef.current.contains(e.target as Node)
-      )
+      if (ref.current && !ref.current.contains(e.target as Node))
         setOpenCal(null);
     };
     document.addEventListener("mousedown", h);
@@ -569,26 +577,29 @@ export function TransferSidebar({
       if (toBranchId) f.toBranchIds = [parseInt(toBranchId)];
       if (selectedStatus) f.status = [parseInt(selectedStatus)];
 
-      if (enableTransferDate || enableReceiveDate) {
-        const range =
-          dateMode === "preset"
-            ? getDateRangeFromPreset(selectedPreset)
-            : fromDate && toDate
-              ? {
-                  from: new Date(fromDate + "T00:00:00"),
-                  to: new Date(toDate + "T23:59:59"),
-                }
-              : getDateRangeFromPreset("this_month");
+      const transferRange =
+        transferDateMode === "preset"
+          ? getDateRangeFromPreset(transferPreset)
+          : transferFromDate && transferToDate
+            ? {
+                from: new Date(transferFromDate + "T00:00:00"),
+                to: new Date(transferToDate + "T23:59:59"),
+              }
+            : getDateRangeFromPreset("this_month");
+      f.fromTransferDate = transferRange.from.toISOString();
+      f.toTransferDate = transferRange.to.toISOString();
 
-        if (enableTransferDate) {
-          f.fromTransferDate = range.from.toISOString();
-          f.toTransferDate = range.to.toISOString();
-        }
-        if (enableReceiveDate) {
-          f.fromReceivedDate = range.from.toISOString();
-          f.toReceivedDate = range.to.toISOString();
-        }
-      }
+      const receiveRange =
+        receiveDateMode === "preset"
+          ? getDateRangeFromPreset(receivePreset)
+          : receiveFromDate && receiveToDate
+            ? {
+                from: new Date(receiveFromDate + "T00:00:00"),
+                to: new Date(receiveToDate + "T23:59:59"),
+              }
+            : getDateRangeFromPreset("this_month");
+      f.fromReceivedDate = receiveRange.from.toISOString();
+      f.toReceivedDate = receiveRange.to.toISOString();
 
       onFiltersChange(f);
     }, 300);
@@ -597,24 +608,28 @@ export function TransferSidebar({
     fromBranchId,
     toBranchId,
     selectedStatus,
-    enableTransferDate,
-    enableReceiveDate,
-    dateMode,
-    selectedPreset,
-    fromDate,
-    toDate,
+    transferDateMode,
+    transferPreset,
+    transferFromDate,
+    transferToDate,
+    receiveDateMode,
+    receivePreset,
+    receiveFromDate,
+    receiveToDate,
   ]);
 
   const resetFilters = () => {
     setFromBranchId("");
     setToBranchId("");
     setSelectedStatus("");
-    setEnableTransferDate(true);
-    setEnableReceiveDate(false);
-    setDateMode("preset");
-    setSelectedPreset("this_month");
-    setFromDate("");
-    setToDate("");
+    setTransferDateMode("preset");
+    setTransferPreset("all_time");
+    setTransferFromDate("");
+    setTransferToDate("");
+    setReceiveDateMode("preset");
+    setReceivePreset("all_time");
+    setReceiveFromDate("");
+    setReceiveToDate("");
     onFiltersChange({});
   };
 
@@ -633,99 +648,90 @@ export function TransferSidebar({
       </div>
 
       <div className="p-4 space-y-3 overflow-y-auto flex-1">
-        {/* ── Thời gian ── */}
+        {/* ── Ngày chuyển ── */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-2 block">
-            Thời gian
-          </label>
-
-          {/* Loại ngày toggle */}
-          <div className="flex gap-3 mb-2">
-            <label className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={enableTransferDate}
-                onChange={(e) => setEnableTransferDate(e.target.checked)}
-                className="cursor-pointer accent-blue-600"
-              />
+          <div className="flex items-center gap-2 mb-2">
+            <label
+              htmlFor="enable-transfer-date"
+              className="text-sm font-medium text-gray-700 cursor-pointer">
               Ngày chuyển
-            </label>
-            <label className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={enableReceiveDate}
-                onChange={(e) => setEnableReceiveDate(e.target.checked)}
-                className="cursor-pointer accent-blue-600"
-              />
-              Ngày nhận
             </label>
           </div>
 
           <div className="space-y-1.5">
-            {/* Preset row */}
             <div
-              ref={presetRowRef}
+              ref={transferPresetRowRef}
               onClick={() => {
-                setDateMode("preset");
+                setTransferDateMode("preset");
                 setOpenCal(null);
-                if (showPresetPanel) {
-                  setShowPresetPanel(false);
+                if (activePanel === "transfer") {
+                  setActivePanel(null);
                 } else {
                   setPanelAnchorRect(
-                    presetRowRef.current?.getBoundingClientRect() ?? null
+                    transferPresetRowRef.current?.getBoundingClientRect() ??
+                      null
                   );
-                  setShowPresetPanel(true);
+                  setActivePanel("transfer");
                 }
               }}
               className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
-                dateMode === "preset"
+                transferDateMode === "preset"
                   ? "border-blue-400 bg-blue-50"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
               <div
-                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${dateMode === "preset" ? "border-blue-600" : "border-gray-300"}`}>
-                {dateMode === "preset" && (
+                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  transferDateMode === "preset"
+                    ? "border-blue-600"
+                    : "border-gray-300"
+                }`}>
+                {transferDateMode === "preset" && (
                   <div className="w-1 h-1 rounded-full bg-blue-600" />
                 )}
               </div>
               <span className="text-sm text-gray-700 flex-1 font-medium">
-                {PRESET_LABELS[selectedPreset] ?? "Chọn thời gian"}
+                {PRESET_LABELS[transferPreset] ?? "Chọn thời gian"}
               </span>
               <ChevronRight
-                className={`w-4 h-4 flex-shrink-0 ${showPresetPanel ? "text-blue-500" : "text-gray-400"}`}
+                className={`w-4 h-4 transition-colors flex-shrink-0 ${
+                  activePanel === "transfer" ? "text-blue-500" : "text-gray-400"
+                }`}
               />
             </div>
 
-            {/* Custom date row */}
             <div
               onClick={() => {
-                setDateMode("custom");
-                setShowPresetPanel(false);
+                setTransferDateMode("custom");
+                setActivePanel(null);
               }}
               className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
-                dateMode === "custom"
+                transferDateMode === "custom"
                   ? "border-blue-400 bg-blue-50"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
               <div
-                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${dateMode === "custom" ? "border-blue-600" : "border-gray-300"}`}>
-                {dateMode === "custom" && (
+                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  transferDateMode === "custom"
+                    ? "border-blue-600"
+                    : "border-gray-300"
+                }`}>
+                {transferDateMode === "custom" && (
                   <div className="w-1 h-1 rounded-full bg-blue-600" />
                 )}
               </div>
-              <span className="text-sm text-gray-700 flex-1 font-medium">
-                Tùy chỉnh
-              </span>
+              <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
+              <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
             </div>
 
-            {/* Custom date inputs */}
-            {dateMode === "custom" && (
-              <div ref={customDateRef} className="space-y-1.5 pt-1">
+            {transferDateMode === "custom" && (
+              <div ref={transferCustomDateRef} className="space-y-2 pt-1">
                 {(["from", "to"] as const).map((field) => {
                   const isFrom = field === "from";
-                  const val = isFrom ? fromDate : toDate;
-                  const setVal = isFrom ? setFromDate : setToDate;
-                  const isOpen = openCal === field;
+                  const val = isFrom ? transferFromDate : transferToDate;
+                  const calKey = (
+                    isFrom ? "transfer-from" : "transfer-to"
+                  ) as typeof openCal;
+                  const isOpen = openCal === calKey;
                   return (
                     <div key={field}>
                       <span className="text-xs text-gray-500 mb-1 block">
@@ -733,8 +739,12 @@ export function TransferSidebar({
                       </span>
                       <button
                         type="button"
-                        onClick={() => setOpenCal(isOpen ? null : field)}
-                        className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all ${val ? "border-blue-300 bg-blue-50 text-gray-800" : "border-gray-200 text-gray-400"} ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                        onClick={() => setOpenCal(isOpen ? null : calKey)}
+                        className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all ${
+                          val
+                            ? "border-blue-300 bg-blue-50 text-gray-800"
+                            : "border-gray-200 text-gray-400"
+                        } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
                         <span>
                           {val
                             ? new Date(val + "T00:00:00").toLocaleDateString(
@@ -752,10 +762,14 @@ export function TransferSidebar({
                       {isOpen && (
                         <MiniCalendar
                           value={val}
-                          onChange={setVal}
+                          onChange={
+                            isFrom ? setTransferFromDate : setTransferToDate
+                          }
                           onClose={() => setOpenCal(null)}
                           minDate={
-                            field === "to" ? fromDate || undefined : undefined
+                            field === "to"
+                              ? transferFromDate || undefined
+                              : undefined
                           }
                         />
                       )}
@@ -763,6 +777,162 @@ export function TransferSidebar({
                   );
                 })}
               </div>
+            )}
+
+            {activePanel === "transfer" && (
+              <PresetPanel
+                groups={PRESET_GROUPS}
+                selected={transferPreset}
+                onSelect={setTransferPreset}
+                onClose={() => setActivePanel(null)}
+                anchorRect={panelAnchorRect}
+                triggerRef={transferPresetRowRef}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* ── Ngày nhận ── */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <label
+              htmlFor="enable-receive-date"
+              className="text-sm font-medium text-gray-700 cursor-pointer">
+              Ngày nhận
+            </label>
+          </div>
+
+          <div className="space-y-1.5">
+            <div
+              ref={receivePresetRowRef}
+              onClick={() => {
+                setReceiveDateMode("preset");
+                setOpenCal(null);
+                if (activePanel === "receive") {
+                  setActivePanel(null);
+                } else {
+                  setPanelAnchorRect(
+                    receivePresetRowRef.current?.getBoundingClientRect() ?? null
+                  );
+                  setActivePanel("receive");
+                }
+              }}
+              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
+                receiveDateMode === "preset"
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <div
+                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  receiveDateMode === "preset"
+                    ? "border-blue-600"
+                    : "border-gray-300"
+                }`}>
+                {receiveDateMode === "preset" && (
+                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                )}
+              </div>
+              <span className="text-sm text-gray-700 flex-1 font-medium">
+                {PRESET_LABELS[receivePreset] ?? "Chọn thời gian"}
+              </span>
+              <ChevronRight
+                className={`w-4 h-4 transition-colors flex-shrink-0 ${
+                  activePanel === "receive" ? "text-blue-500" : "text-gray-400"
+                }`}
+              />
+            </div>
+
+            <div
+              onClick={() => {
+                setReceiveDateMode("custom");
+                setActivePanel(null);
+              }}
+              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
+                receiveDateMode === "custom"
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <div
+                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  receiveDateMode === "custom"
+                    ? "border-blue-600"
+                    : "border-gray-300"
+                }`}>
+                {receiveDateMode === "custom" && (
+                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                )}
+              </div>
+              <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
+              <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            </div>
+
+            {receiveDateMode === "custom" && (
+              <div ref={receiveCustomDateRef} className="space-y-2 pt-1">
+                {(["from", "to"] as const).map((field) => {
+                  const isFrom = field === "from";
+                  const val = isFrom ? receiveFromDate : receiveToDate;
+                  const calKey = (
+                    isFrom ? "receive-from" : "receive-to"
+                  ) as typeof openCal;
+                  const isOpen = openCal === calKey;
+                  return (
+                    <div key={field}>
+                      <span className="text-xs text-gray-500 mb-1 block">
+                        {isFrom ? "Từ ngày" : "Đến ngày"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setOpenCal(isOpen ? null : calKey)}
+                        className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all ${
+                          val
+                            ? "border-blue-300 bg-blue-50 text-gray-800"
+                            : "border-gray-200 text-gray-400"
+                        } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                        <span>
+                          {val
+                            ? new Date(val + "T00:00:00").toLocaleDateString(
+                                "vi-VN",
+                                {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                }
+                              )
+                            : "Chọn ngày"}
+                        </span>
+                        <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      </button>
+                      {isOpen && (
+                        <MiniCalendar
+                          value={val}
+                          onChange={
+                            isFrom ? setReceiveFromDate : setReceiveToDate
+                          }
+                          onClose={() => setOpenCal(null)}
+                          minDate={
+                            field === "to"
+                              ? receiveFromDate || undefined
+                              : undefined
+                          }
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {activePanel === "receive" && (
+              <PresetPanel
+                groups={PRESET_GROUPS}
+                selected={receivePreset}
+                onSelect={setReceivePreset}
+                onClose={() => setActivePanel(null)}
+                anchorRect={panelAnchorRect}
+                triggerRef={receivePresetRowRef}
+              />
             )}
           </div>
         </div>
@@ -812,21 +982,6 @@ export function TransferSidebar({
           />
         </div>
       </div>
-
-      {/* PresetPanel portal */}
-      {showPresetPanel && (
-        <PresetPanel
-          groups={PRESET_GROUPS}
-          selected={selectedPreset}
-          onSelect={(v) => {
-            setSelectedPreset(v);
-            setDateMode("preset");
-          }}
-          onClose={() => setShowPresetPanel(false)}
-          anchorRect={panelAnchorRect}
-          triggerRef={presetRowRef}
-        />
-      )}
     </aside>
   );
 }

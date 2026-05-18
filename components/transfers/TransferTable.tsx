@@ -27,15 +27,6 @@ interface TransferTableProps {
   filters: TransferQueryParams;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const STATUS_TABS = [
-  { value: "all", label: "Tất cả" },
-  { value: "1", label: "Phiếu tạm" },
-  { value: "2", label: "Đang chuyển" },
-  { value: "3", label: "Đã nhận" },
-  { value: "4", label: "Đã hủy" },
-];
-
 const STATUS_COLOR: Record<number, string> = {
   1: "bg-gray-100 text-gray-700",
   2: "bg-blue-100 text-blue-700",
@@ -303,22 +294,6 @@ export function TransferTable({ filters }: TransferTableProps) {
               Cột
             </button>
           </div>
-        </div>
-
-        {/* ── Status Tabs ── */}
-        <div className="flex items-center gap-1 px-4 border-b overflow-x-auto shrink-0">
-          {STATUS_TABS.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => setActiveStatusTab(tab.value)}
-              className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeStatusTab === tab.value
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}>
-              {tab.label}
-            </button>
-          ))}
         </div>
 
         {/* ── Table ── */}
