@@ -40,6 +40,7 @@ export const ROUTE_PERMISSIONS: Record<
   "/san-pham/nha-cung-cap": { resource: "suppliers", action: "view" },
   "/san-pham/dat-hang-nhap": { resource: "order_suppliers", action: "view" },
   "/san-pham/nhap-hang": { resource: "purchase_orders", action: "view" },
+  "/san-pham/tra-hang-nhap": { resource: "supplier_returns", action: "view" },
   "/don-hang/dat-hang": { resource: "orders", action: "view" },
   "/don-hang/hoa-don": { resource: "invoices", action: "view" },
   "/don-hang/tra-hang": { resource: "invoices", action: "view" },
@@ -57,7 +58,6 @@ export const ROUTE_PERMISSIONS: Record<
   "/cai-dat/so-quy": { resource: "bank_accounts", action: "view" },
   "/cai-dat/lich-su": { resource: "audit_logs", action: "view" },
   "/san-pham/kiem-kho": { resource: "stock_audits", action: "view" },
-  "/san-pham/tra-hang-nhap": { resource: "purchase_orders", action: "view" },
   "/cai-dat/in-an": { resource: "print_templates", action: "view" },
 };
 
@@ -118,6 +118,12 @@ export const NAV_CONFIG: NavSection[] = [
         label: "Nhập hàng",
         href: "/san-pham/nhap-hang",
         permission: { resource: "purchase_orders", action: "view" },
+      },
+      {
+        key: "supplier-returns",
+        label: "Trả hàng nhập",
+        href: "/san-pham/tra-hang-nhap",
+        permission: { resource: "supplier_returns", action: "view" },
       },
     ],
   },

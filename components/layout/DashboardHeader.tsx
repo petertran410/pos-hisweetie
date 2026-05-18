@@ -88,6 +88,10 @@ export function DashboardHeader() {
             label: "Nhập hàng",
             href: "/san-pham/nhap-hang",
           },
+          {
+            label: "Trả hàng nhập",
+            href: "/san-pham/tra-hang-nhap",
+          },
         ],
       },
     ],

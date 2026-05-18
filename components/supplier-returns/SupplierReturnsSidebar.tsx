@@ -6,7 +6,33 @@ import { useBranchStore } from "@/lib/store/branch";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { SUPPLIER_RETURN_STATUS_LABELS } from "@/lib/types/supplier-return";
-import { getDateRangeFromPreset } from "@/lib/utils/datePresets";
+
+function getDateRangeFromPreset(
+  preset: string
+): { from: Date; to: Date } | null {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (preset) {
+    case "all_time":
+      return null;
+    case "today":
+      return { from: today, to: now };
+    case "yesterday": {
+      const y = new Date(today);
+      y.setDate(today.getDate() - 1);
+      return { from: y, to: new Date(y.getTime() + 86399999) };
+    }
+    case "this_month":
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+    case "last_month":
+      return {
+        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+        to: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59),
+      };
+    default:
+      return null;
+  }
+}
 
 const PRESET_GROUPS = [
   {
