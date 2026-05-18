@@ -108,7 +108,7 @@ export function ConfirmExportModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col min-h-[80vh] max-h-[150vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b">
           <div>

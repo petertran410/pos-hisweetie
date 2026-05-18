@@ -124,7 +124,7 @@ export function ConfirmRefundModal({
                   )}
                 </div>
                 <div>
-                  <div className="text-sm font-medium">Giảm nợ cho tôi</div>
+                  <div className="text-sm font-medium">Giảm nợ</div>
                   <div className="text-xs text-gray-400">
                     NCC trừ vào khoản nợ hiện tại
                   </div>
@@ -145,9 +145,7 @@ export function ConfirmRefundModal({
                   )}
                 </div>
                 <div>
-                  <div className="text-sm font-medium">
-                    Trả tiền mặt cho tôi
-                  </div>
+                  <div className="text-sm font-medium">Trả tiền</div>
                   <div className="text-xs text-gray-400">
                     NCC hoàn tiền trực tiếp
                   </div>
