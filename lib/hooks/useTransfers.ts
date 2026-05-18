@@ -29,7 +29,6 @@ export function useCreateTransfer() {
     mutationFn: (data: CreateTransferData) => transfersApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transfers"] });
-      toast.success("Tạo phiếu chuyển hàng thành công");
     },
     onError: () => {
       toast.error("Không thể tạo phiếu chuyển hàng");
@@ -50,7 +49,6 @@ export function useUpdateTransfer() {
     }) => transfersApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transfers"] });
-      toast.success("Cập nhật phiếu chuyển hàng thành công");
     },
     onError: () => {
       toast.error("Không thể cập nhật phiếu chuyển hàng");

@@ -11,6 +11,14 @@ export interface SupplierReturnsResponse {
   limit: number;
 }
 
+export interface ImportResult {
+  total: number;
+  imported: number;
+  updated: number;
+  failed: number;
+  errors: { code: string; error: string }[];
+}
+
 export const supplierReturnsApi = {
   getAll: (params?: SupplierReturnFilters): Promise<SupplierReturnsResponse> =>
     apiClient.get("/supplier-returns", params),
@@ -32,4 +40,7 @@ export const supplierReturnsApi = {
 
   updateStep1: (id: number, data: any): Promise<SupplierReturn> =>
     apiClient.put(`/supplier-returns/${id}/update-step1`, data),
+
+  importFromExcel: (data: { items: any[] }): Promise<ImportResult> =>
+    apiClient.post("/supplier-returns/import", data),
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Plus, Settings } from "lucide-react";
+import { Plus, Settings, Upload } from "lucide-react";
 import { useSupplierReturns } from "@/lib/hooks/useSupplierReturns";
 import { useBranchStore } from "@/lib/store/branch";
 import type { SupplierReturn } from "@/lib/types/supplier-return";
@@ -11,6 +11,7 @@ interface Props {
   filters: any;
   onCreateClick: () => void;
   onViewClick: (item: SupplierReturn) => void;
+  onImportClick?: () => void;
 }
 
 const formatMoney = (v: number) => new Intl.NumberFormat("en-US").format(v);
@@ -134,6 +135,7 @@ export function SupplierReturnsTable({
   filters,
   onCreateClick,
   onViewClick,
+  onImportClick,
 }: Props) {
   const { selectedBranch } = useBranchStore();
   const [search, setSearch] = useState("");
@@ -203,6 +205,16 @@ export function SupplierReturnsTable({
               title="Cấu hình cột">
               <Settings className="w-4 h-4" />
             </button>
+            {onImportClick && (
+              <PermissionGate resource="supplier_returns" action="create">
+                <button
+                  onClick={onImportClick}
+                  className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                  <Upload className="w-4 h-4" />
+                  Import Excel
+                </button>
+              </PermissionGate>
+            )}
             <PermissionGate resource="supplier_returns" action="create">
               <button
                 onClick={onCreateClick}

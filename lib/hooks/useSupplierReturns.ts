@@ -98,3 +98,23 @@ export function useUpdateSupplierReturnStep1() {
     },
   });
 }
+
+export function useImportSupplierReturns() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: supplierReturnsApi.importFromExcel,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["supplier-returns"] });
+      if (data.failed === 0) {
+        toast.success(`Import ${data.imported} phiếu thành công`);
+      } else {
+        toast.warning(
+          `Import hoàn tất: ${data.imported} thành công, ${data.failed} lỗi`
+        );
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Import thất bại");
+    },
+  });
+}

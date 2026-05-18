@@ -15,12 +15,14 @@ import {
 } from "@/lib/hooks/useSupplierReturns";
 import type { SupplierReturn } from "@/lib/types/supplier-return";
 import { EditStep1Modal } from "@/components/supplier-returns/EditStep1Modal";
+import { SupplierReturnImportModal } from "@/components/supplier-returns/SupplierReturnImportModal";
 
 type ModalType =
   | "create"
   | "confirm-export"
   | "confirm-refund"
   | "edit-step1"
+  | "import"
   | null;
 
 export default function TraHangNhapPage() {
@@ -90,6 +92,7 @@ export default function TraHangNhapPage() {
           filters={filters}
           onCreateClick={() => setModalType("create")}
           onViewClick={handleViewClick}
+          onImportClick={() => setModalType("import")}
         />
 
         {modalType === "create" && (
@@ -124,6 +127,10 @@ export default function TraHangNhapPage() {
             onSubmit={handleConfirmRefundSubmit}
             onCancel={handleCancelSubmit}
           />
+        )}
+
+        {modalType === "import" && (
+          <SupplierReturnImportModal onClose={handleCloseModal} />
         )}
       </div>
     </PagePermissionGuard>
