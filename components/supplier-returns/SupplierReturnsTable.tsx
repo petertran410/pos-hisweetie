@@ -23,6 +23,7 @@ const STATUS_COLOR: Record<number, string> = {
   3: "bg-green-100 text-green-700",
   4: "bg-red-100 text-red-700",
   5: "bg-orange-100 text-orange-700",
+  6: "bg-purple-100 text-purple-700",
 };
 
 const STATUS_LABEL: Record<number, string> = {
@@ -31,6 +32,7 @@ const STATUS_LABEL: Record<number, string> = {
   3: "Hoàn thành",
   4: "Đã hủy",
   5: "Phiếu tạm",
+  6: "Đang xuất kho (tạm)",
 };
 
 const MODE_LABEL: Record<string, string> = {

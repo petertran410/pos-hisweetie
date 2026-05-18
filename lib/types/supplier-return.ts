@@ -77,6 +77,7 @@ export const SUPPLIER_RETURN_STATUS = {
   COMPLETED: 3,
   CANCELLED: 4,
   DRAFT: 5,
+  STOCK_EXPORT_DRAFT: 6,
 } as const;
 
 export const SUPPLIER_RETURN_STATUS_LABELS: Record<number, string> = {
@@ -85,4 +86,5 @@ export const SUPPLIER_RETURN_STATUS_LABELS: Record<number, string> = {
   3: "Hoàn thành",
   4: "Đã hủy",
   5: "Phiếu tạm",
+  6: "Đang xuất kho (tạm)",
 };

@@ -29,4 +29,7 @@ export const supplierReturnsApi = {
 
   cancel: (id: number): Promise<SupplierReturn> =>
     apiClient.put(`/supplier-returns/${id}/cancel`, {}),
+
+  updateStep1: (id: number, data: any): Promise<SupplierReturn> =>
+    apiClient.put(`/supplier-returns/${id}/update-step1`, data),
 };

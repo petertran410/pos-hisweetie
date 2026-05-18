@@ -11,10 +11,17 @@ import {
   useCreateSupplierReturn,
   useConfirmExport,
   useConfirmSupplierRefund,
+  useCancelSupplierReturn,
 } from "@/lib/hooks/useSupplierReturns";
 import type { SupplierReturn } from "@/lib/types/supplier-return";
+import { EditStep1Modal } from "@/components/supplier-returns/EditStep1Modal";
 
-type ModalType = "create" | "confirm-export" | "confirm-refund" | null;
+type ModalType =
+  | "create"
+  | "confirm-export"
+  | "confirm-refund"
+  | "edit-step1"
+  | null;
 
 export default function TraHangNhapPage() {
   const [filters, setFilters] = useState<any>({});
@@ -24,15 +31,18 @@ export default function TraHangNhapPage() {
   const createMutation = useCreateSupplierReturn();
   const confirmExportMutation = useConfirmExport();
   const confirmRefundMutation = useConfirmSupplierRefund();
+  const cancelMutation = useCancelSupplierReturn();
 
   const handleFiltersChange = useCallback((f: any) => setFilters(f), []);
 
   const handleViewClick = (item: SupplierReturn) => {
     setSelectedId(item.id);
-    if (item.status === 1 || item.status === 5) {
-      setModalType("confirm-export");
+    if (item.status === 5) {
+      setModalType("edit-step1"); // DRAFT → mở modal bước 1 để sửa
+    } else if (item.status === 1 || item.status === 6) {
+      setModalType("confirm-export"); // REQUEST hoặc STOCK_EXPORT_DRAFT → bước 2
     } else if (item.status === 2) {
-      setModalType("confirm-refund");
+      setModalType("confirm-refund"); // STOCK_EXPORTED → bước 3
     }
   };
 
@@ -64,6 +74,14 @@ export default function TraHangNhapPage() {
     } catch {}
   };
 
+  const handleCancelSubmit = async () => {
+    if (!selectedId) return;
+    try {
+      await cancelMutation.mutateAsync(selectedId);
+      handleCloseModal();
+    } catch {}
+  };
+
   return (
     <PagePermissionGuard resource="supplier_returns" action="view">
       <div className="flex h-full border-t bg-gray-50">
@@ -81,11 +99,21 @@ export default function TraHangNhapPage() {
           />
         )}
 
+        {modalType === "edit-step1" && selectedId && (
+          <EditStep1Modal
+            supplierReturnId={selectedId}
+            onClose={handleCloseModal}
+            onSubmit={handleCreateSubmit}
+            onCancel={handleCancelSubmit}
+          />
+        )}
+
         {modalType === "confirm-export" && selectedId && (
           <ConfirmExportModal
             supplierReturnId={selectedId}
             onClose={handleCloseModal}
             onSubmit={handleConfirmExportSubmit}
+            onCancel={handleCancelSubmit}
           />
         )}
 
@@ -94,6 +122,7 @@ export default function TraHangNhapPage() {
             supplierReturnId={selectedId}
             onClose={handleCloseModal}
             onSubmit={handleConfirmRefundSubmit}
+            onCancel={handleCancelSubmit}
           />
         )}
       </div>

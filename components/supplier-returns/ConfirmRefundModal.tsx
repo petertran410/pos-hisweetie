@@ -10,6 +10,7 @@ interface Props {
   supplierReturnId: number;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  onCancel: () => void;
 }
 
 const METHOD_OPTIONS = [
@@ -21,6 +22,7 @@ export function ConfirmRefundModal({
   supplierReturnId,
   onClose,
   onSubmit,
+  onCancel,
 }: Props) {
   const { data: supplierReturn, isLoading } =
     useSupplierReturn(supplierReturnId);
@@ -34,6 +36,7 @@ export function ConfirmRefundModal({
     null
   );
   const [note, setNote] = useState("");
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showMethodDropdown, setShowMethodDropdown] = useState(false);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
@@ -240,17 +243,47 @@ export function ConfirmRefundModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-5 pb-5">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
-            Hủy
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-            Xác nhận
-          </button>
+        <div className="px-5 pb-5 space-y-3">
+          {/* Inline cancel confirm */}
+          {showCancelConfirm && (
+            <div className="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm">
+              <span className="text-red-700 font-medium">
+                Xác nhận hủy phiếu này?
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50">
+                  Không
+                </button>
+                <button
+                  onClick={onCancel}
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">
+                  Hủy phiếu
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-between">
+            <button
+              onClick={() => setShowCancelConfirm(true)}
+              className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50">
+              Hủy phiếu
+            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
+                Đóng
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                Xác nhận
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

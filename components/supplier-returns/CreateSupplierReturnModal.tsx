@@ -8,6 +8,209 @@ import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { apiClient } from "@/lib/config/api";
 import { formatCurrency } from "@/lib/utils";
 
+// ─── Modal local dropdowns ────────────────────────────────────────────────────
+
+function ModalSimpleDropdown({
+  options,
+  value,
+  placeholder,
+  onChange,
+}: {
+  options: { value: string; label: string }[];
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = options.find((o) => o.value === value);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm cursor-pointer bg-white transition-colors ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "hover:border-gray-400 border-gray-300"
+        }`}>
+        <span className={selected ? "text-gray-800" : "text-gray-400"}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <svg
+          className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+          {options.map((opt, idx) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${
+                value === opt.value
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "hover:bg-gray-50 text-gray-700"
+              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModalSearchableDropdown({
+  options,
+  value,
+  placeholder,
+  searchPlaceholder,
+  onChange,
+}: {
+  options: { value: string; label: string }[];
+  value: string;
+  placeholder: string;
+  searchPlaceholder?: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const selected = options.find((o) => o.value === value);
+
+  const filtered = useMemo(
+    () =>
+      options.filter((o) =>
+        o.label.toLowerCase().includes(search.toLowerCase())
+      ),
+    [options, search]
+  );
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 50);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm cursor-pointer bg-white transition-colors ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "hover:border-gray-400 border-gray-300"
+        }`}>
+        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {selected && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange("");
+              }}
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <svg
+            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholder ?? "Tìm kiếm..."}
+              className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div className="max-h-44 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                Không tìm thấy
+              </div>
+            ) : (
+              filtered.map((opt, idx) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                    setSearch("");
+                  }}
+                  className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${
+                    value === opt.value
+                      ? "bg-blue-50 text-blue-700 font-medium"
+                      : "hover:bg-gray-50 text-gray-700"
+                  } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                  {opt.label}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   onClose: () => void;
   onSubmit: (data: any) => void;
@@ -50,7 +253,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
   const poDropdownRef = useRef<HTMLDivElement>(null);
 
   // ── by_product state ──────────────────────────────────────────────────────
-  const [supplierId, setSupplierId] = useState<number | null>(null);
+  const [supplierId, setSupplierId] = useState<string>("");
   const [productSearch, setProductSearch] = useState("");
   const [productResults, setProductResults] = useState<any[]>([]);
   const [showProductDropdown, setShowProductDropdown] = useState(false);
@@ -91,7 +294,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
     setSelectedPO(null);
     setPoSearch("");
     setPoResults([]);
-    setSupplierId(null);
+    setSupplierId("");
     setProductSearch("");
     setProductResults([]);
     setDisplays({});
@@ -108,8 +311,8 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
       try {
         const res = await apiClient.get("/purchase-orders", {
           search: poSearch,
-          status: 1, // chỉ lấy PO đã hoàn thành
-          pageSize: 10,
+          status: 1,
+          pageSize: 50,
           currentItem: 0,
         });
         setPoResults(res.data || []);
@@ -155,8 +358,9 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
     setSelectedPO(po);
     setPoSearch(po.code);
     setShowPoDropdown(false);
+    // Auto-fill NCC từ PO
+    if (po.supplierId) setSupplierId(String(po.supplierId));
 
-    // Load full PO detail để có items
     try {
       const detail = await apiClient.get(`/purchase-orders/${po.id}`);
       const items: ReturnItem[] = (detail.items || []).map((item: any) => ({
@@ -269,7 +473,11 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
   const buildSubmitData = (isDraft: boolean) => {
     const validItems = returnItems.filter((i) => i.requestQuantity > 0);
     const resolvedSupplierId =
-      mode === "by_purchase_order" ? selectedPO?.supplierId : supplierId;
+      mode === "by_purchase_order"
+        ? selectedPO?.supplierId
+        : supplierId
+          ? parseInt(supplierId)
+          : null;
 
     return {
       mode,
@@ -297,7 +505,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col min-h-[80vh] max-h-[150vh]">
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between p-5 border-b">
           <h2 className="text-lg font-semibold">Tạo phiếu trả hàng nhập</h2>
@@ -326,48 +534,49 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
 
         {/* ── Body ────────────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {/* Chi nhánh */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1">
                 Chi nhánh
               </label>
-              <select
-                value={branchId ?? ""}
-                onChange={(e) => setBranchId(Number(e.target.value) || null)}
-                className="w-full border rounded-lg px-3 py-2 text-sm">
-                <option value="">Chọn chi nhánh</option>
-                {branches?.map((b: any) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
+              <ModalSimpleDropdown
+                options={
+                  branches
+                    ?.filter((b: any) => b.isActive)
+                    .map((b: any) => ({
+                      value: String(b.id),
+                      label: b.name,
+                    })) ?? []
+                }
+                value={branchId ? String(branchId) : ""}
+                placeholder="Chọn chi nhánh"
+                onChange={(v) => setBranchId(v ? Number(v) : null)}
+              />
             </div>
 
-            {/* NCC — chỉ hiện ở by_product */}
-            {mode === "by_product" && (
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Nhà cung cấp
-                </label>
-                <select
-                  value={supplierId ?? ""}
-                  onChange={(e) =>
-                    setSupplierId(Number(e.target.value) || null)
-                  }
-                  className="w-full border rounded-lg px-3 py-2 text-sm">
-                  <option value="">Chọn nhà cung cấp</option>
-                  {suppliers.map((s: any) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                Nhà cung cấp
+                {mode === "by_purchase_order" && selectedPO && (
+                  <span className="ml-1 text-blue-500 text-[10px]">
+                    (từ phiếu nhập)
+                  </span>
+                )}
+              </label>
+              <ModalSearchableDropdown
+                options={
+                  suppliersData?.data?.map((s: any) => ({
+                    value: String(s.id),
+                    label: s.name,
+                  })) ?? []
+                }
+                value={supplierId}
+                placeholder="Chọn nhà cung cấp"
+                searchPlaceholder="Tìm tên nhà cung cấp..."
+                onChange={setSupplierId}
+              />
+            </div>
           </div>
-
           {/* ── Mode by_purchase_order: tìm phiếu nhập ─────────────────── */}
           {mode === "by_purchase_order" && (
             <div ref={poDropdownRef} className="relative">

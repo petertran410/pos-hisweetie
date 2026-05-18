@@ -37,9 +37,13 @@ export function useConfirmExport() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) =>
       supplierReturnsApi.confirmExport(id, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["supplier-returns"] });
-      toast.success("Xác nhận xuất kho thành công");
+      if (variables.data.isDraft) {
+        toast.success("Lưu tạm thành công");
+      } else {
+        toast.success("Xác nhận xuất kho thành công");
+      }
     },
     onError: (error: any) => {
       toast.error(error.message || "Xác nhận xuất kho thất bại");
@@ -72,6 +76,25 @@ export function useCancelSupplierReturn() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Hủy phiếu thất bại");
+    },
+  });
+}
+
+export function useUpdateSupplierReturnStep1() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      supplierReturnsApi.updateStep1(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["supplier-returns"] });
+      if (variables.data.isDraft) {
+        toast.success("Lưu tạm thành công");
+      } else {
+        toast.success("Cập nhật phiếu trả hàng nhập thành công");
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Cập nhật thất bại");
     },
   });
 }

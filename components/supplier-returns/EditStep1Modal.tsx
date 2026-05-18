@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X } from "lucide-react";
-import { useSupplierReturn } from "@/lib/hooks/useSupplierReturns";
+import { useState, useEffect, useMemo } from "react";
+import { X, Trash2 } from "lucide-react";
+import {
+  useSupplierReturn,
+  useUpdateSupplierReturnStep1,
+} from "@/lib/hooks/useSupplierReturns";
 import { formatCurrency } from "@/lib/utils";
 
 interface Props {
@@ -12,16 +15,7 @@ interface Props {
   onCancel: () => void;
 }
 
-interface ExportItem {
-  detailId: number;
-  productCode: string;
-  productName: string;
-  requestQuantity: number;
-  confirmedQuantity: number;
-  returnPrice: number;
-}
-
-export function ConfirmExportModal({
+export function EditStep1Modal({
   supplierReturnId,
   onClose,
   onSubmit,
@@ -29,13 +23,34 @@ export function ConfirmExportModal({
 }: Props) {
   const { data: supplierReturn, isLoading } =
     useSupplierReturn(supplierReturnId);
-  const [exportItems, setExportItems] = useState<ExportItem[]>([]);
+  const [returnItems, setReturnItems] = useState<any[]>([]);
   const [note, setNote] = useState("");
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [displays, setDisplays] = useState<Record<string, string>>({});
+  const updateStep1 = useUpdateSupplierReturnStep1();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-  const getDisplay = (idx: number, value: number): string => {
-    const key = String(idx);
+  useEffect(() => {
+    if (!supplierReturn?.details) return;
+    setReturnItems(
+      supplierReturn.details.map((d) => ({
+        detailId: d.id,
+        productId: d.productId,
+        productCode: d.productCode,
+        productName: d.productName,
+        purchaseQuantity: Number(d.purchaseQuantity),
+        purchasePrice: Number(d.purchasePrice),
+        purchaseOrderId: d.purchaseOrderId,
+        purchaseOrderCode: d.purchaseOrderCode,
+        requestQuantity: Number(d.requestQuantity),
+        returnPrice: Number(d.returnPrice),
+      }))
+    );
+    setNote(supplierReturn.note || "");
+  }, [supplierReturn]);
+
+  const getDisplay = (idx: number, field: string, value: number) => {
+    const key = `${idx}_${field}`;
     return displays[key] !== undefined
       ? displays[key]
       : value === 0
@@ -43,28 +58,22 @@ export function ConfirmExportModal({
         : String(value);
   };
 
-  const handleFieldChange = (idx: number, raw: string) => {
-    const key = String(idx);
+  const handleFieldChange = (
+    idx: number,
+    field: "requestQuantity" | "returnPrice",
+    raw: string
+  ) => {
+    const key = `${idx}_${field}`;
     const onlyNums = raw.replace(/[^\d]/g, "");
     setDisplays((prev) => ({ ...prev, [key]: onlyNums }));
     const parsed = onlyNums === "" ? 0 : parseInt(onlyNums, 10);
-    setExportItems((prev) =>
-      prev.map((item, j) =>
-        j === idx
-          ? {
-              ...item,
-              confirmedQuantity: Math.min(
-                item.requestQuantity,
-                Math.max(0, parsed)
-              ),
-            }
-          : item
-      )
+    setReturnItems((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, [field]: parsed } : item))
     );
   };
 
-  const handleFieldBlur = (idx: number) => {
-    const key = String(idx);
+  const handleFieldBlur = (idx: number, field: string) => {
+    const key = `${idx}_${field}`;
     setDisplays((prev) => {
       const next = { ...prev };
       delete next[key];
@@ -72,47 +81,57 @@ export function ConfirmExportModal({
     });
   };
 
-  useEffect(() => {
-    if (!supplierReturn?.details) return;
-    setExportItems(
-      supplierReturn.details.map((d) => ({
-        detailId: d.id,
-        productCode: d.productCode,
-        productName: d.productName,
-        requestQuantity: Number(d.requestQuantity),
-        confirmedQuantity: Number(d.requestQuantity),
-        returnPrice: Number(d.returnPrice),
-      }))
-    );
-    setNote(supplierReturn.note || "");
-  }, [supplierReturn]);
-
-  const totalConfirmed = exportItems.reduce(
-    (sum, item) => sum + item.confirmedQuantity * item.returnPrice,
-    0
+  const totalReturnAmount = useMemo(
+    () =>
+      returnItems.reduce(
+        (sum, i) => sum + i.requestQuantity * i.returnPrice,
+        0
+      ),
+    [returnItems]
   );
 
-  const handleSubmit = (isDraft = false) => {
-    const validItems = exportItems.filter((i) => i.confirmedQuantity > 0);
-    onSubmit({
-      isDraft,
-      note,
-      details: validItems.map((i) => ({
-        detailId: i.detailId,
-        confirmedQuantity: i.confirmedQuantity,
-      })),
-    });
+  const handleSubmit = async (isDraft: boolean) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await updateStep1.mutateAsync({
+        id: supplierReturnId,
+        data: {
+          isDraft,
+          note,
+          details: returnItems
+            .filter((i) => i.requestQuantity > 0)
+            .map((i) => ({
+              productId: i.productId,
+              productCode: i.productCode,
+              productName: i.productName,
+              purchaseQuantity: i.purchaseQuantity,
+              purchasePrice: i.purchasePrice,
+              purchaseOrderId: i.purchaseOrderId,
+              purchaseOrderCode: i.purchaseOrderCode,
+              requestQuantity: i.requestQuantity,
+              returnPrice: i.returnPrice,
+            })),
+        },
+      });
+      if (!isDraft) onClose();
+    } catch {
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) return null;
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b">
           <div>
-            <h2 className="text-lg font-semibold">Xác nhận xuất kho</h2>
+            <h2 className="text-lg font-semibold">
+              Chỉnh sửa phiếu trả hàng nhập
+            </h2>
             <p className="text-sm text-gray-500">{supplierReturn?.code}</p>
           </div>
           <button
@@ -149,19 +168,22 @@ export function ConfirmExportModal({
                   Sản phẩm
                 </th>
                 <th className="text-right py-2 font-medium text-gray-600">
-                  SL yêu cầu
+                  SL nhập
                 </th>
                 <th className="text-right py-2 font-medium text-gray-600">
-                  SL xuất kho
+                  SL trả
                 </th>
                 <th className="text-right py-2 font-medium text-gray-600">
-                  Đơn giá
+                  Giá trả
+                </th>
+                <th className="text-right py-2 font-medium text-gray-600">
+                  Thành tiền
                 </th>
               </tr>
             </thead>
             <tbody>
-              {exportItems.map((item, idx) => (
-                <tr key={item.detailId} className="border-b">
+              {returnItems.map((item, idx) => (
+                <tr key={idx} className="border-b">
                   <td className="py-3">
                     <div className="font-medium">{item.productName}</div>
                     <div className="text-xs text-gray-400">
@@ -169,20 +191,44 @@ export function ConfirmExportModal({
                     </div>
                   </td>
                   <td className="py-3 text-right text-gray-500">
-                    {item.requestQuantity}
+                    {item.purchaseQuantity || "-"}
                   </td>
                   <td className="py-3 text-right">
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={getDisplay(idx, item.confirmedQuantity)}
-                      onChange={(e) => handleFieldChange(idx, e.target.value)}
-                      onBlur={() => handleFieldBlur(idx)}
+                      value={getDisplay(
+                        idx,
+                        "requestQuantity",
+                        item.requestQuantity
+                      )}
+                      onChange={(e) =>
+                        handleFieldChange(
+                          idx,
+                          "requestQuantity",
+                          e.target.value
+                        )
+                      }
+                      onBlur={() => handleFieldBlur(idx, "requestQuantity")}
                       className="w-20 border rounded px-2 py-1 text-right text-sm"
                     />
                   </td>
                   <td className="py-3 text-right">
-                    {new Intl.NumberFormat("en-US").format(item.returnPrice)}
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={getDisplay(idx, "returnPrice", item.returnPrice)}
+                      onChange={(e) =>
+                        handleFieldChange(idx, "returnPrice", e.target.value)
+                      }
+                      onBlur={() => handleFieldBlur(idx, "returnPrice")}
+                      className="w-28 border rounded px-2 py-1 text-right text-sm"
+                    />
+                  </td>
+                  <td className="py-3 text-right font-medium">
+                    {new Intl.NumberFormat("en-US").format(
+                      item.requestQuantity * item.returnPrice
+                    )}
                   </td>
                 </tr>
               ))}
@@ -214,9 +260,9 @@ export function ConfirmExportModal({
           )}
 
           <div className="flex items-center justify-between text-sm font-semibold">
-            <span>Tổng tiền xuất kho</span>
+            <span>Tổng tiền trả</span>
             <span className="text-blue-600">
-              {formatCurrency(totalConfirmed)}
+              {formatCurrency(totalReturnAmount)}
             </span>
           </div>
           <textarea
@@ -227,14 +273,11 @@ export function ConfirmExportModal({
             className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
           />
           <div className="flex justify-between">
-            {/* Nút hủy phiếu — bên trái */}
             <button
               onClick={() => setShowCancelConfirm(true)}
               className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50">
               Hủy phiếu
             </button>
-
-            {/* Các nút hành động — bên phải */}
             <div className="flex gap-2">
               <button
                 onClick={onClose}
@@ -242,14 +285,16 @@ export function ConfirmExportModal({
                 Đóng
               </button>
               <button
+                disabled={isSubmitting}
                 onClick={() => handleSubmit(true)}
-                className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
+                className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50 disabled:opacity-40">
                 Lưu tạm
               </button>
               <button
+                disabled={isSubmitting}
                 onClick={() => handleSubmit(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                Xác nhận xuất kho
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-40">
+                Xác nhận yêu cầu trả
               </button>
             </div>
           </div>
