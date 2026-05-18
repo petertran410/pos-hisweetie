@@ -219,12 +219,13 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
               Import cân bằng nợ
             </button>
           </PermissionGate>
-          <button
-            onClick={() => setShowColumnModal((v) => !v)}
-            className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600 relative">
-            <Settings className="w-4 h-4" />
-            Cột hiển thị
-            {/* Column modal */}
+          <div className="relative">
+            <button
+              onClick={() => setShowColumnModal((v) => !v)}
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
+              <Settings className="w-4 h-4" />
+              Cột hiển thị
+            </button>
             {showColumnModal && (
               <div
                 className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-3 w-56 max-h-80 overflow-y-auto"
@@ -256,7 +257,7 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
                 </div>
               </div>
             )}
-          </button>
+          </div>
         </div>
       </div>
 
