@@ -375,11 +375,7 @@ export function TransferTable({ filters }: TransferTableProps) {
                           ? "bg-blue-50"
                           : "border-b hover:bg-gray-50"
                       }`}
-                      onClick={() => {
-                        toggleExpand(transfer.id);
-                        setSelectedTransfer(transfer);
-                        setShowForm(true);
-                      }}>
+                      onClick={() => toggleExpand(transfer.id)}>
                       <td
                         className={`px-4 py-2.5 sticky left-0 z-10 ${
                           expandedId === transfer.id
