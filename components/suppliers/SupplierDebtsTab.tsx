@@ -76,6 +76,7 @@ export function SupplierDebtsTab({
                 const isPurchase = item.type === "purchase";
                 const isPayment = item.type === "payment";
                 const isBalanceAdjustment = item.type === "balance_adjustment";
+                const isSupplierReturn = item.type === "supplier_return";
 
                 return (
                   <tr
@@ -98,6 +99,12 @@ export function SupplierDebtsTab({
                           className="text-md font-medium text-blue-600 hover:underline">
                           {item.code}
                         </Link>
+                      ) : isSupplierReturn ? (
+                        <Link
+                          href={`/san-pham/tra-hang-nhap`}
+                          className="text-md font-medium text-blue-600 hover:underline">
+                          {item.code}
+                        </Link>
                       ) : (
                         <span className="text-blue-600">{item.code}</span>
                       )}
@@ -112,7 +119,11 @@ export function SupplierDebtsTab({
                           ? "Thanh toán"
                           : isBalanceAdjustment
                             ? "Cân bằng nợ"
-                            : "Khác"}
+                            : isSupplierReturn
+                              ? item.refundType === "debt_offset"
+                                ? "Cấn trừ nợ NCC"
+                                : "Trả hàng nhập"
+                              : "Khác"}
                     </td>
                     <td className="px-4 py-3 text-md">
                       {item.branch?.name || "-"}
