@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useSupplierReturn } from "@/lib/hooks/useSupplierReturns";
 import { formatCurrency } from "@/lib/utils";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 interface Props {
   supplierReturnId: number;
@@ -227,30 +228,33 @@ export function ConfirmExportModal({
             className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
           />
           <div className="flex justify-between">
-            {/* Nút hủy phiếu — bên trái */}
-            <button
-              onClick={() => setShowCancelConfirm(true)}
-              className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50">
-              Hủy phiếu
-            </button>
-
-            {/* Các nút hành động — bên phải */}
+            <PermissionGate resource="supplier_returns" action="cancel">
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50">
+                Hủy phiếu
+              </button>
+            </PermissionGate>
             <div className="flex gap-2">
               <button
                 onClick={onClose}
                 className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
                 Đóng
               </button>
-              <button
-                onClick={() => handleSubmit(true)}
-                className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
-                Lưu tạm
-              </button>
-              <button
-                onClick={() => handleSubmit(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                Xác nhận xuất kho
-              </button>
+              <PermissionGate
+                resource="supplier_returns"
+                action="confirm_export">
+                <button
+                  onClick={() => handleSubmit(true)}
+                  className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
+                  Lưu tạm
+                </button>
+                <button
+                  onClick={() => handleSubmit(false)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                  Xác nhận xuất kho
+                </button>
+              </PermissionGate>
             </div>
           </div>
         </div>
