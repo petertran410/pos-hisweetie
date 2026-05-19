@@ -220,18 +220,18 @@ export function CustomerAddressesTab({
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">
+        <h3 className="text-base lg:text-lg font-semibold">
           Địa chỉ giao hàng
-          <span className="text-sm text-gray-500 font-normal ml-2">
+          <span className="text-xs lg:text-sm text-gray-500 font-normal ml-2">
             ({addresses.length} địa chỉ)
           </span>
         </h3>
         <button
           onClick={() => setModalState({ open: true, mode: "create" })}
           disabled={updateCustomer.isPending}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50">
+          className="px-3 lg:px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50">
           <Plus className="w-4 h-4" />
-          Thêm địa chỉ
+          <span className="hidden sm:inline">Thêm địa chỉ</span>
         </button>
       </div>
 
@@ -257,7 +257,7 @@ export function CustomerAddressesTab({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                      <span className="font-medium truncate">
+                      <span className="text-sm lg:text-base font-medium truncate">
                         {addr.label || addr.receiver || `Địa chỉ #${index + 1}`}
                       </span>
                       {addr.isDefault && (
@@ -268,7 +268,7 @@ export function CustomerAddressesTab({
                       )}
                     </div>
 
-                    <div className="space-y-1 text-sm text-gray-700">
+                    <div className="space-y-1 text-xs lg:text-sm text-gray-700">
                       {(addr.receiver || addr.contactNumber) && (
                         <div className="flex items-center gap-4 text-gray-600">
                           {addr.receiver && (

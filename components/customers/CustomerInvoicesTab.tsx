@@ -198,17 +198,19 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
       <table className="w-full">
         <thead>
           <tr className="border-b bg-gray-50">
-            <th className="px-4 py-3 text-left text-sm font-medium">Loại</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">
+            <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
+              Loại
+            </th>
+            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
               Mã phiếu
             </th>
-            <th className="px-4 py-3 text-left text-sm font-medium">
+            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
               Thời gian
             </th>
-            <th className="px-4 py-3 text-left text-sm font-medium">
+            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
               Người thực hiện
             </th>
-            <th className="px-4 py-3 text-left text-sm font-medium">
+            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
               Chi nhánh
             </th>
             <th className="px-4 py-3 text-right text-sm font-medium">
@@ -224,7 +226,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
             <tr
               key={`${item.type}-${item.id}`}
               className="border-b hover:bg-gray-50">
-              <td className="px-4 py-3">
+              <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                 {item.type === "invoice" ? (
                   <span className="px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">
                     Bán hàng
@@ -235,7 +237,8 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
                   </span>
                 )}
               </td>
-              <td className="px-4 py-3">
+
+              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                 {item.code ? (
                   item.type === "invoice" ? (
                     <>
@@ -267,11 +270,15 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
                   {item.code}
                 </span> */}
               </td>
-              <td className="px-4 py-3 text-sm">
+              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                 {new Date(item.date).toLocaleString("vi-VN")}
               </td>
-              <td className="px-4 py-3 text-sm">{item.sellerName}</td>
-              <td className="px-4 py-3 text-sm">{item.branchName}</td>
+              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
+                {item.sellerName}
+              </td>
+              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
+                {item.branchName}
+              </td>
               <td className="px-4 py-3 text-sm text-right">
                 {item.type === "invoice" ? (
                   <span className="text-red-600 font-medium">

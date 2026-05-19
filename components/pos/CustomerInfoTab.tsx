@@ -106,7 +106,9 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Thông tin khách hàng</h3>
+          <h3 className="text-base lg:text-lg font-semibold">
+            Thông tin khách hàng
+          </h3>
           <button
             onClick={() => setIsEditing(true)}
             className="px-4 py-2 border rounded hover:bg-gray-50 flex items-center gap-2">
@@ -115,35 +117,35 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
               Tên khách hàng
             </label>
-            <div className="text-base">{customer.name || "-"}</div>
+            <div className="text-sm lg:text-base">{customer.name || "-"}</div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
               Điện thoại
             </label>
-            <div className="text-base">
+            <div className="text-sm lg:text-base">
               {customer.contactNumber || customer.phone || "-"}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
               Email
             </label>
-            <div className="text-base">{customer.email || "-"}</div>
+            <div className="text-sm lg:text-base">{customer.email || "-"}</div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
               Giới tính
             </label>
-            <div className="text-base">
+            <div className="text-sm lg:text-base">
               {customer.gender === true
                 ? "Nam"
                 : customer.gender === false
@@ -153,17 +155,17 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
               Ngày sinh
             </label>
-            <div className="text-base">
+            <div className="text-sm lg:text-base">
               {customer.birthDate ? formatDate(customer.birthDate) : "-"}
             </div>
           </div>
 
           {customer.comments && (
-            <div className="col-span-3">
-              <label className="block text-sm font-medium text-gray-500 mb-1">
+            <div className="col-span-2 lg:col-span-3">
+              <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                 Ghi chú
               </label>
               <div className="text-base bg-gray-50 p-3 rounded">
@@ -199,7 +201,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
         <div>
           <label className="block text-sm font-medium mb-2">
             Tên khách hàng <span className="text-red-500">*</span>
@@ -280,7 +282,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           )}
         </div>
 
-        <div className="col-span-3">
+        <div className="col-span-2 lg:col-span-3">
           <label className="block text-sm font-medium mb-2">Ghi chú</label>
           <textarea
             {...register("comments")}

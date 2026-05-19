@@ -49,22 +49,22 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
       <table className="w-full">
         <thead>
           <tr className="border-b bg-gray-50">
-            <th className="px-4 py-3 text-left text-sm font-medium">
+            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
               Mã đặt hàng
             </th>
-            <th className="px-4 py-3 text-left text-sm font-medium">
+            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
               Thời gian
             </th>
-            <th className="px-4 py-3 text-left text-sm font-medium">
+            <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
               Người bán
             </th>
-            <th className="px-4 py-3 text-left text-sm font-medium">
+            <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
               Chi nhánh xử lý
             </th>
-            <th className="px-4 py-3 text-right text-sm font-medium">
+            <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-sm font-medium">
               Tổng cộng
             </th>
-            <th className="px-4 py-3 text-center text-sm font-medium">
+            <th className="px-2 py-2 lg:px-4 lg:py-3 text-center text-xs lg:text-sm font-medium">
               Trạng thái
             </th>
           </tr>
@@ -72,20 +72,22 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
         <tbody>
           {paginatedOrders.map((order) => (
             <tr key={order.id} className="border-b hover:bg-gray-50">
-              <td className="px-4 py-3">
+              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                 <a
                   href={`/orders/${order.id}`}
                   className="text-blue-600 hover:underline">
                   {order.code}
                 </a>
               </td>
-              <td className="px-4 py-3 text-sm">
+              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                 {new Date(order.orderDate).toLocaleString("vi-VN")}
               </td>
-              <td className="px-4 py-3 text-sm">
+              <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                 {order.soldBy?.name || "admin"}
               </td>
-              <td className="px-4 py-3 text-sm">{order.branch?.name || "-"}</td>
+              <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
+                {order.branch?.name || "-"}
+              </td>
               <td className="px-4 py-3 text-sm text-right">
                 {formatCurrency(order.grandTotal)}
               </td>

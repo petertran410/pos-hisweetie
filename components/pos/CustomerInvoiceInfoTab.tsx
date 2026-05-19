@@ -177,7 +177,9 @@ export function CustomerInvoiceInfoTab({
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Thông tin xuất hóa đơn</h3>
+          <h3 className="text-base lg:text-lg font-semibold">
+            Thông tin xuất hóa đơn
+          </h3>
           <button
             onClick={() => setIsEditing(true)}
             className="px-4 py-2 border rounded hover:bg-gray-50 flex items-center gap-2">
@@ -186,12 +188,12 @@ export function CustomerInvoiceInfoTab({
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
               Loại khách hàng
             </label>
-            <div className="text-base">
+            <div className="text-sm lg:text-base">
               {customer.type === 0 ? "Cá nhân" : "Tổ chức/Hộ kinh doanh"}
             </div>
           </div>
@@ -199,55 +201,55 @@ export function CustomerInvoiceInfoTab({
           {customer.type === 0 && (
             <>
               <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Tên người mua
                 </label>
-                <div className="text-base">
+                <div className="text-sm lg:text-base">
                   {customer.invoiceBuyerName || "Chưa có"}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Số CCCD/CMND
                 </label>
-                <div className="text-base">
+                <div className="text-sm lg:text-base">
                   {customer.invoiceCccdCmnd || "Chưa có"}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Số hộ chiếu
                 </label>
-                <div className="text-base">
+                <div className="text-sm lg:text-base">
                   {customer.invoiceBankAccount || "Chưa có"}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Mã ĐVQHNS
                 </label>
-                <div className="text-base">
+                <div className="text-sm lg:text-base">
                   {customer.invoiceDvqhnsCode || "Chưa có"}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Email
                 </label>
-                <div className="text-base">
+                <div className="text-sm lg:text-base">
                   {customer.invoiceEmail || "Chưa có"}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Số điện thoại
                 </label>
-                <div className="text-base">
+                <div className="text-sm lg:text-base">
                   {customer.invoicePhone || "Chưa có"}
                 </div>
               </div>
@@ -257,53 +259,55 @@ export function CustomerInvoiceInfoTab({
           {customer.type === 1 && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Mã số thuế
                 </label>
-                <div className="text-base">{customer.taxCode || "Chưa có"}</div>
+                <div className="text-sm lg:text-base">
+                  {customer.taxCode || "Chưa có"}
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Tên công ty
                 </label>
-                <div className="text-base">
+                <div className="text-sm lg:text-base">
                   {customer.organization || "Chưa có"}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Tên người mua
                 </label>
-                <div className="text-base">
+                <div className="text-sm lg:text-base">
                   {customer.invoiceBuyerName || "Chưa có"}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Mã ĐVQHNS
                 </label>
-                <div className="text-base">
+                <div className="text-sm lg:text-base">
                   {customer.invoiceDvqhnsCode || "Chưa có"}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Email
                 </label>
-                <div className="text-base">
+                <div className="text-sm lg:text-base">
                   {customer.invoiceEmail || "Chưa có"}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
                   Số điện thoại
                 </label>
-                <div className="text-base">
+                <div className="text-sm lg:text-base">
                   {customer.invoicePhone || "Chưa có"}
                 </div>
               </div>
@@ -311,10 +315,10 @@ export function CustomerInvoiceInfoTab({
           )}
 
           <div className="col-span-3">
-            <label className="block text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
               Địa chỉ xuất hóa đơn
             </label>
-            <div className="text-base">
+            <div className="text-sm lg:text-base">
               {[
                 customer.invoiceAddress,
                 customer.invoiceWardName,
@@ -369,7 +373,7 @@ export function CustomerInvoiceInfoTab({
       </div>
 
       {customerType === "0" && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           <div className="col-span-2">
             <label className="block text-sm font-medium mb-2">
               Tên người mua
@@ -479,7 +483,7 @@ export function CustomerInvoiceInfoTab({
       )}
 
       {customerType === "1" && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">
               Mã số thuế <span className="text-red-500">*</span>
