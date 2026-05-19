@@ -369,7 +369,7 @@ export function OrderItemsList({
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex gap-1.5 lg:gap-2 mb-0.5 lg:mb-1">
-                    <span className="hidden lg:inline text-sm lg:text-md font-medium text-gray-600">
+                    <span className="hidden lg:inline text-sm lg:text-base font-medium text-gray-600">
                       {item.product.code}
                     </span>
                     <span className="text-sm lg:text-md font-semibold text-gray-900">
@@ -483,7 +483,7 @@ export function OrderItemsList({
                   </div>
 
                   <div className="flex flex-col items-end min-w-[44px] lg:min-w-[60px]">
-                    <span className="text-xs text-gray-400 mb-0.5">
+                    <span className="text-xs lg:text-md text-gray-400 mb-0.5">
                       Chiết khấu
                     </span>
                     <span
@@ -500,7 +500,7 @@ export function OrderItemsList({
                   </div>
 
                   <div className="flex flex-col items-end min-w-[44px] lg:min-w-[60px]">
-                    <span className="text-xs text-gray-400 mb-0.5">
+                    <span className="text-xs lg:text-md text-gray-400 mb-0.5">
                       Đơn giá
                     </span>
                     {canEditPrice ? (
@@ -515,7 +515,7 @@ export function OrderItemsList({
                         onKeyDown={(e) => {
                           if (e.key === "Enter") e.currentTarget.blur();
                         }}
-                        className="w-20 h-4 lg:w-24 lg:h-7 text-right border border-gray-300 rounded px-1 lg:px-2 text-xs lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                        className="w-20 h-4 lg:w-24 lg:h-6 text-right border border-gray-300 rounded px-1 text-xs lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
                       />
                     ) : (
                       <span className="text-xs lg:text-md text-gray-500">
@@ -525,10 +525,10 @@ export function OrderItemsList({
                   </div>
 
                   <div className="flex flex-col items-end min-w-[44px] lg:min-w-[60px]">
-                    <span className="text-xs text-gray-400 mb-0.5">
+                    <span className="text-xs lg:text-md text-gray-400 mb-0.5">
                       Thành tiền
                     </span>
-                    <span className="text-xs lg:text-md font-medium">
+                    <span className="text-xs lg:text-md">
                       {(
                         (item.price - item.discount) *
                         item.quantity
