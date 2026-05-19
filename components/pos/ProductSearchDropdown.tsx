@@ -224,11 +224,12 @@ export function ProductSearchDropdown({
           onChange={(e) => setSearch(e.target.value)}
           onFocus={() => search && !selectedProduct && setShowDropdown(true)}
           onKeyDown={handleSearchKeyDown}
-          className={`w-full bg-white border-0 rounded-lg px-4 py-2 pl-10 pr-10 focus:outline-none focus:ring-2 focus:ring-white/50 ${
+          className={`w-full bg-white border-0 rounded-lg px-3 lg:px-4 py-1.5 lg:py-2 pl-9 lg:pl-10 pr-9 lg:pr-10 text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-white/50 ${
             selectedProduct ? "bg-gray-50" : ""
           }`}
         />
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+        <Search className="absolute left-2.5 lg:left-3 top-1/2 -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
         <button
           type="button"
           onClick={() => setShowQuantityInput((prev) => !prev)}
@@ -238,7 +239,7 @@ export function ProductSearchDropdown({
               ? "bg-blue-100 text-blue-600"
               : "text-gray-500 hover:bg-gray-100"
           }`}>
-          <Barcode className="w-5 h-5" />
+          <Barcode className="w-4 h-4 lg:w-5 lg:h-5" />
         </button>
 
         {showDropdown && products.length > 0 && (
@@ -350,7 +351,7 @@ export function ProductSearchDropdown({
             setQuantityDisplay(e.target.value.replace(/[^\d]/g, ""))
           }
           onKeyDown={handleQuantityKeyDown}
-          className="w-20 bg-white rounded-lg px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-white/50"
+          className="w-16 lg:w-20 bg-white rounded-lg px-2 lg:px-3 py-1.5 lg:py-2 text-center text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-white/50"
         />
       )}
     </div>

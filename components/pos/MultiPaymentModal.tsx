@@ -149,23 +149,23 @@ export function MultiPaymentModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 lg:p-0">
+      <div className="bg-white rounded-lg w-full max-w-2xl p-4 lg:p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-3 lg:mb-4">
+          <h2 className="text-lg lg:text-xl font-semibold">
             Thanh toán nhiều phương thức
           </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 lg:w-6 lg:h-6" />
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3 lg:space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-lg">Số tiền</span>
-            <span className="text-2xl font-bold text-blue-600">
+            <span className="text-base lg:text-lg">Số tiền</span>
+            <span className="text-xl lg:text-2xl font-bold text-blue-600">
               {getTotalPaid().toLocaleString()}
             </span>
           </div>
@@ -175,7 +175,7 @@ export function MultiPaymentModal({
             value={displayAmount}
             onChange={handleAmountChange}
             placeholder="Nhập số tiền"
-            className="w-full border rounded-lg px-4 py-3 text-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 lg:px-4 py-2 lg:py-3 text-base lg:text-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
           <div className="grid grid-cols-4 gap-2">
@@ -183,27 +183,29 @@ export function MultiPaymentModal({
               <button
                 key={amount}
                 onClick={() => handleQuickAmount(amount)}
-                className="border rounded-lg py-2 hover:bg-gray-100">
+                className="border rounded-lg py-1.5 lg:py-2 text-sm lg:text-base hover:bg-gray-100">
                 {amount.toLocaleString()}
               </button>
             ))}
           </div>
 
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
             {(
               Object.keys(methodLabels) as Array<keyof typeof methodLabels>
             ).map((method) => (
               <button
                 key={method}
                 onClick={() => handleMethodClick(method)}
-                className="border rounded-lg py-3 hover:bg-blue-50 hover:border-blue-500">
+                className="border rounded-lg py-2 lg:py-3 text-sm lg:text-base hover:bg-blue-50 hover:border-blue-500">
                 {methodLabels[method]}
               </button>
             ))}
           </div>
 
           {showAccountDropdown && currentMethod && (
-            <div ref={dropdownRef} className="border rounded-lg p-4 bg-gray-50">
+            <div
+              ref={dropdownRef}
+              className="border rounded-lg p-3 lg:p-4 bg-gray-50">
               <div className="text-sm font-medium mb-2">
                 Chọn tài khoản thanh toán:
               </div>
@@ -240,9 +242,9 @@ export function MultiPaymentModal({
           )}
 
           {payments.length > 0 && (
-            <div className="border rounded-lg p-4 space-y-2">
+            <div className="border rounded-lg p-3 lg:p-4 space-y-2">
               <div className="font-medium mb-2">Khách cần trả</div>
-              <div className="text-2xl font-bold text-blue-600 mb-3">
+              <div className="text-xl lg:text-2xl font-bold text-blue-600 mb-3">
                 {totalAmount.toLocaleString()}
               </div>
 
@@ -254,7 +256,7 @@ export function MultiPaymentModal({
                       {methodLabels[payment.method]}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-lg">
+                      <span className="font-medium text-base lg:text-lg">
                         {payment.amount.toLocaleString()}
                       </span>
                       <button
@@ -275,7 +277,7 @@ export function MultiPaymentModal({
               <div className="pt-3 border-t mt-3">
                 <div className="flex items-center justify-between font-medium">
                   <span>Khách thanh toán</span>
-                  <span className="text-lg text-green-600">
+                  <span className="text-base lg:text-lg text-green-600">
                     {getTotalPaid().toLocaleString()}
                   </span>
                 </div>
@@ -284,15 +286,15 @@ export function MultiPaymentModal({
           )}
         </div>
 
-        <div className="flex items-center gap-3 mt-6">
+        <div className="flex items-center gap-3 mt-4 lg:mt-6">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-100">
+            className="flex-1 px-4 py-2 border rounded-lg text-sm lg:text-base hover:bg-gray-100">
             Hủy
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm lg:text-base hover:bg-blue-700">
             Xong
           </button>
         </div>
