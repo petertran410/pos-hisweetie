@@ -847,7 +847,7 @@ export function CustomerForm({
                 : "hidden"
             }>
             {/* Loại khách hàng radio — inline theo hình 4/5 */}
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
               <span className="text-sm font-medium">Loại khách hàng</span>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -888,7 +888,7 @@ export function CustomerForm({
                   />
                 </div>
 
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <label className="block text-sm font-medium mb-1.5">
                     Địa chỉ
                   </label>
