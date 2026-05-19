@@ -106,7 +106,7 @@ export function DashboardHeader() {
   );
 
   return (
-    <header className="bg-blue-600 text-white relative z-30">
+    <header className="bg-blue-600 text-white">
       <div className="flex items-center h-14">
         {/* ═══════════════════════════════════════════════
             DESKTOP LAYOUT — hidden dưới lg
@@ -454,9 +454,8 @@ export function DashboardHeader() {
 
             {/* Drawer footer — User info + Cài đặt + Logout */}
             <div className="flex-shrink-0 border-t border-blue-600">
-              {/* BranchSelector ở đây — nằm ngoài overflow-y-auto, dropdown tự do */}
               <div className="px-4 py-3 border-b border-blue-600">
-                <BranchSelector />
+                <BranchSelector dropUp />
               </div>
 
               {/* User info + buttons — giữ nguyên */}

@@ -7,7 +7,11 @@ import { authApi } from "@/lib/api/auth";
 import { Branch, branchesApi } from "@/lib/api/branches";
 import { useQuery } from "@tanstack/react-query";
 
-export function BranchSelector() {
+interface BranchSelectorProps {
+  dropUp?: boolean;
+}
+
+export function BranchSelector({ dropUp = false }: BranchSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -117,7 +121,8 @@ export function BranchSelector() {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-1 w-64 bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+        <div
+          className={`absolute ${dropUp ? "bottom-full mb-1" : "top-full mt-1"} right-0 w-64 bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto`}>
           {branches?.map((branch) => (
             <button
               key={branch.id}
