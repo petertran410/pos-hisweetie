@@ -506,11 +506,15 @@ export function OrderItemsList({
                     {canEditPrice ? (
                       <input
                         type="text"
+                        inputMode="numeric"
                         value={getPriceInputValue(item)}
                         onChange={(e) =>
                           handlePriceChange(item, e.target.value)
                         }
                         onBlur={() => handlePriceBlur(item)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                        }}
                         className="w-24 h-7 text-right border border-gray-300 rounded px-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
                       />
                     ) : (
@@ -569,18 +573,22 @@ export function OrderItemsList({
             </span>
           </div>
           {canEditDiscount ? (
-            <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2 w-full">
               <input
                 type="text"
+                inputMode="numeric"
                 value={displayValue}
                 onChange={handleInputChange}
                 onBlur={handleInputBlur}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                }}
                 placeholder={
                   discountType === "amount" ? "Nhập số tiền" : "Nhập %"
                 }
-                className="text-center border rounded-xl px-3 py-1.5 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 min-w-0 text-center border rounded-xl px-3 py-1.5 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => handleDiscountTypeChange("amount")}
                   className={`px-3 py-1 text-md rounded transition-colors ${
