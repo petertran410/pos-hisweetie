@@ -9,9 +9,13 @@ import { useQuery } from "@tanstack/react-query";
 
 interface BranchSelectorProps {
   dropUp?: boolean;
+  fullWidth?: boolean;
 }
 
-export function BranchSelector({ dropUp = false }: BranchSelectorProps) {
+export function BranchSelector({
+  dropUp = false,
+  fullWidth = false,
+}: BranchSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -86,11 +90,13 @@ export function BranchSelector({ dropUp = false }: BranchSelectorProps) {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className={`relative ${fullWidth ? "w-full" : ""}`} ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading}
-        className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 min-w-[200px] text-black disabled:opacity-70">
+        className={`flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 text-black disabled:opacity-70 ${
+          fullWidth ? "w-full" : "min-w-[200px]"
+        }`}>
         <svg
           className="w-5 h-5"
           fill="none"
@@ -122,7 +128,7 @@ export function BranchSelector({ dropUp = false }: BranchSelectorProps) {
 
       {isOpen && (
         <div
-          className={`absolute ${dropUp ? "bottom-full mb-1" : "top-full mt-1"} right-0 w-64 bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto`}>
+          className={`absolute ${dropUp ? "bottom-full mb-1" : "top-full mt-1"} right-0 min-w-full bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto`}>
           {branches?.map((branch) => (
             <button
               key={branch.id}

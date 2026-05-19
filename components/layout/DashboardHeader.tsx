@@ -106,7 +106,7 @@ export function DashboardHeader() {
   );
 
   return (
-    <header className="bg-blue-600 text-white">
+    <header className=" text-gray-700">
       <div className="flex items-center h-14">
         {/* ═══════════════════════════════════════════════
             DESKTOP LAYOUT — hidden dưới lg
@@ -120,7 +120,7 @@ export function DashboardHeader() {
             <nav className="flex items-center gap-1">
               <Link
                 href="/"
-                className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
+                className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
                 Tổng quan
               </Link>
 
@@ -129,7 +129,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("products")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
+                  <button className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
                     Hàng hóa
                   </button>
                   {hoveredMenu === "products" && (
@@ -145,7 +145,7 @@ export function DashboardHeader() {
                                 <li key={item.href}>
                                   <Link
                                     href={item.href}
-                                    className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                                    className="block px-4 py-2 hover:bg-gray-400 rounded-md text-md transition-colors">
                                     {item.label}
                                   </Link>
                                 </li>
@@ -164,7 +164,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("orders")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
+                  <button className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
                     Đơn hàng
                   </button>
                   {hoveredMenu === "orders" && (
@@ -174,7 +174,7 @@ export function DashboardHeader() {
                           <li key={item.href}>
                             <Link
                               href={item.href}
-                              className="block px-5 py-2 min-w-max hover:bg-gray-100 rounded-md text-md transition-colors">
+                              className="block px-5 py-2 min-w-max hover:bg-gray-400 rounded-md text-md transition-colors">
                               {item.label}
                             </Link>
                           </li>
@@ -188,7 +188,7 @@ export function DashboardHeader() {
               <PermissionGate resource="customers" action="view">
                 <Link
                   href="/khach-hang"
-                  className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
+                  className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
                   Khách hàng
                 </Link>
               </PermissionGate>
@@ -196,14 +196,14 @@ export function DashboardHeader() {
               <PermissionGate resource="cash_flows" action="view">
                 <Link
                   href="/so-quy"
-                  className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
+                  className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
                   Sổ quỹ
                 </Link>
               </PermissionGate>
 
               <Link
                 href="/bao-cao/khach-hang"
-                className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
+                className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
                 Báo cáo
               </Link>
             </nav>
@@ -215,7 +215,7 @@ export function DashboardHeader() {
                 className="relative"
                 onMouseEnter={() => setHoveredMenu("pos")}
                 onMouseLeave={() => setHoveredMenu(null)}>
-                <button className="px-4 py-4 bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors font-medium">
+                <button className="px-4 py-2 bg-white text-blue-600 rounded hover:bg-gray-400 transition-colors font-medium">
                   🛒 Bán hàng
                 </button>
                 {hoveredMenu === "pos" && (
@@ -225,7 +225,7 @@ export function DashboardHeader() {
                         <li key={item.key}>
                           <Link
                             href={item.href}
-                            className="block px-4 py-2 hover:bg-gray-100 rounded-md text-md transition-colors">
+                            className="block px-4 py-2 hover:bg-gray-400 rounded-md text-md transition-colors">
                             {item.label}
                           </Link>
                         </li>
@@ -241,7 +241,7 @@ export function DashboardHeader() {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 px-3 py-2 hover:bg-blue-700 rounded transition-colors">
+                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-400 rounded transition-colors">
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                   {user?.avatar ? (
                     <img
