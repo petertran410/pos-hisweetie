@@ -406,7 +406,7 @@ export function InvoiceCart({
                     handleDeliveryChange("weight", Number(e.target.value))
                   }
                   placeholder="500"
-                  className="w-16 text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-16 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
                 <UnitPicker
                   value={deliveryInfo.weightUnit || "g"}
@@ -423,7 +423,7 @@ export function InvoiceCart({
                     handleDeliveryChange("length", Number(e.target.value))
                   }
                   placeholder="10"
-                  className="w-12 text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-12 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
                 <span className="text-gray-400 text-xs">×</span>
                 <input
@@ -433,7 +433,7 @@ export function InvoiceCart({
                     handleDeliveryChange("width", Number(e.target.value))
                   }
                   placeholder="10"
-                  className="w-12 text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-12 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
                 <span className="text-gray-400 text-xs">×</span>
                 <input
@@ -443,7 +443,7 @@ export function InvoiceCart({
                     handleDeliveryChange("height", Number(e.target.value))
                   }
                   placeholder="10"
-                  className="w-12 text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-12 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
                 <select className="text-md bg-transparent outline-none">
                   <option>cm</option>
@@ -538,7 +538,7 @@ export function InvoiceCart({
 
             return (
               isFirstInvoice && (
-                <div className="flex items-center justify-between text-md">
+                <div className="flex items-center justify-between text-sm lg:text-md">
                   <span>Tổng đã thanh toán</span>
                   <span className="font-semibold">
                     {(
