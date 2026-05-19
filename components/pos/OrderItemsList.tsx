@@ -456,7 +456,7 @@ export function OrderItemsList({
                         handleQuantityChange(item, e.target.value)
                       }
                       onBlur={() => handleQuantityBlur(item)}
-                      className="w-5 h-5 text-center border border-gray-300 rounded px-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-9 h-5 text-center border border-gray-300 rounded px-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       min="1"
                     />
                     <button

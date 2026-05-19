@@ -528,7 +528,7 @@ export function OrderCart({
                 )
               }
               disabled={cartItems.length === 0}
-              className="w-full bg-orange-400 text-white py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
+              className="w-full bg-orange-400 text-white py-2 lg:py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
               LƯU
             </button>
           </div>

@@ -328,7 +328,7 @@ export function InvoiceCart({
     <div
       className={className ?? "w-[40%] h-full bg-white border-l flex flex-col"}>
       <div className="flex-1 flex flex-col overflow-y-auto">
-        <div className="pl-3 pr-3 pt-3 pb-1 space-y-2 flex-shrink-0">
+        <div className="pl-2 lg:pl-3 pr-2 lg:pr-3 pt-2 lg:pt-3 pb-1 space-y-1.5 lg:space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {canEditSeller ? (
@@ -355,7 +355,7 @@ export function InvoiceCart({
         </div>
 
         {selectedCustomer && (
-          <div className="pl-3 pr-3 pb-3 space-y-2 flex-1">
+          <div className="pl-2 lg:pl-3 pr-2 lg:pr-3 pb-2 lg:pb-3 space-y-1.5 lg:space-y-2 flex-1">
             {selectedCustomer.addresses &&
               selectedCustomer.addresses.length > 1 && (
                 <DeliveryAddressDropdown
@@ -365,39 +365,39 @@ export function InvoiceCart({
                 />
               )}
 
-            <div className="border rounded-xl shadow-sm p-3 space-y-2">
+            <div className="border rounded-xl shadow-sm p-2 lg:p-3 space-y-1.5 lg:space-y-2">
               <div className="flex items-center gap-1.5">
-                <MapPin className="w-[16px] h-[16px] text-blue-500 flex-shrink-0" />
-                <span className="text-[16px]">
+                <MapPin className="w-[14px] h-[14px] lg:w-[16px] lg:h-[16px] text-blue-500 flex-shrink-0" />
+                <span className="text-sm lg:text-[16px]">
                   {selectedBranch?.address || ""}
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
-                <House className="w-[16px] h-[16px] flex-shrink-0" />
-                <span className="text-[16px]">
+                <House className="w-[14px] h-[14px] lg:w-[16px] lg:h-[16px] flex-shrink-0" />
+                <span className="text-sm lg:text-[16px]">
                   {deliveryInfo.detailAddress}, {deliveryInfo.locationName},{" "}
                   {deliveryInfo.wardName}
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
-                <User className="w-[16px] h-[16px] text-green-500 flex-shrink-0" />
-                <span className="text-[16px]">
+                <User className="w-[14px] h-[14px] lg:w-[16px] lg:h-[16px] text-green-500 flex-shrink-0" />
+                <span className="text-sm lg:text-[16px]">
                   {deliveryInfo.receiver || ""}
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
-                <Phone className="w-[16px] h-[16px] text-gray-400 flex-shrink-0" />
-                <span className="text-[16px]">
+                <Phone className="w-[14px] h-[14px] lg:w-[16px] lg:h-[16px] text-gray-400 flex-shrink-0" />
+                <span className="text-sm lg:text-[16px]">
                   {deliveryInfo.contactNumber || ""}
                 </span>
               </div>
             </div>
 
-            <div className="border rounded-xl shadow-sm p-3">
-              <div className="flex items-center gap-1.5 flex-wrap py-2">
+            <div className="border rounded-xl shadow-sm p-2 lg:p-3">
+              <div className="flex items-center gap-1.5 flex-wrap py-1 lg:py-2">
                 <span className="text-base flex-shrink-0">📦</span>
                 <input
                   type="number"
@@ -445,13 +445,12 @@ export function InvoiceCart({
                   placeholder="10"
                   className="w-12 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
-                <select className="text-md bg-transparent outline-none">
+                <select className="text-sm hidden lg:block lg:text-md bg-transparent outline-none">
                   <option>cm</option>
-                  <option>m</option>
                 </select>
               </div>
-              <div className="flex items-center gap-1.5 py-2">
-                <span className="text-md text-gray-700">
+              <div className="flex items-center gap-1.5 py-1 lg:py-2">
+                <span className="text-sm lg:text-md text-gray-700">
                   Ghi chú cho bưu tá
                 </span>
               </div>
@@ -465,14 +464,14 @@ export function InvoiceCart({
                 }
                 maxLength={1000}
                 placeholder="Nhập ghi chú..."
-                className="w-full text-md border rounded-xl p-2 outline-none focus:border-blue-500 resize-none"
+                className="w-full text-sm lg:text-md border rounded-xl p-2 outline-none focus:border-blue-500 resize-none"
                 rows={3}
               />
             </div>
           </div>
         )}
       </div>
-      <div className="p-3 space-y-2.5 flex-shrink-0 border mr-3 ml-3 mb-3 rounded-xl shadow-sm">
+      <div className="p-2.5 lg:p-3 space-y-2 lg:space-y-2.5 flex-shrink-0 border mr-2 lg:mr-3 ml-2 lg:ml-3 mb-2 lg:mb-3 rounded-xl shadow-sm">
         {/* <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-md">Thu hộ tiền (COD)</span>
@@ -491,7 +490,7 @@ export function InvoiceCart({
           </span>
         </div> */}
 
-        <div className="flex items-center justify-between text-md">
+        <div className="flex items-center justify-between text-sm lg:text-md">
           <span>Khách cần trả</span>
           <span className="font-semibold">
             {calculateTotal().toLocaleString()}
@@ -499,13 +498,13 @@ export function InvoiceCart({
         </div>
 
         {canViewPayment && (
-          <div className="flex items-center justify-between text-md">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between text-sm lg:text-md">
+            <div className="flex items-center gap-1.5 lg:gap-2">
               <span>Khách thanh toán</span>
               {canEditPayment && (
                 <button
                   onClick={() => setShowMultiPaymentModal(true)}
-                  className="p-2 hover:bg-gray-100 rounded-lg">
+                  className="p-1 lg:p-2 hover:bg-gray-100 rounded-lg">
                   <MoreVertical className="w-4 h-4" />
                 </button>
               )}
@@ -517,7 +516,7 @@ export function InvoiceCart({
                     onChange={handlePaymentInputChange}
                     onBlur={handlePaymentInputBlur}
                     placeholder="Nhập số tiền"
-                    className="border rounded-xl px-3 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32"
+                    className="border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-24 lg:w-32"
                   />
                 </div>
               ) : null}
@@ -550,7 +549,7 @@ export function InvoiceCart({
             );
           })()}
 
-        <div className="flex items-center justify-between text-md">
+        <div className="flex items-center justify-between text-sm lg:text-md">
           <span>Công nợ</span>
           <span className="font-semibold">{displayDebt.toLocaleString()}</span>
         </div>
@@ -570,7 +569,7 @@ export function InvoiceCart({
               );
             }}
             disabled={cartItems.length === 0}
-            className="w-full bg-orange-400 text-white py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
+            className="w-full bg-orange-400 text-white py-2 lg:py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
             LƯU
           </button>
         ) : (
@@ -581,7 +580,7 @@ export function InvoiceCart({
               )
             }
             disabled={cartItems.length === 0}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
+            className="w-full bg-blue-600 text-white py-2 lg:py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
             {documentType === "invoice" ? "Tạo hóa đơn" : "Tạo đơn hàng"}
           </button>
         )}
