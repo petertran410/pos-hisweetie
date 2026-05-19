@@ -86,7 +86,7 @@ export function BranchSelector() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading}
-        className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 w-full min-w-[200px] text-black disabled:opacity-70">
+        className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 min-w-[200px] text-black disabled:opacity-70">
         <svg
           className="w-5 h-5"
           fill="none"

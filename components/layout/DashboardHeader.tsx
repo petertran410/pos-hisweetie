@@ -450,58 +450,59 @@ export function DashboardHeader() {
                   </div>
                 </div>
               )}
-
-              {/* BranchSelector — full width, cùng style container với posActions */}
-              <div className="px-4 mt-2">
-                <div className="w-full border border-blue-500 rounded-lg">
-                  <BranchSelector />
-                </div>
-              </div>
             </nav>
 
             {/* Drawer footer — User info + Cài đặt + Logout */}
-            <div className="flex-shrink-0 border-t border-blue-600 px-4 py-3">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  {user?.avatar ? (
-                    <img
-                      src={user.avatar}
-                      alt={user.name}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-sm font-medium text-white">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
-                    {user?.name}
-                  </p>
-                  <p className="text-xs text-blue-300 truncate">
-                    {user?.email}
-                  </p>
-                </div>
+            <div className="flex-shrink-0 border-t border-blue-600">
+              {/* BranchSelector ở đây — nằm ngoài overflow-y-auto, dropdown tự do */}
+              <div className="px-4 py-3 border-b border-blue-600">
+                <BranchSelector />
               </div>
 
-              <div className="flex gap-2">
-                <Link
-                  href="/cai-dat"
-                  onClick={closeMobileMenu}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-white border border-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
-                  <Settings className="w-4 h-4" />
-                  Cài đặt
-                </Link>
-                <button
-                  onClick={() => {
-                    closeMobileMenu();
-                    handleLogout();
-                  }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-red-300 border border-red-400/50 rounded-lg hover:bg-blue-600 transition-colors">
-                  <LogOut className="w-4 h-4" />
-                  Đăng xuất
-                </button>
+              {/* User info + buttons — giữ nguyên */}
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.name}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm font-medium text-white">
+                        {user?.name?.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">
+                      {user?.name}
+                    </p>
+                    <p className="text-xs text-blue-300 truncate">
+                      {user?.email}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Link
+                    href="/cai-dat"
+                    onClick={closeMobileMenu}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-white border border-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
+                    <Settings className="w-4 h-4" />
+                    Cài đặt
+                  </Link>
+                  <button
+                    onClick={() => {
+                      closeMobileMenu();
+                      handleLogout();
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-red-300 border border-red-400/50 rounded-lg hover:bg-blue-600 transition-colors">
+                    <LogOut className="w-4 h-4" />
+                    Đăng xuất
+                  </button>
+                </div>
               </div>
             </div>
           </div>
