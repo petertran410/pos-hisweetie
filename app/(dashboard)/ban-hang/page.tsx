@@ -1745,7 +1745,7 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "items" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[60%] min-h-0`}>
+              } lg:flex flex-col w-full lg:w-[60%] min-h-0 flex-1 lg:flex-none`}>
               <OrderItemsList
                 cartItems={activeTab.cartItems}
                 onUpdateItem={updateCartItem}
@@ -1772,7 +1772,7 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "cart" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l`}>
+              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l flex-1 lg:flex-none`}>
               <OrderCart
                 cartItems={activeTab.cartItems}
                 selectedCustomer={activeTab.selectedCustomer}
@@ -1818,7 +1818,7 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "items" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[60%] min-h-0`}>
+              } lg:flex flex-col w-full lg:w-[60%] min-h-0 flex-1 lg:flex-none`}>
               <InvoiceItemsList
                 cartItems={activeTab.cartItems}
                 onUpdateItem={updateCartItem}
@@ -1845,7 +1845,7 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "cart" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l`}>
+              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l flex-1 lg:flex-none`}>
               <InvoiceCart
                 cartItems={activeTab.cartItems}
                 selectedCustomer={activeTab.selectedCustomer}

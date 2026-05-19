@@ -382,7 +382,7 @@ export function OrderItemsList({
                 )}
               </div>
 
-              <div className="flex items-center justify-between mt-2">
+              <div className="flex flex-wrap items-center mt-2 gap-y-2">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
@@ -422,7 +422,7 @@ export function OrderItemsList({
                   </button>
                 </div>
 
-                <div className="flex items-end gap-3">
+                <div className="flex items-end gap-2 lg:gap-3 ml-auto">
                   <div className="flex flex-col items-end min-w-[60px]">
                     <span className="mb-0.5"></span>
                     <button
