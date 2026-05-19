@@ -292,7 +292,10 @@ export function InvoiceItemsList({
 
   if (cartItems.length === 0) {
     return (
-      <div className="w-[70%] bg-white p-8 flex items-center justify-center">
+      <div
+        className={`${
+          className ?? "w-[60%] bg-white flex flex-col"
+        } items-center justify-center`}>
         <div className="text-center text-gray-400">
           <div className="text-5xl mb-3">🛒</div>
           <p className="text-base">Chưa có sản phẩm trong giỏ hàng</p>
