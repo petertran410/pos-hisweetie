@@ -15,6 +15,11 @@ import { NoteTemplateModal } from "./NoteTemplateModal";
 import { ItemDiscountModal } from "./ItemDiscountModal";
 import { ProductPriceHistory } from "./ProductPriceHistory";
 import { useBranchStore } from "@/lib/store/branch";
+import {
+  formatCurrency,
+  formatNumberInput,
+  parseNumberInput,
+} from "@/lib/utils";
 
 interface InvoiceItemsListProps {
   cartItems: CartItem[];
@@ -57,6 +62,7 @@ export function InvoiceItemsList({
   const [quantityDisplays, setQuantityDisplays] = useState<
     Record<string, string>
   >({});
+  const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
   const [discountType, setDiscountType] = useState<"amount" | "ratio">(
     "amount"
   );
@@ -128,6 +134,46 @@ export function InvoiceItemsList({
       delete next[key];
       return next;
     });
+  };
+
+  const getPriceInputValue = (item: CartItem): string => {
+    const key = getCartItemKey(item);
+    // Đang edit → trả raw digits; không edit → format đẹp
+    return priceInputs[key] ?? formatCurrency(item.price - item.discount);
+  };
+
+  const handlePriceChange = (item: CartItem, value: string) => {
+    const key = getCartItemKey(item);
+    setPriceInputs((prev) => ({ ...prev, [key]: formatNumberInput(value) }));
+  };
+
+  const handlePriceBlur = (item: CartItem) => {
+    const key = getCartItemKey(item);
+    const raw = priceInputs[key];
+
+    setPriceInputs((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
+    if (raw === undefined) return;
+    const newEffective = parseNumberInput(raw); // dùng utils
+    if (newEffective <= 0) return;
+
+    if (newEffective < item.price) {
+      onUpdateItem(
+        item.product.id,
+        { discount: item.price - newEffective },
+        item.conditionType
+      );
+    } else {
+      onUpdateItem(
+        item.product.id,
+        { price: newEffective, discount: 0 },
+        item.conditionType
+      );
+    }
   };
 
   const getConditionLabel = (conditionType?: string) => {
@@ -451,9 +497,21 @@ export function InvoiceItemsList({
                     <span className="text-xs text-gray-400 mb-0.5">
                       Đơn giá
                     </span>
-                    <span className="text-md text-gray-500">
-                      {item.price.toLocaleString()}
-                    </span>
+                    {canEditPrice ? (
+                      <input
+                        type="text"
+                        value={getPriceInputValue(item)}
+                        onChange={(e) =>
+                          handlePriceChange(item, e.target.value)
+                        }
+                        onBlur={() => handlePriceBlur(item)}
+                        className="w-24 h-7 text-right border border-gray-300 rounded px-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                      />
+                    ) : (
+                      <span className="text-md text-gray-500">
+                        {(item.price - item.discount).toLocaleString()}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex flex-col items-end min-w-[60px]">
