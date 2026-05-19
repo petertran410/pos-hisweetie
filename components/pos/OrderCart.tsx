@@ -85,19 +85,19 @@ function SellerDropdown({
   const isOverridden = soldById !== null && soldById !== currentUserId;
 
   return (
-    <div ref={ref} className="relative min-w-[120px]">
+    <div ref={ref} className="relative min-w-[90px] lg:min-w-[120px]">
       <div
         role="button"
         tabIndex={0}
         onClick={() => setOpen((prev) => !prev)}
         onKeyDown={(e) => e.key === "Enter" && setOpen((prev) => !prev)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-1 py-1 text-sm cursor-pointer transition-colors select-none ${
+        className={`w-full flex items-center justify-between gap-1 lg:gap-2 border rounded-lg px-1 py-0.5 lg:py-1 text-xs lg:text-sm cursor-pointer transition-colors select-none ${
           open
             ? "border-blue-400 ring-2 ring-blue-100"
             : "hover:border-gray-400"
         } bg-white`}>
-        <div className="flex items-center gap-2 min-w-0">
-          <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        <div className="flex items-center gap-1 lg:gap-2 min-w-0">
+          <User className="w-3 h-3 lg:w-3.5 lg:h-3.5 text-gray-400 flex-shrink-0" />
           <span
             className={`truncate ${
               isOverridden ? "text-blue-600 font-medium" : "text-gray-700"
@@ -118,7 +118,7 @@ function SellerDropdown({
             </button>
           )}
           <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform ${
+            className={`w-3.5 h-3.5 lg:w-4 lg:h-4 text-gray-400 transition-transform ${
               open ? "rotate-180" : ""
             }`}
           />
@@ -517,7 +517,7 @@ export function OrderCart({
               <button
                 onClick={onCreateInvoice}
                 disabled={cartItems.length === 0}
-                className="w-full bg-blue-600 text-white py-2.5 lg:py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-sm lg:text-base">
+                className="w-full bg-blue-600 text-white py-2 lg:py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
                 TẠO HÓA ĐƠN
               </button>
             )}
@@ -547,7 +547,7 @@ export function OrderCart({
               )
             }
             disabled={cartItems.length === 0}
-            className="w-full bg-blue-600 text-white py-2.5 lg:py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-sm lg:text-base">
+            className="w-full bg-blue-600 text-white py-2 lg:py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
             Tạo đơn hàng
           </button>
         )}

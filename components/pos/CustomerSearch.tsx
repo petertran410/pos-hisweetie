@@ -86,7 +86,7 @@ export function CustomerSearch({
   return (
     <>
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 lg:gap-2">
           <div className="flex-1 relative" ref={dropdownRef}>
             {!selectedCustomer ? (
               <input
@@ -95,7 +95,7 @@ export function CustomerSearch({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onFocus={() => search && setShowDropdown(true)}
-                className="w-full border rounded-xl px-3 py-2"
+                className="w-full border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-sm lg:text-base"
               />
             ) : (
               <div
@@ -107,14 +107,28 @@ export function CustomerSearch({
                     handleOpenModal();
                   }
                 }}
-                className="w-full flex items-center justify-between gap-2 border rounded-lg px-1 py-1 cursor-pointer transition-colors select-none bg-white">
-                <span className="text-blue-600 hover:underline text-md pl-1">
+                className="w-full flex items-start lg:items-center justify-between gap-1 lg:gap-2 border rounded-lg px-1 py-0.5 lg:py-1 cursor-pointer transition-colors select-none bg-white">
+                {/* MOBILE: tách 2 dòng, cho phép wrap */}
+                <div className="lg:hidden flex-1 min-w-0 pl-1">
+                  <div className="text-sm text-blue-600 hover:underline break-words">
+                    {selectedCustomer.name}
+                  </div>
+                  {selectedCustomer.contactNumber && (
+                    <div className="text-xs text-blue-600 hover:underline break-words">
+                      {selectedCustomer.contactNumber}
+                    </div>
+                  )}
+                </div>
+
+                {/* DESKTOP: giữ NGUYÊN logic cũ */}
+                <span className="hidden lg:inline text-blue-600 hover:underline text-md pl-1">
                   {selectedCustomer.name} {selectedCustomer.contactNumber}
                 </span>
+
                 <button
                   onClick={handleClear}
-                  className="ml-2 p-1 hover:bg-gray-200 rounded-full transition-colors">
-                  <X className="w-4 h-4 text-gray-500" />
+                  className="ml-1 lg:ml-2 p-0.5 lg:p-1 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0 mt-0.5 lg:mt-0">
+                  <X className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-gray-500" />
                 </button>
               </div>
             )}
@@ -150,8 +164,8 @@ export function CustomerSearch({
           <button
             onClick={() => setShowCreateModal(true)}
             title="Tạo khách hàng mới"
-            className="p-2 border rounded-md hover:bg-gray-50">
-            <Plus className="w-3.5 h-3.5" />
+            className="p-1 lg:p-2 border rounded-md hover:bg-gray-50 flex-shrink-0">
+            <Plus className="w-3 h-3 lg:w-3.5 lg:h-3.5" />
           </button>
           <PriceBookDropdown
             selectedPriceBookId={selectedPriceBookId}

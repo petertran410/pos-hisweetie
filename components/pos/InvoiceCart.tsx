@@ -85,7 +85,7 @@ function SellerDropdown({
   const isOverridden = soldById !== null && soldById !== currentUserId;
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative min-w-[90px] lg:min-w-[120px]">
       <div
         role="button"
         tabIndex={0}

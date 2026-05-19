@@ -66,9 +66,9 @@ export function PriceBookDropdown({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="pl-2 px-1 py-1 border rounded-lg hover:bg-gray-50 flex items-center gap-4 text-sm">
-        <span>{getDisplayName()}</span>
-        <ChevronDown className="w-4 h-4" />
+        className="pl-1.5 lg:pl-2 px-1 py-0.5 lg:py-1 border rounded-lg hover:bg-gray-50 flex items-center gap-1.5 lg:gap-4 text-xs lg:text-sm">
+        <span className="truncate">{getDisplayName()}</span>
+        <ChevronDown className="w-3.5 h-3.5 lg:w-4 lg:h-4 flex-shrink-0" />
       </button>
 
       {showDropdown && (
