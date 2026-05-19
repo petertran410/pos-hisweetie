@@ -106,7 +106,7 @@ export function DashboardHeader() {
   );
 
   return (
-    <header className="text-black relative z-30">
+    <header className="bg-blue-600 text-white relative z-30">
       <div className="flex items-center h-14">
         {/* ═══════════════════════════════════════════════
             DESKTOP LAYOUT — hidden dưới lg
@@ -120,7 +120,7 @@ export function DashboardHeader() {
             <nav className="flex items-center gap-1">
               <Link
                 href="/"
-                className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
                 Tổng quan
               </Link>
 
@@ -129,7 +129,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("products")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                  <button className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
                     Hàng hóa
                   </button>
                   {hoveredMenu === "products" && (
@@ -164,7 +164,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("orders")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                  <button className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
                     Đơn hàng
                   </button>
                   {hoveredMenu === "orders" && (
@@ -188,7 +188,7 @@ export function DashboardHeader() {
               <PermissionGate resource="customers" action="view">
                 <Link
                   href="/khach-hang"
-                  className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                  className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
                   Khách hàng
                 </Link>
               </PermissionGate>
@@ -196,14 +196,14 @@ export function DashboardHeader() {
               <PermissionGate resource="cash_flows" action="view">
                 <Link
                   href="/so-quy"
-                  className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                  className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
                   Sổ quỹ
                 </Link>
               </PermissionGate>
 
               <Link
                 href="/bao-cao/khach-hang"
-                className="px-4 py-4 hover:bg-gray-300 rounded transition-colors">
+                className="px-4 py-4 hover:bg-blue-700 rounded transition-colors">
                 Báo cáo
               </Link>
             </nav>
@@ -241,7 +241,7 @@ export function DashboardHeader() {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-300 rounded transition-colors">
+                className="flex items-center gap-2 px-3 py-2 hover:bg-blue-700 rounded transition-colors">
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                   {user?.avatar ? (
                     <img
@@ -295,7 +295,7 @@ export function DashboardHeader() {
             {posActions.length > 0 && (
               <Link
                 href={posActions[0]?.href ?? "/ban-hang"}
-                className="p-2 hover:bg-gray-200 rounded transition-colors"
+                className="p-2 hover:bg-blue-700 rounded transition-colors"
                 aria-label="Bán hàng">
                 <ShoppingCart className="w-5 h-5" />
               </Link>
@@ -321,29 +321,29 @@ export function DashboardHeader() {
             onClick={closeMobileMenu}
           />
 
-          {/* Drawer — bỏ overflow-hidden để dropdown BranchSelector không bị clip */}
-          <div className="fixed top-0 left-0 h-full w-72 bg-white z-50 flex flex-col lg:hidden shadow-xl">
+          {/* Drawer — blue theme */}
+          <div className="fixed top-0 left-0 h-full w-72 bg-blue-700 z-50 flex flex-col lg:hidden shadow-xl">
             {/* Drawer header */}
-            <div className="flex items-center justify-between px-4 h-14 border-b flex-shrink-0">
+            <div className="flex items-center justify-between px-4 h-14 border-b border-blue-600 flex-shrink-0">
               <Link
                 href="/"
                 onClick={closeMobileMenu}
-                className="font-bold text-lg">
+                className="font-bold text-lg text-white">
                 Hisweetie
               </Link>
               <button
                 onClick={closeMobileMenu}
-                className="p-2 hover:bg-gray-100 rounded transition-colors">
-                <X className="w-5 h-5" />
+                className="p-2 hover:bg-blue-600 rounded transition-colors">
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
 
-            {/* Drawer nav — scroll độc lập */}
+            {/* Drawer nav */}
             <nav className="flex-1 overflow-y-auto py-2">
               <Link
                 href="/"
                 onClick={closeMobileMenu}
-                className="flex items-center px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
                 Tổng quan
               </Link>
 
@@ -352,17 +352,17 @@ export function DashboardHeader() {
                 <div>
                   <button
                     onClick={() => toggleMobileSection("products")}
-                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
                     <span>Hàng hóa</span>
                     <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${expandedMobileSection === "products" ? "rotate-180" : ""}`}
+                      className={`w-4 h-4 text-white transition-transform duration-200 ${expandedMobileSection === "products" ? "rotate-180" : ""}`}
                     />
                   </button>
                   {expandedMobileSection === "products" && (
-                    <div className="bg-gray-50">
+                    <div className="bg-blue-800/40">
                       {filteredProductSubmenu.map((section) => (
                         <div key={section.title}>
-                          <p className="px-6 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                          <p className="px-6 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase tracking-wider">
                             {section.title}
                           </p>
                           {section.items.map((item) => (
@@ -370,7 +370,7 @@ export function DashboardHeader() {
                               key={item.href}
                               href={item.href}
                               onClick={closeMobileMenu}
-                              className="flex items-center px-8 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                              className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-blue-600 transition-colors">
                               {item.label}
                             </Link>
                           ))}
@@ -386,20 +386,20 @@ export function DashboardHeader() {
                 <div>
                   <button
                     onClick={() => toggleMobileSection("orders")}
-                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
                     <span>Đơn hàng</span>
                     <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${expandedMobileSection === "orders" ? "rotate-180" : ""}`}
+                      className={`w-4 h-4 text-white transition-transform duration-200 ${expandedMobileSection === "orders" ? "rotate-180" : ""}`}
                     />
                   </button>
                   {expandedMobileSection === "orders" && (
-                    <div className="bg-gray-50">
+                    <div className="bg-blue-800/40">
                       {filteredOrderSubmenu.map((item) => (
                         <Link
                           key={item.href}
                           href={item.href}
                           onClick={closeMobileMenu}
-                          className="flex items-center px-8 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                          className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-blue-600 transition-colors">
                           {item.label}
                         </Link>
                       ))}
@@ -412,7 +412,7 @@ export function DashboardHeader() {
                 <Link
                   href="/khach-hang"
                   onClick={closeMobileMenu}
-                  className="flex items-center px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                  className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
                   Khách hàng
                 </Link>
               </PermissionGate>
@@ -421,7 +421,7 @@ export function DashboardHeader() {
                 <Link
                   href="/so-quy"
                   onClick={closeMobileMenu}
-                  className="flex items-center px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                  className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
                   Sổ quỹ
                 </Link>
               </PermissionGate>
@@ -429,20 +429,20 @@ export function DashboardHeader() {
               <Link
                 href="/bao-cao/khach-hang"
                 onClick={closeMobileMenu}
-                className="flex items-center px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
                 Báo cáo
               </Link>
 
               {/* Bán hàng shortcut */}
               {posActions.length > 0 && (
-                <div className="px-4 mt-2">
-                  <div className="border rounded-lg overflow-hidden">
+                <div className="px-4 mt-3">
+                  <div className="border border-blue-500 rounded-lg overflow-hidden">
                     {posActions.map((item) => (
                       <Link
                         key={item.key}
                         href={item.href}
                         onClick={closeMobileMenu}
-                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors border-b last:border-b-0">
+                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors border-b border-blue-500 last:border-b-0">
                         <ShoppingCart className="w-4 h-4" />
                         {item.label}
                       </Link>
@@ -451,58 +451,57 @@ export function DashboardHeader() {
                 </div>
               )}
 
-              <div className="px-4 py-3 border-b">
-                <BranchSelector />
+              {/* BranchSelector — full width, cùng style container với posActions */}
+              <div className="px-4 mt-2">
+                <div className="w-full border border-blue-500 rounded-lg">
+                  <BranchSelector />
+                </div>
               </div>
             </nav>
 
-            {/* Drawer footer — BranchSelector + User */}
-            <div className="flex-shrink-0 border-t">
-              {/* BranchSelector — không bị clip vì drawer không có overflow-hidden */}
-              {/* User info + Cài đặt + Logout */}
-              <div className="px-4 py-3">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    {user?.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt={user.name}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-sm font-medium text-white">
-                        {user?.name?.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {user?.name}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {user?.email}
-                    </p>
-                  </div>
+            {/* Drawer footer — User info + Cài đặt + Logout */}
+            <div className="flex-shrink-0 border-t border-blue-600 px-4 py-3">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  {user?.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-sm font-medium text-white">
+                      {user?.name?.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-white truncate">
+                    {user?.name}
+                  </p>
+                  <p className="text-xs text-blue-300 truncate">
+                    {user?.email}
+                  </p>
+                </div>
+              </div>
 
-                <div className="flex gap-2">
-                  <Link
-                    href="/cai-dat"
-                    onClick={closeMobileMenu}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-gray-700 border rounded-lg hover:bg-gray-50 transition-colors">
-                    <Settings className="w-4 h-4" />
-                    Cài đặt
-                  </Link>
-                  <button
-                    onClick={() => {
-                      closeMobileMenu();
-                      handleLogout();
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
-                    <LogOut className="w-4 h-4" />
-                    Đăng xuất
-                  </button>
-                </div>
+              <div className="flex gap-2">
+                <Link
+                  href="/cai-dat"
+                  onClick={closeMobileMenu}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-white border border-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
+                  <Settings className="w-4 h-4" />
+                  Cài đặt
+                </Link>
+                <button
+                  onClick={() => {
+                    closeMobileMenu();
+                    handleLogout();
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-red-300 border border-red-400/50 rounded-lg hover:bg-blue-600 transition-colors">
+                  <LogOut className="w-4 h-4" />
+                  Đăng xuất
+                </button>
               </div>
             </div>
           </div>
