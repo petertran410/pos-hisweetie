@@ -478,7 +478,7 @@ export function CustomerForm({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full sm:max-w-4xl h-[92vh] sm:h-auto sm:max-h-[90vh] overflow-y-auto sm:m-4 flex flex-col">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full sm:max-w-4xl h-[92dvh] sm:h-auto sm:max-h-[90vh] sm:m-4 flex flex-col">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between z-10 flex-shrink-0">
           <h2 className="text-base sm:text-xl font-semibold">

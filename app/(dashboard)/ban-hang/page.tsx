@@ -1797,7 +1797,7 @@ export default function BanHangPage() {
                   updateActiveTab({ deliveryInfo })
                 }
                 deliveryInfo={activeTab.deliveryInfo}
-                isEditMode={!activeTab.documentId}
+                isEditMode={!!activeTab.isEditMode}
                 existingOrder={activeTab.sourceOrder || existingOrder}
                 documentType={activeTab.type}
                 onSelectAddress={handleSelectAddress}
