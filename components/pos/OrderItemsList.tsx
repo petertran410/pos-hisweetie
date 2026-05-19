@@ -515,7 +515,7 @@ export function OrderItemsList({
                       />
                     ) : (
                       <span className="text-md text-gray-500">
-                        {formatCurrency(item.price - item.discount)}
+                        {(item.price - item.discount).toLocaleString()}
                       </span>
                     )}
                   </div>
