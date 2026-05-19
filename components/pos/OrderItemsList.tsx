@@ -359,7 +359,7 @@ export function OrderItemsList({
           {cartItems.map((item, index) => (
             <div
               key={`${item.product.id}_${item.conditionType || "normal"}_${index}`}
-              className={`border p-3 hover:shadow-md transition-shadow ${
+              className={`border p-2 lg:p-3 hover:shadow-md transition-shadow ${
                 isFirstOfGroup(index) ? "rounded-t-lg mt-2" : "border-t-0"
               } ${isLastOfGroup(index) ? "rounded-b-lg" : ""} ${
                 isFirstOfGroup(index) && index === 0 ? "mt-0" : ""
@@ -368,11 +368,11 @@ export function OrderItemsList({
               onMouseLeave={() => setHoveredItemId(null)}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex gap-2 mb-1">
-                    <span className="text-md font-medium text-gray-600">
+                  <div className="flex gap-1.5 lg:gap-2 mb-0.5 lg:mb-1">
+                    <span className="hidden lg:inline text-sm lg:text-md font-medium text-gray-600">
                       {item.product.code}
                     </span>
-                    <span className="text-md font-semibold text-gray-900">
+                    <span className="text-sm lg:text-md font-semibold text-gray-900">
                       {item.product.name}
                     </span>
                     {(() => {
@@ -432,8 +432,8 @@ export function OrderItemsList({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center mt-2 gap-y-2">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center mt-1.5 lg:mt-2 gap-y-1.5 lg:gap-y-2">
+                <div className="flex items-center gap-1 lg:gap-2">
                   <button
                     onClick={() => {
                       onUpdateItem(
@@ -445,7 +445,7 @@ export function OrderItemsList({
                       );
                       clearQuantityDisplay(item);
                     }}
-                    className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                    className="w-6 h-6 lg:w-9 lg:h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Minus className="w-3 h-3" />
                   </button>
                   <input
@@ -453,7 +453,7 @@ export function OrderItemsList({
                     value={getQuantityDisplay(item)}
                     onChange={(e) => handleQuantityChange(item, e.target.value)}
                     onBlur={() => handleQuantityBlur(item)}
-                    className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-10 h-6 lg:w-14 lg:h-9 text-center border border-gray-300 rounded px-1 lg:px-2 py-0 lg:py-1 text-xs lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                   />
                   <button
@@ -467,27 +467,27 @@ export function OrderItemsList({
                       );
                       clearQuantityDisplay(item);
                     }}
-                    className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                    className="w-6 h-6 lg:w-9 lg:h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
 
-                <div className="flex items-end gap-2 lg:gap-3 ml-auto">
-                  <div className="flex flex-col items-end min-w-[60px]">
+                <div className="flex items-end gap-1 lg:gap-3 ml-auto">
+                  <div className="flex flex-col items-end min-w-[44px] lg:min-w-[60px]">
                     <span className="mb-0.5"></span>
                     <button
                       onClick={() => handleOpenDiscountModal(item)}
-                      className="text-blue-600 hover:text-blue-700 text-md font-medium">
+                      className="text-blue-600 hover:text-blue-700 text-xs lg:text-md font-medium">
                       Giảm giá
                     </button>
                   </div>
 
-                  <div className="flex flex-col items-end min-w-[60px]">
+                  <div className="flex flex-col items-end min-w-[44px] lg:min-w-[60px]">
                     <span className="text-xs text-gray-400 mb-0.5">
                       Chiết khấu
                     </span>
                     <span
-                      className={`text-md ${canEditDiscount ? "cursor-pointer hover:text-blue-600" : ""} ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}
+                      className={`text-xs lg:text-md ${canEditDiscount ? "cursor-pointer hover:text-blue-600" : ""} ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}
                       onClick={
                         canEditDiscount
                           ? () => handleOpenDiscountModal(item)
@@ -499,7 +499,7 @@ export function OrderItemsList({
                     </span>
                   </div>
 
-                  <div className="flex flex-col items-end min-w-[60px]">
+                  <div className="flex flex-col items-end min-w-[44px] lg:min-w-[60px]">
                     <span className="text-xs text-gray-400 mb-0.5">
                       Đơn giá
                     </span>
@@ -515,20 +515,20 @@ export function OrderItemsList({
                         onKeyDown={(e) => {
                           if (e.key === "Enter") e.currentTarget.blur();
                         }}
-                        className="w-24 h-7 text-right border border-gray-300 rounded px-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                        className="w-20 h-4 lg:w-24 lg:h-7 text-right border border-gray-300 rounded px-1 lg:px-2 text-xs lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
                       />
                     ) : (
-                      <span className="text-md text-gray-500">
+                      <span className="text-xs lg:text-md text-gray-500">
                         {(item.price - item.discount).toLocaleString()}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex flex-col items-end min-w-[60px]">
+                  <div className="flex flex-col items-end min-w-[44px] lg:min-w-[60px]">
                     <span className="text-xs text-gray-400 mb-0.5">
                       Thành tiền
                     </span>
-                    <span className="text-md font-medium">
+                    <span className="text-xs lg:text-md font-medium">
                       {(
                         (item.price - item.discount) *
                         item.quantity
@@ -542,9 +542,9 @@ export function OrderItemsList({
         </div>
       </div>
 
-      <div className="m-3 border p-3 flex-shrink-0 space-y-2.5 rounded-xl shadow-xl">
+      <div className="m-2 lg:m-3 border p-2 lg:p-3 flex-shrink-0 space-y-2 lg:space-y-2.5 rounded-xl shadow-xl">
         <div>
-          <label className="block text-md text-gray-600 mb-1">
+          <label className="block text-sm lg:text-md text-gray-600 mb-0.5 lg:mb-1">
             Ghi chú đơn hàng
           </label>
           <textarea
@@ -552,22 +552,24 @@ export function OrderItemsList({
             onChange={(e) => onOrderNoteChange(e.target.value.slice(0, 1000))}
             maxLength={1000}
             placeholder="Nhập ghi chú cho đơn hàng..."
-            className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full border rounded-xl px-3 py-1.5 lg:py-2 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             rows={2}
           />
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-gray-600 text-md">Tổng tiền hàng</span>
-          <span className="font-semibold text-md">
+          <span className="text-gray-600 text-sm lg:text-md">
+            Tổng tiền hàng
+          </span>
+          <span className="font-semibold text-sm lg:text-md">
             {calculateSubtotal().toLocaleString()}
           </span>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-gray-600 text-md">Giảm giá</span>
-            <span className="text-md font-medium text-red-600 min-w-[100px] text-right">
+            <span className="text-gray-600 text-sm lg:text-md">Giảm giá</span>
+            <span className="text-sm lg:text-md font-medium text-red-600 min-w-[100px] text-right">
               - {calculateDiscountAmount().toLocaleString()}
               {discountType === "ratio" && ` (${discountValue}%)`}
             </span>
@@ -586,12 +588,12 @@ export function OrderItemsList({
                 placeholder={
                   discountType === "amount" ? "Nhập số tiền" : "Nhập %"
                 }
-                className="flex-1 min-w-0 text-center border rounded-xl px-3 py-1.5 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 min-w-0 text-center border rounded-xl px-2 lg:px-3 py-1 lg:py-1.5 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => handleDiscountTypeChange("amount")}
-                  className={`px-3 py-1 text-md rounded transition-colors ${
+                  className={`px-2 lg:px-3 py-0.5 lg:py-1 text-sm lg:text-md rounded transition-colors ${
                     discountType === "amount"
                       ? "bg-blue-600 text-white"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -600,7 +602,7 @@ export function OrderItemsList({
                 </button>
                 <button
                   onClick={() => handleDiscountTypeChange("ratio")}
-                  className={`px-3 py-1 text-md rounded transition-colors ${
+                  className={`px-2 lg:px-3 py-0.5 lg:py-1 text-sm lg:text-md rounded transition-colors ${
                     discountType === "ratio"
                       ? "bg-blue-600 text-white"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -612,9 +614,9 @@ export function OrderItemsList({
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between font-semibold text-lg pt-1 border-t">
+        <div className="flex items-center justify-between font-semibold text-base lg:text-lg pt-1 border-t">
           <span>Khách cần trả</span>
-          <span className="text-blue-600 text-lg">
+          <span className="text-blue-600 text-base lg:text-lg">
             {calculateTotal().toLocaleString()}
           </span>
         </div>

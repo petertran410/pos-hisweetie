@@ -1682,7 +1682,7 @@ export default function BanHangPage() {
         <div
           key={tab.id}
           onClick={() => setActiveTabId(tab.id)}
-          className={`flex items-center gap-2 px-3 py-2 cursor-pointer rounded-md flex-shrink-0 ${
+          className={`flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 py-1 lg:py-2 rounded cursor-pointer flex-shrink-0 ${
             tab.id === activeTabId ? "bg-white/30" : "hover:bg-white/20"
           }`}>
           <span className="text-white font-medium text-sm">{tab.label}</span>
@@ -1700,13 +1700,13 @@ export default function BanHangPage() {
         <>
           <button
             onClick={handleAddTab}
-            className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
+            className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
             <Plus className="w-5 h-5" />
           </button>
           {canCreateOrder && canCreateInvoice && (
             <button
               onClick={handleToggleType}
-              className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
+              className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
               <ArrowLeftRight className="w-5 h-5" />
             </button>
           )}
@@ -1730,7 +1730,7 @@ export default function BanHangPage() {
       {/* ══════════════════════════════════════════
           MOBILE HEADER — chỉ hiện dưới lg
       ══════════════════════════════════════════ */}
-      <div className="lg:hidden px-3 pt-2 pb-2 flex flex-col gap-2 flex-shrink-0">
+      <div className="lg:hidden px-2 pt-1.5 pb-1.5 flex flex-col gap-1.5 flex-shrink-0">
         {tabsRow}
         <ProductSearchDropdown onAddProduct={addToCart} />
       </div>

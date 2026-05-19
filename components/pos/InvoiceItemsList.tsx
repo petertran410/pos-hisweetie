@@ -368,10 +368,10 @@ export function InvoiceItemsList({
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex gap-2 mb-1">
-                    <span className="text-md font-medium text-gray-600">
+                    <span className="text-md text-gray-600">
                       {item.product.code}
                     </span>
-                    <span className="text-md font-semibold text-gray-900">
+                    <span className="text-md text-gray-900">
                       {item.product.name}
                     </span>
                     {(() => {
