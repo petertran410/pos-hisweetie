@@ -336,11 +336,13 @@ export function InvoiceItemsList({
                       );
                     })()}
                     {canEditPrice && (
-                      <ProductPriceHistory
-                        customerId={selectedCustomerId}
-                        productId={item.product.id}
-                        documentType="invoice"
-                      />
+                      <span className="hidden lg:inline-flex">
+                        <ProductPriceHistory
+                          customerId={selectedCustomerId}
+                          productId={item.product.id}
+                          documentType="invoice"
+                        />
+                      </span>
                     )}
                   </div>
 
@@ -370,15 +372,28 @@ export function InvoiceItemsList({
                   />
                 </div>
 
-                {hoveredItemId === item.product.id && (
-                  <button
-                    onClick={() =>
-                      onRemoveItem(item.product.id, item.conditionType)
-                    }
-                    className="text-red-500 hover:text-red-700 p-1">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                <div className="flex-shrink-0 flex items-center gap-1">
+                  {/* Mobile: clock luôn hiện góc phải — ẩn trên lg */}
+                  {canEditPrice && (
+                    <span className="lg:hidden">
+                      <ProductPriceHistory
+                        customerId={selectedCustomerId}
+                        productId={item.product.id}
+                        documentType="order" // hoặc "invoice"
+                      />
+                    </span>
+                  )}
+                  {/* Trash: hover trên lg, tap trên mobile */}
+                  {hoveredItemId === item.product.id && (
+                    <button
+                      onClick={() =>
+                        onRemoveItem(item.product.id, item.conditionType)
+                      }
+                      className="p-1 hover:bg-red-50 rounded transition-colors">
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center mt-2 gap-y-2">
