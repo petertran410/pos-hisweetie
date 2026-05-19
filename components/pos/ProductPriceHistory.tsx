@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Clock } from "lucide-react";
 import { useProductPriceHistory } from "@/lib/hooks/useOrders";
 import { formatCurrency } from "@/lib/utils";
@@ -13,13 +14,18 @@ interface ProductPriceHistoryProps {
   documentType: "order" | "invoice";
 }
 
+const POPUP_WIDTH = 320;
+
 export function ProductPriceHistory({
   customerId,
   productId,
   documentType,
 }: ProductPriceHistoryProps) {
   const [showHistory, setShowHistory] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({});
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
 
   const { data: history = [], isLoading } = useProductPriceHistory(
     customerId,
@@ -27,82 +33,106 @@ export function ProductPriceHistory({
     documentType
   );
 
+  // Đảm bảo portal chỉ render sau khi client mount — tránh hydration mismatch
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node)
-      ) {
-        setShowHistory(false);
-      }
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const outsidePopup = !popupRef.current?.contains(target);
+      const outsideButton = !buttonRef.current?.contains(target);
+      if (outsidePopup && outsideButton) setShowHistory(false);
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleToggle = () => {
+    if (!buttonRef.current) return;
+
+    if (!showHistory) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      // Luôn align sát phải: right edge của popup = right edge của button
+      setPopupStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+        width: POPUP_WIDTH,
+        zIndex: 9999,
+      });
+    }
+
+    setShowHistory((prev) => !prev);
+  };
+
   if (!customerId) return null;
 
   return (
-    <div className="relative" ref={popoverRef}>
+    <div className="relative">
       <button
-        onClick={() => setShowHistory(!showHistory)}
+        ref={buttonRef}
+        onClick={handleToggle}
         className="p-1 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-700"
         title="Lịch sử giá">
         <Clock className="w-4 h-4" />
       </button>
 
-      {showHistory && (
-        <div className="absolute z-50 left-0 top-full mt-1 bg-white border rounded-lg shadow-lg w-80">
-          <div className="px-3 py-2 border-b bg-gray-50">
-            <h4 className="font-semibold text-sm">
-              Lịch sử giá 5 {documentType === "order" ? "đơn hàng" : "hóa đơn"}{" "}
-              gần nhất
-            </h4>
-          </div>
+      {mounted &&
+        showHistory &&
+        createPortal(
+          <div
+            ref={popupRef}
+            style={popupStyle}
+            className="bg-white border rounded-lg shadow-lg">
+            <div className="px-3 py-2 border-b bg-gray-50">
+              <h4 className="font-semibold text-sm">
+                Lịch sử giá 5{" "}
+                {documentType === "order" ? "đơn hàng" : "hóa đơn"} gần nhất
+              </h4>
+            </div>
 
-          <div className="max-h-64 overflow-y-auto">
-            {isLoading ? (
-              <div className="px-3 py-4 text-center text-sm text-gray-500">
-                Đang tải...
-              </div>
-            ) : history.length === 0 ? (
-              <div className="px-3 py-4 text-center text-sm text-gray-500">
-                Chưa có lịch sử mua hàng
-              </div>
-            ) : (
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium">
-                      Mã
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium">
-                      Ngày
-                    </th>
-                    <th className="px-3 py-2 text-right text-xs font-medium">
-                      Giá bán
-                    </th>
-                    <th className="px-3 py-2 text-right text-xs font-medium">
-                      SL
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((item: any, index: number) => (
-                    <tr key={index} className="border-t">
-                      <td className="px-3 py-2 text-xs">
-                        <div className="flex items-center gap-1">
+            <div className="max-h-64 overflow-y-auto">
+              {isLoading ? (
+                <div className="px-3 py-4 text-center text-sm text-gray-500">
+                  Đang tải...
+                </div>
+              ) : history.length === 0 ? (
+                <div className="px-3 py-4 text-center text-sm text-gray-500">
+                  Chưa có lịch sử mua hàng
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium">
+                        Mã
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium">
+                        Ngày
+                      </th>
+                      <th className="px-3 py-2 text-right text-xs font-medium">
+                        Giá bán
+                      </th>
+                      <th className="px-3 py-2 text-right text-xs font-medium">
+                        SL
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((item: any, index: number) => (
+                      <tr key={index} className="border-t">
+                        <td className="px-3 py-2 text-xs">
                           <span>{item.code}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-gray-600">
-                        {format(new Date(item.date), "dd/MM/yyyy", {
-                          locale: vi,
-                        })}
-                      </td>
-                      <td className="px-3 py-2 text-xs text-right">
-                        <div>
+                        </td>
+                        <td className="px-3 py-2 text-xs text-gray-600">
+                          {format(new Date(item.date), "dd/MM/yyyy", {
+                            locale: vi,
+                          })}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-right">
                           <div className="font-medium">
                             {formatCurrency(item.finalPrice)}
                           </div>
@@ -111,19 +141,19 @@ export function ProductPriceHistory({
                               (-{formatCurrency(item.discount)})
                             </div>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-right">
-                        {item.quantity}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      )}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-right">
+                          {item.quantity}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
