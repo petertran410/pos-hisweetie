@@ -432,20 +432,102 @@ export function OrderItemsList({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center mt-1.5 lg:mt-2 gap-y-1.5 lg:gap-y-2">
-                <div className="flex items-center gap-1 lg:gap-2">
+              {/* ── MOBILE LAYOUT ── lg:hidden ───────────────── */}
+              <div className="lg:hidden mt-1.5 space-y-1.5">
+                {/* Row 1: Quantity controls + Thành tiền */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        onUpdateItem(
+                          item.product.id,
+                          { quantity: Math.max(1, item.quantity - 1) },
+                          item.conditionType
+                        );
+                        clearQuantityDisplay(item);
+                      }}
+                      className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <input
+                      type="text"
+                      value={getQuantityDisplay(item)}
+                      onChange={(e) =>
+                        handleQuantityChange(item, e.target.value)
+                      }
+                      onBlur={() => handleQuantityBlur(item)}
+                      className="w-5 h-5 text-center border border-gray-300 rounded px-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      min="1"
+                    />
+                    <button
+                      onClick={() => {
+                        onUpdateItem(
+                          item.product.id,
+                          { quantity: item.quantity + 1 },
+                          item.conditionType
+                        );
+                        clearQuantityDisplay(item);
+                      }}
+                      className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {(
+                      (item.price - item.discount) *
+                      item.quantity
+                    ).toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Row 2: Đơn giá + Chiết khấu + Giảm giá */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">Đơn giá:</span>
+                  {canEditPrice ? (
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={getPriceInputValue(item)}
+                      onChange={(e) => handlePriceChange(item, e.target.value)}
+                      onBlur={() => handlePriceBlur(item)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                      }}
+                      className="w-20 h-6 text-right border border-gray-300 rounded px-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <span className="text-xs text-gray-700">
+                      {item.price.toLocaleString()}
+                    </span>
+                  )}
+                  {item.discount > 0 && (
+                    <span className="text-xs text-red-500">
+                      -{item.discount.toLocaleString()}
+                    </span>
+                  )}
+                  {canEditDiscount && (
+                    <button
+                      onClick={() => handleOpenDiscountModal(item)}
+                      className="ml-auto text-xs text-blue-600 font-medium">
+                      Giảm giá
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ── DESKTOP LAYOUT ── hidden lg:flex ──────────── */}
+              <div className="hidden lg:flex flex-wrap items-center mt-2 gap-y-2">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
                       onUpdateItem(
                         item.product.id,
-                        {
-                          quantity: Math.max(1, item.quantity - 1),
-                        },
+                        { quantity: Math.max(1, item.quantity - 1) },
                         item.conditionType
                       );
                       clearQuantityDisplay(item);
                     }}
-                    className="w-6 h-6 lg:w-9 lg:h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                    className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Minus className="w-3 h-3" />
                   </button>
                   <input
@@ -453,41 +535,38 @@ export function OrderItemsList({
                     value={getQuantityDisplay(item)}
                     onChange={(e) => handleQuantityChange(item, e.target.value)}
                     onBlur={() => handleQuantityBlur(item)}
-                    className="w-10 h-6 lg:w-14 lg:h-9 text-center border border-gray-300 rounded px-1 lg:px-2 py-0 lg:py-1 text-xs lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                   />
                   <button
                     onClick={() => {
                       onUpdateItem(
                         item.product.id,
-                        {
-                          quantity: item.quantity + 1,
-                        },
+                        { quantity: item.quantity + 1 },
                         item.conditionType
                       );
                       clearQuantityDisplay(item);
                     }}
-                    className="w-6 h-6 lg:w-9 lg:h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                    className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
 
-                <div className="flex items-end gap-1 lg:gap-3 ml-auto">
-                  <div className="flex flex-col items-end min-w-[44px] lg:min-w-[60px]">
+                <div className="flex items-end gap-3 ml-auto">
+                  <div className="flex flex-col items-end min-w-[60px]">
                     <span className="mb-0.5"></span>
                     <button
                       onClick={() => handleOpenDiscountModal(item)}
-                      className="text-blue-600 hover:text-blue-700 text-xs lg:text-md font-medium">
+                      className="text-blue-600 hover:text-blue-700 text-md font-medium">
                       Giảm giá
                     </button>
                   </div>
-
-                  <div className="flex flex-col items-end min-w-[44px] lg:min-w-[60px]">
+                  <div className="flex flex-col items-end min-w-[60px]">
                     <span className="text-xs lg:text-md text-gray-400 mb-0.5">
                       Chiết khấu
                     </span>
                     <span
-                      className={`text-xs lg:text-md ${canEditDiscount ? "cursor-pointer hover:text-blue-600" : ""} ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}
+                      className={`text-md ${canEditDiscount ? "cursor-pointer hover:text-blue-600" : ""} ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}
                       onClick={
                         canEditDiscount
                           ? () => handleOpenDiscountModal(item)
@@ -498,8 +577,7 @@ export function OrderItemsList({
                         : "0"}
                     </span>
                   </div>
-
-                  <div className="flex flex-col items-end min-w-[44px] lg:min-w-[60px]">
+                  <div className="flex flex-col items-end min-w-[60px]">
                     <span className="text-xs lg:text-md text-gray-400 mb-0.5">
                       Đơn giá
                     </span>
@@ -515,20 +593,19 @@ export function OrderItemsList({
                         onKeyDown={(e) => {
                           if (e.key === "Enter") e.currentTarget.blur();
                         }}
-                        className="w-20 h-4 lg:w-24 lg:h-6 text-right border border-gray-300 rounded px-1 text-xs lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                        className="w-24 h-6 text-right border border-gray-300 rounded px-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
                       />
                     ) : (
-                      <span className="text-xs lg:text-md text-gray-500">
+                      <span className="text-md text-gray-500">
                         {(item.price - item.discount).toLocaleString()}
                       </span>
                     )}
                   </div>
-
-                  <div className="flex flex-col items-end min-w-[44px] lg:min-w-[60px]">
+                  <div className="flex flex-col items-end min-w-[60px]">
                     <span className="text-xs lg:text-md text-gray-400 mb-0.5">
                       Thành tiền
                     </span>
-                    <span className="text-xs lg:text-md">
+                    <span className="text-md font-medium">
                       {(
                         (item.price - item.discount) *
                         item.quantity
