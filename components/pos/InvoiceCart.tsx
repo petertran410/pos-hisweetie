@@ -51,6 +51,7 @@ interface InvoiceCartProps {
   canEditSeller?: boolean;
   canViewPayment?: boolean;
   canEditPayment?: boolean;
+  className?: string;
 }
 
 function SellerDropdown({
@@ -180,6 +181,7 @@ export function InvoiceCart({
   canEditSeller = true,
   canViewPayment = true,
   canEditPayment = true,
+  className,
 }: InvoiceCartProps) {
   const { data: usersForFilter = [] } = useUsersForFilter();
   const { user } = useAuthStore();
@@ -323,7 +325,8 @@ export function InvoiceCart({
   };
 
   return (
-    <div className="w-[40%] h-full bg-white border-l flex flex-col ">
+    <div
+      className={className ?? "w-[40%] h-full bg-white border-l flex flex-col"}>
       <div className="flex-1 flex flex-col overflow-y-auto">
         <div className="pl-3 pr-3 pt-3 pb-1 space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between">

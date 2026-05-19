@@ -18,7 +18,7 @@ import {
   useCreateInvoiceFromOrder,
 } from "@/lib/hooks/useInvoices";
 import { toast } from "sonner";
-import { X, Plus, ArrowLeftRight } from "lucide-react";
+import { X, Plus, ArrowLeftRight, List, ShoppingCart } from "lucide-react";
 import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
 import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
@@ -333,6 +333,8 @@ export default function BanHangPage() {
     productName: string;
     onConfirm: (confirmed: boolean) => void;
   } | null>(null);
+
+  const [mobilePosView, setMobilePosView] = useState<"items" | "cart">("items");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1674,204 +1676,252 @@ export default function BanHangPage() {
     );
   }
 
+  const tabsRow = (
+    <div className="flex items-center gap-2 overflow-x-auto flex-shrink-0">
+      {tabs.map((tab) => (
+        <div
+          key={tab.id}
+          onClick={() => setActiveTabId(tab.id)}
+          className={`flex items-center gap-2 px-3 py-2 cursor-pointer rounded-md flex-shrink-0 ${
+            tab.id === activeTabId ? "bg-white/30" : "hover:bg-white/20"
+          }`}>
+          <span className="text-white font-medium text-sm">{tab.label}</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCloseTab(tab.id);
+            }}
+            className="hover:bg-white/20 p-1 rounded">
+            <X className="w-4 h-4 text-white" />
+          </button>
+        </div>
+      ))}
+      {!activeTab?.documentId && (
+        <>
+          <button
+            onClick={handleAddTab}
+            className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
+            <Plus className="w-5 h-5" />
+          </button>
+          {canCreateOrder && canCreateInvoice && (
+            <button
+              onClick={handleToggleType}
+              className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
+              <ArrowLeftRight className="w-5 h-5" />
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div className="h-full flex flex-col bg-blue-600">
-      <div className="px-4 py-3 flex items-center gap-4 flex-shrink-0">
+      {/* ══════════════════════════════════════════
+          DESKTOP HEADER — chỉ hiện lg+, giữ nguyên
+      ══════════════════════════════════════════ */}
+      <div className="hidden lg:flex px-4 py-3 items-center gap-4 flex-shrink-0">
         <div className="flex-1 max-w-md">
           <ProductSearchDropdown onAddProduct={addToCart} />
         </div>
-
-        <div className="flex items-center gap-2">
-          {tabs.map((tab) => (
-            <div
-              key={tab.id}
-              onClick={() => setActiveTabId(tab.id)}
-              className={`flex items-center gap-2 px-3 py-2 cursor-pointer rounded-md ${
-                tab.id === activeTabId ? "bg-white/30" : "hover:bg-white/20"
-              }`}>
-              <span className="text-white font-medium">{tab.label}</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCloseTab(tab.id);
-                }}
-                className="hover:bg-white/20 p-1 rounded">
-                <X className="w-4 h-4 text-white" />
-              </button>
-            </div>
-          ))}
-
-          {!activeTab?.documentId && (
-            <>
-              <button
-                onClick={handleAddTab}
-                className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium">
-                <Plus className="w-5 h-5" />
-              </button>
-
-              {canCreateOrder && canCreateInvoice && (
-                <button
-                  onClick={handleToggleType}
-                  className="px-3 py-2 rounded text-white hover:bg-white/20 font-medium">
-                  <ArrowLeftRight className="w-5 h-5" />
-                </button>
-              )}
-            </>
-          )}
-        </div>
+        {tabsRow}
       </div>
 
-      <div className="flex-1 flex min-h-0">
+      {/* ══════════════════════════════════════════
+          MOBILE HEADER — chỉ hiện dưới lg
+      ══════════════════════════════════════════ */}
+      <div className="lg:hidden px-3 pt-2 pb-2 flex flex-col gap-2 flex-shrink-0">
+        {tabsRow}
+        <ProductSearchDropdown onAddProduct={addToCart} />
+      </div>
+
+      {/* ══════════════════════════════════════════
+          BODY
+      ══════════════════════════════════════════ */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         {activeTab.type === "order" ? (
           <>
-            <OrderItemsList
-              cartItems={activeTab.cartItems}
-              onUpdateItem={updateCartItem}
-              onRemoveItem={removeFromCart}
-              discount={activeTab.discount}
-              onDiscountChange={(discount) => updateActiveTab({ discount })}
-              discountRatio={activeTab.discountRatio}
-              onDiscountRatioChange={(discountRatio) =>
-                updateActiveTab({ discountRatio })
-              }
-              orderNote={activeTab.orderNote}
-              onOrderNoteChange={(orderNote) => updateActiveTab({ orderNote })}
-              selectedCustomerId={activeTab.selectedCustomer?.id}
-              canEditPrice={canEditPrice}
-              canEditDiscount={canEditDiscount}
-              canViewInventory={canViewInventory}
-            />
-            <OrderCart
-              cartItems={activeTab.cartItems}
-              selectedCustomer={activeTab.selectedCustomer}
-              onSelectCustomer={handleCustomerSelect}
-              selectedPriceBookId={activeTab.selectedPriceBookId}
-              onSelectPriceBook={handlePriceBookSelect}
-              useCOD={activeTab.useCOD}
-              onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
-              paymentAmount={activeTab.paymentAmount}
-              onPaymentAmountChange={(paymentAmount) =>
-                updateActiveTab({ paymentAmount })
-              }
-              onPaymentMethodsChange={(paymentMethods) =>
-                updateActiveTab({ paymentMethods })
-              }
-              onCreateOrder={handleCreateDocument}
-              onSaveOrder={handleSaveOrder}
-              onCreateInvoice={handleConvertToInvoice}
-              discount={activeTab.discount}
-              discountRatio={activeTab.discountRatio}
-              onDeliveryInfoChange={(deliveryInfo) =>
-                updateActiveTab({ deliveryInfo })
-              }
-              deliveryInfo={activeTab.deliveryInfo}
-              isEditMode={!!activeTab.documentId}
-              existingOrder={activeTab.sourceOrder || existingOrder}
-              documentType={activeTab.type}
-              onSelectAddress={handleSelectAddress}
-              selectedAddressId={activeTab.selectedAddressId}
-              soldById={activeTab.soldById}
-              onSellerChange={(soldById) => updateActiveTab({ soldById })}
-              canEditSeller={canEditSeller}
-              canViewPayment={canViewPayment}
-              canEditPayment={canEditPayment}
-              canCreateInvoice={canCreateInvoice}
-            />
+            {/* Items panel */}
+            <div
+              className={`${
+                mobilePosView === "items" ? "flex" : "hidden"
+              } lg:flex flex-col w-full lg:w-[60%] min-h-0`}>
+              <OrderItemsList
+                cartItems={activeTab.cartItems}
+                onUpdateItem={updateCartItem}
+                onRemoveItem={removeFromCart}
+                discount={activeTab.discount}
+                onDiscountChange={(discount) => updateActiveTab({ discount })}
+                discountRatio={activeTab.discountRatio}
+                onDiscountRatioChange={(discountRatio) =>
+                  updateActiveTab({ discountRatio })
+                }
+                orderNote={activeTab.orderNote}
+                onOrderNoteChange={(orderNote) =>
+                  updateActiveTab({ orderNote })
+                }
+                selectedCustomerId={activeTab.selectedCustomer?.id}
+                canEditPrice={canEditPrice}
+                canEditDiscount={canEditDiscount}
+                canViewInventory={canViewInventory}
+                className="w-full flex-1 bg-white flex flex-col min-h-0"
+              />
+            </div>
+
+            {/* Cart panel */}
+            <div
+              className={`${
+                mobilePosView === "cart" ? "flex" : "hidden"
+              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l`}>
+              <OrderCart
+                cartItems={activeTab.cartItems}
+                selectedCustomer={activeTab.selectedCustomer}
+                onSelectCustomer={handleCustomerSelect}
+                selectedPriceBookId={activeTab.selectedPriceBookId}
+                onSelectPriceBook={handlePriceBookSelect}
+                useCOD={activeTab.useCOD}
+                onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
+                paymentAmount={activeTab.paymentAmount}
+                onPaymentAmountChange={(paymentAmount) =>
+                  updateActiveTab({ paymentAmount })
+                }
+                onPaymentMethodsChange={(paymentMethods) =>
+                  updateActiveTab({ paymentMethods })
+                }
+                onCreateOrder={handleCreateDocument}
+                onSaveOrder={handleSaveOrder}
+                onCreateInvoice={handleConvertToInvoice}
+                discount={activeTab.discount}
+                discountRatio={activeTab.discountRatio}
+                onDeliveryInfoChange={(deliveryInfo) =>
+                  updateActiveTab({ deliveryInfo })
+                }
+                deliveryInfo={activeTab.deliveryInfo}
+                isEditMode={!activeTab.documentId}
+                existingOrder={activeTab.sourceOrder || existingOrder}
+                documentType={activeTab.type}
+                onSelectAddress={handleSelectAddress}
+                selectedAddressId={activeTab.selectedAddressId}
+                soldById={activeTab.soldById}
+                onSellerChange={(soldById) => updateActiveTab({ soldById })}
+                canEditSeller={canEditSeller}
+                canViewPayment={canViewPayment}
+                canEditPayment={canEditPayment}
+                canCreateInvoice={canCreateInvoice}
+                className="w-full h-full bg-white flex flex-col"
+              />
+            </div>
           </>
         ) : (
           <>
-            <InvoiceItemsList
-              cartItems={activeTab.cartItems}
-              onUpdateItem={updateCartItem}
-              onRemoveItem={removeFromCart}
-              discount={activeTab.discount}
-              onDiscountChange={(discount) => updateActiveTab({ discount })}
-              discountRatio={activeTab.discountRatio}
-              onDiscountRatioChange={(discountRatio) =>
-                updateActiveTab({ discountRatio })
-              }
-              orderNote={activeTab.orderNote}
-              onOrderNoteChange={(orderNote) => updateActiveTab({ orderNote })}
-              selectedCustomerId={activeTab.selectedCustomer?.id}
-              canEditPrice={canEditPrice}
-              canEditDiscount={canEditDiscount}
-              canViewInventory={canViewInventory}
-            />
-            <InvoiceCart
-              cartItems={activeTab.cartItems}
-              selectedCustomer={activeTab.selectedCustomer}
-              onSelectCustomer={handleCustomerSelect}
-              useCOD={activeTab.useCOD}
-              selectedPriceBookId={activeTab.selectedPriceBookId}
-              onSelectPriceBook={handlePriceBookSelect}
-              onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
-              paymentAmount={activeTab.paymentAmount}
-              onPaymentAmountChange={(paymentAmount) =>
-                updateActiveTab({ paymentAmount })
-              }
-              onPaymentMethodsChange={(paymentMethods) =>
-                updateActiveTab({ paymentMethods })
-              }
-              onCreateOrder={handleCreateDocument}
-              onSaveOrder={handleSaveInvoice}
-              onPayment={handlePayment}
-              discount={activeTab.discount}
-              discountRatio={activeTab.discountRatio}
-              onDeliveryInfoChange={(deliveryInfo) =>
-                updateActiveTab({ deliveryInfo })
-              }
-              deliveryInfo={activeTab.deliveryInfo}
-              isEditMode={!!activeTab.documentId}
-              isCreatingFromOrder={!!activeTab.sourceOrderId}
-              existingOrder={activeTab.sourceOrder || existingInvoice}
-              documentType={activeTab.type}
-              onSelectAddress={handleSelectAddress}
-              selectedAddressId={activeTab.selectedAddressId}
-              soldById={activeTab.soldById}
-              onSellerChange={(soldById) => updateActiveTab({ soldById })}
-              canEditSeller={canEditSeller}
-              canViewPayment={canViewPayment}
-              canEditPayment={canEditPayment}
-            />
+            {/* Invoice items panel */}
+            <div
+              className={`${
+                mobilePosView === "items" ? "flex" : "hidden"
+              } lg:flex flex-col w-full lg:w-[60%] min-h-0`}>
+              <InvoiceItemsList
+                cartItems={activeTab.cartItems}
+                onUpdateItem={updateCartItem}
+                onRemoveItem={removeFromCart}
+                discount={activeTab.discount}
+                onDiscountChange={(discount) => updateActiveTab({ discount })}
+                discountRatio={activeTab.discountRatio}
+                onDiscountRatioChange={(discountRatio) =>
+                  updateActiveTab({ discountRatio })
+                }
+                orderNote={activeTab.orderNote}
+                onOrderNoteChange={(orderNote) =>
+                  updateActiveTab({ orderNote })
+                }
+                selectedCustomerId={activeTab.selectedCustomer?.id}
+                canEditPrice={canEditPrice}
+                canEditDiscount={canEditDiscount}
+                canViewInventory={canViewInventory}
+                className="w-full flex-1 bg-white flex flex-col min-h-0"
+              />
+            </div>
+
+            {/* Invoice cart panel */}
+            <div
+              className={`${
+                mobilePosView === "cart" ? "flex" : "hidden"
+              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l`}>
+              <InvoiceCart
+                cartItems={activeTab.cartItems}
+                selectedCustomer={activeTab.selectedCustomer}
+                onSelectCustomer={handleCustomerSelect}
+                useCOD={activeTab.useCOD}
+                selectedPriceBookId={activeTab.selectedPriceBookId}
+                onSelectPriceBook={handlePriceBookSelect}
+                onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
+                paymentAmount={activeTab.paymentAmount}
+                onPaymentAmountChange={(paymentAmount) =>
+                  updateActiveTab({ paymentAmount })
+                }
+                onPaymentMethodsChange={(paymentMethods) =>
+                  updateActiveTab({ paymentMethods })
+                }
+                onCreateOrder={handleCreateDocument}
+                onSaveOrder={handleSaveInvoice}
+                onPayment={handlePayment}
+                discount={activeTab.discount}
+                discountRatio={activeTab.discountRatio}
+                onDeliveryInfoChange={(deliveryInfo) =>
+                  updateActiveTab({ deliveryInfo })
+                }
+                deliveryInfo={activeTab.deliveryInfo}
+                isEditMode={!!activeTab.documentId}
+                isCreatingFromOrder={!!activeTab.sourceOrderId}
+                existingOrder={activeTab.sourceOrder || existingInvoice}
+                documentType={activeTab.type}
+                onSelectAddress={handleSelectAddress}
+                selectedAddressId={activeTab.selectedAddressId}
+                soldById={activeTab.soldById}
+                onSellerChange={(soldById) => updateActiveTab({ soldById })}
+                canEditSeller={canEditSeller}
+                canViewPayment={canViewPayment}
+                canEditPayment={canEditPayment}
+                className="w-full h-full bg-white flex flex-col"
+              />
+            </div>
           </>
         )}
       </div>
-      {showPriceWarning && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-red-600 mb-4">
-              Cảnh báo
-            </h3>
-            <p className="text-gray-700 mb-6">
-              Sản phẩm{" "}
-              <span className="font-semibold">
-                {showPriceWarning.productCode}
-              </span>{" "}
-              Hàng{" "}
-              <span className="font-semibold">
-                {showPriceWarning.productName}
-              </span>{" "}
-              vừa lựa chọn{" "}
-              <span className="text-red-600 font-semibold">
-                không thuộc bảng giá Bảng Giá Chuỗi Đào Matcha.
-              </span>{" "}
-              Bạn có muốn thêm vào đơn hàng?
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => showPriceWarning.onConfirm(false)}
-                className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                Không
-              </button>
-              <button
-                onClick={() => showPriceWarning.onConfirm(true)}
-                className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
-                Có
-              </button>
-            </div>
+
+      {/* ══════════════════════════════════════════
+          MOBILE BOTTOM TAB BAR — chỉ hiện dưới lg
+          Không dùng fixed — tích hợp flex flow
+      ══════════════════════════════════════════ */}
+      <div className="lg:hidden flex-shrink-0 h-14 bg-white border-t flex">
+        <button
+          onClick={() => setMobilePosView("items")}
+          className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+            mobilePosView === "items"
+              ? "text-blue-600 border-t-2 border-blue-600"
+              : "text-gray-500"
+          }`}>
+          <List className="w-5 h-5" />
+          <span className="text-xs font-medium">Hàng hóa</span>
+        </button>
+
+        <button
+          onClick={() => setMobilePosView("cart")}
+          className={`flex-1 flex flex-col items-center justify-center gap-0.5 relative transition-colors ${
+            mobilePosView === "cart"
+              ? "text-blue-600 border-t-2 border-blue-600"
+              : "text-gray-500"
+          }`}>
+          <div className="relative">
+            <ShoppingCart className="w-5 h-5" />
+            {activeTab.cartItems.length > 0 && (
+              <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5">
+                {activeTab.cartItems.length}
+              </span>
+            )}
           </div>
-        </div>
-      )}
+          <span className="text-xs font-medium">Giỏ hàng</span>
+        </button>
+      </div>
     </div>
   );
 }

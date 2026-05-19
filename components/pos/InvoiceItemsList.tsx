@@ -34,6 +34,7 @@ interface InvoiceItemsListProps {
   canEditPrice?: boolean;
   canEditDiscount?: boolean;
   canViewInventory?: boolean;
+  className?: string;
 }
 
 export function InvoiceItemsList({
@@ -50,6 +51,7 @@ export function InvoiceItemsList({
   canEditPrice = true,
   canEditDiscount = true,
   canViewInventory = true,
+  className,
 }: InvoiceItemsListProps) {
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
   const [quantityDisplays, setQuantityDisplays] = useState<
@@ -301,7 +303,7 @@ export function InvoiceItemsList({
   }
 
   return (
-    <div className="w-[60%] bg-white flex flex-col">
+    <div className={className ?? "w-[60%] bg-white flex flex-col"}>
       <div className="flex-1 p-3 overflow-y-auto">
         <div>
           {cartItems.map((item, index) => (

@@ -51,6 +51,7 @@ interface OrderCartProps {
   canViewPayment?: boolean;
   canEditPayment?: boolean;
   canCreateInvoice?: boolean;
+  className?: string;
 }
 
 function SellerDropdown({
@@ -180,6 +181,7 @@ export function OrderCart({
   canViewPayment = true,
   canEditPayment = true,
   canCreateInvoice = true,
+  className,
 }: OrderCartProps) {
   const { data: usersForFilter = [] } = useUsersForFilter();
   const { user } = useAuthStore();
@@ -294,7 +296,8 @@ export function OrderCart({
   };
 
   return (
-    <div className="w-[40%] h-full bg-white border-l flex flex-col ">
+    <div
+      className={className ?? "w-[40%] h-full bg-white border-l flex flex-col"}>
       <div className="flex-1 flex flex-col overflow-y-auto">
         <div className="pl-3 pr-3 pt-3 pb-1 space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between">
