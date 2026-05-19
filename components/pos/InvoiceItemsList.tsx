@@ -338,15 +338,6 @@ export function InvoiceItemsList({
                         </span>
                       );
                     })()}
-                    {canEditPrice && (
-                      <span className="hidden lg:inline-flex">
-                        <ProductPriceHistory
-                          customerId={selectedCustomerId}
-                          productId={item.product.id}
-                          documentType="invoice"
-                        />
-                      </span>
-                    )}
                   </div>
 
                   {canViewInventory &&
@@ -376,26 +367,20 @@ export function InvoiceItemsList({
                 </div>
 
                 <div className="flex-shrink-0 flex items-center gap-1">
-                  {/* Mobile: clock luôn hiện góc phải — ẩn trên lg */}
                   {canEditPrice && (
-                    <span className="lg:hidden">
-                      <ProductPriceHistory
-                        customerId={selectedCustomerId}
-                        productId={item.product.id}
-                        documentType="order" // hoặc "invoice"
-                      />
-                    </span>
+                    <ProductPriceHistory
+                      customerId={selectedCustomerId}
+                      productId={item.product.id}
+                      documentType="invoice"
+                    />
                   )}
-                  {/* Trash: hover trên lg, tap trên mobile */}
-                  {hoveredItemId === item.product.id && (
-                    <button
-                      onClick={() =>
-                        onRemoveItem(item.product.id, item.conditionType)
-                      }
-                      className="p-1 hover:bg-red-50 rounded transition-colors">
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() =>
+                      onRemoveItem(item.product.id, item.conditionType)
+                    }
+                    className="p-1 hover:bg-red-50 rounded transition-colors">
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </button>
                 </div>
               </div>
 

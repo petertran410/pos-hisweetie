@@ -1206,7 +1206,6 @@ export default function BanHangPage() {
     } else {
       updateActiveTab({
         cartItems: [
-          ...activeTab.cartItems,
           {
             product,
             quantity,
@@ -1214,6 +1213,7 @@ export default function BanHangPage() {
             discount: 0,
             conditionType,
           },
+          ...activeTab.cartItems,
         ],
       });
     }
