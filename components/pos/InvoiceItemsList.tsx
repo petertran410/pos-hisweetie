@@ -358,7 +358,7 @@ export function InvoiceItemsList({
           {cartItems.map((item, index) => (
             <div
               key={`${item.product.id}_${item.conditionType || "normal"}_${index}`}
-              className={`border p-3 hover:shadow-md transition-shadow ${
+              className={`border p-2 lg:p-3 hover:shadow-md transition-shadow ${
                 isFirstOfGroup(index) ? "rounded-t-lg mt-2" : "border-t-0"
               } ${isLastOfGroup(index) ? "rounded-b-lg" : ""} ${
                 isFirstOfGroup(index) && index === 0 ? "mt-0" : ""
@@ -367,11 +367,11 @@ export function InvoiceItemsList({
               onMouseLeave={() => setHoveredItemId(null)}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex gap-2 mb-1">
-                    <span className="text-md text-gray-600">
+                  <div className="flex gap-1.5 lg:gap-2 mb-0.5 lg:mb-1">
+                    <span className="hidden lg:inline text-sm lg:text-base font-medium text-gray-600">
                       {item.product.code}
                     </span>
-                    <span className="text-md text-gray-900">
+                    <span className="text-sm lg:text-md font-semibold text-gray-900">
                       {item.product.name}
                     </span>
                     {(() => {
@@ -430,7 +430,91 @@ export function InvoiceItemsList({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center mt-2 gap-y-2">
+              {/* ── MOBILE LAYOUT ── lg:hidden ───────────────── */}
+              <div className="lg:hidden mt-1.5 space-y-1.5">
+                {/* Row 1: Quantity controls + Thành tiền */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        onUpdateItem(
+                          item.product.id,
+                          { quantity: Math.max(1, item.quantity - 1) },
+                          item.conditionType
+                        );
+                        clearQuantityDisplay(item);
+                      }}
+                      className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <input
+                      type="text"
+                      value={getQuantityDisplay(item)}
+                      onChange={(e) =>
+                        handleQuantityChange(item, e.target.value)
+                      }
+                      onBlur={() => handleQuantityBlur(item)}
+                      className="w-5 h-5 text-center border border-gray-300 rounded px-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      min="1"
+                    />
+                    <button
+                      onClick={() => {
+                        onUpdateItem(
+                          item.product.id,
+                          { quantity: item.quantity + 1 },
+                          item.conditionType
+                        );
+                        clearQuantityDisplay(item);
+                      }}
+                      className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {(
+                      (item.price - item.discount) *
+                      item.quantity
+                    ).toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Row 2: Đơn giá + Chiết khấu + Giảm giá */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">Đơn giá:</span>
+                  {canEditPrice ? (
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={getPriceInputValue(item)}
+                      onChange={(e) => handlePriceChange(item, e.target.value)}
+                      onBlur={() => handlePriceBlur(item)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                      }}
+                      className="w-20 h-6 text-right border border-gray-300 rounded px-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <span className="text-xs text-gray-700">
+                      {item.price.toLocaleString()}
+                    </span>
+                  )}
+                  {item.discount > 0 && (
+                    <span className="text-xs text-red-500">
+                      -{item.discount.toLocaleString()}
+                    </span>
+                  )}
+                  {canEditDiscount && (
+                    <button
+                      onClick={() => handleOpenDiscountModal(item)}
+                      className="ml-auto text-xs text-blue-600 font-medium">
+                      Giảm giá
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ── DESKTOP LAYOUT ── hidden lg:flex ──────────── */}
+              <div className="hidden lg:flex flex-wrap items-center mt-2 gap-y-2">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
@@ -466,7 +550,7 @@ export function InvoiceItemsList({
                   </button>
                 </div>
 
-                <div className="flex items-end gap-2 lg:gap-3 ml-auto">
+                <div className="flex items-end gap-3 ml-auto">
                   <div className="flex flex-col items-end min-w-[60px]">
                     <span className="mb-0.5"></span>
                     <button
@@ -475,9 +559,8 @@ export function InvoiceItemsList({
                       Giảm giá
                     </button>
                   </div>
-
                   <div className="flex flex-col items-end min-w-[60px]">
-                    <span className="text-xs text-gray-400 mb-0.5">
+                    <span className="text-xs lg:text-md text-gray-400 mb-0.5">
                       Chiết khấu
                     </span>
                     <span
@@ -492,9 +575,8 @@ export function InvoiceItemsList({
                         : "0"}
                     </span>
                   </div>
-
                   <div className="flex flex-col items-end min-w-[60px]">
-                    <span className="text-xs text-gray-400 mb-0.5">
+                    <span className="text-xs lg:text-md text-gray-400 mb-0.5">
                       Đơn giá
                     </span>
                     {canEditPrice ? (
@@ -509,7 +591,7 @@ export function InvoiceItemsList({
                         onKeyDown={(e) => {
                           if (e.key === "Enter") e.currentTarget.blur();
                         }}
-                        className="w-24 h-7 text-right border border-gray-300 rounded px-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                        className="w-24 h-6 text-right border border-gray-300 rounded px-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
                       />
                     ) : (
                       <span className="text-md text-gray-500">
@@ -517,9 +599,8 @@ export function InvoiceItemsList({
                       </span>
                     )}
                   </div>
-
                   <div className="flex flex-col items-end min-w-[60px]">
-                    <span className="text-xs text-gray-400 mb-0.5">
+                    <span className="text-xs lg:text-md text-gray-400 mb-0.5">
                       Thành tiền
                     </span>
                     <span className="text-md font-medium">
@@ -536,9 +617,9 @@ export function InvoiceItemsList({
         </div>
       </div>
 
-      <div className="m-3 border p-3 flex-shrink-0 space-y-2.5 rounded-xl shadow-xl">
+      <div className="m-2 lg:m-3 border p-2 lg:p-3 flex-shrink-0 space-y-2 lg:space-y-2.5 rounded-xl shadow-xl">
         <div>
-          <label className="block text-md text-gray-600 mb-1">
+          <label className="block text-sm lg:text-md text-gray-600 mb-0.5 lg:mb-1">
             Ghi chú hóa đơn
           </label>
           <textarea
@@ -546,22 +627,24 @@ export function InvoiceItemsList({
             onChange={(e) => onOrderNoteChange(e.target.value.slice(0, 1000))}
             maxLength={1000}
             placeholder="Nhập ghi chú cho hóa đơn..."
-            className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full border rounded-xl px-3 py-1.5 lg:py-2 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             rows={2}
           />
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-gray-600 text-md">Tổng tiền hàng</span>
-          <span className="font-semibold text-md">
+          <span className="text-gray-600 text-sm lg:text-md">
+            Tổng tiền hàng
+          </span>
+          <span className="font-semibold text-sm lg:text-md">
             {calculateSubtotal().toLocaleString()}
           </span>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-gray-600 text-md">Giảm giá</span>
-            <span className="text-md font-medium text-red-600 min-w-[100px] text-right">
+            <span className="text-gray-600 text-sm lg:text-md">Giảm giá</span>
+            <span className="text-sm lg:text-md font-medium text-red-600 min-w-[100px] text-right">
               - {calculateDiscountAmount().toLocaleString()}
               {discountType === "ratio" && ` (${discountValue}%)`}
             </span>
@@ -580,12 +663,12 @@ export function InvoiceItemsList({
                 placeholder={
                   discountType === "amount" ? "Nhập số tiền" : "Nhập %"
                 }
-                className="flex-1 min-w-0 text-center border rounded-xl px-3 py-1.5 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 min-w-0 text-center border rounded-xl px-2 lg:px-3 py-1 lg:py-1.5 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => handleDiscountTypeChange("amount")}
-                  className={`px-3 py-1 text-md rounded transition-colors ${
+                  className={`px-2 lg:px-3 py-0.5 lg:py-1 text-sm lg:text-md rounded transition-colors ${
                     discountType === "amount"
                       ? "bg-blue-600 text-white"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -594,7 +677,7 @@ export function InvoiceItemsList({
                 </button>
                 <button
                   onClick={() => handleDiscountTypeChange("ratio")}
-                  className={`px-3 py-1 text-md rounded transition-colors ${
+                  className={`px-2 lg:px-3 py-0.5 lg:py-1 text-sm lg:text-md rounded transition-colors ${
                     discountType === "ratio"
                       ? "bg-blue-600 text-white"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -606,9 +689,9 @@ export function InvoiceItemsList({
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between font-semibold text-lg pt-1 border-t">
+        <div className="flex items-center justify-between font-semibold text-base lg:text-lg pt-1 border-t">
           <span>Khách cần trả</span>
-          <span className="text-blue-600 text-lg">
+          <span className="text-blue-600 text-base lg:text-lg">
             {calculateTotal().toLocaleString()}
           </span>
         </div>
