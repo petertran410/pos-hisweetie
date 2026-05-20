@@ -33,7 +33,7 @@ export function PrintPreviewPane({ html, paperSize = "A5" }: Props) {
             }
             table { width: 100%; border-collapse: collapse; }
             td, th { padding: 4px 8px; }
-            h1, h2, h3 { margin: 8px 0; }
+            h1, h2, h3 { margin: 2px 0; }
             * { box-sizing: border-box; }
             @page { size: ${paperSize}; margin: 0; }
           </style>

@@ -31,6 +31,7 @@ import {
 } from "@/lib/utils/customer-address";
 import { useAuthStore } from "@/lib/store/auth";
 import { useCan } from "@/lib/hooks/useCan";
+import { MobilePrintPreviewModal } from "@/components/pos/MobilePrintPreviewModal";
 
 export interface CartItem {
   product: any;
@@ -150,6 +151,25 @@ export default function BanHangPage() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
+
+  const [mobilePrintData, setMobilePrintData] = useState<{
+    templateFor: string;
+    entityId: number;
+  } | null>(null);
+
+  const handlePostCreate = (
+    templateFor: string,
+    entityId: number,
+    targetUrl: string
+  ) => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+    if (isMobile) {
+      setMobilePrintData({ templateFor, entityId });
+    } else {
+      queuePrintAfterRedirect(templateFor, entityId);
+      router.push(targetUrl);
+    }
+  };
 
   const initialEditDataRef = useRef<{
     [key: string]: {
@@ -913,14 +933,11 @@ export default function BanHangPage() {
         }),
       });
 
-      // QUEUE PRINT
-      if (result?.id) {
-        queuePrintAfterRedirect("invoice", result.id);
-      }
-
       handleCloseTab(activeTabId);
       toast.success("Tạo hóa đơn thành công");
-      router.push(`/don-hang/don-hang`);
+      if (result?.id) {
+        handlePostCreate("invoice", result.id, "/don-hang/hoa-don");
+      }
     } catch (error: any) {
       toast.error(error.message || "Không thể tạo hóa đơn");
     }
@@ -1358,10 +1375,8 @@ export default function BanHangPage() {
         setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
 
         // QUEUE PRINT
-        queuePrintAfterRedirect("order", activeTab.documentId);
-
         toast.success("Lưu đơn hàng thành công");
-        router.push("/don-hang/dat-hang");
+        handlePostCreate("order", activeTab.documentId, "/don-hang/dat-hang");
       } catch (error: any) {
         console.error("Save order error:", error);
         toast.error(error.message || "Không thể lưu đơn hàng");
@@ -1483,14 +1498,12 @@ export default function BanHangPage() {
 
       setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
 
-      // QUEUE PRINT — dùng ID từ response (invoice mới nếu items thay đổi)
-      queuePrintAfterRedirect(
-        "invoice",
-        updatedInvoice?.id ?? activeTab.documentId
-      );
-
       toast.success("Lưu hóa đơn thành công");
-      router.push("/don-hang/hoa-don");
+      handlePostCreate(
+        "invoice",
+        updatedInvoice?.id ?? activeTab.documentId,
+        "/don-hang/hoa-don"
+      );
     } catch (error: any) {
       console.error("Save invoice error:", error);
       toast.error(error.message || "Không thể lưu hóa đơn");
@@ -1600,36 +1613,52 @@ export default function BanHangPage() {
     }
 
     try {
-      if (activeTab.type === "order") {
-        const result = await createOrder.mutateAsync(documentData);
+      try {
+        let docId: number | undefined;
 
-        if (actualPayment > 0 && result?.order?.id) {
-          const payments =
-            activeTab.paymentMethods && activeTab.paymentMethods.length > 0
-              ? activeTab.paymentMethods
-              : [{ method: "cash", amount: actualPayment }];
+        if (activeTab.type === "order") {
+          const result = await createOrder.mutateAsync(documentData);
 
-          for (const payment of payments) {
-            await createOrderPayment.mutateAsync({
-              orderId: result.order.id,
-              amount: payment.amount,
-              paymentMethod: payment.method,
-              description: `Thanh toán khi tạo đơn - ${payment.method}`,
-            });
+          if (actualPayment > 0 && result?.order?.id) {
+            const payments =
+              activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+                ? activeTab.paymentMethods
+                : [{ method: "cash", amount: actualPayment }];
+
+            for (const payment of payments) {
+              await createOrderPayment.mutateAsync({
+                orderId: result.order.id,
+                amount: payment.amount,
+                paymentMethod: payment.method,
+                description: `Thanh toán khi tạo đơn - ${payment.method}`,
+              });
+            }
           }
+
+          docId = result?.order?.id;
+        } else {
+          const result = await createInvoice.mutateAsync(documentData);
+
+          docId = result?.id;
         }
 
-        // QUEUE PRINT
-        if (result?.order?.id) {
-          queuePrintAfterRedirect("order", result.order.id);
-        }
-      } else {
-        const result = await createInvoice.mutateAsync(documentData);
+        handleCloseTab(activeTabId);
 
-        // QUEUE PRINT
-        if (result?.id) {
-          queuePrintAfterRedirect("invoice", result.id);
+        if (docId) {
+          handlePostCreate(
+            activeTab.type === "order" ? "order" : "invoice",
+            docId,
+            activeTab.type === "order"
+              ? "/don-hang/dat-hang"
+              : "/don-hang/hoa-don"
+          );
         }
+      } catch (error: any) {
+        console.error("Create document error:", error);
+        toast.error(
+          error.message ||
+            `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`
+        );
       }
 
       handleCloseTab(activeTabId);
@@ -1922,6 +1951,14 @@ export default function BanHangPage() {
           <span className="text-xs font-medium">Giỏ hàng</span>
         </button>
       </div>
+
+      {mobilePrintData && (
+        <MobilePrintPreviewModal
+          templateFor={mobilePrintData.templateFor}
+          entityId={mobilePrintData.entityId}
+          onClose={() => setMobilePrintData(null)}
+        />
+      )}
     </div>
   );
 }
