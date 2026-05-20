@@ -8,6 +8,7 @@ import type { Order } from "@/lib/types/order";
 import { useRouter } from "next/navigation";
 import { usePendingPrint } from "@/lib/hooks/usePendingPrint";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { OrdersMobileView } from "@/components/orders/OrdersMobileView";
 
 export default function DatHangPage() {
   const router = useRouter();
@@ -44,7 +45,8 @@ export default function DatHangPage() {
 
   return (
     <PagePermissionGuard resource="orders" action="view">
-      <div className="flex h-full border-t bg-gray-50 w-screen">
+      {/* ── Desktop (md+) — giữ nguyên 100% ── */}
+      <div className="hidden md:flex h-full border-t bg-gray-50 w-screen">
         <OrdersSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}
@@ -53,6 +55,15 @@ export default function DatHangPage() {
           filters={filters}
           onCreateClick={handleCreateClick}
           onEditClick={handleEditClick}
+        />
+      </div>
+
+      {/* ── Mobile (dưới md) ── */}
+      <div className="md:hidden h-full">
+        <OrdersMobileView
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onCreateClick={handleCreateClick}
         />
       </div>
     </PagePermissionGuard>
