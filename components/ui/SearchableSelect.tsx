@@ -18,6 +18,7 @@ interface SearchableSelectProps {
   disabled?: boolean;
   required?: boolean;
   error?: string;
+  size?: "sm" | "md";
 }
 
 export function SearchableSelect({
@@ -30,6 +31,7 @@ export function SearchableSelect({
   disabled = false,
   required = false,
   error,
+  size = "md",
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -84,7 +86,7 @@ export function SearchableSelect({
         disabled={disabled}
         aria-required={required}
         aria-invalid={!!error}
-        className={`w-full px-3 py-2 border rounded-lg flex items-center justify-between transition-colors ${
+        className={`w-full ${size === "sm" ? "px-2.5 py-1.5 text-sm" : "px-3 py-2"} border rounded-lg flex items-center justify-between transition-colors ${
           disabled
             ? "bg-gray-100 cursor-not-allowed opacity-60"
             : error
@@ -99,7 +101,7 @@ export function SearchableSelect({
             : placeholder}
         </span>
         <ChevronDown
-          className={`w-5 h-5 text-gray-400 transition-transform ${
+          className={`${size === "sm" ? "w-4 h-4" : "w-5 h-5"} text-gray-400 transition-transform ${
             isOpen ? "rotate-180" : ""
           }`}
         />
@@ -116,7 +118,7 @@ export function SearchableSelect({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full pl-9 pr-3 ${size === "sm" ? "py-1.5 text-xs" : "py-2 text-sm"} border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
               />
             </div>
           </div>

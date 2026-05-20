@@ -415,6 +415,7 @@ export function CustomerInvoiceInfoTab({
                 setValue("invoiceWardCode", "");
               }}
               placeholder="Tìm Tỉnh/Thành phố"
+              size="sm"
             />
           </div>
 
@@ -433,6 +434,7 @@ export function CustomerInvoiceInfoTab({
               onChange={(value) => setValue("invoiceWardCode", value)}
               placeholder="Tìm Phường/Xã"
               disabled={!selectedInvoiceCityCode}
+              size="sm"
             />
           </div>
 
@@ -545,6 +547,7 @@ export function CustomerInvoiceInfoTab({
                 setValue("invoiceWardCode", "");
               }}
               placeholder="Tìm Tỉnh/Thành phố"
+              size="sm"
             />
           </div>
 
@@ -563,6 +566,7 @@ export function CustomerInvoiceInfoTab({
               onChange={(value) => setValue("invoiceWardCode", value)}
               placeholder="Tìm Phường/Xã"
               disabled={!selectedInvoiceCityCode}
+              size="sm"
             />
           </div>
 
