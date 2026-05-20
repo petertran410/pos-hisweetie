@@ -182,7 +182,7 @@ export function CustomerInvoiceInfoTab({
           </h3>
           <button
             onClick={() => setIsEditing(true)}
-            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm border rounded hover:bg-gray-50 flex items-center gap-1.5 lg:gap-2">
+            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-sm lg:text-sm border rounded hover:bg-gray-50 flex items-center gap-1.5 lg:gap-2">
             <Pencil className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             Chỉnh sửa
           </button>
@@ -191,7 +191,7 @@ export function CustomerInvoiceInfoTab({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-4 divide-y divide-gray-100 lg:divide-y-0 border-y border-gray-100 lg:border-y-0">
           <div className="py-2 lg:py-0">
             {/* ↑ py-3 → py-2 */}
-            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+            <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
               Loại khách hàng
             </label>
             <div className="text-sm lg:text-base">
@@ -202,7 +202,7 @@ export function CustomerInvoiceInfoTab({
           {customer.type === 0 && (
             <>
               <div className="py-2 lg:py-0 lg:col-span-2">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Tên người mua
                 </label>
                 <div className="text-sm lg:text-base">
@@ -211,7 +211,7 @@ export function CustomerInvoiceInfoTab({
               </div>
 
               <div className="py-2 lg:py-0">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Số CCCD/CMND
                 </label>
                 <div className="text-sm lg:text-base">
@@ -220,7 +220,7 @@ export function CustomerInvoiceInfoTab({
               </div>
 
               <div className="py-2 lg:py-0">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Số hộ chiếu
                 </label>
                 <div className="text-sm lg:text-base">
@@ -229,7 +229,7 @@ export function CustomerInvoiceInfoTab({
               </div>
 
               <div className="py-2 lg:py-0">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Mã ĐVQHNS
                 </label>
                 <div className="text-sm lg:text-base">
@@ -238,7 +238,7 @@ export function CustomerInvoiceInfoTab({
               </div>
 
               <div className="py-2 lg:py-0">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Email
                 </label>
                 <div className="text-sm lg:text-base">
@@ -247,7 +247,7 @@ export function CustomerInvoiceInfoTab({
               </div>
 
               <div className="py-2 lg:py-0">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Số điện thoại
                 </label>
                 <div className="text-sm lg:text-base">
@@ -260,7 +260,7 @@ export function CustomerInvoiceInfoTab({
           {customer.type === 1 && (
             <>
               <div className="py-2 lg:py-0">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Mã số thuế
                 </label>
                 <div className="text-sm lg:text-base">
@@ -269,7 +269,7 @@ export function CustomerInvoiceInfoTab({
               </div>
 
               <div className="py-2 lg:py-0">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Tên công ty
                 </label>
                 <div className="text-sm lg:text-base">
@@ -278,7 +278,7 @@ export function CustomerInvoiceInfoTab({
               </div>
 
               <div className="py-2 lg:py-0">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Tên người mua
                 </label>
                 <div className="text-sm lg:text-base">
@@ -287,7 +287,7 @@ export function CustomerInvoiceInfoTab({
               </div>
 
               <div className="py-2 lg:py-0">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Mã ĐVQHNS
                 </label>
                 <div className="text-sm lg:text-base">
@@ -296,7 +296,7 @@ export function CustomerInvoiceInfoTab({
               </div>
 
               <div className="py-2 lg:py-0">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Email
                 </label>
                 <div className="text-sm lg:text-base">
@@ -305,7 +305,7 @@ export function CustomerInvoiceInfoTab({
               </div>
 
               <div className="py-2 lg:py-0">
-                <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Số điện thoại
                 </label>
                 <div className="text-sm lg:text-base">
@@ -316,7 +316,7 @@ export function CustomerInvoiceInfoTab({
           )}
 
           <div className="py-2 lg:py-0 lg:col-span-3">
-            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+            <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
               Địa chỉ xuất hóa đơn
             </label>
             <div className="text-sm lg:text-base">
@@ -345,13 +345,13 @@ export function CustomerInvoiceInfoTab({
           <button
             type="button"
             onClick={handleCancel}
-            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-2">
+            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-sm lg:text-sm border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-2">
             <XIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             Hủy
           </button>
           <button
             type="submit"
-            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1 lg:gap-2">
+            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-sm lg:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1 lg:gap-2">
             <Save className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             Lưu
           </button>
@@ -360,15 +360,15 @@ export function CustomerInvoiceInfoTab({
 
       {/* Radio: Loại khách hàng */}
       <div className="mb-2.5 lg:mb-4">
-        <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+        <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
           Loại khách hàng
         </label>
         <div className="flex flex-wrap gap-3 lg:gap-4">
-          <label className="flex items-center gap-1.5 text-xs lg:text-sm">
+          <label className="flex items-center gap-1.5 text-sm lg:text-sm">
             <input type="radio" value="0" {...register("type")} />
             <span>Cá nhân</span>
           </label>
-          <label className="flex items-center gap-1.5 text-xs lg:text-sm">
+          <label className="flex items-center gap-1.5 text-sm lg:text-sm">
             <input type="radio" value="1" {...register("type")} />
             <span>Tổ chức/Hộ kinh doanh</span>
           </label>
@@ -379,7 +379,7 @@ export function CustomerInvoiceInfoTab({
       {customerType === "0" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-4">
           <div className="col-span-1">
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Tên người mua
             </label>
             <input
@@ -390,7 +390,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Địa chỉ
             </label>
             <input
@@ -401,7 +401,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Tỉnh/Thành phố
             </label>
             <SearchableSelect
@@ -420,7 +420,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div className="col-span-1 sm:col-span-2">
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Phường/Xã
             </label>
             <SearchableSelect
@@ -439,7 +439,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Số CCCD/CMND
             </label>
             <input
@@ -450,7 +450,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Số hộ chiếu
             </label>
             <input
@@ -461,7 +461,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Mã ĐVQHNS
             </label>
             <input
@@ -472,7 +472,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Email
             </label>
             <input
@@ -484,7 +484,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Số điện thoại
             </label>
             <input
@@ -500,7 +500,7 @@ export function CustomerInvoiceInfoTab({
       {customerType === "1" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-4">
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Mã số thuế <span className="text-red-500">*</span>
             </label>
             <input
@@ -511,7 +511,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Tên công ty
             </label>
             <input
@@ -522,7 +522,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Địa chỉ
             </label>
             <input
@@ -533,7 +533,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Tỉnh/Thành phố
             </label>
             <SearchableSelect
@@ -552,7 +552,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Phường/Xã
             </label>
             <SearchableSelect
@@ -571,7 +571,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Số CCCD/CMND
             </label>
             <input
@@ -582,7 +582,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Số hộ chiếu
             </label>
             <input
@@ -593,7 +593,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Mã ĐVQHNS
             </label>
             <input
@@ -604,7 +604,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Email
             </label>
             <input
@@ -616,7 +616,7 @@ export function CustomerInvoiceInfoTab({
           </div>
 
           <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Số điện thoại
             </label>
             <input

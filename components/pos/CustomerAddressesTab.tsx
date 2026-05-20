@@ -222,9 +222,6 @@ export function CustomerAddressesTab({
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base lg:text-lg font-semibold">
           Địa chỉ giao hàng
-          <span className="text-xs lg:text-sm text-gray-500 font-normal ml-2">
-            ({addresses.length} địa chỉ)
-          </span>
         </h3>
         <button
           onClick={() => setModalState({ open: true, mode: "create" })}
@@ -268,11 +265,11 @@ export function CustomerAddressesTab({
                       )}
                     </div>
 
-                    <div className="space-y-1 text-xs lg:text-sm text-gray-700">
+                    <div className="space-y-1 text-sm lg:text-sm text-gray-700">
                       {(addr.receiver || addr.contactNumber) && (
-                        <div className="flex items-center gap-4 text-gray-600">
+                        <div className="lg:flex items-center lg:gap-4 text-gray-600">
                           {addr.receiver && (
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 mb-1 lg:mb-0">
                               <User className="w-3.5 h-3.5" />
                               {addr.receiver}
                             </span>

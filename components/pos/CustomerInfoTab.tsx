@@ -119,14 +119,14 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-4 divide-y divide-gray-100 lg:divide-y-0 border-y border-gray-100 lg:border-y-0">
           <div className="py-3 lg:py-0">
-            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-1">
               Tên khách hàng
             </label>
             <div className="text-sm lg:text-base">{customer.name || "-"}</div>
           </div>
 
           <div className="py-3 lg:py-0">
-            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-1">
               Điện thoại
             </label>
             <div className="text-sm lg:text-base">
@@ -135,14 +135,14 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </div>
 
           {/* <div className="py-3 lg:py-0">
-            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-1">
               Email
             </label>
             <div className="text-sm lg:text-base">{customer.email || "-"}</div>
           </div> */}
 
           {/* <div>
-            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-1">
               Giới tính
             </label>
             <div className="text-sm lg:text-base">
@@ -155,7 +155,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </div> */}
 
           {/* <div>
-            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-1">
               Ngày sinh
             </label>
             <div className="text-sm lg:text-base">
@@ -164,7 +164,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </div> */}
 
           <div className="py-3 lg:py-0 lg:col-span-3">
-            <label className="block text-xs lg:text-sm font-medium text-gray-500 mb-1">
+            <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-1">
               Ghi chú
             </label>
             <div className="text-sm lg:text-base bg-gray-50 p-3 rounded">

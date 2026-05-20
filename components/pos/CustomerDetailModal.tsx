@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { useCustomer } from "@/lib/hooks/useCustomers";
 import { CustomerInvoicesTab } from "../customers/CustomerInvoicesTab";
 import { CustomerOrdersTab } from "../customers/CustomerOrdersTab";
-import { CustomerDebtsTab } from "../customers/CustomerDebtsTab";
 import { CustomerInfoTab } from "./CustomerInfoTab";
 import { CustomerInvoiceInfoTab } from "./CustomerInvoiceInfoTab";
 import { formatCurrency } from "@/lib/utils";
 import { CustomerAddressesTab } from "./CustomerAddressesTab";
+import { createPortal } from "react-dom";
 
 interface CustomerDetailModalProps {
   isOpen: boolean;
@@ -31,6 +31,15 @@ export function CustomerDetailModal({
 
   if (!isOpen) return null;
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
+
   const handleCustomerUpdate = (updatedCustomer: any) => {
     if (onCustomerUpdate) {
       onCustomerUpdate(updatedCustomer);
@@ -45,14 +54,14 @@ export function CustomerDetailModal({
     { key: "orders", label: "Lịch sử đặt hàng" },
   ];
 
-  return (
+  return createPortal(
     // Mobile: flex justify-end → sheet dán đáy. Desktop: justify-center → centered modal
     <div className="fixed inset-0 z-[99] flex flex-col justify-end lg:items-center lg:justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Sheet / Modal */}
-      <div className="relative bg-white w-full flex flex-col h-[90dvh] lg:h-auto rounded-t-2xl lg:rounded-xl lg:max-w-5xl">
+      <div className="relative bg-white w-full flex flex-col h-[95dvh] lg:h-auto rounded-t-2xl lg:rounded-xl lg:max-w-5xl">
         {/* Handle bar — mobile only */}
         <div className="lg:hidden flex justify-center pt-2.5 pb-0.5 flex-shrink-0">
           <div className="w-10 h-1 bg-gray-200 rounded-full" />
@@ -65,7 +74,7 @@ export function CustomerDetailModal({
               {customer?.name || "Đang tải..."}
             </h2>
             {customer && (
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs lg:text-sm text-gray-500">
+              <div className="flex flex-nowrap items-baseline gap-x-1.5 mt-1 text-sm lg:text-sm text-gray-500">
                 <span>{customer.code}</span>
                 <span>
                   Nợ:{" "}
@@ -94,7 +103,7 @@ export function CustomerDetailModal({
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-3 lg:px-4 py-2.5 text-xs lg:text-sm font-medium border-b-2 whitespace-nowrap flex-shrink-0 transition-colors ${
+                className={`px-3 lg:px-4 py-2.5 text-sm lg:text-sm font-medium border-b-2 whitespace-nowrap flex-shrink-0 transition-colors ${
                   activeTab === tab.key
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-800"
@@ -145,6 +154,7 @@ export function CustomerDetailModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
