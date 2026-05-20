@@ -13,6 +13,7 @@ import {
   Check,
   ChevronDown,
   XIcon,
+  Search,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { MultiPaymentModal } from "./MultiPaymentModal";
@@ -68,8 +69,11 @@ function SellerDropdown({
   onChange: (id: number | null) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState(""); // ← thêm
   const ref = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null); // ← thêm
 
+  // Đóng khi click ngoài — giữ nguyên
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node))
@@ -79,19 +83,34 @@ function SellerDropdown({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Reset search + auto-focus khi mở dropdown — thêm mới
+  useEffect(() => {
+    if (open) {
+      setSearch("");
+      setTimeout(() => searchInputRef.current?.focus(), 0);
+    }
+  }, [open]);
+
   const effectiveId = soldById ?? currentUserId;
   const selected = users.find((u) => u.id === effectiveId);
   const displayName = selected?.name ?? currentUserName;
   const isOverridden = soldById !== null && soldById !== currentUserId;
 
+  // Filter theo search — thêm mới
+  const filteredUsers = users.filter((u) =>
+    u.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div ref={ref} className="relative min-w-[90px] lg:min-w-[120px]">
+    <div ref={ref} className="relative min-w-[140px] lg:min-w-[180px]">
+      {" "}
+      {/* ← tăng min-w */}
       <div
         role="button"
         tabIndex={0}
         onClick={() => setOpen((prev) => !prev)}
         onKeyDown={(e) => e.key === "Enter" && setOpen((prev) => !prev)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-1 py-1 text-sm cursor-pointer transition-colors select-none ${
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
             ? "border-blue-400 ring-2 ring-blue-100"
             : "hover:border-gray-400"
@@ -124,28 +143,52 @@ function SellerDropdown({
           />
         </div>
       </div>
-
       {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
-          {users.map((u, idx) => (
-            <button
-              key={u.id}
-              type="button"
-              onClick={() => {
-                onChange(
-                  u.id === currentUserId && soldById === null ? null : u.id
-                );
-                setOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
-                u.id === effectiveId ? "bg-blue-50" : "hover:bg-gray-50"
-              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-              <span className="flex-1 truncate">{u.name}</span>
-              {u.id === effectiveId && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-              )}
-            </button>
-          ))}
+        <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[220px]">
+          {" "}
+          {/* ← bỏ right-0, thêm min-w-[220px] */}
+          {/* Search input — thêm mới */}
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Tìm người bán..."
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          {/* Danh sách — dùng filteredUsers thay users */}
+          <div className="max-h-52 overflow-y-auto">
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map((u, idx) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(
+                      u.id === currentUserId && soldById === null ? null : u.id
+                    );
+                    setOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
+                    u.id === effectiveId ? "bg-blue-50" : "hover:bg-gray-50"
+                  } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                  <span className="flex-1 truncate">{u.name}</span>
+                  {u.id === effectiveId && (
+                    <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                  )}
+                </button>
+              ))
+            ) : (
+              <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                Không tìm thấy
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
