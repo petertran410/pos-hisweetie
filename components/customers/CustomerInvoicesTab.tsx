@@ -210,10 +210,10 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
             <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
               Người thực hiện
             </th>
-            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
+            <th className="px-2 py-2 hidden lg:block lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
               Chi nhánh
             </th>
-            <th className="px-4 py-3 text-right text-sm font-medium">
+            <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-sm font-medium">
               Giá trị
             </th>
             {/* <th className="px-4 py-3 text-center text-sm font-medium">
@@ -246,7 +246,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
                         href={`/don-hang/hoa-don?Code=${item.code}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-md font-medium text-blue-600 hover:underline"
+                        className="text-xs lg:text-sm font-medium text-blue-600 hover:underline"
                         onClick={(e) => e.stopPropagation()}>
                         {item.code}
                       </Link>
@@ -257,7 +257,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
                         href={`/don-hang/tra-hang?Code=${item.code}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-md font-medium text-blue-600 hover:underline"
+                        className="text-xs lg:text-sm font-medium text-blue-600 hover:underline"
                         onClick={(e) => e.stopPropagation()}>
                         {item.code}
                       </Link>
@@ -276,10 +276,10 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
               <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                 {item.sellerName}
               </td>
-              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
+              <td className="px-2 py-2 hidden lg:block lg:px-4 lg:py-3 text-xs lg:text-sm">
                 {item.branchName}
               </td>
-              <td className="px-4 py-3 text-sm text-right">
+              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm text-right">
                 {item.type === "invoice" ? (
                   <span className="text-red-600 font-medium">
                     +{formatCurrency(item.totalAmount)}

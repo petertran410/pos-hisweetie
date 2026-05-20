@@ -64,7 +64,7 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
             <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-sm font-medium">
               Tổng cộng
             </th>
-            <th className="px-2 py-2 lg:px-4 lg:py-3 text-center text-xs lg:text-sm font-medium">
+            <th className="px-2 py-2 hidden lg:block lg:px-4 lg:py-3 text-center text-xs lg:text-sm font-medium">
               Trạng thái
             </th>
           </tr>
@@ -88,10 +88,10 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
               <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                 {order.branch?.name || "-"}
               </td>
-              <td className="px-4 py-3 text-sm text-right">
+              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm text-right">
                 {formatCurrency(order.grandTotal)}
               </td>
-              <td className="px-4 py-3 text-center">
+              <td className="px-2 py-2 hidden lg:block lg:px-4 lg:py-3 text-center">
                 <span
                   className={`px-2 py-1 rounded text-xs font-medium ${
                     order.status === 3
@@ -109,24 +109,24 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
       </table>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t">
-          <div className="text-sm text-gray-600">
+        <div className="flex items-center justify-between px-3 py-2 lg:px-4 lg:py-3 border-t">
+          <div className="text-xs lg:text-sm text-gray-600">
             Tổng: {orders.length} đơn hàng
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
-              className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
+              className="px-2 py-1 lg:px-3 border rounded text-xs lg:text-sm disabled:opacity-50 hover:bg-gray-50">
               Trước
             </button>
-            <span className="text-sm">
+            <span className="text-xs lg:text-sm">
               {page} / {totalPages}
             </span>
             <button
               onClick={() => setPage(Math.min(totalPages, page + 1))}
               disabled={page >= totalPages}
-              className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
+              className="px-2 py-1 lg:px-3 border rounded text-xs lg:text-sm disabled:opacity-50 hover:bg-gray-50">
               Sau
             </button>
           </div>
