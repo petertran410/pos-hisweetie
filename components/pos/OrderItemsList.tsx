@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 import { NoteTemplate } from "@/lib/api/note-templates";
 import {
@@ -20,6 +20,9 @@ import {
   formatNumberInput,
   parseNumberInput,
 } from "@/lib/utils";
+import { ProductInventoryModal } from "./ProductInventoryModal";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { ProductInventoryMobileSheet } from "./ProductInventoryMobileSheet";
 
 interface CartItemsListProps {
   cartItems: CartItem[];
@@ -75,7 +78,11 @@ export function OrderItemsList({
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [selectedItemForDiscount, setSelectedItemForDiscount] =
     useState<CartItem | null>(null);
+  const [selectedItemForInventory, setSelectedItemForInventory] =
+    useState<CartItem | null>(null);
   const { selectedBranch } = useBranchStore();
+
+  const isMobile = useIsMobile();
 
   const getItemOnHand = (item: CartItem): number | null => {
     if (!selectedBranch || !item.product.inventories) return null;
@@ -414,6 +421,14 @@ export function OrderItemsList({
                 </div>
 
                 <div className="flex-shrink-0 flex items-center gap-1">
+                  {canViewInventory && (
+                    <button
+                      onClick={() => setSelectedItemForInventory(item)}
+                      className="p-1 hover:bg-blue-50 rounded transition-colors"
+                      title="Xem tồn kho tất cả chi nhánh">
+                      <AlertCircle className="w-4 h-4 text-blue-400" />
+                    </button>
+                  )}
                   {canEditPrice && (
                     <ProductPriceHistory
                       customerId={selectedCustomerId}
@@ -421,7 +436,6 @@ export function OrderItemsList({
                       documentType="order"
                     />
                   )}
-                  {/* Trash: hover trên lg, tap trên mobile */}
                   <button
                     onClick={() =>
                       onRemoveItem(item.product.id, item.conditionType)
@@ -719,6 +733,18 @@ export function OrderItemsList({
           onSave={handleSaveItemDiscount}
         />
       )}
+      {selectedItemForInventory &&
+        (isMobile ? (
+          <ProductInventoryMobileSheet
+            product={selectedItemForInventory.product}
+            onClose={() => setSelectedItemForInventory(null)}
+          />
+        ) : (
+          <ProductInventoryModal
+            product={selectedItemForInventory.product}
+            onClose={() => setSelectedItemForInventory(null)}
+          />
+        ))}
     </div>
   );
 }
