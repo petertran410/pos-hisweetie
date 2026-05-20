@@ -30,16 +30,6 @@ interface OrdersTableProps {
   onEditClick: (order: Order) => void;
 }
 
-const STATUS_TABS = [
-  { value: "all", label: "Tất cả" },
-  { value: "pending", label: "Phiếu tạm" },
-  { value: "confirmed", label: "Đã xác nhận" },
-  { value: "processing", label: "Đang giao" },
-  { value: "partially_invoiced", label: "Ra 1 phần HĐ" },
-  { value: "completed", label: "Hoàn thành" },
-  { value: "cancelled", label: "Đã hủy" },
-];
-
 const STATUS_COLOR: Record<number, string> = {
   1: "bg-yellow-100 text-yellow-700",
   2: "bg-blue-100 text-blue-700",

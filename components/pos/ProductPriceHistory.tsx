@@ -71,7 +71,7 @@ export function ProductPriceHistory({
   if (!customerId) return null;
 
   return (
-    <div className="relative">
+    <>
       <button
         ref={buttonRef}
         onClick={handleToggle}
@@ -154,6 +154,6 @@ export function ProductPriceHistory({
           </div>,
           document.body
         )}
-    </div>
+    </>
   );
 }
