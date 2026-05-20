@@ -52,7 +52,7 @@ export function CustomerDetailModal({
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Sheet / Modal */}
-      <div className="relative bg-white w-full flex flex-col h-[80vh] rounded-t-2xl lg:rounded-xl lg:max-w-5xl">
+      <div className="relative bg-white w-full flex flex-col h-[90dvh] lg:h-auto rounded-t-2xl lg:rounded-xl lg:max-w-5xl">
         {/* Handle bar — mobile only */}
         <div className="lg:hidden flex justify-center pt-2.5 pb-0.5 flex-shrink-0">
           <div className="w-10 h-1 bg-gray-200 rounded-full" />

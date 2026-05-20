@@ -178,22 +178,22 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex items-center justify-between mb-3 lg:mb-4">
-        <h3 className="text-base lg:text-lg font-semibold">
+      <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2.5 lg:mb-4">
+        <h3 className="text-sm lg:text-lg font-semibold">
           Chỉnh sửa thông tin khách hàng
         </h3>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 lg:gap-2 flex-shrink-0">
           <button
             type="button"
             onClick={handleCancel}
-            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm border rounded hover:bg-gray-50 flex items-center gap-2">
-            <XIcon className="w-4 h-4" />
+            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-2">
+            <XIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             Hủy
           </button>
           <button
             type="submit"
-            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
-            <Save className="w-4 h-4" />
+            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1 lg:gap-2">
+            <Save className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             Lưu
           </button>
         </div>
@@ -206,7 +206,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </label>
           <input
             {...register("name", { required: true })}
-            className="w-full border rounded px-3 py-1.5 lg:py-2"
+            className="w-full border rounded px-3 py-1.5 lg:py-2 text-sm lg:text-base"
           />
         </div>
 
@@ -216,7 +216,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </label>
           <input
             {...register("contactNumber")}
-            className="w-full border rounded px-3 py-1.5 lg:py-2"
+            className="w-full border rounded px-3 py-1.5 lg:py-2 text-sm lg:text-base"
           />
         </div>
 
@@ -226,7 +226,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </label>
           <input
             {...register("phone")}
-            className="w-full border rounded px-3 py-1.5 lg:py-2"
+            className="w-full border rounded px-3 py-1.5 lg:py-2 text-sm lg:text-base"
           />
         </div>
 
@@ -237,7 +237,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           <input
             type="email"
             {...register("email")}
-            className="w-full border rounded px-3 py-1.5 lg:py-2"
+            className="w-full border rounded px-3 py-1.5 lg:py-2 text-sm lg:text-base"
           />
         </div>
 
@@ -247,7 +247,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </label>
           <select
             {...register("gender")}
-            className="w-full border rounded px-3 py-1.5 lg:py-2">
+            className="w-full border rounded px-3 py-1.5 lg:py-2 text-sm lg:text-base">
             <option value="">Chọn giới tính</option>
             <option value="true">Nam</option>
             <option value="false">Nữ</option>
@@ -294,7 +294,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </label>
           <textarea
             {...register("comments")}
-            className="w-full border rounded px-3 py-1.5 lg:py-2"
+            className="w-full border rounded px-3 py-1.5 lg:py-2 text-sm lg:text-base"
             rows={3}
             maxLength={1000}
             placeholder="Ghi chú về khách hàng"
