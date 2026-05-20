@@ -105,7 +105,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
   if (!isEditing) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3 lg:mb-4">
           <h3 className="text-base lg:text-lg font-semibold">
             Thông tin khách hàng
           </h3>
@@ -178,70 +178,76 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">
+      <div className="flex items-center justify-between mb-3 lg:mb-4">
+        <h3 className="text-base lg:text-lg font-semibold">
           Chỉnh sửa thông tin khách hàng
         </h3>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={handleCancel}
-            className="px-4 py-2 border rounded hover:bg-gray-50 flex items-center gap-2">
+            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm border rounded hover:bg-gray-50 flex items-center gap-2">
             <XIcon className="w-4 h-4" />
             Hủy
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
+            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
             <Save className="w-4 h-4" />
             Lưu
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium mb-1 lg:mb-2">
             Tên khách hàng <span className="text-red-500">*</span>
           </label>
           <input
             {...register("name", { required: true })}
-            className="w-full border rounded px-3 py-2"
+            className="w-full border rounded px-3 py-1.5 lg:py-2"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Điện thoại</label>
+          <label className="block text-sm font-medium mb-1 lg:mb-2">
+            Điện thoại
+          </label>
           <input
             {...register("contactNumber")}
-            className="w-full border rounded px-3 py-2"
+            className="w-full border rounded px-3 py-1.5 lg:py-2"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium mb-1 lg:mb-2">
             Điện thoại phụ
           </label>
           <input
             {...register("phone")}
-            className="w-full border rounded px-3 py-2"
+            className="w-full border rounded px-3 py-1.5 lg:py-2"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Email</label>
+          <label className="block text-sm font-medium mb-1 lg:mb-2">
+            Email
+          </label>
           <input
             type="email"
             {...register("email")}
-            className="w-full border rounded px-3 py-2"
+            className="w-full border rounded px-3 py-1.5 lg:py-2"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Giới tính</label>
+          <label className="block text-sm font-medium mb-1 lg:mb-2">
+            Giới tính
+          </label>
           <select
             {...register("gender")}
-            className="w-full border rounded px-3 py-2">
+            className="w-full border rounded px-3 py-1.5 lg:py-2">
             <option value="">Chọn giới tính</option>
             <option value="true">Nam</option>
             <option value="false">Nữ</option>
@@ -249,7 +255,9 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
         </div>
 
         <div className="relative" ref={birthDatePickerRef}>
-          <label className="block text-sm font-medium mb-2">Ngày sinh</label>
+          <label className="block text-sm font-medium mb-1 lg:mb-2">
+            Ngày sinh
+          </label>
           <button
             type="button"
             onClick={() => setShowBirthDatePicker(!showBirthDatePicker)}
@@ -280,11 +288,13 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           )}
         </div>
 
-        <div className="col-span-2 lg:col-span-3">
-          <label className="block text-sm font-medium mb-2">Ghi chú</label>
+        <div className="sm:col-span-2 lg:col-span-3">
+          <label className="block text-sm font-medium mb-1 lg:mb-2">
+            Ghi chú
+          </label>
           <textarea
             {...register("comments")}
-            className="w-full border rounded px-3 py-2"
+            className="w-full border rounded px-3 py-1.5 lg:py-2"
             rows={3}
             maxLength={1000}
             placeholder="Ghi chú về khách hàng"
