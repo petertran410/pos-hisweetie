@@ -1660,11 +1660,6 @@ export default function BanHangPage() {
             `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`
         );
       }
-
-      handleCloseTab(activeTabId);
-      router.push(
-        activeTab.type === "order" ? "/don-hang/dat-hang" : "/don-hang/hoa-don"
-      );
     } catch (error: any) {
       console.error("Create document error:", error);
       toast.error(
