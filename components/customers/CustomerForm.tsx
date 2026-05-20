@@ -478,7 +478,7 @@ export function CustomerForm({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full sm:max-w-4xl h-[92dvh] sm:h-auto sm:max-h-[90vh] sm:m-4 flex flex-col">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full sm:max-w-4xl h-[92dvh] sm:h-auto sm:max-h-[90vh] sm:m-4 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between z-10 flex-shrink-0">
           <h2 className="text-base sm:text-xl font-semibold">
@@ -489,7 +489,9 @@ export function CustomerForm({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Tab navigation */}
           <div className="border-b flex gap-4 sm:gap-6 px-4 sm:px-6 flex-shrink-0">
             <button
@@ -517,7 +519,7 @@ export function CustomerForm({
           <div
             className={
               activeFormTab === "basic"
-                ? "p-4 sm:p-6 space-y-4 sm:space-y-6 flex-1 overflow-y-auto"
+                ? "p-4 sm:p-6 space-y-4 sm:space-y-6 flex-1 overflow-y-auto min-h-0"
                 : "hidden"
             }>
             {/* ── Khách hàng cha ── */}
@@ -843,7 +845,7 @@ export function CustomerForm({
           <div
             className={
               activeFormTab === "invoice"
-                ? "p-4 sm:p-6 space-y-4 sm:space-y-6 flex-1 overflow-y-auto"
+                ? "p-4 sm:p-6 space-y-4 sm:space-y-6 flex-1 overflow-y-auto min-h-0"
                 : "hidden"
             }>
             {/* Loại khách hàng radio — inline theo hình 4/5 */}
