@@ -378,7 +378,7 @@ export function CustomerInvoiceInfoTab({
       {/* Type = 0: Cá nhân */}
       {customerType === "0" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-4">
-          <div className="col-span-1 sm:col-span-2">
+          <div className="col-span-1">
             <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
               Tên người mua
             </label>
@@ -389,7 +389,7 @@ export function CustomerInvoiceInfoTab({
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-2">
               Địa chỉ
             </label>
