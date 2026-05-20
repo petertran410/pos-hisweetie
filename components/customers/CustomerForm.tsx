@@ -497,7 +497,7 @@ export function CustomerForm({
             <button
               type="button"
               onClick={() => setActiveFormTab("basic")}
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`py-2 sm:py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeFormTab === "basic"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
@@ -507,7 +507,7 @@ export function CustomerForm({
             <button
               type="button"
               onClick={() => setActiveFormTab("invoice")}
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`py-2 sm:py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeFormTab === "invoice"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
@@ -519,7 +519,7 @@ export function CustomerForm({
           <div
             className={
               activeFormTab === "basic"
-                ? "p-4 sm:p-6 space-y-4 sm:space-y-6 flex-1 overflow-y-auto min-h-0"
+                ? "p-3 sm:p-6 space-y-3 sm:space-y-6 flex-1 overflow-y-auto min-h-0"
                 : "hidden"
             }>
             {/* ── Khách hàng cha ── */}
@@ -527,7 +527,7 @@ export function CustomerForm({
               !customer?.children
                 ?.length /* Chỉ hiện khi tạo mới hoặc edit khách không phải con */ && (
                 <div className="mb-4" ref={parentDropdownRef}>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-1 sm:mb-2">
                     Khách hàng cha
                     <span className="text-xs text-gray-400 font-normal ml-2">
                       (nếu là khách hàng con / chuỗi cửa hàng)
@@ -556,7 +556,7 @@ export function CustomerForm({
                           setShowParentDropdown(true);
                         }}
                         onFocus={() => setShowParentDropdown(true)}
-                        className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                        className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                       />
                       {showParentDropdown && parentOptions.length > 0 && (
                         <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -603,54 +603,56 @@ export function CustomerForm({
             {/* Section 1: Thông tin cá nhân (grid 2 cột, tất cả 7 field trong cùng 1 grid) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium mb-1 sm:mb-2">
                   Tên khách hàng <span className="text-red-500">*</span>
                 </label>
                 <input
                   {...register("name", { required: true })}
                   placeholder="Bắt buộc"
-                  className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                  className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium mb-1 sm:mb-2">
                   Mã khách hàng
                 </label>
                 <input
                   {...register("code")}
                   placeholder="Tự động"
-                  className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                  className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium mb-1 sm:mb-2">
                   Điện thoại 1 <span className="text-red-500">*</span>
                 </label>
                 <input
                   {...register("contactNumber", { required: true })}
-                  className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                  className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium mb-1 sm:mb-2">
                   Điện thoại 2
                 </label>
                 <input
                   {...register("phone")}
-                  className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                  className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
+                <label className="block text-sm font-medium mb-1 sm:mb-2">
+                  Email
+                </label>
                 <input
                   type="email"
                   {...register("email")}
                   placeholder="email@gmail.com"
-                  className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                  className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                 />
               </div>
             </div>
@@ -658,7 +660,7 @@ export function CustomerForm({
             {/* Section 2: Địa chỉ giao hàng (GIỮ NGUYÊN nội dung, chỉ đảm bảo nằm trong wrapper basic) */}
             <div className="border-t pt-4 sm:pt-6">
               <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="font-semibold">
+                <h3 className="text-sm sm:text-base font-semibold">
                   Địa chỉ giao hàng <span className="text-red-500">*</span>
                   <span className="text-xs text-gray-500 font-normal ml-2">
                     ({addresses.length} địa chỉ)
@@ -673,15 +675,15 @@ export function CustomerForm({
               </div>
 
               {addresses.length === 0 ? (
-                <div className="text-center py-6 text-gray-500 border-2 border-dashed rounded-lg text-sm">
+                <div className="text-center py-4 sm:py-6 text-gray-500 border-2 border-dashed rounded-lg text-sm">
                   Chưa có địa chỉ. Bấm "Thêm địa chỉ" để bắt đầu.
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3 sm:space-y-4">
                   {addresses.map((addr: any, index: number) => (
                     <div
                       key={index}
-                      className={`border rounded-lg px-3 py-2.5 flex items-start justify-between gap-3 ${
+                      className={`border rounded-lg px-3 py-2 sm:py-2.5 flex items-start justify-between gap-3 ${
                         addr.isDefault
                           ? "border-blue-500 bg-blue-50/50"
                           : "border-gray-200"
@@ -745,15 +747,17 @@ export function CustomerForm({
             </div>
 
             {/* Nhóm khách hàng + Ghi chú */}
-            <div className="border-t pt-6">
-              <h3 className="font-semibold mb-4">Nhóm khách hàng, ghi chú</h3>
+            <div className="border-t pt-4 sm:pt-6">
+              <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-4">
+                Nhóm khách hàng, ghi chú
+              </h3>
               <div>
                 <div className="relative" ref={dropdownRef}>
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium mb-1 sm:mb-2">
                     Nhóm khách hàng
                   </label>
                   <div
-                    className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 min-h-[36px] sm:min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
                     onClick={() => setShowGroupDropdown(true)}>
                     {selectedGroups.map((group) => (
                       <span
@@ -826,13 +830,13 @@ export function CustomerForm({
                 </div>
 
                 <div className="mt-2">
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium mb-1 sm:mb-2">
                     Ghi chú
                   </label>
                   <textarea
                     {...register("comments")}
                     placeholder="Nhập ghi chú"
-                    className="w-full px-3 py-2 border rounded-lg resize-none"
+                    className="w-full px-3 py-1.5 sm:py-2 border rounded-lg resize-none"
                     rows={3}
                     maxLength={1000}
                   />
@@ -845,7 +849,7 @@ export function CustomerForm({
           <div
             className={
               activeFormTab === "invoice"
-                ? "p-4 sm:p-6 space-y-4 sm:space-y-6 flex-1 overflow-y-auto min-h-0"
+                ? "p-3 sm:p-6 space-y-3 sm:space-y-6 flex-1 overflow-y-auto min-h-0"
                 : "hidden"
             }>
             {/* Loại khách hàng radio — inline theo hình 4/5 */}
@@ -876,7 +880,7 @@ export function CustomerForm({
                   <input
                     {...register("invoiceBuyerName")}
                     placeholder="Nhập tên người mua"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
                 <div>
@@ -886,7 +890,7 @@ export function CustomerForm({
                   <input
                     {...register("taxCode")}
                     placeholder="Nhập mã số thuế"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
 
@@ -897,7 +901,7 @@ export function CustomerForm({
                   <input
                     {...register("invoiceAddress")}
                     placeholder="Nhập địa chỉ"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
 
@@ -952,7 +956,7 @@ export function CustomerForm({
                   <input
                     {...register("invoiceCccdCmnd")}
                     placeholder="Nhập số CCCD/CMND"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
                 <div>
@@ -962,7 +966,7 @@ export function CustomerForm({
                   <input
                     {...register("invoiceBankAccount")}
                     placeholder="Nhập số hộ chiếu"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
 
@@ -974,7 +978,7 @@ export function CustomerForm({
                     type="email"
                     {...register("invoiceEmail")}
                     placeholder="email@gmail.com"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
                 <div>
@@ -984,7 +988,7 @@ export function CustomerForm({
                   <input
                     {...register("invoicePhone")}
                     placeholder="Nhập số điện thoại"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
               </div>
@@ -1000,7 +1004,7 @@ export function CustomerForm({
                   <input
                     {...register("taxCode")}
                     placeholder="Bắt buộc"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
                 <div>
@@ -1010,7 +1014,7 @@ export function CustomerForm({
                   <input
                     {...register("organization")}
                     placeholder="Nhập tên công ty"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
 
@@ -1021,7 +1025,7 @@ export function CustomerForm({
                   <input
                     {...register("invoiceAddress")}
                     placeholder="Nhập địa chỉ"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
 
@@ -1076,7 +1080,7 @@ export function CustomerForm({
                   <input
                     {...register("invoiceBuyerName")}
                     placeholder="Nhập tên người mua"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
                 <div>
@@ -1086,7 +1090,7 @@ export function CustomerForm({
                   <input
                     {...register("invoiceDvqhnsCode")}
                     placeholder="Nhập mã đơn vị"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
 
@@ -1098,7 +1102,7 @@ export function CustomerForm({
                     type="email"
                     {...register("invoiceEmail")}
                     placeholder="email@gmail.com"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
                 <div>
@@ -1108,7 +1112,7 @@ export function CustomerForm({
                   <input
                     {...register("invoicePhone")}
                     placeholder="Nhập số điện thoại"
-                    className="w-full border rounded px-3 py-2.5 sm:py-2 text-base sm:text-sm"
+                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
               </div>
@@ -1119,13 +1123,13 @@ export function CustomerForm({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 sm:py-2 border rounded hover:bg-gray-50 text-sm">
+              className="px-4 py-2 border rounded hover:bg-gray-50 text-sm">
               Hủy
             </button>
             <button
               type="submit"
               disabled={createCustomer.isPending || updateCustomer.isPending}
-              className="px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm font-medium">
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm font-medium">
               {customer ? "Cập nhật" : "Tạo khách hàng"}
             </button>
           </div>

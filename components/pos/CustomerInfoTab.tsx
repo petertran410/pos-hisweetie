@@ -111,7 +111,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </h3>
           <button
             onClick={() => setIsEditing(true)}
-            className="px-4 py-2 border rounded hover:bg-gray-50 flex items-center gap-2">
+            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm border rounded hover:bg-gray-50 flex items-center gap-1.5 lg:gap-2">
             <Pencil className="w-4 h-4" />
             Chỉnh sửa
           </button>
