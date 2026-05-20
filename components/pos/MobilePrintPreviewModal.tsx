@@ -17,9 +17,9 @@ export function MobilePrintPreviewModal({
   onClose,
 }: MobilePrintPreviewModalProps) {
   const [mounted, setMounted] = useState(false);
-  const [content, setContent] = useState<string | null>(null);
-  const [paperSize, setPaperSize] = useState("A5");
+  const [srcDoc, setSrcDoc] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -28,7 +28,6 @@ export function MobilePrintPreviewModal({
     return () => setMounted(false);
   }, []);
 
-  // Fetch template + render content
   useEffect(() => {
     let cancelled = false;
 
@@ -36,6 +35,7 @@ export function MobilePrintPreviewModal({
       try {
         setIsLoading(true);
         setError(null);
+        setIframeLoaded(false);
 
         const templates = await printTemplatesApi.getAll({
           templateFor,
@@ -56,30 +56,9 @@ export function MobilePrintPreviewModal({
         if (!preview?.content) throw new Error("Không render được nội dung in");
 
         if (!cancelled) {
-          setContent(preview.content);
-          setPaperSize(template.paperSize || "A5");
-        }
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message || "Không thể tải mẫu in");
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [templateFor, entityId]);
-
-  // Ghi nội dung vào iframe khi content sẵn sàng
-  useEffect(() => {
-    if (!content || !iframeRef.current) return;
-    const doc = iframeRef.current.contentDocument;
-    if (!doc) return;
-
-    doc.open();
-    doc.write(`<!DOCTYPE html>
+          const paperSize = template.paperSize || "A5";
+          // Build full HTML string → gán vào srcDoc, browser tự load
+          setSrcDoc(`<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -93,10 +72,21 @@ export function MobilePrintPreviewModal({
     * { box-sizing: border-box; }
   </style>
 </head>
-<body>${content}</body>
+<body>${preview.content}</body>
 </html>`);
-    doc.close();
-  }, [content, paperSize]);
+        }
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message || "Không thể tải mẫu in");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [templateFor, entityId]);
 
   // User gesture → window.print() hoạt động trên mobile
   const handlePrint = () => {
@@ -131,23 +121,33 @@ export function MobilePrintPreviewModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-2">
-          {isLoading && (
-            <div className="flex items-center justify-center h-full gap-2 text-gray-500">
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-2 relative">
+          {/* Loading overlay — hiện cho đến khi iframe onLoad fired */}
+          {(isLoading || (srcDoc && !iframeLoaded)) && !error && (
+            <div className="absolute inset-0 flex items-center justify-center gap-2 text-gray-500 bg-gray-50 z-10">
               <Loader2 className="w-5 h-5 animate-spin" />
               <span className="text-sm">Đang tải...</span>
             </div>
           )}
+
           {error && (
-            <div className="flex items-center justify-center h-full text-red-500 text-sm">
+            <div className="absolute inset-0 flex items-center justify-center text-red-500 text-sm px-4 text-center">
               {error}
             </div>
           )}
-          {content && !isLoading && (
+
+          {/* iframe chỉ render khi có srcDoc, ẩn cho đến khi onLoad */}
+          {srcDoc && (
             <iframe
               ref={iframeRef}
+              srcDoc={srcDoc}
+              onLoad={() => setIframeLoaded(true)}
               className="w-full bg-white border rounded shadow"
-              style={{ height: "100%", minHeight: 400 }}
+              style={{
+                height: "100%",
+                minHeight: 400,
+                opacity: iframeLoaded ? 1 : 0,
+              }}
               title="print-preview"
             />
           )}
@@ -162,7 +162,7 @@ export function MobilePrintPreviewModal({
           </button>
           <button
             onClick={handlePrint}
-            disabled={!content || isLoading}
+            disabled={!iframeLoaded}
             className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
             <Printer className="w-4 h-4" />
             In phiếu
