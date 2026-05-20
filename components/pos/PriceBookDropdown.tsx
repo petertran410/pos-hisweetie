@@ -84,7 +84,7 @@ export function PriceBookDropdown({
             />
           </div>
 
-          <div className="overflow-y-auto flex-1">
+          <div className="overflow-y-auto flex-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
             <button
               onClick={() => handleSelectPriceBook(null)}
               className={`w-full px-4 py-2 text-left hover:bg-gray-50 border-b ${

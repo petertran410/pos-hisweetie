@@ -162,7 +162,7 @@ function SellerDropdown({
             </div>
           </div>
           {/* Danh sách — dùng filteredUsers thay users */}
-          <div className="max-h-52 overflow-y-auto">
+          <div className="max-h-52 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
             {filteredUsers.length > 0 ? (
               filteredUsers.map((u, idx) => (
                 <button
