@@ -174,13 +174,14 @@ export function CustomerAddressFormModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 lg:p-0"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}>
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
-          <h3 className="text-lg font-semibold">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 lg:px-6 lg:py-4 border-b shrink-0">
+          <h3 className="text-base lg:text-lg font-semibold">
             {mode === "create"
               ? "Thêm địa chỉ giao hàng"
               : "Chỉnh sửa địa chỉ giao hàng"}
@@ -192,10 +193,12 @@ export function CustomerAddressFormModal({
           </button>
         </div>
 
-        <div className="p-6 space-y-5 overflow-y-auto flex-1">
-          <div className="grid grid-cols-3 gap-4">
+        {/* Body */}
+        <div className="p-4 lg:p-6 space-y-3 lg:space-y-5 overflow-y-auto flex-1">
+          {/* Row 1: Tên gợi nhớ / Người nhận / SĐT */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 lg:gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5">
+              <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-1.5">
                 Tên gợi nhớ
               </label>
               <input
@@ -203,11 +206,11 @@ export function CustomerAddressFormModal({
                 value={form.label || ""}
                 onChange={(e) => set("label", e.target.value || undefined)}
                 placeholder="VD: Văn phòng, Kho 1"
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5">
+              <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-1.5">
                 Người nhận
               </label>
               <input
@@ -215,11 +218,11 @@ export function CustomerAddressFormModal({
                 value={form.receiver || ""}
                 onChange={(e) => set("receiver", e.target.value || undefined)}
                 placeholder="Tên người nhận"
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5">
+              <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-1.5">
                 Số điện thoại
               </label>
               <input
@@ -229,13 +232,14 @@ export function CustomerAddressFormModal({
                   set("contactNumber", e.target.value || undefined)
                 }
                 placeholder="SĐT người nhận"
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
               />
             </div>
           </div>
 
+          {/* Địa chỉ chi tiết */}
           <div>
-            <label className="block text-sm font-medium mb-1.5">
+            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-1.5">
               Địa chỉ chi tiết (số nhà, tên đường)
             </label>
             <input
@@ -243,27 +247,29 @@ export function CustomerAddressFormModal({
               value={form.address || ""}
               onChange={(e) => set("address", e.target.value || undefined)}
               placeholder="VD: 123 Nguyễn Trãi"
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
             />
           </div>
 
-          <div className="border-t pt-4">
-            <p className="text-sm font-medium mb-3 text-gray-700">
+          {/* Địa chỉ mới */}
+          <div className="border-t pt-3 lg:pt-4">
+            <p className="text-xs lg:text-sm font-medium mb-2 lg:mb-3 text-gray-700">
               Địa chỉ mới (Tỉnh / Phường — sau sáp nhập)
             </p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-4">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
                   Tỉnh/Thành phố
                 </label>
                 <SearchableSelect
-                  options={invoiceProvinces.map((p) => ({
+                  options={(invoiceProvinces || []).map((p) => ({
                     value: p.code,
                     label: p.name,
                   }))}
                   value={form.newCityCode || ""}
                   onChange={handleNewCityChange}
                   placeholder="Tìm Tỉnh/Thành phố"
+                  size="sm"
                 />
               </div>
               <div>
@@ -279,16 +285,18 @@ export function CustomerAddressFormModal({
                   onChange={handleNewWardChange}
                   placeholder="Tìm Phường/Xã"
                   disabled={!form.newCityCode}
+                  size="sm"
                 />
               </div>
             </div>
           </div>
 
-          <div className="border-t pt-3">
+          {/* Địa chỉ cũ — toggle */}
+          <div className="border-t pt-3 lg:pt-4">
             <button
               type="button"
               onClick={() => setShowOld((v) => !v)}
-              className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700">
+              className="flex items-center gap-1.5 text-xs lg:text-sm text-blue-600 hover:text-blue-700 font-medium">
               {showOld ? (
                 <ChevronUp className="w-4 h-4" />
               ) : (
@@ -298,7 +306,7 @@ export function CustomerAddressFormModal({
             </button>
 
             {showOld && (
-              <div className="grid grid-cols-3 gap-4 mt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 lg:gap-4 mt-2 lg:mt-3">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">
                     Tỉnh/Thành phố
@@ -311,6 +319,7 @@ export function CustomerAddressFormModal({
                     value={form.cityCode || ""}
                     onChange={handleCityChange}
                     placeholder="Chọn Tỉnh/Thành phố"
+                    size="sm"
                   />
                 </div>
                 <div>
@@ -326,6 +335,7 @@ export function CustomerAddressFormModal({
                     onChange={handleDistrictChange}
                     placeholder="Chọn Quận/Huyện"
                     disabled={!form.cityCode}
+                    size="sm"
                   />
                 </div>
                 <div>
@@ -341,6 +351,7 @@ export function CustomerAddressFormModal({
                     onChange={handleWardChange}
                     placeholder="Chọn Phường/Xã"
                     disabled={!form.districtCode}
+                    size="sm"
                   />
                 </div>
               </div>
@@ -351,39 +362,41 @@ export function CustomerAddressFormModal({
             </p>
           </div>
 
-          <div className="border-t pt-4">
+          {/* isDefault checkbox */}
+          <div className="border-t pt-3 lg:pt-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={!!form.isDefault}
+                checked={!form.isDefault}
                 onChange={(e) => set("isDefault", e.target.checked)}
               />
-              <span className="text-sm">
+              <span className="text-xs lg:text-sm">
                 Đặt làm địa chỉ giao hàng mặc định
               </span>
             </label>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded px-3 py-2">
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs lg:text-sm rounded px-3 py-2">
               {error}
             </div>
           )}
         </div>
 
-        <div className="border-t px-6 py-4 flex justify-end gap-2">
+        {/* Footer */}
+        <div className="border-t px-4 py-3 lg:px-6 lg:py-4 flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-4 py-2 border rounded hover:bg-gray-50 disabled:opacity-50">
+            className="px-3 py-1.5 lg:px-4 lg:py-2 text-sm border rounded hover:bg-gray-50 disabled:opacity-50">
             Hủy
           </button>
           <button
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+            className="px-3 py-1.5 lg:px-4 lg:py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
             {isSaving
               ? "Đang lưu..."
               : mode === "create"

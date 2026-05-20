@@ -123,7 +123,7 @@ export function SearchableSelect({
             </div>
           </div>
 
-          <div className="overflow-y-auto">
+          <div className="overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
             {filteredOptions.length > 0 ? (
               filteredOptions.map((option) => (
                 <button
@@ -132,7 +132,7 @@ export function SearchableSelect({
                   onClick={() => handleSelect(option.value)}
                   className={`w-full px-3 py-2.5 text-left hover:bg-gray-50 flex items-center justify-between transition-colors ${
                     option.value === value ? "bg-blue-50" : ""
-                  }`}>
+                  } `}>
                   <span className="text-sm">
                     {renderOption ? renderOption(option) : option.label}
                   </span>

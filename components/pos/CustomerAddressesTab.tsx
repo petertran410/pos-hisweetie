@@ -236,7 +236,7 @@ export function CustomerAddressesTab({
       </div>
 
       {addresses.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 border-2 border-dashed rounded-lg">
+        <div className="text-center py-8 lg:py-12 text-gray-500 border-2 border-dashed rounded-lg">
           <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-400" />
           <p>Khách hàng chưa có địa chỉ giao hàng.</p>
           <p className="text-sm">Bấm "Thêm địa chỉ" để bắt đầu.</p>
@@ -248,14 +248,14 @@ export function CustomerAddressesTab({
             return (
               <div
                 key={addr.id ?? index}
-                className={`group border rounded-lg p-4 transition-colors ${
+                className={`group border rounded-lg p-3 lg:p-4 transition-colors ${
                   addr.isDefault
                     ? "border-blue-500 bg-blue-50/50"
                     : "border-gray-200 hover:border-gray-300"
                 }`}>
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-2 lg:gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <div className="flex items-center gap-2 mb-1.5 lg:mb-2 flex-wrap">
                       <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
                       <span className="text-sm lg:text-base font-medium truncate">
                         {addr.label || addr.receiver || `Địa chỉ #${index + 1}`}
@@ -302,7 +302,7 @@ export function CustomerAddressesTab({
                         onClick={() => handleSetDefault(index)}
                         disabled={updateCustomer.isPending}
                         title="Đặt làm mặc định"
-                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50">
+                        className="p-1.5 lg:p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50">
                         <Star className="w-4 h-4" />
                       </button>
                     )}
@@ -313,7 +313,7 @@ export function CustomerAddressesTab({
                       }
                       disabled={updateCustomer.isPending}
                       title="Chỉnh sửa"
-                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50">
+                      className="p-1.5 lg:p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50">
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button

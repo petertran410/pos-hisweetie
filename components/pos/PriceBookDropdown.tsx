@@ -72,14 +72,14 @@ export function PriceBookDropdown({
       </button>
 
       {showDropdown && (
-        <div className="absolute top-full right-0 mt-1 bg-white border rounded-lg shadow-lg w-80 z-50 flex flex-col max-h-96">
+        <div className="absolute top-full right-0 mt-1 bg-white border rounded-lg shadow-lg w-40 lg:w-80 z-50 flex flex-col max-h-96 text-xs lg:text-sm">
           <div className="p-2 border-b">
             <input
               type="text"
               placeholder="Tìm bảng giá..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm"
+              className="w-full border rounded px-3 py-2 text-xs lg:text-sm"
               autoFocus
             />
           </div>
@@ -100,7 +100,7 @@ export function PriceBookDropdown({
                   <button
                     key={priceBook.id}
                     onClick={() => handleSelectPriceBook(priceBook.id)}
-                    className={`w-full px-4 py-2 text-left hover:bg-gray-50 border-b ${
+                    className={`w-full px-4 py-2 text-left hover:bg-gray-50 ${
                       selectedPriceBookId === priceBook.id
                         ? "bg-blue-50 font-medium"
                         : ""
