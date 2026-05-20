@@ -528,11 +528,7 @@ export function OrdersMobileDetailSheet({
                               </span>
                               {Number(item.discount) > 0 && (
                                 <span className="text-xs text-red-500">
-                                  Giảm: -
-                                  {formatCurrency(
-                                    Number(item.discount) *
-                                      Number(item.quantity)
-                                  )}
+                                  Giảm: -{formatCurrency(Number(item.discount))}
                                 </span>
                               )}
                             </div>
