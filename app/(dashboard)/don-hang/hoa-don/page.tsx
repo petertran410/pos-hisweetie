@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { usePendingPrint } from "@/lib/hooks/usePendingPrint";
+import { InvoicesMobileView } from "@/components/invoices/InvoicesMobileView";
 
 type FormType = "giao-hang" | "dong-hang" | "loading" | null;
 
@@ -129,7 +130,7 @@ export default function HoaDonPage() {
 
   return (
     <PagePermissionGuard resource="invoices" action="view">
-      <div className="flex h-full border-t bg-gray-50">
+      <div className="hidden md:flex h-full border-t bg-gray-50">
         <InvoicesSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}
@@ -169,6 +170,15 @@ export default function HoaDonPage() {
             preselectedBranchId={preselectedBranchId}
           />
         )}
+      </div>
+
+      {/* ── Mobile (dưới md) ── */}
+      <div className="md:hidden h-full">
+        <InvoicesMobileView
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onCreateClick={handleCreateClick}
+        />
       </div>
     </PagePermissionGuard>
   );

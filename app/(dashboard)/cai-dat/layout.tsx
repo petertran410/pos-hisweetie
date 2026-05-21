@@ -10,6 +10,7 @@ import {
   Wallet,
   Printer,
   RefreshCw,
+  CreditCard,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 
@@ -49,6 +50,12 @@ export default function SettingsLayout({
       href: "/cai-dat/so-quy",
       label: "Sổ quỹ",
       icon: Wallet,
+      permission: { resource: "bank_accounts", action: "view" },
+    },
+    {
+      href: "/cai-dat/tk-ngan-hang-sale",
+      label: "TK ngân hàng theo sale",
+      icon: CreditCard,
       permission: { resource: "bank_accounts", action: "view" },
     },
     {

@@ -27,6 +27,10 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
     Da_Thanh_Toan: "1,000,000",
     Con_Lai: "2,210,000",
     Tong_Can_Thanh_Toan_Bang_Chu: "Ba triệu hai trăm nghìn đồng chẵn",
+    Ma_QR_Code: `<img src="https://img.vietqr.io/image/MB-1234567890-compact2.png?amount=2210000&addInfo=HD049170&accountName=NGUYEN%20VAN%20A" alt="QR thanh toan" style="width:160px;height:160px;" />`,
+    Ten_Ngan_Hang_QR: "Ngân hàng TMCP Quân đội",
+    So_Tai_Khoan_QR: "1234567890",
+    Chu_Tai_Khoan_QR: "NGUYEN VAN A",
     items: [
       {
         Ma_Hang: "SP001",
@@ -35,6 +39,7 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
         So_Luong: 1,
         Don_Gia: "10,000",
         Giam_Gia_Don_Gia: "0",
+        Don_Gia_Sau_Chiet_Khau: "10,000",
         Ghi_Chu_Hang_Hoa: "HÀNG TẶNG KHÁCH CTKM T4",
         Thanh_Tien: "10,000",
       },
@@ -45,6 +50,7 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
         So_Luong: 20,
         Don_Gia: "160,000",
         Giam_Gia_Don_Gia: "0",
+        Don_Gia_Sau_Chiet_Khau: "160,000",
         Ghi_Chu_Hang_Hoa: "CHUYỂN TỪ CỬA HÀNG VỀ",
         Thanh_Tien: "3,200,000",
       },
@@ -75,6 +81,10 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
     Da_Thanh_Toan: "0",
     Con_Lai: "3,200,000",
     Tong_Can_Thanh_Toan_Bang_Chu: "Ba triệu hai trăm nghìn đồng chẵn",
+    Ma_QR_Code: `<img src="https://img.vietqr.io/image/MB-1234567890-compact2.png?amount=3200000&addInfo=DH049170&accountName=NGUYEN%20VAN%20A" alt="QR thanh toan" style="width:160px;height:160px;" />`,
+    Ten_Ngan_Hang_QR: "Ngân hàng TMCP Quân đội",
+    So_Tai_Khoan_QR: "1234567890",
+    Chu_Tai_Khoan_QR: "NGUYEN VAN A",
     items: [
       {
         Ma_Hang: "SP002",
@@ -83,6 +93,7 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
         So_Luong: 20,
         Giam_Gia_Don_Gia: "0",
         Don_Gia: "160,000",
+        Don_Gia_Sau_Chiet_Khau: "160,000",
         Ghi_Chu_Hang_Hoa: "",
         Thanh_Tien: "3,200,000",
       },
