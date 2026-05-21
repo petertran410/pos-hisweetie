@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import {
   useUserBankAccounts,
   useUpsertUserBankAccount,
@@ -24,14 +25,52 @@ export default function UserBankAccountsPage() {
   const upsertMutation = useUpsertUserBankAccount();
   const removeMutation = useRemoveUserBankAccount();
 
-  // Build lookup: userId → mapping
+  // Lookup map: bankAccountId(string) → bankAccount object (dùng cho renderOption)
+  const bankAccountById = useMemo(() => {
+    const map = new Map<string, any>();
+    (bankAccounts || []).forEach((b: any) => map.set(b.id.toString(), b));
+    return map;
+  }, [bankAccounts]);
+
+  // Options cho SearchableSelect: label gộp các trường để search được theo bankCode/số TK/tên chủ
+  const bankOptions = useMemo(
+    () =>
+      (bankAccounts || []).map((b: any) => ({
+        value: b.id.toString(),
+        label: `${b.bankCode} ${b.bankName} ${b.accountNumber} ${b.accountHolder}`,
+      })),
+    [bankAccounts]
+  );
+
+  // Custom render: badge bankCode + 2 dòng thông tin
+  const renderBankOption = (opt: { value: string; label: string }) => {
+    const bank = bankAccountById.get(opt.value);
+    if (!bank) return opt.label;
+    return (
+      <span className="flex items-center gap-2 w-full">
+        <span className="px-1.5 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded shrink-0">
+          {bank.bankCode}
+        </span>
+        <span className="flex flex-col min-w-0 flex-1 text-left">
+          <span className="text-sm font-medium text-gray-900 truncate">
+            {bank.accountNumber} — {bank.accountHolder}
+          </span>
+          <span className="text-xs text-gray-500 truncate">
+            {bank.bankName}
+          </span>
+        </span>
+      </span>
+    );
+  };
+
+  // Lookup: userId → mapping
   const mappingByUserId = useMemo(() => {
     const map = new Map<number, any>();
     (mappings || []).forEach((m: any) => map.set(m.userId, m));
     return map;
   }, [mappings]);
 
-  // Filter users by search
+  // Filter users theo search
   const filteredUsers = useMemo(() => {
     if (!users) return [];
     const kw = search.trim().toLowerCase();
@@ -43,14 +82,18 @@ export default function UserBankAccountsPage() {
     );
   }, [users, search]);
 
-  const handleChange = (userId: number, bankAccountId: number | null) => {
-    if (bankAccountId == null) {
-      // Gỡ mapping
+  const handleSelectBank = (userId: number, value: string) => {
+    if (!value) {
       const mapping = mappingByUserId.get(userId);
       if (mapping) removeMutation.mutate(mapping.id);
       return;
     }
-    upsertMutation.mutate({ userId, bankAccountId });
+    upsertMutation.mutate({ userId, bankAccountId: Number(value) });
+  };
+
+  const handleRemove = (userId: number) => {
+    const mapping = mappingByUserId.get(userId);
+    if (mapping) removeMutation.mutate(mapping.id);
   };
 
   if (!canView) return null;
@@ -72,7 +115,7 @@ export default function UserBankAccountsPage() {
           </div>
         </div>
 
-        {/* Search */}
+        {/* Search box */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -86,7 +129,7 @@ export default function UserBankAccountsPage() {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
-        <div className="bg-white border rounded-lg overflow-hidden">
+        <div className="bg-white border rounded-lg">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
@@ -96,7 +139,7 @@ export default function UserBankAccountsPage() {
                 <th className="text-left px-4 py-3 font-medium text-gray-700">
                   Email
                 </th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">
+                <th className="text-left px-4 py-3 font-medium text-gray-700 w-[400px]">
                   Tài khoản ngân hàng
                 </th>
                 <th className="w-20 px-4 py-3"></th>
@@ -124,32 +167,28 @@ export default function UserBankAccountsPage() {
                     <tr
                       key={user.id}
                       className="border-b last:border-b-0 hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium">{user.name}</td>
-                      <td className="px-4 py-3 text-gray-600">{user.email}</td>
-                      <td className="px-4 py-3">
-                        <select
-                          disabled={!canUpdate || upsertMutation.isPending}
-                          value={mapping?.bankAccountId || ""}
-                          onChange={(e) =>
-                            handleChange(
-                              user.id,
-                              e.target.value ? Number(e.target.value) : null
-                            )
-                          }
-                          className="border rounded px-3 py-1.5 text-sm min-w-[280px] disabled:bg-gray-100">
-                          <option value="">— Chưa gán —</option>
-                          {(bankAccounts || []).map((b: any) => (
-                            <option key={b.id} value={b.id}>
-                              {b.bankName} - {b.accountNumber} (
-                              {b.accountHolder})
-                            </option>
-                          ))}
-                        </select>
+                      <td className="px-4 py-3 font-medium align-top">
+                        {user.name}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-gray-600 align-top">
+                        {user.email}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <SearchableSelect
+                          options={bankOptions}
+                          value={mapping?.bankAccountId?.toString() || ""}
+                          onChange={(v) => handleSelectBank(user.id, v)}
+                          placeholder="— Chưa gán —"
+                          searchPlaceholder="Tìm theo mã NH, số TK, tên chủ TK..."
+                          renderOption={renderBankOption}
+                          disabled={!canUpdate || upsertMutation.isPending}
+                          size="sm"
+                        />
+                      </td>
+                      <td className="px-4 py-3 align-top">
                         {mapping && canUpdate && (
                           <button
-                            onClick={() => handleChange(user.id, null)}
+                            onClick={() => handleRemove(user.id)}
                             disabled={removeMutation.isPending}
                             className="p-1.5 rounded hover:bg-red-50 text-red-600 disabled:opacity-40"
                             title="Gỡ tài khoản">
