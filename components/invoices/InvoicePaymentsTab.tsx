@@ -127,9 +127,15 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
                 {row.paymentMethod ? getMethodText(row.paymentMethod) : "-"}
               </td>
               <td className="px-4 py-3 text-center">
-                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                  Đã thanh toán
-                </span>
+                {row.status === 2 ? (
+                  <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
+                    Đã hủy
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                    Đã thanh toán
+                  </span>
+                )}
               </td>
             </tr>
           ))}
