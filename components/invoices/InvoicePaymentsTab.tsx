@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { invoicesApi } from "@/lib/api/invoices";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 
 interface InvoicePaymentsTabProps {
   invoiceId: number;
@@ -33,30 +34,28 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
     );
   }
 
+  const displayRows = [];
+
   const tttuhd = payments.filter((p: any) => p.code.startsWith("TTTUHD"));
   const othersRaw = payments.filter((p: any) => !p.code.startsWith("TTTUHD"));
 
-  const totalTTTUHD = tttuhd.reduce(
-    (sum: number, p: any) => sum + Number(p.amount),
-    0
-  );
-
-  const displayRows = [];
-
-  if (totalTTTUHD > 0) {
+  // Hiển thị từng TTTUHD riêng, ưu tiên sourceOrderPaymentCode nếu có
+  tttuhd.forEach((p: any) => {
+    const displayCode = p.sourceOrderPaymentCode ?? p.code;
+    const isSourceLinked = !!p.sourceOrderPaymentCode;
     displayRows.push({
-      code: "(Chuyển tạm ứng)",
-      paymentDate: tttuhd[0]?.paymentDate,
-      amount: totalTTTUHD,
-      paymentMethod: null,
-      status: 1,
+      code: displayCode,
+      paymentDate: p.paymentDate,
+      amount: Number(p.amount),
+      paymentMethod: p.paymentMethod,
+      status: p.status,
       isTTTUHD: true,
+      isSourceLinked,
     });
-  }
+  });
 
   const others = othersRaw.map((p: any) => {
     const isFromCustomerPayment = p.cashFlow && !p.cashFlow.code.includes("HD");
-
     return {
       code: isFromCustomerPayment ? p.cashFlow.code : p.code,
       paymentDate: p.paymentDate,
@@ -65,6 +64,7 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
       status: p.status,
       cashFlow: p.cashFlow,
       isTTTUHD: false,
+      isSourceLinked: false,
       isFromCustomerPayment,
     };
   });
@@ -108,14 +108,24 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
           {displayRows.map((row, index) => (
             <tr key={index} className="border-b hover:bg-gray-50">
               <td className="px-4 py-3">
-                <span
-                  className={
-                    row.isTTTUHD
-                      ? "text-gray-600 italic"
-                      : "text-blue-600 hover:underline cursor-pointer"
-                  }>
-                  {row.code}
-                </span>
+                <div className="flex items-center gap-1">
+                  <Link
+                    className={
+                      row.isTTTUHD
+                        ? "text-blue-600 hover:underline cursor-pointer"
+                        : "text-blue-600 hover:underline cursor-pointer"
+                    }
+                    href={`/so-quy?Code=${row.code}`}
+                    target="_blank"
+                    rel="noopener noreferrer">
+                    {row.code}
+                  </Link>
+                  {row.isTTTUHD && (
+                    <span className="text-xs text-gray-400 italic">
+                      {row.isSourceLinked ? "" : "(Chuyển tạm ứng)"}
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="px-4 py-3 text-sm">
                 {new Date(row.paymentDate).toLocaleString("vi-VN")}
