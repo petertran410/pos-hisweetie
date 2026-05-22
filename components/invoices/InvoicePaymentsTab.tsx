@@ -64,8 +64,8 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
       status: p.status,
       cashFlow: p.cashFlow,
       isTTTUHD: false,
-      isSourceLinked: false,
       isFromCustomerPayment,
+      isCTN: !!p.isCTN,
     };
   });
 
@@ -140,6 +140,10 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
                 {row.status === 2 ? (
                   <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
                     Đã hủy
+                  </span>
+                ) : row.isCTN ? (
+                  <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">
+                    Cấn trừ nợ
                   </span>
                 ) : (
                   <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
