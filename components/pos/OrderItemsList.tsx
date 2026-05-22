@@ -26,12 +26,8 @@ import { ProductInventoryMobileSheet } from "./ProductInventoryMobileSheet";
 
 interface CartItemsListProps {
   cartItems: CartItem[];
-  onUpdateItem: (
-    productId: number,
-    updates: Partial<CartItem>,
-    conditionType?: string
-  ) => void;
-  onRemoveItem: (productId: number, conditionType?: string) => void;
+  onUpdateItem: (rowId: string, updates: Partial<CartItem>) => void;
+  onRemoveItem: (rowId: string) => void;
   discount: number;
   onDiscountChange: (discount: number) => void;
   discountRatio: number;
@@ -100,8 +96,7 @@ export function OrderItemsList({
     return null;
   };
 
-  const getCartItemKey = (item: CartItem): string =>
-    `${item.product.id}_${item.conditionType || "normal"}`;
+  const getCartItemKey = (item: CartItem): string => item.rowId;
 
   const getQuantityDisplay = (item: CartItem): string => {
     return quantityDisplays[getCartItemKey(item)] ?? String(item.quantity);
@@ -113,7 +108,7 @@ export function OrderItemsList({
     setQuantityDisplays((prev) => ({ ...prev, [key]: onlyNumbers }));
     if (onlyNumbers !== "" && onlyNumbers !== "0") {
       const parsed = parseInt(onlyNumbers, 10);
-      onUpdateItem(item.product.id, { quantity: parsed }, item.conditionType);
+      onUpdateItem(item.rowId, { quantity: parsed });
     }
   };
 
@@ -126,7 +121,7 @@ export function OrderItemsList({
       !display || isNaN(parsed) || parsed < 1
         ? item.quantity
         : Math.max(1, parsed);
-    onUpdateItem(item.product.id, { quantity: validQty }, item.conditionType);
+    onUpdateItem(item.rowId, { quantity: validQty });
     setQuantityDisplays((prev) => {
       const next = { ...prev };
       delete next[key];
@@ -169,17 +164,9 @@ export function OrderItemsList({
     if (newEffective <= 0) return;
 
     if (newEffective < item.price) {
-      onUpdateItem(
-        item.product.id,
-        { discount: item.price - newEffective },
-        item.conditionType
-      );
+      onUpdateItem(item.rowId, { discount: item.price - newEffective });
     } else {
-      onUpdateItem(
-        item.product.id,
-        { price: newEffective, discount: 0 },
-        item.conditionType
-      );
+      onUpdateItem(item.rowId, { price: newEffective, discount: 0 });
     }
   };
 
@@ -190,11 +177,7 @@ export function OrderItemsList({
 
   const handleSaveItemDiscount = (discount: number) => {
     if (selectedItemForDiscount) {
-      onUpdateItem(
-        selectedItemForDiscount.product.id,
-        { discount },
-        selectedItemForDiscount.conditionType
-      );
+      onUpdateItem(selectedItemForDiscount.rowId, { discount });
     }
   };
 
@@ -407,13 +390,7 @@ export function OrderItemsList({
 
                   <NoteDropdown
                     value={item.note || ""}
-                    onChange={(note) =>
-                      onUpdateItem(
-                        item.product.id,
-                        { note },
-                        item.conditionType
-                      )
-                    }
+                    onChange={(note) => onUpdateItem(item.rowId, { note })}
                     templates={noteTemplates}
                     onCreateTemplate={handleCreateTemplate}
                     onEditTemplate={handleEditTemplate}
@@ -437,9 +414,7 @@ export function OrderItemsList({
                     />
                   )}
                   <button
-                    onClick={() =>
-                      onRemoveItem(item.product.id, item.conditionType)
-                    }
+                    onClick={() => onRemoveItem(item.rowId)}
                     className="p-1 hover:bg-red-50 rounded transition-colors">
                     <Trash2 className="w-4 h-4 text-red-500" />
                   </button>
@@ -453,11 +428,9 @@ export function OrderItemsList({
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => {
-                        onUpdateItem(
-                          item.product.id,
-                          { quantity: Math.max(1, item.quantity - 1) },
-                          item.conditionType
-                        );
+                        onUpdateItem(item.rowId, {
+                          quantity: Math.max(1, item.quantity - 1),
+                        });
                         clearQuantityDisplay(item);
                       }}
                       className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
@@ -475,11 +448,9 @@ export function OrderItemsList({
                     />
                     <button
                       onClick={() => {
-                        onUpdateItem(
-                          item.product.id,
-                          { quantity: item.quantity + 1 },
-                          item.conditionType
-                        );
+                        onUpdateItem(item.rowId, {
+                          quantity: item.quantity + 1,
+                        });
                         clearQuantityDisplay(item);
                       }}
                       className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
@@ -534,11 +505,9 @@ export function OrderItemsList({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
-                      onUpdateItem(
-                        item.product.id,
-                        { quantity: Math.max(1, item.quantity - 1) },
-                        item.conditionType
-                      );
+                      onUpdateItem(item.rowId, {
+                        quantity: Math.max(1, item.quantity - 1),
+                      });
                       clearQuantityDisplay(item);
                     }}
                     className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
@@ -554,11 +523,9 @@ export function OrderItemsList({
                   />
                   <button
                     onClick={() => {
-                      onUpdateItem(
-                        item.product.id,
-                        { quantity: item.quantity + 1 },
-                        item.conditionType
-                      );
+                      onUpdateItem(item.rowId, {
+                        quantity: Math.max(1, item.quantity + 1),
+                      });
                       clearQuantityDisplay(item);
                     }}
                     className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">

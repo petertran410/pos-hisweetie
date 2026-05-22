@@ -34,6 +34,7 @@ import { useCan } from "@/lib/hooks/useCan";
 import { MobilePrintPreviewModal } from "@/components/pos/MobilePrintPreviewModal";
 
 export interface CartItem {
+  rowId: string;
   product: any;
   quantity: number;
   price: number;
@@ -242,7 +243,12 @@ export default function BanHangPage() {
               id: `edit-${type}-${docId}`,
               type: editState.type,
               label: type === "order" ? `Sửa ĐH #${code}` : `Sửa HĐ #${code}`,
-              cartItems: editState.cartItems || [],
+              cartItems: (editState.cartItems || []).map((item: CartItem) => ({
+                ...item,
+                rowId:
+                  item.rowId ??
+                  `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
+              })),
               selectedCustomer: editState.selectedCustomer || null,
               selectedPriceBookId: editState.selectedPriceBookId || null,
               orderNote: editState.orderNote || "",
@@ -529,6 +535,7 @@ export default function BanHangPage() {
           const remaining = Number(item.quantity) - invoiced;
           if (remaining <= 0) return null;
           return {
+            rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
             product: item.product,
             quantity: remaining,
             price: Number(item.price),
@@ -538,6 +545,7 @@ export default function BanHangPage() {
           };
         })
         .filter(Boolean) as CartItem[];
+      1;
 
       if (remainingCartItems.length === 0) {
         toast.info("Đơn hàng đã được xuất hóa đơn toàn bộ");
@@ -587,8 +595,14 @@ export default function BanHangPage() {
     }
 
     const cartItems: CartItem[] = restoredState
-      ? restoredState.cartItems
+      ? restoredState.cartItems.map((item: CartItem) => ({
+          ...item,
+          rowId:
+            item.rowId ??
+            `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
+        }))
       : existingOrder.items?.map((item: any) => ({
+          rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
           product: item.product,
           quantity: Number(item.quantity),
           price: Number(item.price),
@@ -703,8 +717,14 @@ export default function BanHangPage() {
     }
 
     const cartItems: CartItem[] = restoredState
-      ? restoredState.cartItems
+      ? restoredState.cartItems.map((item: CartItem) => ({
+          ...item,
+          rowId:
+            item.rowId ??
+            `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
+        }))
       : existingInvoice.details?.map((item: any) => ({
+          rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
           product: item.product,
           quantity: Number(item.quantity),
           price: Number(item.price),
@@ -834,6 +854,7 @@ export default function BanHangPage() {
         const invoiced = invoicedQuantities[item.productId] || 0;
         const remaining = Number(item.quantity) - invoiced;
         return {
+          rowId: `${item.productId}_normal_${Date.now()}_${Math.random()}`,
           product: item.product,
           quantity: remaining,
           price: Number(item.price),
@@ -1204,65 +1225,32 @@ export default function BanHangPage() {
       }
     }
 
-    // ← SỬA: composite key matching
-    const existingItem = activeTab.cartItems.find(
-      (item) =>
-        item.product.id === product.id &&
-        (item.conditionType || "normal") === conditionType
-    );
-
-    if (existingItem) {
-      updateActiveTab({
-        cartItems: activeTab.cartItems.map((item) =>
-          item.product.id === product.id &&
-          (item.conditionType || "normal") === conditionType
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        ),
-      });
-    } else {
-      updateActiveTab({
-        cartItems: [
-          {
-            product,
-            quantity,
-            price: productPrice,
-            discount: 0,
-            conditionType,
-          },
-          ...activeTab.cartItems,
-        ],
-      });
-    }
+    updateActiveTab({
+      cartItems: [
+        {
+          rowId: `${product.id}_${conditionType}_${Date.now()}`,
+          product,
+          quantity,
+          price: productPrice,
+          discount: 0,
+          conditionType,
+        },
+        ...activeTab.cartItems,
+      ],
+    });
   };
 
-  const updateCartItem = (
-    productId: number,
-    updates: Partial<CartItem>,
-    conditionType: string = "normal"
-  ) => {
+  const updateCartItem = (rowId: string, updates: Partial<CartItem>) => {
     updateActiveTab({
       cartItems: activeTab.cartItems.map((item) =>
-        item.product.id === productId &&
-        (item.conditionType || "normal") === conditionType
-          ? { ...item, ...updates }
-          : item
+        item.rowId === rowId ? { ...item, ...updates } : item
       ),
     });
   };
 
-  const removeFromCart = (
-    productId: number,
-    conditionType: string = "normal"
-  ) => {
+  const removeFromCart = (rowId: string) => {
     updateActiveTab({
-      cartItems: activeTab.cartItems.filter(
-        (item) =>
-          !(
-            item.product.id === productId &&
-            (item.conditionType || "normal") === conditionType
-          )
-      ),
+      cartItems: activeTab.cartItems.filter((item) => item.rowId !== rowId),
     });
   };
 
