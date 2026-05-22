@@ -531,7 +531,7 @@ export function InvoiceItemsList({
                   <button
                     onClick={() => {
                       onUpdateItem(item.rowId, {
-                        quantity: Math.max(1, item.quantity - 1),
+                        quantity: Math.max(1, item.quantity + 1),
                       });
                       clearQuantityDisplay(item);
                     }}
