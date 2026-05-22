@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertCircle, Minus, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, Copy, Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 import { NoteTemplate } from "@/lib/api/note-templates";
 import {
@@ -29,6 +29,7 @@ interface CartItemsListProps {
   onUpdateItem: (rowId: string, updates: Partial<CartItem>) => void;
   onRemoveItem: (rowId: string) => void;
   discount: number;
+  onDuplicateItem: (item: CartItem) => void;
   onDiscountChange: (discount: number) => void;
   discountRatio: number;
   onDiscountRatioChange: (ratio: number) => void;
@@ -45,6 +46,7 @@ export function OrderItemsList({
   cartItems,
   onUpdateItem,
   onRemoveItem,
+  onDuplicateItem,
   discount,
   onDiscountChange,
   discountRatio,
@@ -413,6 +415,12 @@ export function OrderItemsList({
                       documentType="order"
                     />
                   )}
+                  <button
+                    onClick={() => onDuplicateItem(item)}
+                    className="p-1 hover:bg-green-50 rounded transition-colors"
+                    title="Thêm dòng mới cho sản phẩm này">
+                    <Copy className="w-4 h-4 text-green-600" />
+                  </button>
                   <button
                     onClick={() => onRemoveItem(item.rowId)}
                     className="p-1 hover:bg-red-50 rounded transition-colors">

@@ -1254,6 +1254,22 @@ export default function BanHangPage() {
     });
   };
 
+  const duplicateCartItem = (item: CartItem) => {
+    const index = activeTab.cartItems.findIndex((i) => i.rowId === item.rowId);
+    const newItem: CartItem = {
+      rowId: `${item.product.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
+      product: item.product,
+      quantity: 1,
+      price: item.price,
+      discount: item.discount,
+      conditionType: item.conditionType,
+      note: "",
+    };
+    const newCartItems = [...activeTab.cartItems];
+    newCartItems.splice(index + 1, 0, newItem);
+    updateActiveTab({ cartItems: newCartItems });
+  };
+
   const handleSaveOrder = async () => {
     if (!selectedBranch) {
       toast.error(
@@ -1762,6 +1778,7 @@ export default function BanHangPage() {
                 cartItems={activeTab.cartItems}
                 onUpdateItem={updateCartItem}
                 onRemoveItem={removeFromCart}
+                onDuplicateItem={duplicateCartItem}
                 discount={activeTab.discount}
                 onDiscountChange={(discount) => updateActiveTab({ discount })}
                 discountRatio={activeTab.discountRatio}
@@ -1835,6 +1852,7 @@ export default function BanHangPage() {
                 cartItems={activeTab.cartItems}
                 onUpdateItem={updateCartItem}
                 onRemoveItem={removeFromCart}
+                onDuplicateItem={duplicateCartItem}
                 discount={activeTab.discount}
                 onDiscountChange={(discount) => updateActiveTab({ discount })}
                 discountRatio={activeTab.discountRatio}
