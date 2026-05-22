@@ -14,7 +14,6 @@ import {
 import Swal from "sweetalert2";
 import { InvoicePackingSlipsTab } from "./InvoicePackingSlipsTab";
 import { InvoicePaymentsTab } from "./InvoicePaymentsTab";
-import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Link from "next/link";
