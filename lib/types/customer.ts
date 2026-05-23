@@ -115,8 +115,6 @@ export interface CustomerGroup {
   createdAt: string;
 }
 
-// Type cho dropdown khách hàng (POS, form,...)
-// Lấy từ GET /customers/search — chỉ chứa thông tin tối thiểu + addresses
 export interface CustomerSearchResult {
   id: number;
   code: string;
@@ -124,6 +122,7 @@ export interface CustomerSearchResult {
   contactNumber?: string;
   phone?: string;
   email?: string;
+  totalDebt: number;
   parentId?: number;
   parent?: {
     code: string;

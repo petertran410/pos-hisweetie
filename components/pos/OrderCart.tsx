@@ -357,6 +357,9 @@ export function OrderCart({
 
         {selectedCustomer && (
           <div className="pl-2 lg:pl-3 pr-2 lg:pr-3 pb-2 lg:pb-3 space-y-1.5 lg:space-y-2 flex-1">
+            <p className="text-xs text-red-600 italic pl-1">
+              Nợ: {Number(selectedCustomer.totalDebt).toLocaleString("vi-VN")}
+            </p>
             {selectedCustomer.addresses &&
               selectedCustomer.addresses.length > 1 && (
                 <DeliveryAddressDropdown

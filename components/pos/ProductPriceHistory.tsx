@@ -7,6 +7,7 @@ import { useProductPriceHistory } from "@/lib/hooks/useOrders";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import Link from "next/link";
 
 interface ProductPriceHistoryProps {
   customerId?: number;
@@ -125,7 +126,22 @@ export function ProductPriceHistory({
                     {history.map((item: any, index: number) => (
                       <tr key={index} className="border-t">
                         <td className="px-3 py-2 text-xs">
-                          <span>{item.code}</span>
+                          {/* <span>{item.code}</span> */}
+                          {documentType === "order" ? (
+                            <Link
+                              href={`/don-hang/dat-hang?Code=${item.code}`}
+                              target="_blank"
+                              className="text-blue-600 hover:underline">
+                              {item.code}
+                            </Link>
+                          ) : (
+                            <Link
+                              href={`/don-hang/hoa-don?Code=${item.code}`}
+                              target="_blank"
+                              className="text-blue-600 hover:underline">
+                              {item.code}
+                            </Link>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-xs text-gray-600">
                           {format(new Date(item.date), "dd/MM/yyyy", {

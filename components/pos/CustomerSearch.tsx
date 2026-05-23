@@ -110,18 +110,21 @@ export function CustomerSearch({
                 className="w-full flex items-start lg:items-center justify-between gap-1 lg:gap-2 border rounded-lg px-1 py-0.5 lg:py-1 cursor-pointer transition-colors select-none bg-white">
                 {/* MOBILE: tách 2 dòng, cho phép wrap */}
                 <div className="lg:hidden flex-1 min-w-0 pl-1">
-                  <div className="text-sm text-blue-600 hover:underline break-words">
+                  <div
+                    className={`text-sm hover:underline break-words ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-blue-600"}`}>
                     {selectedCustomer.name}
                   </div>
                   {selectedCustomer.contactNumber && (
-                    <div className="text-xs text-blue-600 hover:underline break-words">
+                    <div
+                      className={`text-xs hover:underline break-words ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-blue-600"}`}>
                       {selectedCustomer.contactNumber}
                     </div>
                   )}
                 </div>
 
                 {/* DESKTOP: giữ NGUYÊN logic cũ */}
-                <span className="hidden lg:inline text-blue-600 hover:underline text-md pl-1">
+                <span
+                  className={`hidden lg:inline hover:underline text-md pl-1 ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-blue-600"}`}>
                   {selectedCustomer.name} {selectedCustomer.contactNumber}
                 </span>
 
@@ -155,6 +158,12 @@ export function CustomerSearch({
                         {(customer as any).parent.name}
                       </div>
                     )}
+                    <div className="text-xs text-red-600 mt-1 font-medium">
+                      Nợ:{" "}
+                      {Number((customer as any).totalDebt).toLocaleString(
+                        "vi-VN"
+                      )}
+                    </div>
                   </button>
                 ))}
               </div>
