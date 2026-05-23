@@ -3,7 +3,11 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useCreateCashFlow } from "@/lib/hooks/useCashflows";
 import { useCashFlowGroups } from "@/lib/hooks/useCashflowGroups";
-import { useCustomer, useCustomers } from "@/lib/hooks/useCustomers";
+import {
+  useCustomer,
+  useCustomers,
+  useSearchCustomers,
+} from "@/lib/hooks/useCustomers";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useUnpaidInvoicesByPartner } from "@/lib/hooks/useInvoices";
@@ -96,6 +100,7 @@ export function CreateCashFlowModal({
   const [showPartnerTypeDropdown, setShowPartnerTypeDropdown] = useState(false);
   const [showPartnerDropdown, setShowPartnerDropdown] = useState(false);
   const [partnerSearch, setPartnerSearch] = useState("");
+  const [debouncedPartnerSearch, setDebouncedPartnerSearch] = useState("");
   const [selectedPartner, setSelectedPartner] = useState<any>(null);
   const [collectorUserId, setCollectorUserId] = useState<string>("");
 
@@ -137,7 +142,9 @@ export function CreateCashFlowModal({
   const { data: cashFlowGroups } = useCashFlowGroups(isReceipt);
   const { data: collectionBranches } = useCollectionBranches();
   const branches = collectionBranches || [];
-  const { data: customersData } = useCustomers({ pageSize: 100 });
+  const { data: customerSearchData } = useSearchCustomers(
+    debouncedPartnerSearch || undefined
+  );
   const { data: suppliersData } = useSuppliers({ pageSize: 100 });
   const { data: usersData } = useUsersForFilter();
   const { data: unpaidInvoicesData } = useQuery({
@@ -160,7 +167,7 @@ export function CreateCashFlowModal({
   );
 
   const groups = cashFlowGroups || [];
-  const customers = customersData?.data || [];
+  const customers = customerSearchData?.data || [];
   const suppliers = suppliersData?.data || [];
   const users = usersData || [];
   const unpaidInvoices = useMemo(() => {
@@ -200,6 +207,11 @@ export function CreateCashFlowModal({
     );
     return Math.max(0, totalUnpaid - customerDebt);
   }, [unpaidInvoices, customerDebt, partnerType, isReceipt, selectedPartner]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedPartnerSearch(partnerSearch), 300);
+    return () => clearTimeout(t);
+  }, [partnerSearch]);
 
   useEffect(() => {
     if (isOpen && user?.id) {
@@ -291,6 +303,21 @@ export function CreateCashFlowModal({
     }
   }, [unpaidInvoices, availableCredit]);
 
+  const filteredPartners = useMemo(() => {
+    if (partnerType === "C") return customers;
+    if (partnerType === "S") {
+      if (!partnerSearch) return suppliers;
+      const q = partnerSearch.toLowerCase();
+      return suppliers.filter(
+        (s: any) =>
+          s.name.toLowerCase().includes(q) ||
+          (s.code ?? "").toLowerCase().includes(q) ||
+          (s.phone ?? "").includes(q)
+      );
+    }
+    return [];
+  }, [partnerType, customers, suppliers, partnerSearch]);
+
   if (!isOpen) return null;
 
   const selectedGroup = groups.find(
@@ -303,16 +330,6 @@ export function CreateCashFlowModal({
 
   const selectedPartnerType = PARTNER_TYPES.find(
     (pt) => pt.value === partnerType
-  );
-
-  const getPartnerList = () => {
-    if (partnerType === "C") return customers;
-    if (partnerType === "S") return suppliers;
-    return [];
-  };
-
-  const filteredPartners = getPartnerList().filter((p: any) =>
-    p.name.toLowerCase().includes(partnerSearch.toLowerCase())
   );
 
   const handleDateSelect = (date: Date) => {
