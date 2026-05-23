@@ -214,7 +214,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     },
   },
   {
-    key: "customerOrder",
+    key: "customerReserved",
     label: "Đặt NCC",
     visible: false,
     width: "100px",
