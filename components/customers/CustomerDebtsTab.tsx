@@ -140,7 +140,7 @@ export function CustomerDebtsTab({
                             </Link>
                           </>
                         ) : (
-                          <span className="text-blue-600 hover:underline cursor-pointer">
+                          <span className="text-md font-medium text-blue-600 hover:underline cursor-pointer">
                             {item.code}
                           </span>
                         )}
@@ -148,7 +148,7 @@ export function CustomerDebtsTab({
                       <td className="px-4 py-3 text-md">
                         {new Date(item.date).toLocaleString("vi-VN")}
                       </td>
-                      <td className="px-4 py-3 text-md">
+                      <td className="px-4 py-3 text-md font-medium">
                         {isInvoice
                           ? "Bán hàng"
                           : isDebtOffset

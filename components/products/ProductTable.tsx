@@ -185,19 +185,33 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
       return totalStock.toLocaleString();
     },
   },
-  {
-    key: "channelLink",
-    label: "Liên kết kênh bán",
-    visible: false,
-    width: "140px",
-    render: () => "-",
-  },
+  // {
+  //   key: "channelLink",
+  //   label: "Liên kết kênh bán",
+  //   visible: false,
+  //   width: "140px",
+  //   render: () => "-",
+  // },
   {
     key: "customerOrder",
     label: "Khách đặt",
     visible: false,
     width: "100px",
-    render: () => "-",
+    render: (product) => {
+      const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
+      if (selectedBranchId) {
+        const inventory = product.inventories?.find(
+          (inv) => inv.branchId === selectedBranchId
+        );
+        return inventory ? Number(inventory.onOrder).toLocaleString() : "0";
+      }
+      const totalStockOrder =
+        product.inventories?.reduce(
+          (sum, inv) => sum + Number(inv.onOrder),
+          0
+        ) || 0;
+      return totalStockOrder.toLocaleString();
+    },
   },
   {
     key: "createdAt",
