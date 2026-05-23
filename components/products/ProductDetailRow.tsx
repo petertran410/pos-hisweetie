@@ -146,30 +146,6 @@ export function ProductDetailRow({
     );
   }
 
-  const handleStartEditCondition = (inv: any) => {
-    setEditingCondition(inv.branchId);
-    setConditionInputs({
-      damaged: String(Number(inv.damagedQuantity || 0)),
-      nearExpiry: String(Number(inv.nearExpiryQuantity || 0)),
-    });
-  };
-
-  const handleSaveCondition = (inv: any) => {
-    const damaged = parseInt(conditionInputs.damaged) || 0;
-    const nearExpiry = parseInt(conditionInputs.nearExpiry) || 0;
-
-    updateCondition.mutate(
-      {
-        productId: product.id,
-        branchId: inv.branchId,
-        data: { damagedQuantity: damaged, nearExpiryQuantity: nearExpiry },
-      },
-      {
-        onSuccess: () => setEditingCondition(null),
-      }
-    );
-  };
-
   // ── Calculations ──
   const currentBranchInventory = product.inventories?.find(
     (inv) => inv.branchId === selectedBranch?.id

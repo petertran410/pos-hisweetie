@@ -203,14 +203,14 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
         const inventory = product.inventories?.find(
           (inv) => inv.branchId === selectedBranchId
         );
-        return inventory ? Number(inventory.onOrder).toLocaleString() : "0";
+        return inventory ? Number(inventory.reserved).toLocaleString() : "0";
       }
-      const totalStockOrder =
+      const totalStockReserved =
         product.inventories?.reduce(
-          (sum, inv) => sum + Number(inv.onOrder),
+          (sum, inv) => sum + Number(inv.reserved),
           0
         ) || 0;
-      return totalStockOrder.toLocaleString();
+      return totalStockReserved.toLocaleString();
     },
   },
   {
