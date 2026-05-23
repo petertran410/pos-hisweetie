@@ -43,7 +43,7 @@ export interface Inventory {
   nearExpiryQuantity: number;
   createdAt: string;
   updatedAt: string;
-  branch?: { id: number; name: string };
+  branch?: { id: number; name: string; isActive: boolean };
 }
 
 export interface Product {

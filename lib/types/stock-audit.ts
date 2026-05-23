@@ -28,7 +28,7 @@ export interface StockAudit {
   completedByName?: string;
   completedAt?: string;
   createdAt: string;
-  branch?: { id: number; name: string };
+  branch?: { id: number; name: string; isActive: boolean };
   creator?: { id: number; name: string };
   completedBy?: { id: number; name: string };
   details: StockAuditDetail[];

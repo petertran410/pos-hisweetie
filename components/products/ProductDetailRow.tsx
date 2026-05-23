@@ -213,6 +213,10 @@ export function ProductDetailRow({
     { key: "inventory", label: "Tồn kho" },
   ];
 
+  const activeInventories = (product.inventories ?? []).filter(
+    (inv) => inv.branch?.isActive !== false
+  );
+
   return (
     <tr>
       <td
@@ -547,7 +551,7 @@ export function ProductDetailRow({
                ═══════════════════════════════════════════ */}
             {activeTab === "inventory" && (
               <div>
-                {product.inventories && product.inventories.length > 0 ? (
+                {activeInventories.length > 0 ? (
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="w-full">
                       <thead className="bg-gray-50">
@@ -588,12 +592,21 @@ export function ProductDetailRow({
                             Tổng
                           </td>
                           <td className="px-4 py-2.5 text-sm text-right">
-                            {product.inventories
+                            {activeInventories
                               .reduce((sum, inv) => sum + Number(inv.onHand), 0)
                               .toLocaleString()}
                           </td>
                           <td className="px-4 py-2.5 text-sm text-right text-red-600">
-                            {product.inventories
+                            {activeInventories
+                              .reduce(
+                                (sum, inv) =>
+                                  sum + Number(inv.damagedQuantity || 0),
+                                0
+                              )
+                              .toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-sm text-right text-red-600">
+                            {activeInventories
                               .reduce(
                                 (sum, inv) =>
                                   sum + Number(inv.damagedQuantity || 0),
@@ -602,7 +615,7 @@ export function ProductDetailRow({
                               .toLocaleString()}
                           </td>
                           <td className="px-4 py-2.5 text-sm text-right text-orange-600">
-                            {product.inventories
+                            {activeInventories
                               .reduce(
                                 (sum, inv) =>
                                   sum + Number(inv.nearExpiryQuantity || 0),
@@ -611,7 +624,7 @@ export function ProductDetailRow({
                               .toLocaleString()}
                           </td>
                           <td className="px-4 py-2.5 text-sm text-right text-green-700">
-                            {product.inventories
+                            {activeInventories
                               .reduce((sum, inv) => {
                                 const oh = Number(inv.onHand);
                                 const dm = Number(inv.damagedQuantity || 0);
@@ -621,7 +634,7 @@ export function ProductDetailRow({
                               .toLocaleString()}
                           </td>
                           <td className="px-4 py-2.5 text-sm text-right">
-                            {product.inventories
+                            {activeInventories
                               .reduce(
                                 (sum, inv) => sum + Number(inv.onOrder),
                                 0
@@ -629,7 +642,7 @@ export function ProductDetailRow({
                               .toLocaleString()}
                           </td>
                           <td className="px-4 py-2.5 text-sm text-right">
-                            {product.inventories
+                            {activeInventories
                               .reduce(
                                 (sum, inv) => sum + Number(inv.reserved),
                                 0
@@ -642,7 +655,7 @@ export function ProductDetailRow({
                         </tr>
 
                         {/* Dòng chi tiết */}
-                        {product.inventories.map((inv) => {
+                        {activeInventories.map((inv) => {
                           const onHand = Number(inv.onHand);
                           const damaged = Number(inv.damagedQuantity || 0);
                           const nearExpiry = Number(

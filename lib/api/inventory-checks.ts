@@ -26,7 +26,7 @@ export interface InventoryCheck {
   createdById: number;
   createdByName: string;
   createdAt: string;
-  branch?: { id: number; name: string };
+  branch?: { id: number; name: string; isActive: boolean };
   creator?: { id: number; name: string };
   details: InventoryCheckDetail[];
 }

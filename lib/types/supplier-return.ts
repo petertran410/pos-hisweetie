@@ -49,7 +49,7 @@ export interface SupplierReturn {
   updatedAt: string;
   purchaseOrder?: { id: number; code: string };
   supplier?: { id: number; code: string; name: string };
-  branch?: { id: number; name: string };
+  branch?: { id: number; name: string; isActive: boolean };
   creator?: { id: number; name: string };
   exporter?: { id: number; name: string };
   refundConfirmer?: { id: number; name: string };
