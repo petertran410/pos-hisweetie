@@ -298,19 +298,6 @@ export function OrderCart({
     return subtotal - discount - (subtotal * discountRatio) / 100;
   };
 
-  const calculateDebt = () => {
-    if (useCOD) return calculateTotal();
-
-    if (isEditMode && existingOrder) {
-      const currentPaidAmount = Number(existingOrder.paidAmount || 0);
-      const totalPaid = currentPaidAmount + paymentAmount;
-      const newDebt = calculateTotal() - totalPaid;
-      return Math.max(0, newDebt);
-    }
-
-    return Math.max(0, calculateTotal() - paymentAmount);
-  };
-
   const displayDebt = (() => {
     if (useCOD) return calculateTotal();
     if (isEditMode && existingOrder) {

@@ -94,6 +94,22 @@ export function ProductSearchDropdown({
     return inventory ? Number(inventory.onHand) : 0;
   };
 
+  const getInventoryReserved = (product: any) => {
+    if (!selectedBranch) return 0;
+    const inventory = product.inventories?.find(
+      (inv: any) => inv.branchId === selectedBranch.id
+    );
+    return inventory ? Number(inventory.reserved) : 0;
+  };
+
+  const getInventoryOnOrder = (product: any) => {
+    if (!selectedBranch) return 0;
+    const inventory = product.inventories?.find(
+      (inv: any) => inv.branchId === selectedBranch.id
+    );
+    return inventory ? Number(inventory.onOrder) : 0;
+  };
+
   const getInventoryCondition = (product: any) => {
     if (!selectedBranch) return { damaged: 0, nearExpiry: 0 };
     const inventory = product.inventories?.find(
@@ -243,7 +259,7 @@ export function ProductSearchDropdown({
         </button>
 
         {showDropdown && products.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-96 overflow-y-auto z-50">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-96 overflow-y-auto z-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
             {products.map((product, idx) => {
               const condition = getInventoryCondition(product);
               const hasDamaged = condition.damaged > 0;
@@ -289,8 +305,12 @@ export function ProductSearchDropdown({
                       <div className="text-xs text-gray-500">
                         {product.code}
                       </div>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
+                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-600 flex-wrap">
                         <span>Tồn: {getInventoryQuantity(product)}</span>
+                        <span className="text-gray-300">|</span>
+                        <span>Đặt NCC: {getInventoryOnOrder(product)}</span>
+                        <span className="text-gray-300">|</span>
+                        <span>Khách đặt: {getInventoryReserved(product)}</span>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
