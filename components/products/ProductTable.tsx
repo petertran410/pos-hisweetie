@@ -214,6 +214,27 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     },
   },
   {
+    key: "customerOrder",
+    label: "Đặt NCC",
+    visible: false,
+    width: "100px",
+    render: (product) => {
+      const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
+      if (selectedBranchId) {
+        const inventory = product.inventories?.find(
+          (inv) => inv.branchId === selectedBranchId
+        );
+        return inventory ? Number(inventory.onOrder).toLocaleString() : "0";
+      }
+      const totalStockOrder =
+        product.inventories?.reduce(
+          (sum, inv) => sum + Number(inv.onOrder),
+          0
+        ) || 0;
+      return totalStockOrder.toLocaleString();
+    },
+  },
+  {
     key: "createdAt",
     label: "Thời gian tạo",
     visible: false,
