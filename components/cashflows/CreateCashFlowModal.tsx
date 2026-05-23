@@ -286,11 +286,13 @@ export function CreateCashFlowModal({
   // Auto-init debt offsets cho hóa đơn cũ nhất
   useEffect(() => {
     if (debtOffsetsInitialized.current || unpaidInvoices.length === 0) return;
+    // Đợi freshCustomerData load để availableCredit tính đúng (CustomerSearchResult không có totalDebt)
+    if (partnerType === "C" && selectedPartner?.id && !freshCustomerData)
+      return;
     debtOffsetsInitialized.current = true;
 
     if (availableCredit <= 0) return;
 
-    // unpaidInvoices sorted DESC từ API → invoice cũ nhất ở cuối
     const oldestInvoice = unpaidInvoices[0];
     const defaultOffset = Math.min(
       availableCredit,
@@ -301,7 +303,13 @@ export function CreateCashFlowModal({
         [oldestInvoice.id]: formatNumberInput(defaultOffset.toString()),
       });
     }
-  }, [unpaidInvoices, availableCredit]);
+  }, [
+    unpaidInvoices,
+    availableCredit,
+    freshCustomerData,
+    selectedPartner?.id,
+    partnerType,
+  ]);
 
   const filteredPartners = useMemo(() => {
     if (partnerType === "C") return customers;
