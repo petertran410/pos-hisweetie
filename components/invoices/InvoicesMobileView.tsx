@@ -341,7 +341,6 @@ export function InvoicesMobileView({
     page,
     limit,
     search: debouncedSearch,
-    branchId: selectedBranch?.id,
     ...effectiveFilters,
   });
 
@@ -359,7 +358,6 @@ export function InvoicesMobileView({
         invoicesApi.getInvoices({
           limit: 1,
           page: 1,
-          branchId: selectedBranch?.id,
           ...filters,
           ...(tab.apiStatus ? { statusIds: [Number(tab.apiStatus)] } : {}),
         }),
