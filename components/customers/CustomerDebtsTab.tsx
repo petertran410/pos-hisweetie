@@ -1,6 +1,10 @@
-import { useCustomerDebtTimeline } from "@/lib/hooks/useCustomers";
+import {
+  useCustomerDebtTimeline,
+  useExportCustomerDebt,
+  useExportCustomerDebtTimeline,
+} from "@/lib/hooks/useCustomers";
 import { formatCurrency } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { CustomerPaymentModal } from "./CustomerPaymentModal";
 import Link from "next/link";
@@ -26,6 +30,11 @@ export function CustomerDebtsTab({
     customerId,
     includeChildren
   );
+
+  const { exportToFile: exportTimeline, isExporting: exportingTimeline } =
+    useExportCustomerDebtTimeline();
+  const { exportToFile: exportDebt, isExporting: exportingDebt } =
+    useExportCustomerDebt();
 
   const timeline = data?.data || [];
   const totalPages = Math.ceil(timeline.length / limit);
@@ -57,6 +66,30 @@ export function CustomerDebtsTab({
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportTimeline(customerId, includeChildren)}
+              disabled={exportingTimeline}
+              className="px-3 py-2 border rounded hover:bg-gray-50 flex items-center gap-1.5 text-sm text-gray-700 disabled:opacity-50">
+              {exportingTimeline ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Lịch sử TT
+            </button>
+
+            <button
+              onClick={() => exportDebt(customerId)}
+              disabled={exportingDebt}
+              className="px-3 py-2 border rounded hover:bg-gray-50 flex items-center gap-1.5 text-sm text-gray-700 disabled:opacity-50">
+              {exportingDebt ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Công nợ
+            </button>
+
             <button
               onClick={() => setShowPaymentModal(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">

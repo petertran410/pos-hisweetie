@@ -161,6 +161,80 @@ export function useSearchCustomers(search?: string) {
   });
 }
 
+async function downloadExcelFromUrl(url: URL, filename: string) {
+  const token = useAuthStore.getState().token;
+  const selectedBranch = useBranchStore.getState().selectedBranch;
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(selectedBranch?.id
+        ? { "X-Branch-Id": String(selectedBranch.id) }
+        : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || "Lỗi khi xuất dữ liệu");
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename=([^;]+)/);
+  const finalName = match ? match[1].trim() : filename;
+
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = finalName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(objectUrl);
+}
+
+export function useExportCustomerDebtTimeline() {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportToFile = async (customerId: number, includeChildren = false) => {
+    setIsExporting(true);
+    try {
+      const url = new URL(
+        `${API_URL}/customers/${customerId}/export-debt-timeline`
+      );
+      if (includeChildren) url.searchParams.set("includeChildren", "true");
+      await downloadExcelFromUrl(url, `LichSuThanhToan_KH${customerId}.xlsx`);
+      toast.success("Xuất file thành công");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return { exportToFile, isExporting };
+}
+
+export function useExportCustomerDebt() {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportToFile = async (customerId: number) => {
+    setIsExporting(true);
+    try {
+      const url = new URL(`${API_URL}/customers/${customerId}/export-debt`);
+      await downloadExcelFromUrl(url, `CongNoChiTiet_KH${customerId}.xlsx`);
+      toast.success("Xuất file thành công");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return { exportToFile, isExporting };
+}
+
 export function useExportCustomers() {
   const [isExporting, setIsExporting] = useState(false);
 
