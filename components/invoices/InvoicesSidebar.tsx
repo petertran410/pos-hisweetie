@@ -90,6 +90,10 @@ const DELIVERY_STATUS_OPTIONS = [
 
 const PRESET_GROUPS = [
   {
+    label: "Tất cả",
+    options: [{ label: "Toàn thời gian", value: "all_time" }],
+  },
+  {
     label: "Theo ngày",
     options: [
       { label: "Hôm nay", value: "today" },
@@ -582,12 +586,16 @@ function MiniCalendar({
 // ─── Main ────────────────────────────────────────────────────────────────────
 export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   const { data: branches } = useBranches();
+  const activeBranches = useMemo(
+    () => (branches ?? []).filter((b: any) => b.isActive),
+    [branches]
+  );
   const { data: customersData } = useCustomers({ pageSize: 1000 });
   const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
   const { data: bankAccounts } = useBankAccountsForPayment();
 
-  const [branchId, setBranchId] = useState("");
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
@@ -635,7 +643,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
-    if (branchId) n++;
+    if (selectedBranchIds.length > 0) n++;
     if (customerId) n++;
     if (selectedStatus) n++;
     if (selectedDeliveryStatus) n++;
@@ -646,7 +654,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     if (paymentMethod) n++;
     return n;
   }, [
-    branchId,
+    selectedBranchIds,
     customerId,
     selectedStatus,
     selectedDeliveryStatus,
@@ -673,7 +681,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   useEffect(() => {
     const timer = setTimeout(() => {
       const f: any = {};
-      if (branchId) f.branchId = parseInt(branchId);
+      if (selectedBranchIds.length > 0) f.branchIds = selectedBranchIds;
       if (customerId) f.customerIds = [parseInt(customerId)];
       if (selectedStatus) f.statusIds = [parseInt(selectedStatus)];
       if (selectedDeliveryStatus) f.deliveryStatus = selectedDeliveryStatus;
@@ -698,7 +706,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     }, 300);
     return () => clearTimeout(timer);
   }, [
-    branchId,
+    selectedBranchIds,
     customerId,
     selectedStatus,
     selectedDeliveryStatus,
@@ -714,7 +722,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   ]);
 
   const clearAll = () => {
-    setBranchId("");
+    setSelectedBranchIds([]);
     setCustomerId("");
     setCustomerSearch("");
     setSelectedStatus("");
@@ -1059,17 +1067,45 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Chi nhánh
           </label>
-          <SimpleDropdown
-            options={
-              branches?.map((b: any) => ({
-                value: String(b.id),
-                label: b.name,
-              })) ?? []
-            }
-            value={branchId}
-            placeholder="Tất cả chi nhánh"
-            onChange={setBranchId}
-          />
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <label className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors select-none">
+              <input
+                type="checkbox"
+                checked={
+                  selectedBranchIds.length === activeBranches.length &&
+                  activeBranches.length > 0
+                }
+                onChange={(e) =>
+                  setSelectedBranchIds(
+                    e.target.checked ? activeBranches.map((b: any) => b.id) : []
+                  )
+                }
+                className="accent-blue-600"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Tất cả chi nhánh
+              </span>
+            </label>
+            {activeBranches.map((b: any) => (
+              <label
+                key={b.id}
+                className="flex items-center gap-2.5 px-3 py-2 border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50 transition-colors select-none">
+                <input
+                  type="checkbox"
+                  checked={selectedBranchIds.includes(b.id)}
+                  onChange={(e) =>
+                    setSelectedBranchIds((prev) =>
+                      e.target.checked
+                        ? [...prev, b.id]
+                        : prev.filter((id) => id !== b.id)
+                    )
+                  }
+                  className="accent-blue-600"
+                />
+                <span className="text-sm text-gray-700">{b.name}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
         {/* ── Người tạo ── */}

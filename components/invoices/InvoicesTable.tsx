@@ -581,7 +581,6 @@ export function InvoicesTable({
     const currentFilters = {
       ...effectiveFilters,
       search: debouncedSearch,
-      branchId: selectedBranch?.id,
       ...advancedSearch,
     };
     await exportOverview(currentFilters);
@@ -592,7 +591,6 @@ export function InvoicesTable({
     const currentFilters = {
       ...effectiveFilters,
       search: debouncedSearch,
-      branchId: selectedBranch?.id,
       ...advancedSearch,
     };
     await exportDetail(currentFilters, exportDetailCols);
