@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Fragment, useMemo } from "react";
-import { useCustomers } from "@/lib/hooks/useCustomers";
+import { useCustomers, useExportCustomers } from "@/lib/hooks/useCustomers";
 import {
   Plus,
   Settings,
@@ -10,6 +10,8 @@ import {
   ChevronRight,
   X,
   Upload,
+  Download,
+  Loader2,
 } from "lucide-react";
 import type { Customer, CustomerFilters } from "@/lib/types/customer";
 import { CustomerDetailRow } from "./CustomerDetailRow";
@@ -237,6 +239,7 @@ export function CustomersTable({
   const [activeStatusTab, setActiveStatusTab] = useState("all");
 
   const canViewDebt = useCan("customers", "view_debt");
+  const { exportToFile, isExporting } = useExportCustomers();
 
   // Debounce search 300ms
   useEffect(() => {
@@ -360,6 +363,24 @@ export function CustomersTable({
                 className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600">
                 <Upload className="w-4 h-4" />
                 Import
+              </button>
+            </PermissionGate>
+            <PermissionGate resource="customers" action="view">
+              <button
+                onClick={() =>
+                  exportToFile({
+                    ...effectiveFilters,
+                    name: debouncedSearch || undefined,
+                  })
+                }
+                disabled={isExporting}
+                className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {isExporting ? "Đang xuất..." : "Xuất file"}
               </button>
             </PermissionGate>
             <button

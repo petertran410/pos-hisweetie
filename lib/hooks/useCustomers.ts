@@ -1,5 +1,7 @@
+import { useState } from "react";
+import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/config/api";
+import { API_URL, apiClient } from "@/lib/config/api";
 import {
   Customer,
   CustomerFilters,
@@ -8,6 +10,7 @@ import {
 } from "@/lib/types/customer";
 import { toast } from "sonner";
 import { useAuthStore } from "../store/auth";
+import { useBranchStore } from "../store/branch";
 
 export function useCustomers(filters?: CustomerFilters) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -156,4 +159,65 @@ export function useSearchCustomers(search?: string) {
     },
     enabled: hasHydrated && isAuthenticated,
   });
+}
+
+export function useExportCustomers() {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportToFile = async (filters: CustomerFilters) => {
+    setIsExporting(true);
+    try {
+      const { pageSize: _ps, currentItem: _ci, ...exportFilters } = filters;
+
+      const token = useAuthStore.getState().token;
+      const selectedBranch = useBranchStore.getState().selectedBranch;
+
+      const url = new URL(`${API_URL}/customers/export`);
+      Object.entries(exportFilters).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) {
+          url.searchParams.append(k, String(v));
+        }
+      });
+
+      const res = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(selectedBranch?.id
+            ? { "X-Branch-Id": String(selectedBranch.id) }
+            : {}),
+        },
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Lỗi khi xuất dữ liệu");
+      }
+
+      const blob = await res.blob();
+
+      // Lấy filename từ header nếu có, fallback sang tên mặc định
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const filenameMatch = disposition.match(/filename=([^;]+)/);
+      const filename = filenameMatch
+        ? filenameMatch[1].trim()
+        : `DanhSachKhachHang_${Date.now()}.xlsx`;
+
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+
+      toast.success("Xuất file thành công");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return { exportToFile, isExporting };
 }
