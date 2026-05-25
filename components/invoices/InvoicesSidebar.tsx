@@ -413,49 +413,48 @@ function PresetPanel({
   triggerRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (panelRef.current?.contains(t) || triggerRef.current?.contains(t))
-        return;
-      onClose();
+      const insidePanel = panelRef.current?.contains(e.target as Node);
+      const insideTrigger = triggerRef.current?.contains(e.target as Node);
+      if (!insidePanel && !insideTrigger) onClose();
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [onClose, triggerRef]);
 
-  if (!anchorRect) return null;
-  const top = anchorRect.bottom + 6;
-  const left = Math.max(8, anchorRect.right - 320);
+  if (!anchorRect || typeof window === "undefined") return null;
+
+  const left = anchorRect.right + 8;
+  const top = anchorRect.top;
 
   return createPortal(
     <div
       ref={panelRef}
-      style={{ position: "fixed", top, left, width: 320, zIndex: 1000 }}
-      className="bg-white border border-gray-200 rounded-xl shadow-2xl p-3 space-y-2">
-      {groups.map((g) => (
-        <div key={g.label}>
-          <div className="text-[11px] font-semibold text-gray-400 uppercase mb-1.5 px-1">
-            {g.label}
-          </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {g.options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => {
-                  onSelect(opt.value);
-                  onClose();
-                }}
-                className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors text-left ${
-                  selected === opt.value
-                    ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
-                    : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
-                }`}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
+      style={{ position: "fixed", top, left, zIndex: 9999 }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 flex gap-5 animate-in fade-in zoom-in-95 duration-150">
+      {groups.map((group) => (
+        <div key={group.label} className="flex flex-col gap-1.5 min-w-[88px]">
+          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+            {group.label}
+          </span>
+          {group.options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onSelect(opt.value);
+                onClose();
+              }}
+              className={`px-3 py-1.5 rounded-full text-sm border transition-all whitespace-nowrap text-left ${
+                selected === opt.value
+                  ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
+                  : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+              }`}>
+              {opt.label}
+            </button>
+          ))}
         </div>
       ))}
     </div>,
@@ -594,9 +593,8 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState("");
-  const [enableCreatedDate, setEnableCreatedDate] = useState(true);
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
-  const [selectedPreset, setSelectedPreset] = useState("this_month");
+  const [selectedPreset, setSelectedPreset] = useState("all_time");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [creatorId, setCreatorId] = useState("");
@@ -641,7 +639,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     if (customerId) n++;
     if (selectedStatus) n++;
     if (selectedDeliveryStatus) n++;
-    if (enableCreatedDate) n++;
+    if (selectedPreset !== "all_time" || dateMode === "custom") n++;
     if (creatorId) n++;
     if (soldById) n++;
     if (saleChannelId) n++;
@@ -652,7 +650,6 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     customerId,
     selectedStatus,
     selectedDeliveryStatus,
-    enableCreatedDate,
     creatorId,
     soldById,
     saleChannelId,
@@ -683,7 +680,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
       if (creatorId) f.createdBy = parseInt(creatorId);
       if (soldById) f.soldById = parseInt(soldById);
       if (saleChannelId) f.saleChannelId = parseInt(saleChannelId);
-      if (enableCreatedDate) {
+      if (selectedPreset !== "all_time" || dateMode === "custom") {
         const range =
           dateMode === "preset"
             ? getDateRangeFromPreset(selectedPreset)
@@ -705,7 +702,6 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     customerId,
     selectedStatus,
     selectedDeliveryStatus,
-    enableCreatedDate,
     dateMode,
     selectedPreset,
     fromDate,
@@ -723,9 +719,8 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     setCustomerSearch("");
     setSelectedStatus("");
     setSelectedDeliveryStatus("");
-    setEnableCreatedDate(true);
     setDateMode("preset");
-    setSelectedPreset("this_month");
+    setSelectedPreset("all_time");
     setFromDate("");
     setToDate("");
     setCreatorId("");
