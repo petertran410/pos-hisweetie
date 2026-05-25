@@ -219,10 +219,26 @@ export function useExportCustomerDebtTimeline() {
 export function useExportCustomerDebt() {
   const [isExporting, setIsExporting] = useState(false);
 
-  const exportToFile = async (customerId: number) => {
+  const exportToFile = async (
+    customerId: number,
+    opts: {
+      fromDate?: string;
+      toDate?: string;
+      includeDetails?: boolean;
+      showUnit?: boolean;
+      showQty?: boolean;
+      showPrice?: boolean;
+      showDiscount?: boolean;
+      showTotal?: boolean;
+      showNote?: boolean;
+    } = {}
+  ) => {
     setIsExporting(true);
     try {
       const url = new URL(`${API_URL}/customers/${customerId}/export-debt`);
+      Object.entries(opts).forEach(([k, v]) => {
+        if (v !== undefined) url.searchParams.set(k, String(v));
+      });
       await downloadExcelFromUrl(url, `CongNoChiTiet_KH${customerId}.xlsx`);
       toast.success("Xuất file thành công");
     } catch (e: any) {

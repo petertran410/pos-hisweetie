@@ -8,6 +8,7 @@ import { Download, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { CustomerPaymentModal } from "./CustomerPaymentModal";
 import Link from "next/link";
+import { ExportDebtModal, ExportDebtOptions } from "./ExportDebtModal";
 
 interface CustomerDebtsTabProps {
   customerId: number;
@@ -35,6 +36,7 @@ export function CustomerDebtsTab({
     useExportCustomerDebtTimeline();
   const { exportToFile: exportDebt, isExporting: exportingDebt } =
     useExportCustomerDebt();
+  const [showExportDebtModal, setShowExportDebtModal] = useState(false);
 
   const timeline = data?.data || [];
   const totalPages = Math.ceil(timeline.length / limit);
@@ -45,6 +47,55 @@ export function CustomerDebtsTab({
     if (code.startsWith("TTHD")) return "Thanh toán hóa đơn";
     if (code.startsWith("TT")) return "Thu tiền khách";
     return "Thanh toán";
+  };
+
+  const handleExportDebt = async (opts: ExportDebtOptions) => {
+    const { preset, fromDate, toDate, ...rest } = opts;
+
+    // Tính date range từ preset
+    let from: string | undefined;
+    let to: string | undefined;
+
+    if (preset === "custom") {
+      from = fromDate;
+      to = toDate;
+    } else if (preset !== "all_time") {
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const toStr = (d: Date) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+      if (preset === "today") {
+        from = to = toStr(now);
+      } else if (preset === "this_week") {
+        const day = now.getDay() || 7;
+        const mon = new Date(now);
+        mon.setDate(now.getDate() - day + 1);
+        from = toStr(mon);
+        to = toStr(now);
+      } else if (preset === "last_7_days") {
+        const d = new Date(now);
+        d.setDate(now.getDate() - 6);
+        from = toStr(d);
+        to = toStr(now);
+      } else if (preset === "last_30_days") {
+        const d = new Date(now);
+        d.setDate(now.getDate() - 29);
+        from = toStr(d);
+        to = toStr(now);
+      } else if (preset === "this_month") {
+        from = toStr(new Date(now.getFullYear(), now.getMonth(), 1));
+        to = toStr(now);
+      } else if (preset === "last_month") {
+        const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const last = new Date(now.getFullYear(), now.getMonth(), 0);
+        from = toStr(first);
+        to = toStr(last);
+      }
+    }
+
+    await exportDebt(customerId, { fromDate: from, toDate: to, ...rest });
+    setShowExportDebtModal(false);
   };
 
   if (isLoading) {
@@ -79,7 +130,7 @@ export function CustomerDebtsTab({
             </button>
 
             <button
-              onClick={() => exportDebt(customerId)}
+              onClick={() => setShowExportDebtModal(true)}
               disabled={exportingDebt}
               className="px-3 py-2 border rounded hover:bg-gray-50 flex items-center gap-1.5 text-sm text-gray-700 disabled:opacity-50">
               {exportingDebt ? (
@@ -282,6 +333,14 @@ export function CustomerDebtsTab({
           </div>
         )}
       </div>
+
+      {showExportDebtModal && (
+        <ExportDebtModal
+          isExporting={exportingDebt}
+          onClose={() => setShowExportDebtModal(false)}
+          onConfirm={handleExportDebt}
+        />
+      )}
 
       {showPaymentModal && (
         <CustomerPaymentModal
