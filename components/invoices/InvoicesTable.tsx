@@ -492,7 +492,6 @@ export function InvoicesTable({
     page,
     limit,
     search: debouncedSearch,
-    branchId: selectedBranch?.id,
     ...effectiveFilters,
     ...(advancedSearch.invoiceCodeSearch && {
       invoiceCodeSearch: advancedSearch.invoiceCodeSearch,
