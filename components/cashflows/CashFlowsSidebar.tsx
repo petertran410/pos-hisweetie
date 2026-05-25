@@ -26,6 +26,10 @@ const METHOD_OPTIONS = [
 
 const PRESET_GROUPS = [
   {
+    label: "Tất cả",
+    items: [{ value: "all_time", label: "Toàn bộ" }],
+  },
+  {
     label: "Nhanh",
     items: [
       { value: "today", label: "Hôm nay" },
@@ -137,6 +141,7 @@ const getDateRangeFromPreset = (preset: string) => {
 };
 
 const PRESET_LABEL: Record<string, string> = {
+  all_time: "Toàn bộ",
   today: "Hôm nay",
   yesterday: "Hôm qua",
   this_week: "Tuần này",
@@ -410,6 +415,84 @@ function MiniCalendar({
   );
 }
 
+function BranchMultiSelectDropdown({
+  branches,
+  selectedIds,
+  onChange,
+}: {
+  branches: { id: number; name: string }[];
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const toggle = (id: number) => {
+    onChange(
+      selectedIds.includes(id)
+        ? selectedIds.filter((x) => x !== id)
+        : [...selectedIds, id]
+    );
+  };
+
+  const label =
+    selectedIds.length === 0
+      ? null
+      : selectedIds.length === 1
+        ? (branches.find((b) => b.id === selectedIds[0])?.name ?? "")
+        : `${selectedIds.length} chi nhánh`;
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((p) => !p)}
+        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "hover:border-gray-400"
+        }`}>
+        <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
+          {label ?? "Tất cả chi nhánh"}
+        </span>
+        <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+      </div>
+      {open && (
+        <div className="absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {branches.map((b, idx) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => toggle(b.id)}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left transition-colors ${
+                selectedIds.includes(b.id) ? "bg-blue-50" : "hover:bg-gray-50"
+              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(b.id)}
+                onChange={() => {}}
+                className="w-3.5 h-3.5 accent-blue-600 flex-shrink-0"
+              />
+              <span className="text-gray-700">{b.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CashFlowsSidebar({
   filters,
   onFiltersChange,
@@ -417,15 +500,22 @@ export function CashFlowsSidebar({
   const { data: branches } = useBranches();
   const { data: users } = useUsersForFilter();
 
-  const [branchId, setBranchId] = useState("");
+  const activeBranches = useMemo(
+    () => (branches ?? []).filter((b) => b.isActive),
+    [branches]
+  );
+
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
   const [selectedType, setSelectedType] = useState("");
+
+  const [branchId, setBranchId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedMethod, setSelectedMethod] = useState("");
   const [creatorId, setCreatorId] = useState("");
   const [partnerName, setPartnerName] = useState("");
 
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
-  const [selectedPreset, setSelectedPreset] = useState("this_month");
+  const [selectedPreset, setSelectedPreset] = useState("all_time");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
@@ -437,20 +527,23 @@ export function CashFlowsSidebar({
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
-    if (branchId) n++;
+    if (selectedBranchIds.length > 0) n++;
     if (selectedType) n++;
     if (selectedStatus) n++;
     if (selectedMethod) n++;
     if (creatorId) n++;
     if (partnerName) n++;
+    if (selectedPreset !== "all_time" || dateMode === "custom") n++;
     return n;
   }, [
-    branchId,
+    selectedBranchIds,
     selectedType,
     selectedStatus,
     selectedMethod,
     creatorId,
     partnerName,
+    selectedPreset,
+    dateMode,
   ]);
 
   useEffect(() => {
@@ -470,7 +563,7 @@ export function CashFlowsSidebar({
   useEffect(() => {
     const timer = setTimeout(() => {
       const f: any = {};
-      if (branchId) f.branchIds = [parseInt(branchId)];
+      if (selectedBranchIds.length > 0) f.branchIds = selectedBranchIds;
 
       if (selectedType === "receipt") f.isReceipt = true;
       else if (selectedType === "payment") f.isReceipt = false;
@@ -481,14 +574,16 @@ export function CashFlowsSidebar({
       if (creatorId) f.userId = parseInt(creatorId);
       if (partnerName) f.partnerName = partnerName;
 
-      const range =
-        dateMode === "preset"
-          ? getDateRangeFromPreset(selectedPreset)
-          : fromDate && toDate
-            ? { from: new Date(fromDate), to: new Date(toDate) }
-            : getDateRangeFromPreset("this_month");
-      f.startDate = range.from.toISOString();
-      f.endDate = range.to.toISOString();
+      if (selectedPreset !== "all_time" || dateMode === "custom") {
+        const range =
+          dateMode === "preset"
+            ? getDateRangeFromPreset(selectedPreset)
+            : fromDate && toDate
+              ? { from: new Date(fromDate), to: new Date(toDate) }
+              : getDateRangeFromPreset("this_month");
+        f.startDate = range.from.toISOString();
+        f.endDate = range.to.toISOString();
+      }
 
       onFiltersChange(f);
     }, 300);
@@ -507,14 +602,14 @@ export function CashFlowsSidebar({
   ]);
 
   const clearAll = () => {
-    setBranchId("");
+    setSelectedBranchIds([]);
     setSelectedType("");
     setSelectedStatus("");
     setSelectedMethod("");
     setCreatorId("");
     setPartnerName("");
     setDateMode("preset");
-    setSelectedPreset("this_month");
+    setSelectedPreset("all_time");
     setFromDate("");
     setToDate("");
     onFiltersChange({});
@@ -723,16 +818,10 @@ export function CashFlowsSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Chi nhánh
           </label>
-          <SimpleDropdown
-            options={
-              branches?.map((b: any) => ({
-                value: String(b.id),
-                label: b.name,
-              })) ?? []
-            }
-            value={branchId}
-            placeholder="Tất cả chi nhánh"
-            onChange={setBranchId}
+          <BranchMultiSelectDropdown
+            branches={activeBranches}
+            selectedIds={selectedBranchIds}
+            onChange={setSelectedBranchIds}
           />
         </div>
 

@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
-import { useCashFlows, useOpeningBalance } from "@/lib/hooks/useCashflows";
+import {
+  useCashFlows,
+  useExportCashFlows,
+  useOpeningBalance,
+} from "@/lib/hooks/useCashflows";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -10,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Download,
+  Loader2,
 } from "lucide-react";
 import type { CashFlow } from "@/lib/types/cashflow";
 import { CashFlowDetailRow } from "./CashFlowDetailRow";
@@ -214,6 +220,10 @@ export function CashFlowsTable({
   const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
   const receiptDropdownRef = useRef<HTMLDivElement>(null);
   const paymentDropdownRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+
+  const { exportOverview, isExportingOverview } = useExportCashFlows();
 
   // Debounce search
   useEffect(() => {
@@ -286,6 +296,9 @@ export function CashFlowsTable({
       ) {
         setShowPaymentDropdown(false);
       }
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setShowExportDropdown(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -294,6 +307,11 @@ export function CashFlowsTable({
   const cashFlows = data?.data || [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
+
+  const handleExportOverview = async () => {
+    setShowExportDropdown(false);
+    await exportOverview(effectiveFilters);
+  };
 
   const canViewBalance = useCan("cash_flows", "view_balance");
 
@@ -458,6 +476,28 @@ export function CashFlowsTable({
                 )}
               </div>
             </PermissionGate>
+            <div ref={exportRef} className="relative">
+              <button
+                onClick={() => setShowExportDropdown((p) => !p)}
+                disabled={isExportingOverview}
+                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 disabled:opacity-50">
+                {isExportingOverview ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                Xuất file
+              </button>
+              {showExportDropdown && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-44 overflow-hidden">
+                  <button
+                    onClick={handleExportOverview}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                    Tổng quan
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               onClick={() => setShowColumnModal(true)}
               className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
