@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
-import { useInvoices } from "@/lib/hooks/useInvoices";
+import { useExportInvoices, useInvoices } from "@/lib/hooks/useInvoices";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -12,6 +12,8 @@ import {
   X,
   SlidersHorizontal,
   Upload,
+  Download,
+  Loader2,
 } from "lucide-react";
 import type { Invoice } from "@/lib/types/invoice";
 import { InvoiceDetailRow } from "./InvoiceDetailRow";
@@ -35,18 +37,6 @@ interface InvoicesTableProps {
   onCreateDongHang: (selectedIds: number[], branchId: number | null) => void;
   onCreateLoading: (selectedIds: number[], branchId: number | null) => void;
 }
-
-const STATUS_TABS = [
-  { value: "all", label: "Tất cả" },
-  { value: "3", label: "Đang xử lý" },
-  { value: "5", label: "Đóng hàng" },
-  { value: "6", label: "Loading" },
-  { value: "7", label: "Giao thành công" },
-  { value: "1", label: "Hoàn thành" },
-  { value: "4", label: "Không giao được" },
-  { value: "8", label: "Trả hàng" },
-  { value: "2", label: "Đã hủy" },
-];
 
 const STATUS_COLOR: Record<number, string> = {
   1: "bg-green-100 text-green-700",
@@ -330,6 +320,54 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   },
 ];
 
+const EXPORT_DETAIL_COLUMNS = [
+  { key: "branchName", label: "Chi nhánh" },
+  { key: "invoiceCode", label: "Mã hóa đơn" },
+  { key: "purchaseDate", label: "Thời gian" },
+  { key: "createdAt", label: "Thời gian tạo" },
+  { key: "updatedAt", label: "Ngày cập nhật" },
+  { key: "orderCode", label: "Mã đặt hàng" },
+  { key: "customerCode", label: "Mã khách hàng" },
+  { key: "customerName", label: "Tên khách hàng" },
+  { key: "customerPhone", label: "Điện thoại" },
+  { key: "customerAddress", label: "Địa chỉ KH" },
+  { key: "customerLocationName", label: "Khu vực KH" },
+  { key: "customerWardName", label: "Phường-Xã KH" },
+  { key: "priceBookName", label: "Bảng giá" },
+  { key: "soldByName", label: "Người bán" },
+  { key: "creatorName", label: "Người tạo" },
+  { key: "deliveryReceiver", label: "Người nhận" },
+  { key: "deliveryPhone", label: "ĐT người nhận" },
+  { key: "deliveryAddress", label: "Địa chỉ giao" },
+  { key: "deliveryLocationName", label: "Khu vực giao" },
+  { key: "deliveryWardName", label: "Phường-Xã giao" },
+  { key: "deliveryWeight", label: "Trọng lượng (gram)" },
+  { key: "deliveryNote", label: "Ghi chú giao hàng" },
+  { key: "description", label: "Ghi chú" },
+  { key: "totalAmount", label: "Tổng tiền hàng" },
+  { key: "discount", label: "Giảm giá HĐ" },
+  { key: "grandTotal", label: "Khách cần trả" },
+  { key: "paidAmount", label: "Khách đã trả" },
+  { key: "cashPayment", label: "Tiền mặt" },
+  { key: "cardPayment", label: "Thẻ" },
+  { key: "walletPayment", label: "Ví" },
+  { key: "bankTransferPayment", label: "Chuyển khoản" },
+  { key: "rewardPoint", label: "Điểm" },
+  { key: "voucherAmount", label: "Voucher" },
+  { key: "voucherCode", label: "Mã voucher" },
+  { key: "codAmount", label: "Còn cần thu (COD)" },
+  { key: "statusValue", label: "Trạng thái" },
+  { key: "productCode", label: "Mã hàng" },
+  { key: "productName", label: "Tên hàng" },
+  { key: "productNote", label: "Ghi chú hàng hóa" },
+  { key: "quantity", label: "Số lượng" },
+  { key: "unitPrice", label: "Đơn giá" },
+  { key: "detailDiscountRatio", label: "Giảm giá %" },
+  { key: "detailDiscount", label: "Giảm giá (chi tiết)" },
+  { key: "sellingPrice", label: "Giá bán" },
+  { key: "totalPrice", label: "Thành tiền" },
+];
+
 export function InvoicesTable({
   filters,
   onCreateClick,
@@ -350,6 +388,19 @@ export function InvoicesTable({
   const [activeStatusTab, setActiveStatusTab] = useState("all");
   const [showBaoDonDropdown, setShowBaoDonDropdown] = useState(false);
   const baoDonRef = useRef<HTMLDivElement>(null);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [showExportDetailModal, setShowExportDetailModal] = useState(false);
+  const [exportDetailCols, setExportDetailCols] = useState<string[]>(
+    EXPORT_DETAIL_COLUMNS.map((c) => c.key)
+  );
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  const {
+    exportOverview,
+    exportDetail,
+    isExportingOverview,
+    isExportingDetail,
+  } = useExportInvoices();
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const advancedRef = useRef<HTMLDivElement>(null);
@@ -472,11 +523,19 @@ export function InvoicesTable({
     }
   }, [columns]);
 
-  // Đóng dropdown Báo đơn khi click ngoài
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (baoDonRef.current && !baoDonRef.current.contains(e.target as Node))
         setShowBaoDonDropdown(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node))
+        setShowExportDropdown(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
@@ -516,6 +575,40 @@ export function InvoicesTable({
     else onCreateLoading(selectedIds, branchId);
     setShowBaoDonDropdown(false);
   };
+
+  const handleExportOverview = async () => {
+    setShowExportDropdown(false);
+    const currentFilters = {
+      ...effectiveFilters,
+      search: debouncedSearch,
+      branchId: selectedBranch?.id,
+      ...advancedSearch,
+    };
+    await exportOverview(currentFilters);
+  };
+
+  const handleExportDetailConfirm = async () => {
+    setShowExportDetailModal(false);
+    const currentFilters = {
+      ...effectiveFilters,
+      search: debouncedSearch,
+      branchId: selectedBranch?.id,
+      ...advancedSearch,
+    };
+    await exportDetail(currentFilters, exportDetailCols);
+  };
+
+  const toggleExportCol = (key: string) =>
+    setExportDetailCols((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+
+  const toggleAllExportCols = () =>
+    setExportDetailCols(
+      exportDetailCols.length === EXPORT_DETAIL_COLUMNS.length
+        ? []
+        : EXPORT_DETAIL_COLUMNS.map((c) => c.key)
+    );
 
   const colSpan = visibleColumns.length + 2;
 
@@ -685,15 +778,6 @@ export function InvoicesTable({
               </button>
             </PermissionGate>
 
-            <PermissionGate resource="invoices" action="create">
-              <button
-                onClick={() => setShowImportModal(true)}
-                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5">
-                <Upload className="w-4 h-4" />
-                Import
-              </button>
-            </PermissionGate>
-
             {/* Báo đơn dropdown */}
             <div ref={baoDonRef} className="relative">
               <button
@@ -721,6 +805,49 @@ export function InvoicesTable({
                     onClick={() => handleCreateBaoDon("loading")}
                     className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-50">
                     Loading
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <PermissionGate resource="invoices" action="create">
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5">
+                <Upload className="w-4 h-4" />
+                Import
+              </button>
+            </PermissionGate>
+
+            <div ref={exportRef} className="relative">
+              <button
+                onClick={() => setShowExportDropdown((p) => !p)}
+                disabled={isExportingOverview || isExportingDetail}
+                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 disabled:opacity-50">
+                {isExportingOverview || isExportingDetail ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                Xuất file
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${showExportDropdown ? "rotate-180" : ""}`}
+                />
+              </button>
+              {showExportDropdown && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-44 overflow-hidden">
+                  <button
+                    onClick={handleExportOverview}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                    Tổng quan
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowExportDropdown(false);
+                      setShowExportDetailModal(true);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
+                    Chi tiết (chọn cột)
                   </button>
                 </div>
               )}
@@ -940,6 +1067,72 @@ export function InvoicesTable({
           </div>
         )}
       </div>
+
+      {showExportDetailModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-2xl w-[540px] max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-base font-semibold text-gray-800">
+                Chọn cột xuất chi tiết
+              </h3>
+              <button
+                onClick={() => setShowExportDetailModal(false)}
+                className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Chọn/Bỏ tất cả */}
+            <div className="px-4 pt-3 pb-1 flex items-center gap-2">
+              <button
+                onClick={toggleAllExportCols}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                {exportDetailCols.length === EXPORT_DETAIL_COLUMNS.length
+                  ? "Bỏ tất cả"
+                  : "Chọn tất cả"}
+              </button>
+              <span className="text-xs text-gray-400">
+                ({exportDetailCols.length}/{EXPORT_DETAIL_COLUMNS.length} cột)
+              </span>
+            </div>
+
+            {/* Danh sách cột */}
+            <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-1">
+              {EXPORT_DETAIL_COLUMNS.map((col) => (
+                <label
+                  key={col.key}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={exportDetailCols.includes(col.key)}
+                    onChange={() => toggleExportCol(col.key)}
+                    className="accent-blue-600"
+                  />
+                  <span className="text-sm text-gray-700">{col.label}</span>
+                </label>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 p-4 border-t">
+              <button
+                onClick={() => setShowExportDetailModal(false)}
+                className="px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
+                Hủy
+              </button>
+              <button
+                onClick={handleExportDetailConfirm}
+                disabled={exportDetailCols.length === 0 || isExportingDetail}
+                className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5">
+                {isExportingDetail && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                Xuất {exportDetailCols.length} cột
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showImportModal && (
         <InvoiceImportModal onClose={() => setShowImportModal(false)} />

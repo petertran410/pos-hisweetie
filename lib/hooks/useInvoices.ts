@@ -1,7 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { invoicesApi } from "../api/invoices";
 import { toast } from "sonner";
-import { apiClient } from "../config/api";
+import { API_URL, apiClient } from "../config/api";
+import { useState } from "react";
+import { useAuthStore } from "../store/auth";
+import { useBranchStore } from "../store/branch";
 
 export function useInvoices(params?: any) {
   return useQuery({
@@ -122,4 +125,88 @@ export function useInvoicesForReturnOrder(params: {
     queryKey: ["invoices", "for-return-order", params],
     queryFn: () => invoicesApi.getInvoicesForReturnOrder(params),
   });
+}
+
+export function useExportInvoices() {
+  const [isExportingOverview, setIsExportingOverview] = useState(false);
+  const [isExportingDetail, setIsExportingDetail] = useState(false);
+
+  const doExport = async (url: URL, setLoading: (v: boolean) => void) => {
+    setLoading(true);
+    try {
+      const token = useAuthStore.getState().token;
+      const selectedBranch = useBranchStore.getState().selectedBranch;
+
+      const res = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(selectedBranch?.id
+            ? { "X-Branch-Id": String(selectedBranch.id) }
+            : {}),
+        },
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Lỗi khi xuất dữ liệu");
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const filenameMatch = disposition.match(/filename=([^;]+)/);
+      const filename = filenameMatch
+        ? filenameMatch[1].trim()
+        : `HoaDon_${Date.now()}.xlsx`;
+
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+
+      toast.success("Xuất file thành công");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportOverview = async (filters: Record<string, any>) => {
+    const { pageSize: _ps, currentItem: _ci, ...exportFilters } = filters;
+    const url = new URL(`${API_URL}/invoices/export`);
+    Object.entries(exportFilters).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") {
+        url.searchParams.append(k, String(v));
+      }
+    });
+    await doExport(url, setIsExportingOverview);
+  };
+
+  const exportDetail = async (
+    filters: Record<string, any>,
+    selectedColumns: string[]
+  ) => {
+    const { pageSize: _ps, currentItem: _ci, ...exportFilters } = filters;
+    const url = new URL(`${API_URL}/invoices/export-detail`);
+    Object.entries(exportFilters).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") {
+        url.searchParams.append(k, String(v));
+      }
+    });
+    if (selectedColumns.length > 0) {
+      url.searchParams.append("columns", selectedColumns.join(","));
+    }
+    await doExport(url, setIsExportingDetail);
+  };
+
+  return {
+    exportOverview,
+    exportDetail,
+    isExportingOverview,
+    isExportingDetail,
+  };
 }
