@@ -7,6 +7,7 @@ import {
 } from "@/components/reports/CustomerReportSidebar";
 import { CustomerSalesPreview } from "@/components/reports/CustomerSalesPreview";
 import { ProductByCustomerPreview } from "@/components/reports/ProductByCustomerPreview";
+import { CustomerDebtPreview } from "@/components/reports/CustomerDebtPreview";
 import { ReportFilters } from "@/lib/api/reports";
 
 export default function CustomerReportPage() {
@@ -24,10 +25,14 @@ export default function CustomerReportPage() {
         reportType={reportType}
         onReportTypeChange={setReportType}
       />
-      {reportType === "customer-sales" ? (
+      {reportType === "customer-sales" && (
         <CustomerSalesPreview filters={filters} />
-      ) : (
+      )}
+      {reportType === "product-by-customer" && (
         <ProductByCustomerPreview filters={filters} />
+      )}
+      {reportType === "customer-debt" && (
+        <CustomerDebtPreview filters={filters} />
       )}
     </div>
   );

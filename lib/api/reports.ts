@@ -73,6 +73,26 @@ export interface ProductByCustomerSummary {
   totalPrice: number;
 }
 
+export interface CustomerDebtRow {
+  customerId: number;
+  customerCode: string;
+  customerName: string;
+  contactNumber: string;
+  customerGroups: string;
+  openingDebt: number;
+  debit: number;
+  credit: number;
+  closingDebt: number;
+}
+
+export interface CustomerDebtSummary {
+  totalCustomers: number;
+  totalOpening: number;
+  totalDebit: number;
+  totalCredit: number;
+  totalClosing: number;
+}
+
 export const reportsApi = {
   getCustomerSales: (
     params: ReportFilters
@@ -154,6 +174,48 @@ export const reportsApi = {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `hang-ban-theo-khach_${Date.now()}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
+
+  getCustomerDebt: (
+    params: ReportFilters
+  ): Promise<{
+    data: CustomerDebtRow[];
+    total: number;
+    page: number;
+    limit: number;
+    summary: CustomerDebtSummary;
+  }> => {
+    return apiClient.get("/reports/customer-debt", params);
+  },
+
+  exportCustomerDebt: async (params: ReportFilters) => {
+    const url = new URL(`${API_URL}/reports/customer-debt/export`);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+
+    const token = useAuthStore.getState().token;
+    const branch = useBranchStore.getState().selectedBranch;
+    const headers: HeadersInit = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (branch?.id) headers["X-Branch-Id"] = String(branch.id);
+
+    const res = await fetch(url.toString(), { headers });
+    if (!res.ok) {
+      const err = await res
+        .json()
+        .catch(() => ({ message: "Xuất file thất bại" }));
+      throw new Error(err.message);
+    }
+
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `bao-cao-cong-no-theo-khach-hang_${Date.now()}.xlsx`;
     a.click();
     URL.revokeObjectURL(a.href);
   },

@@ -23,3 +23,14 @@ export function useProductByCustomerReport(filters: ReportFilters) {
     enabled: hasHydrated && isAuthenticated,
   });
 }
+
+export function useCustomerDebtReport(filters: ReportFilters) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
+
+  return useQuery({
+    queryKey: ["reports", "customer-debt", filters],
+    queryFn: () => reportsApi.getCustomerDebt(filters),
+    enabled: hasHydrated && isAuthenticated,
+  });
+}

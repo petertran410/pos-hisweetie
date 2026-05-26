@@ -16,7 +16,10 @@ import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 
 // ─── Types ───
-export type ReportType = "customer-sales" | "product-by-customer";
+export type ReportType =
+  | "customer-sales"
+  | "product-by-customer"
+  | "customer-debt";
 
 interface CustomerReportSidebarProps {
   onFiltersChange: (filters: any) => void;
@@ -495,6 +498,7 @@ export function CustomerReportSidebar({
             className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
             <option value="customer-sales">Bán hàng</option>
             <option value="product-by-customer">Hàng bán theo khách</option>
+            <option value="customer-debt">Công nợ</option>
           </select>
         </div>
 
