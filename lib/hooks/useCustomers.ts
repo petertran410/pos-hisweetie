@@ -235,7 +235,11 @@ export function useExportCustomerDebt() {
   ) => {
     setIsExporting(true);
     try {
+      const selectedBranch = useBranchStore.getState().selectedBranch;
       const url = new URL(`${API_URL}/customers/${customerId}/export-debt`);
+      if (selectedBranch?.id) {
+        url.searchParams.set("branchId", String(selectedBranch.id));
+      }
       Object.entries(opts).forEach(([k, v]) => {
         if (v !== undefined) url.searchParams.set(k, String(v));
       });
