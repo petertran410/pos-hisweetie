@@ -71,6 +71,16 @@ export function ProductSearchDropdown({
     );
   };
 
+  const getDisplayPrice = (product: any): number => {
+    if (activePriceBook?.priceBookDetails) {
+      const detail = activePriceBook.priceBookDetails.find(
+        (d: any) => d.productId === product.id && d.isActive
+      );
+      if (detail) return Number(detail.price);
+    }
+    return Number(product.basePrice);
+  };
+
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -357,7 +367,7 @@ export function ProductSearchDropdown({
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="text-blue-600 font-medium">
-                        {Number(product.basePrice).toLocaleString()}
+                        {getDisplayPrice(product).toLocaleString()}
                       </div>
                     </div>
                   </div>

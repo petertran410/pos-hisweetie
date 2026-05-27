@@ -1749,21 +1749,17 @@ export default function BanHangPage() {
           </button>
         </div>
       ))}
-      {!activeTab?.documentId && (
-        <>
-          <button
-            onClick={handleAddTab}
-            className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
-            <Plus className="w-5 h-5" />
-          </button>
-          {canCreateOrder && canCreateInvoice && (
-            <button
-              onClick={handleToggleType}
-              className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
-              <ArrowLeftRight className="w-5 h-5" />
-            </button>
-          )}
-        </>
+      <button
+        onClick={handleAddTab}
+        className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
+        <Plus className="w-5 h-5" />
+      </button>
+      {canCreateOrder && canCreateInvoice && (
+        <button
+          onClick={handleToggleType}
+          className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
+          <ArrowLeftRight className="w-5 h-5" />
+        </button>
       )}
     </div>
   );

@@ -57,6 +57,16 @@ export function ProductSearch({
     );
   };
 
+  const getDisplayPrice = (product: any): number => {
+    if (activePriceBook?.priceBookDetails) {
+      const detail = activePriceBook.priceBookDetails.find(
+        (d: any) => d.productId === product.id && d.isActive
+      );
+      if (detail) return Number(detail.price);
+    }
+    return Number(product.basePrice);
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchDebounced(search);
@@ -152,7 +162,7 @@ export function ProductSearch({
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className="text-blue-600 font-medium">
-                    {Number(product.basePrice).toLocaleString()}
+                    {getDisplayPrice(product).toLocaleString()}
                   </div>
                   <div className="flex gap-1 mt-1">
                     <span
