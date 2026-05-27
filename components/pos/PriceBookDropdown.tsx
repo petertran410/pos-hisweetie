@@ -1,31 +1,45 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePriceBooks } from "@/lib/hooks/usePriceBooks";
+import { useApplicablePriceBooks } from "@/lib/hooks/usePriceBooks";
 import { useBranchStore } from "@/lib/store/branch";
+import { useAuthStore } from "@/lib/store/auth";
 import { ChevronDown } from "lucide-react";
+import { priceBooksApi } from "@/lib/api";
+import { toast } from "sonner";
 
 interface PriceBookDropdownProps {
   selectedPriceBookId: number | null;
-  onSelectPriceBook: (priceBookId: number | null) => void;
+  selectedPriceBookName?: string | null;
+  onSelectPriceBook: (
+    priceBookId: number | null,
+    priceBookName: string | null
+  ) => void;
+  cartItems?: any[];
+  selectedCustomerId?: number | null;
 }
 
 export function PriceBookDropdown({
   selectedPriceBookId,
+  selectedPriceBookName,
   onSelectPriceBook,
+  cartItems,
+  selectedCustomerId,
 }: PriceBookDropdownProps) {
   const { selectedBranch } = useBranchStore();
+  const { user } = useAuthStore();
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const prevCustomerIdRef = useRef<number | null | undefined>(undefined);
 
-  const { data: priceBooksData } = usePriceBooks({
-    isActive: true,
+  const { data: applicablePriceBooks } = useApplicablePriceBooks({
     branchId: selectedBranch?.id,
-    limit: 1000,
+    customerId: selectedCustomerId ?? undefined,
+    userId: user?.id,
   });
 
-  const priceBooks = priceBooksData?.data || [];
+  const priceBooks = applicablePriceBooks || [];
 
   const filteredPriceBooks = priceBooks.filter((pb) =>
     pb.name.toLowerCase().includes(search.toLowerCase())
@@ -46,8 +60,64 @@ export function PriceBookDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSelectPriceBook = (priceBookId: number | null) => {
-    onSelectPriceBook(priceBookId);
+  // Auto-reset bảng giá khi user đổi customer thực sự (không reset khi load lần đầu)
+  useEffect(() => {
+    const curr = selectedCustomerId ?? null;
+
+    if (prevCustomerIdRef.current === undefined) {
+      prevCustomerIdRef.current = curr;
+      return;
+    }
+
+    if (prevCustomerIdRef.current === curr) return;
+    prevCustomerIdRef.current = curr;
+
+    if (!selectedPriceBookId || selectedPriceBookId === 0) return;
+    if (!applicablePriceBooks) return;
+
+    const stillValid = applicablePriceBooks.some(
+      (pb) => pb.id === selectedPriceBookId
+    );
+    if (!stillValid) {
+      onSelectPriceBook(null, null);
+      toast.info(
+        "Bảng giá đã được đặt lại do không còn áp dụng cho khách hàng này"
+      );
+    }
+  }, [
+    selectedCustomerId,
+    applicablePriceBooks,
+    selectedPriceBookId,
+    onSelectPriceBook,
+  ]);
+
+  const handleSelectPriceBook = async (priceBookId: number | null) => {
+    if (priceBookId && priceBookId > 0 && cartItems && cartItems.length > 0) {
+      try {
+        const pb = await priceBooksApi.getPriceBook(priceBookId);
+        if (!pb.allowNonListedProducts) {
+          const allowedIds = new Set(
+            (pb.priceBookDetails || [])
+              .filter((d: any) => d.isActive)
+              .map((d: any) => d.productId)
+          );
+          const violating = cartItems
+            .map((it: any) => it.product)
+            .filter((p: any) => p && !allowedIds.has(p.id));
+          if (violating.length > 0) {
+            toast.error(
+              `Trong giỏ có ${violating.length} sản phẩm không thuộc bảng giá "${pb.name}". Vui lòng xoá trước khi đổi.`
+            );
+            return;
+          }
+        }
+      } catch (e) {
+        toast.error("Không thể kiểm tra bảng giá. Vui lòng thử lại.");
+        return;
+      }
+    }
+    const pb = priceBooks.find((p) => p.id === priceBookId);
+    onSelectPriceBook(priceBookId, pb?.name ?? null);
     setShowDropdown(false);
     setSearch("");
   };
@@ -59,7 +129,9 @@ export function PriceBookDropdown({
     const selectedPriceBook = priceBooks.find(
       (pb) => pb.id === selectedPriceBookId
     );
-    return selectedPriceBook?.name || "Bảng giá chung";
+    if (selectedPriceBook) return selectedPriceBook.name;
+    // Fallback: snapshot name từ existing order/invoice
+    return selectedPriceBookName || "Bảng giá chung";
   };
 
   return (

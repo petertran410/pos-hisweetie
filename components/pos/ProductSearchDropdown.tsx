@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useBranchStore } from "@/lib/store/branch";
 import { Search, Barcode } from "lucide-react";
+import { usePriceBook } from "@/lib/hooks/usePriceBooks";
+import { toast } from "sonner";
 
 interface ProductSearchDropdownProps {
   onAddProduct: (
@@ -11,12 +13,14 @@ interface ProductSearchDropdownProps {
     conditionType?: string,
     quantity?: number
   ) => void;
+  selectedPriceBookId?: number | null;
 }
 
 type ConditionType = string | undefined;
 
 export function ProductSearchDropdown({
   onAddProduct,
+  selectedPriceBookId,
 }: ProductSearchDropdownProps) {
   const { selectedBranch } = useBranchStore();
   const [search, setSearch] = useState("");
@@ -40,13 +44,32 @@ export function ProductSearchDropdown({
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
 
+  const activePriceBookId =
+    selectedPriceBookId && selectedPriceBookId > 0 ? selectedPriceBookId : null;
+  const { data: activePriceBook } = usePriceBook(activePriceBookId);
+  const isStrictPriceBook =
+    !!activePriceBook && !activePriceBook.allowNonListedProducts;
+  const shouldWarnNonListed =
+    !!activePriceBook &&
+    activePriceBook.allowNonListedProducts &&
+    activePriceBook.warnNonListedProducts;
+
   const { data: productsData } = useProducts({
     search: searchDebounced,
     limit: 100,
     branchId: selectedBranch?.id,
+    priceBookId: activePriceBookId ?? undefined,
+    onlyInPriceBook: isStrictPriceBook ? true : undefined,
   });
 
   const products = productsData?.data || [];
+
+  const isProductInPriceBook = (productId: number) => {
+    if (!activePriceBook?.priceBookDetails) return true;
+    return activePriceBook.priceBookDetails.some(
+      (d: any) => d.productId === productId && d.isActive
+    );
+  };
 
   // Debounce search
   useEffect(() => {
@@ -135,7 +158,6 @@ export function ProductSearchDropdown({
       ? getAvailableSubOptions(products[highlightedIndex])[subOptionIndex]
       : undefined;
 
-  // Reset everything after an add or cancel
   const resetAll = () => {
     setSearch("");
     setSearchDebounced("");
@@ -147,9 +169,28 @@ export function ProductSearchDropdown({
     setTimeout(() => searchInputRef.current?.focus(), 0);
   };
 
-  // Click handler (mouse) — always qty = 1 (existing behavior)
+  const safeAdd = (
+    product: any,
+    conditionType?: string,
+    quantity: number = 1
+  ): boolean => {
+    if (isStrictPriceBook && !isProductInPriceBook(product.id)) {
+      toast.error(
+        `Sản phẩm "${product.name}" không có trong bảng giá đang chọn`
+      );
+      return false;
+    }
+    if (shouldWarnNonListed && !isProductInPriceBook(product.id)) {
+      toast.warning(
+        `Sản phẩm "${product.name}" không có trong bảng giá đang chọn`
+      );
+    }
+    onAddProduct(product, conditionType, quantity);
+    return true;
+  };
+
   const handleClickAdd = (product: any, conditionType?: string) => {
-    onAddProduct(product, conditionType, 1);
+    if (!safeAdd(product, conditionType, 1)) return;
     setSearch("");
     setShowDropdown(false);
     setHighlightedIndex(-1);
@@ -208,7 +249,7 @@ export function ProductSearchDropdown({
           quantityInputRef.current?.select();
         }, 0);
       } else {
-        onAddProduct(product, conditionType, 1);
+        if (!safeAdd(product, conditionType, 1)) return;
         resetAll();
       }
     }
@@ -220,7 +261,8 @@ export function ProductSearchDropdown({
       if (!selectedProduct) return;
       const qty = parseInt(quantityDisplay, 10);
       if (!qty || qty < 1) return;
-      onAddProduct(selectedProduct.product, selectedProduct.conditionType, qty);
+      if (!safeAdd(selectedProduct.product, selectedProduct.conditionType, qty))
+        return;
       resetAll();
     } else if (e.key === "Escape") {
       e.preventDefault();

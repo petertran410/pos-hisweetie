@@ -67,6 +67,7 @@ export interface Tab {
   cartItems: CartItem[];
   selectedCustomer: any;
   selectedPriceBookId: number | null;
+  selectedPriceBookName: string | null;
   orderNote: string;
   discount: number;
   discountRatio: number;
@@ -98,6 +99,7 @@ const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   cartItems: [],
   selectedCustomer: null,
   selectedPriceBookId: null,
+  selectedPriceBookName: null,
   orderNote: "",
   discount: 0,
   discountRatio: 0,
@@ -177,6 +179,7 @@ export default function BanHangPage() {
       cartItems: CartItem[];
       selectedCustomer: any;
       selectedPriceBookId: number | null;
+      selectedPriceBookName: string | null;
       orderNote: string;
       discount: number;
       discountRatio: number;
@@ -202,6 +205,7 @@ export default function BanHangPage() {
       tab.discountRatio !== initialData.discountRatio ||
       tab.paymentAmount !== initialData.paymentAmount ||
       tab.selectedPriceBookId !== initialData.selectedPriceBookId ||
+      tab.selectedPriceBookName !== initialData.selectedPriceBookName ||
       JSON.stringify(tab.deliveryInfo) !==
         JSON.stringify(initialData.deliveryInfo);
 
@@ -217,6 +221,7 @@ export default function BanHangPage() {
         discountRatio: tab.discountRatio,
         paymentAmount: tab.paymentAmount,
         selectedPriceBookId: tab.selectedPriceBookId,
+        selectedPriceBookName: tab.selectedPriceBookName,
         deliveryInfo: tab.deliveryInfo,
         timestamp: Date.now(),
       };
@@ -251,6 +256,7 @@ export default function BanHangPage() {
               })),
               selectedCustomer: editState.selectedCustomer || null,
               selectedPriceBookId: editState.selectedPriceBookId || null,
+              selectedPriceBookName: editState.selectedPriceBookName || null,
               orderNote: editState.orderNote || "",
               discount: editState.discount || 0,
               discountRatio: editState.discountRatio || 0,
@@ -280,6 +286,7 @@ export default function BanHangPage() {
               cartItems: editTab.cartItems,
               selectedCustomer: editTab.selectedCustomer,
               selectedPriceBookId: editTab.selectedPriceBookId,
+              selectedPriceBookName: editTab.selectedPriceBookName,
               orderNote: editTab.orderNote,
               discount: editTab.discount,
               discountRatio: editTab.discountRatio,
@@ -298,7 +305,10 @@ export default function BanHangPage() {
     return editTabs;
   };
 
-  const handlePriceBookSelect = async (priceBookId: number | null) => {
+  const handlePriceBookSelect = async (
+    priceBookId: number | null,
+    priceBookName: string | null
+  ) => {
     const storageKey = getPriceBookStorageKey(user?.id);
     if (priceBookId !== null) {
       localStorage.setItem(storageKey, priceBookId.toString());
@@ -309,7 +319,10 @@ export default function BanHangPage() {
     const currentCartItems = activeTab.cartItems;
 
     if (currentCartItems.length === 0) {
-      updateActiveTab({ selectedPriceBookId: priceBookId });
+      updateActiveTab({
+        selectedPriceBookId: priceBookId,
+        selectedPriceBookName: priceBookName,
+      });
       return;
     }
 
@@ -342,6 +355,7 @@ export default function BanHangPage() {
 
     updateActiveTab({
       selectedPriceBookId: priceBookId,
+      selectedPriceBookName: priceBookName,
       cartItems: updatedCartItems,
     });
   };
@@ -559,6 +573,7 @@ export default function BanHangPage() {
         cartItems: remainingCartItems,
         selectedCustomer: existingOrder.customer || null,
         selectedPriceBookId: existingOrder.priceBookId || null,
+        selectedPriceBookName: existingOrder.priceBookName || null,
         orderNote: existingOrder.description || "",
         discount: 0,
         discountRatio: 0,
@@ -623,6 +638,9 @@ export default function BanHangPage() {
       selectedPriceBookId: restoredState
         ? restoredState.selectedPriceBookId
         : existingOrder.priceBookId || null,
+      selectedPriceBookName: restoredState
+        ? restoredState.selectedPriceBookName
+        : existingOrder.priceBookName || null,
       orderNote: restoredState
         ? restoredState.orderNote
         : existingOrder.description || "",
@@ -660,6 +678,7 @@ export default function BanHangPage() {
       cartItems: editTab.cartItems,
       selectedCustomer: editTab.selectedCustomer,
       selectedPriceBookId: editTab.selectedPriceBookId,
+      selectedPriceBookName: editTab.selectedPriceBookName,
       orderNote: editTab.orderNote,
       discount: editTab.discount,
       discountRatio: editTab.discountRatio,
@@ -745,6 +764,9 @@ export default function BanHangPage() {
       selectedPriceBookId: restoredState
         ? restoredState.selectedPriceBookId
         : existingInvoice.priceBookId || null,
+      selectedPriceBookName: restoredState
+        ? restoredState.selectedPriceBookName
+        : existingInvoice.priceBookName || null,
       orderNote: restoredState
         ? restoredState.orderNote
         : existingInvoice.description || "",
@@ -797,6 +819,7 @@ export default function BanHangPage() {
       cartItems: editTab.cartItems,
       selectedCustomer: editTab.selectedCustomer,
       selectedPriceBookId: editTab.selectedPriceBookId,
+      selectedPriceBookName: editTab.selectedPriceBookName,
       orderNote: editTab.orderNote,
       discount: editTab.discount,
       discountRatio: editTab.discountRatio,
@@ -889,6 +912,8 @@ export default function BanHangPage() {
               cartItems: remainingCartItems,
               selectedCustomer: order.customer || tab.selectedCustomer,
               selectedPriceBookId: order.priceBookId ?? tab.selectedPriceBookId,
+              selectedPriceBookName:
+                order.priceBookName ?? tab.selectedPriceBookName,
               discount: remainingDiscount > 0 ? remainingDiscount : 0,
               discountRatio: 0,
               paymentAmount: 0,
@@ -1750,7 +1775,10 @@ export default function BanHangPage() {
       ══════════════════════════════════════════ */}
       <div className="hidden lg:flex px-4 py-3 items-center gap-4 flex-shrink-0">
         <div className="flex-1 max-w-md">
-          <ProductSearchDropdown onAddProduct={addToCart} />
+          <ProductSearchDropdown
+            onAddProduct={addToCart}
+            selectedPriceBookId={activeTab.selectedPriceBookId}
+          />
         </div>
         {tabsRow}
       </div>
@@ -1760,7 +1788,10 @@ export default function BanHangPage() {
       ══════════════════════════════════════════ */}
       <div className="lg:hidden px-2 pt-1.5 pb-1.5 flex flex-col gap-1.5 flex-shrink-0">
         {tabsRow}
-        <ProductSearchDropdown onAddProduct={addToCart} />
+        <ProductSearchDropdown
+          onAddProduct={addToCart}
+          selectedPriceBookId={activeTab.selectedPriceBookId}
+        />
       </div>
 
       {/* ══════════════════════════════════════════
@@ -1807,6 +1838,7 @@ export default function BanHangPage() {
                 selectedCustomer={activeTab.selectedCustomer}
                 onSelectCustomer={handleCustomerSelect}
                 selectedPriceBookId={activeTab.selectedPriceBookId}
+                selectedPriceBookName={activeTab.selectedPriceBookName}
                 onSelectPriceBook={handlePriceBookSelect}
                 useCOD={activeTab.useCOD}
                 onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
@@ -1882,6 +1914,7 @@ export default function BanHangPage() {
                 onSelectCustomer={handleCustomerSelect}
                 useCOD={activeTab.useCOD}
                 selectedPriceBookId={activeTab.selectedPriceBookId}
+                selectedPriceBookName={activeTab.selectedPriceBookName}
                 onSelectPriceBook={handlePriceBookSelect}
                 onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
                 paymentAmount={activeTab.paymentAmount}

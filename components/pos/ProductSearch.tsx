@@ -6,12 +6,14 @@ import { useBranchStore } from "@/lib/store/branch";
 import { toast } from "sonner";
 import { X, Minus, Plus } from "lucide-react";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
+import { usePriceBook } from "@/lib/hooks/usePriceBooks";
 
 interface ProductSearchProps {
   onAddProduct: (product: any) => void;
   cartItems: CartItem[];
   onUpdateItem: (productId: number, updates: Partial<CartItem>) => void;
   onRemoveItem: (productId: number) => void;
+  selectedPriceBookId?: number | null;
 }
 
 export function ProductSearch({
@@ -19,6 +21,7 @@ export function ProductSearch({
   cartItems,
   onUpdateItem,
   onRemoveItem,
+  selectedPriceBookId,
 }: ProductSearchProps) {
   const { selectedBranch } = useBranchStore();
   const [search, setSearch] = useState("");
@@ -27,13 +30,32 @@ export function ProductSearch({
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const activePriceBookId =
+    selectedPriceBookId && selectedPriceBookId > 0 ? selectedPriceBookId : null;
+  const { data: activePriceBook } = usePriceBook(activePriceBookId);
+  const isStrictPriceBook =
+    !!activePriceBook && !activePriceBook.allowNonListedProducts;
+  const shouldWarnNonListed =
+    !!activePriceBook &&
+    activePriceBook.allowNonListedProducts &&
+    activePriceBook.warnNonListedProducts;
+
   const { data: productsData } = useProducts({
     search: searchDebounced,
     limit: 100,
     branchId: selectedBranch?.id,
+    priceBookId: activePriceBookId ?? undefined,
+    onlyInPriceBook: isStrictPriceBook ? true : undefined,
   });
 
   const products = productsData?.data || [];
+
+  const isProductInPriceBook = (productId: number) => {
+    if (!activePriceBook?.priceBookDetails) return true;
+    return activePriceBook.priceBookDetails.some(
+      (d: any) => d.productId === productId && d.isActive
+    );
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -61,6 +83,17 @@ export function ProductSearch({
   }, []);
 
   const handleAddProduct = (product: any) => {
+    if (isStrictPriceBook && !isProductInPriceBook(product.id)) {
+      toast.error(
+        `Sản phẩm "${product.name}" không có trong bảng giá đang chọn`
+      );
+      return;
+    }
+    if (shouldWarnNonListed && !isProductInPriceBook(product.id)) {
+      toast.warning(
+        `Sản phẩm "${product.name}" không có trong bảng giá đang chọn`
+      );
+    }
     onAddProduct(product);
     setSearch("");
     setShowDropdown(false);

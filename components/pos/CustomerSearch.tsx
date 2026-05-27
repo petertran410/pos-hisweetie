@@ -11,14 +11,21 @@ interface CustomerSearchProps {
   selectedCustomer: any;
   onSelectCustomer: (customer: any) => void;
   selectedPriceBookId: number | null;
-  onSelectPriceBook: (priceBookId: number | null) => void;
+  selectedPriceBookName?: string | null;
+  onSelectPriceBook: (
+    priceBookId: number | null,
+    priceBookName: string | null
+  ) => void;
+  cartItems?: any[];
 }
 
 export function CustomerSearch({
   selectedCustomer,
   onSelectCustomer,
   selectedPriceBookId,
+  selectedPriceBookName,
   onSelectPriceBook,
+  cartItems,
 }: CustomerSearchProps) {
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
@@ -178,7 +185,10 @@ export function CustomerSearch({
           </button>
           <PriceBookDropdown
             selectedPriceBookId={selectedPriceBookId}
+            selectedPriceBookName={selectedPriceBookName}
             onSelectPriceBook={onSelectPriceBook}
+            cartItems={cartItems}
+            selectedCustomerId={selectedCustomer?.id}
           />
         </div>
       </div>

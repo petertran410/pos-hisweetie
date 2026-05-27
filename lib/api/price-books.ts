@@ -11,12 +11,14 @@ export interface PriceBook {
   warnNonListedProducts: boolean;
   priority: number;
   forAllCusGroup: boolean;
+  forAllCustomer: boolean;
   forAllUser: boolean;
   createdAt: string;
   updatedAt: string;
   priceBookDetails?: PriceBookDetail[];
   priceBookBranches?: PriceBookBranch[];
   priceBookCustomerGroups?: PriceBookCustomerGroup[];
+  priceBookCustomers?: PriceBookCustomer[];
   priceBookUsers?: PriceBookUser[];
 }
 
@@ -58,6 +60,18 @@ export interface PriceBookCustomerGroup {
   customerGroup?: {
     id: number;
     name: string;
+  };
+}
+
+export interface PriceBookCustomer {
+  id: number;
+  priceBookId: number;
+  customerId: number;
+  customerName: string;
+  customer?: {
+    id: number;
+    name: string;
+    code?: string;
   };
 }
 

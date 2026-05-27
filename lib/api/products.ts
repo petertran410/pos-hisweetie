@@ -23,6 +23,8 @@ export interface ProductQueryParams {
   middleName?: string;
   childName?: string;
   stockStatus?: string;
+  priceBookId?: number;
+  onlyInPriceBook?: boolean;
 }
 
 export interface Inventory {

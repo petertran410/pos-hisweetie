@@ -27,7 +27,11 @@ interface InvoiceCartProps {
   onSelectCustomer: (customer: any) => void;
   useCOD: boolean;
   selectedPriceBookId: number | null;
-  onSelectPriceBook: (priceBookId: number | null) => void;
+  selectedPriceBookName?: string | null;
+  onSelectPriceBook: (
+    priceBookId: number | null,
+    priceBookName: string | null
+  ) => void;
   onUseCODChange: (useCOD: boolean) => void;
   paymentAmount: number;
   onPaymentAmountChange: (amount: number) => void;
@@ -201,6 +205,7 @@ export function InvoiceCart({
   onSelectCustomer,
   selectedPriceBookId,
   onSelectPriceBook,
+  selectedPriceBookName,
   useCOD,
   onUseCODChange,
   paymentAmount,
@@ -393,7 +398,9 @@ export function InvoiceCart({
             selectedCustomer={selectedCustomer}
             onSelectCustomer={onSelectCustomer}
             selectedPriceBookId={selectedPriceBookId}
+            selectedPriceBookName={selectedPriceBookName}
             onSelectPriceBook={onSelectPriceBook}
+            cartItems={cartItems}
           />
         </div>
 
