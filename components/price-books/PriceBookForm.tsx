@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import type { PriceBook } from "@/lib/api/price-books";
 import {
   useCreatePriceBook,
   useUpdatePriceBook,
 } from "@/lib/hooks/usePriceBooks";
-import { useBranches } from "@/lib/hooks/useBranches"; // SỬA
-import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups"; // SỬA
-import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers"; // SỬA
+import { useBranches } from "@/lib/hooks/useBranches";
+import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups";
+import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
+import { DateTimePickerField } from "../ui/DateTimePickerField";
 
 interface PriceBookFormProps {
   priceBook?: PriceBook | null;
@@ -32,15 +33,15 @@ export function PriceBookForm({
   const createPriceBook = useCreatePriceBook();
   const updatePriceBook = useUpdatePriceBook();
 
-  const { register, handleSubmit, watch, setValue } = useForm({
+  const { register, handleSubmit, watch, setValue, control } = useForm({
     defaultValues: {
       name: priceBook?.name || "",
       startDate: priceBook?.startDate
-        ? new Date(priceBook.startDate).toISOString().slice(0, 16)
-        : "",
+        ? new Date(priceBook.startDate)
+        : (null as Date | null),
       endDate: priceBook?.endDate
-        ? new Date(priceBook.endDate).toISOString().slice(0, 16)
-        : "",
+        ? new Date(priceBook.endDate)
+        : (null as Date | null),
       status: priceBook?.isActive ? "active" : "inactive",
       allowNonListed: priceBook?.allowNonListedProducts ? "allow" : "restrict",
       warnNonListed: priceBook?.warnNonListedProducts || false,
@@ -72,15 +73,24 @@ export function PriceBookForm({
   const branchScope = watch("branchScope");
   const customerGroupScope = watch("customerGroupScope");
   const userScope = watch("userScope");
+  const startDate = watch("startDate");
+  const endDate = watch("endDate");
+  const dateRangeError =
+    startDate && endDate && endDate < startDate
+      ? "Ngày kết thúc phải sau ngày bắt đầu"
+      : null;
 
   const onSubmit = async (data: any) => {
+    if (data.startDate && data.endDate && data.endDate < data.startDate) {
+      return;
+    }
     setIsSubmitting(true);
     try {
       const payload = {
         name: data.name,
         isActive: data.status === "active",
-        startDate: data.startDate || undefined,
-        endDate: data.endDate || undefined,
+        startDate: data.startDate ? data.startDate.toISOString() : undefined,
+        endDate: data.endDate ? data.endDate.toISOString() : undefined,
         allowNonListedProducts: data.allowNonListed === "allow",
         warnNonListedProducts: data.warnNonListed,
         isGlobal: data.branchScope === "all",
@@ -170,22 +180,44 @@ export function PriceBookForm({
                 <label className="block text-sm font-medium mb-2">
                   Hiệu lực
                 </label>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm">Hiệu lực</label>
-                    <input
-                      type="datetime-local"
-                      {...register("startDate")}
-                      className="border rounded px-3 py-2"
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Từ ngày
+                    </label>
+                    <Controller
+                      name="startDate"
+                      control={control}
+                      render={({ field }) => (
+                        <DateTimePickerField
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Chọn ngày bắt đầu"
+                        />
+                      )}
                     />
                   </div>
-                  <span className="text-sm">đến</span>
-                  <input
-                    type="datetime-local"
-                    {...register("endDate")}
-                    className="border rounded px-3 py-2"
-                  />
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Đến ngày
+                    </label>
+                    <Controller
+                      name="endDate"
+                      control={control}
+                      render={({ field }) => (
+                        <DateTimePickerField
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Chọn ngày kết thúc"
+                          min={startDate ?? null}
+                        />
+                      )}
+                    />
+                  </div>
                 </div>
+                {dateRangeError && (
+                  <p className="mt-2 text-xs text-red-600">{dateRangeError}</p>
+                )}
               </div>
 
               <div>
@@ -392,8 +424,8 @@ export function PriceBookForm({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+              disabled={isSubmitting || !!dateRangeError}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
               {isSubmitting ? "Đang lưu..." : "Lưu"}
             </button>
           </div>

@@ -2,25 +2,23 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useCategories } from "@/lib/hooks/useCategories";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Pencil } from "lucide-react";
 import type { PriceBook } from "@/lib/api/price-books";
 
-// ─── Props ───────────────────────────────────────────────────────────────────
 interface PriceBookSidebarProps {
   priceBooks?: PriceBook[];
   selectedIds: number[];
   onSelectedIdsChange: (ids: number[]) => void;
   onCreateNew: () => void;
+  onEditPriceBook?: (priceBook: PriceBook) => void;
   onFiltersChange: (filters: any) => void;
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
 const STOCK_OPTIONS = [
   { value: "instock", label: "Còn hàng" },
   { value: "outstock", label: "Hết hàng" },
 ];
 
-// ─── SimpleDropdown (giống ProductsSidebar) ──────────────────────────────────
 function SimpleDropdown({
   options,
   value,
@@ -95,12 +93,12 @@ function SimpleDropdown({
   );
 }
 
-// ─── Main ────────────────────────────────────────────────────────────────────
 export function PriceBookSidebar({
   priceBooks,
   selectedIds,
   onSelectedIdsChange,
   onCreateNew,
+  onEditPriceBook,
   onFiltersChange,
 }: PriceBookSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -286,7 +284,7 @@ export function PriceBookSidebar({
                   {filteredPriceBooks?.map((pb) => (
                     <label
                       key={pb.id}
-                      className={`flex items-center gap-3 px-2 py-1 cursor-pointer hover:bg-gray-50 ${
+                      className={`group flex items-center gap-3 px-2 py-1 cursor-pointer hover:bg-gray-50 ${
                         selectedIds.includes(pb.id) ? "bg-blue-50" : ""
                       }`}>
                       <input
@@ -295,7 +293,21 @@ export function PriceBookSidebar({
                         onChange={() => togglePriceBook(pb.id)}
                         className="rounded border-gray-300"
                       />
-                      <span className="text-sm flex-1">{pb.name}</span>
+                      <span className="text-sm flex-1 truncate">{pb.name}</span>
+                      {onEditPriceBook && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onEditPriceBook(pb);
+                            setShowDropdown(false);
+                          }}
+                          className="p-1 rounded hover:bg-blue-100 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Sửa bảng giá">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </label>
                   ))}
                 </div>

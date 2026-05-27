@@ -9,13 +9,17 @@ import { PriceBookProductSelector } from "@/components/price-books/PriceBookProd
 import { useBranchStore } from "@/lib/store/branch";
 import { PriceBookImportModal } from "@/components/price-books/PriceBookImportModal";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { PriceBook } from "@/lib/api";
 
 export default function PriceBooksPage() {
   const [selectedPriceBookIds, setSelectedPriceBookIds] = useState<number[]>([
     0,
   ]);
   const [filters, setFilters] = useState<any>({});
-  const [showForm, setShowForm] = useState(false);
+  const [formState, setFormState] = useState<{
+    open: boolean;
+    priceBook: PriceBook | null;
+  }>({ open: false, priceBook: null });
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const { selectedBranch } = useBranchStore();
@@ -45,25 +49,27 @@ export default function PriceBooksPage() {
           priceBooks={priceBooksData?.data}
           selectedIds={selectedPriceBookIds}
           onSelectedIdsChange={setSelectedPriceBookIds}
-          onCreateNew={() => setShowForm(true)}
+          onCreateNew={() => setFormState({ open: true, priceBook: null })}
+          onEditPriceBook={(pb) => setFormState({ open: true, priceBook: pb })}
           onFiltersChange={handleFiltersChange}
         />
 
         <PriceBookTable
           selectedPriceBooks={selectedPriceBooks}
           onAddProducts={() => setShowProductSelector(true)}
-          onCreateNew={() => setShowForm(true)}
+          onCreateNew={() => setFormState({ open: true, priceBook: null })}
+          onEditPriceBook={(pb) => setFormState({ open: true, priceBook: pb })}
           onImportClick={() => setShowImportModal(true)}
           filters={filters}
           branchId={selectedBranch?.id}
         />
       </div>
 
-      {showForm && (
+      {formState.open && (
         <PriceBookForm
-          priceBook={null}
-          onClose={() => setShowForm(false)}
-          onSuccess={() => setShowForm(false)}
+          priceBook={formState.priceBook}
+          onClose={() => setFormState({ open: false, priceBook: null })}
+          onSuccess={() => setFormState({ open: false, priceBook: null })}
         />
       )}
 

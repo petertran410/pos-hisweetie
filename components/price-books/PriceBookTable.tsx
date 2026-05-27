@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useBranchStore } from "@/lib/store/branch";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { usePermission } from "@/lib/hooks/usePermissions";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { formatNumberInput } from "@/lib/utils";
 
 interface TableProduct {
@@ -34,6 +34,7 @@ interface PriceBookTableProps {
   selectedPriceBooks: (PriceBook | { id: number; name: string })[];
   onAddProducts?: () => void;
   onCreateNew: () => void;
+  onEditPriceBook?: (priceBook: PriceBook) => void;
   onImportClick?: () => void;
   selectedCategoryIds?: number[];
   filters: any;
@@ -44,6 +45,7 @@ export function PriceBookTable({
   selectedPriceBooks,
   onAddProducts,
   onCreateNew,
+  onEditPriceBook,
   onImportClick,
   selectedCategoryIds,
   filters,
@@ -358,7 +360,18 @@ export function PriceBookTable({
                     key={pb.id}
                     className="p-3 text-right font-medium text-gray-700 whitespace-nowrap"
                     style={{ minWidth: "140px" }}>
-                    {pb.name}
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>{pb.name}</span>
+                      {pb.id !== 0 && onEditPriceBook && canUpdate && (
+                        <button
+                          type="button"
+                          onClick={() => onEditPriceBook(pb as PriceBook)}
+                          className="p-1 rounded hover:bg-blue-100 text-gray-400 hover:text-blue-600"
+                          title="Sửa bảng giá">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </th>
                 ))}
               </tr>
