@@ -648,7 +648,7 @@ export function EditCashFlowModal({
               {cashFlow.isReceipt ? "Tổng tiền thu" : "Tổng tiền chi"}
             </label>
             <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-right font-semibold text-gray-800 cursor-not-allowed">
-              {formatCurrencyDisplay(Number(cashFlow.amount) + debtOffsetTotal)}
+              {formatCurrencyDisplay(Number(cashFlow.amount))}
             </div>
           </div>
 

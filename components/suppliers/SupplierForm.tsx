@@ -7,13 +7,17 @@ import {
   useUpdateSupplier,
   useSupplierGroups,
 } from "@/lib/hooks/useSuppliers";
-import { Supplier, SupplierGroup } from "@/lib/types/supplier";
+import { Supplier } from "@/lib/types/supplier";
 import { useBranchStore } from "@/lib/store/branch";
+import { X, Check, ChevronDown, Search, Loader2 } from "lucide-react";
 
 interface SupplierFormProps {
   supplier?: Supplier;
   onClose: () => void;
 }
+
+const INPUT_CLASS =
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all";
 
 export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
   const createSupplier = useCreateSupplier();
@@ -132,236 +136,269 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
-          <h2 className="text-lg font-semibold">
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-4xl h-[92dvh] sm:h-auto sm:max-h-[90vh] sm:m-4 flex flex-col overflow-hidden shadow-2xl">
+        {/* ── Header ── */}
+        <div className="sticky top-0 bg-white border-b px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between z-10 flex-shrink-0">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900">
             {supplier ? "Chỉnh sửa nhà cung cấp" : "Tạo nhà cung cấp"}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-xl">
-            ✕
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            type="button">
+            <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6">
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Tên nhà cung cấp <span className="text-red-500">*</span>
-              </label>
-              <input
-                {...register("name", { required: true })}
-                placeholder="Bắt buộc"
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Mã nhà cung cấp
-              </label>
-              <input
-                {...register("code")}
-                placeholder="Tự động"
-                className="w-full border rounded px-3 py-2"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                {autoGenerateCode
-                  ? "Mã sẽ được tự động tạo hoặc sử dụng mã tùy chỉnh"
-                  : "Sử dụng mã tùy chỉnh hoặc giữ nguyên mã hiện tại"}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Điện thoại
-              </label>
-              <input
-                {...register("contactNumber")}
-                placeholder="Nhập số điện thoại"
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
-              <input
-                {...register("email")}
-                type="email"
-                placeholder="email@gmail.com"
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-          </div>
-
-          <div className="border-t pt-6 mb-6">
-            <h3 className="font-semibold mb-4">Địa chỉ</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Địa chỉ
-                </label>
-                <input
-                  {...register("address")}
-                  placeholder="Nhập địa chỉ"
-                  className="w-full border rounded px-3 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Khu vực
-                </label>
-                <input
-                  {...register("location")}
-                  placeholder="Chọn Tỉnh/Thành phố"
-                  className="w-full border rounded px-3 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Phường/Xã
-                </label>
-                <input
-                  {...register("wardName")}
-                  placeholder="Chọn Phường/Xã"
-                  className="w-full border rounded px-3 py-2"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t pt-6 mb-6">
-            <h3 className="font-semibold mb-4">Nhóm nhà cung cấp, ghi chú</h3>
-            <div className="grid grid-cols-1 gap-4">
-              <div className="relative" ref={dropdownRef}>
-                <label className="block text-sm font-medium mb-2">
-                  Nhóm nhà cung cấp
-                </label>
-                <div className="border rounded-xl px-3 py-2 min-h-[50px] flex flex-wrap gap-2 items-center cursor-pointer">
-                  {selectedGroups.map((group) => (
-                    <span
-                      key={group.id}
-                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm flex items-center gap-1">
-                      {group.name}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveGroup(group.id);
-                        }}
-                        className="text-blue-600 hover:text-blue-800">
-                        ✕
-                      </button>
-                    </span>
-                  ))}
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-5">
+            {/* ── Section: Thông tin cơ bản ── */}
+            <section>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                Thông tin cơ bản
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Tên nhà cung cấp{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
                   <input
-                    type="text"
-                    value={groupSearchTerm}
-                    onChange={(e) => setGroupSearchTerm(e.target.value)}
-                    onFocus={() => setShowGroupDropdown(true)}
-                    placeholder={
-                      selectedGroups.length === 0
-                        ? "Chọn nhóm nhà cung cấp"
-                        : ""
-                    }
-                    className="flex-1 outline-none min-w-[120px] bg-transparent"
+                    {...register("name", { required: true })}
+                    placeholder="Bắt buộc"
+                    className={INPUT_CLASS}
                   />
                 </div>
 
-                {showGroupDropdown && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-[240px] overflow-y-auto">
-                    {filteredGroups.length > 0 ? (
-                      filteredGroups.map((group) => {
-                        const isSelected = selectedGroupIds.includes(group.id);
-                        return (
-                          <div
-                            key={group.id}
-                            onClick={() => handleToggleGroup(group.id)}
-                            className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between">
-                            <span className="text-sm">{group.name}</span>
-                            {isSelected && (
-                              <svg
-                                className="w-5 h-5 text-blue-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                            )}
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="px-4 py-2 text-sm text-gray-500">
-                        Không tìm thấy nhóm nhà cung cấp
-                      </div>
-                    )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Mã nhà cung cấp
+                  </label>
+                  <input
+                    {...register("code")}
+                    placeholder="Tự động"
+                    className={INPUT_CLASS}
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    {autoGenerateCode
+                      ? "Mã sẽ được tự động tạo hoặc sử dụng mã tùy chỉnh"
+                      : "Sử dụng mã tùy chỉnh hoặc giữ nguyên mã hiện tại"}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Điện thoại
+                  </label>
+                  <input
+                    {...register("contactNumber")}
+                    placeholder="Nhập số điện thoại"
+                    className={INPUT_CLASS}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Email
+                  </label>
+                  <input
+                    {...register("email")}
+                    type="email"
+                    placeholder="email@gmail.com"
+                    className={INPUT_CLASS}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* ── Section: Địa chỉ ── */}
+            <section className="border-t border-gray-100 pt-5">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                Địa chỉ
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Địa chỉ
+                  </label>
+                  <input
+                    {...register("address")}
+                    placeholder="Nhập địa chỉ"
+                    className={INPUT_CLASS}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Khu vực
+                  </label>
+                  <input
+                    {...register("location")}
+                    placeholder="Chọn Tỉnh/Thành phố"
+                    className={INPUT_CLASS}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Phường/Xã
+                  </label>
+                  <input
+                    {...register("wardName")}
+                    placeholder="Chọn Phường/Xã"
+                    className={INPUT_CLASS}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* ── Section: Nhóm + Ghi chú ── */}
+            <section className="border-t border-gray-100 pt-5">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                Nhóm nhà cung cấp & ghi chú
+              </h3>
+              <div className="space-y-3 sm:space-y-4">
+                <div className="relative" ref={dropdownRef}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Nhóm nhà cung cấp
+                  </label>
+                  <div
+                    onClick={() => setShowGroupDropdown(true)}
+                    className={`border border-gray-200 rounded-lg px-3 py-2 min-h-[42px] flex flex-wrap gap-1.5 items-center cursor-text bg-white transition-all ${
+                      showGroupDropdown
+                        ? "border-blue-400 ring-2 ring-blue-100"
+                        : "hover:border-gray-300"
+                    }`}>
+                    {selectedGroups.map((group) => (
+                      <span
+                        key={group.id}
+                        className="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
+                        {group.name}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveGroup(group.id);
+                          }}
+                          className="text-blue-400 hover:text-blue-700 transition-colors">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      type="text"
+                      value={groupSearchTerm}
+                      onChange={(e) => setGroupSearchTerm(e.target.value)}
+                      onFocus={() => setShowGroupDropdown(true)}
+                      placeholder={
+                        selectedGroups.length === 0
+                          ? "Chọn nhóm nhà cung cấp"
+                          : ""
+                      }
+                      className="flex-1 outline-none min-w-[120px] bg-transparent text-sm placeholder:text-gray-400"
+                    />
+                    <ChevronDown
+                      className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${
+                        showGroupDropdown ? "rotate-180" : ""
+                      }`}
+                    />
                   </div>
-                )}
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Ghi chú
-                </label>
-                <textarea
-                  {...register("comments")}
-                  maxLength={1000}
-                  placeholder="Nhập ghi chú"
-                  className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  rows={2}
-                />
+                  {showGroupDropdown && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-[240px] overflow-y-auto">
+                      {filteredGroups.length > 0 ? (
+                        filteredGroups.map((group, idx) => {
+                          const isSelected = selectedGroupIds.includes(
+                            group.id
+                          );
+                          return (
+                            <div
+                              key={group.id}
+                              onClick={() => handleToggleGroup(group.id)}
+                              className={`px-4 py-2.5 cursor-pointer flex items-center justify-between text-sm transition-colors ${
+                                isSelected
+                                  ? "bg-blue-50 text-blue-700 font-medium"
+                                  : "hover:bg-gray-50 text-gray-700"
+                              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                              <span className="truncate">{group.name}</span>
+                              {isSelected && (
+                                <Check className="w-4 h-4 text-blue-500 flex-shrink-0 ml-2" />
+                              )}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="px-4 py-6 text-sm text-gray-400 text-center flex flex-col items-center gap-2">
+                          <Search className="w-5 h-5 text-gray-300" />
+                          Không tìm thấy nhóm nhà cung cấp
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Ghi chú
+                  </label>
+                  <textarea
+                    {...register("comments")}
+                    maxLength={1000}
+                    placeholder="Nhập ghi chú"
+                    rows={3}
+                    className={`${INPUT_CLASS} resize-none`}
+                  />
+                </div>
               </div>
-            </div>
+            </section>
+
+            {/* ── Section: Hóa đơn ── */}
+            <section className="border-t border-gray-100 pt-5">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                Thông tin xuất hóa đơn
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Tên công ty
+                  </label>
+                  <input
+                    {...register("organization")}
+                    placeholder="Nhập tên công ty"
+                    className={INPUT_CLASS}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Mã số thuế
+                  </label>
+                  <input
+                    {...register("taxCode")}
+                    placeholder="Nhập mã số thuế"
+                    className={INPUT_CLASS}
+                  />
+                </div>
+              </div>
+            </section>
           </div>
 
-          <div className="border-t pt-6 mb-6">
-            <h3 className="font-semibold mb-4">Thông tin xuất hóa đơn</h3>
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Tên công ty
-                </label>
-                <input
-                  {...register("organization")}
-                  placeholder="Nhập tên công ty"
-                  className="w-full border rounded px-3 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Mã số thuế
-                </label>
-                <input
-                  {...register("taxCode")}
-                  placeholder="Nhập mã số thuế"
-                  className="w-full border rounded px-3 py-2"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          {/* ── Footer ── */}
+          <div className="sticky bottom-0 bg-white border-t px-4 py-3 sm:px-6 sm:py-4 flex justify-end gap-2 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border rounded hover:bg-gray-50">
+              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
               Bỏ qua
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5 transition-colors">
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? "Đang lưu..." : "Lưu"}
             </button>
           </div>

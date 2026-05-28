@@ -4,46 +4,13 @@ import { apiClient } from "../config/api";
 import { Order } from "../types/order";
 
 export const ordersApi = {
-  getOrders: (params?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    status?: string;
-    customerId?: number;
-    branchId?: number;
-    fromDate?: string;
-    toDate?: string;
-    fromCreatedDate?: string;
-    toCreatedDate?: string;
-    paymentMethod?: string;
-    bankAccountIds?: number[];
-  }): Promise<{
+  getOrders: (params?: Record<string, any>): Promise<{
     data: Order[];
     total: number;
     page: number;
     limit: number;
   }> => {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append("page", params.page.toString());
-    if (params?.limit) queryParams.append("limit", params.limit.toString());
-    if (params?.search) queryParams.append("search", params.search);
-    if (params?.status) queryParams.append("status", params.status);
-    if (params?.customerId)
-      queryParams.append("customerId", params.customerId.toString());
-    if (params?.branchId)
-      queryParams.append("branchId", params.branchId.toString());
-    if (params?.fromDate) queryParams.append("fromDate", params.fromDate);
-    if (params?.toDate) queryParams.append("toDate", params.toDate);
-    if (params?.fromCreatedDate)
-      queryParams.append("fromCreatedDate", params.fromCreatedDate);
-    if (params?.toCreatedDate)
-      queryParams.append("toCreatedDate", params.toCreatedDate);
-    if (params?.paymentMethod)
-      queryParams.append("paymentMethod", params.paymentMethod);
-    if (params?.bankAccountIds && params.bankAccountIds.length > 0)
-      queryParams.append("bankAccountIds", params.bankAccountIds.join(","));
-
-    return apiClient.get(`/orders?${queryParams.toString()}`);
+    return apiClient.get("/orders", params);
   },
 
   getOrder: (id: number): Promise<Order> => {

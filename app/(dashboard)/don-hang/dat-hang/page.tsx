@@ -20,8 +20,6 @@ export default function DatHangPage() {
       : {
           pageSize: 15,
           currentItem: 0,
-          orderBy: "createdAt",
-          orderDirection: "desc",
         }
   );
 

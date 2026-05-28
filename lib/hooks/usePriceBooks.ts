@@ -226,6 +226,10 @@ export function useProductsWithPrices(params: {
   branchId?: number;
   page?: number;
   limit?: number;
+  parentName?: string;
+  middleName?: string;
+  childName?: string;
+  stockStatus?: string;
 }) {
   return useQuery({
     queryKey: ["products-with-prices", params],

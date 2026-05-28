@@ -103,17 +103,13 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Số tiền",
     visible: true,
     width: "140px",
-    render: (cf) => {
-      const total =
-        Number(cf.amount) + Number((cf as any).debtOffsetTotal || 0);
-      return (
-        <span
-          className={`font-medium ${cf.isReceipt ? "text-green-600" : "text-red-600"}`}>
-          {cf.isReceipt ? "+" : "-"}
-          {formatCurrency(total)}
-        </span>
-      );
-    },
+    render: (cf) => (
+      <span
+        className={`font-medium ${cf.isReceipt ? "text-green-600" : "text-red-600"}`}>
+        {cf.isReceipt ? "+" : "-"}
+        {formatCurrency(Number(cf.amount))}
+      </span>
+    ),
   },
   {
     key: "method",
@@ -323,11 +319,7 @@ export function CashFlowsTable({
     () =>
       cashFlows
         .filter((cf) => cf.isReceipt && cf.status !== 2)
-        .reduce(
-          (sum, cf) =>
-            sum + Number(cf.amount) + Number((cf as any).debtOffsetTotal || 0),
-          0
-        ),
+        .reduce((sum, cf) => sum + Number(cf.amount), 0),
     [cashFlows]
   );
 
@@ -335,11 +327,7 @@ export function CashFlowsTable({
     () =>
       cashFlows
         .filter((cf) => !cf.isReceipt && cf.status !== 2)
-        .reduce(
-          (sum, cf) =>
-            sum + Number(cf.amount) + Number((cf as any).debtOffsetTotal || 0),
-          0
-        ),
+        .reduce((sum, cf) => sum + Number(cf.amount), 0),
     [cashFlows]
   );
 

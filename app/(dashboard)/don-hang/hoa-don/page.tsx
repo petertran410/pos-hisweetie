@@ -30,8 +30,6 @@ export default function HoaDonPage() {
       : {
           pageSize: 15,
           currentItem: 0,
-          orderBy: "createdAt",
-          orderDirection: "desc",
         }
   );
 

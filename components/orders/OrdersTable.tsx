@@ -10,6 +10,9 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from "lucide-react";
 import type { Order } from "@/lib/types/order";
 import { OrderDetailRow } from "./OrderDetailRow";
@@ -256,6 +259,46 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [activeStatusTab, setActiveStatusTab] = useState("all");
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
+
+  const SORTABLE_COLUMNS = new Set([
+    "orderDate",
+    "createTime",
+    "updateDate",
+    "customerDebt",
+    "customerPaid",
+    "customerOwes",
+    "totalAmount",
+    "grandTotal",
+    "status",
+  ]);
+
+  const COLUMN_ORDER_BY: Record<string, string> = {
+    orderDate: "orderDate",
+    createTime: "createdAt",
+    updateDate: "updatedAt",
+    customerDebt: "grandTotal",
+    customerPaid: "paidAmount",
+    customerOwes: "debtAmount",
+    totalAmount: "totalAmount",
+    grandTotal: "grandTotal",
+    status: "status",
+  };
+
+  const handleSort = (colKey: string) => {
+    if (!SORTABLE_COLUMNS.has(colKey)) return;
+    if (sortBy !== colKey) {
+      setSortBy(colKey);
+      setSortDir("desc");
+    } else if (sortDir === "desc") {
+      setSortDir("asc");
+    } else {
+      setSortBy(null);
+      setSortDir(null);
+    }
+    setPage(1);
+  };
 
   // Debounce search 300ms → giảm API calls
   useEffect(() => {
@@ -301,6 +344,15 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
     search: debouncedSearch,
     branchId: selectedBranch?.id,
     ...effectiveFilters,
+    ...(sortBy && sortDir
+      ? {
+          orderBy: COLUMN_ORDER_BY[sortBy],
+          orderDirection: sortDir,
+        }
+      : {
+          orderBy: effectiveFilters.orderBy ?? "orderDate",
+          orderDirection: effectiveFilters.orderDirection ?? "desc",
+        }),
   });
 
   useEffect(() => {
@@ -404,9 +456,27 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
-                    className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide"
-                    style={{ width: col.width, minWidth: col.width }}>
-                    {col.label}
+                    className={`px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide ${
+                      SORTABLE_COLUMNS.has(col.key)
+                        ? "cursor-pointer select-none hover:bg-gray-100"
+                        : ""
+                    }`}
+                    style={{ width: col.width, minWidth: col.width }}
+                    onClick={() => handleSort(col.key)}>
+                    <span className="flex items-center gap-1">
+                      {col.label}
+                      {SORTABLE_COLUMNS.has(col.key) && (
+                        <span className="inline-flex text-gray-400">
+                          {sortBy === col.key && sortDir === "desc" ? (
+                            <ArrowDown className="w-3 h-3 text-blue-500" />
+                          ) : sortBy === col.key && sortDir === "asc" ? (
+                            <ArrowUp className="w-3 h-3 text-blue-500" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 opacity-40" />
+                          )}
+                        </span>
+                      )}
+                    </span>
                   </th>
                 ))}
                 <th className="px-4 py-2.5 w-8" />

@@ -312,7 +312,7 @@ export function ComboProductForm({
 
   const handleCostConfirm = async (
     scope: "all" | "specific",
-    branchId?: number[]
+    branchIds?: number[]
   ) => {
     setShowCostConfirmation(false);
 
@@ -321,7 +321,7 @@ export function ComboProductForm({
     const finalData = {
       ...pendingFormData,
       costScope: scope,
-      costBranchId: branchId,
+      costBranchIds: branchIds,
     };
 
     await submitProduct(finalData);

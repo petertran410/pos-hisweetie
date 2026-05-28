@@ -16,7 +16,16 @@ import { toast } from "sonner";
 import { useBranchStore } from "@/lib/store/branch";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { usePermission } from "@/lib/hooks/usePermissions";
-import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Plus,
+  Upload,
+  Download,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { formatNumberInput } from "@/lib/utils";
 
 interface TableProduct {
@@ -125,6 +134,10 @@ export function PriceBookTable({
       branchId,
       page,
       limit,
+      parentName: filters.parentName,
+      middleName: filters.middleName,
+      childName: filters.childName,
+      stockStatus: filters.stockStatus,
     });
 
   const products = useMemo<TableProduct[] | undefined>(() => {
@@ -255,7 +268,8 @@ export function PriceBookTable({
           <p className="text-gray-500 mb-4">Chưa chọn bảng giá nào</p>
           <button
             onClick={onCreateNew}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium inline-flex items-center gap-1.5 transition-colors">
+            <Plus className="w-4 h-4" />
             Tạo bảng giá mới
           </button>
         </div>
@@ -264,48 +278,59 @@ export function PriceBookTable({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl">
-      {/* Header */}
-      <div className="border-b p-4 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4 w-[500px]">
-          <h2 className="text-xl font-semibold w-[200px]">Thiết Lập Giá</h2>
-          <input
-            type="text"
-            placeholder="Theo mã, tên hàng"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
+      {/* ── Toolbar ── */}
+      <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+            Thiết lập giá
+          </h2>
+          <div className="relative">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Tìm theo mã, tên hàng..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-72 border border-gray-200 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
+            />
+          </div>
         </div>
         <PermissionGate resource="price_books" action="create">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {canCreate && (
               <button
                 onClick={onCreateNew}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                + Bảng giá
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5 transition-colors">
+                <Plus className="w-4 h-4" />
+                Bảng giá
               </button>
             )}
             <button
               onClick={onImportClick}
-              className="px-4 py-2 border rounded hover:bg-gray-50">
+              className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600 transition-colors">
+              <Upload className="w-4 h-4" />
               Import
             </button>
-            <button className="px-4 py-2 border rounded hover:bg-gray-50">
+            <button className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600 transition-colors">
+              <Download className="w-4 h-4" />
               Xuất file
             </button>
           </div>
         </PermissionGate>
       </div>
 
-      {/* Selected bar */}
+      {/* ── Selected bar ── */}
       {selectedProductIds.length > 0 && (
-        <div className="border-b p-4 bg-blue-50 flex items-center justify-between shrink-0">
-          <span className="text-sm">
-            Đã chọn {selectedProductIds.length} sản phẩm
+        <div className="border-b px-4 py-2 bg-blue-50 flex items-center justify-between shrink-0">
+          <span className="text-sm text-blue-700">
+            Đã chọn{" "}
+            <span className="font-semibold">{selectedProductIds.length}</span>{" "}
+            sản phẩm
           </span>
           {canDelete && (
-            <button className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
+            <button className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium flex items-center gap-1.5 transition-colors">
+              <Trash2 className="w-4 h-4" />
               Xóa khỏi bảng giá
             </button>
           )}
@@ -325,7 +350,8 @@ export function PriceBookTable({
               {canCreateProduct && !isDefaultOnly && onAddProducts && (
                 <button
                   onClick={onAddProducts}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium inline-flex items-center gap-1.5 transition-colors">
+                  <Plus className="w-4 h-4" />
                   Thêm sản phẩm
                 </button>
               )}

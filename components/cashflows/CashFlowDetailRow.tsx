@@ -369,9 +369,7 @@ export function CashFlowDetailRow({
                         </label>
                         <span className="block text-sm text-gray-900">
                           {cashFlow.isReceipt ? "+" : "-"}
-                          {formatCurrency(
-                            Number(cashFlow.amount) + debtOffsetTotal
-                          )}
+                          {formatCurrency(Number(cashFlow.amount))}
                         </span>
                       </div>
                       <div className="flex flex-col gap-2 mb-2 border-b pb-1">

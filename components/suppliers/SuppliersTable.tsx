@@ -4,7 +4,15 @@ import { useState, useEffect, useMemo, Fragment } from "react";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { SupplierFilters, Supplier } from "@/lib/types/supplier";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Upload, Settings } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  Settings,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import { SupplierDetailRow } from "./SupplierDetailRow";
 import { SupplierForm } from "./SupplierForm";
 import { SupplierImportBalanceModal } from "./SupplierImportBalanceModal";
@@ -108,7 +116,7 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [limit] = useState(15);
+  const [limit, setLimit] = useState(15);
   const [activeStatusTab, setActiveStatusTab] = useState("all");
 
   // Debounce search 300ms
@@ -190,19 +198,22 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
     setExpandedId((prev) => (prev === id ? null : id));
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-white">
+    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
       {/* ── Toolbar ── */}
-      <div className="border-b px-4 py-3 flex items-center justify-between gap-3 flex-shrink-0">
-        <div className="flex items-center gap-2">
+      <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+            Nhà cung cấp
+          </h2>
           <input
             type="text"
             placeholder="Theo mã, tên, số điện thoại"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+            className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <PermissionGate resource="suppliers" action="create">
             <button
               onClick={() => setShowCreateModal(true)}
@@ -219,45 +230,12 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
               Import cân bằng nợ
             </button>
           </PermissionGate>
-          <div className="relative">
-            <button
-              onClick={() => setShowColumnModal((v) => !v)}
-              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
-              <Settings className="w-4 h-4" />
-              Cột hiển thị
-            </button>
-            {showColumnModal && (
-              <div
-                className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-3 w-56 max-h-80 overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-2 px-1">
-                  <span className="text-sm font-semibold text-gray-700">
-                    Hiển thị cột
-                  </span>
-                  <button
-                    onClick={() => setShowColumnModal(false)}
-                    className="text-gray-400 hover:text-gray-600 text-xs">
-                    ✕
-                  </button>
-                </div>
-                <div className="space-y-0.5">
-                  {columns.map((col) => (
-                    <label
-                      key={col.key}
-                      className="flex items-center gap-2 cursor-pointer px-2 py-1.5 hover:bg-gray-50 rounded-lg">
-                      <input
-                        type="checkbox"
-                        checked={col.visible}
-                        onChange={() => toggleColumnVisibility(col.key)}
-                        className="cursor-pointer"
-                      />
-                      <span className="text-sm text-gray-700">{col.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <button
+            onClick={() => setShowColumnModal(true)}
+            className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
+            <Settings className="w-4 h-4" />
+            Cột
+          </button>
         </div>
       </div>
 
@@ -302,22 +280,26 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
               <tr>
                 <td
                   colSpan={colSpan}
-                  className="py-16 text-center text-gray-400 text-sm">
-                  Không có nhà cung cấp nào
+                  className="py-20 text-center text-gray-400">
+                  <div className="text-sm">Không có nhà cung cấp nào</div>
                 </td>
               </tr>
             ) : (
               suppliers.map((supplier) => (
                 <Fragment key={supplier.id}>
                   <tr
-                    className={`border-b hover:bg-gray-50 cursor-pointer transition-colors ${
+                    className={`cursor-pointer transition-colors ${
                       expandedId === supplier.id
-                        ? "bg-blue-50 hover:bg-blue-50"
-                        : ""
+                        ? "bg-blue-50"
+                        : "border-b hover:bg-gray-50"
                     }`}
                     onClick={() => toggleExpand(supplier.id)}>
                     <td
-                      className="px-4 py-3 sticky left-0 bg-inherit"
+                      className={`px-4 py-2.5 sticky left-0 z-10 ${
+                        expandedId === supplier.id
+                          ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
+                          : "bg-white"
+                      }`}
                       onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
@@ -329,16 +311,32 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
                     {visibleColumns.map((col) => (
                       <td
                         key={col.key}
-                        className="px-4 py-3 text-gray-700"
-                        style={{ width: col.width, minWidth: col.width }}>
+                        className={`px-4 py-2.5 text-gray-700 ${
+                          expandedId === supplier.id
+                            ? "border-t-2 border-blue-500"
+                            : ""
+                        }`}
+                        style={{
+                          width: col.width,
+                          minWidth: col.width,
+                          maxWidth: col.width,
+                          wordWrap: "break-word",
+                          whiteSpace: "normal",
+                        }}>
                         {col.render(supplier)}
                       </td>
                     ))}
-                    <td className="px-4 py-3 text-right">
-                      <span
-                        className={`text-gray-400 transition-transform inline-block ${expandedId === supplier.id ? "rotate-90" : ""}`}>
-                        ›
-                      </span>
+                    <td
+                      className={`px-4 py-2.5 ${
+                        expandedId === supplier.id
+                          ? "border-t-2 border-r-2 border-blue-500"
+                          : ""
+                      }`}>
+                      <ChevronDown
+                        className={`w-4 h-4 text-gray-400 transition-transform ${
+                          expandedId === supplier.id ? "rotate-180" : ""
+                        }`}
+                      />
                     </td>
                   </tr>
                   {expandedId === supplier.id && (
@@ -355,29 +353,100 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
       </div>
 
       {/* ── Pagination ── */}
-      <div className="border-t px-4 py-3 flex items-center justify-between flex-shrink-0">
-        <div className="text-sm text-gray-500">
-          Tổng: <span className="font-medium text-gray-700">{total}</span> nhà
-          cung cấp
-        </div>
+      <div className="border-t px-4 py-2.5 flex items-center justify-between bg-white shrink-0">
         <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">Hiển thị</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            {[10, 15, 20, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-gray-500">/ trang</span>
+        </div>
+
+        <div className="flex items-center gap-1">
           <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            onClick={() => setPage(Math.max(1, page - 1))}
             disabled={page === 1}
-            className="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
-            Trước
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm text-gray-600">
-            {page} / {totalPages}
-          </span>
+
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            const p = Math.min(
+              Math.max(page - 2 + i, i + 1),
+              totalPages - (Math.min(5, totalPages) - 1 - i)
+            );
+            return (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
+                  p === page
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "hover:bg-gray-50 text-gray-600 border-gray-200"
+                }`}>
+                {p}
+              </button>
+            );
+          })}
+
           <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            onClick={() => setPage(Math.min(totalPages, page + 1))}
             disabled={page >= totalPages}
-            className="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
-            Sau
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+
+        <span className="text-xs text-gray-400">
+          Trang {page}/{totalPages}
+          {total > 0 ? ` · ${total} nhà cung cấp` : ""}
+        </span>
       </div>
+
+      {/* ── Column visibility modal ── */}
+      {showColumnModal && (
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+          onClick={() => setShowColumnModal(false)}>
+          <div
+            className="bg-white rounded-xl shadow-xl w-72 p-5"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900 text-sm">
+                Cột hiển thị
+              </h3>
+              <button onClick={() => setShowColumnModal(false)}>
+                <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+              </button>
+            </div>
+            <div className="space-y-0.5 max-h-80 overflow-y-auto">
+              {columns.map((col) => (
+                <label
+                  key={col.key}
+                  className="flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={col.visible}
+                    onChange={() => toggleColumnVisibility(col.key)}
+                    className="cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-700">{col.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modals ── */}
       {showCreateModal && (

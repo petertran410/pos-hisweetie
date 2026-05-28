@@ -14,6 +14,9 @@ import {
   Upload,
   Download,
   Loader2,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from "lucide-react";
 import type { Invoice } from "@/lib/types/invoice";
 import { InvoiceDetailRow } from "./InvoiceDetailRow";
@@ -423,6 +426,50 @@ export function InvoicesTable({
     productNoteSearch: "",
   });
   const [showImportModal, setShowImportModal] = useState(false);
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
+
+  const SORTABLE_COLUMNS = new Set([
+    "purchaseDate",
+    "createTime",
+    "updateDate",
+    "customerDebt",
+    "customerPaid",
+    "returnOrderAmount",
+    "cashRefundAmount",
+    "debtOffsetAmount",
+    "remainingAmount",
+  ]);
+
+  // Map column key -> orderBy param gửi lên backend
+  const COLUMN_ORDER_BY: Record<string, string> = {
+    purchaseDate: "purchaseDate",
+    createTime: "createdAt",
+    updateDate: "updatedAt",
+    customerDebt: "grandTotal",
+    customerPaid: "paidAmount",
+    returnOrderAmount: "returnOrderAmount",
+    cashRefundAmount: "cashRefundAmount",
+    debtOffsetAmount: "debtOffsetAmount",
+    remainingAmount: "remainingAmount",
+  };
+
+  const handleSort = (colKey: string) => {
+    if (!SORTABLE_COLUMNS.has(colKey)) return;
+    if (sortBy !== colKey) {
+      // Lần đầu click cột mới: desc
+      setSortBy(colKey);
+      setSortDir("desc");
+    } else if (sortDir === "desc") {
+      // Lần 2: asc
+      setSortDir("asc");
+    } else {
+      // Lần 3: reset về default
+      setSortBy(null);
+      setSortDir(null);
+    }
+    setPage(1);
+  };
 
   const advancedFilterCount = useMemo(() => {
     return Object.values(advancedSearch).filter(Boolean).length;
@@ -493,6 +540,15 @@ export function InvoicesTable({
     limit,
     search: debouncedSearch,
     ...effectiveFilters,
+    ...(sortBy && sortDir
+      ? {
+          orderBy: COLUMN_ORDER_BY[sortBy],
+          orderDirection: sortDir,
+        }
+      : {
+          orderBy: effectiveFilters.orderBy ?? "createdAt",
+          orderDirection: effectiveFilters.orderDirection ?? "desc",
+        }),
     ...(advancedSearch.invoiceCodeSearch && {
       invoiceCodeSearch: advancedSearch.invoiceCodeSearch,
     }),
@@ -878,9 +934,27 @@ export function InvoicesTable({
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
-                    className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide"
-                    style={{ width: col.width, minWidth: col.width }}>
-                    {col.label}
+                    className={`px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide ${
+                      SORTABLE_COLUMNS.has(col.key)
+                        ? "cursor-pointer select-none hover:bg-gray-100"
+                        : ""
+                    }`}
+                    style={{ width: col.width, minWidth: col.width }}
+                    onClick={() => handleSort(col.key)}>
+                    <span className="flex items-center gap-1">
+                      {col.label}
+                      {SORTABLE_COLUMNS.has(col.key) && (
+                        <span className="inline-flex text-gray-400">
+                          {sortBy === col.key && sortDir === "desc" ? (
+                            <ArrowDown className="w-3 h-3 text-blue-500" />
+                          ) : sortBy === col.key && sortDir === "asc" ? (
+                            <ArrowUp className="w-3 h-3 text-blue-500" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 opacity-40" />
+                          )}
+                        </span>
+                      )}
+                    </span>
                   </th>
                 ))}
                 <th className="px-4 py-2.5 w-8" />

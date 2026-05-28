@@ -201,6 +201,10 @@ export const priceBooksApi = {
     branchId?: number;
     page?: number;
     limit?: number;
+    parentName?: string;
+    middleName?: string;
+    childName?: string;
+    stockStatus?: string;
   }): Promise<{
     data: ProductWithPrices[];
     total: number;
@@ -214,6 +218,10 @@ export const priceBooksApi = {
       branchId: params.branchId,
       page: params.page,
       limit: params.limit,
+      parentName: params.parentName,
+      middleName: params.middleName,
+      childName: params.childName,
+      stockStatus: params.stockStatus,
     });
   },
 };
