@@ -230,6 +230,12 @@ export function InvoicesMobileDetailSheet({
     if (!invoice) return;
     try {
       await printEntity("invoice", invoice.id);
+      // Sau khi in hóa đơn xong (user đóng print dialog), tự động in phiếu giao hàng
+      try {
+        await printDeliverySlip("invoice", invoice.id);
+      } catch (e: any) {
+        toast.error(e?.message || "Không thể in phiếu giao hàng");
+      }
     } catch (e: any) {
       toast.error(e?.message || "In thất bại");
     }

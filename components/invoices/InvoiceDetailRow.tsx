@@ -179,6 +179,12 @@ export function InvoiceDetailRow({
     if (!invoice) return;
     try {
       await printEntity("invoice", invoice.id);
+      // Sau khi in hóa đơn xong (user đóng print dialog), tự động in phiếu giao hàng
+      try {
+        await printDeliverySlip("invoice", invoice.id);
+      } catch (e: any) {
+        toast.error(e?.message || "Không thể in phiếu giao hàng");
+      }
     } catch (e: any) {
       toast.error(e?.message || "In thất bại");
     }
@@ -248,12 +254,11 @@ export function InvoiceDetailRow({
 
   const isFinalState =
     invoice.status === INVOICE_STATUS.COMPLETED ||
-    invoice.status === INVOICE_STATUS.CANCELLED;
+    invoice.status === INVOICE_STATUS.CANCELLED ||
+    invoice.status === INVOICE_STATUS.DELIVERED;
 
   const canCancel = !isFinalState;
-  const canProcess =
-    invoice.status !== INVOICE_STATUS.CANCELLED &&
-    invoice.status !== INVOICE_STATUS.COMPLETED;
+  const canProcess = !isFinalState;
 
   const getConditionLabel = (conditionType?: string) => {
     switch (conditionType) {
@@ -647,16 +652,13 @@ export function InvoiceDetailRow({
                 <div className="flex gap-2">
                   <button
                     onClick={handleSave}
-                    disabled={
-                      isSaving || invoice.status === INVOICE_STATUS.CANCELLED
-                    }
+                    disabled={isSaving}
                     hidden={!hasPermUpdate}
                     className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {isSaving ? "Đang lưu..." : "Lưu"}
                   </button>
                   <button
                     onClick={handlePrint}
-                    disabled={invoice.status === INVOICE_STATUS.CANCELLED}
                     hidden={!hasPermPrint}
                     className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50">
                     <Printer className="w-4 h-4" />

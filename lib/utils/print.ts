@@ -52,7 +52,7 @@ export async function printEntity(
       font-family: Arial, sans-serif;
       font-size: 13px;
       color: #000;
-      padding: 10mm;
+      padding: 0 5mm;
     }
     table { width: 100%; border-collapse: collapse; }
     td, th { padding: 4px 8px; }
@@ -64,40 +64,46 @@ export async function printEntity(
 </html>`);
   doc.close();
 
-  // Đợi render xong rồi in
-  const cleanup = () => {
-    setTimeout(() => {
-      if (iframe.parentNode) {
-        iframe.parentNode.removeChild(iframe);
-      }
-    }, 100);
-  };
+  // Đợi render xong rồi in, resolve sau khi print dialog đóng
+  return new Promise<void>((resolve) => {
+    const cleanup = () => {
+      setTimeout(() => {
+        if (iframe.parentNode) {
+          iframe.parentNode.removeChild(iframe);
+        }
+      }, 100);
+    };
 
-  iframe.onload = () => {
-    const win = iframe.contentWindow;
-    if (!win) {
+    iframe.onload = () => {
+      const win = iframe.contentWindow;
+      if (!win) {
+        cleanup();
+        resolve();
+        return;
+      }
+      win.focus();
+      win.print(); // blocking trên hầu hết browser — chờ user đóng print dialog
       cleanup();
-      return;
-    }
-    win.focus();
-    win.print();
-    cleanup();
-  };
+      resolve();
+    };
+  });
 }
 
 const PENDING_PRINT_KEY = "pending-print";
 
 /**
  * Lưu yêu cầu in để trang đích sau redirect tự xử lý.
+ * Nếu followUpDelivery = true, sau khi in xong sẽ tự động in phiếu giao hàng.
  */
 export function queuePrintAfterRedirect(
   templateFor: string,
-  entityId: number
+  entityId: number,
+  options?: { followUpDelivery?: boolean }
 ): void {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(
     PENDING_PRINT_KEY,
-    JSON.stringify({ templateFor, entityId })
+    JSON.stringify({ templateFor, entityId, followUpDelivery: options?.followUpDelivery ?? false })
   );
 }
 
@@ -107,6 +113,7 @@ export function queuePrintAfterRedirect(
 export function consumePendingPrint(): {
   templateFor: string;
   entityId: number;
+  followUpDelivery?: boolean;
 } | null {
   if (typeof window === "undefined") return null;
   const raw = sessionStorage.getItem(PENDING_PRINT_KEY);
@@ -171,7 +178,7 @@ export async function printDeliverySlip(
   <style>
     @page { size: ${paperSize}; margin: 0; }
     html, body { margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 10mm; }
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 0 5mm; }
     table { width: 100%; border-collapse: collapse; }
     td, th { padding: 4px 8px; }
     * { box-sizing: border-box; }

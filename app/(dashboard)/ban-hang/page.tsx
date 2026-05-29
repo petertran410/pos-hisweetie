@@ -158,6 +158,8 @@ export default function BanHangPage() {
   const [mobilePrintData, setMobilePrintData] = useState<{
     templateFor: string;
     entityId: number;
+    entityType?: string;
+    followUpDelivery?: boolean;
   } | null>(null);
 
   const handlePostCreate = (
@@ -166,10 +168,12 @@ export default function BanHangPage() {
     targetUrl: string
   ) => {
     const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+    // Nếu là hóa đơn, sau khi in hóa đơn sẽ tự động in phiếu giao hàng
+    const followUpDelivery = templateFor === "invoice";
     if (isMobile) {
-      setMobilePrintData({ templateFor, entityId });
+      setMobilePrintData({ templateFor, entityId, followUpDelivery });
     } else {
-      queuePrintAfterRedirect(templateFor, entityId);
+      queuePrintAfterRedirect(templateFor, entityId, { followUpDelivery });
       router.push(targetUrl);
     }
   };
@@ -2042,7 +2046,22 @@ export default function BanHangPage() {
         <MobilePrintPreviewModal
           templateFor={mobilePrintData.templateFor}
           entityId={mobilePrintData.entityId}
-          onClose={() => setMobilePrintData(null)}
+          entityType={mobilePrintData.entityType}
+          onClose={() => {
+            const { followUpDelivery, entityId, templateFor } = mobilePrintData;
+            setMobilePrintData(null);
+            // Nếu vừa đóng modal in hóa đơn và có followUpDelivery, hiện tiếp modal phiếu giao hàng
+            if (followUpDelivery && templateFor === "invoice") {
+              setTimeout(() => {
+                setMobilePrintData({
+                  templateFor: "delivery",
+                  entityId,
+                  entityType: "invoice_delivery",
+                  followUpDelivery: false,
+                });
+              }, 300);
+            }
+          }}
         />
       )}
     </div>

@@ -8,12 +8,14 @@ import { printTemplatesApi } from "@/lib/api/print-templates";
 interface MobilePrintPreviewModalProps {
   templateFor: string;
   entityId: number;
+  entityType?: string; // Dùng cho delivery: truyền "order_delivery" hoặc "invoice_delivery"
   onClose: () => void;
 }
 
 export function MobilePrintPreviewModal({
   templateFor,
   entityId,
+  entityType,
   onClose,
 }: MobilePrintPreviewModalProps) {
   const [mounted, setMounted] = useState(false);
@@ -50,7 +52,8 @@ export function MobilePrintPreviewModal({
           templates.find((t: any) => t.isDefault) || templates[0];
         const preview = await printTemplatesApi.renderPreview(
           template.id,
-          entityId
+          entityId,
+          entityType
         );
 
         if (!preview?.content) throw new Error("Không render được nội dung in");
@@ -65,7 +68,7 @@ export function MobilePrintPreviewModal({
   <style>
     @page { size: ${paperSize}; margin: 0; }
     html, body { margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 10mm; }
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 0 5mm; }
     table { width: 100%; border-collapse: collapse; }
     td, th { padding: 4px 8px; }
     h1, h2, h3 { margin: 8px 0; }
