@@ -67,6 +67,36 @@ export function useDeleteOrderSupplier() {
   });
 }
 
+/**
+ * Hủy mềm PDN. Đối xứng `useCancelOrder` của phía bán.
+ *   - cancelPayments=true → soft cancel toàn bộ payment + cashflow PCPDN
+ *   - cancelPayments=false → throw nếu PDN còn payment active
+ *
+ * Backend block khi đã có PN active (chưa CANCELLED) — UX hiển thị toast lỗi.
+ */
+export function useCancelOrderSupplier() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      cancelPayments,
+    }: {
+      id: number;
+      cancelPayments: boolean;
+    }) => orderSuppliersApi.cancel(id, cancelPayments),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["order-suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["cashflows"] });
+      toast.success("Hủy phiếu đặt hàng nhập thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Không thể hủy phiếu đặt hàng nhập");
+    },
+  });
+}
+
 export function useOrderSupplierPayments(orderSupplierId: number) {
   return useQuery({
     queryKey: ["order-supplier-payments", orderSupplierId],

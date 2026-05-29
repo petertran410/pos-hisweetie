@@ -44,6 +44,14 @@ export const orderSuppliersApi = {
     return response;
   },
 
+  cancel: async (id: number, cancelPayments: boolean) => {
+    const response = await apiClient.put<{ message: string }>(
+      `/order-suppliers/${id}/cancel`,
+      { cancelPayments }
+    );
+    return response;
+  },
+
   getPayments: async (orderSupplierId: number) => {
     const response = await apiClient.get<OrderSupplierPayment[]>(
       `/order-suppliers/${orderSupplierId}/payments`

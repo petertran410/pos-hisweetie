@@ -57,7 +57,6 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
 
   const { data: productsData } = useProducts({
     search: search.length >= 1 ? search : undefined,
-    limit: 20,
     branchId: selectedBranch?.id,
   });
 
@@ -229,7 +228,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
           </div>
 
           {showDropdown && products.length > 0 && (
-            <div className="border rounded-lg mt-1 max-h-48 overflow-y-auto bg-white shadow-lg">
+            <div className="border rounded-lg mt-1 max-h-80 overflow-y-auto bg-white shadow-lg [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
               {products.map((p: any) => {
                 const already = items.some((i) => i.productId === p.id);
                 const inv = p.inventories?.find(

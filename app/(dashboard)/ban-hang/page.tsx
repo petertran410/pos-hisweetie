@@ -1263,6 +1263,9 @@ export default function BanHangPage() {
         ...activeTab.cartItems,
       ],
     });
+
+    // Auto-switch to "items" tab on mobile after adding product
+    setMobilePosView("items");
   };
 
   const updateCartItem = (rowId: string, updates: Partial<CartItem>) => {
@@ -1822,6 +1825,34 @@ export default function BanHangPage() {
                 canViewInventory={canViewInventory}
                 className="w-full flex-1 bg-white flex flex-col min-h-0"
               />
+              {/* Mobile action buttons */}
+              <div className="lg:hidden flex-shrink-0 px-3 py-2 border-t bg-white">
+                {activeTab.isEditMode ? (
+                  <div className="flex gap-4">
+                    {canCreateInvoice && (
+                      <button
+                        onClick={handleConvertToInvoice}
+                        disabled={activeTab.cartItems.length === 0}
+                        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                        TẠO HÓA ĐƠN
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleSaveOrder()}
+                      disabled={activeTab.cartItems.length === 0}
+                      className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                      LƯU
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleCreateDocument()}
+                    disabled={activeTab.cartItems.length === 0}
+                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                    Tạo đơn hàng
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Cart panel */}
@@ -1897,6 +1928,31 @@ export default function BanHangPage() {
                 canViewInventory={canViewInventory}
                 className="w-full flex-1 bg-white flex flex-col min-h-0"
               />
+              {/* Mobile action buttons */}
+              <div className="lg:hidden flex-shrink-0 px-3 py-2 border-t bg-white">
+                {activeTab.sourceOrderId ? (
+                  <button
+                    onClick={handlePayment}
+                    disabled={activeTab.cartItems.length === 0}
+                    className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                    THANH TOÁN
+                  </button>
+                ) : activeTab.documentId ? (
+                  <button
+                    onClick={() => handleSaveInvoice()}
+                    disabled={activeTab.cartItems.length === 0}
+                    className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                    LƯU
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleCreateDocument()}
+                    disabled={activeTab.cartItems.length === 0}
+                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                    Tạo hóa đơn
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Invoice cart panel */}

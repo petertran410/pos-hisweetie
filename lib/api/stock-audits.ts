@@ -11,7 +11,9 @@ export const stockAuditsApi = {
   getAll: (params?: StockAuditQueryParams): Promise<StockAuditsResponse> => {
     const query = new URLSearchParams();
     if (params?.search) query.append("search", params.search);
-    if (params?.branchId) query.append("branchId", params.branchId.toString());
+    if (params?.branchIds) query.append("branchIds", params.branchIds);
+    else if (params?.branchId)
+      query.append("branchId", params.branchId.toString());
     if (params?.status) query.append("status", params.status.toString());
     if (params?.page) query.append("page", params.page.toString());
     if (params?.limit) query.append("limit", params.limit.toString());

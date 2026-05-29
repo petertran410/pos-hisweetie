@@ -44,6 +44,7 @@ export interface StockAuditsResponse {
 export interface StockAuditQueryParams {
   search?: string;
   branchId?: number;
+  branchIds?: string;
   status?: number;
   page?: number;
   limit?: number;

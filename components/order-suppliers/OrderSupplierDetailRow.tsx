@@ -6,12 +6,14 @@ import {
   useOrderSupplier,
   useUpdateOrderSupplier,
   useOrderSupplierPayments,
+  useCancelOrderSupplier,
 } from "@/lib/hooks/useOrderSuppliers";
 import { ExternalLink, FileText, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { useCan } from "@/lib/hooks/useCan";
 import Link from "next/link";
+import { CancelOrderSupplierModal } from "./CancelOrderSupplierModal";
 
 interface OrderSupplierDetailRowProps {
   orderSupplierId: number;
@@ -94,6 +96,7 @@ export function OrderSupplierDetailRow({
   const router = useRouter();
   const { data: orderSupplier, isLoading } = useOrderSupplier(orderSupplierId);
   const updateOrderSupplier = useUpdateOrderSupplier();
+  const cancelOrderSupplier = useCancelOrderSupplier();
   const { data: payments } = useOrderSupplierPayments(orderSupplierId);
 
   const [activeTab, setActiveTab] = useState("info");
@@ -101,6 +104,7 @@ export function OrderSupplierDetailRow({
   const [productNameSearch, setProductNameSearch] = useState("");
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -134,20 +138,32 @@ export function OrderSupplierDetailRow({
     }
   }, [orderSupplier?.id]);
 
-  const handleCancel = async () => {
+  const handleCancelClick = () => {
     if (!orderSupplier) return;
-    if (!confirm("Bạn có chắc chắn muốn hủy phiếu đặt hàng nhập này?")) return;
+
+    // Block khi còn PN active — đối xứng "Đơn hàng có hóa đơn" phía bán
+    const hasActivePN = (orderSupplier.purchaseOrders || []).some(
+      (po: any) => po.status !== 2
+    );
+    if (hasActivePN) {
+      toast.error(
+        "Phiếu đặt hàng nhập đã có phiếu nhập. Vui lòng hủy tất cả phiếu nhập trước khi hủy phiếu đặt hàng nhập"
+      );
+      return;
+    }
+
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async (cancelPayments: boolean) => {
+    if (!orderSupplier) return;
     try {
-      setIsSaving(true);
-      await updateOrderSupplier.mutateAsync({
+      await cancelOrderSupplier.mutateAsync({
         id: orderSupplierId,
-        data: { status: 4 },
+        cancelPayments,
       });
-      toast.success("Hủy phiếu thành công");
     } catch (error: any) {
-      toast.error(error.message || "Không thể hủy phiếu");
-    } finally {
-      setIsSaving(false);
+      // toast đã hiển thị trong hook onError
     }
   };
 
@@ -518,8 +534,8 @@ export function OrderSupplierDetailRow({
                         )}
                       {canUpdateOS && canCancel && (
                         <button
-                          onClick={handleCancel}
-                          disabled={isSaving}
+                          onClick={handleCancelClick}
+                          disabled={isSaving || cancelOrderSupplier.isPending}
                           className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50">
                           Hủy phiếu
                         </button>
@@ -647,7 +663,7 @@ export function OrderSupplierDetailRow({
                           </tbody>
                         </table>
                       </div>
-                    ) : (
+                     ) : (
                       <p className="text-center text-sm text-gray-400 py-8">
                         Chưa có lịch sử thanh toán
                       </p>
@@ -659,6 +675,20 @@ export function OrderSupplierDetailRow({
           </div>
         </td>
       </tr>
+
+      <CancelOrderSupplierModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleConfirmCancel}
+        hasPayments={(orderSupplier?.payments || []).some(
+          (p: any) => p.status !== 2
+        )}
+        orderSupplierCode={orderSupplier?.code || ""}
+        totalPayments={
+          (orderSupplier?.payments || []).filter((p: any) => p.status !== 2)
+            .length
+        }
+      />
     </>
   );
 }
