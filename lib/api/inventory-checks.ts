@@ -41,6 +41,7 @@ export interface InventoryChecksResponse {
 export interface InventoryCheckQueryParams {
   search?: string;
   branchId?: number;
+  branchIds?: string;
   page?: number;
   limit?: number;
   fromDate?: string;
@@ -66,7 +67,9 @@ export const inventoryChecksApi = {
   ): Promise<InventoryChecksResponse> => {
     const query = new URLSearchParams();
     if (params?.search) query.append("search", params.search);
-    if (params?.branchId) query.append("branchId", params.branchId.toString());
+    if (params?.branchIds) query.append("branchIds", params.branchIds);
+    else if (params?.branchId)
+      query.append("branchId", params.branchId.toString());
     if (params?.page) query.append("page", params.page.toString());
     if (params?.limit) query.append("limit", params.limit.toString());
     if (params?.fromDate) query.append("fromDate", params.fromDate);

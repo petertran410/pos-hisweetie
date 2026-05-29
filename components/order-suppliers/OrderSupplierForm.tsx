@@ -120,7 +120,6 @@ export function OrderSupplierForm({
 
   const { data: searchResults } = useProducts({
     search: searchQuery,
-    limit: 20,
   });
 
   const isFormDisabled = orderSupplier && orderSupplier.status === 3;
@@ -385,7 +384,7 @@ export function OrderSupplierForm({
             </div>
 
             {showSearchResults && searchQuery && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                 {searchResults?.data?.map((product: any) => (
                   <div
                     key={product.id}

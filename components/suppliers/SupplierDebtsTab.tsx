@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useSupplierDebtTimeline } from "@/lib/hooks/useSuppliers";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
+import { SupplierPaymentBulkModal } from "./SupplierPaymentBulkModal";
 
 interface SupplierDebtsTabProps {
   supplierId: number;
@@ -17,6 +18,7 @@ export function SupplierDebtsTab({
 }: SupplierDebtsTabProps) {
   const [page, setPage] = useState(1);
   const limit = 10;
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const { data, isLoading } = useSupplierDebtTimeline(supplierId);
   const timeline = data?.data || [];
@@ -40,6 +42,11 @@ export function SupplierDebtsTab({
             {formatCurrency(supplierDebt)}
           </span>
         </div>
+        <button
+          onClick={() => setShowPaymentModal(true)}
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+          💵 Trả tiền NCC
+        </button>
       </div>
 
       <div className="overflow-x-auto">
@@ -168,6 +175,14 @@ export function SupplierDebtsTab({
             ›
           </button>
         </div>
+      )}
+
+      {showPaymentModal && (
+        <SupplierPaymentBulkModal
+          supplierId={supplierId}
+          supplierDebt={supplierDebt}
+          onClose={() => setShowPaymentModal(false)}
+        />
       )}
     </div>
   );

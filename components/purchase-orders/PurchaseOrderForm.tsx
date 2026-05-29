@@ -131,7 +131,6 @@ export function PurchaseOrderForm({
 
   const { data: searchResults } = useProducts({
     search: searchQuery,
-    limit: 20,
   });
 
   const isFormDisabled = purchaseOrder && !purchaseOrder.isDraft;
@@ -404,7 +403,8 @@ export function PurchaseOrderForm({
       return null;
     }
 
-    const isCreatingFromOrderSupplier = !purchaseOrder?.id && !!orderSupplier?.id;
+    const isCreatingFromOrderSupplier =
+      !purchaseOrder?.id && !!orderSupplier?.id;
 
     if (isCreatingFromOrderSupplier) {
       // Endpoint từ-PDN-sang-PN: BE tự kế thừa paidAmount từ PDN.
@@ -980,10 +980,7 @@ export function PurchaseOrderForm({
             </label>
             <div className="">
               {formatCurrency(
-                Math.max(
-                  0,
-                  paymentAmount + previouslyPaid - calculateTotal()
-                )
+                Math.max(0, paymentAmount + previouslyPaid - calculateTotal())
               )}
             </div>
           </div>

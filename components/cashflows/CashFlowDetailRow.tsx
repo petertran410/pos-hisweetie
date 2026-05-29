@@ -66,6 +66,10 @@ export function CashFlowDetailRow({
   const invoicePayments: any[] = relatedPayments?.invoicePayments || [];
   const orderPayments: any[] = relatedPayments?.orderPayments || [];
   const debtOffsets: any[] = relatedPayments?.debtOffsets || [];
+  const purchaseOrderPayments: any[] =
+    relatedPayments?.purchaseOrderPayments || [];
+  const orderSupplierPayments: any[] =
+    relatedPayments?.orderSupplierPayments || [];
   const activeDebtOffsets = debtOffsets.filter((d: any) => d.status !== 5);
   const debtOffsetTotal = activeDebtOffsets.reduce(
     (sum: number, d: any) => sum + Number(d.refundAmount),
@@ -135,7 +139,9 @@ export function CashFlowDetailRow({
   const hasInvoicePayments =
     invoicePayments.length > 0 ||
     orderPayments.length > 0 ||
-    debtOffsets.length > 0;
+    debtOffsets.length > 0 ||
+    purchaseOrderPayments.length > 0 ||
+    orderSupplierPayments.length > 0;
   const cancelCashFlow = useCancelCashFlow();
   const { user } = useAuthStore();
 
@@ -729,6 +735,215 @@ export function CashFlowDetailRow({
                                                 "cancelled"
                                               ? "Đã hủy"
                                               : "Đang xử lý"}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Bảng phiếu nhập hàng (PN) liên quan — đối xứng
+                            "Hóa đơn liên quan" của KH. */}
+                        {purchaseOrderPayments.length > 0 && (
+                          <div>
+                            <p className="text-sm font-semibold text-gray-600 mb-2">
+                              Phiếu nhập hàng liên quan
+                            </p>
+                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                              <table className="w-full">
+                                <thead className="bg-gray-100 border-b border-gray-200">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                      Mã phiếu nhập
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                      Thời gian
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                      Giá trị PN
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                      Đã trả trước
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                      Giá trị chi
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                      Còn cần trả
+                                    </th>
+                                    <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
+                                      Trạng thái
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {purchaseOrderPayments.map((payment: any) => (
+                                    <tr
+                                      key={payment.id}
+                                      className="hover:bg-gray-50">
+                                      <td className="px-4 py-3">
+                                        <Link
+                                          className="text-md font-medium text-blue-600 hover:underline"
+                                          href={`/san-pham/nhap-hang?Code=${payment.purchaseOrder?.code}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}>
+                                          {payment.purchaseOrder?.code}
+                                        </Link>
+                                      </td>
+                                      <td className="px-4 py-3 text-md text-gray-900">
+                                        {formatDateTime(payment.paymentDate)}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                        {formatCurrency(
+                                          Number(
+                                            payment.purchaseOrder?.subTotal ||
+                                              payment.purchaseOrder?.total ||
+                                              0
+                                          )
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                        {formatCurrency(
+                                          Number(
+                                            payment.purchaseOrder?.paidAmount ||
+                                              0
+                                          ) - Number(payment.amount)
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-md font-medium text-red-600">
+                                        {formatCurrency(Number(payment.amount))}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                        {formatCurrency(
+                                          Number(
+                                            payment.purchaseOrder?.debtAmount ||
+                                              0
+                                          )
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 text-center">
+                                        <span
+                                          className={`px-2 py-1 rounded text-xs font-medium ${
+                                            payment.purchaseOrder?.status === 1
+                                              ? "bg-green-100 text-green-700"
+                                              : payment.purchaseOrder
+                                                    ?.status === 2
+                                                ? "bg-red-100 text-red-700"
+                                                : "bg-yellow-100 text-yellow-700"
+                                          }`}>
+                                          {payment.purchaseOrder?.statusValue ||
+                                            (payment.purchaseOrder?.status === 1
+                                              ? "Đã nhập hàng"
+                                              : payment.purchaseOrder
+                                                    ?.status === 2
+                                                ? "Đã hủy"
+                                                : "Phiếu tạm")}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Bảng phiếu đặt hàng nhập (PDN) liên quan — đối xứng
+                            "Đơn hàng liên quan" của KH. */}
+                        {orderSupplierPayments.length > 0 && (
+                          <div>
+                            <p className="text-sm font-semibold text-gray-600 mb-2">
+                              Phiếu đặt hàng nhập liên quan
+                            </p>
+                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                              <table className="w-full">
+                                <thead className="bg-gray-100 border-b border-gray-200">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                      Mã PDN
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                      Thời gian
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                      Giá trị PDN
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                      Đã trả trước
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                      Giá trị chi
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                      Còn cần trả
+                                    </th>
+                                    <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
+                                      Trạng thái
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {orderSupplierPayments.map((payment: any) => (
+                                    <tr
+                                      key={payment.id}
+                                      className="hover:bg-gray-50">
+                                      <td className="px-4 py-3">
+                                        <Link
+                                          className="text-md font-medium text-blue-600 hover:underline"
+                                          href={`/san-pham/dat-hang-nhap?Code=${payment.orderSupplier?.code}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}>
+                                          {payment.orderSupplier?.code}
+                                        </Link>
+                                      </td>
+                                      <td className="px-4 py-3 text-md text-gray-900">
+                                        {formatDateTime(payment.paymentDate)}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                        {formatCurrency(
+                                          Number(
+                                            payment.orderSupplier?.subTotal ||
+                                              payment.orderSupplier?.total ||
+                                              0
+                                          )
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                        {formatCurrency(
+                                          Number(
+                                            payment.orderSupplier?.paidAmount ||
+                                              0
+                                          ) - Number(payment.amount)
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-md font-medium text-red-600">
+                                        {formatCurrency(Number(payment.amount))}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                        {formatCurrency(
+                                          Number(
+                                            payment.orderSupplier
+                                              ?.supplierDebt || 0
+                                          )
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 text-center">
+                                        <span
+                                          className={`px-2 py-1 rounded text-xs font-medium ${
+                                            payment.orderSupplier?.status === 3
+                                              ? "bg-green-100 text-green-700"
+                                              : payment.orderSupplier
+                                                    ?.status === 4
+                                                ? "bg-red-100 text-red-700"
+                                                : "bg-yellow-100 text-yellow-700"
+                                          }`}>
+                                          {payment.orderSupplier?.statusValue ||
+                                            "Chưa xác định"}
                                         </span>
                                       </td>
                                     </tr>

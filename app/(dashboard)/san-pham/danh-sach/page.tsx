@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { ProductsSidebar } from "@/components/products/ProductSidebar";
 import { ProductsTable } from "@/components/products/ProductTable";
+import { ProductsMobileView } from "@/components/products/ProductsMobileView";
 import { useSearchParams } from "next/navigation";
 import { ProductImportModal } from "@/components/products/ProductImportModal";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
@@ -27,7 +28,8 @@ export default function ProductListPage() {
 
   return (
     <PagePermissionGuard resource="products" action="view">
-      <div className="flex h-full border-t bg-gray-50">
+      {/* ── Desktop (md+) — giữ nguyên 100% ── */}
+      <div className="hidden md:flex h-full border-t bg-gray-50">
         <ProductsSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}
@@ -36,6 +38,15 @@ export default function ProductListPage() {
           filters={filters}
           codeFilter={codeParam || undefined}
           onImportClick={() => setShowImportModal(true)}
+        />
+      </div>
+
+      {/* ── Mobile (dưới md) ── */}
+      <div className="md:hidden h-[calc(100vh-56px)] overflow-hidden">
+        <ProductsMobileView
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          codeFilter={codeParam || undefined}
         />
       </div>
 
