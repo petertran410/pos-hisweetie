@@ -72,18 +72,27 @@ export function useCreatePurchaseOrderFromOrderSupplier() {
   return useMutation({
     mutationFn: ({
       orderSupplierId,
-      additionalPayment,
+      ...payload
     }: {
       orderSupplierId: number;
       additionalPayment?: number;
+      items?: any[];
+      payments?: Array<{ method: string; amount: number; accountId?: number }>;
+      branchId?: number;
+      purchaseDate?: string;
+      discount?: number;
+      discountRatio?: number;
+      isDraft?: boolean;
+      partnerType?: string;
+      description?: string;
+      purchaseById?: number;
     }) =>
-      purchaseOrdersApi.createFromOrderSupplier(
-        orderSupplierId,
-        additionalPayment
-      ),
+      purchaseOrdersApi.createFromOrderSupplier(orderSupplierId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["order-suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["cashflows"] });
       toast.success("Tạo phiếu nhập từ đặt hàng nhập thành công");
     },
     onError: (error: any) => {

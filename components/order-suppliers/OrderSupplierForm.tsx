@@ -127,6 +127,7 @@ export function OrderSupplierForm({
 
   const selectedStatus = STATUS_OPTIONS.find((s) => s.value === status);
   const selectedBranchData = branches?.find((b) => b.id === branchId);
+  const activeBranches = branches?.filter((b) => b.isActive);
   const selectedSupplier = suppliersData?.data?.find(
     (s) => s.id === supplierId
   );
@@ -646,7 +647,7 @@ export function OrderSupplierForm({
               </button>
               {showBranchDropdown && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                  {branches?.map((branch) => (
+                  {activeBranches?.map((branch) => (
                     <div
                       key={branch.id}
                       onClick={() => {

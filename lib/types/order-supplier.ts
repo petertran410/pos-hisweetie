@@ -53,6 +53,8 @@ export interface OrderSupplier {
     purchaseDate: string;
     total: number;
     discount: number;
+    isDraft?: boolean;
+    status?: number;
     items?: Array<{
       productId: number;
       quantity: number;

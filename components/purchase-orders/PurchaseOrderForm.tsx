@@ -8,6 +8,7 @@ import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
   useCreatePurchaseOrder,
+  useCreatePurchaseOrderFromOrderSupplier,
   useUpdatePurchaseOrder,
 } from "@/lib/hooks/usePurchaseOrders";
 import { toast } from "sonner";
@@ -59,8 +60,11 @@ export function PurchaseOrderForm({
   const { data: branches } = useBranches();
   const { data: suppliersData } = useSuppliers({});
   const createPurchaseOrder = useCreatePurchaseOrder();
+  const createPurchaseOrderFromOrderSupplier =
+    useCreatePurchaseOrderFromOrderSupplier();
   const updatePurchaseOrder = useUpdatePurchaseOrder();
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [previouslyPaid, setPreviouslyPaid] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<
     "cash" | "transfer" | "card"
   >("cash");
@@ -134,6 +138,7 @@ export function PurchaseOrderForm({
 
   const selectedStatus = STATUS_OPTIONS.find((s) => s.value === isDraft);
   const selectedBranchData = branches?.find((b) => b.id === branchId);
+  const activeBranches = branches?.filter((b) => b.isActive);
   const selectedSupplier = suppliersData?.data?.find(
     (s) => s.id === supplierId
   );
@@ -164,6 +169,12 @@ export function PurchaseOrderForm({
         note: item.description,
       }));
       setProducts(loadedProducts);
+
+      // Edit/xem PN đã có: PN.paidAmount đã chứa cả phần kế thừa từ PDN
+      // (nếu là PN tạo từ PDN qua endpoint createFromOrderSupplier) lẫn phần
+      // user trả thêm. Hiển thị nguyên giá trị này làm "đã thanh toán".
+      setPreviouslyPaid(Number(purchaseOrder.paidAmount || 0));
+      setPaymentAmount(0);
     } else if (orderSupplier?.items) {
       const receivedQuantities: Record<number, number> = {};
       orderSupplier.purchaseOrders?.forEach((po) => {
@@ -201,6 +212,19 @@ export function PurchaseOrderForm({
         }, 0) ?? 0;
       const remainingDiscount = orderLevelDiscount - usedDiscount;
       setDiscount(remainingDiscount > 0 ? remainingDiscount : 0);
+
+      // Đối xứng phía bán: chỉ kế thừa số đã thanh toán khi đây là PN ĐẦU TIÊN
+      // của PDN. Đã có PN active rồi → BE đã chuyển paidAmount sang PN trước,
+      // PN tiếp theo tính từ 0.
+      const hasActivePurchaseOrder = (orderSupplier.purchaseOrders || []).some(
+        (po) => !po.isDraft && (po.status as any) !== 2
+      );
+      if (!hasActivePurchaseOrder) {
+        setPreviouslyPaid(Number(orderSupplier.paidAmount || 0));
+      } else {
+        setPreviouslyPaid(0);
+      }
+      setPaymentAmount(0);
     }
   }, [purchaseOrder, orderSupplier]);
 
@@ -347,32 +371,78 @@ export function PurchaseOrderForm({
     handleFormComplete();
   };
 
-  const handleFormSubmit = async () => {
+  /**
+   * Validate + build payload chung cho 2 path: lưu tạm và hoàn thành.
+   * Trả về null nếu validate fail (đã toast bên trong) hoặc payload hợp lệ.
+   */
+  const buildSubmitPayload = (asDraft: boolean) => {
     if (!branchId) {
       toast.error("Vui lòng chọn chi nhánh");
-      return;
+      return null;
     }
 
     if (!supplierId) {
       toast.error("Vui lòng chọn nhà cung cấp");
-      return;
+      return null;
     }
 
     if (products.length === 0) {
       toast.error("Vui lòng thêm ít nhất một sản phẩm");
-      return;
+      return null;
     }
 
     const hasInvalidQuantity = products.some((p) => p.quantity <= 0);
     if (hasInvalidQuantity) {
       toast.error("Vui lòng nhập số lượng hợp lệ cho tất cả sản phẩm");
-      return;
+      return null;
     }
 
-    const purchaseOrderData: any = {
+    if (availableDiscount !== null && discount > availableDiscount) {
+      toast.error(
+        `Giảm giá không được vượt quá ${formatCurrency(availableDiscount)}`
+      );
+      return null;
+    }
+
+    const isCreatingFromOrderSupplier = !purchaseOrder?.id && !!orderSupplier?.id;
+
+    if (isCreatingFromOrderSupplier) {
+      // Endpoint từ-PDN-sang-PN: BE tự kế thừa paidAmount từ PDN.
+      // FE chỉ gửi `additionalPayment` = phần user trả THÊM (paymentAmount).
+      const fromOSPayload: any = {
+        orderSupplierId: orderSupplier!.id,
+        branchId,
+        isDraft: asDraft,
+        description: note,
+        discount: discountType === "amount" ? Number(discount) || 0 : 0,
+        discountRatio:
+          discountType === "ratio" ? Number(discountRatio) || 0 : 0,
+        items: products.map((p) => ({
+          productId: Number(p.productId),
+          productCode: p.productCode,
+          productName: p.productName,
+          quantity: Number(p.quantity),
+          price: Number(p.price),
+          discount: Number(p.discount) || 0,
+          discountRatio: 0,
+          totalPrice:
+            (Number(p.price) - (Number(p.discount) || 0)) * Number(p.quantity),
+          description: p.note,
+        })),
+        additionalPayment: paymentAmount > 0 ? Number(paymentAmount) : 0,
+        payments:
+          paymentAmount > 0
+            ? [{ method: paymentMethod, amount: Number(paymentAmount) }]
+            : [],
+        purchaseById: purchaseById || undefined,
+      };
+      return { kind: "from-os" as const, payload: fromOSPayload };
+    }
+
+    const standardPayload: any = {
       supplierId,
       branchId,
-      isDraft: true,
+      isDraft: asDraft,
       description: note,
       discount: discountType === "amount" ? Number(discount) || 0 : 0,
       discountRatio: discountType === "ratio" ? Number(discountRatio) || 0 : 0,
@@ -386,27 +456,24 @@ export function PurchaseOrderForm({
       paidAmount: paymentAmount > 0 ? Number(paymentAmount) : 0,
       purchaseById: purchaseById || undefined,
     };
+    return { kind: "standard" as const, payload: standardPayload };
+  };
 
-    if (!purchaseOrder?.id) {
-      purchaseOrderData.orderSupplierId = orderSupplier?.id;
-    }
-
-    if (availableDiscount !== null && discount > availableDiscount) {
-      toast.error(
-        `Giảm giá không được vượt quá ${formatCurrency(availableDiscount)}`
-      );
-      return;
-    }
+  const handleFormSubmit = async () => {
+    const built = buildSubmitPayload(true);
+    if (!built) return;
 
     try {
       if (purchaseOrder?.id) {
         await updatePurchaseOrder.mutateAsync({
           id: purchaseOrder.id,
-          data: purchaseOrderData,
+          data: built.payload,
         });
         toast.success("Cập nhật phiếu nhập hàng thành công");
+      } else if (built.kind === "from-os") {
+        await createPurchaseOrderFromOrderSupplier.mutateAsync(built.payload);
       } else {
-        await createPurchaseOrder.mutateAsync(purchaseOrderData);
+        await createPurchaseOrder.mutateAsync(built.payload);
         toast.success("Tạo phiếu nhập hàng thành công");
       }
 
@@ -417,65 +484,20 @@ export function PurchaseOrderForm({
   };
 
   const handleFormComplete = async () => {
-    if (!branchId) {
-      toast.error("Vui lòng chọn chi nhánh");
-      return;
-    }
-
-    if (!supplierId) {
-      toast.error("Vui lòng chọn nhà cung cấp");
-      return;
-    }
-
-    if (products.length === 0) {
-      toast.error("Vui lòng thêm ít nhất một sản phẩm");
-      return;
-    }
-
-    const hasInvalidQuantity = products.some((p) => p.quantity <= 0);
-    if (hasInvalidQuantity) {
-      toast.error("Vui lòng nhập số lượng hợp lệ cho tất cả sản phẩm");
-      return;
-    }
-
-    const purchaseOrderData: any = {
-      supplierId,
-      branchId,
-      isDraft: false,
-      description: note,
-      discount: discountType === "amount" ? Number(discount) || 0 : 0,
-      discountRatio: discountType === "ratio" ? Number(discountRatio) || 0 : 0,
-      items: products.map((p) => ({
-        productId: Number(p.productId),
-        quantity: Number(p.quantity),
-        price: Number(p.price),
-        discount: Number(p.discount) || 0,
-        description: p.note,
-      })),
-      paidAmount: paymentAmount > 0 ? Number(paymentAmount) : 0,
-      purchaseById: purchaseById || undefined,
-    };
-
-    if (!purchaseOrder?.id) {
-      purchaseOrderData.orderSupplierId = orderSupplier?.id;
-    }
-
-    if (availableDiscount !== null && discount > availableDiscount) {
-      toast.error(
-        `Giảm giá không được vượt quá ${formatCurrency(availableDiscount)}`
-      );
-      return;
-    }
+    const built = buildSubmitPayload(false);
+    if (!built) return;
 
     try {
       if (purchaseOrder?.id) {
         await updatePurchaseOrder.mutateAsync({
           id: purchaseOrder.id,
-          data: purchaseOrderData,
+          data: built.payload,
         });
         toast.success("Cập nhật phiếu nhập hàng thành công");
+      } else if (built.kind === "from-os") {
+        await createPurchaseOrderFromOrderSupplier.mutateAsync(built.payload);
       } else {
-        await createPurchaseOrder.mutateAsync(purchaseOrderData);
+        await createPurchaseOrder.mutateAsync(built.payload);
         toast.success("Tạo phiếu nhập hàng thành công");
       }
 
@@ -768,7 +790,7 @@ export function PurchaseOrderForm({
 
               {showBranchDropdown && !isFormDisabled && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                  {branches?.map((branch) => (
+                  {activeBranches?.map((branch) => (
                     <button
                       key={branch.id}
                       type="button"
@@ -903,8 +925,37 @@ export function PurchaseOrderForm({
             <div className="text-md">{formatCurrency(calculateTotal())}</div>
           </div>
 
+          {previouslyPaid > 0 && (
+            <>
+              <div className="flex gap-2">
+                <div className="block text-md text-gray-600">
+                  {purchaseOrder
+                    ? "Đã thanh toán:"
+                    : "Đã thanh toán ở phiếu đặt hàng:"}
+                </div>
+                <div className="text-md font-medium text-green-600">
+                  {formatCurrency(previouslyPaid)}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <div className="block text-md text-gray-600">
+                  Còn cần trả thêm:
+                </div>
+                <div className="text-md font-semibold">
+                  {formatCurrency(
+                    Math.max(0, calculateTotal() - previouslyPaid)
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
           <div className="flex gap-2 items-center">
-            <div className="text-md text-gray-600">Tiền trả nhà cung cấp:</div>
+            <div className="text-md text-gray-600">
+              {previouslyPaid > 0
+                ? "Trả thêm nhà cung cấp:"
+                : "Tiền trả nhà cung cấp:"}
+            </div>
             <div className="flex gap-2 items-center">
               <div>{formatCurrency(paymentAmount)}</div>
               <button
@@ -928,7 +979,12 @@ export function PurchaseOrderForm({
               Tiền nhà cung cấp trả lại:
             </label>
             <div className="">
-              {formatCurrency(Math.max(0, paymentAmount - calculateTotal()))}
+              {formatCurrency(
+                Math.max(
+                  0,
+                  paymentAmount + previouslyPaid - calculateTotal()
+                )
+              )}
             </div>
           </div>
 
@@ -966,7 +1022,7 @@ export function PurchaseOrderForm({
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         totalAmount={calculateTotal()}
-        previouslyPaid={0}
+        previouslyPaid={previouslyPaid}
         onConfirm={handlePaymentConfirm}
       />
     </div>
