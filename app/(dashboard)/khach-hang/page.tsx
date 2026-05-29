@@ -6,6 +6,7 @@ import { CustomersSidebar } from "@/components/customers/CustomersSidebar";
 import { CustomersTable } from "@/components/customers/CustomersTable";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { CustomerImportModal } from "@/components/customers/CustomerImportModal";
+import { CustomersMobileView } from "@/components/customers/CustomersMobileView";
 import { CustomerFilters, Customer } from "@/lib/types/customer";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
@@ -37,7 +38,8 @@ export default function CustomersPage() {
 
   return (
     <PagePermissionGuard resource="customers" action="view">
-      <div className="flex h-full border-t bg-gray-50 w-screen">
+      {/* Desktop (md+) */}
+      <div className="hidden md:flex h-full border-t bg-gray-50 w-screen">
         <CustomersSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}
@@ -47,6 +49,16 @@ export default function CustomersPage() {
           onCreateClick={() => setShowCreateForm(true)}
           onEditClick={(customer) => setEditingCustomer(customer)}
           onImportClick={() => setShowImportModal(true)}
+        />
+      </div>
+
+      {/* Mobile (below md = 768px) */}
+      <div className="md:hidden h-full">
+        <CustomersMobileView
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onCreateClick={() => setShowCreateForm(true)}
+          onEditClick={(customer) => setEditingCustomer(customer)}
         />
       </div>
 

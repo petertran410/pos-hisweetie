@@ -20,6 +20,8 @@ const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   PRODUCTION_IN: "Sản xuất",
   DESTRUCTION: "Xuất hủy",
   RETURN: "Trả hàng",
+  STOCK_AUDIT: "Kiểm hàng",
+  STOCK_AUDIT_CANCEL: "Hủy kiểm hàng",
 };
 
 const formatMoney = (v: number | null | undefined) => {
