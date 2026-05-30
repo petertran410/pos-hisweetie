@@ -393,7 +393,7 @@ export function CustomersTable({
         </div>
 
         {/* ── Table ── */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>

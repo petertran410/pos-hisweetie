@@ -192,6 +192,8 @@ export default function BanHangPage() {
     };
   }>({});
 
+  const isInitialCartLoad = useRef<Record<string, boolean>>({});
+
   const saveEditStateIfChanged = (tab: Tab) => {
     if (!tab.documentId || !tab.isEditMode) return;
 
@@ -507,6 +509,21 @@ export default function BanHangPage() {
   useEffect(() => {
     if (!existingOrder || !orderId) return;
 
+    // Guard: chặn mở đơn nếu chi nhánh đang chọn lệch với chi nhánh đơn
+    if (
+      selectedBranch &&
+      existingOrder.branchId &&
+      existingOrder.branchId !== selectedBranch.id
+    ) {
+      toast.error(
+        `Vui lòng đổi chi nhánh sang ${
+          existingOrder.branch?.name || "chi nhánh của đơn"
+        } để xem/sửa đơn này`
+      );
+      router.replace("/don-hang/dat-hang");
+      return;
+    }
+
     const editTabId = `edit-order-${orderId}`;
 
     const key = getEditStorageKey(Number(orderId), "order");
@@ -703,10 +720,25 @@ export default function BanHangPage() {
     });
 
     setActiveTabId(editTabId);
-  }, [existingOrder?.id, orderId]);
+  }, [existingOrder?.id, orderId, selectedBranch?.id]);
 
   useEffect(() => {
     if (!existingInvoice || !invoiceId) return;
+
+    // Guard: chặn mở hóa đơn nếu chi nhánh đang chọn lệch với chi nhánh hóa đơn
+    if (
+      selectedBranch &&
+      existingInvoice.branchId &&
+      existingInvoice.branchId !== selectedBranch.id
+    ) {
+      toast.error(
+        `Vui lòng đổi chi nhánh sang ${
+          existingInvoice.branch?.name || "chi nhánh của hóa đơn"
+        } để xem/sửa hóa đơn này`
+      );
+      router.replace("/don-hang/dat-hang");
+      return;
+    }
 
     const editTabId = `edit-invoice-${invoiceId}`;
     const existingTab = tabs.find((t) => t.id === editTabId);
@@ -847,7 +879,7 @@ export default function BanHangPage() {
     });
 
     setActiveTabId(editTabId);
-  }, [existingInvoice?.id, invoiceId]);
+  }, [existingInvoice?.id, invoiceId, selectedBranch?.id]);
 
   const updateActiveTab = (updates: Partial<Tab>) => {
     setTabs((prevTabs) =>
@@ -1131,6 +1163,14 @@ export default function BanHangPage() {
 
   useEffect(() => {
     if (!activeTab) return;
+
+    // Skip auto-calc weight lần đầu khi load đơn từ DB (giữ weight DB đã đúng).
+    // Effect chỉ chạy bình thường khi user thực sự thêm/xóa/sửa SL trong cart.
+    const loadKey = `${activeTab.id}-${activeTab.documentId ?? "new"}`;
+    if (activeTab.isEditMode && !isInitialCartLoad.current[loadKey]) {
+      isInitialCartLoad.current[loadKey] = true;
+      return;
+    }
 
     const totalWeight = activeTab.cartItems.reduce((sum, item) => {
       const productWeight = Number(item.product.weight) || 0;

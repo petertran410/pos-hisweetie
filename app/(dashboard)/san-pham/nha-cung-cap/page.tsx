@@ -1,26 +1,44 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { SuppliersSidebar } from "@/components/suppliers/SuppliersSidebar";
 import { SuppliersTable } from "@/components/suppliers/SuppliersTable";
 import { SupplierFilters } from "@/lib/types/supplier";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function SuppliersPage() {
-  const [filters, setFilters] = useState<SupplierFilters>({
-    pageSize: 15,
-    currentItem: 0,
-    orderBy: "createdAt",
-    orderDirection: "desc",
-    isActive: true,
-    includeSupplierGroup: true,
-  });
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code");
+
+  const [filters, setFilters] = useState<SupplierFilters>(() =>
+    codeParam
+      ? {
+          code: codeParam,
+          pageSize: 15,
+          currentItem: 0,
+          orderBy: "createdAt",
+          orderDirection: "desc",
+          includeSupplierGroup: true,
+        }
+      : {
+          pageSize: 15,
+          currentItem: 0,
+          orderBy: "createdAt",
+          orderDirection: "desc",
+          isActive: true,
+          includeSupplierGroup: true,
+        }
+  );
 
   const handleSidebarFiltersChange = useCallback(
     (newFilters: SupplierFilters) => {
-      setFilters(newFilters);
+      setFilters({
+        ...newFilters,
+        ...(codeParam ? { code: codeParam } : {}),
+      });
     },
-    []
+    [codeParam]
   );
 
   return (
@@ -30,7 +48,7 @@ export default function SuppliersPage() {
           filters={filters}
           onFiltersChange={handleSidebarFiltersChange}
         />
-        <SuppliersTable filters={filters} /> {/* ← xóa onFiltersChange */}
+        <SuppliersTable filters={filters} />
       </div>
     </PagePermissionGuard>
   );

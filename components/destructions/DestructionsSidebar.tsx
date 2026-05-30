@@ -84,7 +84,7 @@ export function DestructionsSidebar({
   const { data: branchesData } = useBranches();
   const { data: usersData } = useUsersForFilter();
 
-  const branches = branchesData || [];
+  const branches = (branchesData || []).filter((b) => b.isActive);
   const users = usersData || [];
 
   useEffect(() => {

@@ -356,7 +356,8 @@ export function ProductionSidebar({
   filters,
   onFiltersChange,
 }: ProductionSidebarProps) {
-  const { data: branches } = useBranches();
+  const { data: branchesData } = useBranches();
+  const branches = (branchesData || []).filter((b) => b.isActive);
 
   const [branchIds, setBranchIds] = useState<number[]>([]);
   const [statusList, setStatusList] = useState<number[]>([]);

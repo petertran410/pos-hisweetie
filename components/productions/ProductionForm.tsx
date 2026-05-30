@@ -9,6 +9,8 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Check,
   Clock,
 } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
@@ -203,6 +205,76 @@ function TimePicker({
   );
 }
 
+// ── BranchDropdown ────────────────────────────────────────────────────────────
+function BranchDropdown({
+  options,
+  value,
+  placeholder,
+  onChange,
+  disabled,
+}: {
+  options: { value: number; label: string }[];
+  value: number;
+  placeholder: string;
+  onChange: (v: number) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  const selected = options.find((o) => o.value === value);
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        className={`w-full flex items-center justify-between px-2 py-1 border rounded text-sm transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "border-gray-200 hover:border-gray-300"
+        }`}>
+        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+          {options.map((opt, idx) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                opt.value === value
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "hover:bg-gray-50 text-gray-700"
+              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+              <span className="truncate">{opt.label}</span>
+              {opt.value === value && (
+                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProductionForm({
   sourceBranchId: initialSourceBranchId,
   destinationBranchId: initialDestinationBranchId,
@@ -253,7 +325,8 @@ export function ProductionForm({
   const calRef = useRef<HTMLDivElement>(null);
   const timePickerRef = useRef<HTMLDivElement>(null);
 
-  const { data: branches } = useBranches();
+  const { data: branchesData } = useBranches();
+  const branches = (branchesData || []).filter((b) => b.isActive);
   const { data: productsData } = useProducts({ type: 4 });
   const { data: productDetail } = useProduct(production?.productId || 0);
   const { data: freshProduction } = useProduction(production?.id || 0);
@@ -483,18 +556,16 @@ export function ProductionForm({
         { id: production.id, data },
         {
           onSuccess: () => onClose(),
-          onError: (error) => {
-            console.error("Error updating production:", error);
-            alert("Có lỗi xảy ra khi cập nhật phiếu sản xuất");
+          onError: (error: any) => {
+            alert(error?.message || "Có lỗi xảy ra khi cập nhật phiếu sản xuất");
           },
         }
       );
     } else {
       createProduction(data, {
         onSuccess: () => onClose(),
-        onError: (error) => {
-          console.error("Error creating production:", error);
-          alert("Có lỗi xảy ra khi tạo phiếu sản xuất");
+        onError: (error: any) => {
+          alert(error?.message || "Có lỗi xảy ra khi tạo phiếu sản xuất");
         },
       });
     }
@@ -538,10 +609,10 @@ export function ProductionForm({
           setShowCancelConfirm(false);
           onClose();
         },
-        onError: (error) => {
+        onError: (error: any) => {
           console.error("Error canceling production:", error);
           setShowCancelConfirm(false);
-          alert("Có lỗi xảy ra khi hủy phiếu sản xuất");
+          alert(error?.message || "Có lỗi xảy ra khi hủy phiếu sản xuất");
         },
       }
     );
@@ -735,36 +806,26 @@ export function ProductionForm({
                 <label className="block text-sm font-medium mb-1">
                   Chi nhánh đầu vào
                 </label>
-                <select
+                <BranchDropdown
+                  options={branches.map((b) => ({ value: b.id, label: b.name }))}
                   value={sourceBranchId}
-                  onChange={(e) => setSourceBranchId(Number(e.target.value))}
-                  className="text-sm w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  disabled={isFormDisabled}>
-                  {branches?.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Chọn chi nhánh"
+                  onChange={setSourceBranchId}
+                  disabled={isFormDisabled}
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Chi nhánh đầu ra
                 </label>
-                <select
+                <BranchDropdown
+                  options={branches.map((b) => ({ value: b.id, label: b.name }))}
                   value={destinationBranchId}
-                  onChange={(e) =>
-                    setDestinationBranchId(Number(e.target.value))
-                  }
-                  className="text-sm w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  disabled={isFormDisabled}>
-                  {branches?.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Chọn chi nhánh"
+                  onChange={setDestinationBranchId}
+                  disabled={isFormDisabled}
+                />
               </div>
             </div>
 
