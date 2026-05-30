@@ -424,7 +424,7 @@ export function InvoiceDetailRow({
                       <div className="flex justify-end">
                         <button
                           onClick={handlePrintDelivery}
-                          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5">
                           <Printer className="w-3.5 h-3.5" />
                           In phiếu giao hàng
                         </button>
