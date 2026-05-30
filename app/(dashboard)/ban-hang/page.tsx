@@ -374,12 +374,6 @@ export default function BanHangPage() {
     invoiceId ? Number(invoiceId) : 0
   );
 
-  const [showPriceWarning, setShowPriceWarning] = useState<{
-    productCode: string;
-    productName: string;
-    onConfirm: (confirmed: boolean) => void;
-  } | null>(null);
-
   const [mobilePosView, setMobilePosView] = useState<"items" | "cart">("items");
 
   useEffect(() => {
@@ -1257,7 +1251,6 @@ export default function BanHangPage() {
     const selectedPriceBookId = activeTab.selectedPriceBookId;
 
     let productPrice = Number(product.basePrice);
-    let useBasePriceForProduct = false;
 
     if (selectedPriceBookId && selectedPriceBookId !== 0) {
       try {
@@ -1268,25 +1261,14 @@ export default function BanHangPage() {
         });
 
         if (priceInfo.priceBookId === selectedPriceBookId) {
+          // Sản phẩm có trong bảng giá → dùng giá bảng giá
           productPrice = priceInfo.price;
         } else {
-          const shouldAdd = await new Promise<boolean>((resolve) => {
-            const handleConfirm = (confirmed: boolean) => {
-              setShowPriceWarning(null);
-              resolve(confirmed);
-            };
-
-            setShowPriceWarning({
-              productCode: product.code,
-              productName: product.name,
-              onConfirm: handleConfirm,
-            });
-          });
-
-          if (!shouldAdd) return;
-
-          useBasePriceForProduct = true;
+          // Sản phẩm không có trong bảng giá → fallback basePrice + cảnh báo
           productPrice = Number(product.basePrice);
+          toast.warning(
+            `Sản phẩm "${product.name}" không có trong bảng giá đang chọn, dùng giá gốc ${productPrice.toLocaleString()}`
+          );
         }
       } catch (error) {
         console.error("Error fetching product price:", error);
@@ -1294,19 +1276,26 @@ export default function BanHangPage() {
       }
     }
 
-    updateActiveTab({
-      cartItems: [
-        {
-          rowId: `${product.id}_${conditionType}_${Date.now()}`,
-          product,
-          quantity,
-          price: productPrice,
-          discount: 0,
-          conditionType,
-        },
-        ...activeTab.cartItems,
-      ],
-    });
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) =>
+        tab.id === activeTabId
+          ? {
+              ...tab,
+              cartItems: [
+                {
+                  rowId: `${product.id}_${conditionType}_${Date.now()}`,
+                  product,
+                  quantity,
+                  price: productPrice,
+                  discount: 0,
+                  conditionType,
+                },
+                ...tab.cartItems,
+              ],
+            }
+          : tab
+      )
+    );
 
     // Auto-switch to "items" tab on mobile after adding product
     setMobilePosView("items");
