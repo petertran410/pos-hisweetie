@@ -16,10 +16,17 @@ export function PagePermissionGuard({
   action,
   children,
 }: PagePermissionGuardProps) {
-  const { _hasHydrated } = useAuthStore();
+  const { _hasHydrated, isProfileSynced, isAuthenticated } = useAuthStore();
   const hasPermission = usePermission(resource, action);
 
-  if (!_hasHydrated) {
+  // Hiện loading khi:
+  // - Chưa rehydrate localStorage xong, HOẶC
+  // - Đã đăng nhập nhưng chưa sync profile từ backend trong session hiện tại.
+  //   Đây là điểm quan trọng: tránh hiện UI "Không có quyền" dựa trên
+  //   permissions cache cũ (snapshot lúc login lần trước, có thể đã stale
+  //   nếu admin vừa cấp/sửa quyền). RouteGuard chịu trách nhiệm fetch
+  //   /auth/profile và bật cờ isProfileSynced khi xong.
+  if (!_hasHydrated || (isAuthenticated && !isProfileSynced)) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

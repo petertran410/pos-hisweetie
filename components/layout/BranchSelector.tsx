@@ -6,6 +6,7 @@ import { useAuthStore } from "@/lib/store/auth";
 import { authApi } from "@/lib/api/auth";
 import { Branch, branchesApi } from "@/lib/api/branches";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface BranchSelectorProps {
   dropUp?: boolean;
@@ -72,8 +73,13 @@ export function BranchSelector({
     if (!token || !currentUser) return;
 
     setIsLoading(true);
+    // Đánh dấu chưa sync để các guard hiện loading thay vì check theo
+    // permissions cũ trong khi đang fetch permissions mới của branch.
+    useAuthStore.getState().setProfileSynced(false);
+
     try {
       const profile = await authApi.getProfile(token, branch.id);
+      // setAuth tự bật isProfileSynced=true.
       useAuthStore.getState().setAuth(
         {
           ...currentUser,
@@ -83,7 +89,34 @@ export function BranchSelector({
         },
         token
       );
-    } catch {
+    } catch (err: unknown) {
+      console.error("[BranchSelector] fetch profile failed:", err);
+      // Nếu là lỗi auth → đá về login. Lỗi khác (mạng/5xx) thì
+      // báo cho user và giữ branch cũ là an toàn nhất.
+      const message = err instanceof Error ? err.message : String(err);
+      const msg = message.toLowerCase();
+      const isAuthErr =
+        msg.includes("unauthorized") ||
+        msg.includes("đăng nhập") ||
+        msg.includes("token") ||
+        msg.includes("quyền của bạn đã được thay đổi");
+
+      if (isAuthErr) {
+        useAuthStore.getState().clearAuth();
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(
+            "auth-error",
+            "Quyền của bạn đã được thay đổi. Vui lòng đăng nhập lại."
+          );
+          window.location.href = "/login";
+        }
+      } else {
+        toast.error(
+          "Không thể tải quyền cho chi nhánh này. Vui lòng thử lại."
+        );
+        // Để RouteGuard tự retry sync ở lần render kế tiếp.
+        useAuthStore.getState().setProfileSynced(false);
+      }
     } finally {
       setIsLoading(false);
     }

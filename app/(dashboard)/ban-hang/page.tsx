@@ -24,7 +24,6 @@ import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
 import { priceBooksApi } from "@/lib/api";
-import { queuePrintAfterRedirect } from "@/lib/utils/print";
 import {
   getDefaultAddress,
   addressToDeliveryInfo,
@@ -32,6 +31,7 @@ import {
 import { useAuthStore } from "@/lib/store/auth";
 import { useCan } from "@/lib/hooks/useCan";
 import { MobilePrintPreviewModal } from "@/components/pos/MobilePrintPreviewModal";
+import { printEntity, printDeliverySlip } from "@/lib/utils/print";
 
 export interface CartItem {
   rowId: string;
@@ -165,16 +165,21 @@ export default function BanHangPage() {
   const handlePostCreate = (
     templateFor: string,
     entityId: number,
-    targetUrl: string
+    _targetUrl: string
   ) => {
     const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
     // Nếu là hóa đơn, sau khi in hóa đơn sẽ tự động in phiếu giao hàng
     const followUpDelivery = templateFor === "invoice";
     if (isMobile) {
+      // Mobile: hiện modal xem trước
       setMobilePrintData({ templateFor, entityId, followUpDelivery });
     } else {
-      queuePrintAfterRedirect(templateFor, entityId, { followUpDelivery });
-      router.push(targetUrl);
+      // Desktop: in trực tiếp (không redirect), sau đó in phiếu giao hàng nếu là hóa đơn
+      printEntity(templateFor, entityId).then(() => {
+        if (followUpDelivery) {
+          printDeliverySlip("invoice", entityId);
+        }
+      });
     }
   };
 
