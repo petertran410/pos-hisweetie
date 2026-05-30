@@ -7,6 +7,7 @@ import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
+import { useBranchStore } from "@/lib/store/branch";
 import {
   ChevronDown,
   ChevronLeft,
@@ -594,26 +595,40 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
   const { data: bankAccounts } = useBankAccountsForPayment();
+  const { selectedBranch } = useBranchStore();
 
-  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
-  const [customerId, setCustomerId] = useState("");
+  // Restore filter state từ sessionStorage
+  const STORAGE_KEY = "invoices-sidebar-filters";
+  const getSavedFilters = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  };
+  const saved = useRef(getSavedFilters());
+
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>(
+    saved.current?.selectedBranchIds ?? (selectedBranch ? [selectedBranch.id] : [])
+  );
+  const [customerId, setCustomerId] = useState(saved.current?.customerId || "");
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState("");
-  const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
-  const [selectedPreset, setSelectedPreset] = useState("all_time");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [creatorId, setCreatorId] = useState("");
-  const [soldById, setSoldById] = useState("");
-  const [saleChannelId, setSaleChannelId] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState(saved.current?.selectedStatus || "");
+  const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState(saved.current?.selectedDeliveryStatus || "");
+  const [dateMode, setDateMode] = useState<"preset" | "custom">(saved.current?.dateMode || "preset");
+  const [selectedPreset, setSelectedPreset] = useState(saved.current?.selectedPreset || "all_time");
+  const [fromDate, setFromDate] = useState(saved.current?.fromDate || "");
+  const [toDate, setToDate] = useState(saved.current?.toDate || "");
+  const [creatorId, setCreatorId] = useState(saved.current?.creatorId || "");
+  const [soldById, setSoldById] = useState(saved.current?.soldById || "");
+  const [saleChannelId, setSaleChannelId] = useState(saved.current?.saleChannelId || "");
   const [paymentMethod, setPaymentMethod] = useState<"" | "cash" | "transfer">(
-    ""
+    saved.current?.paymentMethod || ""
   );
   const [selectedBankAccountIds, setSelectedBankAccountIds] = useState<
     number[]
-  >([]);
+  >(saved.current?.selectedBankAccountIds || []);
 
   const [showPresetPanel, setShowPresetPanel] = useState(false);
   const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
@@ -621,6 +636,51 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   const presetRowRef = useRef<HTMLDivElement>(null);
   const customDateRef = useRef<HTMLDivElement>(null);
   const customerRef = useRef<HTMLDivElement>(null);
+
+  // Persist filter state vào sessionStorage khi thay đổi
+  useEffect(() => {
+    const state = {
+      selectedBranchIds,
+      customerId,
+      selectedStatus,
+      selectedDeliveryStatus,
+      dateMode,
+      selectedPreset,
+      fromDate,
+      toDate,
+      creatorId,
+      soldById,
+      saleChannelId,
+      paymentMethod,
+      selectedBankAccountIds,
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }, [
+    selectedBranchIds,
+    customerId,
+    selectedStatus,
+    selectedDeliveryStatus,
+    dateMode,
+    selectedPreset,
+    fromDate,
+    toDate,
+    creatorId,
+    soldById,
+    saleChannelId,
+    paymentMethod,
+    selectedBankAccountIds,
+  ]);
+
+  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó
+  // Ref init = null để effect luôn chạy lần đầu, reconcile với sessionStorage có thể đã stale
+  const lastSyncedBranchIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const currentBranchId = selectedBranch?.id ?? null;
+    if (currentBranchId !== lastSyncedBranchIdRef.current) {
+      lastSyncedBranchIdRef.current = currentBranchId;
+      setSelectedBranchIds(currentBranchId ? [currentBranchId] : []);
+    }
+  }, [selectedBranch?.id]);
 
   const customers = useMemo(() => customersData?.data || [], [customersData]);
   const selectedCustomer = useMemo(
@@ -722,7 +782,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   ]);
 
   const clearAll = () => {
-    setSelectedBranchIds([]);
+    setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setCustomerId("");
     setCustomerSearch("");
     setSelectedStatus("");
@@ -737,6 +797,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     setPaymentMethod("");
     setSelectedBankAccountIds([]);
     onFiltersChange({});
+    sessionStorage.removeItem(STORAGE_KEY);
   };
 
   function BranchMultiSelectDropdown({

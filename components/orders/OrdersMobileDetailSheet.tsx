@@ -222,7 +222,7 @@ export function OrdersMobileDetailSheet({
 
   const handleProcessOrder = () => {
     if (!order) return;
-    router.push(`/ban-hang?orderId=${order.id}`);
+    router.push(`/ban-hang?orderId=${order.id}&from=dat-hang`);
   };
 
   // ─── invoicedQuantities (giống OrderDetailRow) ───────────────────────────

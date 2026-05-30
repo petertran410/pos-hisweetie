@@ -58,7 +58,7 @@ export default function HoaDonPage() {
   usePendingPrint();
 
   const handleCreateClick = () => {
-    router.push("/ban-hang?type=invoice");
+    router.push("/ban-hang?type=invoice&from=hoa-don");
   };
 
   const handleEditClick = (invoice: Invoice) => {};

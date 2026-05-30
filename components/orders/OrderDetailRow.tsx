@@ -234,7 +234,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
   const handleProcessOrder = () => {
     if (!order) return;
-    router.push(`/ban-hang?orderId=${order.id}`);
+    router.push(`/ban-hang?orderId=${order.id}&from=dat-hang`);
   };
 
   if (isLoading) {

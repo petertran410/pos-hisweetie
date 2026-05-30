@@ -36,7 +36,7 @@ export default function DatHangPage() {
   usePendingPrint();
 
   const handleCreateClick = () => {
-    router.push("/ban-hang?type=order");
+    router.push("/ban-hang?type=order&from=dat-hang");
   };
 
   const handleEditClick = (order: Order) => {};

@@ -226,7 +226,7 @@ export function InvoiceDetailRow({
 
   const handleProcessInvoice = () => {
     if (!invoice) return;
-    router.push(`/ban-hang?invoiceId=${invoice.id}`);
+    router.push(`/ban-hang?invoiceId=${invoice.id}&from=hoa-don`);
   };
 
   if (isLoading) {

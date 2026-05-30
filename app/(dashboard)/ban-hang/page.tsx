@@ -31,7 +31,7 @@ import {
 import { useAuthStore } from "@/lib/store/auth";
 import { useCan } from "@/lib/hooks/useCan";
 import { MobilePrintPreviewModal } from "@/components/pos/MobilePrintPreviewModal";
-import { printEntity, printDeliverySlip } from "@/lib/utils/print";
+import { printEntity, printDeliverySlip, queuePrintAfterRedirect } from "@/lib/utils/print";
 
 export interface CartItem {
   rowId: string;
@@ -128,6 +128,7 @@ export default function BanHangPage() {
   const orderId = searchParams.get("orderId");
   const invoiceId = searchParams.get("invoiceId");
   const tabType = searchParams.get("type") as TabType | null;
+  const fromPage = searchParams.get("from"); // nguồn gốc navigate: "dat-hang", "hoa-don", hoặc null
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
   const { user } = useAuthStore();
@@ -152,6 +153,7 @@ export default function BanHangPage() {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState("tab-1");
   const [isInitialized, setIsInitialized] = useState(false);
+  const fromPageRef = useRef<string | null>(fromPage);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
 
@@ -165,21 +167,32 @@ export default function BanHangPage() {
   const handlePostCreate = (
     templateFor: string,
     entityId: number,
-    _targetUrl: string
+    targetUrl: string,
+    options?: { shouldRedirect?: boolean }
   ) => {
     const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
     // Nếu là hóa đơn, sau khi in hóa đơn sẽ tự động in phiếu giao hàng
     const followUpDelivery = templateFor === "invoice";
-    if (isMobile) {
-      // Mobile: hiện modal xem trước
-      setMobilePrintData({ templateFor, entityId, followUpDelivery });
+
+    if (options?.shouldRedirect) {
+      // Đến từ trang danh sách (edit hoặc tạo hóa đơn từ đơn hàng) → redirect về trang gốc + in
+      if (isMobile) {
+        setMobilePrintData({ templateFor, entityId, followUpDelivery });
+      } else {
+        queuePrintAfterRedirect(templateFor, entityId, { followUpDelivery });
+        router.push(targetUrl);
+      }
     } else {
-      // Desktop: in trực tiếp (không redirect), sau đó in phiếu giao hàng nếu là hóa đơn
-      printEntity(templateFor, entityId).then(() => {
-        if (followUpDelivery) {
-          printDeliverySlip("invoice", entityId);
-        }
-      });
+      // Tạo mới từ trang /ban-hang → ở yên, in trực tiếp
+      if (isMobile) {
+        setMobilePrintData({ templateFor, entityId, followUpDelivery });
+      } else {
+        printEntity(templateFor, entityId).then(() => {
+          if (followUpDelivery) {
+            printDeliverySlip("invoice", entityId);
+          }
+        });
+      }
     }
   };
 
@@ -1017,7 +1030,7 @@ export default function BanHangPage() {
       handleCloseTab(activeTabId);
       toast.success("Tạo hóa đơn thành công");
       if (result?.id) {
-        handlePostCreate("invoice", result.id, "/don-hang/hoa-don");
+        handlePostCreate("invoice", result.id, "/don-hang/dat-hang", { shouldRedirect: true });
       }
     } catch (error: any) {
       toast.error(error.message || "Không thể tạo hóa đơn");
@@ -1446,7 +1459,7 @@ export default function BanHangPage() {
 
         // QUEUE PRINT
         toast.success("Lưu đơn hàng thành công");
-        handlePostCreate("order", activeTab.documentId, "/don-hang/dat-hang");
+        handlePostCreate("order", activeTab.documentId, "/don-hang/dat-hang", { shouldRedirect: true });
       } catch (error: any) {
         console.error("Save order error:", error);
         toast.error(error.message || "Không thể lưu đơn hàng");
@@ -1572,7 +1585,8 @@ export default function BanHangPage() {
       handlePostCreate(
         "invoice",
         updatedInvoice?.id ?? activeTab.documentId,
-        "/don-hang/hoa-don"
+        "/don-hang/hoa-don",
+        { shouldRedirect: true }
       );
     } catch (error: any) {
       console.error("Save invoice error:", error);
@@ -1720,7 +1734,8 @@ export default function BanHangPage() {
             docId,
             activeTab.type === "order"
               ? "/don-hang/dat-hang"
-              : "/don-hang/hoa-don"
+              : "/don-hang/hoa-don",
+            { shouldRedirect: !!fromPageRef.current }
           );
         }
       } catch (error: any) {

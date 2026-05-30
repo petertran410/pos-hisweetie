@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
+import { useBranchStore } from "@/lib/store/branch";
 
 interface OrdersSidebarProps {
   filters: any;
@@ -710,26 +711,40 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
   const { data: bankAccounts } = useBankAccountsForPayment();
+  const { selectedBranch } = useBranchStore();
+
+  // Restore filter state từ sessionStorage
+  const STORAGE_KEY = "orders-sidebar-filters";
+  const getSavedFilters = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  };
+  const saved = useRef(getSavedFilters());
 
   const [paymentMethod, setPaymentMethod] = useState<"" | "cash" | "transfer">(
-    ""
+    saved.current?.paymentMethod || ""
   );
   const [selectedBankAccountIds, setSelectedBankAccountIds] = useState<
     number[]
-  >([]);
-  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
-  const [customerId, setCustomerId] = useState("");
+  >(saved.current?.selectedBankAccountIds || []);
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>(
+    saved.current?.selectedBranchIds ?? (selectedBranch ? [selectedBranch.id] : [])
+  );
+  const [customerId, setCustomerId] = useState(saved.current?.customerId || "");
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState("");
-  const [enableOrderDate, setEnableOrderDate] = useState(false);
-  const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
-  const [selectedPreset, setSelectedPreset] = useState("all_time");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [creatorId, setCreatorId] = useState("");
-  const [saleChannelId, setSaleChannelId] = useState("");
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(saved.current?.selectedStatuses || []);
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState(saved.current?.selectedPaymentStatus || "");
+  const [enableOrderDate, setEnableOrderDate] = useState(saved.current?.enableOrderDate ?? false);
+  const [dateMode, setDateMode] = useState<"preset" | "custom">(saved.current?.dateMode || "preset");
+  const [selectedPreset, setSelectedPreset] = useState(saved.current?.selectedPreset || "all_time");
+  const [fromDate, setFromDate] = useState(saved.current?.fromDate || "");
+  const [toDate, setToDate] = useState(saved.current?.toDate || "");
+  const [creatorId, setCreatorId] = useState(saved.current?.creatorId || "");
+  const [saleChannelId, setSaleChannelId] = useState(saved.current?.saleChannelId || "");
   const [showPresetPanel, setShowPresetPanel] = useState(false);
   const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
@@ -737,6 +752,40 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
 
   const customDateRef = useRef<HTMLDivElement>(null);
   const customerRef = useRef<HTMLDivElement>(null);
+
+  // Persist filter state vào sessionStorage khi thay đổi
+  useEffect(() => {
+    const state = {
+      selectedBranchIds,
+      customerId,
+      selectedStatuses,
+      selectedPaymentStatus,
+      enableOrderDate,
+      dateMode,
+      selectedPreset,
+      fromDate,
+      toDate,
+      creatorId,
+      saleChannelId,
+      paymentMethod,
+      selectedBankAccountIds,
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }, [
+    selectedBranchIds,
+    customerId,
+    selectedStatuses,
+    selectedPaymentStatus,
+    enableOrderDate,
+    dateMode,
+    selectedPreset,
+    fromDate,
+    toDate,
+    creatorId,
+    saleChannelId,
+    paymentMethod,
+    selectedBankAccountIds,
+  ]);
 
   const customers = useMemo(() => customersData?.data || [], [customersData]);
 
@@ -837,7 +886,7 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   ]);
 
   const clearAll = () => {
-    setSelectedBranchIds([]);
+    setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setCustomerId("");
     setCustomerSearch("");
     setSelectedStatuses([]);
@@ -852,7 +901,19 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     onFiltersChange({});
     setPaymentMethod("");
     setSelectedBankAccountIds([]);
+    sessionStorage.removeItem(STORAGE_KEY);
   };
+
+  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó
+  // Ref init = null để effect luôn chạy lần đầu, reconcile với sessionStorage có thể đã stale
+  const lastSyncedBranchIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const currentBranchId = selectedBranch?.id ?? null;
+    if (currentBranchId !== lastSyncedBranchIdRef.current) {
+      lastSyncedBranchIdRef.current = currentBranchId;
+      setSelectedBranchIds(currentBranchId ? [currentBranchId] : []);
+    }
+  }, [selectedBranch?.id]);
 
   return (
     <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
