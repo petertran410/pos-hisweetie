@@ -18,6 +18,7 @@ import {
   Calendar,
   Tag,
   ArrowLeft,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -223,6 +224,11 @@ export function OrdersMobileDetailSheet({
   const handleProcessOrder = () => {
     if (!order) return;
     router.push(`/ban-hang?orderId=${order.id}&from=dat-hang`);
+  };
+
+  const handleCopy = () => {
+    if (!order) return;
+    router.push(`/ban-hang?copyOrderId=${order.id}`);
   };
 
   // ─── invoicedQuantities (giống OrderDetailRow) ───────────────────────────
@@ -678,6 +684,13 @@ export function OrdersMobileDetailSheet({
                 <Printer className="w-4 h-4" />
               </button>
             )}
+
+            <button
+              onClick={handleCopy}
+              title="Copy đơn hàng sang tab mới"
+              className="p-2.5 text-gray-500 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 active:scale-95 transition-all flex-shrink-0">
+              <Copy className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>

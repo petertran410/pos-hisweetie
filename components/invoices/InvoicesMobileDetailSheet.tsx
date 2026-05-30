@@ -8,6 +8,7 @@ import {
   Building2,
   Calendar,
   ChevronDown,
+  Copy,
   Loader2,
   MapPin,
   Printer,
@@ -253,6 +254,11 @@ export function InvoicesMobileDetailSheet({
   const handleProcessInvoice = () => {
     if (!invoice) return;
     router.push(`/ban-hang?invoiceId=${invoice.id}&from=hoa-don`);
+  };
+
+  const handleCopy = () => {
+    if (!invoice) return;
+    router.push(`/ban-hang?copyInvoiceId=${invoice.id}`);
   };
 
   return (
@@ -663,6 +669,13 @@ export function InvoicesMobileDetailSheet({
                 <Printer className="w-4 h-4" />
               </button>
             )}
+
+            <button
+              onClick={handleCopy}
+              title="Copy hóa đơn sang tab mới"
+              className="p-2.5 text-gray-500 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 active:scale-95 transition-all flex-shrink-0">
+              <Copy className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>

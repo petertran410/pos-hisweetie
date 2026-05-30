@@ -81,6 +81,8 @@ export interface Tab {
   isEditMode?: boolean;
   selectedAddressId?: number | null;
   soldById: number | null;
+  // fromPage = "dat-hang" | "hoa-don" → khi tạo xong sẽ redirect về trang này (dùng cho copy)
+  fromPage?: string;
 }
 
 const STORAGE_KEY = "pos-tabs";
@@ -127,6 +129,8 @@ export default function BanHangPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const invoiceId = searchParams.get("invoiceId");
+  const copyOrderId = searchParams.get("copyOrderId");
+  const copyInvoiceId = searchParams.get("copyInvoiceId");
   const tabType = searchParams.get("type") as TabType | null;
   const fromPage = searchParams.get("from"); // nguồn gốc navigate: "dat-hang", "hoa-don", hoặc null
   const router = useRouter();
@@ -390,6 +394,14 @@ export default function BanHangPage() {
 
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(
     invoiceId ? Number(invoiceId) : 0
+  );
+
+  // Copy: fetch nguồn để copy nội dung sang tab mới
+  const { data: copySourceOrder } = useOrder(
+    copyOrderId ? Number(copyOrderId) : 0
+  );
+  const { data: copySourceInvoice } = useInvoice(
+    copyInvoiceId ? Number(copyInvoiceId) : 0
   );
 
   const [mobilePosView, setMobilePosView] = useState<"items" | "cart">("items");
@@ -893,6 +905,143 @@ export default function BanHangPage() {
     setActiveTabId(editTabId);
   }, [existingInvoice?.id, invoiceId, selectedBranch?.id]);
 
+  // ── COPY: copy đơn hàng → tab mới Copy_<code>, type=order, fromPage="dat-hang" ──
+  useEffect(() => {
+    if (!copySourceOrder || !copyOrderId) return;
+    if (!isInitialized) return;
+    if (!canCreateOrder) {
+      toast.error("Bạn không có quyền tạo đơn hàng");
+      router.replace("/ban-hang", { scroll: false });
+      return;
+    }
+
+    const cartItems: CartItem[] = (copySourceOrder.items || []).map(
+      (item: any) => ({
+        rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
+        product: item.product,
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+        discount: Number(item.discount) || 0,
+        note: item.note || "",
+        conditionType: item.conditionType || "normal",
+      })
+    );
+
+    const newTabId = `tab-copy-order-${copySourceOrder.id}-${Date.now()}`;
+    const copyTab: Tab = {
+      id: newTabId,
+      type: "order",
+      label: `Copy_${copySourceOrder.code}`,
+      code: copySourceOrder.code,
+      cartItems,
+      selectedCustomer: copySourceOrder.customer || null,
+      selectedPriceBookId: copySourceOrder.priceBookId || null,
+      selectedPriceBookName: copySourceOrder.priceBookName || null,
+      orderNote: copySourceOrder.description || "",
+      discount: Number(copySourceOrder.discount) || 0,
+      discountRatio: Number(copySourceOrder.discountRatio) || 0,
+      useCOD: false,
+      paymentAmount: 0,
+      paymentMethods: [],
+      soldById: copySourceOrder.soldById ?? null,
+      deliveryInfo: {
+        receiver: copySourceOrder.delivery?.receiver || "",
+        contactNumber: copySourceOrder.delivery?.contactNumber || "",
+        detailAddress: copySourceOrder.delivery?.address || "",
+        locationName: copySourceOrder.delivery?.locationName || "",
+        wardName: copySourceOrder.delivery?.wardName || "",
+        weight: Number(copySourceOrder.delivery?.weight) || 0,
+        weightUnit: copySourceOrder.delivery?.weightUnit || "g",
+        length: Number(copySourceOrder.delivery?.length) || 10,
+        width: Number(copySourceOrder.delivery?.width) || 10,
+        height: Number(copySourceOrder.delivery?.height) || 10,
+        noteForDriver: copySourceOrder.delivery?.noteForDriver || "",
+      },
+      // KHÔNG set documentId / isEditMode để dùng flow create
+      fromPage: "dat-hang", // copy từ trang đặt hàng → sau khi tạo redirect về /don-hang/dat-hang
+    };
+
+    setTabs((prev) => [...prev, copyTab]);
+    setActiveTabId(newTabId);
+    fromPageRef.current = "dat-hang";
+    router.replace("/ban-hang", { scroll: false });
+  }, [copySourceOrder?.id, copyOrderId, isInitialized, canCreateOrder]);
+
+  // ── COPY: copy hóa đơn → tab mới Copy_<code>, type=invoice, fromPage="hoa-don" ──
+  useEffect(() => {
+    if (!copySourceInvoice || !copyInvoiceId) return;
+    if (!isInitialized) return;
+    if (!canCreateInvoice) {
+      toast.error("Bạn không có quyền tạo hóa đơn");
+      router.replace("/ban-hang", { scroll: false });
+      return;
+    }
+
+    const cartItems: CartItem[] = (copySourceInvoice.details || []).map(
+      (item: any) => ({
+        rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
+        product: item.product,
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+        discount: Number(item.discount) || 0,
+        note: item.note || "",
+        conditionType: item.conditionType || "normal",
+      })
+    );
+
+    const newTabId = `tab-copy-invoice-${copySourceInvoice.id}-${Date.now()}`;
+    const copyTab: Tab = {
+      id: newTabId,
+      type: "invoice",
+      label: `Copy_${copySourceInvoice.code}`,
+      code: copySourceInvoice.code,
+      cartItems,
+      selectedCustomer: copySourceInvoice.customer || null,
+      selectedPriceBookId: copySourceInvoice.priceBookId || null,
+      selectedPriceBookName: copySourceInvoice.priceBookName || null,
+      orderNote: copySourceInvoice.description || "",
+      discount: Number(copySourceInvoice.discount) || 0,
+      discountRatio: Number(copySourceInvoice.discountRatio) || 0,
+      useCOD: copySourceInvoice.usingCod || false,
+      paymentAmount: 0,
+      paymentMethods: [],
+      soldById: copySourceInvoice.soldById ?? null,
+      deliveryInfo: copySourceInvoice.delivery
+        ? {
+            receiver: copySourceInvoice.delivery.receiver || "",
+            contactNumber: copySourceInvoice.delivery.contactNumber || "",
+            detailAddress: copySourceInvoice.delivery.address || "",
+            locationName: copySourceInvoice.delivery.locationName || "",
+            wardName: copySourceInvoice.delivery.wardName || "",
+            weight: Number(copySourceInvoice.delivery.weight) || 0,
+            weightUnit: copySourceInvoice.delivery?.weightUnit || "g",
+            length: Number(copySourceInvoice.delivery.length) || 10,
+            width: Number(copySourceInvoice.delivery.width) || 10,
+            height: Number(copySourceInvoice.delivery.height) || 10,
+            noteForDriver: copySourceInvoice.delivery.noteForDriver || "",
+          }
+        : {
+            receiver: "",
+            contactNumber: "",
+            detailAddress: "",
+            locationName: "",
+            wardName: "",
+            weight: 0,
+            weightUnit: "g",
+            length: 10,
+            width: 10,
+            height: 10,
+            noteForDriver: "",
+          },
+      fromPage: "hoa-don", // copy từ trang hóa đơn → sau khi tạo redirect về /don-hang/hoa-don
+    };
+
+    setTabs((prev) => [...prev, copyTab]);
+    setActiveTabId(newTabId);
+    fromPageRef.current = "hoa-don";
+    router.replace("/ban-hang", { scroll: false });
+  }, [copySourceInvoice?.id, copyInvoiceId, isInitialized, canCreateInvoice]);
+
   const updateActiveTab = (updates: Partial<Tab>) => {
     setTabs((prevTabs) =>
       prevTabs.map((tab) =>
@@ -1114,6 +1263,21 @@ export default function BanHangPage() {
 
     const tabsOfNewType = tabs.filter((t) => t.type === newType);
     const newTabNumber = tabsOfNewType.length + 1;
+
+    // Tab Copy: giữ nguyên data + fromPage, đổi type và label thành "Đơn hàng N" / "Hóa đơn N"
+    if (activeTab.fromPage) {
+      updateActiveTab({
+        type: newType,
+        label:
+          newType === "order"
+            ? `Đơn hàng ${newTabNumber}`
+            : `Hóa đơn ${newTabNumber}`,
+      });
+      toast.success(
+        `Đã chuyển sang ${newType === "order" ? "đơn hàng" : "hóa đơn"}`
+      );
+      return;
+    }
 
     const hasData =
       activeTab.cartItems.length > 0 || activeTab.selectedCustomer;
@@ -1729,13 +1893,25 @@ export default function BanHangPage() {
         handleCloseTab(activeTabId);
 
         if (docId) {
+          // Xác định trang redirect:
+          // - Copy tab: dùng activeTab.fromPage (giữ nguyên dù đã "Chuyển" loại tab)
+          // - Tạo mới từ trang danh sách: dùng fromPageRef.current
+          // - Tạo trực tiếp từ /ban-hang: không redirect
+          const tabFromPage = activeTab.fromPage || fromPageRef.current;
+          const targetUrl =
+            tabFromPage === "dat-hang"
+              ? "/don-hang/dat-hang"
+              : tabFromPage === "hoa-don"
+                ? "/don-hang/hoa-don"
+                : activeTab.type === "order"
+                  ? "/don-hang/dat-hang"
+                  : "/don-hang/hoa-don";
+
           handlePostCreate(
             activeTab.type === "order" ? "order" : "invoice",
             docId,
-            activeTab.type === "order"
-              ? "/don-hang/dat-hang"
-              : "/don-hang/hoa-don",
-            { shouldRedirect: !!fromPageRef.current }
+            targetUrl,
+            { shouldRedirect: !!tabFromPage }
           );
         }
       } catch (error: any) {

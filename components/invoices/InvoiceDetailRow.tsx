@@ -4,7 +4,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useInvoice, useUpdateInvoice } from "@/lib/hooks/useInvoices";
-import { ExternalLink, Loader2, MapPin, Printer } from "lucide-react";
+import { Copy, ExternalLink, Loader2, MapPin, Printer } from "lucide-react";
 import { toast } from "sonner";
 import {
   INVOICE_STATUS,
@@ -227,6 +227,11 @@ export function InvoiceDetailRow({
   const handleProcessInvoice = () => {
     if (!invoice) return;
     router.push(`/ban-hang?invoiceId=${invoice.id}&from=hoa-don`);
+  };
+
+  const handleCopy = () => {
+    if (!invoice) return;
+    router.push(`/ban-hang?copyInvoiceId=${invoice.id}`);
   };
 
   if (isLoading) {
@@ -636,32 +641,39 @@ export function InvoiceDetailRow({
                     <button
                       onClick={handleCancel}
                       disabled={isSaving}
-                      className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                       {isSaving ? "Đang xử lý..." : "Hủy"}
                     </button>
                   )}
+                  <button
+                    onClick={handleCopy}
+                    title="Sao chép hóa đơn sang tab mới"
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50">
+                    <Copy className="w-3.5 h-3.5" />
+                    Sao chép
+                  </button>
+                </div>
+                <div className="flex gap-2">
                   {canProcess && hasPermUpdate && (
                     <button
                       onClick={handleProcessInvoice}
                       disabled={isSaving}
-                      className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                       Xử lý hóa đơn
                     </button>
                   )}
-                </div>
-                <div className="flex gap-2">
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
                     hidden={!hasPermUpdate}
-                    className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {isSaving ? "Đang lưu..." : "Lưu"}
                   </button>
                   <button
                     onClick={handlePrint}
                     hidden={!hasPermPrint}
-                    className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50">
-                    <Printer className="w-4 h-4" />
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50">
+                    <Printer className="w-3.5 h-3.5" />
                     In
                   </button>
                 </div>
