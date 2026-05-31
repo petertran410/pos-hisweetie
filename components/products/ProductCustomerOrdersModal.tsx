@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useOrdersPendingByProduct } from "@/lib/hooks/useOrders";
 import { ORDER_STATUS } from "@/lib/types/order";
+import Link from "next/link";
 
 interface ProductCustomerOrdersModalProps {
   productId: number;
@@ -46,9 +47,7 @@ export function ProductCustomerOrdersModal({
             </h3>
             <p className="text-xs text-gray-500 mt-0.5 truncate">
               {productCode ? (
-                <span className="font-medium text-blue-600">
-                  {productCode}
-                </span>
+                <span className="font-medium text-blue-600">{productCode}</span>
               ) : null}
               {productCode && productName ? " — " : ""}
               {productName || ""}
@@ -107,7 +106,11 @@ export function ProductCustomerOrdersModal({
                 {orders.map((o) => (
                   <tr key={o.orderId} className="hover:bg-gray-50">
                     <td className="px-4 py-2.5 font-medium text-blue-600 whitespace-nowrap">
-                      {o.code}
+                      <Link
+                        href={`/don-hang/dat-hang?Code=${o.code}`}
+                        target="_blank">
+                        {o.code}
+                      </Link>
                     </td>
                     <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">
                       {formatDateTime(o.createdAt)}
