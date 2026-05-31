@@ -2,9 +2,10 @@
 
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { useOrdersPendingByProduct } from "@/lib/hooks/useOrders";
-import { ORDER_STATUS } from "@/lib/types/order";
 import Link from "next/link";
+import { useOrdersPendingByProduct } from "@/lib/hooks/useOrders";
+import { useBranchStore } from "@/lib/store/branch";
+import { ORDER_STATUS } from "@/lib/types/order";
 
 interface ProductCustomerOrdersModalProps {
   productId: number;
@@ -27,8 +28,12 @@ export function ProductCustomerOrdersModal({
   productCode,
   onClose,
 }: ProductCustomerOrdersModalProps) {
-  const { data, isLoading, isError, error } =
-    useOrdersPendingByProduct(productId);
+  const selectedBranch = useBranchStore((s) => s.selectedBranch);
+
+  const { data, isLoading, isError, error } = useOrdersPendingByProduct(
+    productId,
+    selectedBranch?.id
+  );
 
   const orders = data || [];
   const totalQty = orders.reduce((sum, o) => sum + Number(o.quantity || 0), 0);
@@ -47,10 +52,17 @@ export function ProductCustomerOrdersModal({
             </h3>
             <p className="text-xs text-gray-500 mt-0.5 truncate">
               {productCode ? (
-                <span className="font-medium text-blue-600">{productCode}</span>
+                <span className="font-medium text-blue-600">
+                  {productCode}
+                </span>
               ) : null}
               {productCode && productName ? " — " : ""}
               {productName || ""}
+              {selectedBranch?.name ? (
+                <span className="ml-2 text-gray-400">
+                  • Chi nhánh: {selectedBranch.name}
+                </span>
+              ) : null}
             </p>
           </div>
           <button

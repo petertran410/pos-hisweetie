@@ -76,11 +76,13 @@ export const ordersApi = {
   },
 
   /**
-   * Danh sách đơn hàng (Phiếu tạm/Đã xác nhận, mọi chi nhánh) chứa
-   * sản phẩm cụ thể — dùng cho modal khi click vào số "Khách đặt".
+   * Danh sách đơn hàng (Phiếu tạm/Đã xác nhận) chứa sản phẩm cụ thể.
+   * Nếu truyền branchId thì lọc theo chi nhánh, không truyền thì lấy mọi chi nhánh.
+   * Dùng cho modal khi click vào số "Khách đặt".
    */
   getPendingByProduct: (
-    productId: number
+    productId: number,
+    branchId?: number
   ): Promise<
     Array<{
       orderId: number;
@@ -97,6 +99,8 @@ export const ordersApi = {
       branch: { id: number; name: string } | null;
     }>
   > => {
-    return apiClient.get(`/orders/pending-by-product`, { productId });
+    const params: Record<string, any> = { productId };
+    if (branchId) params.branchId = branchId;
+    return apiClient.get(`/orders/pending-by-product`, params);
   },
 };

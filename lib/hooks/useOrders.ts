@@ -114,13 +114,18 @@ export function useOrdersPendingSummary(productIds: number[]) {
 }
 
 /**
- * Danh sách đơn hàng (Phiếu tạm/Đã xác nhận, mọi chi nhánh) chứa
- * sản phẩm cụ thể — dùng cho modal khi click vào số "Khách đặt".
+ * Danh sách đơn hàng (Phiếu tạm/Đã xác nhận) chứa sản phẩm cụ thể.
+ * Truyền branchId để lọc theo chi nhánh đang chọn ở DashboardHeader.
+ * Dùng cho modal khi click vào số "Khách đặt".
  */
-export function useOrdersPendingByProduct(productId: number | null) {
+export function useOrdersPendingByProduct(
+  productId: number | null,
+  branchId?: number
+) {
   return useQuery({
-    queryKey: ["orders-pending-by-product", productId],
-    queryFn: () => ordersApi.getPendingByProduct(productId as number),
+    queryKey: ["orders-pending-by-product", productId, branchId ?? null],
+    queryFn: () =>
+      ordersApi.getPendingByProduct(productId as number, branchId),
     enabled: !!productId,
   });
 }
