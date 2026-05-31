@@ -109,22 +109,22 @@ export function CustomerDebtsTab({
   return (
     <>
       <div>
-        <div className="mb-4 flex items-center justify-between">
-          <div className="text-md text-gray-600">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 lg:mb-4">
+          <div className="text-sm lg:text-md text-gray-600">
             Nợ hiện tại:{" "}
             <span className="font-semibold text-red-600">
               {formatCurrency(customerDebt)}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
             <button
               onClick={() => exportTimeline(customerId, includeChildren)}
               disabled={exportingTimeline}
-              className="px-3 py-2 border rounded hover:bg-gray-50 flex items-center gap-1.5 text-sm text-gray-700 disabled:opacity-50">
+              className="px-2 py-1.5 lg:px-3 lg:py-2 border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-1.5 text-xs lg:text-sm text-gray-700 disabled:opacity-50">
               {exportingTimeline ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" />
               ) : (
-                <Download className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               )}
               Lịch sử TT
             </button>
@@ -132,18 +132,18 @@ export function CustomerDebtsTab({
             <button
               onClick={() => setShowExportDebtModal(true)}
               disabled={exportingDebt}
-              className="px-3 py-2 border rounded hover:bg-gray-50 flex items-center gap-1.5 text-sm text-gray-700 disabled:opacity-50">
+              className="px-2 py-1.5 lg:px-3 lg:py-2 border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-1.5 text-xs lg:text-sm text-gray-700 disabled:opacity-50">
               {exportingDebt ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" />
               ) : (
-                <Download className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               )}
               Công nợ
             </button>
 
             <button
               onClick={() => setShowPaymentModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2">
+              className="px-2.5 py-1.5 lg:px-4 lg:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
               💵 Thanh toán
             </button>
           </div>
@@ -153,38 +153,35 @@ export function CustomerDebtsTab({
           <table className="w-full">
             <thead>
               <tr className="border-b bg-gray-50">
-                <th className="px-4 py-3 text-left text-md font-medium">
+                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-md font-medium">
                   Mã phiếu
                 </th>
-                <th className="px-4 py-3 text-left text-md font-medium">
+                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-md font-medium">
                   Thời gian
                 </th>
-                <th className="px-4 py-3 text-left text-md font-medium">
+                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-md font-medium">
                   Loại
                 </th>
-                <th className="px-4 py-3 text-left text-md font-medium">
+                <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-md font-medium">
                   Khách hàng
                 </th>
-                <th className="px-4 py-3 text-left text-md font-medium">
+                <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-md font-medium">
                   Chi nhánh
                 </th>
-                <th className="px-4 py-3 text-right text-md font-medium">
+                <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-md font-medium">
                   Giá trị
                 </th>
-                <th className="px-4 py-3 text-right text-md font-medium">
-                  Dư nợ khách hàng
+                <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-md font-medium">
+                  Dư nợ
                 </th>
-                {/* <th className="px-4 py-3 text-center text-md font-medium">
-                  Trạng thái
-                </th> */}
               </tr>
             </thead>
             <tbody>
               {timeline.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
-                    className="px-4 py-8 text-center text-gray-500">
+                    colSpan={7}
+                    className="px-4 py-8 text-center text-gray-500 text-xs lg:text-sm">
                     Chưa có giao dịch nào
                   </td>
                 </tr>
@@ -200,50 +197,56 @@ export function CustomerDebtsTab({
                     <tr
                       key={`${item.type}-${item.id}`}
                       className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2 lg:px-4 lg:py-3">
                         {item.type === "invoice" ? (
-                          <>
-                            <Link
-                              href={`/don-hang/hoa-don?Code=${item.code}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-md font-medium text-blue-600 hover:underline"
-                              onClick={(e) => e.stopPropagation()}>
-                              {item.code}
-                            </Link>
-                          </>
+                          <Link
+                            href={`/don-hang/hoa-don?Code=${item.code}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs lg:text-md font-medium text-blue-600 hover:underline"
+                            onClick={(e) => e.stopPropagation()}>
+                            {item.code}
+                          </Link>
                         ) : item.type === "payment" ? (
-                          <>
-                            <Link
-                              href={`/so-quy?Code=${item.code}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-md font-medium text-blue-600 hover:underline"
-                              onClick={(e) => e.stopPropagation()}>
-                              {item.code}
-                            </Link>
-                          </>
+                          <Link
+                            href={`/so-quy?Code=${item.code}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs lg:text-md font-medium text-blue-600 hover:underline"
+                            onClick={(e) => e.stopPropagation()}>
+                            {item.code}
+                          </Link>
                         ) : (
-                          <span className="text-md font-medium text-blue-600 hover:underline cursor-pointer">
+                          <span className="text-xs lg:text-md font-medium text-blue-600 hover:underline cursor-pointer">
                             {item.code}
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-md">
-                        {new Date(item.date).toLocaleString("vi-VN")}
+                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md">
+                        {(() => {
+                          const d = new Date(item.date);
+                          return (
+                            <>
+                              <div>{d.toLocaleDateString("vi-VN")}</div>
+                              <div className="text-gray-500">
+                                {d.toLocaleTimeString("vi-VN")}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </td>
-                      <td className="px-4 py-3 text-md font-medium">
+                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md font-medium">
                         {isInvoice
                           ? "Bán hàng"
                           : isDebtOffset
                             ? "Cấn trừ công nợ"
-                            : isReturnOrder // THÊM
+                            : isReturnOrder
                               ? "Trả hàng"
-                              : isExpense // THÊM
+                              : isExpense
                                 ? "Thanh toán"
                                 : getPaymentType(item.code)}
                       </td>
-                      <td className="px-4 py-3 text-md">
+                      <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md">
                         {item.customerName ? (
                           <div>
                             <div className="font-medium">
@@ -254,16 +257,14 @@ export function CustomerDebtsTab({
                           "-"
                         )}
                       </td>
-                      <td className="px-4 py-3 text-md">
+                      <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md">
                         {item.branch?.name || "-"}
                       </td>
-                      <td className="px-4 py-3 text-md text-right">
+                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md text-right whitespace-nowrap">
                         {isInvoice && (
-                          <div>
-                            <div className="text-green-600 font-medium">
-                              {formatCurrency(item.amount)}
-                            </div>
-                          </div>
+                          <span className="text-green-600 font-medium">
+                            {formatCurrency(item.amount)}
+                          </span>
                         )}
                         {isPayment && (
                           <span className="text-red-600 font-medium">
@@ -275,28 +276,19 @@ export function CustomerDebtsTab({
                             -{formatCurrency(item.amount)}
                           </span>
                         )}
-                        {/* THÊM: Hiển thị cho return_order */}
                         {isReturnOrder && (
                           <span className="text-red-600 font-medium">
                             -{formatCurrency(item.amount)}
                           </span>
                         )}
-                        {/* THÊM: Hiển thị cho expense (phiếu chi) */}
                         {isExpense && (
                           <span className="text-green-600 font-medium">
                             {formatCurrency(item.amount)}
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-md text-right font-medium">
-                        <span
-                          className={
-                            item.debtSnapshot > 0
-                              ? "text-red-600"
-                              : item.debtSnapshot < 0
-                                ? "text-red-600"
-                                : "text-red-600"
-                          }>
+                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md text-right font-medium whitespace-nowrap">
+                        <span className="text-red-600">
                           {formatCurrency(item.debtSnapshot)}
                         </span>
                       </td>
@@ -309,24 +301,24 @@ export function CustomerDebtsTab({
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t">
-            <div className="text-sm text-gray-600">
+          <div className="flex items-center justify-between px-2 py-2 lg:px-4 lg:py-3 border-t">
+            <div className="text-xs lg:text-sm text-gray-600">
               Tổng: {timeline.length} giao dịch
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 lg:gap-2">
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
+                className="px-2 py-1 lg:px-3 border rounded text-xs lg:text-sm disabled:opacity-50 hover:bg-gray-50">
                 Trước
               </button>
-              <span className="text-sm">
+              <span className="text-xs lg:text-sm">
                 {page} / {totalPages}
               </span>
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page >= totalPages}
-                className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
+                className="px-2 py-1 lg:px-3 border rounded text-xs lg:text-sm disabled:opacity-50 hover:bg-gray-50">
                 Sau
               </button>
             </div>

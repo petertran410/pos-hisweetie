@@ -707,6 +707,10 @@ function MiniCalendar({
 
 export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   const { data: branches } = useBranches();
+  const activeBranches = useMemo(
+    () => (branches ?? []).filter((b: any) => b.isActive),
+    [branches]
+  );
   const { data: customersData } = useCustomers({ pageSize: 1000 });
   const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
@@ -914,6 +918,100 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
       setSelectedBranchIds(currentBranchId ? [currentBranchId] : []);
     }
   }, [selectedBranch?.id]);
+
+  function BranchMultiSelectDropdown({
+    branches,
+    selectedIds,
+    onChange,
+  }: {
+    branches: { id: number; name: string }[];
+    selectedIds: number[];
+    onChange: (ids: number[]) => void;
+  }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      const h = (e: MouseEvent) => {
+        if (ref.current && !ref.current.contains(e.target as Node))
+          setOpen(false);
+      };
+      document.addEventListener("mousedown", h);
+      return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    const toggle = (id: number) => {
+      onChange(
+        selectedIds.includes(id)
+          ? selectedIds.filter((x) => x !== id)
+          : [...selectedIds, id]
+      );
+    };
+
+    const label =
+      selectedIds.length === 0
+        ? null
+        : selectedIds.length === 1
+          ? (branches.find((b) => b.id === selectedIds[0])?.name ?? "")
+          : `${selectedIds.length} chi nhánh`;
+
+    return (
+      <div ref={ref} className="relative">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpen((p) => !p)}
+          onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
+          className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
+            open
+              ? "border-blue-400 ring-2 ring-blue-100"
+              : "hover:border-gray-400"
+          }`}>
+          <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
+            {label ?? "Tất cả chi nhánh"}
+          </span>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {selectedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange([]);
+                }}
+                className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            <ChevronDown
+              className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+            />
+          </div>
+        </div>
+
+        {open && (
+          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+            {branches.map((b, idx) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => toggle(b.id)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
+                  selectedIds.includes(b.id) ? "bg-blue-50" : "hover:bg-gray-50"
+                } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(b.id)}
+                  onChange={() => {}}
+                  className="w-3.5 h-3.5 accent-blue-600 flex-shrink-0"
+                />
+                <span className="text-gray-700">{b.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
@@ -1252,66 +1350,11 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Chi nhánh
           </label>
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            {/* Chọn tất cả */}
-            <label className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors select-none">
-              <input
-                type="checkbox"
-                checked={
-                  Array.isArray(branches) &&
-                  branches.filter((b) => b.isActive).length > 0 &&
-                  selectedBranchIds.length ===
-                    branches.filter((b) => b.isActive).length
-                }
-                onChange={(e) => {
-                  if (!Array.isArray(branches)) return;
-                  setSelectedBranchIds(
-                    e.target.checked
-                      ? branches.filter((b) => b.isActive).map((b) => b.id)
-                      : []
-                  );
-                }}
-                className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer flex-shrink-0"
-              />
-              <span className="text-xs font-medium text-gray-600">
-                Tất cả chi nhánh
-              </span>
-            </label>
-
-            {/* Danh sách chi nhánh */}
-            <div className="max-h-40 overflow-y-auto">
-              {!Array.isArray(branches) ||
-              branches.filter((b) => b.isActive).length === 0 ? (
-                <div className="px-3 py-3 text-xs text-gray-400 text-center">
-                  Không có chi nhánh
-                </div>
-              ) : (
-                branches
-                  .filter((b) => b.isActive)
-                  .map((branch) => (
-                    <label
-                      key={branch.id}
-                      className="flex items-center gap-2.5 px-3 py-2 border-t border-gray-50 cursor-pointer hover:bg-blue-50 transition-colors select-none">
-                      <input
-                        type="checkbox"
-                        checked={selectedBranchIds.includes(branch.id)}
-                        onChange={(e) =>
-                          setSelectedBranchIds((prev) =>
-                            e.target.checked
-                              ? [...prev, branch.id]
-                              : prev.filter((id) => id !== branch.id)
-                          )
-                        }
-                        className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer flex-shrink-0"
-                      />
-                      <span className="text-xs font-medium text-gray-700 truncate">
-                        {branch.name}
-                      </span>
-                    </label>
-                  ))
-              )}
-            </div>
-          </div>
+          <BranchMultiSelectDropdown
+            branches={activeBranches}
+            selectedIds={selectedBranchIds}
+            onChange={setSelectedBranchIds}
+          />
         </div>
 
         {/* ── Người tạo ── */}

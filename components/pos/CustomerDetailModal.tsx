@@ -5,10 +5,12 @@ import { X, Loader2 } from "lucide-react";
 import { useCustomer } from "@/lib/hooks/useCustomers";
 import { CustomerInvoicesTab } from "../customers/CustomerInvoicesTab";
 import { CustomerOrdersTab } from "../customers/CustomerOrdersTab";
+import { CustomerDebtsTab } from "../customers/CustomerDebtsTab";
 import { CustomerInfoTab } from "./CustomerInfoTab";
 import { CustomerInvoiceInfoTab } from "./CustomerInvoiceInfoTab";
 import { formatCurrency } from "@/lib/utils";
 import { CustomerAddressesTab } from "./CustomerAddressesTab";
+import { useCan } from "@/lib/hooks/useCan";
 import { createPortal } from "react-dom";
 
 interface CustomerDetailModalProps {
@@ -18,7 +20,15 @@ interface CustomerDetailModalProps {
   onCustomerUpdate?: (customer: any) => void;
 }
 
-type TabType = "info" | "invoiceInfo" | "addresses" | "invoices" | "orders";
+type TabType =
+  | "info"
+  | "invoiceInfo"
+  | "addresses"
+  | "invoices"
+  | "orders"
+  | "debts"
+  | "debts_total"
+  | "debts_own";
 
 export function CustomerDetailModal({
   isOpen,
@@ -27,16 +37,28 @@ export function CustomerDetailModal({
   onCustomerUpdate,
 }: CustomerDetailModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>("info");
-  const { data: customer, isLoading } = useCustomer(customerId);
-
-  if (!isOpen) return null;
-
   const [mounted, setMounted] = useState(false);
+  const { data: customer, isLoading } = useCustomer(customerId);
+  const canViewDebt = useCan("customers", "view_debt");
+
+  const isParent = (customer?.children?.length ?? 0) > 0;
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  // Nếu user mất quyền xem công nợ trong khi đang ở tab công nợ → quay về Thông tin
+  useEffect(() => {
+    if (
+      !canViewDebt &&
+      (activeTab === "debts" ||
+        activeTab === "debts_total" ||
+        activeTab === "debts_own")
+    ) {
+      setActiveTab("info");
+    }
+  }, [canViewDebt, activeTab]);
 
   if (!isOpen || !mounted) return null;
 
@@ -52,6 +74,14 @@ export function CustomerDetailModal({
     { key: "addresses", label: "Địa chỉ" },
     { key: "invoices", label: "Lịch sử bán/trả" },
     { key: "orders", label: "Lịch sử đặt hàng" },
+    ...(canViewDebt
+      ? isParent
+        ? [
+            { key: "debts_total" as TabType, label: "Công nợ (bao gồm con)" },
+            { key: "debts_own" as TabType, label: "Công nợ (chỉ KH này)" },
+          ]
+        : [{ key: "debts" as TabType, label: "Công nợ" }]
+      : []),
   ];
 
   return createPortal(
@@ -61,7 +91,7 @@ export function CustomerDetailModal({
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Sheet / Modal */}
-      <div className="relative bg-white w-full flex flex-col h-[95dvh] lg:h-auto rounded-t-2xl lg:rounded-xl lg:max-w-5xl">
+      <div className="relative bg-white w-full flex flex-col h-[95dvh] lg:h-[90dvh] rounded-t-2xl lg:rounded-xl lg:max-w-5xl">
         {/* Handle bar — mobile only */}
         <div className="lg:hidden flex justify-center pt-2.5 pb-0.5 flex-shrink-0">
           <div className="w-10 h-1 bg-gray-200 rounded-full" />
@@ -145,6 +175,31 @@ export function CustomerDetailModal({
               )}
               {activeTab === "orders" && (
                 <CustomerOrdersTab customerId={customer.id} />
+              )}
+              {activeTab === "debts" && canViewDebt && (
+                <CustomerDebtsTab
+                  customerId={customer.id}
+                  customerDebt={Number(customer.totalDebt)}
+                />
+              )}
+              {activeTab === "debts_total" && canViewDebt && (
+                <CustomerDebtsTab
+                  customerId={customer.id}
+                  customerDebt={
+                    Number(customer.totalDebt) +
+                    (customer.children?.reduce(
+                      (sum: number, c: any) => sum + Number(c.totalDebt),
+                      0
+                    ) ?? 0)
+                  }
+                  includeChildren
+                />
+              )}
+              {activeTab === "debts_own" && canViewDebt && (
+                <CustomerDebtsTab
+                  customerId={customer.id}
+                  customerDebt={Number(customer.totalDebt)}
+                />
               )}
             </>
           ) : (
