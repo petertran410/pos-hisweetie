@@ -31,7 +31,11 @@ import {
 import { useAuthStore } from "@/lib/store/auth";
 import { useCan } from "@/lib/hooks/useCan";
 import { MobilePrintPreviewModal } from "@/components/pos/MobilePrintPreviewModal";
-import { printEntity, printDeliverySlip, queuePrintAfterRedirect } from "@/lib/utils/print";
+import {
+  printEntity,
+  printDeliverySlip,
+  queuePrintAfterRedirect,
+} from "@/lib/utils/print";
 
 export interface CartItem {
   rowId: string;
@@ -1179,7 +1183,9 @@ export default function BanHangPage() {
       handleCloseTab(activeTabId);
       toast.success("Tạo hóa đơn thành công");
       if (result?.id) {
-        handlePostCreate("invoice", result.id, "/don-hang/dat-hang", { shouldRedirect: true });
+        handlePostCreate("invoice", result.id, "/don-hang/dat-hang", {
+          shouldRedirect: true,
+        });
       }
     } catch (error: any) {
       toast.error(error.message || "Không thể tạo hóa đơn");
@@ -1563,7 +1569,7 @@ export default function BanHangPage() {
         branchId: selectedBranch?.id,
         soldById: activeTab.soldById ?? user?.id,
         priceBookId: activeTab.selectedPriceBookId ?? 0,
-        orderDate: new Date().toISOString(),
+        orderDate: existingOrder.orderDate,
         orderStatus: existingOrder.orderStatus,
         description: activeTab.orderNote,
         paidAmount: actualPayment,
@@ -1623,7 +1629,9 @@ export default function BanHangPage() {
 
         // QUEUE PRINT
         toast.success("Lưu đơn hàng thành công");
-        handlePostCreate("order", activeTab.documentId, "/don-hang/dat-hang", { shouldRedirect: true });
+        handlePostCreate("order", activeTab.documentId, "/don-hang/dat-hang", {
+          shouldRedirect: true,
+        });
       } catch (error: any) {
         console.error("Save order error:", error);
         toast.error(error.message || "Không thể lưu đơn hàng");

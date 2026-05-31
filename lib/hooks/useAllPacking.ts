@@ -7,8 +7,17 @@ export function useAllPacking(params?: any) {
     queryFn: async () => {
       const queryParams = new URLSearchParams();
       if (params?.branchId) queryParams.append("branchId", params.branchId);
+      if (params?.branchIds?.length) {
+        params.branchIds.forEach((id: number) =>
+          queryParams.append("branchIds", String(id))
+        );
+      }
       if (params?.type) queryParams.append("type", params.type);
       if (params?.search) queryParams.append("search", params.search);
+      if (params?.invoiceSearch)
+        queryParams.append("invoiceSearch", params.invoiceSearch);
+      if (params?.customerSearch)
+        queryParams.append("customerSearch", params.customerSearch);
       if (params?.pageSize) queryParams.append("pageSize", params.pageSize);
       if (params?.currentItem)
         queryParams.append("currentItem", params.currentItem);
