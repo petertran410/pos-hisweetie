@@ -58,4 +58,45 @@ export const ordersApi = {
   cancel: (id: number, cancelPayments: boolean): Promise<any> => {
     return apiClient.put(`/orders/${id}/cancel`, { cancelPayments });
   },
+
+  /**
+   * Tổng số "Khách đặt" cho từng sản phẩm — chỉ tính các đơn ở
+   * trạng thái Phiếu tạm hoặc Đã xác nhận trên mọi chi nhánh.
+   * Trả về object: { [productId]: totalQuantity }
+   */
+  getPendingSummary: (
+    productIds: number[]
+  ): Promise<Record<number, number>> => {
+    if (!productIds || productIds.length === 0) {
+      return Promise.resolve({});
+    }
+    return apiClient.get(`/orders/pending-summary`, {
+      productIds: productIds.join(","),
+    });
+  },
+
+  /**
+   * Danh sách đơn hàng (Phiếu tạm/Đã xác nhận, mọi chi nhánh) chứa
+   * sản phẩm cụ thể — dùng cho modal khi click vào số "Khách đặt".
+   */
+  getPendingByProduct: (
+    productId: number
+  ): Promise<
+    Array<{
+      orderId: number;
+      code: string;
+      createdAt: string;
+      orderDate: string;
+      grandTotal: number;
+      status: number;
+      statusValue: string;
+      orderStatus: string;
+      quantity: number;
+      customer: { id: number; code?: string; name: string } | null;
+      creator: { id: number; name: string } | null;
+      branch: { id: number; name: string } | null;
+    }>
+  > => {
+    return apiClient.get(`/orders/pending-by-product`, { productId });
+  },
 };

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
+import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -17,6 +18,7 @@ import { ProductDetailRow } from "./ProductDetailRow";
 import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
+import { ProductCustomerOrdersModal } from "./ProductCustomerOrdersModal";
 import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface ColumnConfig {
@@ -24,7 +26,13 @@ interface ColumnConfig {
   label: string;
   visible: boolean;
   width?: string;
-  render: (product: Product) => React.ReactNode;
+  render: (
+    product: Product,
+    ctx?: {
+      pendingMap: Record<number, number>;
+      onOpenPending: (p: Product) => void;
+    }
+  ) => React.ReactNode;
 }
 
 interface ProductsTableProps {
@@ -197,20 +205,23 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Khách đặt",
     visible: false,
     width: "100px",
-    render: (product) => {
-      const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
-      if (selectedBranchId) {
-        const inventory = product.inventories?.find(
-          (inv) => inv.branchId === selectedBranchId
-        );
-        return inventory ? Number(inventory.reserved).toLocaleString() : "0";
+    render: (product, ctx) => {
+      const total = ctx?.pendingMap?.[product.id] ?? 0;
+      const display = total.toLocaleString();
+      if (total <= 0) {
+        return <span className="text-gray-500">{display}</span>;
       }
-      const totalStockReserved =
-        product.inventories?.reduce(
-          (sum, inv) => sum + Number(inv.reserved),
-          0
-        ) || 0;
-      return totalStockReserved.toLocaleString();
+      return (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            ctx?.onOpenPending(product);
+          }}
+          className="text-blue-600 hover:underline font-medium">
+          {display}
+        </button>
+      );
     },
   },
   {
@@ -418,6 +429,25 @@ export function ProductsTable({
     () => displayColumns.filter((c) => c.visible),
     [displayColumns]
   );
+
+  const isCustomerOrderColumnVisible = useMemo(
+    () => visibleColumns.some((c) => c.key === "customerOrder"),
+    [visibleColumns]
+  );
+
+  // Chỉ fetch summary "Khách đặt" khi cột đang hiển thị, gom theo trang hiện tại.
+  const productIdsForPending = useMemo(
+    () => (isCustomerOrderColumnVisible ? products.map((p) => p.id) : []),
+    [isCustomerOrderColumnVisible, products]
+  );
+
+  const { data: pendingSummary } = useOrdersPendingSummary(
+    productIdsForPending
+  );
+  const pendingMap = pendingSummary || {};
+
+  const [pendingModalProduct, setPendingModalProduct] =
+    useState<Product | null>(null);
 
   const colSpan = visibleColumns.length + 2; // +checkbox +chevron
 
@@ -646,7 +676,10 @@ export function ProductsTable({
                           wordWrap: "break-word",
                           whiteSpace: "normal",
                         }}>
-                        {col.render(product)}
+                        {col.render(product, {
+                          pendingMap,
+                          onOpenPending: (p) => setPendingModalProduct(p),
+                        })}
                       </td>
                     ))}
                     <td
@@ -759,6 +792,15 @@ export function ProductsTable({
         <ManufacturingProductForm
           onClose={() => setShowCreateForm(false)}
           onSuccess={() => setShowCreateForm(false)}
+        />
+      )}
+
+      {pendingModalProduct && (
+        <ProductCustomerOrdersModal
+          productId={pendingModalProduct.id}
+          productName={pendingModalProduct.name}
+          productCode={pendingModalProduct.code}
+          onClose={() => setPendingModalProduct(null)}
         />
       )}
     </div>
