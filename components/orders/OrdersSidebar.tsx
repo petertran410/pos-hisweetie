@@ -909,10 +909,16 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   };
 
   // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó
-  // Ref init = null để effect luôn chạy lần đầu, reconcile với sessionStorage có thể đã stale
-  const lastSyncedBranchIdRef = useRef<number | null>(null);
+  // Skip lần mount đầu tiên (hydrate) để không ghi đè sessionStorage đã restore
+  const isFirstRenderRef = useRef(true);
+  const lastSyncedBranchIdRef = useRef<number | null>(selectedBranch?.id ?? null);
   useEffect(() => {
     const currentBranchId = selectedBranch?.id ?? null;
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      lastSyncedBranchIdRef.current = currentBranchId;
+      return;
+    }
     if (currentBranchId !== lastSyncedBranchIdRef.current) {
       lastSyncedBranchIdRef.current = currentBranchId;
       setSelectedBranchIds(currentBranchId ? [currentBranchId] : []);

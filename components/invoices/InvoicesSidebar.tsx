@@ -315,6 +315,202 @@ function StatusDropdown({
   );
 }
 
+// ─── MultiStatusDropdown ─────────────────────────────────────────────────────
+function MultiStatusDropdown({
+  options,
+  values,
+  placeholder,
+  onChange,
+}: {
+  options: DropdownOption[];
+  values: string[];
+  placeholder: string;
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  const selectedOptions = options.filter((o) => values.includes(o.value));
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((p) => !p)}
+        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "hover:border-gray-400"
+        } bg-white`}>
+        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+          {selectedOptions.length > 0 ? (
+            selectedOptions.map((s) => (
+              <span
+                key={s.value}
+                className={`text-xs font-medium px-2 py-0.5 rounded-full truncate ${s.color}`}>
+                {s.label}
+              </span>
+            ))
+          ) : (
+            <span className="text-gray-400 text-sm">{placeholder}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {selectedOptions.length > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange([]);
+              }}
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </div>
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          {options.map((opt, idx) => {
+            const isSelected = values.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(
+                    isSelected
+                      ? values.filter((v) => v !== opt.value)
+                      : [...values, opt.value]
+                  );
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
+                  isSelected ? "bg-blue-50" : "hover:bg-gray-50"
+                } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                <span
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dot}`}
+                />
+                <span
+                  className={`flex-1 text-xs font-medium px-2 py-0.5 rounded-full ${opt.color}`}>
+                  {opt.label}
+                </span>
+                {isSelected && (
+                  <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MultiSimpleDropdown ─────────────────────────────────────────────────────
+function MultiSimpleDropdown({
+  options,
+  values,
+  placeholder,
+  onChange,
+}: {
+  options: SimpleOption[];
+  values: string[];
+  placeholder: string;
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  const selectedOptions = options.filter((o) => values.includes(o.value));
+  const label =
+    selectedOptions.length === 0
+      ? null
+      : selectedOptions.length === 1
+        ? selectedOptions[0].label
+        : `${selectedOptions.length} đã chọn`;
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((p) => !p)}
+        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "hover:border-gray-400"
+        } bg-white`}>
+        <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
+          {label ?? placeholder}
+        </span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {selectedOptions.length > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange([]);
+              }}
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </div>
+      </div>
+      {open && options.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+          {options.map((opt, idx) => {
+            const isSelected = values.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(
+                    isSelected
+                      ? values.filter((v) => v !== opt.value)
+                      : [...values, opt.value]
+                  );
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                  isSelected
+                    ? "bg-blue-50 text-blue-700 font-medium"
+                    : "hover:bg-gray-50 text-gray-700"
+                } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                <span className="truncate">{opt.label}</span>
+                {isSelected && (
+                  <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── SimpleDropdown ──────────────────────────────────────────────────────────
 interface SimpleOption {
   value: string;
@@ -604,25 +800,38 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   };
   const saved = useRef(getSavedFilters());
 
   const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>(
-    saved.current?.selectedBranchIds ?? (selectedBranch ? [selectedBranch.id] : [])
+    saved.current?.selectedBranchIds ??
+      (selectedBranch ? [selectedBranch.id] : [])
   );
   const [customerId, setCustomerId] = useState(saved.current?.customerId || "");
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState(saved.current?.selectedStatus || "");
-  const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState(saved.current?.selectedDeliveryStatus || "");
-  const [dateMode, setDateMode] = useState<"preset" | "custom">(saved.current?.dateMode || "preset");
-  const [selectedPreset, setSelectedPreset] = useState(saved.current?.selectedPreset || "all_time");
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(
+    saved.current?.selectedStatuses || []
+  );
+  const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState(
+    saved.current?.selectedDeliveryStatus || ""
+  );
+  const [dateMode, setDateMode] = useState<"preset" | "custom">(
+    saved.current?.dateMode || "preset"
+  );
+  const [selectedPreset, setSelectedPreset] = useState(
+    saved.current?.selectedPreset || "all_time"
+  );
   const [fromDate, setFromDate] = useState(saved.current?.fromDate || "");
   const [toDate, setToDate] = useState(saved.current?.toDate || "");
-  const [creatorId, setCreatorId] = useState(saved.current?.creatorId || "");
-  const [soldById, setSoldById] = useState(saved.current?.soldById || "");
-  const [saleChannelId, setSaleChannelId] = useState(saved.current?.saleChannelId || "");
+  const [creatorIds, setCreatorIds] = useState<string[]>(saved.current?.creatorIds || []);
+  const [soldByIds, setSoldByIds] = useState<string[]>(saved.current?.soldByIds || []);
+  const [saleChannelId, setSaleChannelId] = useState(
+    saved.current?.saleChannelId || ""
+  );
   const [paymentMethod, setPaymentMethod] = useState<"" | "cash" | "transfer">(
     saved.current?.paymentMethod || ""
   );
@@ -642,14 +851,14 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     const state = {
       selectedBranchIds,
       customerId,
-      selectedStatus,
+      selectedStatuses,
       selectedDeliveryStatus,
       dateMode,
       selectedPreset,
       fromDate,
       toDate,
-      creatorId,
-      soldById,
+      creatorIds,
+      soldByIds,
       saleChannelId,
       paymentMethod,
       selectedBankAccountIds,
@@ -658,24 +867,32 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   }, [
     selectedBranchIds,
     customerId,
-    selectedStatus,
+    selectedStatuses,
     selectedDeliveryStatus,
     dateMode,
     selectedPreset,
     fromDate,
     toDate,
-    creatorId,
-    soldById,
+    creatorIds,
+    soldByIds,
     saleChannelId,
     paymentMethod,
     selectedBankAccountIds,
   ]);
 
   // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó
-  // Ref init = null để effect luôn chạy lần đầu, reconcile với sessionStorage có thể đã stale
-  const lastSyncedBranchIdRef = useRef<number | null>(null);
+  // Skip lần mount đầu tiên (hydrate) để không ghi đè sessionStorage đã restore
+  const isFirstRenderRef = useRef(true);
+  const lastSyncedBranchIdRef = useRef<number | null>(
+    selectedBranch?.id ?? null
+  );
   useEffect(() => {
     const currentBranchId = selectedBranch?.id ?? null;
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      lastSyncedBranchIdRef.current = currentBranchId;
+      return;
+    }
     if (currentBranchId !== lastSyncedBranchIdRef.current) {
       lastSyncedBranchIdRef.current = currentBranchId;
       setSelectedBranchIds(currentBranchId ? [currentBranchId] : []);
@@ -705,21 +922,21 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     let n = 0;
     if (selectedBranchIds.length > 0) n++;
     if (customerId) n++;
-    if (selectedStatus) n++;
+    if (selectedStatuses.length > 0) n++;
     if (selectedDeliveryStatus) n++;
     if (selectedPreset !== "all_time" || dateMode === "custom") n++;
-    if (creatorId) n++;
-    if (soldById) n++;
+    if (creatorIds.length > 0) n++;
+    if (soldByIds.length > 0) n++;
     if (saleChannelId) n++;
     if (paymentMethod) n++;
     return n;
   }, [
     selectedBranchIds,
     customerId,
-    selectedStatus,
+    selectedStatuses,
     selectedDeliveryStatus,
-    creatorId,
-    soldById,
+    creatorIds,
+    soldByIds,
     saleChannelId,
     paymentMethod,
   ]);
@@ -743,10 +960,10 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
       const f: any = {};
       if (selectedBranchIds.length > 0) f.branchIds = selectedBranchIds;
       if (customerId) f.customerIds = [parseInt(customerId)];
-      if (selectedStatus) f.statusIds = [parseInt(selectedStatus)];
+      if (selectedStatuses.length > 0) f.statusIds = selectedStatuses.map(Number);
       if (selectedDeliveryStatus) f.deliveryStatus = selectedDeliveryStatus;
-      if (creatorId) f.createdBy = parseInt(creatorId);
-      if (soldById) f.soldById = parseInt(soldById);
+      if (creatorIds.length > 0) f.createdByIds = creatorIds.map(Number);
+      if (soldByIds.length > 0) f.soldByIds = soldByIds.map(Number);
       if (saleChannelId) f.saleChannelId = parseInt(saleChannelId);
       if (selectedPreset !== "all_time" || dateMode === "custom") {
         const range =
@@ -768,14 +985,14 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   }, [
     selectedBranchIds,
     customerId,
-    selectedStatus,
+    selectedStatuses,
     selectedDeliveryStatus,
     dateMode,
     selectedPreset,
     fromDate,
     toDate,
-    creatorId,
-    soldById,
+    creatorIds,
+    soldByIds,
     saleChannelId,
     paymentMethod,
     selectedBankAccountIds,
@@ -785,14 +1002,14 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setCustomerId("");
     setCustomerSearch("");
-    setSelectedStatus("");
+    setSelectedStatuses([]);
     setSelectedDeliveryStatus("");
     setDateMode("preset");
     setSelectedPreset("all_time");
     setFromDate("");
     setToDate("");
-    setCreatorId("");
-    setSoldById("");
+    setCreatorIds([]);
+    setSoldByIds([]);
     setSaleChannelId("");
     setPaymentMethod("");
     setSelectedBankAccountIds([]);
@@ -1052,16 +1269,16 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Trạng thái hóa đơn
           </label>
-          <StatusDropdown
+          <MultiStatusDropdown
             options={STATUS_OPTIONS}
-            value={selectedStatus}
+            values={selectedStatuses}
             placeholder="Chọn trạng thái"
-            onChange={setSelectedStatus}
+            onChange={setSelectedStatuses}
           />
         </div>
 
         {/* ── Trạng thái giao hàng ── */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Trạng thái giao hàng
           </label>
@@ -1071,7 +1288,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
             placeholder="Tất cả"
             onChange={setSelectedDeliveryStatus}
           />
-        </div>
+        </div> */}
 
         <div className="border-t border-gray-100" />
 
@@ -1233,16 +1450,16 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Người tạo
           </label>
-          <SimpleDropdown
+          <MultiSimpleDropdown
             options={
               users?.map((u: any) => ({
                 value: String(u.id),
                 label: u.name,
               })) ?? []
             }
-            value={creatorId}
+            values={creatorIds}
             placeholder="Tất cả"
-            onChange={setCreatorId}
+            onChange={setCreatorIds}
           />
         </div>
 
@@ -1251,21 +1468,21 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Người bán
           </label>
-          <SimpleDropdown
+          <MultiSimpleDropdown
             options={
               users?.map((u: any) => ({
                 value: String(u.id),
                 label: u.name,
               })) ?? []
             }
-            value={soldById}
+            values={soldByIds}
             placeholder="Tất cả"
-            onChange={setSoldById}
+            onChange={setSoldByIds}
           />
         </div>
 
         {/* ── Kênh bán ── */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Kênh bán hàng
           </label>
@@ -1280,7 +1497,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
             placeholder="Tất cả kênh"
             onChange={setSaleChannelId}
           />
-        </div>
+        </div> */}
       </div>
     </aside>
   );

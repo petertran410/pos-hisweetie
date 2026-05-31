@@ -500,19 +500,23 @@ export function InvoicesTable({
     setPage(1);
   }, [debouncedSearch, filters, activeStatusTab, advancedSearch]);
 
-  // Tab override sidebar status
+  // Tab override sidebar status — chỉ khi tab khác "all" VÀ sidebar không gửi multi-status
   const effectiveFilters = useMemo(() => {
     const f = { ...filters };
-    if (activeStatusTab !== "all") f.statusIds = [Number(activeStatusTab)];
+    if (activeStatusTab !== "all" && (!f.statusIds || f.statusIds.length <= 1))
+      f.statusIds = [Number(activeStatusTab)];
     return f;
   }, [filters, activeStatusTab]);
 
-  // Sync tab với sidebar
+  // Sync tab với sidebar — chỉ sync khi sidebar chọn đúng 1 status
   useEffect(() => {
-    const s = filters.statusIds?.[0];
-    if (s != null && String(s) !== activeStatusTab)
-      setActiveStatusTab(String(s));
-    else if (s == null && activeStatusTab !== "all") setActiveStatusTab("all");
+    const ids = filters.statusIds;
+    if (ids && ids.length === 1) {
+      if (String(ids[0]) !== activeStatusTab)
+        setActiveStatusTab(String(ids[0]));
+    } else {
+      if (activeStatusTab !== "all") setActiveStatusTab("all");
+    }
   }, [filters.statusIds]);
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {

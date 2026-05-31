@@ -5,7 +5,7 @@ import { X, Camera, Upload, ChevronDown } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useInvoices } from "@/lib/hooks/useInvoices";
 import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
-import { uploadPackingLoadingImage } from "@/lib/hooks/usePackingLoadings";
+import { uploadPackingLoadingImages } from "@/lib/hooks/usePackingLoadings";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingLoading } from "@/lib/types/packing-loading";
 import { toast } from "sonner";
@@ -134,25 +134,30 @@ export function PackingLoadingForm({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleImageUpload = async (file: File) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
+    e.target.value = "";
     setIsUploading(true);
     try {
-      const url = await uploadPackingLoadingImage(file);
-      setImages([...images, url]);
-      toast.success("Upload hình thành công");
-    } catch (error) {
+      const { urls, errors } = await uploadPackingLoadingImages(fileList);
+      if (urls.length > 0) {
+        setImages((prev) => [...prev, ...urls]);
+      }
+      if (errors.length === 0) {
+        toast.success(`Upload ${urls.length} hình thành công`);
+      } else if (urls.length > 0) {
+        toast.success(
+          `Upload ${urls.length}/${fileList.length} hình thành công`
+        );
+      } else {
+        toast.error("Upload hình thất bại");
+      }
+    } catch {
       toast.error("Upload hình thất bại");
     } finally {
       setIsUploading(false);
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      Array.from(files).forEach((file) => {
-        handleImageUpload(file);
-      });
     }
   };
 

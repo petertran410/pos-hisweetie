@@ -108,3 +108,22 @@ export async function uploadPackingSlipImage(file: File): Promise<string> {
   const result = await res.json();
   return result.url;
 }
+
+export async function uploadPackingSlipImages(
+  files: File[]
+): Promise<{ urls: string[]; errors: { originalname: string; reason: string }[] }> {
+  const token = useAuthStore.getState().token;
+  const formData = new FormData();
+  files.forEach((f) => formData.append("files", f));
+  const res = await fetch(`${API_URL}/upload/images?subfolder=bao-don`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!res.ok) throw new Error("Upload failed");
+  const result = await res.json();
+  return {
+    urls: result.items.map((it: { url: string }) => it.url),
+    errors: result.errors ?? [],
+  };
+}
