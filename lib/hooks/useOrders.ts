@@ -9,6 +9,17 @@ export function useOrders(params?: any) {
   });
 }
 
+/**
+ * Tổng các cột tiền của TOÀN BỘ đơn match filter (không phân trang).
+ * Dùng cho hàng "tổng" hiển thị ngay dưới header bảng đặt hàng.
+ */
+export function useOrdersTotals(params?: any) {
+  return useQuery({
+    queryKey: ["orders-totals", params],
+    queryFn: () => ordersApi.getTotals(params),
+  });
+}
+
 export function useOrder(id: number) {
   return useQuery({
     queryKey: ["orders", id],

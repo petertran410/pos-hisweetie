@@ -11,6 +11,7 @@ export interface PackingSlip {
   feeGrab: number;
   hasCuocGuiHang: boolean;
   cuocGuiHang: number;
+  expensePayerId?: number | null;
   note?: string;
   createdBy: number;
   createdAt: string;
@@ -24,8 +25,13 @@ export interface PackingSlip {
     id: number;
     name: string;
   };
+  expensePayer?: {
+    id: number;
+    name: string;
+  } | null;
   invoices?: PackingSlipInvoice[];
   images?: PackingSlipImage[];
+  expenseFiles?: PackingSlipExpenseFile[];
 }
 
 export interface PackingSlipInvoice {
@@ -48,4 +54,13 @@ export interface PackingSlipImage {
   id: number;
   packingSlipId: number;
   imageUrl: string;
+}
+
+export interface PackingSlipExpenseFile {
+  id: number;
+  packingSlipId: number;
+  fileUrl: string;
+  fileName?: string | null;
+  fileType?: string | null;
+  fileSize?: number | null;
 }

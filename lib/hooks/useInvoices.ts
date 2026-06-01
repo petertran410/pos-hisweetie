@@ -13,6 +13,17 @@ export function useInvoices(params?: any) {
   });
 }
 
+/**
+ * Tổng các cột tiền của TOÀN BỘ hóa đơn match filter (không phân trang).
+ * Dùng cho hàng "tổng" hiển thị ngay dưới header bảng hóa đơn.
+ */
+export function useInvoicesTotals(params?: any) {
+  return useQuery({
+    queryKey: ["invoices-totals", params],
+    queryFn: () => invoicesApi.getTotals(params),
+  });
+}
+
 export function useInvoicesForPacking(params?: {
   branchId?: number;
   pageSize?: number;

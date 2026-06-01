@@ -1195,10 +1195,12 @@ export function CustomersSidebar({
             </label>
             <SimpleDropdown
               options={
-                branchesData?.map((b) => ({
-                  value: String(b.id),
-                  label: b.name,
-                })) ?? []
+                branchesData
+                  ?.filter((b) => b.isActive)
+                  .map((b) => ({
+                    value: String(b.id),
+                    label: b.name,
+                  })) ?? []
               }
               value={branchId}
               placeholder="Tất cả chi nhánh"

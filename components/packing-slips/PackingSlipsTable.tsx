@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
-import { X, Plus, Settings } from "lucide-react";
+import { X, Plus, Settings, FileText } from "lucide-react";
 
 interface ColumnConfig {
   key: string;
@@ -49,6 +49,8 @@ export function PackingSlipsTable({
 }: PackingSlipsTableProps) {
   const [search, setSearch] = useState("");
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [viewingExpenseFiles, setViewingExpenseFiles] =
+    useState<PackingSlip | null>(null);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
 
@@ -174,6 +176,33 @@ export function PackingSlipsTable({
       width: "180px",
       render: (slip) =>
         slip.hasCuocGuiHang ? formatCurrency(slip.cuocGuiHang) : "-",
+    },
+    {
+      key: "expensePayer",
+      label: "Người chi",
+      visible: true,
+      width: "160px",
+      render: (slip) => slip.expensePayer?.name || "-",
+    },
+    {
+      key: "expenseFiles",
+      label: "Chứng từ chi phí",
+      visible: true,
+      width: "150px",
+      render: (slip) => {
+        const files = slip.expenseFiles || [];
+        if (files.length === 0) return "0";
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setViewingExpenseFiles(slip);
+            }}
+            className="text-blue-600 hover:text-blue-800">
+            {files.length} file
+          </button>
+        );
+      },
     },
     {
       key: "images",
@@ -334,7 +363,9 @@ export function PackingSlipsTable({
                 <th
                   key={col.key}
                   className={`px-6 py-3 font-medium text-gray-700 whitespace-nowrap ${
-                    col.key === "numberOfPackages" || col.key === "images"
+                    col.key === "numberOfPackages" ||
+                    col.key === "images" ||
+                    col.key === "expenseFiles"
                       ? "text-center"
                       : col.key === "feeGuiBen" ||
                           col.key === "feeGrab" ||
@@ -376,7 +407,9 @@ export function PackingSlipsTable({
                     <td
                       key={col.key}
                       className={`px-6 py-3 text-md break-words ${
-                        col.key === "numberOfPackages" || col.key === "images"
+                        col.key === "numberOfPackages" ||
+                        col.key === "images" ||
+                        col.key === "expenseFiles"
                           ? "text-center"
                           : col.key === "feeGuiBen" ||
                               col.key === "feeGrab" ||
@@ -535,6 +568,75 @@ export function PackingSlipsTable({
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {viewingExpenseFiles && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4"
+          onClick={() => setViewingExpenseFiles(null)}>
+          <div
+            className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Chứng từ chi phí - {viewingExpenseFiles.code}
+              </h3>
+              <button
+                onClick={() => setViewingExpenseFiles(null)}
+                className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {viewingExpenseFiles.expenseFiles?.map((file) => {
+                const isImage =
+                  file.fileType?.startsWith("image/") ||
+                  /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.fileUrl);
+                return (
+                  <div
+                    key={file.id}
+                    className="border rounded-lg overflow-hidden hover:shadow-md transition">
+                    {isImage ? (
+                      <button
+                        type="button"
+                        onClick={() => setViewingImage(file.fileUrl)}
+                        className="w-full h-32 bg-gray-50 block">
+                        <img
+                          src={file.fileUrl}
+                          alt={file.fileName || ""}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ) : (
+                      <a
+                        href={file.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full h-32 bg-gray-50 hover:bg-gray-100 flex flex-col items-center justify-center p-3"
+                        title={file.fileName || file.fileUrl}>
+                        <FileText className="w-10 h-10 text-gray-500" />
+                        <span className="text-xs text-gray-700 mt-2 line-clamp-2 text-center break-all">
+                          {file.fileName ||
+                            file.fileUrl.split("/").pop() ||
+                            "File"}
+                        </span>
+                      </a>
+                    )}
+                    <div className="px-2 py-1 text-xs text-gray-600 truncate border-t">
+                      {file.fileName || file.fileUrl.split("/").pop() || "File"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {(!viewingExpenseFiles.expenseFiles ||
+              viewingExpenseFiles.expenseFiles.length === 0) && (
+              <div className="text-center text-gray-500 py-8">
+                Không có chứng từ
+              </div>
+            )}
           </div>
         </div>
       )}

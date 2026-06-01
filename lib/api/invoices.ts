@@ -39,9 +39,29 @@ export interface InvoicesResponse {
   limit: number;
 }
 
+export interface InvoicesTotalsResponse {
+  count: number;
+  totalAmount: number;
+  grandTotal: number;
+  customerDebt: number;
+  paidAmount: number;
+  debtAmount: number;
+  returnOrderAmount: number;
+  cashRefundAmount: number;
+  debtOffsetAmount: number;
+  remainingAmount: number;
+}
+
 export const invoicesApi = {
   getInvoices: (params?: any): Promise<InvoicesResponse> => {
     return apiClient.get("/invoices", params);
+  },
+  /**
+   * Tổng các cột tiền của TOÀN BỘ hóa đơn match filter (không phân trang).
+   * Dùng cho hàng "tổng" hiển thị ngay dưới header bảng hóa đơn.
+   */
+  getTotals: (params?: any): Promise<InvoicesTotalsResponse> => {
+    return apiClient.get("/invoices/totals", params);
   },
   getInvoice: (id: number): Promise<Invoice> => {
     return apiClient.get(`/invoices/${id}`);

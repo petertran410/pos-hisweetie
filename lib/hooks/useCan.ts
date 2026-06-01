@@ -8,9 +8,16 @@ import type {
 import { NAV_CONFIG, POS_ACTIONS } from "../permissions/registry";
 
 const SUPER_ADMIN_ROLE = "Super Admin";
+const ADMIN_ROLE = "Admin";
 
 function isSuperAdmin(roles?: string[]): boolean {
   return roles?.includes(SUPER_ADMIN_ROLE) ?? false;
+}
+
+function isAdminOrSuperAdmin(roles?: string[]): boolean {
+  return (
+    roles?.some((r) => r === SUPER_ADMIN_ROLE || r === ADMIN_ROLE) ?? false
+  );
 }
 
 export function useCan(resource: string, action: string): boolean {
@@ -19,6 +26,16 @@ export function useCan(resource: string, action: string): boolean {
   if (isSuperAdmin(user.roles)) return true;
   if (!user.permissions) return false;
   return user.permissions.includes(`${resource}:${action}`);
+}
+
+/**
+ * Trả về true nếu user có role Super Admin hoặc Admin.
+ * Dùng khi cần bypass các điều kiện ẩn UI theo trạng thái nghiệp vụ
+ * (ví dụ: ẩn nút theo status hóa đơn) cho admin.
+ */
+export function useIsAdmin(): boolean {
+  const { user } = useAuthStore();
+  return isAdminOrSuperAdmin(user?.roles);
 }
 
 export function useCanDef(def: PermissionDef): boolean {

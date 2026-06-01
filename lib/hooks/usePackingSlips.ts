@@ -127,3 +127,51 @@ export async function uploadPackingSlipImages(
     errors: result.errors ?? [],
   };
 }
+
+export interface UploadedExpenseFile {
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+}
+
+/**
+ * Upload nhiều file (image/pdf/doc/xls/...) cho phần "Chứng từ chi phí" của báo đơn.
+ * Subfolder: bao-don/chi-phi.
+ */
+export async function uploadPackingSlipExpenseFiles(
+  files: File[]
+): Promise<{
+  files: UploadedExpenseFile[];
+  errors: { originalname: string; reason: string }[];
+}> {
+  const token = useAuthStore.getState().token;
+  const formData = new FormData();
+  files.forEach((f) => formData.append("files", f));
+  const res = await fetch(
+    `${API_URL}/upload/files?subfolder=bao-don/chi-phi`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    }
+  );
+  if (!res.ok) throw new Error("Upload failed");
+  const result = await res.json();
+  return {
+    files: (result.items ?? []).map(
+      (it: {
+        url: string;
+        originalname: string;
+        mimetype: string;
+        size: number;
+      }) => ({
+        fileUrl: it.url,
+        fileName: it.originalname,
+        fileType: it.mimetype,
+        fileSize: it.size,
+      })
+    ),
+    errors: result.errors ?? [],
+  };
+}

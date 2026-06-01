@@ -13,6 +13,23 @@ export const ordersApi = {
     return apiClient.get("/orders", params);
   },
 
+  /**
+   * Tổng các cột tiền của TOÀN BỘ đơn match filter (không phân trang).
+   * Dùng cho hàng "tổng" hiển thị ngay dưới header bảng đặt hàng.
+   */
+  getTotals: (
+    params?: Record<string, any>
+  ): Promise<{
+    count: number;
+    totalAmount: number;
+    grandTotal: number;
+    customerDebt: number;
+    paidAmount: number;
+    debtAmount: number;
+  }> => {
+    return apiClient.get("/orders/totals", params);
+  },
+
   getOrder: (id: number): Promise<Order> => {
     return apiClient.get(`/orders/${id}`);
   },

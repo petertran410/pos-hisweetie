@@ -18,7 +18,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
-import { useCan } from "@/lib/hooks/useCan";
+import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
 
 interface InvoiceDetailRowProps {
   invoiceId: number;
@@ -64,6 +64,7 @@ export function InvoiceDetailRow({
   const hasPermCancel = useCan("invoices", "cancel");
   const hasPermUpdate = useCan("invoices", "update");
   const hasPermPrint = useCan("invoices", "print");
+  const isAdmin = useIsAdmin();
 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -262,8 +263,9 @@ export function InvoiceDetailRow({
     invoice.status === INVOICE_STATUS.CANCELLED ||
     invoice.status === INVOICE_STATUS.DELIVERED;
 
-  const canCancel = !isFinalState;
-  const canProcess = !isFinalState;
+  // Admin/Super Admin được bỏ qua điều kiện ẩn theo trạng thái hóa đơn
+  const canCancel = !isFinalState || isAdmin;
+  const canProcess = !isFinalState || isAdmin;
 
   const getConditionLabel = (conditionType?: string) => {
     switch (conditionType) {

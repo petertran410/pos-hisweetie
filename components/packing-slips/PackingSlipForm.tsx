@@ -1,10 +1,15 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Camera, Upload, ChevronDown } from "lucide-react";
+import { X, Camera, Upload, ChevronDown, FileText } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useInvoicesForPacking } from "@/lib/hooks/useInvoices";
-import { uploadPackingSlipImages } from "@/lib/hooks/usePackingSlips";
+import {
+  uploadPackingSlipImages,
+  uploadPackingSlipExpenseFiles,
+  type UploadedExpenseFile,
+} from "@/lib/hooks/usePackingSlips";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import { toast } from "sonner";
@@ -84,6 +89,43 @@ export function PackingSlipForm({
     Number(packingSlip?.cuocGuiHang) || 0
   );
 
+  // Người chi tiền (optional, single-select, có search)
+  const [expensePayerId, setExpensePayerId] = useState<number | null>(
+    packingSlip?.expensePayerId ?? null
+  );
+  const [showPayerDropdown, setShowPayerDropdown] = useState(false);
+  const [payerSearch, setPayerSearch] = useState("");
+  const payerDropdownRef = useRef<HTMLDivElement>(null);
+  const { data: users } = useUsersForFilter();
+  const selectedPayer = useMemo(
+    () => users?.find((u) => u.id === expensePayerId) || null,
+    [users, expensePayerId]
+  );
+  const filteredUsers = useMemo(() => {
+    const list = users || [];
+    const q = payerSearch.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((u) => u.name.toLowerCase().includes(q));
+  }, [users, payerSearch]);
+
+  // Chứng từ chi phí (image / pdf / doc / xls / ...)
+  const [expenseFiles, setExpenseFiles] = useState<UploadedExpenseFile[]>(
+    packingSlip?.expenseFiles?.map((f) => ({
+      fileUrl: f.fileUrl,
+      fileName: f.fileName ?? "",
+      fileType: f.fileType ?? "",
+      fileSize: f.fileSize ?? 0,
+    })) || []
+  );
+  const [isUploadingExpense, setIsUploadingExpense] = useState(false);
+
+  const hasAnyFee = hasFeeGuiBen || hasFeeGrab || hasCuocGuiHang;
+
+  const isImageFile = (file: UploadedExpenseFile) => {
+    if (file.fileType?.startsWith("image/")) return true;
+    return /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.fileUrl);
+  };
+
   const parseFormattedNumber = (value: string): number => {
     return parseFloat(value.replace(/,/g, "")) || 0;
   };
@@ -133,6 +175,12 @@ export function PackingSlipForm({
       ) {
         setShowInvoiceDropdown(false);
       }
+      if (
+        payerDropdownRef.current &&
+        !payerDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowPayerDropdown(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -168,6 +216,43 @@ export function PackingSlipForm({
 
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
+  };
+
+  const handleExpenseFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
+    e.target.value = "";
+    setIsUploadingExpense(true);
+    try {
+      const { files: uploaded, errors } = await uploadPackingSlipExpenseFiles(
+        fileList
+      );
+      if (uploaded.length > 0) {
+        setExpenseFiles((prev) => [...prev, ...uploaded]);
+      }
+      if (errors.length === 0) {
+        toast.success(`Upload ${uploaded.length} file thành công`);
+      } else if (uploaded.length > 0) {
+        toast.success(
+          `Upload ${uploaded.length}/${fileList.length} file thành công`
+        );
+        // Hiển thị thông báo lỗi đầu tiên cho dễ debug
+        toast.error(`${errors[0].originalname}: ${errors[0].reason}`);
+      } else {
+        toast.error(errors[0]?.reason || "Upload file thất bại");
+      }
+    } catch {
+      toast.error("Upload file thất bại");
+    } finally {
+      setIsUploadingExpense(false);
+    }
+  };
+
+  const removeExpenseFile = (index: number) => {
+    setExpenseFiles(expenseFiles.filter((_, i) => i !== index));
   };
 
   const toggleInvoice = (invoiceId: number) => {
@@ -227,6 +312,8 @@ export function PackingSlipForm({
       feeGrab: hasFeeGrab ? feeGrab : 0,
       hasCuocGuiHang,
       cuocGuiHang: hasCuocGuiHang ? cuocGuiHang : 0,
+      expensePayerId: hasAnyFee ? expensePayerId : null,
+      expenseFiles: hasAnyFee ? expenseFiles : [],
       note,
       imageUrls: images,
     };
@@ -508,6 +595,87 @@ export function PackingSlipForm({
 
             <div>
               <label className="block text-sm font-medium mb-2">Chi phí</label>
+
+              {/* Người chi tiền — single-select, có search, được phép trống */}
+              <div ref={payerDropdownRef} className="relative mb-3">
+                <label className="block text-xs text-gray-600 mb-1">
+                  Người chi
+                </label>
+                <div
+                  className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex items-center gap-2"
+                  onClick={() => setShowPayerDropdown(true)}>
+                  {selectedPayer ? (
+                    <>
+                      <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                        {selectedPayer.name}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpensePayerId(null);
+                            setPayerSearch("");
+                          }}
+                          className="hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center">
+                          ×
+                        </button>
+                      </span>
+                      <input
+                        type="text"
+                        value={payerSearch}
+                        onChange={(e) => setPayerSearch(e.target.value)}
+                        onFocus={() => setShowPayerDropdown(true)}
+                        placeholder=""
+                        className="flex-1 outline-none min-w-[120px] bg-transparent"
+                      />
+                    </>
+                  ) : (
+                    <input
+                      type="text"
+                      value={payerSearch}
+                      onChange={(e) => setPayerSearch(e.target.value)}
+                      onFocus={() => setShowPayerDropdown(true)}
+                      placeholder="Tìm và chọn người chi (tùy chọn)"
+                      className="flex-1 outline-none min-w-[120px] bg-transparent"
+                    />
+                  )}
+                  <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                </div>
+
+                {showPayerDropdown && (
+                  <div className="absolute z-50 left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-[260px] overflow-y-auto">
+                    <div
+                      onClick={() => {
+                        setExpensePayerId(null);
+                        setPayerSearch("");
+                        setShowPayerDropdown(false);
+                      }}
+                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-400 border-b">
+                      Không chọn
+                    </div>
+                    {filteredUsers.length > 0 ? (
+                      filteredUsers.map((u) => (
+                        <div
+                          key={u.id}
+                          onClick={() => {
+                            setExpensePayerId(u.id);
+                            setPayerSearch("");
+                            setShowPayerDropdown(false);
+                          }}
+                          className={`px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${
+                            expensePayerId === u.id ? "bg-blue-50" : ""
+                          }`}>
+                          {u.name}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500 text-sm">
+                        Không tìm thấy người dùng
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-3">
                 <label className="flex items-center gap-2">
                   <input
@@ -580,6 +748,97 @@ export function PackingSlipForm({
                   />
                 )}
               </div>
+
+              {/* Chứng từ chi phí — chỉ hiển thị khi tick ít nhất 1 phí */}
+              {hasAnyFee && (
+                <div className="mt-4 pt-4 border-t">
+                  <label className="block text-sm font-medium mb-2">
+                    Chứng từ chi phí
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {expenseFiles.map((file, index) => (
+                      <div
+                        key={index}
+                        className="relative w-24 h-24 group">
+                        {isImageFile(file) ? (
+                          <img
+                            src={file.fileUrl}
+                            alt={file.fileName || ""}
+                            className="w-full h-full object-cover rounded border cursor-pointer"
+                            onClick={() => setPreviewImage(file.fileUrl)}
+                          />
+                        ) : (
+                          <a
+                            href={file.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full h-full rounded border bg-gray-50 hover:bg-gray-100 flex flex-col items-center justify-center p-2 text-center"
+                            title={file.fileName || file.fileUrl}>
+                            <FileText className="w-7 h-7 text-gray-500" />
+                            <span className="text-[10px] text-gray-600 mt-1 line-clamp-2 break-all">
+                              {file.fileName ||
+                                file.fileUrl.split("/").pop() ||
+                                "File"}
+                            </span>
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeExpenseFile(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+
+                    <label
+                      className={`w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 ${
+                        isUploadingExpense
+                          ? "opacity-50 pointer-events-none"
+                          : ""
+                      }`}>
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.zip,.rar"
+                        multiple
+                        onChange={handleExpenseFileSelect}
+                        className="hidden"
+                        disabled={isUploadingExpense}
+                      />
+                      <Upload className="w-6 h-6 text-gray-400" />
+                      <span className="text-xs text-gray-400 mt-1">
+                        Upload
+                      </span>
+                    </label>
+
+                    <label
+                      className={`w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 ${
+                        isUploadingExpense
+                          ? "opacity-50 pointer-events-none"
+                          : ""
+                      }`}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleExpenseFileSelect}
+                        className="hidden"
+                        disabled={isUploadingExpense}
+                      />
+                      <Camera className="w-6 h-6 text-gray-400" />
+                      <span className="text-xs text-gray-400 mt-1">Chụp</span>
+                    </label>
+                  </div>
+                  {isUploadingExpense && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Đang upload...
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-2">
+                    Hỗ trợ ảnh, PDF, Word, Excel, CSV, TXT, ZIP
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </form>

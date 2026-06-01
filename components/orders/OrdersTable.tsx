@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Fragment, useMemo } from "react";
-import { useOrders } from "@/lib/hooks/useOrders";
+import { useOrders, useOrdersTotals } from "@/lib/hooks/useOrders";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -355,6 +355,13 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
         }),
   });
 
+  // Tổng các cột tiền của TOÀN BỘ đơn match filter — không phụ thuộc page/limit/sort.
+  const { data: totals } = useOrdersTotals({
+    search: debouncedSearch,
+    branchId: selectedBranch?.id,
+    ...effectiveFilters,
+  });
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("orderTableColumns", JSON.stringify(columns));
@@ -402,6 +409,57 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
   }, [filters.status]);
 
   const colSpan = visibleColumns.length + 2; // checkbox + chevron
+
+  // Map cột → giá trị tổng tương ứng. Chỉ những cột có ý nghĩa cộng tổng
+  // mới render số; các cột còn lại để trống (cell vẫn tồn tại để giữ layout).
+  const renderTotalCell = (key: string): React.ReactNode => {
+    if (!totals) return null;
+    switch (key) {
+      case "totalAmount":
+        return (
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(totals.totalAmount)}
+          </span>
+        );
+      case "grandTotal":
+        return (
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(totals.grandTotal)}
+          </span>
+        );
+      case "customerDebt":
+        return (
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(totals.customerDebt)}
+          </span>
+        );
+      case "customerPaid":
+        return (
+          <span className="font-semibold text-green-700">
+            {formatCurrency(totals.paidAmount)}
+          </span>
+        );
+      case "customerOwes":
+        return (
+          <span
+            className={`font-semibold ${totals.debtAmount > 0 ? "text-orange-600" : "text-gray-400"}`}>
+            {formatCurrency(totals.debtAmount)}
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Có ít nhất 1 cột tiền đang hiển thị thì mới render row tổng.
+  const TOTAL_KEYS = new Set([
+    "totalAmount",
+    "grandTotal",
+    "customerDebt",
+    "customerPaid",
+    "customerOwes",
+  ]);
+  const hasTotalRow = visibleColumns.some((c) => TOTAL_KEYS.has(c.key));
 
   return (
     <PermissionGate resource="orders" action="view">
@@ -483,6 +541,24 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
               </tr>
             </thead>
             <tbody>
+              {hasTotalRow && (
+                <tr className="bg-gray-50/60 border-b">
+                  <td className="px-4 py-2.5 sticky left-0 bg-gray-50/60" />
+                  {visibleColumns.map((col) => (
+                    <td
+                      key={col.key}
+                      className="px-4 py-2.5 whitespace-nowrap"
+                      style={{
+                        width: col.width,
+                        minWidth: col.width,
+                        maxWidth: col.width,
+                      }}>
+                      {renderTotalCell(col.key)}
+                    </td>
+                  ))}
+                  <td className="px-4 py-2.5" />
+                </tr>
+              )}
               {isLoading ? (
                 <tr>
                   <td colSpan={colSpan} className="py-16 text-center">

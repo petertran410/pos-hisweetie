@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
-import { useExportInvoices, useInvoices } from "@/lib/hooks/useInvoices";
+import { useExportInvoices, useInvoices, useInvoicesTotals } from "@/lib/hooks/useInvoices";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -576,6 +576,33 @@ export function InvoicesTable({
     }),
   });
 
+  // Tổng các cột tiền của TOÀN BỘ hóa đơn match filter — không phụ thuộc page/limit/sort.
+  const { data: totals } = useInvoicesTotals({
+    search: debouncedSearch,
+    ...effectiveFilters,
+    ...(advancedSearch.invoiceCodeSearch && {
+      invoiceCodeSearch: advancedSearch.invoiceCodeSearch,
+    }),
+    ...(advancedSearch.productSearch && {
+      productSearch: advancedSearch.productSearch,
+    }),
+    ...(advancedSearch.customerSearch && {
+      customerSearch: advancedSearch.customerSearch,
+    }),
+    ...(advancedSearch.deliveryCodeSearch && {
+      deliveryCodeSearch: advancedSearch.deliveryCodeSearch,
+    }),
+    ...(advancedSearch.orderCodeSearch && {
+      orderCodeSearch: advancedSearch.orderCodeSearch,
+    }),
+    ...(advancedSearch.descriptionSearch && {
+      descriptionSearch: advancedSearch.descriptionSearch,
+    }),
+    ...(advancedSearch.productNoteSearch && {
+      productNoteSearch: advancedSearch.productNoteSearch,
+    }),
+  });
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("invoiceTableColumns", JSON.stringify(columns));
@@ -668,6 +695,106 @@ export function InvoicesTable({
     );
 
   const colSpan = visibleColumns.length + 2;
+
+  // Map cột → giá trị tổng tương ứng. Chỉ những cột có ý nghĩa cộng tổng
+  // mới render số; các cột còn lại để trống (cell vẫn tồn tại để giữ layout).
+  const renderTotalCell = (key: string): React.ReactNode => {
+    if (!totals) return null;
+    switch (key) {
+      case "totalAmount":
+        return (
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(totals.totalAmount)}
+          </span>
+        );
+      case "grandTotal":
+        return (
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(totals.grandTotal)}
+          </span>
+        );
+      case "customerDebt":
+        return (
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(totals.customerDebt)}
+          </span>
+        );
+      case "customerPaid":
+        return (
+          <span className="font-semibold text-green-700">
+            {formatCurrency(totals.paidAmount)}
+          </span>
+        );
+      case "returnOrderAmount":
+        return (
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(totals.returnOrderAmount)}
+          </span>
+        );
+      case "cashRefundAmount": {
+        const a = totals.cashRefundAmount;
+        const d = a > 0 ? -a : a;
+        return (
+          <span
+            className={`font-semibold ${d < 0 ? "text-red-600" : "text-gray-900"}`}>
+            {formatCurrency(d)}
+          </span>
+        );
+      }
+      case "debtOffsetAmount": {
+        const a = totals.debtOffsetAmount;
+        const d = a > 0 ? -a : a;
+        return (
+          <span
+            className={`font-semibold ${d < 0 ? "text-red-600" : "text-gray-900"}`}>
+            {formatCurrency(d)}
+          </span>
+        );
+      }
+      case "remainingAmount": {
+        const a = totals.remainingAmount;
+        if (a > 0)
+          return (
+            <span className="font-semibold text-orange-600">
+              {formatCurrency(a)}
+            </span>
+          );
+        if (a < 0)
+          return (
+            <span className="font-semibold text-red-600">
+              {formatCurrency(a)}
+            </span>
+          );
+        return (
+          <span className="font-semibold text-green-600">
+            {formatCurrency(a)}
+          </span>
+        );
+      }
+      case "codAmount":
+        return (
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(totals.debtAmount)}
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Có ít nhất 1 cột tiền đang hiển thị thì mới render row tổng.
+  const TOTAL_KEYS = new Set([
+    "totalAmount",
+    "grandTotal",
+    "customerDebt",
+    "customerPaid",
+    "returnOrderAmount",
+    "cashRefundAmount",
+    "debtOffsetAmount",
+    "remainingAmount",
+    "codAmount",
+  ]);
+  const hasTotalRow = visibleColumns.some((c) => TOTAL_KEYS.has(c.key));
 
   return (
     <PermissionGate resource="invoices" action="view">
@@ -965,6 +1092,24 @@ export function InvoicesTable({
               </tr>
             </thead>
             <tbody>
+              {hasTotalRow && (
+                <tr className="bg-gray-50/60 border-b">
+                  <td className="px-4 py-2.5 sticky left-0 bg-gray-50/60" />
+                  {visibleColumns.map((col) => (
+                    <td
+                      key={col.key}
+                      className="px-4 py-2.5 whitespace-nowrap"
+                      style={{
+                        width: col.width,
+                        minWidth: col.width,
+                        maxWidth: col.width,
+                      }}>
+                      {renderTotalCell(col.key)}
+                    </td>
+                  ))}
+                  <td className="px-4 py-2.5" />
+                </tr>
+              )}
               {isLoading ? (
                 <tr>
                   <td colSpan={colSpan} className="py-16 text-center">

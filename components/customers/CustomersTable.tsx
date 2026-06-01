@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Fragment, useMemo } from "react";
-import { useCustomers, useExportCustomers } from "@/lib/hooks/useCustomers";
+import { useCustomers, useCustomersTotals, useExportCustomers } from "@/lib/hooks/useCustomers";
 import {
   Plus,
   Settings,
@@ -296,6 +296,12 @@ export function CustomersTable({
     currentItem: (page - 1) * limit,
   });
 
+  // Tổng các cột tiền của TOÀN BỘ khách hàng match filter — không phụ thuộc page/limit.
+  const { data: totals } = useCustomersTotals({
+    ...effectiveFilters,
+    name: debouncedSearch || undefined,
+  });
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("customerTableColumns", JSON.stringify(columns));
@@ -312,6 +318,48 @@ export function CustomersTable({
   );
 
   const colSpan = visibleColumns.length + 2;
+
+  // Map cột → giá trị tổng tương ứng. Chỉ những cột có ý nghĩa cộng tổng
+  // mới render số; các cột còn lại để trống (cell vẫn tồn tại để giữ layout).
+  const renderTotalCell = (key: string): React.ReactNode => {
+    if (!totals) return null;
+    switch (key) {
+      case "debtAmount": {
+        const debt = totals.totalDebt;
+        return debt > 0 ? (
+          <span className="font-semibold text-orange-600">
+            {formatCurrency(debt)}
+          </span>
+        ) : (
+          <span className="font-semibold text-gray-400">
+            {formatCurrency(debt)}
+          </span>
+        );
+      }
+      case "totalPurchased":
+        return (
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(totals.totalPurchased)}
+          </span>
+        );
+      case "totalRevenue":
+        return (
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(totals.totalRevenue)}
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Có ít nhất 1 cột tiền đang hiển thị thì mới render row tổng.
+  const TOTAL_KEYS = new Set([
+    "debtAmount",
+    "totalPurchased",
+    "totalRevenue",
+  ]);
+  const hasTotalRow = visibleColumns.some((c) => TOTAL_KEYS.has(c.key));
 
   const toggleColumnVisibility = (key: string) =>
     setColumns((prev) =>
@@ -420,6 +468,24 @@ export function CustomersTable({
               </tr>
             </thead>
             <tbody>
+              {hasTotalRow && (
+                <tr className="bg-gray-50/60 border-b">
+                  <td className="px-4 py-2.5 sticky left-0 bg-gray-50/60" />
+                  {visibleColumns.map((col) => (
+                    <td
+                      key={col.key}
+                      className="px-4 py-2.5 whitespace-nowrap"
+                      style={{
+                        width: col.width,
+                        minWidth: col.width,
+                        maxWidth: col.width,
+                      }}>
+                      {renderTotalCell(col.key)}
+                    </td>
+                  ))}
+                  <td className="px-4 py-2.5" />
+                </tr>
+              )}
               {isLoading ? (
                 <tr>
                   <td colSpan={colSpan} className="py-16 text-center">

@@ -30,6 +30,29 @@ export function useCustomers(filters?: CustomerFilters) {
   });
 }
 
+/**
+ * Tổng các cột tiền của TOÀN BỘ khách hàng match filter (không phân trang).
+ * Dùng cho hàng "tổng" hiển thị ngay dưới header bảng khách hàng.
+ */
+export function useCustomersTotals(filters?: CustomerFilters) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+
+  return useQuery({
+    queryKey: ["customers-totals", filters],
+    queryFn: async () => {
+      const response = await apiClient.get<{
+        count: number;
+        totalDebt: number;
+        totalPurchased: number;
+        totalRevenue: number;
+      }>("/customers/totals", filters);
+      return response;
+    },
+    enabled: hasHydrated && isAuthenticated,
+  });
+}
+
 export function useCustomer(id: number) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
