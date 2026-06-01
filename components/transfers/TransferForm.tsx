@@ -192,7 +192,9 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
   });
 
   const handleChangeReceivedQuantity = (index: number, value: string) => {
-    const quantity = parseFloat(value) || 0;
+    // Cho phép input rỗng (đang gõ) — coi như 0
+    const sanitized = value.replace(/[^\d.]/g, "");
+    const quantity = sanitized === "" ? 0 : parseFloat(sanitized) || 0;
 
     if (quantity < 0) return;
 
@@ -422,8 +424,8 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
 
     const newQuantity = currentProduct.receivedQuantity + delta;
 
-    if (newQuantity < 1) {
-      toast.error("Số lượng nhận không được nhỏ hơn 1");
+    if (newQuantity < 0) {
+      toast.error("Số lượng nhận không được nhỏ hơn 0");
       return;
     }
 
@@ -868,11 +870,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                   <input
                                     type="text"
                                     inputMode="numeric"
-                                    value={
-                                      item.receivedQuantity === 0
-                                        ? ""
-                                        : item.receivedQuantity
-                                    }
+                                    value={item.receivedQuantity}
                                     placeholder="0"
                                     onChange={(e) =>
                                       handleChangeReceivedQuantity(
@@ -880,6 +878,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                         e.target.value
                                       )
                                     }
+                                    onFocus={(e) => e.target.select()}
                                     disabled={isReadOnly}
                                     className="w-16 border rounded-lg px-2 py-1 text-center text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                                   />

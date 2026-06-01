@@ -3,13 +3,11 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { X, Camera, Upload, ChevronDown } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { useInvoices } from "@/lib/hooks/useInvoices";
+import { useInvoicesForPacking } from "@/lib/hooks/useInvoices";
 import { uploadPackingHangImages } from "@/lib/hooks/usePackingHangs";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingHang } from "@/lib/types/packing-hang";
 import { toast } from "sonner";
-import { packingChecksApi } from "@/lib/api/packing-checks";
-import { useQuery } from "@tanstack/react-query";
 
 interface PackingHangFormProps {
   packingHang?: PackingHang;
@@ -53,7 +51,7 @@ export function PackingHangForm({
   const branchDropdownRef = useRef<HTMLDivElement>(null);
   const invoiceDropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: invoicesData } = useInvoices({
+  const { data: invoicesData } = useInvoicesForPacking({
     branchId: branchId || undefined,
     pageSize: 100,
   });
@@ -64,41 +62,6 @@ export function PackingHangForm({
     () => (branches || []).filter((b) => b.isActive),
     [branches]
   );
-
-  const isEditing = !!packingHang;
-
-  const invoiceIds = useMemo(
-    () => availableInvoices.map((inv) => inv.id),
-    [availableInvoices]
-  );
-
-  const { data: checkData } = useQuery({
-    queryKey: ["packing-hangs-check", invoiceIds],
-    queryFn: () => packingChecksApi.checkDongHang(invoiceIds),
-    enabled: !isEditing && invoiceIds.length > 0,
-    staleTime: 30_000,
-  });
-
-  const takenInvoiceMap = useMemo(() => {
-    const map = new Map<number, string>();
-    (checkData || []).forEach((item) => map.set(item.invoiceId, item.code));
-    return map;
-  }, [checkData]);
-
-  useEffect(() => {
-    if (!isEditing && takenInvoiceMap.size > 0) {
-      setSelectedInvoiceIds((prev) => {
-        const blocked = prev.filter((id) => takenInvoiceMap.has(id));
-        if (blocked.length > 0) {
-          toast.warning(
-            `${blocked.length} hóa đơn đã có đóng hàng, đã tự động bỏ khỏi danh sách`
-          );
-          return prev.filter((id) => !takenInvoiceMap.has(id));
-        }
-        return prev;
-      });
-    }
-  }, [takenInvoiceMap, isEditing]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -333,43 +296,27 @@ export function PackingHangForm({
                 <div className="absolute z-50 left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-[300px] overflow-y-auto">
                   {filteredInvoices.length > 0 ? (
                     <div className="p-2">
-                      {filteredInvoices.map((invoice) => {
-                        const takenByCode = takenInvoiceMap.get(invoice.id);
-                        const isTaken = !!takenByCode;
-                        return (
-                          <label
-                            key={invoice.id}
-                            className={`flex items-center gap-3 px-3 py-2 rounded ${
-                              isTaken
-                                ? "opacity-60 cursor-not-allowed bg-gray-50"
-                                : "hover:bg-gray-50 cursor-pointer"
-                            }`}>
-                            <input
-                              type="checkbox"
-                              checked={selectedInvoiceIds.includes(invoice.id)}
-                              onChange={() =>
-                                !isTaken && toggleInvoice(invoice.id)
-                              }
-                              disabled={isTaken}
-                              className="cursor-pointer disabled:cursor-not-allowed"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm flex items-center gap-2">
-                                {invoice.code}
-                                {isTaken && (
-                                  <span className="text-xs text-orange-600 font-normal">
-                                    Đã có đóng hàng: {takenByCode}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-xs text-gray-500 truncate">
-                                {invoice.customer?.name} -{" "}
-                                {formatCurrency(invoice.grandTotal)}
-                              </div>
+                      {filteredInvoices.map((invoice) => (
+                        <label
+                          key={invoice.id}
+                          className="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedInvoiceIds.includes(invoice.id)}
+                            onChange={() => toggleInvoice(invoice.id)}
+                            className="cursor-pointer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm">
+                              {invoice.code}
                             </div>
-                          </label>
-                        );
-                      })}
+                            <div className="text-xs text-gray-500 truncate">
+                              {invoice.customer?.name} -{" "}
+                              {formatCurrency(invoice.grandTotal)}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
                     </div>
                   ) : (
                     <div className="p-4 text-center text-gray-500 text-sm">

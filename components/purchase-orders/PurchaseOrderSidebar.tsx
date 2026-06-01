@@ -510,7 +510,7 @@ export function PurchaseOrderSidebar({
   setFilters,
 }: PurchaseOrderSidebarProps) {
   const { data: branches } = useBranches();
-  const { data: suppliersData } = useSuppliers({});
+  const { data: suppliersData } = useSuppliers({ pageSize: 1000 });
   const { data: users } = useUsersForFilter();
 
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");

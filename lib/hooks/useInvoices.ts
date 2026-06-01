@@ -13,6 +13,16 @@ export function useInvoices(params?: any) {
   });
 }
 
+export function useInvoicesForPacking(params?: {
+  branchId?: number;
+  pageSize?: number;
+}) {
+  return useQuery({
+    queryKey: ["invoices", "for-packing", params],
+    queryFn: () => invoicesApi.getInvoicesForPacking(params),
+  });
+}
+
 export function useInvoice(id: number) {
   return useQuery({
     queryKey: ["invoices", id],
