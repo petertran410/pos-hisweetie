@@ -31,6 +31,31 @@ export function PackingSlipForm({
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>(
     packingSlip?.invoices?.map((i) => i.invoiceId) || preselectedInvoiceIds
   );
+
+  // Cache thông tin các hóa đơn đã chọn để chip hiển thị bền vững
+  // khi server filter theo search trả về list khác
+  type InvoiceLite = {
+    id: number;
+    code: string;
+    grandTotal: number;
+    customer?: { id: number; name: string } | null;
+  };
+  const [selectedInvoiceCache, setSelectedInvoiceCache] = useState<
+    Record<number, InvoiceLite>
+  >(() => {
+    const init: Record<number, InvoiceLite> = {};
+    packingSlip?.invoices?.forEach((i) => {
+      if (i.invoice) {
+        init[i.invoiceId] = {
+          id: i.invoice.id,
+          code: i.invoice.code,
+          grandTotal: i.invoice.grandTotal,
+          customer: i.invoice.customer ?? null,
+        };
+      }
+    });
+    return init;
+  });
   const [numberOfPackages, setNumberOfPackages] = useState(
     packingSlip?.numberOfPackages || 0
   );
@@ -71,12 +96,19 @@ export function PackingSlipForm({
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
   const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [debouncedInvoiceSearch, setDebouncedInvoiceSearch] = useState("");
   const branchDropdownRef = useRef<HTMLDivElement>(null);
   const invoiceDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedInvoiceSearch(invoiceSearch), 300);
+    return () => clearTimeout(t);
+  }, [invoiceSearch]);
 
   const { data: invoicesData } = useInvoicesForPacking({
     branchId: branchId || undefined,
     pageSize: 100,
+    search: debouncedInvoiceSearch || undefined,
   });
 
   const availableInvoices = invoicesData?.data || [];
@@ -143,6 +175,18 @@ export function PackingSlipForm({
         selectedInvoiceIds.filter((id) => id !== invoiceId)
       );
     } else {
+      const inv = availableInvoices.find((i) => i.id === invoiceId);
+      if (inv) {
+        setSelectedInvoiceCache((prev) => ({
+          ...prev,
+          [invoiceId]: {
+            id: inv.id,
+            code: inv.code,
+            grandTotal: inv.grandTotal,
+            customer: inv.customer ?? null,
+          },
+        }));
+      }
       setSelectedInvoiceIds([...selectedInvoiceIds, invoiceId]);
     }
   };
@@ -189,15 +233,12 @@ export function PackingSlipForm({
     onSubmit(data);
   };
 
-  const selectedInvoices = availableInvoices.filter((inv) =>
-    selectedInvoiceIds.includes(inv.id)
-  );
+  const selectedInvoices = selectedInvoiceIds
+    .map((id) => selectedInvoiceCache[id])
+    .filter(Boolean);
 
-  const filteredInvoices = availableInvoices.filter(
-    (inv) =>
-      inv.code.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
-      inv.customer?.name?.toLowerCase().includes(invoiceSearch.toLowerCase())
-  );
+  // Server đã filter theo search; client không cần filter lại
+  const filteredInvoices = availableInvoices;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4">
@@ -253,6 +294,7 @@ export function PackingSlipForm({
                           onClick={() => {
                             setBranchId(branch.id);
                             setSelectedInvoiceIds([]);
+                            setSelectedInvoiceCache({});
                             setShowBranchDropdown(false);
                           }}
                           className={`px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${

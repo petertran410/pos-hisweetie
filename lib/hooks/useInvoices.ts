@@ -16,6 +16,7 @@ export function useInvoices(params?: any) {
 export function useInvoicesForPacking(params?: {
   branchId?: number;
   pageSize?: number;
+  search?: string;
 }) {
   return useQuery({
     queryKey: ["invoices", "for-packing", params],

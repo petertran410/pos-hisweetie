@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { X, Search, ChevronDown, Minus, Plus } from "lucide-react";
-import { useProducts } from "@/lib/hooks/useProducts";
 import { useSuppliers, useSupplier } from "@/lib/hooks/useSuppliers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
@@ -20,6 +19,7 @@ import { CreditCard } from "lucide-react";
 import { SupplierPaymentModal } from "../order-suppliers/SupplierPaymentModal";
 import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useAuthStore } from "@/lib/store/auth";
+import { ProductPickerDropdown } from "@/components/products/ProductPickerDropdown";
 
 interface ProductItem {
   productId: number;
@@ -38,13 +38,6 @@ interface PurchaseOrderFormProps {
   orderSupplier?: OrderSupplier | null;
   onClose?: () => void;
 }
-
-const getProductCost = (product: any, branchId: number): number => {
-  const inventory = product.inventories?.find(
-    (inv: any) => inv.branchId === branchId
-  );
-  return inventory ? Number(inventory.cost) : 0;
-};
 
 const STATUS_OPTIONS = [
   { value: true, label: "Phiếu tạm" },
@@ -126,9 +119,6 @@ export function PurchaseOrderForm({
     return parseFloat(value.replace(/,/g, "")) || 0;
   };
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showSearchResults, setShowSearchResults] = useState(false);
-
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
@@ -138,10 +128,6 @@ export function PurchaseOrderForm({
   const branchDropdownRef = useRef<HTMLDivElement>(null);
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const discountDropdownRef = useRef<HTMLDivElement>(null);
-
-  const { data: searchResults } = useProducts({
-    search: searchQuery,
-  });
 
   const isFormDisabled = purchaseOrder && !purchaseOrder.isDraft;
 
@@ -279,7 +265,7 @@ export function PurchaseOrderForm({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleAddProduct = (product: any) => {
+  const handleAddProduct = (product: any, quantity: number = 1) => {
     if (isFormDisabled) return;
 
     const existingProduct = products.find((p) => p.productId === product.id);
@@ -293,21 +279,20 @@ export function PurchaseOrderForm({
     );
 
     const cost = inventory ? Number(inventory.cost) : 0;
+    const qty = quantity > 0 ? quantity : 1;
 
     const newProduct: ProductItem = {
       productId: product.id,
       productCode: product.code,
       productName: product.name,
-      quantity: 1,
+      quantity: qty,
       price: cost,
       discount: 0,
-      subTotal: cost,
+      subTotal: cost * qty,
       inventory: Number(inventory?.onHand || 0),
     };
 
     setProducts((prev) => [...prev, newProduct]);
-    setSearchQuery("");
-    setShowSearchResults(false);
   };
 
   const handleRemoveProduct = (index: number) => {
@@ -538,54 +523,12 @@ export function PurchaseOrderForm({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="mb-4 relative">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setShowSearchResults(true);
-                }}
-                onFocus={() => setShowSearchResults(true)}
-                placeholder="Tìm kiếm sản phẩm theo mã hoặc tên..."
-                disabled={isFormDisabled ? true : false}
-                className="w-full pl-10 pr-4 py-2.5 border rounded-lg disabled:bg-gray-100"
-              />
-            </div>
-
-            {showSearchResults && searchQuery && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto">
-                {searchResults?.data?.map((product: any) => (
-                  <div
-                    key={product.id}
-                    onClick={() => handleAddProduct(product)}
-                    className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded flex-shrink-0">
-                        {product.images?.[0]?.image && (
-                          <img
-                            src={product.images[0].image}
-                            alt={product.name}
-                            className="w-full h-full object-cover rounded"
-                          />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {product.code} - {product.name}
-                        </p>
-                        <p className="text-md text-gray-500">
-                          Giá:{" "}
-                          {formatCurrency(getProductCost(product, branchId))}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="mb-4">
+            <ProductPickerDropdown
+              branchId={branchId}
+              disabled={!!isFormDisabled}
+              onAddProduct={handleAddProduct}
+            />
           </div>
 
           <div className="border rounded-lg overflow-hidden bg-white">

@@ -85,6 +85,7 @@ export const invoicesApi = {
   getInvoicesForPacking: (params?: {
     branchId?: number;
     pageSize?: number;
+    search?: string;
   }): Promise<{ data: Invoice[]; total: number; page: number; limit: number }> => {
     return apiClient.get("/invoices/for-packing", params);
   },

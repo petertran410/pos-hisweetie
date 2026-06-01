@@ -37,6 +37,33 @@ export function PackingLoadingForm({
     packingLoading?.invoices?.map((i) => i.invoiceId) || preselectedInvoiceIds
   );
 
+  type InvoiceLite = {
+    id: number;
+    code: string;
+    grandTotal: number;
+    branchId?: number | null;
+    purchaseDate?: string | null;
+    customer?: { id: number; name: string } | null;
+  };
+  const [selectedInvoiceCache, setSelectedInvoiceCache] = useState<
+    Record<number, InvoiceLite>
+  >(() => {
+    const init: Record<number, InvoiceLite> = {};
+    packingLoading?.invoices?.forEach((i: any) => {
+      if (i.invoice) {
+        init[i.invoiceId] = {
+          id: i.invoice.id,
+          code: i.invoice.code,
+          grandTotal: i.invoice.grandTotal,
+          branchId: i.invoice.branchId ?? null,
+          purchaseDate: i.invoice.purchaseDate ?? null,
+          customer: i.invoice.customer ?? null,
+        };
+      }
+    });
+    return init;
+  });
+
   const [numberOfPackages, setNumberOfPackages] = useState(
     packingLoading?.numberOfPackages || 0
   );
@@ -55,13 +82,20 @@ export function PackingLoadingForm({
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
   const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [debouncedInvoiceSearch, setDebouncedInvoiceSearch] = useState("");
   const loadingByDropdownRef = useRef<HTMLDivElement>(null);
   const branchDropdownRef = useRef<HTMLDivElement>(null);
   const invoiceDropdownRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedInvoiceSearch(invoiceSearch), 300);
+    return () => clearTimeout(t);
+  }, [invoiceSearch]);
+
   const { data: invoicesData } = useInvoicesForPacking({
     branchId: branchId || undefined,
     pageSize: 100,
+    search: debouncedInvoiceSearch || undefined,
   });
 
   const availableInvoices = invoicesData?.data || [];
@@ -136,17 +170,31 @@ export function PackingLoadingForm({
     } else {
       const invoice = availableInvoices.find((inv) => inv.id === invoiceId);
       if (invoice) {
+        const cached: InvoiceLite = {
+          id: invoice.id,
+          code: invoice.code,
+          grandTotal: invoice.grandTotal,
+          branchId: invoice.branchId ?? null,
+          purchaseDate: (invoice as any).purchaseDate ?? null,
+          customer: invoice.customer ?? null,
+        };
         if (selectedInvoiceIds.length === 0) {
           setBranchId(invoice.branchId || 0);
+          setSelectedInvoiceCache((prev) => ({
+            ...prev,
+            [invoiceId]: cached,
+          }));
           setSelectedInvoiceIds([...selectedInvoiceIds, invoiceId]);
         } else {
-          const firstInvoice = availableInvoices.find(
-            (inv) => inv.id === selectedInvoiceIds[0]
-          );
+          const firstInvoice = selectedInvoiceCache[selectedInvoiceIds[0]];
           if (firstInvoice?.branchId !== invoice.branchId) {
             toast.error("Chỉ được chọn hóa đơn cùng chi nhánh");
             return;
           }
+          setSelectedInvoiceCache((prev) => ({
+            ...prev,
+            [invoiceId]: cached,
+          }));
           setSelectedInvoiceIds([...selectedInvoiceIds, invoiceId]);
         }
       }
@@ -188,15 +236,12 @@ export function PackingLoadingForm({
     onSubmit(data);
   };
 
-  const selectedInvoices = availableInvoices.filter((inv) =>
-    selectedInvoiceIds.includes(inv.id)
-  );
+  const selectedInvoices = selectedInvoiceIds
+    .map((id) => selectedInvoiceCache[id])
+    .filter(Boolean);
 
-  const filteredInvoices = availableInvoices.filter(
-    (inv) =>
-      inv.code.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
-      inv.customer?.name?.toLowerCase().includes(invoiceSearch.toLowerCase())
-  );
+  // Server đã filter theo search; client không cần filter lại
+  const filteredInvoices = availableInvoices;
 
   const uniqueCustomerNames = Array.from(
     new Set(
@@ -205,7 +250,12 @@ export function PackingLoadingForm({
   ).join(", ");
 
   const purchaseDates = selectedInvoices
-    .map((inv) => new Date(inv.purchaseDate).toLocaleDateString("vi-VN"))
+    .map((inv) =>
+      inv.purchaseDate
+        ? new Date(inv.purchaseDate).toLocaleDateString("vi-VN")
+        : ""
+    )
+    .filter(Boolean)
     .join(", ");
 
   return (
