@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PackingSlipsTable } from "@/components/packing-slips/PackingSlipsTable";
 import { PackingSlipsSidebar } from "@/components/packing-slips/PackingSlipsSidebar";
+import { PackingSlipsMobileView } from "@/components/packing-slips/PackingSlipsMobileView";
 import { PackingSlipForm } from "@/components/packing-slips/PackingSlipForm";
 import { PackingHangForm } from "@/components/packing-hangs/PackingHangForm";
 import { PackingLoadingForm } from "@/components/packing-loadings/PackingLoadingForm";
@@ -164,6 +165,22 @@ export default function BaoDonPage() {
     }
   };
 
+  // Mobile xóa: tự phân loại theo type của item
+  const handleMobileDelete = async (item: any) => {
+    try {
+      if (item.type === "dong-hang") {
+        await deletePackingHang.mutateAsync(item.id);
+      } else if (item.type === "loading") {
+        await deletePackingLoading.mutateAsync(item.id);
+      } else {
+        await deletePackingSlip.mutateAsync(item.id);
+      }
+      toast.success("Xóa báo đơn thành công");
+    } catch (error) {
+      toast.error("Xóa báo đơn thất bại");
+    }
+  };
+
   const handleDelete = async (id: number) => {
     try {
       await deletePackingSlip.mutateAsync(id);
@@ -189,7 +206,8 @@ export default function BaoDonPage() {
 
   return (
     <PagePermissionGuard resource="packing_slips" action="view">
-      <div className="flex h-full border-t bg-gray-50">
+      {/* ── Desktop (md+) — giữ nguyên ── */}
+      <div className="hidden md:flex h-full border-t bg-gray-50">
         <PackingSlipsSidebar onFiltersChange={setFilters} />
         <PackingSlipsTable
           packingSlips={data?.data || []}
@@ -204,6 +222,49 @@ export default function BaoDonPage() {
           onCreatePackingLoadingClick={handleCreateLoadingClick}
           onEditClick={handleEditClick}
           onDeleteClick={handleDelete}
+        />
+
+        {formType === "giao-hang" && (
+          <PackingSlipForm
+            key={formKey}
+            packingSlip={editingPackingSlip || undefined}
+            onClose={handleCloseForm}
+            onSubmit={handleGiaoHangSubmit}
+          />
+        )}
+
+        {formType === "dong-hang" && (
+          <PackingHangForm
+            key={formKey}
+            packingHang={editingPackingHang || undefined}
+            onClose={handleCloseForm}
+            onSubmit={handleDongHangSubmit}
+          />
+        )}
+
+        {formType === "loading" && (
+          <PackingLoadingForm
+            key={formKey}
+            packingLoading={editingPackingLoading || undefined}
+            onClose={handleCloseForm}
+            onSubmit={handleLoadingSubmit}
+          />
+        )}
+      </div>
+
+      {/* ── Mobile (dưới md) ── */}
+      <div className="md:hidden h-full">
+        <PackingSlipsMobileView
+          onCreateGiaoHangClick={handleCreateGiaoHangClick}
+          onCreateDongHangClick={handleCreateDongHangClick}
+          onCreateLoadingClick={handleCreateLoadingClick}
+          onEditClick={handleEditClick}
+          onDeleteClick={(id) => {
+            // mobile chỉ truyền id, nhưng cần biết type → tìm trong data
+            const item = (data?.data || []).find((x: any) => x.id === id);
+            if (item) handleMobileDelete(item);
+            else handleDelete(id);
+          }}
         />
 
         {formType === "giao-hang" && (

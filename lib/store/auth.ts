@@ -12,6 +12,7 @@ export interface User {
   roles: string[];
   permissions: string[];
   canViewOtherStaffData?: boolean;
+  canViewOnlyOwnPackings?: boolean;
 }
 
 interface AuthState {

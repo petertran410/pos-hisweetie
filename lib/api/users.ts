@@ -65,6 +65,7 @@ export const usersApi = {
       denyPermissionIds?: number[];
       branchIds?: number[];
       canViewOtherStaffData?: boolean;
+      canViewOnlyOwnPackings?: boolean;
     }
   ) => {
     return apiClient.put(`/users/${id}`, data);

@@ -48,6 +48,7 @@ export function UserPermissionModal({
   // ── UI state ───────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<"role" | "other">("role");
   const [canViewOtherStaff, setCanViewOtherStaff] = useState(false);
+  const [canViewOnlyOwnPackings, setCanViewOnlyOwnPackings] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState<number>(0);
   const [localActive, setLocalActive] = useState<number[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
@@ -139,6 +140,7 @@ export function UserPermissionModal({
   useEffect(() => {
     if (user) {
       setCanViewOtherStaff(user.canViewOtherStaffData || false);
+      setCanViewOnlyOwnPackings(user.canViewOnlyOwnPackings || false);
     }
   }, [user]);
 
@@ -319,7 +321,10 @@ export function UserPermissionModal({
     if (activeTab === "other") {
       await updateUser.mutateAsync({
         id: userId,
-        data: { canViewOtherStaffData: canViewOtherStaff },
+        data: {
+          canViewOtherStaffData: canViewOtherStaff,
+          canViewOnlyOwnPackings: canViewOnlyOwnPackings,
+        },
       });
       toast.success("Cập nhật phân quyền khác thành công");
       setHasChanges(false);
@@ -733,7 +738,7 @@ export function UserPermissionModal({
               <h3 className="text-base font-bold text-gray-900 mb-4">
                 Phân quyền khác
               </h3>
-              <div className="border rounded-lg p-4">
+              <div className="border rounded-lg p-4 mb-3">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -753,6 +758,30 @@ export function UserPermissionModal({
                       Cho phép xem đơn hàng, hóa đơn, phiếu thu/chi và tất cả dữ
                       liệu do nhân viên khác tạo. Nếu tắt, nhân viên chỉ xem
                       được dữ liệu do chính mình tạo.
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <div className="border rounded-lg p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={canViewOnlyOwnPackings}
+                    onChange={(e) => {
+                      setCanViewOnlyOwnPackings(e.target.checked);
+                      setHasChanges(true);
+                    }}
+                    className="w-5 h-5 mt-0.5 rounded"
+                  />
+                  <div>
+                    <div className="font-medium text-sm text-gray-900">
+                      Chỉ xem báo đơn do chính mình tạo
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Khi bật, nhân viên chỉ thấy được các báo đơn (Giao hàng,
+                      Đóng hàng, Loading) do chính mình tạo trong trang Báo
+                      đơn. Tắt để xem tất cả báo đơn của chi nhánh.
                     </div>
                   </div>
                 </label>
