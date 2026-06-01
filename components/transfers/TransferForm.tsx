@@ -486,24 +486,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
       return;
     }
 
-    const productsWithoutDestInventory = products.filter(
-      (p) => p.toInventory === undefined || p.toInventory < 0
-    );
-    if (!isDraft && productsWithoutDestInventory.length > 0) {
-      const productCodes = productsWithoutDestInventory
-        .map((p) => p.productCode)
-        .join(", ");
-      const toBranchName =
-        branches?.find((b) => b.id === toBranchId)?.name || "chi nhánh đích";
-      toast.error(
-        `Các sản phẩm sau chưa tồn tại ở ${toBranchName}: ${productCodes}. Vui lòng tạo sản phẩm tại chi nhánh đích trước.`,
-        {
-          duration: 6000,
-        }
-      );
-      return;
-    }
-
     let newStatus: number;
     if (isReceiver) {
       newStatus = isDraft ? 2 : 3;
@@ -558,24 +540,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
       return;
     }
 
-    const productsWithoutDestInventory = products.filter(
-      (p) => p.toInventory === undefined || p.toInventory < 0
-    );
-    if (statusToKeep >= 2 && productsWithoutDestInventory.length > 0) {
-      const productCodes = productsWithoutDestInventory
-        .map((p) => p.productCode)
-        .join(", ");
-      const toBranchName =
-        branches?.find((b) => b.id === toBranchId)?.name || "chi nhánh đích";
-      toast.error(
-        `Các sản phẩm sau chưa tồn tại ở ${toBranchName}: ${productCodes}. Vui lòng tạo sản phẩm tại chi nhánh đích trước.`,
-        {
-          duration: 6000,
-        }
-      );
-      return;
-    }
-
     const transferData = {
       fromBranchId,
       toBranchId,
@@ -608,7 +572,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="w-[1280px] min-h-[90px] max-h-[130vh] bg-white flex flex-col shadow-2xl rounded-lg">
+      <div className="w-full max-w-[1280px] max-h-[calc(100vh-2rem)] bg-white flex flex-col shadow-2xl rounded-lg">
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white shrink-0">
           <div>
