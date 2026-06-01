@@ -83,6 +83,8 @@ export function OrderSupplierForm({
     setPaymentMethod(method);
   };
 
+  const [code, setCode] = useState<string>(orderSupplier?.code || "");
+
   const [branchId, setBranchId] = useState<number>(
     orderSupplier?.branchId || selectedBranch?.id || 0
   );
@@ -310,7 +312,7 @@ export function OrderSupplierForm({
       return;
     }
 
-    const orderSupplierData = {
+    const orderSupplierData: any = {
       supplierId,
       branchId,
       userId: userId || undefined,
@@ -329,6 +331,10 @@ export function OrderSupplierForm({
       paymentMethod: paymentAmount > 0 ? paymentMethod : undefined,
       orderDate: orderDate?.toISOString(),
     };
+
+    if (code.trim()) {
+      orderSupplierData.code = code.trim();
+    }
 
     try {
       if (orderSupplier?.id) {
@@ -507,11 +513,22 @@ export function OrderSupplierForm({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <div className="flex gap-2">
-            <label className="text-md text-gray-600 mb-1">
+          <div className="flex gap-2 items-center">
+            <label className="text-md text-gray-600 mb-1 whitespace-nowrap">
               Mã đặt hàng nhập:
             </label>
-            <div>{orderSupplier?.code || "Mã phiếu tự động"}</div>
+            {orderSupplier?.id ? (
+              <span>{orderSupplier.code}</span>
+            ) : (
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Mã phiếu tự động"
+                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                disabled={isFormDisabled}
+              />
+            )}
           </div>
 
           <div ref={userDropdownRef} className="flex gap-2 items-center">

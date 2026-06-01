@@ -90,6 +90,7 @@ export function PurchaseOrderForm({
       selectedBranch?.id ||
       0
   );
+  const [code, setCode] = useState<string>(purchaseOrder?.code || "");
   const [supplierId, setSupplierId] = useState<number>(
     purchaseOrder?.supplierId || orderSupplier?.supplierId || copyFrom?.supplierId || 0
   );
@@ -454,6 +455,9 @@ export function PurchaseOrderForm({
             : [],
         purchaseById: purchaseById || undefined,
       };
+      if (code.trim()) {
+        fromOSPayload.code = code.trim();
+      }
       return { kind: "from-os" as const, payload: fromOSPayload };
     }
 
@@ -474,6 +478,9 @@ export function PurchaseOrderForm({
       paidAmount: paymentAmount > 0 ? Number(paymentAmount) : 0,
       purchaseById: purchaseById || undefined,
     };
+    if (code.trim()) {
+      standardPayload.code = code.trim();
+    }
     return { kind: "standard" as const, payload: standardPayload };
   };
 
@@ -688,9 +695,20 @@ export function PurchaseOrderForm({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <div className="flex gap-2">
-            <div className="text-md text-gray-600">Mã phiếu nhập:</div>
-            <span>{purchaseOrder?.code || "Mã phiếu tự động"}</span>
+          <div className="flex gap-2 items-center">
+            <div className="text-md text-gray-600 whitespace-nowrap">Mã phiếu nhập:</div>
+            {purchaseOrder?.id ? (
+              <span>{purchaseOrder.code}</span>
+            ) : (
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Mã phiếu tự động"
+                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                disabled={!!isFormDisabled}
+              />
+            )}
           </div>
 
           {purchaseOrder?.orderSupplier?.code && (
