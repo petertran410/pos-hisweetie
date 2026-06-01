@@ -167,6 +167,7 @@ export function TransferTable({ filters }: TransferTableProps) {
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(
     null
   );
+  const [isCopyMode, setIsCopyMode] = useState(false);
 
   // Debounce search 300ms
   useEffect(() => {
@@ -280,6 +281,7 @@ export function TransferTable({ filters }: TransferTableProps) {
               <button
                 onClick={() => {
                   setSelectedTransfer(null);
+                  setIsCopyMode(false);
                   setShowForm(true);
                 }}
                 className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
@@ -403,6 +405,12 @@ export function TransferTable({ filters }: TransferTableProps) {
                         colSpan={colSpan}
                         onEdit={(t) => {
                           setSelectedTransfer(t);
+                          setIsCopyMode(false);
+                          setShowForm(true);
+                        }}
+                        onCopy={(t) => {
+                          setSelectedTransfer(t);
+                          setIsCopyMode(true);
                           setShowForm(true);
                         }}
                       />
@@ -493,9 +501,11 @@ export function TransferTable({ filters }: TransferTableProps) {
       {showForm && (
         <TransferForm
           transfer={selectedTransfer}
+          copyMode={isCopyMode}
           onClose={() => {
             setShowForm(false);
             setSelectedTransfer(null);
+            setIsCopyMode(false);
             setExpandedId(null);
           }}
         />

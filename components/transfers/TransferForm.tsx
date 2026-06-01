@@ -30,6 +30,7 @@ import {
 
 interface TransferFormProps {
   transfer?: Transfer | null;
+  copyMode?: boolean;
   onClose: () => void;
 }
 
@@ -149,7 +150,7 @@ function BranchDropdown({
   );
 }
 
-export function TransferForm({ transfer, onClose }: TransferFormProps) {
+export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps) {
   const { selectedBranch } = useBranchStore();
   const { data: branches } = useBranches();
   const createTransfer = useCreateTransfer();
@@ -169,14 +170,16 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
     transfer?.noteBySource || ""
   );
   const [noteByDestination, setNoteByDestination] = useState(
-    transfer?.noteByDestination || ""
+    copyMode ? "" : transfer?.noteByDestination || ""
   );
-  const isReceiver = transfer && selectedBranch?.id === transfer.toBranchId;
-  const isSender = !transfer || selectedBranch?.id === transfer.fromBranchId;
-  const isCancelled = transfer?.status === 4;
-  const isDraft = !transfer || transfer.status === 1;
-  const isInTransit = transfer?.status === 2;
-  const isReceived = transfer?.status === 3;
+  const isReceiver =
+    !copyMode && !!transfer && selectedBranch?.id === transfer.toBranchId;
+  const isSender =
+    copyMode || !transfer || selectedBranch?.id === transfer.fromBranchId;
+  const isCancelled = !copyMode && transfer?.status === 4;
+  const isDraft = copyMode || !transfer || transfer.status === 1;
+  const isInTransit = !copyMode && transfer?.status === 2;
+  const isReceived = !copyMode && transfer?.status === 3;
   const isReadOnly = isCancelled || isReceived;
   const canEditProducts = isSender && isDraft && !isCancelled;
 
@@ -185,7 +188,6 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
 
   const { data: searchResults } = useProducts({
     search: searchQuery,
-    limit: 20,
     branchIds: [fromBranchId, toBranchId].filter((id) => id > 0),
   });
 
@@ -253,7 +255,8 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                   unit: product.unit,
                   sendQuantity: Number(detail.sendQuantity),
                   receivedQuantity: isReceiver
-                    ? Number(detail.receivedQuantity || detail.sendQuantity)
+                    ? Number(detail.receivedQuantity) ||
+                      Number(detail.sendQuantity)
                     : Number(detail.sendQuantity),
                   price: Number(detail.sendPrice),
                   fromInventory: Number(fromInventory?.onHand || 0),
@@ -510,7 +513,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
     };
 
     try {
-      if (transfer?.id) {
+      if (transfer?.id && !copyMode) {
         await updateTransfer.mutateAsync({
           id: transfer.id,
           data: transferData,
@@ -522,7 +525,11 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
         );
       } else {
         await createTransfer.mutateAsync(transferData);
-        toast.success("Tạo phiếu chuyển hàng thành công");
+        toast.success(
+          copyMode
+            ? "Sao chép phiếu chuyển hàng thành công"
+            : "Tạo phiếu chuyển hàng thành công"
+        );
       }
       onClose();
     } catch (error: any) {
@@ -577,13 +584,13 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white shrink-0">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
-              {transfer
+              {transfer && !copyMode
                 ? isReceiver
                   ? "Xác nhận nhận hàng"
                   : "Chi tiết phiếu chuyển hàng"
                 : "Tạo phiếu chuyển hàng"}
             </h2>
-            {transfer && (
+            {transfer && !copyMode && (
               <p className="text-sm text-blue-600 font-medium mt-0.5">
                 {transfer.code}
               </p>
@@ -613,7 +620,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                     value={fromBranchId}
                     options={fromBranchOptions}
                     placeholder="Chọn chi nhánh"
-                    disabled={!!transfer || isReadOnly}
+                    disabled={(!!transfer && !copyMode) || isReadOnly}
                     onChange={setFromBranchId}
                   />
                 </div>
@@ -625,7 +632,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                     value={toBranchId}
                     options={toBranchOptions}
                     placeholder="Chọn chi nhánh"
-                    disabled={!!transfer || isReadOnly}
+                    disabled={(!!transfer && !copyMode) || isReadOnly}
                     onChange={setToBranchId}
                   />
                 </div>
@@ -791,7 +798,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                             {Number(item.toInventory).toLocaleString()}
                           </td>
                           <td className="px-4 py-3">
-                            {isSender && !transfer ? (
+                            {isSender && (!transfer || copyMode) ? (
                               <div className="flex items-center justify-center gap-1">
                                 <button
                                   type="button"
@@ -896,7 +903,7 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
                           )}
 
                           <td className="px-4 py-3 text-right text-sm text-gray-700">
-                            {isSender && !transfer ? (
+                            {isSender && (!transfer || copyMode) ? (
                               <input
                                 type="text"
                                 inputMode="numeric"
@@ -1029,19 +1036,21 @@ export function TransferForm({ transfer, onClose }: TransferFormProps) {
               <>
                 {isDraft && (
                   <>
-                    <button
-                      onClick={() => setShowCancelConfirm(true)}
-                      disabled={cancelTransfer.isPending}
-                      className="px-5 py-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg hover:bg-red-100 text-sm font-medium transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                      {cancelTransfer.isPending ? (
-                        <>
-                          <span className="w-3.5 h-3.5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                          Đang hủy...
-                        </>
-                      ) : (
-                        "Hủy phiếu"
-                      )}
-                    </button>
+                    {!copyMode && (
+                      <button
+                        onClick={() => setShowCancelConfirm(true)}
+                        disabled={cancelTransfer.isPending}
+                        className="px-5 py-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg hover:bg-red-100 text-sm font-medium transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        {cancelTransfer.isPending ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                            Đang hủy...
+                          </>
+                        ) : (
+                          "Hủy phiếu"
+                        )}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleSubmit(true)}
                       disabled={

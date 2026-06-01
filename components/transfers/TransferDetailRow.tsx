@@ -2,7 +2,7 @@
 
 import { useState, useRef, useLayoutEffect } from "react";
 import { useTransfer } from "@/lib/hooks/useTransfers";
-import { Loader2, Pencil } from "lucide-react";
+import { Copy, Loader2, Pencil } from "lucide-react";
 import type { Transfer } from "@/lib/api/transfers";
 import { useCan } from "@/lib/hooks/useCan";
 
@@ -10,6 +10,7 @@ interface TransferDetailRowProps {
   transferId: number;
   colSpan: number;
   onEdit: (transfer: Transfer) => void;
+  onCopy: (transfer: Transfer) => void;
 }
 
 const STATUS_COLOR: Record<number, string> = {
@@ -36,9 +37,11 @@ export function TransferDetailRow({
   transferId,
   colSpan,
   onEdit,
+  onCopy,
 }: TransferDetailRowProps) {
   const { data: transfer, isLoading } = useTransfer(transferId);
   const canUpdate = useCan("transfers", "update");
+  const canCreate = useCan("transfers", "create");
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // ─── Sticky width — giống OrderDetailRow ────────────────────────────────
@@ -107,15 +110,26 @@ export function TransferDetailRow({
                     </span>
                   </div>
 
-                  {/* Nút chỉnh sửa — chỉ hiện khi chưa hoàn thành */}
-                  {canEdit && (
-                    <button
-                      onClick={() => onEdit(transfer)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors">
-                      <Pencil className="w-3.5 h-3.5" />
-                      Chỉnh sửa
-                    </button>
-                  )}
+                  {/* Nút chỉnh sửa & sao chép */}
+                  <div className="flex items-center gap-2">
+                    {canCreate && (
+                      <button
+                        onClick={() => onCopy(transfer)}
+                        title="Sao chép phiếu chuyển hàng"
+                        className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                        <Copy className="w-3.5 h-3.5" />
+                        Sao chép
+                      </button>
+                    )}
+                    {canEdit && (
+                      <button
+                        onClick={() => onEdit(transfer)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors">
+                        <Pencil className="w-3.5 h-3.5" />
+                        Chỉnh sửa
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Chi nhánh chuyển / nhận */}
