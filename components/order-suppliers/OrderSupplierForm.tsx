@@ -526,7 +526,7 @@ export function OrderSupplierForm({
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="Mã phiếu tự động"
                 className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                disabled={isFormDisabled}
+                disabled={!!isFormDisabled}
               />
             )}
           </div>
