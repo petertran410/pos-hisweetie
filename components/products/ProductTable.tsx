@@ -3,6 +3,7 @@
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
+import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -19,6 +20,7 @@ import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { ProductCustomerOrdersModal } from "./ProductCustomerOrdersModal";
+import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
 import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface ColumnConfig {
@@ -31,6 +33,8 @@ interface ColumnConfig {
     ctx?: {
       pendingMap: Record<number, number>;
       onOpenPending: (p: Product) => void;
+      supplierMap: Record<number, number>;
+      onOpenSupplier: (p: Product) => void;
     }
   ) => React.ReactNode;
 }
@@ -229,20 +233,23 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Đặt NCC",
     visible: false,
     width: "100px",
-    render: (product) => {
-      const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
-      if (selectedBranchId) {
-        const inventory = product.inventories?.find(
-          (inv) => inv.branchId === selectedBranchId
-        );
-        return inventory ? Number(inventory.onOrder).toLocaleString() : "0";
+    render: (product, ctx) => {
+      const total = ctx?.supplierMap?.[product.id] ?? 0;
+      const display = total.toLocaleString();
+      if (total <= 0) {
+        return <span className="text-gray-500">{display}</span>;
       }
-      const totalStockOrder =
-        product.inventories?.reduce(
-          (sum, inv) => sum + Number(inv.onOrder),
-          0
-        ) || 0;
-      return totalStockOrder.toLocaleString();
+      return (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            ctx?.onOpenSupplier(product);
+          }}
+          className="text-blue-600 hover:underline font-medium">
+          {display}
+        </button>
+      );
     },
   },
   {
@@ -435,6 +442,11 @@ export function ProductsTable({
     [visibleColumns]
   );
 
+  const isSupplierOrderColumnVisible = useMemo(
+    () => visibleColumns.some((c) => c.key === "customerReserved"),
+    [visibleColumns]
+  );
+
   // Chỉ fetch summary "Khách đặt" khi cột đang hiển thị, gom theo trang hiện tại.
   const productIdsForPending = useMemo(
     () => (isCustomerOrderColumnVisible ? products.map((p) => p.id) : []),
@@ -446,7 +458,21 @@ export function ProductsTable({
   );
   const pendingMap = pendingSummary || {};
 
+  // Chỉ fetch summary "Đặt NCC" khi cột đang hiển thị, gom theo trang hiện tại.
+  const productIdsForSupplier = useMemo(
+    () => (isSupplierOrderColumnVisible ? products.map((p) => p.id) : []),
+    [isSupplierOrderColumnVisible, products]
+  );
+
+  const { data: supplierSummary } = useOrderSuppliersConfirmedSummary(
+    productIdsForSupplier
+  );
+  const supplierMap = supplierSummary || {};
+
   const [pendingModalProduct, setPendingModalProduct] =
+    useState<Product | null>(null);
+
+  const [supplierModalProduct, setSupplierModalProduct] =
     useState<Product | null>(null);
 
   const colSpan = visibleColumns.length + 2; // +checkbox +chevron
@@ -679,6 +705,8 @@ export function ProductsTable({
                         {col.render(product, {
                           pendingMap,
                           onOpenPending: (p) => setPendingModalProduct(p),
+                          supplierMap,
+                          onOpenSupplier: (p) => setSupplierModalProduct(p),
                         })}
                       </td>
                     ))}
@@ -801,6 +829,17 @@ export function ProductsTable({
           productName={pendingModalProduct.name}
           productCode={pendingModalProduct.code}
           onClose={() => setPendingModalProduct(null)}
+        />
+      )}
+
+      {supplierModalProduct && (
+        <ProductSupplierOrdersModal
+          productId={supplierModalProduct.id}
+          productName={supplierModalProduct.name}
+          productCode={supplierModalProduct.code}
+          branchId={selectedBranch?.id}
+          branchName={selectedBranch?.name}
+          onClose={() => setSupplierModalProduct(null)}
         />
       )}
     </div>

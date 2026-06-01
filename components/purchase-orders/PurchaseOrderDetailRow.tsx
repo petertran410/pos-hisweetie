@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   usePurchaseOrder,
   useUpdatePurchaseOrder,
+  useCancelPurchaseOrder,
 } from "@/lib/hooks/usePurchaseOrders";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
@@ -14,6 +15,8 @@ import {
   FileText,
   Loader2,
   Save,
+  Copy,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
@@ -82,6 +85,7 @@ export function PurchaseOrderDetailRow({
   const { data: suppliersData } = useSuppliers({});
   const { data: users } = useUsersForFilter();
   const updatePurchaseOrder = useUpdatePurchaseOrder();
+  const cancelPurchaseOrder = useCancelPurchaseOrder();
 
   const [activeTab, setActiveTab] = useState("info");
   const [productCodeSearch, setProductCodeSearch] = useState("");
@@ -172,32 +176,38 @@ export function PurchaseOrderDetailRow({
 
   const handleCancelPurchaseOrder = async () => {
     if (!purchaseOrder) return;
-    if (!window.confirm("Bạn có chắc chắn muốn hủy phiếu nhập hàng này?"))
-      return;
-    try {
-      await updatePurchaseOrder.mutateAsync({
-        id: purchaseOrder.id,
-        data: {
-          supplierId: purchaseOrder.supplierId,
-          items: purchaseOrder.items?.map((item: any) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price,
-            discount: item.discount || 0,
-            description: item.description,
-          })),
-          isDraft: false,
-          purchaseDate: purchaseOrder.purchaseDate,
-        },
-      });
-      await updatePurchaseOrder.mutateAsync({
-        id: purchaseOrder.id,
-        data: { status: 2 },
-      });
-      toast.success("Đã hủy phiếu nhập hàng");
-    } catch (error: any) {
-      toast.error(error.message || "Không thể hủy phiếu nhập hàng");
+
+    const hasPayments =
+      purchaseOrder.payments &&
+      purchaseOrder.payments.filter((p: any) => p.status !== 2).length > 0;
+
+    let cancelPayments = false;
+    if (hasPayments) {
+      const confirmed = window.confirm(
+        `Phiếu nhập hàng "${purchaseOrder.code}" có thanh toán. Bạn có muốn hủy luôn các phiếu thanh toán không?\n\n- OK: Hủy phiếu nhập + hủy thanh toán\n- Cancel: Không hủy`
+      );
+      if (!confirmed) return;
+      cancelPayments = true;
+    } else {
+      const confirmed = window.confirm(
+        `Bạn có chắc chắn muốn hủy phiếu nhập hàng "${purchaseOrder.code}"?\nTồn kho sẽ được hoàn nguyên.`
+      );
+      if (!confirmed) return;
     }
+
+    try {
+      await cancelPurchaseOrder.mutateAsync({
+        id: purchaseOrder.id,
+        cancelPayments,
+      });
+    } catch {
+      // error handled by hook
+    }
+  };
+
+  const handleCopyPurchaseOrder = () => {
+    if (!purchaseOrder) return;
+    router.push(`/san-pham/nhap-hang/new?copyPurchaseOrderId=${purchaseOrder.id}`);
   };
 
   // ── Loading ──
@@ -248,7 +258,7 @@ export function PurchaseOrderDetailRow({
     ) || 0;
   const itemCount = filteredItems?.length || 0;
 
-  const canCancel = purchaseOrder.status === PURCHASE_ORDER_STATUS.DRAFT;
+  const canCancel = purchaseOrder.status !== PURCHASE_ORDER_STATUS.CANCELLED;
 
   const TABS = [
     { value: "info", label: "Thông tin" },
@@ -586,10 +596,19 @@ export function PurchaseOrderDetailRow({
                           Chỉnh sửa
                         </button>
                       )}
+                      <button
+                        onClick={handleCopyPurchaseOrder}
+                        title="Sao chép phiếu nhập hàng"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <Copy className="w-3.5 h-3.5" />
+                        Sao chép
+                      </button>
                       {canUpdatePO && canCancel && (
                         <button
                           onClick={handleCancelPurchaseOrder}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors">
+                          disabled={cancelPurchaseOrder.isPending}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50">
+                          <XCircle className="w-3.5 h-3.5" />
                           Hủy phiếu
                         </button>
                       )}

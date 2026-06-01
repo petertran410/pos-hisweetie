@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { X, ChevronDown, Minus, Plus } from "lucide-react";
-import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import { X, ChevronDown, Minus, Plus, Search } from "lucide-react";
+import { useSuppliers, useSupplier } from "@/lib/hooks/useSuppliers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
   useCreateOrderSupplier,
@@ -51,7 +51,17 @@ export function OrderSupplierForm({
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
   const { data: branches } = useBranches();
-  const { data: suppliersData } = useSuppliers({});
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const [debouncedSupplierSearch, setDebouncedSupplierSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSupplierSearch(supplierSearch), 250);
+    return () => clearTimeout(t);
+  }, [supplierSearch]);
+  const { data: suppliersData } = useSuppliers({
+    name: debouncedSupplierSearch || undefined,
+    pageSize: 50,
+    currentItem: 0,
+  });
   const createOrderSupplier = useCreateOrderSupplier();
   const updateOrderSupplier = useUpdateOrderSupplier();
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
@@ -113,9 +123,13 @@ export function OrderSupplierForm({
   const selectedStatus = STATUS_OPTIONS.find((s) => s.value === status);
   const selectedBranchData = branches?.find((b) => b.id === branchId);
   const activeBranches = branches?.filter((b) => b.isActive);
-  const selectedSupplier = suppliersData?.data?.find(
+  const selectedSupplierFromList = suppliersData?.data?.find(
     (s) => s.id === supplierId
   );
+  const { data: selectedSupplierFetched } = useSupplier(
+    supplierId && !selectedSupplierFromList ? supplierId : undefined
+  );
+  const selectedSupplier = selectedSupplierFromList || selectedSupplierFetched;
 
   useEffect(() => {
     if (orderSupplier?.items) {
@@ -607,7 +621,7 @@ export function OrderSupplierForm({
 
           <div ref={supplierDropdownRef} className="flex gap-2 items-center">
             <div className="text-md text-gray-600">Nhà cung cấp:</div>
-            <div className="relative w-40">
+            <div className="relative w-64">
               <button
                 type="button"
                 onClick={() =>
@@ -616,26 +630,49 @@ export function OrderSupplierForm({
                 }
                 disabled={isFormDisabled ? true : false}
                 className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100">
-                <span className={!selectedSupplier ? "text-gray-400" : ""}>
+                <span
+                  className={`truncate ${!selectedSupplier ? "text-gray-400" : ""}`}>
                   {selectedSupplier
                     ? selectedSupplier.name
                     : "Chọn nhà cung cấp"}
                 </span>
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDown className="w-4 h-4 flex-shrink-0" />
               </button>
               {showSupplierDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                  {suppliersData?.data?.map((supplier) => (
-                    <div
-                      key={supplier.id}
-                      onClick={() => {
-                        setSupplierId(supplier.id);
-                        setShowSupplierDropdown(false);
-                      }}
-                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
-                      {supplier.name}
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-72 overflow-hidden flex flex-col">
+                  <div className="p-2 border-b sticky top-0 bg-white">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        autoFocus
+                        value={supplierSearch}
+                        onChange={(e) => setSupplierSearch(e.target.value)}
+                        placeholder="Tìm nhà cung cấp..."
+                        className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
                     </div>
-                  ))}
+                  </div>
+                  <div className="overflow-y-auto max-h-56">
+                    {suppliersData?.data?.length ? (
+                      suppliersData.data.map((supplier) => (
+                        <div
+                          key={supplier.id}
+                          onClick={() => {
+                            setSupplierId(supplier.id);
+                            setShowSupplierDropdown(false);
+                            setSupplierSearch("");
+                          }}
+                          className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                          {supplier.name}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        Không tìm thấy nhà cung cấp
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -100,3 +100,29 @@ export function useCreatePurchaseOrderFromOrderSupplier() {
     },
   });
 }
+
+export function useCancelPurchaseOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      cancelPayments,
+    }: {
+      id: number;
+      cancelPayments?: boolean;
+    }) => purchaseOrdersApi.cancel(id, { cancelPayments }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({
+        queryKey: ["purchase-orders", variables.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["order-suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["cashflows"] });
+      toast.success("Hủy phiếu nhập hàng thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Hủy phiếu nhập hàng thất bại");
+    },
+  });
+}

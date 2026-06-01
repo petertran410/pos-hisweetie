@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useProduct } from "@/lib/hooks/useProducts";
+import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -14,6 +15,7 @@ import {
   Weight,
   ArrowLeft,
 } from "lucide-react";
+import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +59,42 @@ interface ProductMobileDetailSheetProps {
   onClose: () => void;
 }
 
+/**
+ * Cell hiển thị "Đặt NCC" cho mobile — tự fetch summary per (productId, branchId).
+ */
+function MobileSupplierOrderCell({
+  productId,
+  branch,
+  onOpen,
+}: {
+  productId: number;
+  branch: { id: number; name: string };
+  onOpen: (branch: { id: number; name: string }) => void;
+}) {
+  const { data, isLoading } = useOrderSuppliersConfirmedSummary(
+    [productId],
+    branch.id
+  );
+  const total = data?.[productId] ?? 0;
+
+  if (isLoading) {
+    return <span className="text-xs font-medium text-gray-300">…</span>;
+  }
+
+  if (total <= 0) {
+    return <span className="text-xs font-medium text-gray-600">0</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(branch)}
+      className="text-xs font-medium text-blue-600 hover:underline">
+      {total.toLocaleString()}
+    </button>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ProductMobileDetailSheet({
@@ -68,6 +106,10 @@ export function ProductMobileDetailSheet({
   const [activeTab, setActiveTab] = useState<
     "info" | "description" | "inventory"
   >("info");
+  const [supplierOrdersBranch, setSupplierOrdersBranch] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
 
   // Lock scroll
   useEffect(() => {
@@ -394,9 +436,14 @@ export function ProductMobileDetailSheet({
                                 <p className="text-[10px] text-gray-400">
                                   Đặt NCC
                                 </p>
-                                <p className="text-xs font-medium text-gray-600">
-                                  {Number(inv.onOrder).toLocaleString()}
-                                </p>
+                                <MobileSupplierOrderCell
+                                  productId={productId}
+                                  branch={{
+                                    id: inv.branchId,
+                                    name: inv.branchName,
+                                  }}
+                                  onOpen={(b) => setSupplierOrdersBranch(b)}
+                                />
                               </div>
                               <div>
                                 <p className="text-[10px] text-gray-400">
@@ -433,6 +480,17 @@ export function ProductMobileDetailSheet({
           )}
         </div>
       </div>
+
+      {supplierOrdersBranch && product && (
+        <ProductSupplierOrdersModal
+          productId={product.id}
+          productName={product.name}
+          productCode={product.code}
+          branchId={supplierOrdersBranch.id}
+          branchName={supplierOrdersBranch.name}
+          onClose={() => setSupplierOrdersBranch(null)}
+        />
+      )}
     </div>
   );
 }

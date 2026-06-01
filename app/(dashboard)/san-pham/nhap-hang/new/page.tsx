@@ -3,15 +3,21 @@
 import { PurchaseOrderForm } from "@/components/purchase-orders/PurchaseOrderForm";
 import { useSearchParams } from "next/navigation";
 import { useOrderSupplier } from "@/lib/hooks/useOrderSuppliers";
+import { usePurchaseOrder } from "@/lib/hooks/usePurchaseOrders";
 
 export default function NewPurchaseOrderPage() {
   const searchParams = useSearchParams();
   const orderSupplierId = searchParams.get("orderSupplierId");
-  const { data: orderSupplier, isLoading } = useOrderSupplier(
+  const copyPurchaseOrderId = searchParams.get("copyPurchaseOrderId");
+
+  const { data: orderSupplier, isLoading: isLoadingOS } = useOrderSupplier(
     orderSupplierId ? Number(orderSupplierId) : 0
   );
+  const { data: copySource, isLoading: isLoadingCopy } = usePurchaseOrder(
+    copyPurchaseOrderId ? Number(copyPurchaseOrderId) : 0
+  );
 
-  if (orderSupplierId && isLoading) {
+  if ((orderSupplierId && isLoadingOS) || (copyPurchaseOrderId && isLoadingCopy)) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-gray-500">Đang tải...</div>
@@ -19,5 +25,10 @@ export default function NewPurchaseOrderPage() {
     );
   }
 
-  return <PurchaseOrderForm orderSupplier={orderSupplier || null} />;
+  return (
+    <PurchaseOrderForm
+      orderSupplier={orderSupplier || null}
+      copyFrom={copySource || null}
+    />
+  );
 }

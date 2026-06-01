@@ -104,3 +104,51 @@ export function useOrderSupplierPayments(orderSupplierId: number) {
     enabled: !!orderSupplierId,
   });
 }
+
+/**
+ * Tổng số "Đặt NCC" cho 1 batch productIds.
+ * Chỉ tính các phiếu OrderSupplier ở trạng thái Đã xác nhận NCC hoặc Nhập một phần.
+ * Truyền branchId nếu muốn lọc theo chi nhánh.
+ *
+ * Đối xứng `useOrdersPendingSummary` của phía bán.
+ */
+export function useOrderSuppliersConfirmedSummary(
+  productIds: number[],
+  branchId?: number
+) {
+  const sortedKey = [...productIds].sort((a, b) => a - b).join(",");
+  return useQuery({
+    queryKey: [
+      "order-suppliers-confirmed-summary",
+      sortedKey,
+      branchId ?? null,
+    ],
+    queryFn: () =>
+      orderSuppliersApi.getConfirmedSummary(productIds, branchId),
+    enabled: productIds.length > 0,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Danh sách phiếu đặt hàng nhập (Đã xác nhận NCC / Nhập một phần) chứa
+ * sản phẩm cụ thể. Truyền branchId để lọc theo chi nhánh đang chọn.
+ * Dùng cho modal khi click vào số "Đặt NCC".
+ *
+ * Đối xứng `useOrdersPendingByProduct` của phía bán.
+ */
+export function useOrderSuppliersConfirmedByProduct(
+  productId: number | null,
+  branchId?: number
+) {
+  return useQuery({
+    queryKey: [
+      "order-suppliers-confirmed-by-product",
+      productId,
+      branchId ?? null,
+    ],
+    queryFn: () =>
+      orderSuppliersApi.getConfirmedByProduct(productId as number, branchId),
+    enabled: !!productId,
+  });
+}

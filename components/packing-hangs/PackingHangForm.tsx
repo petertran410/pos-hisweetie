@@ -71,6 +71,7 @@ export function PackingHangForm({
     packingHang?.images?.map((img) => img.imageUrl) || []
   );
   const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
@@ -468,7 +469,8 @@ export function PackingHangForm({
                         <img
                           src={url}
                           alt=""
-                          className="w-full h-24 object-cover rounded border"
+                          className="w-full h-24 object-cover rounded border cursor-pointer"
+                          onClick={() => setPreviewImage(url)}
                         />
                         <button
                           type="button"
@@ -499,6 +501,25 @@ export function PackingHangForm({
           </div>
         </form>
       </div>
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4"
+          onClick={() => setPreviewImage(null)}>
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-4 right-4 text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-2xl hover:bg-black/70">
+            ×
+          </button>
+          <img
+            src={previewImage}
+            alt="Preview"
+            className="max-w-full max-h-full object-contain rounded"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -308,7 +308,7 @@ export function OrderSuppliersTable({
             </h2>
             <input
               type="text"
-              placeholder="Tìm mã đặt hàng, nhà cung cấp..."
+              placeholder="Tìm mã đặt hàng, mã nhập hàng, NCC, mã hàng, tên SP..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

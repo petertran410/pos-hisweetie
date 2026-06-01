@@ -36,6 +36,7 @@ interface ProductItem {
 interface PurchaseOrderFormProps {
   purchaseOrder?: PurchaseOrder | null;
   orderSupplier?: OrderSupplier | null;
+  copyFrom?: PurchaseOrder | null;
   onClose?: () => void;
 }
 
@@ -47,6 +48,7 @@ const STATUS_OPTIONS = [
 export function PurchaseOrderForm({
   purchaseOrder,
   orderSupplier,
+  copyFrom,
 }: PurchaseOrderFormProps) {
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
@@ -84,20 +86,21 @@ export function PurchaseOrderForm({
   const [branchId, setBranchId] = useState<number>(
     purchaseOrder?.branchId ||
       orderSupplier?.branchId ||
+      copyFrom?.branchId ||
       selectedBranch?.id ||
       0
   );
   const [supplierId, setSupplierId] = useState<number>(
-    purchaseOrder?.supplierId || orderSupplier?.supplierId || 0
+    purchaseOrder?.supplierId || orderSupplier?.supplierId || copyFrom?.supplierId || 0
   );
   const [note, setNote] = useState<string>(
-    purchaseOrder?.description || orderSupplier?.description || ""
+    purchaseOrder?.description || orderSupplier?.description || copyFrom?.description || ""
   );
   const [discount, setDiscount] = useState<number>(
-    purchaseOrder?.discount || 0
+    purchaseOrder?.discount || copyFrom?.discount || 0
   );
   const [discountRatio, setDiscountRatio] = useState<number>(
-    purchaseOrder?.discountRatio || 0
+    purchaseOrder?.discountRatio || copyFrom?.discountRatio || 0
   );
   const [discountType, setDiscountType] = useState<"amount" | "ratio">(
     "amount"
@@ -109,7 +112,7 @@ export function PurchaseOrderForm({
   const { user: currentUser } = useAuthStore();
   const { data: users } = useUsersForFilter();
   const [purchaseById, setPurchaseById] = useState<number>(
-    purchaseOrder?.purchaseById || orderSupplier?.userId || currentUser?.id || 0
+    purchaseOrder?.purchaseById || orderSupplier?.userId || copyFrom?.purchaseById || currentUser?.id || 0
   );
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -174,6 +177,22 @@ export function PurchaseOrderForm({
       // user trả thêm. Hiển thị nguyên giá trị này làm "đã thanh toán".
       setPreviouslyPaid(Number(purchaseOrder.paidAmount || 0));
       setPaymentAmount(0);
+    } else if (copyFrom?.items) {
+      // Copy từ PN khác: seed products, reset payment
+      const loadedProducts: ProductItem[] = copyFrom.items.map((item) => ({
+        productId: item.productId,
+        productCode: item.productCode,
+        productName: item.productName,
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+        discount: Number(item.discount),
+        subTotal: Number(item.totalPrice),
+        inventory: 0,
+        note: item.description,
+      }));
+      setProducts(loadedProducts);
+      setPreviouslyPaid(0);
+      setPaymentAmount(0);
     } else if (orderSupplier?.items) {
       const receivedQuantities: Record<number, number> = {};
       orderSupplier.purchaseOrders?.forEach((po) => {
@@ -225,7 +244,7 @@ export function PurchaseOrderForm({
       }
       setPaymentAmount(0);
     }
-  }, [purchaseOrder, orderSupplier]);
+  }, [purchaseOrder, copyFrom, orderSupplier]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -37,5 +37,7 @@ export const purchaseOrdersApi = {
     }),
   update: (id: number, data: any) =>
     apiClient.put(`/purchase-orders/${id}`, data),
+  cancel: (id: number, data?: { cancelPayments?: boolean }) =>
+    apiClient.put(`/purchase-orders/${id}/cancel`, data || {}),
   delete: (id: number) => apiClient.delete(`/purchase-orders/${id}`),
 };

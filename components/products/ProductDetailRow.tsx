@@ -14,12 +14,52 @@ import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { ProductInventoryLogTab } from "./ProductInventoryLogTab";
+import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
+import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import Link from "next/link";
 
 interface ProductDetailRowProps {
   productId: number;
   colSpan: number;
+}
+
+/**
+ * Cell hiển thị "Đặt NCC" cho từng dòng (mỗi chi nhánh) trong tab Tồn kho.
+ * Tự fetch summary cho cặp (productId, branchId). Nếu > 0 → button click
+ * mở `ProductSupplierOrdersModal` lọc đúng chi nhánh đang xét.
+ */
+function SupplierOrderCell({
+  productId,
+  branch,
+  onOpen,
+}: {
+  productId: number;
+  branch: { id: number; name: string };
+  onOpen: (branch: { id: number; name: string }) => void;
+}) {
+  const { data, isLoading } = useOrderSuppliersConfirmedSummary(
+    [productId],
+    branch.id
+  );
+  const total = data?.[productId] ?? 0;
+
+  if (isLoading) {
+    return <span className="text-gray-300">…</span>;
+  }
+
+  if (total <= 0) {
+    return <span>0</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(branch)}
+      className="text-blue-600 hover:underline font-medium">
+      {total.toLocaleString()}
+    </button>
+  );
 }
 
 const getProductTypeLabel = (type: number) => {
@@ -64,6 +104,11 @@ export function ProductDetailRow({
     damaged: string;
     nearExpiry: string;
   }>({ damaged: "", nearExpiry: "" });
+
+  const [supplierOrdersBranch, setSupplierOrdersBranch] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -670,7 +715,14 @@ export function ProductDetailRow({
                               </td>
 
                               <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
-                                {Number(inv.onOrder).toLocaleString()}
+                                <SupplierOrderCell
+                                  productId={product.id}
+                                  branch={{
+                                    id: inv.branchId,
+                                    name: inv.branchName,
+                                  }}
+                                  onOpen={(b) => setSupplierOrdersBranch(b)}
+                                />
                               </td>
 
                               <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
@@ -722,6 +774,17 @@ export function ProductDetailRow({
             </div>
           </div>
         </div>
+
+        {supplierOrdersBranch && (
+          <ProductSupplierOrdersModal
+            productId={product.id}
+            productName={product.name}
+            productCode={product.code}
+            branchId={supplierOrdersBranch.id}
+            branchName={supplierOrdersBranch.name}
+            onClose={() => setSupplierOrdersBranch(null)}
+          />
+        )}
       </td>
     </tr>
   );
