@@ -31,7 +31,6 @@ export function PriceBookDropdown({
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const prevCustomerIdRef = useRef<number | null | undefined>(undefined);
 
   const { data: applicablePriceBooks } = useApplicablePriceBooks({
     branchId: selectedBranch?.id,
@@ -59,37 +58,6 @@ export function PriceBookDropdown({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  // Auto-reset bảng giá khi user đổi customer thực sự (không reset khi load lần đầu)
-  useEffect(() => {
-    const curr = selectedCustomerId ?? null;
-
-    if (prevCustomerIdRef.current === undefined) {
-      prevCustomerIdRef.current = curr;
-      return;
-    }
-
-    if (prevCustomerIdRef.current === curr) return;
-    prevCustomerIdRef.current = curr;
-
-    if (!selectedPriceBookId || selectedPriceBookId === 0) return;
-    if (!applicablePriceBooks) return;
-
-    const stillValid = applicablePriceBooks.some(
-      (pb) => pb.id === selectedPriceBookId
-    );
-    if (!stillValid) {
-      onSelectPriceBook(null, null);
-      toast.info(
-        "Bảng giá đã được đặt lại do không còn áp dụng cho khách hàng này"
-      );
-    }
-  }, [
-    selectedCustomerId,
-    applicablePriceBooks,
-    selectedPriceBookId,
-    onSelectPriceBook,
-  ]);
 
   const handleSelectPriceBook = async (priceBookId: number | null) => {
     if (priceBookId && priceBookId > 0 && cartItems && cartItems.length > 0) {
