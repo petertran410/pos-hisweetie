@@ -17,6 +17,7 @@ import { SupplierDetailRow } from "./SupplierDetailRow";
 import { SupplierForm } from "./SupplierForm";
 import { SupplierImportBalanceModal } from "./SupplierImportBalanceModal";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ColumnKey =
@@ -51,7 +52,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã nhà cung cấp",
     visible: true,
     width: "160px",
-    render: (s) => <span className="font-medium text-blue-600">{s.code}</span>,
+    render: (s) => <CodeLink entity="supplier" code={s.code} />,
   },
   {
     key: "name",

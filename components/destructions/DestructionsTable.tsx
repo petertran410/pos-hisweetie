@@ -6,6 +6,7 @@ import { formatDate, formatCurrency } from "../../lib/utils";
 import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { DestructionDetailRow } from "./DestructionDetailRow";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 interface ColumnConfig {
   key: string;
@@ -58,7 +59,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã xuất hủy",
     visible: true,
     render: (destruction) => (
-      <span className="font-medium text-blue-600">{destruction.code}</span>
+      <CodeLink entity="destruction" code={destruction.code} />
     ),
   },
   {

@@ -5,6 +5,7 @@ import { useProduction } from "@/lib/hooks/useProductions";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ProductionDetailRowProps {
   productionId: number;
@@ -106,7 +107,13 @@ export function ProductionDetailRow({
               <div className="border-b border-gray-200 pb-4 mb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex gap-2 items-center">
-                    <p className="text-md font-bold">{production.code}</p>
+                    <p className="text-md font-bold">
+                      <CodeLink
+                        entity="production"
+                        code={production.code}
+                        className="text-md font-bold text-blue-600 hover:underline"
+                      />
+                    </p>
                     <span className="text-gray-300">-</span>
                     <span className="text-md text-gray-700">
                       {production.productName}
@@ -180,7 +187,14 @@ export function ProductionDetailRow({
                       Mã hàng:
                     </label>
                     <span className="block text-sm text-gray-800">
-                      {production.productCode}
+                      {production.productCode ? (
+                        <CodeLink
+                          entity="product"
+                          code={production.productCode}
+                        />
+                      ) : (
+                        "-"
+                      )}
                     </span>
                   </div>
 

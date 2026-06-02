@@ -29,6 +29,7 @@ import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 import { useCan } from "@/lib/hooks/useCan";
+import { CodeLink } from "../shared/CodeLink";
 
 const getOrderStatusBadgeColor = (status: number) => {
   switch (status) {
@@ -325,7 +326,11 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                   <div className="flex border-b pb-2 items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-gray-900">
-                        {order.code}
+                        <CodeLink
+                          entity="order"
+                          code={order.code}
+                          className="text-lg font-bold text-blue-600 hover:underline"
+                        />
                       </span>
                       <span className="text-gray-400">-</span>
                       {order.customer?.code ? (

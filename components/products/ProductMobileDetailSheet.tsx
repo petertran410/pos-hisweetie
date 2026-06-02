@@ -5,6 +5,7 @@ import { useProduct } from "@/lib/hooks/useProducts";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
+import { CodeLink } from "@/components/shared/CodeLink";
 import {
   X,
   Loader2,
@@ -200,7 +201,7 @@ export function ProductMobileDetailSheet({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-blue-600 font-bold text-sm mb-0.5">
-                    {product.code}
+                    <CodeLink entity="product" code={product.code} />
                   </p>
                   <p className="font-semibold text-gray-900 text-base leading-tight mb-2">
                     {product.name}
@@ -344,8 +345,16 @@ export function ProductMobileDetailSheet({
                                     {cp?.name || "-"}
                                   </p>
                                   <p className="text-xs text-gray-400">
-                                    {cp?.code || "-"} | SL:{" "}
-                                    {Number(comp.quantity)}
+                                    {cp?.code ? (
+                                      <CodeLink
+                                        entity="product"
+                                        code={cp.code}
+                                        className="text-blue-600 hover:underline"
+                                      />
+                                    ) : (
+                                      "-"
+                                    )}{" "}
+                                    | SL: {Number(comp.quantity)}
                                   </p>
                                 </div>
                                 <span className="text-xs font-medium text-gray-600">

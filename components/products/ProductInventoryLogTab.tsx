@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useProductInventoryLogs } from "@/lib/hooks/useProducts";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { CodeLink, type CodeEntity } from "../shared/CodeLink";
 
 interface Props {
   productId: number;
@@ -25,24 +26,18 @@ const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   STOCK_AUDIT_CANCEL: "Hủy kiểm hàng",
 };
 
-// Map refType (backend InventoryLog) → route đích trên frontend.
-// Các page đích đều đọc query `Code` để auto-lọc theo mã (xem hoa-don/page.tsx,
-// nhap-hang/page.tsx, tra-hang/page.tsx, ...). Page nào chưa hỗ trợ thì vẫn
-// mở đúng trang để user thấy ngữ cảnh.
-const REF_TYPE_ROUTES: Record<string, string> = {
-  invoice: "/don-hang/hoa-don",
-  purchase_order: "/san-pham/nhap-hang",
-  return_order: "/don-hang/tra-hang",
-  transfer: "/san-pham/chuyen-hang",
-  stock_audit: "/san-pham/kiem-kho",
-  supplier_return: "/san-pham/tra-hang-nhap",
-  destruction: "/san-pham/xuat-huy",
-};
-
-const buildRefHref = (refType: string, refCode: string): string | null => {
-  const base = REF_TYPE_ROUTES[refType];
-  if (!base || !refCode) return null;
-  return `${base}?Code=${encodeURIComponent(refCode)}`;
+// Map loại giao dịch → trang đích cho mã liên quan
+const TRANSACTION_TYPE_ENTITY: Record<string, CodeEntity> = {
+  PURCHASE: "purchase-order",
+  SALE: "invoice",
+  TRANSFER_OUT: "transfer",
+  TRANSFER_IN: "transfer",
+  PRODUCTION_OUT: "production",
+  PRODUCTION_IN: "production",
+  DESTRUCTION: "destruction",
+  RETURN: "return-order",
+  STOCK_AUDIT: "stock-audit",
+  STOCK_AUDIT_CANCEL: "stock-audit",
 };
 
 const formatMoney = (v: number | null | undefined) => {
@@ -139,50 +134,44 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
           </tr>
         </thead>
         <tbody>
-          {logs.map((log) => {
-            const href = buildRefHref(log.refType, log.refCode);
-            return (
-              <tr key={log.id} className="border-t hover:bg-gray-50">
-                <td className="px-4 py-3">
-                  {log.refCode && href ? (
-                    <Link
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-blue-600 hover:underline"
-                      title={`Mở ${log.refCode} ở tab mới`}>
-                      {log.refCode}
-                    </Link>
-                  ) : (
-                    <span className="font-medium text-blue-600">
-                      {log.refCode || "-"}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                  {formatDateTime(log.createdAt)}
-                </td>
-                <td className="px-4 py-3">
-                  {TRANSACTION_TYPE_LABELS[log.transactionType] ||
-                    log.transactionType}
-                </td>
-                <td className="px-4 py-3 text-gray-600">
-                  {log.partnerName || "-"}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {log.transactionPrice != null
-                    ? formatMoney(log.transactionPrice)
-                    : "-"}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {formatMoney(log.costPrice)}
-                </td>
-                <td className="px-4 py-3 text-right font-medium">
-                  {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
-                </td>
-              </tr>
-            );
-          })}
+          {logs.map((log) => (
+            <tr key={log.id} className="border-t hover:bg-gray-50">
+              <td className="px-4 py-3">
+                {log.refCode &&
+                TRANSACTION_TYPE_ENTITY[log.transactionType] ? (
+                  <CodeLink
+                    entity={TRANSACTION_TYPE_ENTITY[log.transactionType]}
+                    code={log.refCode}
+                  />
+                ) : (
+                  <span className="font-medium text-blue-600">
+                    {log.refCode || "-"}
+                  </span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                {formatDateTime(log.createdAt)}
+              </td>
+              <td className="px-4 py-3">
+                {TRANSACTION_TYPE_LABELS[log.transactionType] ||
+                  log.transactionType}
+              </td>
+              <td className="px-4 py-3 text-gray-600">
+                {log.partnerName || "-"}
+              </td>
+              <td className="px-4 py-3 text-right">
+                {log.transactionPrice != null
+                  ? formatMoney(log.transactionPrice)
+                  : "-"}
+              </td>
+              <td className="px-4 py-3 text-right">
+                {formatMoney(log.costPrice)}
+              </td>
+              <td className="px-4 py-3 text-right font-medium">
+                {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
 

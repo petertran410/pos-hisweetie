@@ -12,6 +12,7 @@ import { useBranchStore } from "@/lib/store/branch";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { ActionGuard } from "../permissions/ActionGuard";
 import { ProductInventoryLogTab } from "./ProductInventoryLogTab";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ProductDetailProps {
   product?: Product;
@@ -294,7 +295,9 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
               <div className="grid grid-cols-3 gap-6">
                 <div>
                   <label className="text-sm text-gray-600">Mã hàng</label>
-                  <p className="font-medium">{product.code}</p>
+                  <p className="font-medium">
+                    <CodeLink entity="product" code={product.code} />
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-600">Tên hàng</label>
@@ -708,7 +711,14 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                             <tr key={comp.id} className="border-t">
                               <td className="px-4 py-2">{actualIndex + 1}</td>
                               <td className="px-4 py-2 text-sm">
-                                {componentProduct?.code}
+                                {componentProduct?.code ? (
+                                  <CodeLink
+                                    entity="product"
+                                    code={componentProduct.code}
+                                  />
+                                ) : (
+                                  "-"
+                                )}
                               </td>
                               <td className="px-4 py-2">
                                 {componentProduct?.name}
@@ -838,7 +848,14 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                             <tr key={comp.id} className="border-t">
                               <td className="px-4 py-2">{actualIndex + 1}</td>
                               <td className="px-4 py-2 text-sm">
-                                {componentProduct?.code}
+                                {componentProduct?.code ? (
+                                  <CodeLink
+                                    entity="product"
+                                    code={componentProduct.code}
+                                  />
+                                ) : (
+                                  "-"
+                                )}
                               </td>
                               <td className="px-4 py-2">
                                 {componentProduct?.name}

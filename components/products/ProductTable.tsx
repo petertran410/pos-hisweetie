@@ -22,6 +22,7 @@ import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { ProductCustomerOrdersModal } from "./ProductCustomerOrdersModal";
 import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
 import { usePermission } from "@/lib/hooks/usePermissions";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ColumnConfig {
   key: string;
@@ -107,9 +108,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã hàng",
     visible: true,
     width: "130px",
-    render: (product) => (
-      <span className="font-medium text-blue-600">{product.code}</span>
-    ),
+    render: (product) => <CodeLink entity="product" code={product.code} />,
   },
   {
     key: "name",

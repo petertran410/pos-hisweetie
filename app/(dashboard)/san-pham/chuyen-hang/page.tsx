@@ -24,10 +24,9 @@ export default function TransferPage() {
 
   const handleFiltersChange = useCallback(
     (newFilters: TransferQueryParams) => {
-      setFilters({
-        ...newFilters,
-        ...(codeParam ? { search: codeParam } : {}),
-      });
+      // Khi đang lọc theo Code: bỏ qua toàn bộ filter sidebar
+      if (codeParam) return;
+      setFilters(newFilters);
       setPage(1);
     },
     [codeParam]

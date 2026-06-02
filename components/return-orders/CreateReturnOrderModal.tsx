@@ -9,6 +9,7 @@ import { formatCurrency, formatNumberInput } from "@/lib/utils";
 import { invoicesApi } from "@/lib/api/invoices";
 import { API_URL } from "@/lib/config/api";
 import { useAuthStore } from "@/lib/store/auth";
+import { CodeLink } from "../shared/CodeLink";
 
 interface CreateReturnOrderModalProps {
   onClose: () => void;
@@ -416,7 +417,9 @@ export function CreateReturnOrderModal({
                 <div
                   key={inv.id}
                   className="flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-sm">
-                  <span className="font-medium">{inv.code}</span>
+                  <span className="font-medium">
+                    <CodeLink entity="invoice" code={inv.code} />
+                  </span>
                   <button
                     onClick={() => handleRemoveInvoice(inv.id)}
                     className="ml-1 p-0.5 hover:bg-blue-100 rounded-full">
@@ -431,7 +434,9 @@ export function CreateReturnOrderModal({
             <div key={invoice.id} className="border rounded-lg overflow-hidden">
               <div className="bg-gray-50 px-3 py-2 flex items-center justify-between">
                 <div className="text-sm">
-                  <span className="font-medium">{invoice.code}</span>
+                  <span className="font-medium">
+                    <CodeLink entity="invoice" code={invoice.code} />
+                  </span>
                   <span className="text-gray-500 ml-2">
                     {invoice.customer?.name || "Khách lẻ"}
                   </span>
@@ -477,7 +482,13 @@ export function CreateReturnOrderModal({
                             {item.productName}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {item.productCode}
+                            {item.productCode ? (
+                              <CodeLink
+                                entity="product"
+                                code={item.productCode}
+                                className="text-blue-600 hover:underline"
+                              />
+                            ) : null}
                           </div>
                         </td>
                         <td className="px-2 py-2 text-right text-sm">

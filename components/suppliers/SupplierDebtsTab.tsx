@@ -6,6 +6,7 @@ import { useSupplierDebtTimeline } from "@/lib/hooks/useSuppliers";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { SupplierPaymentBulkModal } from "./SupplierPaymentBulkModal";
+import { CodeLink } from "../shared/CodeLink";
 
 interface SupplierDebtsTabProps {
   supplierId: number;
@@ -107,11 +108,11 @@ export function SupplierDebtsTab({
                           {item.code}
                         </Link>
                       ) : isSupplierReturn ? (
-                        <Link
-                          href={`/san-pham/tra-hang-nhap`}
-                          className="text-md font-medium text-blue-600 hover:underline">
-                          {item.code}
-                        </Link>
+                        <CodeLink
+                          entity="supplier-return"
+                          code={item.code}
+                          className="text-md font-medium text-blue-600 hover:underline"
+                        />
                       ) : (
                         <span className="text-blue-600">{item.code}</span>
                       )}

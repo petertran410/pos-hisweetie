@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import Link from "next/link";
 import { useOrderSuppliersConfirmedByProduct } from "@/lib/hooks/useOrderSuppliers";
 import { ORDER_SUPPLIER_STATUS } from "@/lib/types/order-supplier";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ProductSupplierOrdersModalProps {
   productId: number;
@@ -52,7 +53,7 @@ export function ProductSupplierOrdersModal({
             <p className="text-xs text-gray-500 mt-0.5 truncate">
               {productCode ? (
                 <span className="font-medium text-blue-600">
-                  {productCode}
+                  <CodeLink entity="product" code={productCode} />
                 </span>
               ) : null}
               {productCode && productName ? " — " : ""}

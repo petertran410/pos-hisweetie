@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useCustomerGroups } from "@/lib/hooks/useCustomers";
 import { formatCurrency } from "@/lib/utils";
+import { CodeLink } from "@/components/shared/CodeLink";
 import type { Customer, CustomerFilters } from "@/lib/types/customer";
 import { useCan } from "@/lib/hooks/useCan";
 import { PermissionGate } from "../permissions/PermissionGate";
@@ -60,7 +61,7 @@ function CustomerMobileCard({
       {/* Row 1: code + status */}
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-blue-600 font-bold text-[15px]">
-          {customer.code}
+          <CodeLink entity="customer" code={customer.code} />
         </span>
         <span
           className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -159,7 +160,7 @@ function CustomerMobileDetailSheet({
         <div className="flex items-center justify-between px-4 pb-3 pt-1 border-b border-gray-100 flex-shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-blue-600 font-bold text-base">
-              {customer.code}
+              <CodeLink entity="customer" code={customer.code} />
             </span>
             <span
               className={`px-2 py-0.5 rounded-full text-xs font-medium ${

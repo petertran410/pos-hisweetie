@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useReturnOrders } from "@/lib/hooks/useReturnOrders";
 import { formatCurrency } from "@/lib/utils";
 import type { ReturnOrder } from "@/lib/types/return-order";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 interface DebtOffsetsTableProps {
   filters: any;
@@ -90,17 +91,32 @@ export function DebtOffsetsTable({ filters }: DebtOffsetsTableProps) {
               </tr>
             ) : (
               items.map((item: ReturnOrder) => {
-                const invoiceCodes =
-                  item.invoice?.code ||
-                  [
-                    ...new Set(
-                      (item.details || []).map((d: any) => d.invoiceCode)
-                    ),
-                  ].join(", ");
+                const invoiceCodeList: string[] = item.invoice?.code
+                  ? [item.invoice.code]
+                  : ([
+                      ...new Set(
+                        (item.details || [])
+                          .map((d: any) => d.invoiceCode)
+                          .filter(Boolean)
+                      ),
+                    ] as string[]);
                 return (
                   <tr key={item.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3 text-blue-600">{item.code}</td>
-                    <td className="px-4 py-3">{invoiceCodes || "-"}</td>
+                    <td className="px-4 py-3">
+                      <CodeLink entity="debt-offset" code={item.code} />
+                    </td>
+                    <td className="px-4 py-3">
+                      {invoiceCodeList.length > 0
+                        ? invoiceCodeList.map((c, idx) => (
+                            <span key={c}>
+                              {idx > 0 && (
+                                <span className="text-gray-400">, </span>
+                              )}
+                              <CodeLink entity="invoice" code={c} />
+                            </span>
+                          ))
+                        : "-"}
+                    </td>
                     <td className="px-4 py-3">{item.customer?.name || "-"}</td>
                     <td className="px-4 py-3">{item.branch?.name || "-"}</td>
                     <td className="px-4 py-3 text-right font-medium text-green-600">

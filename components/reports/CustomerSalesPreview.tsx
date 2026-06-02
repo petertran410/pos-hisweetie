@@ -6,6 +6,7 @@ import { reportsApi, ReportFilters } from "@/lib/api/reports";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 const STATUS_COLOR: Record<number, string> = {
   1: "bg-green-100 text-green-800",
@@ -159,7 +160,7 @@ export function CustomerSalesPreview({ filters }: Props) {
                     {(page - 1) * limit + idx + 1}
                   </td>
                   <td className="px-3 py-2 font-medium text-blue-700">
-                    {row.code}
+                    <CodeLink entity="invoice" code={row.code} />
                   </td>
                   <td className="px-3 py-2 text-gray-600">
                     {formatDate(row.purchaseDate)}
@@ -170,7 +171,11 @@ export function CustomerSalesPreview({ filters }: Props) {
                     </div>
                     {row.customer?.code && (
                       <div className="text-xs text-gray-400">
-                        {row.customer.code}
+                        <CodeLink
+                          entity="customer"
+                          code={row.customer.code}
+                          className="text-blue-600 hover:underline"
+                        />
                       </div>
                     )}
                   </td>

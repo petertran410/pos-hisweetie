@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useOrdersPendingByProduct } from "@/lib/hooks/useOrders";
 import { useBranchStore } from "@/lib/store/branch";
 import { ORDER_STATUS } from "@/lib/types/order";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ProductCustomerOrdersModalProps {
   productId: number;
@@ -53,7 +54,7 @@ export function ProductCustomerOrdersModal({
             <p className="text-xs text-gray-500 mt-0.5 truncate">
               {productCode ? (
                 <span className="font-medium text-blue-600">
-                  {productCode}
+                  <CodeLink entity="product" code={productCode} />
                 </span>
               ) : null}
               {productCode && productName ? " — " : ""}

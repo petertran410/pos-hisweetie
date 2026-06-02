@@ -9,6 +9,7 @@ import { usePermission } from "@/lib/hooks/usePermissions";
 import { StockAudit } from "@/lib/types/stock-audit";
 import { StockAuditForm } from "./StockAuditForm";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 const formatMoney = (n: number) => n.toLocaleString("vi-VN") + " đ";
 
@@ -79,7 +80,9 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
             <div className="grid grid-cols-4 gap-4 text-sm mb-4 pt-4">
               <div>
                 <span className="text-gray-500">Mã phiếu:</span>
-                <p className="font-semibold">{audit.code}</p>
+                <p className="font-semibold">
+                  <CodeLink entity="stock-audit" code={audit.code} />
+                </p>
               </div>
               <div>
                 <span className="text-gray-500">Chi nhánh:</span>
@@ -151,7 +154,11 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                     return (
                       <tr key={d.id} className="border-t">
                         <td className="px-3 py-2 text-blue-600 font-medium">
-                          {d.productCode}
+                          {d.productCode ? (
+                            <CodeLink entity="product" code={d.productCode} />
+                          ) : (
+                            "-"
+                          )}
                         </td>
                         <td className="px-3 py-2">{d.productName}</td>
                         <td className="px-3 py-2 text-center text-gray-500">

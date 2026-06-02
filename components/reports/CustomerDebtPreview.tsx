@@ -6,6 +6,7 @@ import { reportsApi, ReportFilters } from "@/lib/api/reports";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 interface Props {
   filters: ReportFilters;
@@ -140,7 +141,11 @@ export function CustomerDebtPreview({ filters }: Props) {
                     {(page - 1) * limit + idx + 1}
                   </td>
                   <td className="px-3 py-2 font-medium text-blue-700">
-                    {row.customerCode || "-"}
+                    {row.customerCode ? (
+                      <CodeLink entity="customer" code={row.customerCode} />
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td className="px-3 py-2 text-gray-900">
                     {row.customerName}

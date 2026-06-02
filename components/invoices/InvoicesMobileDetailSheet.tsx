@@ -21,6 +21,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { useCan } from "@/lib/hooks/useCan";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Swal from "sweetalert2";
+import { CodeLink } from "../shared/CodeLink";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getInvoiceStatusBadgeColor = (status: number) => {
@@ -278,7 +279,7 @@ export function InvoicesMobileDetailSheet({
           ) : (
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <span className="text-base font-bold text-gray-900 flex-shrink-0">
-                {invoice.code}
+                <CodeLink entity="invoice" code={invoice.code} />
               </span>
               <span
                 className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getInvoiceStatusBadgeColor(invoice.status)}`}>
@@ -490,9 +491,16 @@ export function InvoicesMobileDetailSheet({
                           {/* Row 1: code + condition badge */}
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-semibold text-blue-600">
-                              {detail.productCode ||
-                                detail.product?.code ||
-                                "—"}
+                              {detail.productCode || detail.product?.code ? (
+                                <CodeLink
+                                  entity="product"
+                                  code={
+                                    detail.productCode || detail.product?.code
+                                  }
+                                />
+                              ) : (
+                                "—"
+                              )}
                             </span>
                             {conditionLabel && (
                               <span
