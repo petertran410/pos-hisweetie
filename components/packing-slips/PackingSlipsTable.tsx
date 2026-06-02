@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import { X, Plus, Settings, FileText } from "lucide-react";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 interface ColumnConfig {
   key: string;
@@ -88,9 +89,7 @@ export function PackingSlipsTable({
       label: "Mã báo đơn",
       visible: true,
       width: "150px",
-      render: (slip) => (
-        <span className="text-blue-600 font-medium">{slip.code}</span>
-      ),
+      render: (slip) => <CodeLink entity="packing-slip" code={slip.code} />,
     },
     {
       key: "branch",
@@ -115,17 +114,22 @@ export function PackingSlipsTable({
         const invoices = slip.invoices || [];
         if (invoices.length === 0) return "-";
 
+        const renderCode = (inv: any, idx: number) => (
+          <span key={inv.invoice?.code ?? idx}>
+            {idx > 0 && <span className="text-gray-400">, </span>}
+            <CodeLink entity="invoice" code={inv.invoice?.code} />
+          </span>
+        );
+
         if (invoices.length <= 2) {
-          return invoices.map((inv: any) => inv.invoice?.code).join(", ");
+          return invoices.map(renderCode);
         }
 
-        const firstTwo = invoices
-          .slice(0, 2)
-          .map((inv: any) => inv.invoice?.code)
-          .join(", ");
         return (
           <div className="flex items-center gap-2">
-            <span className="truncate">{firstTwo}</span>
+            <span className="truncate">
+              {invoices.slice(0, 2).map(renderCode)}
+            </span>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -541,7 +545,12 @@ export function PackingSlipsTable({
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">
-                Danh sách hóa đơn - {viewingInvoices.code}
+                Danh sách hóa đơn -{" "}
+                <CodeLink
+                  entity="packing-slip"
+                  code={viewingInvoices.code}
+                  className="text-blue-600 hover:underline font-semibold"
+                />
               </h3>
               <button
                 onClick={() => setViewingInvoices(null)}
@@ -555,7 +564,12 @@ export function PackingSlipsTable({
                   key={index}
                   className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
                   <div>
-                    <div className="font-medium">{inv.invoice?.code}</div>
+                    <div className="font-medium">
+                      <CodeLink
+                        entity="invoice"
+                        code={inv.invoice?.code}
+                      />
+                    </div>
                     <div className="text-sm text-gray-500">
                       {inv.invoice?.customer?.name || "-"}
                     </div>

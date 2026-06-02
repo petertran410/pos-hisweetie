@@ -8,6 +8,7 @@ import { StockAuditDetailRow } from "./StockAuditDetailRow";
 import { StockAuditForm } from "./StockAuditForm";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { formatCurrency } from "@/lib/utils";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
@@ -43,7 +44,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
   const { data, isLoading } = useStockAudits({
     page,
     limit,
-    search: debouncedSearch,
+    search: filters?.search || debouncedSearch,
     branchIds: filters?.branchIds || undefined,
     branchId: !filters?.branchIds ? (filters?.branchId || selectedBranch?.id) : undefined,
     status: filters?.status,
@@ -181,7 +182,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
                       onClick={() => toggleExpand(audit.id)}>
                       <td
                         className={`px-4 py-2.5 ${isExpanded ? `${borderCls} border-l-2` : ""}`}>
-                        {audit.code}
+                        <CodeLink entity="stock-audit" code={audit.code} />
                       </td>
                       <td className={`px-4 py-2.5 ${borderCls}`}>
                         {audit.branchName}

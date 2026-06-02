@@ -18,6 +18,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
+import { CodeLink } from "../shared/CodeLink";
 import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
 
 interface InvoiceDetailRowProps {
@@ -299,7 +300,11 @@ export function InvoiceDetailRow({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
-                      {invoice.code}
+                      <CodeLink
+                        entity="invoice"
+                        code={invoice.code}
+                        className="text-lg font-bold text-blue-600 hover:underline"
+                      />
                     </span>
                     <span className="text-gray-400">-</span>
 

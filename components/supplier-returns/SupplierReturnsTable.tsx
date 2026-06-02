@@ -6,6 +6,7 @@ import { useSupplierReturns } from "@/lib/hooks/useSupplierReturns";
 import { useBranchStore } from "@/lib/store/branch";
 import type { SupplierReturn } from "@/lib/types/supplier-return";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 interface Props {
   filters: any;
@@ -53,15 +54,18 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "code",
     label: "Mã trả hàng nhập",
     visible: true,
-    render: (item) => (
-      <span className="font-medium text-blue-600">{item.code}</span>
-    ),
+    render: (item) => <CodeLink entity="supplier-return" code={item.code} />,
   },
   {
     key: "purchaseOrderCode",
     label: "Mã phiếu nhập",
     visible: true,
-    render: (item) => item.purchaseOrder?.code || "-",
+    render: (item) =>
+      item.purchaseOrder?.code ? (
+        <CodeLink entity="purchase-order" code={item.purchaseOrder.code} />
+      ) : (
+        "-"
+      ),
   },
   {
     key: "supplier",

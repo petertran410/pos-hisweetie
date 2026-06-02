@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ColumnConfig {
   key: string;
@@ -52,16 +53,19 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã nhập hàng",
     visible: true,
     width: "150px",
-    render: (po) => (
-      <span className="font-medium text-blue-600">{po.code}</span>
-    ),
+    render: (po) => <CodeLink entity="purchase-order" code={po.code} />,
   },
   {
     key: "supplierOrderCode",
     label: "Mã đặt hàng nhập",
     visible: true,
     width: "180px",
-    render: (po) => po.orderSupplier?.code || "-",
+    render: (po) =>
+      po.orderSupplier?.code ? (
+        <CodeLink entity="order-supplier" code={po.orderSupplier.code} />
+      ) : (
+        "-"
+      ),
   },
   {
     key: "purchaseDate",
@@ -121,7 +125,12 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã NCC",
     visible: false,
     width: "120px",
-    render: (po) => po.supplier?.code || "-",
+    render: (po) =>
+      po.supplier?.code ? (
+        <CodeLink entity="supplier" code={po.supplier.code} />
+      ) : (
+        "-"
+      ),
   },
   {
     key: "discount",

@@ -11,6 +11,7 @@ import { CustomerOrdersTab } from "./CustomerOrdersTab";
 import { CustomerDebtsTab } from "./CustomerDebtsTab";
 import { CustomerAddressesTab } from "../pos/CustomerAddressesTab";
 import { useCan } from "@/lib/hooks/useCan";
+import { CodeLink } from "../shared/CodeLink";
 
 interface CustomerDetailRowProps {
   customerId: number;
@@ -177,11 +178,21 @@ export function CustomerDetailRow({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
-                      {customer.code}
+                      <CodeLink
+                        entity="customer"
+                        code={customer.code}
+                        className="text-lg font-bold text-blue-600 hover:underline"
+                      />
                     </span>
                     {customer.parent && (
                       <span className="text-sm text-gray-500 ml-2">
-                        (thuộc {customer.parent.code} - {customer.parent.name})
+                        (thuộc{" "}
+                        <CodeLink
+                          entity="customer"
+                          code={customer.parent.code}
+                          className="text-blue-600 hover:underline"
+                        />{" "}
+                        - {customer.parent.name})
                       </span>
                     )}
                     <span className="text-gray-400">-</span>
@@ -436,7 +447,7 @@ export function CustomerDetailRow({
                           key={child.id}
                           className="border-b hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm font-medium text-blue-600">
-                            {child.code}
+                            <CodeLink entity="customer" code={child.code} />
                           </td>
                           <td className="px-4 py-3 text-sm">{child.name}</td>
                           <td className="px-4 py-3 text-sm">

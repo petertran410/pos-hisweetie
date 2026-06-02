@@ -27,6 +27,7 @@ import {
   PurchaseOrderPayment,
 } from "@/lib/types/purchase-order";
 import Link from "next/link";
+import { CodeLink } from "../shared/CodeLink";
 
 interface PurchaseOrderDetailRowProps {
   purchaseOrderId: number;
@@ -282,7 +283,11 @@ export function PurchaseOrderDetailRow({
                   <div className="flex border-b pb-2 items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-gray-900">
-                        {purchaseOrder.code}
+                        <CodeLink
+                          entity="purchase-order"
+                          code={purchaseOrder.code}
+                          className="text-lg font-bold text-blue-600 hover:underline"
+                        />
                       </span>
                       <span className="text-gray-400">-</span>
                       {purchaseOrder.supplier ? (
@@ -315,14 +320,12 @@ export function PurchaseOrderDetailRow({
                         </span>
                       )}
                       {purchaseOrder.orderSupplier && (
-                        <Link
-                          href={`/san-pham/dat-hang-nhap/${purchaseOrder.orderSupplier.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <CodeLink
+                          entity="order-supplier"
+                          code={purchaseOrder.orderSupplier.code}
+                          label={`(${purchaseOrder.orderSupplier.code})`}
                           className="text-sm text-gray-500 hover:text-blue-600 transition-colors"
-                          onClick={(e) => e.stopPropagation()}>
-                          ({purchaseOrder.orderSupplier.code})
-                        </Link>
+                        />
                       )}
                     </div>
                     <span className="text-sm text-gray-600 font-medium">
@@ -394,12 +397,11 @@ export function PurchaseOrderDetailRow({
                           Phiếu đặt hàng nhập:
                         </label>
                         {purchaseOrder.orderSupplier ? (
-                          <Link
-                            href={`/san-pham/dat-hang-nhap/${purchaseOrder.orderSupplier.code}`}
+                          <CodeLink
+                            entity="order-supplier"
+                            code={purchaseOrder.orderSupplier.code}
                             className="text-sm text-blue-600 hover:underline font-medium"
-                            onClick={(e) => e.stopPropagation()}>
-                            {purchaseOrder.orderSupplier.code}
-                          </Link>
+                          />
                         ) : (
                           <span className="text-sm text-gray-400">-</span>
                         )}

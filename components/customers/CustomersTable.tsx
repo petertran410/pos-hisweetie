@@ -18,6 +18,7 @@ import { CustomerDetailRow } from "./CustomerDetailRow";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ColumnConfig {
   key: string;
@@ -45,7 +46,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã khách hàng",
     visible: true,
     width: "160px",
-    render: (c) => <span className="font-medium text-blue-600">{c.code}</span>,
+    render: (c) => <CodeLink entity="customer" code={c.code} />,
   },
   {
     key: "name",

@@ -18,6 +18,7 @@ import type { Order } from "@/lib/types/order";
 import { OrderDetailRow } from "./OrderDetailRow";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ColumnConfig {
   key: string;
@@ -57,14 +58,22 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã đặt hàng",
     visible: true,
     width: "140px",
-    render: (o) => <span className="font-medium text-blue-600">{o.code}</span>,
+    render: (o) => <CodeLink entity="order" code={o.code} />,
   },
   {
     key: "invoiceCode",
     label: "Mã hóa đơn",
     visible: true,
     width: "160px",
-    render: (o) => o.invoices?.map((inv) => inv.code).join(" | ") || "-",
+    render: (o) =>
+      o.invoices && o.invoices.length > 0
+        ? o.invoices.map((inv, idx) => (
+            <Fragment key={inv.code ?? idx}>
+              {idx > 0 && <span className="text-gray-400"> | </span>}
+              <CodeLink entity="invoice" code={inv.code} />
+            </Fragment>
+          ))
+        : "-",
   },
   {
     key: "orderDate",

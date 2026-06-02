@@ -14,6 +14,7 @@ import { ProductionDetailRow } from "./ProductionDetailRow";
 import { SelectBranchModal } from "./SelectBranchModal";
 import { ProductionForm } from "./ProductionForm";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ColumnConfig {
   key: string;
@@ -55,9 +56,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã sản xuất",
     visible: true,
     width: "140px",
-    render: (prod) => (
-      <span className="font-medium text-blue-600">{prod.code}</span>
-    ),
+    render: (prod) => <CodeLink entity="production" code={prod.code} />,
   },
   {
     key: "manufacturedDate",
@@ -78,7 +77,12 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã hàng",
     visible: false,
     width: "120px",
-    render: (prod) => prod.productCode,
+    render: (prod) =>
+      prod.productCode ? (
+        <CodeLink entity="product" code={prod.productCode} />
+      ) : (
+        "-"
+      ),
   },
   {
     key: "sourceBranchName",

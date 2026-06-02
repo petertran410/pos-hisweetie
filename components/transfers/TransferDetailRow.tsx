@@ -5,6 +5,7 @@ import { useTransfer } from "@/lib/hooks/useTransfers";
 import { Copy, Loader2, Pencil } from "lucide-react";
 import type { Transfer } from "@/lib/api/transfers";
 import { useCan } from "@/lib/hooks/useCan";
+import { CodeLink } from "../shared/CodeLink";
 
 interface TransferDetailRowProps {
   transferId: number;
@@ -102,7 +103,11 @@ export function TransferDetailRow({
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
-                      {transfer.code}
+                      <CodeLink
+                        entity="transfer"
+                        code={transfer.code}
+                        className="text-lg font-bold text-blue-600 hover:underline"
+                      />
                     </span>
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOR[transfer.status] || "bg-gray-100 text-gray-700"}`}>
@@ -243,7 +248,14 @@ export function TransferDetailRow({
                       transfer.details.map((detail, idx) => (
                         <tr key={idx} className="hover:bg-gray-50">
                           <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">
-                            {detail.productCode}
+                            {detail.productCode ? (
+                              <CodeLink
+                                entity="product"
+                                code={detail.productCode}
+                              />
+                            ) : (
+                              "-"
+                            )}
                           </td>
                           <td className="px-3 py-2 text-sm text-gray-900">
                             {detail.productName}

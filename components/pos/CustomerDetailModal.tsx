@@ -10,6 +10,7 @@ import { CustomerInfoTab } from "./CustomerInfoTab";
 import { CustomerInvoiceInfoTab } from "./CustomerInvoiceInfoTab";
 import { formatCurrency } from "@/lib/utils";
 import { CustomerAddressesTab } from "./CustomerAddressesTab";
+import { CodeLink } from "../shared/CodeLink";
 import { useCan } from "@/lib/hooks/useCan";
 import { createPortal } from "react-dom";
 
@@ -105,7 +106,13 @@ export function CustomerDetailModal({
             </h2>
             {customer && (
               <div className="flex flex-nowrap items-baseline gap-x-1.5 mt-1 text-sm lg:text-sm text-gray-500">
-                <span>{customer.code}</span>
+                <span>
+                  <CodeLink
+                    entity="customer"
+                    code={customer.code}
+                    className="text-blue-600 hover:underline"
+                  />
+                </span>
                 <span>
                   Nợ:{" "}
                   <span

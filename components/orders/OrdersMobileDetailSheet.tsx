@@ -31,6 +31,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store/auth";
 import { useCan } from "@/lib/hooks/useCan";
 import { CancelOrderModal } from "./CancelOrderModal";
+import { CodeLink } from "../shared/CodeLink";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 
 // ─── Helpers (giống OrderDetailRow) ──────────────────────────────────────────
@@ -261,7 +262,7 @@ export function OrdersMobileDetailSheet({
           ) : (
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <span className="text-base font-bold text-gray-900 flex-shrink-0">
-                {order.code}
+                <CodeLink entity="order" code={order.code} />
               </span>
               <span
                 className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getOrderStatusBadgeColor(order.status)}`}>
@@ -488,7 +489,14 @@ export function OrdersMobileDetailSheet({
                           {/* Row 1: code (blue) + condition badge */}
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-semibold text-blue-600">
-                              {item.product?.code || item.productCode || "—"}
+                              {item.product?.code || item.productCode ? (
+                                <CodeLink
+                                  entity="product"
+                                  code={item.product?.code || item.productCode}
+                                />
+                              ) : (
+                                "—"
+                              )}
                             </span>
                             {conditionLabel && (
                               <span

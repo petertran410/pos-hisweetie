@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useProductInventoryLogs } from "@/lib/hooks/useProducts";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { CodeLink, type CodeEntity } from "../shared/CodeLink";
 
 interface Props {
   productId: number;
@@ -22,6 +23,20 @@ const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   RETURN: "Trả hàng",
   STOCK_AUDIT: "Kiểm hàng",
   STOCK_AUDIT_CANCEL: "Hủy kiểm hàng",
+};
+
+// Map loại giao dịch → trang đích cho mã liên quan
+const TRANSACTION_TYPE_ENTITY: Record<string, CodeEntity> = {
+  PURCHASE: "purchase-order",
+  SALE: "invoice",
+  TRANSFER_OUT: "transfer",
+  TRANSFER_IN: "transfer",
+  PRODUCTION_OUT: "production",
+  PRODUCTION_IN: "production",
+  DESTRUCTION: "destruction",
+  RETURN: "return-order",
+  STOCK_AUDIT: "stock-audit",
+  STOCK_AUDIT_CANCEL: "stock-audit",
 };
 
 const formatMoney = (v: number | null | undefined) => {
@@ -121,9 +136,17 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
           {logs.map((log) => (
             <tr key={log.id} className="border-t hover:bg-gray-50">
               <td className="px-4 py-3">
-                <span className="font-medium text-blue-600">
-                  {log.refCode || "-"}
-                </span>
+                {log.refCode &&
+                TRANSACTION_TYPE_ENTITY[log.transactionType] ? (
+                  <CodeLink
+                    entity={TRANSACTION_TYPE_ENTITY[log.transactionType]}
+                    code={log.refCode}
+                  />
+                ) : (
+                  <span className="font-medium text-blue-600">
+                    {log.refCode || "-"}
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                 {formatDateTime(log.createdAt)}

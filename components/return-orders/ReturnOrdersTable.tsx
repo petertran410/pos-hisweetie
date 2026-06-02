@@ -7,6 +7,7 @@ import { Plus, Settings } from "lucide-react";
 import type { ReturnOrder } from "@/lib/types/return-order";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ColumnConfig {
   key: string;
@@ -79,18 +80,27 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "code",
     label: "Mã cấn trừ nợ",
     visible: true,
-    render: (item) => item.code,
+    render: (item) => <CodeLink entity="return-order" code={item.code} />,
   },
   {
     key: "invoiceCode",
     label: "Mã hóa đơn",
     visible: true,
     render: (item) => {
-      if (item.invoice?.code) return item.invoice.code;
+      if (item.invoice?.code)
+        return <CodeLink entity="invoice" code={item.invoice.code} />;
       const codes = [
-        ...new Set((item.details || []).map((d: any) => d.invoiceCode)),
-      ];
-      return codes.join(", ") || "-";
+        ...new Set(
+          (item.details || []).map((d: any) => d.invoiceCode).filter(Boolean)
+        ),
+      ] as string[];
+      if (codes.length === 0) return "-";
+      return codes.map((c, idx) => (
+        <span key={c}>
+          {idx > 0 && <span className="text-gray-400">, </span>}
+          <CodeLink entity="invoice" code={c} />
+        </span>
+      ));
     },
   },
   {
@@ -124,7 +134,12 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     key: "customerCode",
     label: "Mã KH",
     visible: true,
-    render: (item) => item.customer?.code || "-",
+    render: (item) =>
+      item.customer?.code ? (
+        <CodeLink entity="customer" code={item.customer.code} />
+      ) : (
+        "-"
+      ),
   },
   {
     key: "customerName",

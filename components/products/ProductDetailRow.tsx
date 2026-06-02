@@ -18,6 +18,7 @@ import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import Link from "next/link";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ProductDetailRowProps {
   productId: number;
@@ -361,7 +362,7 @@ export function ProductDetailRow({
                   <div className="flex flex-col gap-1 py-2 border-b">
                     <span className="text-xs text-gray-500">Mã hàng</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {product.code}
+                      <CodeLink entity="product" code={product.code} />
                     </span>
                   </div>
                   <div className="flex flex-col gap-1 py-2 border-b">

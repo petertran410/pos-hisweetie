@@ -13,6 +13,7 @@ import {
 import { InventoryCheckDetailRow } from "./InventoryCheckDetailRow";
 import { InventoryCheckForm } from "./InventoryCheckForm";
 import { usePermission } from "@/lib/hooks/usePermissions";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
@@ -40,7 +41,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
   const { data, isLoading } = useInventoryChecks({
     page,
     limit,
-    search: debouncedSearch,
+    search: filters?.search || debouncedSearch,
     branchIds: filters?.branchIds || undefined,
     branchId: !filters?.branchIds ? (filters?.branchId || selectedBranch?.id) : undefined,
     fromDate: filters?.fromDate,
@@ -156,7 +157,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                           ? "border-t-2 border-l-2 border-blue-500"
                           : ""
                       }`}>
-                      {check.code}
+                      <CodeLink entity="inventory-check" code={check.code} />
                     </td>
                     <td
                       className={`px-4 py-2.5 text-sm ${

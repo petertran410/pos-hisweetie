@@ -16,6 +16,7 @@ import {
 import type { SupplierReturn } from "@/lib/types/supplier-return";
 import { EditStep1Modal } from "@/components/supplier-returns/EditStep1Modal";
 import { SupplierReturnImportModal } from "@/components/supplier-returns/SupplierReturnImportModal";
+import { useSearchParams } from "next/navigation";
 
 type ModalType =
   | "create"
@@ -26,7 +27,11 @@ type ModalType =
   | null;
 
 export default function TraHangNhapPage() {
-  const [filters, setFilters] = useState<any>({});
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code");
+  const [filters, setFilters] = useState<any>(() =>
+    codeParam ? { search: codeParam } : {}
+  );
   const [modalType, setModalType] = useState<ModalType>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -35,7 +40,14 @@ export default function TraHangNhapPage() {
   const confirmRefundMutation = useConfirmSupplierRefund();
   const cancelMutation = useCancelSupplierReturn();
 
-  const handleFiltersChange = useCallback((f: any) => setFilters(f), []);
+  const handleFiltersChange = useCallback(
+    (f: any) => {
+      // Khi đang lọc theo Code: bỏ qua toàn bộ filter sidebar
+      if (codeParam) return;
+      setFilters(f);
+    },
+    [codeParam]
+  );
 
   const handleViewClick = (item: SupplierReturn) => {
     setSelectedId(item.id);
