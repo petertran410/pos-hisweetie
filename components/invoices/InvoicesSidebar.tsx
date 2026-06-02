@@ -928,7 +928,7 @@ export function InvoicesSidebar({
   const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
   const { data: bankAccounts } = useBankAccountsForPayment();
-  const { data: misaEmployees } = useMisaEmployees();
+  const { data: misaEmployees } = useMisaEmployees(showMisaEmployeeFilter);
   const { selectedBranch } = useBranchStore();
 
   // Restore filter state từ sessionStorage
