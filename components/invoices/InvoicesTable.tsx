@@ -2,6 +2,8 @@
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import { useExportInvoices, useInvoices, useInvoicesTotals } from "@/lib/hooks/useInvoices";
+import { useSearchCustomers } from "@/lib/hooks/useCustomers";
+import type { CustomerSearchResult } from "@/lib/types/customer";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -416,7 +418,6 @@ export function InvoicesTable({
   const [advancedSearch, setAdvancedSearch] = useState({
     invoiceCodeSearch: "",
     productSearch: "",
-    customerSearch: "",
     deliveryCodeSearch: "",
     orderCodeSearch: "",
     descriptionSearch: "",
@@ -425,7 +426,6 @@ export function InvoicesTable({
   const [tempAdvanced, setTempAdvanced] = useState({
     invoiceCodeSearch: "",
     productSearch: "",
-    customerSearch: "",
     deliveryCodeSearch: "",
     orderCodeSearch: "",
     descriptionSearch: "",
@@ -434,6 +434,21 @@ export function InvoicesTable({
   const [showImportModal, setShowImportModal] = useState(false);
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
+
+  // ── Khách hàng: autocomplete theo tên (giống ban-hang) ──
+  // Chọn 1 khách → lọc hóa đơn theo customerIds. Vẫn tuân theo filter chi nhánh
+  // vì query đã kèm branchIds (sidebar) + header X-Branch-Id (apiClient).
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<CustomerSearchResult | null>(null);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerQueryDebounced, setCustomerQueryDebounced] = useState("");
+  const [showCustomerDrop, setShowCustomerDrop] = useState(false);
+  const customerDropRef = useRef<HTMLDivElement>(null);
+  const { data: customerSearchData } = useSearchCustomers(
+    customerQueryDebounced || undefined
+  );
+  const customerResults: CustomerSearchResult[] =
+    customerSearchData?.data || [];
 
   const SORTABLE_COLUMNS = new Set([
     "purchaseDate",
@@ -478,14 +493,38 @@ export function InvoicesTable({
   };
 
   const advancedFilterCount = useMemo(() => {
-    return Object.values(advancedSearch).filter(Boolean).length;
-  }, [advancedSearch]);
+    return (
+      Object.values(advancedSearch).filter(Boolean).length +
+      (selectedCustomer ? 1 : 0)
+    );
+  }, [advancedSearch, selectedCustomer]);
 
   // Debounce search
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  // Debounce ô tìm khách hàng (giống CustomerSearch ban-hang)
+  useEffect(() => {
+    const t = setTimeout(() => setCustomerQueryDebounced(customerQuery), 300);
+    return () => clearTimeout(t);
+  }, [customerQuery]);
+
+  // Đóng dropdown khách hàng khi click ra ngoài
+  useEffect(() => {
+    if (!showCustomerDrop) return;
+    const h = (e: MouseEvent) => {
+      if (
+        customerDropRef.current &&
+        !customerDropRef.current.contains(e.target as Node)
+      ) {
+        setShowCustomerDrop(false);
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showCustomerDrop]);
 
   useEffect(() => {
     if (!showAdvancedSearch) return;
@@ -504,7 +543,7 @@ export function InvoicesTable({
   // Reset page khi filter/search/tab đổi
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, filters, activeStatusTab, advancedSearch]);
+  }, [debouncedSearch, filters, activeStatusTab, advancedSearch, selectedCustomer]);
 
   // Tab override sidebar status — chỉ khi tab khác "all" VÀ sidebar không gửi multi-status
   const effectiveFilters = useMemo(() => {
@@ -565,8 +604,8 @@ export function InvoicesTable({
     ...(advancedSearch.productSearch && {
       productSearch: advancedSearch.productSearch,
     }),
-    ...(advancedSearch.customerSearch && {
-      customerSearch: advancedSearch.customerSearch,
+    ...(selectedCustomer && {
+      customerIds: [selectedCustomer.id],
     }),
     ...(advancedSearch.deliveryCodeSearch && {
       deliveryCodeSearch: advancedSearch.deliveryCodeSearch,
@@ -592,8 +631,8 @@ export function InvoicesTable({
     ...(advancedSearch.productSearch && {
       productSearch: advancedSearch.productSearch,
     }),
-    ...(advancedSearch.customerSearch && {
-      customerSearch: advancedSearch.customerSearch,
+    ...(selectedCustomer && {
+      customerIds: [selectedCustomer.id],
     }),
     ...(advancedSearch.deliveryCodeSearch && {
       deliveryCodeSearch: advancedSearch.deliveryCodeSearch,
@@ -674,6 +713,7 @@ export function InvoicesTable({
       ...effectiveFilters,
       search: debouncedSearch,
       ...advancedSearch,
+      ...(selectedCustomer && { customerIds: [selectedCustomer.id] }),
     };
     await exportOverview(currentFilters);
   };
@@ -684,6 +724,7 @@ export function InvoicesTable({
       ...effectiveFilters,
       search: debouncedSearch,
       ...advancedSearch,
+      ...(selectedCustomer && { customerIds: [selectedCustomer.id] }),
     };
     await exportDetail(currentFilters, exportDetailCols);
   };
@@ -870,18 +911,69 @@ export function InvoicesTable({
                       }
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <input
-                      type="text"
-                      placeholder="Theo mã, tên, số điện thoại khách hàng"
-                      value={tempAdvanced.customerSearch}
-                      onChange={(e) =>
-                        setTempAdvanced((p) => ({
-                          ...p,
-                          customerSearch: e.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    {/* ── Khách hàng: autocomplete theo tên (giống ban-hang) ── */}
+                    <div ref={customerDropRef} className="relative">
+                      {selectedCustomer ? (
+                        <div className="w-full flex items-center justify-between gap-2 border border-blue-300 bg-blue-50 rounded-lg px-3 py-2">
+                          <span className="text-sm text-blue-700 font-medium truncate">
+                            {selectedCustomer.name}
+                            {selectedCustomer.code && (
+                              <span className="text-blue-400 ml-1 font-normal">
+                                ({selectedCustomer.code})
+                              </span>
+                            )}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomer(null);
+                              setCustomerQuery("");
+                            }}
+                            className="text-blue-400 hover:text-blue-600 flex-shrink-0">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="Theo tên khách hàng"
+                          value={customerQuery}
+                          onChange={(e) => {
+                            setCustomerQuery(e.target.value);
+                            setShowCustomerDrop(true);
+                          }}
+                          onFocus={() => customerQuery && setShowCustomerDrop(true)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      )}
+                      {showCustomerDrop &&
+                        !selectedCustomer &&
+                        customerResults.length > 0 && (
+                          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                            {customerResults.map((c, idx) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCustomer(c);
+                                  setCustomerQuery("");
+                                  setShowCustomerDrop(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors ${
+                                  idx > 0 ? "border-t border-gray-50" : ""
+                                }`}>
+                                <div className="text-sm font-medium text-gray-800">
+                                  {c.name}
+                                </div>
+                                <div className="text-xs text-gray-400 mt-0.5">
+                                  {c.code ? `Mã: ${c.code}` : "Chưa có mã"}
+                                  {c.contactNumber ? ` · ${c.contactNumber}` : ""}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                    </div>
 
                     {/* ── Expanded filters ── */}
                     {isExpanded && (

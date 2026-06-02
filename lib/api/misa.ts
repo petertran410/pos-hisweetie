@@ -23,10 +23,40 @@ export interface MisaDictionarySyncResult {
   };
 }
 
+export interface MisaEmployee {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface MisaBulkVoucherResult {
+  success: boolean;
+  message: string;
+  total: number;
+  successCount: number;
+  failedCount: number;
+  results: Array<{
+    invoiceCode: string;
+    success: boolean;
+    orgRefId: string | null;
+    message: string;
+  }>;
+}
+
 export const misaApi = {
+  /** Danh sách nhân viên phụ trách (Misa account object, isEmployee = true) */
+  getEmployees: (): Promise<MisaEmployee[]> => {
+    return apiClient.get(`/misa/employees`);
+  },
   /** Đồng bộ toàn bộ danh mục Misa về database */
   syncDictionary: (): Promise<MisaDictionarySyncResult> => {
     return apiClient.post(`/misa/dictionary/sync`);
+  },
+  /** Đẩy hàng loạt hóa đơn lên Misa theo danh sách mã */
+  createVouchersBulk: (
+    invoiceCodes: string[]
+  ): Promise<MisaBulkVoucherResult> => {
+    return apiClient.post(`/misa/voucher/bulk-create`, { invoiceCodes });
   },
   /** Đẩy 1 hóa đơn lên Misa (sinh chứng từ bán hàng) */
   createVoucher: (invoiceCode: string): Promise<MisaVoucherResult> => {

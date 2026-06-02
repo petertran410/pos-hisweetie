@@ -43,7 +43,7 @@ export const ROUTE_PERMISSIONS: Record<
   "/san-pham/tra-hang-nhap": { resource: "supplier_returns", action: "view" },
   "/don-hang/dat-hang": { resource: "orders", action: "view" },
   "/don-hang/hoa-don": { resource: "invoices", action: "view" },
-  "/don-hang/hoa-don-vat": { resource: "invoices", action: "view" },
+  "/don-hang/hoa-don-vat": { resource: "vat_invoices", action: "view" },
   "/don-hang/tra-hang": { resource: "invoices", action: "view" },
   "/don-hang/can-tru-cong-no": { resource: "return_orders", action: "view" },
   "/don-hang/bao-don": { resource: "packing_slips", action: "view" },
@@ -148,7 +148,7 @@ export const NAV_CONFIG: NavSection[] = [
         key: "hoa-don-vat",
         label: "Hóa đơn VAT",
         href: "/don-hang/hoa-don-vat",
-        permission: { resource: "invoices", action: "view" },
+        permission: { resource: "vat_invoices", action: "view" },
       },
       {
         key: "tra-hang",

@@ -734,9 +734,20 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   const [selectedBankAccountIds, setSelectedBankAccountIds] = useState<
     number[]
   >(saved.current?.selectedBankAccountIds || []);
-  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>(
-    saved.current?.selectedBranchIds ?? (selectedBranch ? [selectedBranch.id] : [])
-  );
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>(() => {
+    const savedIds = saved.current?.selectedBranchIds;
+    if (Array.isArray(savedIds)) {
+      // Giữ nguyên filter nhiều chi nhánh (>=2) user đã chủ động chọn.
+      if (savedIds.length >= 2) return savedIds;
+      // Giữ nguyên lựa chọn "Tất cả chi nhánh" (mảng rỗng) user đã chủ động chọn.
+      if (savedIds.length === 0) return [];
+    }
+    // Còn lại (1 chi nhánh hoặc chưa có gì): bám theo chi nhánh đang chọn ở
+    // DashboardHeader. Quan trọng vì khi đổi chi nhánh ở header, guard
+    // unmount→mount lại sidebar, nên không thể dựa vào sessionStorage cũ.
+    if (selectedBranch) return [selectedBranch.id];
+    return Array.isArray(savedIds) ? savedIds : [];
+  });
   const [customerId, setCustomerId] = useState(saved.current?.customerId || "");
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
@@ -908,8 +919,11 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     sessionStorage.removeItem(STORAGE_KEY);
   };
 
-  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó
-  // Skip lần mount đầu tiên (hydrate) để không ghi đè sessionStorage đã restore
+  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó.
+  // - Skip lần mount đầu tiên (hydrate) để không ghi đè sessionStorage đã restore.
+  // - Chỉ ghi đè khi sidebar đang ở chế độ "bám theo header" (đúng 1 chi nhánh).
+  //   Nếu user đang lọc nhiều chi nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng) thì
+  //   giữ nguyên, không ghi đè bằng chi nhánh mới chọn trên header.
   const isFirstRenderRef = useRef(true);
   const lastSyncedBranchIdRef = useRef<number | null>(selectedBranch?.id ?? null);
   useEffect(() => {
@@ -921,7 +935,9 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     }
     if (currentBranchId !== lastSyncedBranchIdRef.current) {
       lastSyncedBranchIdRef.current = currentBranchId;
-      setSelectedBranchIds(currentBranchId ? [currentBranchId] : []);
+      setSelectedBranchIds((prev) =>
+        prev.length === 1 ? (currentBranchId ? [currentBranchId] : []) : prev
+      );
     }
   }, [selectedBranch?.id]);
 
@@ -1176,6 +1192,20 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
 
         <div className="border-t border-gray-100" />
 
+        {/* ── Chi nhánh ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Chi nhánh
+          </label>
+          <BranchMultiSelectDropdown
+            branches={activeBranches}
+            selectedIds={selectedBranchIds}
+            onChange={setSelectedBranchIds}
+          />
+        </div>
+
+        <div className="border-t border-gray-100" />
+
         {/* ── Trạng thái đơn hàng ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1350,18 +1380,6 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
         </div>
 
         <div className="border-t border-gray-100" />
-
-        {/* ── Chi nhánh ── */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Chi nhánh
-          </label>
-          <BranchMultiSelectDropdown
-            branches={activeBranches}
-            selectedIds={selectedBranchIds}
-            onChange={setSelectedBranchIds}
-          />
-        </div>
 
         {/* ── Người tạo ── */}
         <div>
