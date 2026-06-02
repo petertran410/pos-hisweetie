@@ -19,6 +19,7 @@ import {
   Check,
 } from "lucide-react";
 import { OrdersMobileDetailSheet } from "./OrdersMobileDetailSheet";
+import { CodeLink } from "../shared/CodeLink";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_TEXT: Record<number, string> = {
@@ -95,7 +96,7 @@ function OrderMobileCard({
       {/* Row 1: code + status */}
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-blue-600 font-bold text-[15px]">
-          {order.code}
+          <CodeLink entity="order" code={order.code} />
         </span>
         <div className="flex items-center gap-1.5">
           <span

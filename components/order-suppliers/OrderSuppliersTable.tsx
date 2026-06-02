@@ -22,6 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ColumnConfig {
   key: string;
@@ -62,9 +63,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã đặt hàng nhập",
     visible: true,
     width: "180px",
-    render: (os) => (
-      <span className="font-medium text-blue-600">{os.code}</span>
-    ),
+    render: (os) => <CodeLink entity="order-supplier" code={os.code} />,
   },
   {
     key: "purchaseOrderCode",
@@ -73,7 +72,12 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     width: "250px",
     render: (os) =>
       os.purchaseOrders?.length
-        ? os.purchaseOrders.map((po) => po.code).join(" | ")
+        ? os.purchaseOrders.map((po, idx) => (
+            <Fragment key={po.code ?? idx}>
+              {idx > 0 && <span className="text-gray-400"> | </span>}
+              <CodeLink entity="purchase-order" code={po.code} />
+            </Fragment>
+          ))
         : "-",
   },
   {

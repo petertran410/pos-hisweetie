@@ -33,12 +33,21 @@ import { useSearchParams } from "next/navigation";
 type FormType = "giao-hang" | "dong-hang" | "loading" | null;
 
 export default function BaoDonPage() {
-  const [filters, setFilters] = useState({});
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code");
+  const [filters, setFilters] = useState<any>(() =>
+    codeParam ? { search: codeParam } : {}
+  );
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [formType, setFormType] = useState<FormType>(null);
-  const searchParams = useSearchParams();
   const [formKey, setFormKey] = useState(0);
+
+  // Khi đang lọc theo Code: bỏ qua toàn bộ filter sidebar
+  const handleFiltersChange = (newFilters: any) => {
+    if (codeParam) return;
+    setFilters(newFilters);
+  };
 
   const [editingPackingSlip, setEditingPackingSlip] =
     useState<PackingSlip | null>(null);
@@ -208,7 +217,7 @@ export default function BaoDonPage() {
     <PagePermissionGuard resource="packing_slips" action="view">
       {/* ── Desktop (md+) — giữ nguyên ── */}
       <div className="hidden md:flex h-full border-t bg-gray-50">
-        <PackingSlipsSidebar onFiltersChange={setFilters} />
+        <PackingSlipsSidebar onFiltersChange={handleFiltersChange} />
         <PackingSlipsTable
           packingSlips={data?.data || []}
           isLoading={isLoading}

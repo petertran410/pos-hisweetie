@@ -14,6 +14,7 @@ import Swal from "sweetalert2";
 import { useAuthStore } from "@/lib/store/auth";
 import Link from "next/link";
 import { EditCashFlowModal } from "./EditCashFlowModal";
+import { CodeLink } from "../shared/CodeLink";
 import { useCan } from "@/lib/hooks/useCan";
 
 interface CashFlowDetailRowProps {
@@ -251,7 +252,11 @@ export function CashFlowDetailRow({
               <div className="flex items-center justify-between px-6 pt-3 border-gray-100">
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-bold text-gray-900">
-                    {cashFlow.code}
+                    <CodeLink
+                      entity="cashflow"
+                      code={cashFlow.code}
+                      className="text-lg font-bold text-blue-600 hover:underline"
+                    />
                   </span>
                   <span className="text-gray-400">-</span>
                   {/* Title + status */}

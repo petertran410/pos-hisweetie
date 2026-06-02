@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { useCan } from "@/lib/hooks/useCan";
 import Link from "next/link";
+import { CodeLink } from "../shared/CodeLink";
 import { CancelOrderSupplierModal } from "./CancelOrderSupplierModal";
 
 interface OrderSupplierDetailRowProps {
@@ -262,7 +263,11 @@ export function OrderSupplierDetailRow({
                   <div className="flex border-b pb-2 items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-gray-900">
-                        {orderSupplier.code}
+                        <CodeLink
+                          entity="order-supplier"
+                          code={orderSupplier.code}
+                          className="text-lg font-bold text-blue-600 hover:underline"
+                        />
                       </span>
                       <span className="text-gray-400">-</span>
                       {orderSupplier.supplier ? (

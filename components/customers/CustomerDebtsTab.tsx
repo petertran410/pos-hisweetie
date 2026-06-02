@@ -8,6 +8,7 @@ import { Download, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { CustomerPaymentModal } from "./CustomerPaymentModal";
 import Link from "next/link";
+import { CodeLink } from "../shared/CodeLink";
 import { ExportDebtModal, ExportDebtOptions } from "./ExportDebtModal";
 
 interface CustomerDebtsTabProps {
@@ -216,6 +217,18 @@ export function CustomerDebtsTab({
                             onClick={(e) => e.stopPropagation()}>
                             {item.code}
                           </Link>
+                        ) : item.type === "debt_offset" ? (
+                          <CodeLink
+                            entity="debt-offset"
+                            code={item.code}
+                            className="text-xs lg:text-md font-medium text-blue-600 hover:underline"
+                          />
+                        ) : item.type === "return_order" ? (
+                          <CodeLink
+                            entity="return-order"
+                            code={item.code}
+                            className="text-xs lg:text-md font-medium text-blue-600 hover:underline"
+                          />
                         ) : (
                           <span className="text-xs lg:text-md font-medium text-blue-600 hover:underline cursor-pointer">
                             {item.code}

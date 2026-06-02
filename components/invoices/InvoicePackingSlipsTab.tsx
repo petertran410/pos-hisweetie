@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { packingSlipsApi } from "@/lib/api/packing-slips";
 import { apiClient } from "@/lib/config/api";
 import { Loader2 } from "lucide-react";
+import { CodeLink } from "../shared/CodeLink";
 
 interface InvoicePackingSlipsTabProps {
   invoiceId: number;
@@ -122,7 +123,7 @@ export function InvoicePackingSlipsTab({
                 </span>
               </td>
               <td className="px-4 py-3">
-                <span className="text-blue-600 font-medium">{item.code}</span>
+                <CodeLink entity="packing-slip" code={item.code} />
               </td>
               <td className="px-4 py-3 text-sm">{item.branch?.name || "-"}</td>
               <td className="px-4 py-3 text-center text-sm">

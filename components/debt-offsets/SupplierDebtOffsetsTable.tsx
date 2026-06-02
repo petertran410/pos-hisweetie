@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSupplierReturns } from "@/lib/hooks/useSupplierReturns";
 import { formatCurrency } from "@/lib/utils";
 import type { SupplierReturn } from "@/lib/types/supplier-return";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 interface SupplierDebtOffsetsTableProps {
   filters: any;
@@ -95,9 +96,18 @@ export function SupplierDebtOffsetsTable({
             ) : (
               items.map((item: SupplierReturn) => (
                 <tr key={item.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-3 text-blue-600">{item.code}</td>
                   <td className="px-4 py-3">
-                    {item.purchaseOrder?.code || "-"}
+                    <CodeLink entity="supplier-return" code={item.code} />
+                  </td>
+                  <td className="px-4 py-3">
+                    {item.purchaseOrder?.code ? (
+                      <CodeLink
+                        entity="purchase-order"
+                        code={item.purchaseOrder.code}
+                      />
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td className="px-4 py-3">{item.supplier?.name || "-"}</td>
                   <td className="px-4 py-3">{item.branch?.name || "-"}</td>

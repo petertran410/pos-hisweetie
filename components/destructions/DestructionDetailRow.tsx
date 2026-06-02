@@ -10,6 +10,7 @@ import {
 } from "@/lib/hooks/useDestructions";
 import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { toast } from "sonner";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 interface DestructionDetailRowProps {
   destructionId: number;
@@ -146,7 +147,9 @@ export function DestructionDetailRow({
         <div className="grid grid-cols-2 gap-6 mb-6">
           <div>
             <p className="text-md text-gray-600 mb-1">Mã phiếu</p>
-            <p className="text-md font-medium">{destruction.code}</p>
+            <p className="text-md font-medium">
+              <CodeLink entity="destruction" code={destruction.code} />
+            </p>
           </div>
           <div>
             <p className="text-md text-gray-600 mb-1">Chi nhánh</p>
@@ -253,7 +256,11 @@ export function DestructionDetailRow({
                 filteredDetails.map((detail, index) => (
                   <tr key={index}>
                     <td className="px-4 py-3 text-md text-blue-600 font-medium">
-                      {detail.productCode}
+                      {detail.productCode ? (
+                        <CodeLink entity="product" code={detail.productCode} />
+                      ) : (
+                        "-"
+                      )}
                     </td>
                     <td className="px-4 py-3 text-md">{detail.productName}</td>
                     <td className="px-4 py-3 text-center text-md">

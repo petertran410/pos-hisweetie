@@ -6,6 +6,7 @@ import { reportsApi, ReportFilters } from "@/lib/api/reports";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 const CONDITION_LABELS: Record<string, string> = {
   normal: "Bình thường",
@@ -154,11 +155,21 @@ export function ProductByCustomerPreview({ filters }: Props) {
                   <td className="px-3 py-2">
                     <div className="text-gray-900">{row.customerName}</div>
                     <div className="text-xs text-gray-400">
-                      {row.customerCode}
+                      {row.customerCode ? (
+                        <CodeLink
+                          entity="customer"
+                          code={row.customerCode}
+                          className="text-blue-600 hover:underline"
+                        />
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-3 py-2 font-medium text-blue-700">
-                    {row.invoiceCode}
+                    {row.invoiceCode ? (
+                      <CodeLink entity="invoice" code={row.invoiceCode} />
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td className="px-3 py-2 text-gray-600">
                     {formatDate(row.purchaseDate)}
@@ -166,7 +177,13 @@ export function ProductByCustomerPreview({ filters }: Props) {
                   <td className="px-3 py-2 text-gray-600">
                     {row.branchName || "-"}
                   </td>
-                  <td className="px-3 py-2 text-gray-600">{row.productCode}</td>
+                  <td className="px-3 py-2 text-gray-600">
+                    {row.productCode ? (
+                      <CodeLink entity="product" code={row.productCode} />
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-gray-900">{row.productName}</td>
                   <td className="px-3 py-2 text-center text-gray-500">
                     {row.unit || "-"}

@@ -19,6 +19,7 @@ import {
   Check,
 } from "lucide-react";
 import { InvoicesMobileDetailSheet } from "./InvoicesMobileDetailSheet";
+import { CodeLink } from "../shared/CodeLink";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_TEXT: Record<number, string> = {
@@ -104,7 +105,7 @@ function InvoiceMobileCard({
       {/* Row 1: code + status */}
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-blue-600 font-bold text-[15px]">
-          {invoice.code}
+          <CodeLink entity="invoice" code={invoice.code} />
         </span>
         <div className="flex items-center gap-1.5">
           <span

@@ -20,6 +20,7 @@ import {
   Box,
 } from "lucide-react";
 import { ProductMobileDetailSheet } from "./ProductMobileDetailSheet";
+import { CodeLink } from "@/components/shared/CodeLink";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ function ProductMobileCard({
           {/* Code + Status */}
           <div className="flex items-center justify-between mb-1">
             <span className="text-blue-600 font-bold text-[13px]">
-              {product.code}
+              <CodeLink entity="product" code={product.code} />
             </span>
             <span
               className={`w-2 h-2 rounded-full flex-shrink-0 ${

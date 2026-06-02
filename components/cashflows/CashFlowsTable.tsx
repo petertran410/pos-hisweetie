@@ -23,6 +23,7 @@ import { formatCurrency } from "@/lib/utils";
 import { CreateCashFlowModal } from "./CreateCashFlowModal";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ColumnConfig {
   key: string;
@@ -71,9 +72,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã phiếu",
     visible: true,
     width: "160px",
-    render: (cf) => (
-      <span className="font-medium text-blue-600">{cf.code}</span>
-    ),
+    render: (cf) => <CodeLink entity="cashflow" code={cf.code} />,
   },
   {
     key: "transDate",

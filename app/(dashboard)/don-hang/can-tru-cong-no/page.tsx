@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { DebtOffsetsTable } from "@/components/debt-offsets/DebtOffsetsTable";
 import { SupplierDebtOffsetsTable } from "@/components/debt-offsets/SupplierDebtOffsetsTable";
 import { DebtOffsetsSidebar } from "@/components/debt-offsets/DebtOffsetsSidebar";
@@ -14,23 +15,34 @@ const TABS: { value: Tab; label: string }[] = [
 ];
 
 export default function CanTruCongNoPage() {
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code");
+
   const [activeTab, setActiveTab] = useState<Tab>("customer");
   const [sidebarFilters, setSidebarFilters] = useState<any>({});
 
+  // Khi đang lọc theo Code: bỏ qua filter sidebar, chỉ tìm theo mã
+  const handleSidebarFiltersChange = (f: any) => {
+    if (codeParam) return;
+    setSidebarFilters(f);
+  };
+
   const customerFilters = {
     ...sidebarFilters,
+    ...(codeParam ? { search: codeParam } : {}),
     refundType: "debt_offsets",
     status: 4,
   };
 
   const supplierFilters = {
     ...sidebarFilters,
+    ...(codeParam ? { search: codeParam } : {}),
   };
 
   return (
     <PagePermissionGuard resource="return_orders" action="view">
       <div className="flex h-full border-t bg-gray-50">
-        <DebtOffsetsSidebar onFiltersChange={setSidebarFilters} />
+        <DebtOffsetsSidebar onFiltersChange={handleSidebarFiltersChange} />
 
         <div className="flex-1 flex flex-col overflow-hidden mt-4 mr-4 mb-4">
           {/* Tab bar */}

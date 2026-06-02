@@ -10,6 +10,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import type { Transfer, TransferQueryParams } from "@/lib/api/transfers";
+import { CodeLink } from "@/components/shared/CodeLink";
 import { TransferForm } from "./TransferForm";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -57,7 +58,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã chuyển hàng",
     visible: true,
     width: "160px",
-    render: (t) => <span className="font-medium text-blue-600">{t.code}</span>,
+    render: (t) => <CodeLink entity="transfer" code={t.code} />,
   },
   {
     key: "transferDate",
@@ -198,6 +199,9 @@ export function TransferTable({ filters }: TransferTableProps) {
     return f;
   }, [filters, activeStatusTab]);
 
+  // Ưu tiên search từ deep-link (?Code=) qua filters.search; nếu không thì dùng ô tìm nội bộ.
+  const effectiveSearch = (filters as any)?.search || debouncedSearch || undefined;
+
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("transferTableColumns");
@@ -220,6 +224,7 @@ export function TransferTable({ filters }: TransferTableProps) {
 
   const { data, isLoading } = useTransfers({
     ...effectiveFilters,
+    search: effectiveSearch,
     pageSize: limit,
     currentItem: (page - 1) * limit,
   });

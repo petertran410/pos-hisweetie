@@ -23,6 +23,7 @@ import { InvoiceDetailRow } from "./InvoiceDetailRow";
 import { formatCurrency } from "@/lib/utils";
 import { InvoiceImportModal } from "./InvoiceImportModal";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { CodeLink } from "../shared/CodeLink";
 
 interface ColumnConfig {
   key: string;
@@ -73,7 +74,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: true,
     width: "140px",
     render: (inv) => (
-      <span className="font-medium text-blue-600">{inv.code}</span>
+      <CodeLink entity="invoice" code={inv.code} />
     ),
   },
   {
@@ -120,7 +121,12 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã KH",
     visible: true,
     width: "120px",
-    render: (inv) => inv.customer?.code || "-",
+    render: (inv) =>
+      inv.customer?.code ? (
+        <CodeLink entity="customer" code={inv.customer.code} />
+      ) : (
+        "-"
+      ),
   },
   {
     key: "customer",

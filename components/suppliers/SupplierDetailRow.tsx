@@ -11,6 +11,7 @@ import { Pencil, Trash2, Loader2 } from "lucide-react";
 import { SupplierForm } from "./SupplierForm";
 import { SupplierDebtsTab } from "./SupplierDebtsTab";
 import { useCan } from "@/lib/hooks/useCan";
+import { CodeLink } from "../shared/CodeLink";
 
 interface SupplierDetailRowProps {
   supplierId: number;
@@ -124,7 +125,11 @@ export function SupplierDetailRow({
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
-                      {supplier.code}
+                      <CodeLink
+                        entity="supplier"
+                        code={supplier.code}
+                        className="text-lg font-bold text-blue-600 hover:underline"
+                      />
                     </span>
                     <span className="text-gray-400">-</span>
                     <span className="text-lg font-semibold text-gray-800">
