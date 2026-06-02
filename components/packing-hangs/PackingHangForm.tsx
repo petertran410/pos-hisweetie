@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Camera, Upload, ChevronDown } from "lucide-react";
+import { X, Camera, Upload, ChevronDown, QrCode } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useInvoicesForPacking } from "@/lib/hooks/useInvoices";
 import { uploadPackingHangImages } from "@/lib/hooks/usePackingHangs";
+import { QrUploadModal } from "@/components/shared/QrUploadModal";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingHang } from "@/lib/types/packing-hang";
 import { toast } from "sonner";
@@ -72,6 +73,13 @@ export function PackingHangForm({
   );
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
+
+  const handleQrUploaded = (urls: string[]) => {
+    if (urls.length > 0) {
+      setImages((prev) => [...prev, ...urls]);
+    }
+  };
 
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
@@ -454,6 +462,13 @@ export function PackingHangForm({
                     <Camera className="w-6 h-6 mx-auto mb-2 text-gray-400" />
                     <span className="text-sm text-gray-600">Chụp hình</span>
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowQrModal(true)}
+                    className="flex-1 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50">
+                    <QrCode className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                    <span className="text-sm text-gray-600">QR điện thoại</span>
+                  </button>
                 </div>
 
                 {isUploading && (
@@ -519,6 +534,14 @@ export function PackingHangForm({
             onClick={(e) => e.stopPropagation()}
           />
         </div>
+      )}
+
+      {showQrModal && (
+        <QrUploadModal
+          subfolder="dong-hang"
+          onUploaded={handleQrUploaded}
+          onClose={() => setShowQrModal(false)}
+        />
       )}
     </div>
   );

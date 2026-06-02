@@ -8,10 +8,11 @@ import {
   useSearchCustomers,
   useUpdateCustomer,
 } from "@/lib/hooks/useCustomers";
-import { X, Calendar, Plus, Pencil, Star, Trash2 } from "lucide-react";
+import { X, Calendar, Plus, Pencil, Star, Trash2, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Customer } from "@/lib/types/customer";
 import { useBranchStore } from "@/lib/store/branch";
+import { useTaxCodeLookup } from "@/lib/hooks/useVietQr";
 import { sanitizeAddresses } from "@/lib/utils/sanitize-address";
 import { SearchableSelect } from "../ui/SearchableSelect";
 import { CustomerAddressFormModal } from "../pos/CustomerAddressFormModal";
@@ -187,6 +188,60 @@ export function CustomerForm({
   };
 
   const customerType = watch("type", "0");
+
+  // ── Tra cứu mã số thuế qua VietQR ──
+  const taxLookup = useTaxCodeLookup();
+  const lastLookedUpTaxCode = useRef<string>("");
+
+  const handleTaxLookup = async () => {
+    const taxCode = (watch("taxCode") || "").trim();
+    if (!taxCode) {
+      toast.error("Vui lòng nhập mã số thuế");
+      return;
+    }
+    lastLookedUpTaxCode.current = taxCode;
+    try {
+      const data = await taxLookup.mutateAsync(taxCode);
+      const currentType = watch("type", "0");
+
+      // Tên: tổ chức → Tên công ty (organization), cá nhân → Tên người mua (invoiceBuyerName)
+      if (currentType === "1") {
+        setValue("organization", data.name || "");
+      } else {
+        setValue("invoiceBuyerName", data.name || "");
+      }
+
+      // Địa chỉ: điền toàn bộ chuỗi vào ô Địa chỉ, bỏ qua Phường/Xã & Tỉnh/Thành phố
+      if (data.address) {
+        setValue("invoiceAddress", data.address);
+      }
+
+      // Điền tên khách hàng (tab cơ bản) nếu đang trống
+      if (!watch("name") && data.name) {
+        setValue("name", data.name);
+      }
+
+      toast.success(
+        data.status
+          ? `Đã điền thông tin từ mã số thuế (${data.status})`
+          : "Đã điền thông tin từ mã số thuế"
+      );
+    } catch (err: any) {
+      toast.error(err?.message || "Không thể tra cứu mã số thuế");
+    }
+  };
+
+  const handleTaxCodeBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const taxCode = (e.target.value || "").trim();
+    // Tự tra cứu khi độ dài hợp lệ (10 hoặc 13 số) và khác mã đã tra trước đó
+    if (
+      /^\d{10}(\d{3})?$/.test(taxCode) &&
+      taxCode !== lastLookedUpTaxCode.current &&
+      !taxLookup.isPending
+    ) {
+      handleTaxLookup();
+    }
+  };
 
   // Load cities (địa chỉ cũ)
   useEffect(() => {
@@ -887,11 +942,27 @@ export function CustomerForm({
                   <label className="block text-sm font-medium mb-1.5">
                     Mã số thuế
                   </label>
-                  <input
-                    {...register("taxCode")}
-                    placeholder="Nhập mã số thuế"
-                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      {...register("taxCode")}
+                      onBlur={handleTaxCodeBlur}
+                      placeholder="Nhập mã số thuế"
+                      className="flex-1 border rounded px-3 py-1.5 sm:py-2 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTaxLookup}
+                      disabled={taxLookup.isPending}
+                      title="Tra cứu thông tin từ mã số thuế"
+                      className="px-3 py-1.5 sm:py-2 border rounded text-sm font-medium text-blue-600 border-blue-200 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
+                      {taxLookup.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Search className="w-4 h-4" />
+                      )}
+                      Tra cứu
+                    </button>
+                  </div>
                 </div>
 
                 <div className="sm:col-span-2">
@@ -1001,11 +1072,27 @@ export function CustomerForm({
                   <label className="block text-sm font-medium mb-1.5">
                     Mã số thuế <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    {...register("taxCode")}
-                    placeholder="Bắt buộc"
-                    className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      {...register("taxCode")}
+                      onBlur={handleTaxCodeBlur}
+                      placeholder="Bắt buộc"
+                      className="flex-1 border rounded px-3 py-1.5 sm:py-2 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTaxLookup}
+                      disabled={taxLookup.isPending}
+                      title="Tra cứu thông tin từ mã số thuế"
+                      className="px-3 py-1.5 sm:py-2 border rounded text-sm font-medium text-blue-600 border-blue-200 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
+                      {taxLookup.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Search className="w-4 h-4" />
+                      )}
+                      Tra cứu
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5">

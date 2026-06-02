@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Camera, Upload, ChevronDown } from "lucide-react";
+import { X, Camera, Upload, ChevronDown, QrCode } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useInvoicesForPacking } from "@/lib/hooks/useInvoices";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { uploadPackingLoadingImages } from "@/lib/hooks/usePackingLoadings";
+import { QrUploadModal } from "@/components/shared/QrUploadModal";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingLoading } from "@/lib/types/packing-loading";
 import { toast } from "sonner";
@@ -78,6 +79,13 @@ export function PackingLoadingForm({
   );
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
+
+  const handleQrUploaded = (urls: string[]) => {
+    if (urls.length > 0) {
+      setImages((prev) => [...prev, ...urls]);
+    }
+  };
 
   const [showLoadingByDropdown, setShowLoadingByDropdown] = useState(false);
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
@@ -510,6 +518,13 @@ export function PackingLoadingForm({
                     <Camera className="w-6 h-6 mx-auto mb-2 text-gray-400" />
                     <span className="text-sm text-gray-600">Chụp hình</span>
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowQrModal(true)}
+                    className="flex-1 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50">
+                    <QrCode className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                    <span className="text-sm text-gray-600">QR điện thoại</span>
+                  </button>
                 </div>
 
                 {isUploading && (
@@ -575,6 +590,14 @@ export function PackingLoadingForm({
             onClick={(e) => e.stopPropagation()}
           />
         </div>
+      )}
+
+      {showQrModal && (
+        <QrUploadModal
+          subfolder="loading"
+          onUploaded={handleQrUploaded}
+          onClose={() => setShowQrModal(false)}
+        />
       )}
     </div>
   );

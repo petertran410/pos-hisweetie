@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Camera, Upload, ChevronDown, FileText } from "lucide-react";
+import { X, Camera, Upload, ChevronDown, FileText, QrCode } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useInvoicesForPacking } from "@/lib/hooks/useInvoices";
 import {
@@ -10,6 +10,7 @@ import {
   type UploadedExpenseFile,
 } from "@/lib/hooks/usePackingSlips";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { QrUploadModal } from "@/components/shared/QrUploadModal";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import { toast } from "sonner";
@@ -135,6 +136,13 @@ export function PackingSlipForm({
   );
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
+
+  const handleQrUploaded = (urls: string[]) => {
+    if (urls.length > 0) {
+      setImages((prev) => [...prev, ...urls]);
+    }
+  };
 
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
@@ -530,6 +538,14 @@ export function PackingSlipForm({
                   <Camera className="w-6 h-6 text-gray-400" />
                   <span className="text-xs text-gray-400 mt-1">Chụp</span>
                 </label>
+
+                <button
+                  type="button"
+                  onClick={() => setShowQrModal(true)}
+                  className="w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50">
+                  <QrCode className="w-6 h-6 text-gray-400" />
+                  <span className="text-xs text-gray-400 mt-1">QR</span>
+                </button>
               </div>
               {isUploading && (
                 <p className="text-sm text-gray-500 mt-2">Đang upload...</p>
@@ -875,6 +891,14 @@ export function PackingSlipForm({
             onClick={(e) => e.stopPropagation()}
           />
         </div>
+      )}
+
+      {showQrModal && (
+        <QrUploadModal
+          subfolder="bao-don"
+          onUploaded={handleQrUploaded}
+          onClose={() => setShowQrModal(false)}
+        />
       )}
     </div>
   );

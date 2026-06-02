@@ -46,6 +46,9 @@ export interface TransferQueryParams {
   toReceivedDate?: string;
   fromTransferDate?: string;
   toTransferDate?: string;
+  // ⚠️ CẦN BACKEND: backend hiện chưa lọc theo `search`/`code` trên /transfers.
+  // Tham số vẫn được gửi lên để link ?Code= hoạt động khi backend bổ sung.
+  search?: string;
 }
 
 export interface CreateTransferData {
