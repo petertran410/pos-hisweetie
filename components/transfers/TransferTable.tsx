@@ -223,6 +223,7 @@ export function TransferTable({ filters }: TransferTableProps) {
   });
 
   const { data, isLoading } = useTransfers({
+    search: debouncedSearch || undefined,
     ...effectiveFilters,
     search: effectiveSearch,
     pageSize: limit,

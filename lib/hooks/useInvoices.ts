@@ -35,6 +35,22 @@ export function useInvoicesForPacking(params?: {
   });
 }
 
+/** Danh sách hóa đơn VAT (dữ liệu Misa) cho trang /don-hang/hoa-don-vat */
+export function useInvoicesVat(params?: any) {
+  return useQuery({
+    queryKey: ["invoices-vat", params],
+    queryFn: () => invoicesApi.getInvoicesVat(params),
+  });
+}
+
+/** Tổng các cột VAT của toàn bộ hóa đơn match filter */
+export function useInvoicesVatTotals(params?: any) {
+  return useQuery({
+    queryKey: ["invoices-vat-totals", params],
+    queryFn: () => invoicesApi.getVatTotals(params),
+  });
+}
+
 export function useInvoice(id: number) {
   return useQuery({
     queryKey: ["invoices", id],

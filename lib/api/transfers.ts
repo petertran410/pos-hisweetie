@@ -35,6 +35,7 @@ export interface Transfer {
 }
 
 export interface TransferQueryParams {
+  search?: string;
   fromBranchIds?: number[];
   toBranchIds?: number[];
   currentBranchId?: number;
