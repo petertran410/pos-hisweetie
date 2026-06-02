@@ -3,11 +3,12 @@ import { misaApi } from "../api/misa";
 import { toast } from "sonner";
 
 /** Danh sách nhân viên phụ trách (Misa) cho dropdown filter */
-export function useMisaEmployees() {
+export function useMisaEmployees(enabled: boolean = true) {
   return useQuery({
     queryKey: ["misa-employees"],
     queryFn: () => misaApi.getEmployees(),
     staleTime: 5 * 60 * 1000,
+    enabled,
   });
 }
 
