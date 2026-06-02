@@ -92,10 +92,16 @@ export function PurchaseOrderForm({
   );
   const [code, setCode] = useState<string>(purchaseOrder?.code || "");
   const [supplierId, setSupplierId] = useState<number>(
-    purchaseOrder?.supplierId || orderSupplier?.supplierId || copyFrom?.supplierId || 0
+    purchaseOrder?.supplierId ||
+      orderSupplier?.supplierId ||
+      copyFrom?.supplierId ||
+      0
   );
   const [note, setNote] = useState<string>(
-    purchaseOrder?.description || orderSupplier?.description || copyFrom?.description || ""
+    purchaseOrder?.description ||
+      orderSupplier?.description ||
+      copyFrom?.description ||
+      ""
   );
   const [discount, setDiscount] = useState<number>(
     purchaseOrder?.discount || copyFrom?.discount || 0
@@ -113,7 +119,11 @@ export function PurchaseOrderForm({
   const { user: currentUser } = useAuthStore();
   const { data: users } = useUsersForFilter();
   const [purchaseById, setPurchaseById] = useState<number>(
-    purchaseOrder?.purchaseById || orderSupplier?.userId || copyFrom?.purchaseById || currentUser?.id || 0
+    purchaseOrder?.purchaseById ||
+      orderSupplier?.userId ||
+      copyFrom?.purchaseById ||
+      currentUser?.id ||
+      0
   );
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -695,20 +705,24 @@ export function PurchaseOrderForm({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <div className="flex gap-2 items-center">
-            <div className="text-md text-gray-600 whitespace-nowrap">Mã phiếu nhập:</div>
-            {purchaseOrder?.id ? (
-              <span>{purchaseOrder.code}</span>
-            ) : (
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-2 items-center">
+              <div className="text-md text-gray-600 whitespace-nowrap">
+                Mã phiếu nhập:
+              </div>
               <input
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="Mã phiếu tự động"
-                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="VD: PN000123 (để trống = tự sinh)"
+                maxLength={50}
+                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
                 disabled={!!isFormDisabled}
               />
-            )}
+            </div>
+            <p className="text-xs text-gray-500">
+              Bạn có thể tự nhập mã. Để trống, hệ thống sẽ tự sinh mã PN######.
+            </p>
           </div>
 
           {purchaseOrder?.orderSupplier?.code && (

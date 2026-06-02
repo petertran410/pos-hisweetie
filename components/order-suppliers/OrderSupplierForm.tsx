@@ -513,22 +513,24 @@ export function OrderSupplierForm({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <div className="flex gap-2 items-center">
-            <label className="text-md text-gray-600 mb-1 whitespace-nowrap">
-              Mã đặt hàng nhập:
-            </label>
-            {orderSupplier?.id ? (
-              <span>{orderSupplier.code}</span>
-            ) : (
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-2 items-center">
+              <label className="text-md text-gray-600 whitespace-nowrap">
+                Mã đặt hàng nhập:
+              </label>
               <input
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="Mã phiếu tự động"
-                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="VD: PDN000123 (để trống = tự sinh)"
+                maxLength={50}
+                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
                 disabled={!!isFormDisabled}
               />
-            )}
+            </div>
+            <p className="text-xs text-gray-500">
+              Bạn có thể tự nhập mã. Để trống, hệ thống sẽ tự sinh mã PDN######.
+            </p>
           </div>
 
           <div ref={userDropdownRef} className="flex gap-2 items-center">
