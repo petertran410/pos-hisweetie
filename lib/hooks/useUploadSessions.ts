@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../store/auth";
 import { API_URL } from "../config/api";
 
-export type UploadSubfolder = "bao-don" | "dong-hang" | "loading";
+export type UploadSubfolder = "bao-don" | "dong-hang" | "loading" | "bao-don/chi-phi";
 
 export interface UploadSession {
   id: string;
