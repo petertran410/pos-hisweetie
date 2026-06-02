@@ -143,7 +143,11 @@ export function PurchaseOrderForm({
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const discountDropdownRef = useRef<HTMLDivElement>(null);
 
-  const isFormDisabled = purchaseOrder && !purchaseOrder.isDraft;
+  // Cho phép sửa PN ở mọi trạng thái trừ "Đã hủy" (status=2). Trước đây
+  // form bị khoá khi `!isDraft` (= "Đã nhập hàng") nên user không thể chỉnh
+  // số lượng/giá kể cả khi cần điều chỉnh sau nhập hàng. BE đã hỗ trợ tính
+  // delta tồn kho an toàn khi update PN status=1.
+  const isFormDisabled = purchaseOrder?.status === 2;
 
   const selectedStatus = STATUS_OPTIONS.find((s) => s.value === isDraft);
   const selectedBranchData = branches?.find((b) => b.id === branchId);
