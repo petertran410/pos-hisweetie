@@ -23,6 +23,10 @@ import {
 import { ProductInventoryModal } from "./ProductInventoryModal";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { ProductInventoryMobileSheet } from "./ProductInventoryMobileSheet";
+import {
+  getItemOnHand as getItemOnHandHelper,
+  getStockWarning as getStockWarningHelper,
+} from "@/lib/utils/inventory";
 
 interface CartItemsListProps {
   cartItems: CartItem[];
@@ -82,21 +86,11 @@ export function OrderItemsList({
 
   const isMobile = useIsMobile();
 
-  const getItemOnHand = (item: CartItem): number | null => {
-    if (!selectedBranch || !item.product.inventories) return null;
-    const inv = item.product.inventories.find(
-      (i: any) => i.branchId === selectedBranch.id
-    );
-    return inv ? Number(inv.onHand) : null;
-  };
+  const getItemOnHand = (item: CartItem): number | null =>
+    getItemOnHandHelper(item, selectedBranch?.id);
 
-  const getStockWarning = (item: CartItem): string | null => {
-    const onHand = getItemOnHand(item);
-    if (onHand === null) return null;
-    if (onHand < 0) return `Tồn kho âm (${onHand})`;
-    if (item.quantity > onHand) return `Vượt tồn kho (tồn: ${onHand})`;
-    return null;
-  };
+  const getStockWarning = (item: CartItem): string | null =>
+    getStockWarningHelper(item, selectedBranch?.id);
 
   const getCartItemKey = (item: CartItem): string => item.rowId;
 
