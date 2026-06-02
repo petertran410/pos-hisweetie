@@ -52,6 +52,33 @@ export interface InvoicesTotalsResponse {
   remainingAmount: number;
 }
 
+export interface InvoiceVat extends Invoice {
+  vat?: {
+    totalPreTax: number;
+    totalVat: number;
+    totalAfterTax: number;
+  };
+  missingMisaCode?: boolean;
+  misaSyncStatus?: "PENDING" | "SYNCED" | "FAILED" | "SKIP";
+  misaSyncRetries?: number;
+  misaSyncedAt?: string | null;
+  misaOrgRefId?: string | null;
+  misaConfirmed?: boolean;
+  misaErrorMessage?: string | null;
+}
+
+export interface InvoicesVatResponse {
+  data: InvoiceVat[];
+  total: number;
+}
+
+export interface InvoicesVatTotalsResponse {
+  count: number;
+  totalPreTax: number;
+  totalVat: number;
+  totalAfterTax: number;
+}
+
 export const invoicesApi = {
   getInvoices: (params?: any): Promise<InvoicesResponse> => {
     return apiClient.get("/invoices", params);
@@ -108,5 +135,11 @@ export const invoicesApi = {
     search?: string;
   }): Promise<{ data: Invoice[]; total: number; page: number; limit: number }> => {
     return apiClient.get("/invoices/for-packing", params);
+  },
+  getInvoicesVat: (params?: any): Promise<InvoicesVatResponse> => {
+    return apiClient.get("/invoices/vat", params);
+  },
+  getVatTotals: (params?: any): Promise<InvoicesVatTotalsResponse> => {
+    return apiClient.get("/invoices/vat/totals", params);
   },
 };

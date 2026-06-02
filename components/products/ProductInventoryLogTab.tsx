@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useProductInventoryLogs } from "@/lib/hooks/useProducts";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { CodeLink, type CodeEntity } from "../shared/CodeLink";
