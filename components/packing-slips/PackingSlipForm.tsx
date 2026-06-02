@@ -119,6 +119,18 @@ export function PackingSlipForm({
     })) || []
   );
   const [isUploadingExpense, setIsUploadingExpense] = useState(false);
+  const [showExpenseQrModal, setShowExpenseQrModal] = useState(false);
+
+  const handleExpenseQrUploaded = (urls: string[]) => {
+    if (urls.length === 0) return;
+    const mapped: UploadedExpenseFile[] = urls.map((url) => ({
+      fileUrl: url,
+      fileName: url.split("/").pop() || "",
+      fileType: "image/*",
+      fileSize: 0,
+    }));
+    setExpenseFiles((prev) => [...prev, ...mapped]);
+  };
 
   const hasAnyFee = hasFeeGuiBen || hasFeeGrab || hasCuocGuiHang;
 
@@ -844,6 +856,14 @@ export function PackingSlipForm({
                       <Camera className="w-6 h-6 text-gray-400" />
                       <span className="text-xs text-gray-400 mt-1">Chụp</span>
                     </label>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowExpenseQrModal(true)}
+                      className="w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50">
+                      <QrCode className="w-6 h-6 text-gray-400" />
+                      <span className="text-xs text-gray-400 mt-1">QR</span>
+                    </button>
                   </div>
                   {isUploadingExpense && (
                     <p className="text-sm text-gray-500 mt-2">
@@ -898,6 +918,14 @@ export function PackingSlipForm({
           subfolder="bao-don"
           onUploaded={handleQrUploaded}
           onClose={() => setShowQrModal(false)}
+        />
+      )}
+
+      {showExpenseQrModal && (
+        <QrUploadModal
+          subfolder="bao-don/chi-phi"
+          onUploaded={handleExpenseQrUploaded}
+          onClose={() => setShowExpenseQrModal(false)}
         />
       )}
     </div>
