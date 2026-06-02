@@ -116,8 +116,6 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
       }),
   });
 
-  console.log(invoicesData?.data.map((i) => i.code));
-
   const { data: returnsData, isLoading: returnsLoading } = useQuery({
     queryKey: ["return-orders", "customer", customerId],
     queryFn: () =>
@@ -134,38 +132,44 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
   const timeline = useMemo(() => {
     const items: TimelineItem[] = [];
 
-    (invoicesData?.data || []).forEach((inv: any) => {
-      items.push({
-        id: inv.id,
-        code: inv.code,
-        date: inv.purchaseDate,
-        type: "invoice",
-        sellerName: inv.soldBy?.name || inv.creator?.name || "-",
-        branchName: inv.branch?.name || "-",
-        totalAmount: Number(inv.grandTotal),
-        status: inv.status,
-        statusLabel: getInvoiceStatusLabel(inv.status),
-        statusColor: getInvoiceStatusColor(inv.status),
-        debtAdjustment: Number(inv.grandTotal),
+    (invoicesData?.data || [])
+      .filter((inv: any) => inv.status !== 2) // loại bỏ hóa đơn đã hủy
+      .forEach((inv: any) => {
+        items.push({
+          id: inv.id,
+          code: inv.code,
+          date: inv.purchaseDate,
+          type: "invoice",
+          sellerName: inv.soldBy?.name || inv.creator?.name || "-",
+          branchName: inv.branch?.name || "-",
+          totalAmount: Number(inv.grandTotal),
+          status: inv.status,
+          statusLabel: getInvoiceStatusLabel(inv.status),
+          statusColor: getInvoiceStatusColor(inv.status),
+          debtAdjustment: Number(inv.grandTotal),
+        });
       });
-    });
 
-    (returnsData?.data || []).forEach((ro: any) => {
-      const refundAmount = Number(ro.refundAmount || ro.totalReturnAmount || 0);
-      items.push({
-        id: ro.id,
-        code: ro.code,
-        date: ro.createdAt,
-        type: "return",
-        sellerName: ro.creator?.name || ro.createdByName || "-",
-        branchName: ro.branch?.name || "-",
-        totalAmount: refundAmount,
-        status: ro.status,
-        statusLabel: getReturnStatusLabel(ro.status),
-        statusColor: getReturnStatusColor(ro.status),
-        debtAdjustment: ro.status === 4 ? -refundAmount : 0,
+    (returnsData?.data || [])
+      .filter((ro: any) => ro.status !== 5) // loại bỏ phiếu trả hàng đã hủy
+      .forEach((ro: any) => {
+        const refundAmount = Number(
+          ro.refundAmount || ro.totalReturnAmount || 0
+        );
+        items.push({
+          id: ro.id,
+          code: ro.code,
+          date: ro.createdAt,
+          type: "return",
+          sellerName: ro.creator?.name || ro.createdByName || "-",
+          branchName: ro.branch?.name || "-",
+          totalAmount: refundAmount,
+          status: ro.status,
+          statusLabel: getReturnStatusLabel(ro.status),
+          statusColor: getReturnStatusColor(ro.status),
+          debtAdjustment: ro.status === 4 ? -refundAmount : 0,
+        });
       });
-    });
 
     items.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
