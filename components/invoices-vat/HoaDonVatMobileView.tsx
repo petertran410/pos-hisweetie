@@ -6,7 +6,6 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import type { InvoiceVat } from "@/lib/api/invoices";
 import {
   Search,
-  Plus,
   SlidersHorizontal,
   Calendar,
   X,
@@ -253,13 +252,11 @@ function HoaDonVatMobileFilterSheet({
 interface HoaDonVatMobileViewProps {
   filters: any;
   onFiltersChange: (f: any) => void;
-  onCreateClick: () => void;
 }
 
 export function HoaDonVatMobileView({
   filters,
   onFiltersChange,
-  onCreateClick,
 }: HoaDonVatMobileViewProps) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -411,13 +408,6 @@ export function HoaDonVatMobileView({
           </>
         )}
       </div>
-
-      {/* ─── FAB ─── */}
-      <button
-        onClick={onCreateClick}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 rounded-full shadow-xl flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all z-40">
-        <Plus className="w-7 h-7 text-white" />
-      </button>
 
       {/* ─── Detail bottom sheet ─── */}
       {selectedInvoiceId !== null && (

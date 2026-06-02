@@ -9,9 +9,9 @@ import {
   useCreateVoucher,
   useRetryVouchers,
   useDeleteVoucher,
+  useCreateVouchersBulk,
 } from "@/lib/hooks/useMisa";
 import {
-  Plus,
   Settings,
   ChevronDown,
   ChevronLeft,
@@ -32,9 +32,10 @@ import {
   MinusCircle,
 } from "lucide-react";
 import type { InvoiceVat } from "@/lib/api/invoices";
-import { InvoiceDetailRow } from "@/components/invoices/InvoiceDetailRow";
+import { HoaDonVatDetailRow } from "@/components/invoices-vat/HoaDonVatDetailRow";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { useCan } from "@/lib/hooks/useCan";
 import Swal from "sweetalert2";
 
 interface ColumnConfig {
@@ -47,30 +48,7 @@ interface ColumnConfig {
 
 interface HoaDonVatTableProps {
   filters: any;
-  onCreateClick: () => void;
 }
-
-const STATUS_COLOR: Record<number, string> = {
-  1: "bg-green-100 text-green-700",
-  2: "bg-red-100 text-red-700",
-  3: "bg-blue-100 text-blue-700",
-  4: "bg-yellow-100 text-yellow-700",
-  5: "bg-orange-100 text-orange-700",
-  6: "bg-purple-100 text-purple-700",
-  7: "bg-teal-100 text-teal-700",
-  8: "bg-pink-100 text-pink-700",
-};
-
-const STATUS_TEXT: Record<number, string> = {
-  1: "Hoàn thành",
-  2: "Đã hủy",
-  3: "Đang xử lý",
-  4: "Không giao được",
-  5: "Đóng hàng",
-  6: "Loading",
-  7: "Giao thành công",
-  8: "Trả hàng",
-};
 
 // ─── Trạng thái đồng bộ Misa ──────────────────────────────────────────────────
 type MisaStatus = "PENDING" | "SYNCED" | "FAILED" | "SKIP";
@@ -134,13 +112,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     ),
   },
   {
-    key: "purchaseDate",
-    label: "Thời gian",
-    visible: true,
-    width: "160px",
-    render: (inv) => formatDateTime(inv.purchaseDate),
-  },
-  {
     key: "createTime",
     label: "Thời gian tạo",
     visible: false,
@@ -160,6 +131,16 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     visible: true,
     width: "180px",
     render: (inv) => inv.customer?.name || "-",
+  },
+  {
+    key: "misaEmployee",
+    label: "Nhân viên phụ trách",
+    visible: true,
+    width: "180px",
+    render: (inv) =>
+      inv.customer?.misaEmployeeName ||
+      inv.customer?.misaEmployeeCode ||
+      "-",
   },
   {
     key: "taxCode",
@@ -241,18 +222,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
       ),
   },
   {
-    key: "misaConfirmed",
-    label: "Đã xác nhận",
-    visible: false,
-    width: "120px",
-    render: (inv) =>
-      inv.misaConfirmed ? (
-        <span className="text-green-600 text-xs font-medium">Đã xác nhận</span>
-      ) : (
-        <span className="text-gray-400 text-xs">Chưa</span>
-      ),
-  },
-  {
     key: "misaSyncedAt",
     label: "Thời gian đồng bộ",
     visible: false,
@@ -285,21 +254,9 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
         <span className="text-gray-400 text-xs">Không</span>
       ),
   },
-  {
-    key: "status",
-    label: "Trạng thái HĐ",
-    visible: false,
-    width: "140px",
-    render: (inv) => (
-      <span
-        className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOR[inv.status] || "bg-gray-100 text-gray-700"}`}>
-        {STATUS_TEXT[inv.status] || inv.status}
-      </span>
-    ),
-  },
 ];
 
-export function HoaDonVatTable({ filters, onCreateClick }: HoaDonVatTableProps) {
+export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
     null
   );
@@ -339,18 +296,23 @@ export function HoaDonVatTable({ filters, onCreateClick }: HoaDonVatTableProps) 
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
 
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
   const createVoucher = useCreateVoucher();
   const retryVouchers = useRetryVouchers();
   const deleteVoucher = useDeleteVoucher();
+  const createVouchersBulk = useCreateVouchersBulk();
+
+  const canPushMisa = useCan("vat_invoices", "push");
+  const canDeleteMisa = useCan("vat_invoices", "delete");
+  const canRowAction = canPushMisa || canDeleteMisa;
 
   const SORTABLE_COLUMNS = new Set([
-    "purchaseDate",
     "createTime",
     "grandTotal",
   ]);
 
   const COLUMN_ORDER_BY: Record<string, string> = {
-    purchaseDate: "purchaseDate",
     createTime: "createdAt",
     grandTotal: "grandTotal",
   };
@@ -531,6 +493,30 @@ export function HoaDonVatTable({ filters, onCreateClick }: HoaDonVatTableProps) 
   const toggleExpand = (id: number) =>
     setExpandedInvoiceId((prev) => (prev === id ? null : id));
 
+  const toggleSelect = (id: number) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+
+  const allOnPageSelected =
+    invoices.length > 0 && invoices.every((inv) => selectedIds.includes(inv.id));
+
+  const toggleSelectAll = () =>
+    setSelectedIds((prev) => {
+      if (invoices.every((inv) => prev.includes(inv.id)) && invoices.length > 0) {
+        const pageIds = new Set(invoices.map((i) => i.id));
+        return prev.filter((id) => !pageIds.has(id));
+      }
+      const merged = new Set(prev);
+      invoices.forEach((inv) => merged.add(inv.id));
+      return Array.from(merged);
+    });
+
+  // Bỏ chọn các id không còn trong trang hiện tại khi đổi filter/trang
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [debouncedSearch, filters, activeStatusTab, misaStatusFilter, page]);
+
   const toggleMisaStatus = (value: MisaStatus) =>
     setMisaStatusFilter((prev) =>
       prev.includes(value)
@@ -585,7 +571,29 @@ export function HoaDonVatTable({ filters, onCreateClick }: HoaDonVatTableProps) 
     }
   };
 
-  const colSpan = visibleColumns.length + 1;
+  const handleBulkPush = async () => {
+    if (selectedIds.length === 0) return;
+    const selectedCodes = invoices
+      .filter((inv) => selectedIds.includes(inv.id))
+      .map((inv) => inv.code);
+
+    const result = await Swal.fire({
+      title: `Đẩy ${selectedCodes.length} hóa đơn lên Misa?`,
+      text: "Hệ thống sẽ tạo chứng từ bán hàng Misa cho các hóa đơn đã chọn. Quá trình xử lý tuần tự, có thể mất chút thời gian.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Đẩy hàng loạt",
+      cancelButtonText: "Hủy",
+      confirmButtonColor: "#2563eb",
+    });
+    if (result.isConfirmed) {
+      createVouchersBulk.mutate(selectedCodes, {
+        onSuccess: () => setSelectedIds([]),
+      });
+    }
+  };
+
+  const colSpan = visibleColumns.length + 2;
 
   const renderTotalCell = (key: string): React.ReactNode => {
     if (!totals) return null;
@@ -806,16 +814,28 @@ export function HoaDonVatTable({ filters, onCreateClick }: HoaDonVatTableProps) 
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <PermissionGate resource="invoices" action="create">
+            <PermissionGate resource="vat_invoices" action="push">
               <button
-                onClick={onCreateClick}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
-                <Plus className="w-4 h-4" />
-                Tạo hóa đơn
+                onClick={handleBulkPush}
+                disabled={
+                  selectedIds.length === 0 || createVouchersBulk.isPending
+                }
+                className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                {createVouchersBulk.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <UploadCloud className="w-4 h-4" />
+                )}
+                Đẩy Misa
+                {selectedIds.length > 0 && (
+                  <span className="bg-white/25 text-white text-[11px] font-bold rounded-full px-1.5 min-w-[18px] text-center">
+                    {selectedIds.length}
+                  </span>
+                )}
               </button>
             </PermissionGate>
 
-            <PermissionGate resource="invoices" action="update">
+            <PermissionGate resource="vat_invoices" action="push">
               <button
                 onClick={handleRetry}
                 disabled={retryVouchers.isPending}
@@ -843,6 +863,14 @@ export function HoaDonVatTable({ filters, onCreateClick }: HoaDonVatTableProps) 
           <table className="w-full text-sm">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
+                <th className="px-4 py-2.5 text-left w-10 sticky left-0 bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={allOnPageSelected}
+                    onChange={toggleSelectAll}
+                    className="cursor-pointer accent-blue-600"
+                  />
+                </th>
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
@@ -875,6 +903,7 @@ export function HoaDonVatTable({ filters, onCreateClick }: HoaDonVatTableProps) 
             <tbody>
               {hasTotalRow && (
                 <tr className="bg-gray-50/60 border-b">
+                  <td className="px-4 py-2.5 sticky left-0 bg-gray-50/60" />
                   {visibleColumns.map((col) => (
                     <td
                       key={col.key}
@@ -917,6 +946,20 @@ export function HoaDonVatTable({ filters, onCreateClick }: HoaDonVatTableProps) 
                           : "border-b hover:bg-gray-50"
                       }`}
                       onClick={() => toggleExpand(invoice.id)}>
+                      <td
+                        className={`px-4 py-2.5 sticky left-0 z-10 ${
+                          expandedInvoiceId === invoice.id
+                            ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
+                            : "bg-white"
+                        }`}
+                        onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(invoice.id)}
+                          onChange={() => toggleSelect(invoice.id)}
+                          className="cursor-pointer accent-blue-600"
+                        />
+                      </td>
                       {visibleColumns.map((col) => (
                         <td
                           key={col.key}
@@ -942,41 +985,51 @@ export function HoaDonVatTable({ filters, onCreateClick }: HoaDonVatTableProps) 
                             : ""
                         }`}
                         onClick={(e) => e.stopPropagation()}>
-                        <div className="relative">
-                          <button
-                            onClick={() =>
-                              setOpenActionId((prev) =>
-                                prev === invoice.id ? null : invoice.id
-                              )
-                            }
-                            className="p-1 rounded hover:bg-gray-100 text-gray-500">
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                          {openActionId === invoice.id && (
-                            <div
-                              ref={actionRef}
-                              className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 w-44 overflow-hidden">
-                              <button
-                                onClick={() => handlePush(invoice)}
-                                disabled={createVoucher.isPending}
-                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50">
-                                <UploadCloud className="w-4 h-4 text-blue-600" />
-                                Đẩy Misa
-                              </button>
-                              <button
-                                onClick={() => handleDelete(invoice)}
-                                disabled={deleteVoucher.isPending}
-                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 border-t border-gray-50 text-red-600 disabled:opacity-50">
-                                <Trash2 className="w-4 h-4" />
-                                Xóa chứng từ
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        {canRowAction && (
+                          <div className="relative">
+                            <button
+                              onClick={() =>
+                                setOpenActionId((prev) =>
+                                  prev === invoice.id ? null : invoice.id
+                                )
+                              }
+                              className="p-1 rounded hover:bg-gray-100 text-gray-500">
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                            {openActionId === invoice.id && (
+                              <div
+                                ref={actionRef}
+                                className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 w-44 overflow-hidden">
+                                <PermissionGate
+                                  resource="vat_invoices"
+                                  action="push">
+                                  <button
+                                    onClick={() => handlePush(invoice)}
+                                    disabled={createVoucher.isPending}
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50">
+                                    <UploadCloud className="w-4 h-4 text-blue-600" />
+                                    Đẩy Misa
+                                  </button>
+                                </PermissionGate>
+                                <PermissionGate
+                                  resource="vat_invoices"
+                                  action="delete">
+                                  <button
+                                    onClick={() => handleDelete(invoice)}
+                                    disabled={deleteVoucher.isPending}
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 border-t border-gray-50 text-red-600 disabled:opacity-50">
+                                    <Trash2 className="w-4 h-4" />
+                                    Xóa chứng từ
+                                  </button>
+                                </PermissionGate>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                     {expandedInvoiceId === invoice.id && (
-                      <InvoiceDetailRow
+                      <HoaDonVatDetailRow
                         invoiceId={invoice.id}
                         colSpan={colSpan}
                       />

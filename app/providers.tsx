@@ -9,6 +9,10 @@ import { Toaster, toast } from "sonner";
 import { useState } from "react";
 import { useAuthStore } from "@/lib/store/auth";
 
+// Nhớ các thông báo "không có quyền" (403) đã hiển thị để chỉ toast 1 lần,
+// tránh lặp lại mỗi khi người dùng chuyển trang trong cùng phiên app.
+const shownForbiddenMessages = new Set<string>();
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -16,6 +20,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
         queryCache: new QueryCache({
           // Xử lý lỗi tập trung cho tất cả useQuery (fires 1 lần sau khi hết retry)
           onError: (error: any) => {
+            const status = error?.status;
+
+            // 401: đã tự clear auth + redirect sang /login → không cần toast.
+            if (status === 401) return;
+
+            // 403 (không có quyền): chỉ hiển thị 1 lần cho mỗi nội dung,
+            // không spam mỗi lần chuyển trang/refetch.
+            if (status === 403) {
+              const message =
+                error?.message || "Bạn không có quyền thực hiện thao tác này";
+              if (shownForbiddenMessages.has(message)) return;
+              shownForbiddenMessages.add(message);
+              toast.error(message, { id: `forbidden:${message}` });
+              return;
+            }
+
             toast.error(error.message || "Có lỗi xảy ra");
           },
         }),

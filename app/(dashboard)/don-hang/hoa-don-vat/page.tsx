@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { InvoicesSidebar } from "@/components/invoices/InvoicesSidebar";
 import { HoaDonVatTable } from "@/components/invoices-vat/HoaDonVatTable";
 import { HoaDonVatMobileView } from "@/components/invoices-vat/HoaDonVatMobileView";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function HoaDonVatPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("Code");
 
@@ -31,18 +30,15 @@ export default function HoaDonVatPage() {
     [codeParam]
   );
 
-  const handleCreateClick = () => {
-    router.push("/ban-hang?type=invoice&from=hoa-don-vat");
-  };
-
   return (
-    <PagePermissionGuard resource="invoices" action="view">
+    <PagePermissionGuard resource="vat_invoices" action="view">
       <div className="hidden md:flex h-full border-t bg-gray-50">
         <InvoicesSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}
+          showMisaEmployeeFilter
         />
-        <HoaDonVatTable filters={filters} onCreateClick={handleCreateClick} />
+        <HoaDonVatTable filters={filters} />
       </div>
 
       {/* ── Mobile (dưới md) ── */}
@@ -50,7 +46,6 @@ export default function HoaDonVatPage() {
         <HoaDonVatMobileView
           filters={filters}
           onFiltersChange={handleFiltersChange}
-          onCreateClick={handleCreateClick}
         />
       </div>
     </PagePermissionGuard>

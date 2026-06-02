@@ -7,6 +7,7 @@ import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
+import { useMisaEmployees } from "@/lib/hooks/useMisa";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   ChevronDown,
@@ -21,6 +22,8 @@ import { createPortal } from "react-dom";
 interface InvoicesSidebarProps {
   filters: any;
   onFiltersChange: (filters: any) => void;
+  /** Hiện filter "Nhân viên phụ trách" (Misa) — chỉ dùng cho trang hóa đơn VAT */
+  showMisaEmployeeFilter?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -511,6 +514,137 @@ function MultiSimpleDropdown({
   );
 }
 
+// ─── SearchableMultiDropdown (multi-select + ô tìm theo tên) ─────────────────
+function SearchableMultiDropdown({
+  options,
+  values,
+  placeholder,
+  searchPlaceholder,
+  onChange,
+}: {
+  options: SimpleOption[];
+  values: string[];
+  placeholder: string;
+  searchPlaceholder?: string;
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  const selectedOptions = options.filter((o) => values.includes(o.value));
+  const label =
+    selectedOptions.length === 0
+      ? null
+      : selectedOptions.length === 1
+        ? selectedOptions[0].label
+        : `${selectedOptions.length} đã chọn`;
+
+  const filteredOptions = useMemo(() => {
+    if (!search.trim()) return options;
+    const q = search.trim().toLowerCase();
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, search]);
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((p) => !p)}
+        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "hover:border-gray-400"
+        } bg-white`}>
+        <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
+          {label ?? placeholder}
+        </span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {selectedOptions.length > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange([]);
+              }}
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </div>
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholder ?? "Tìm theo tên..."}
+              className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="max-h-52 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2.5 text-sm text-gray-400 text-center">
+                Không tìm thấy
+              </div>
+            ) : (
+              filteredOptions.map((opt, idx) => {
+                const isSelected = values.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(
+                        isSelected
+                          ? values.filter((v) => v !== opt.value)
+                          : [...values, opt.value]
+                      );
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                      isSelected
+                        ? "bg-blue-50 text-blue-700 font-medium"
+                        : "hover:bg-gray-50 text-gray-700"
+                    } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                    <span className="truncate">{opt.label}</span>
+                    {isSelected && (
+                      <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── SimpleDropdown ──────────────────────────────────────────────────────────
 interface SimpleOption {
   value: string;
@@ -781,7 +915,10 @@ function MiniCalendar({
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
-export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
+export function InvoicesSidebar({
+  onFiltersChange,
+  showMisaEmployeeFilter = false,
+}: InvoicesSidebarProps) {
   const { data: branches } = useBranches();
   const activeBranches = useMemo(
     () => (branches ?? []).filter((b: any) => b.isActive),
@@ -791,6 +928,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
   const { data: bankAccounts } = useBankAccountsForPayment();
+  const { data: misaEmployees } = useMisaEmployees();
   const { selectedBranch } = useBranchStore();
 
   // Restore filter state từ sessionStorage
@@ -806,10 +944,20 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   };
   const saved = useRef(getSavedFilters());
 
-  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>(
-    saved.current?.selectedBranchIds ??
-      (selectedBranch ? [selectedBranch.id] : [])
-  );
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>(() => {
+    const savedIds = saved.current?.selectedBranchIds;
+    if (Array.isArray(savedIds)) {
+      // Giữ nguyên filter nhiều chi nhánh (>=2) user đã chủ động chọn.
+      if (savedIds.length >= 2) return savedIds;
+      // Giữ nguyên lựa chọn "Tất cả chi nhánh" (mảng rỗng) user đã chủ động chọn.
+      if (savedIds.length === 0) return [];
+    }
+    // Còn lại (1 chi nhánh hoặc chưa có gì): bám theo chi nhánh đang chọn ở
+    // DashboardHeader. Quan trọng vì khi đổi chi nhánh ở header, guard
+    // unmount→mount lại sidebar, nên không thể dựa vào sessionStorage cũ.
+    if (selectedBranch) return [selectedBranch.id];
+    return Array.isArray(savedIds) ? savedIds : [];
+  });
   const [customerId, setCustomerId] = useState(saved.current?.customerId || "");
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
@@ -829,6 +977,9 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
   const [toDate, setToDate] = useState(saved.current?.toDate || "");
   const [creatorIds, setCreatorIds] = useState<string[]>(saved.current?.creatorIds || []);
   const [soldByIds, setSoldByIds] = useState<string[]>(saved.current?.soldByIds || []);
+  const [misaEmployeeCodes, setMisaEmployeeCodes] = useState<string[]>(
+    saved.current?.misaEmployeeCodes || []
+  );
   const [saleChannelId, setSaleChannelId] = useState(
     saved.current?.saleChannelId || ""
   );
@@ -862,6 +1013,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
       saleChannelId,
       paymentMethod,
       selectedBankAccountIds,
+      misaEmployeeCodes,
     };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [
@@ -878,10 +1030,14 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     saleChannelId,
     paymentMethod,
     selectedBankAccountIds,
+    misaEmployeeCodes,
   ]);
 
-  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó
-  // Skip lần mount đầu tiên (hydrate) để không ghi đè sessionStorage đã restore
+  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó.
+  // - Skip lần mount đầu tiên (hydrate) để không ghi đè sessionStorage đã restore.
+  // - Chỉ ghi đè khi sidebar đang ở chế độ "bám theo header" (đúng 1 chi nhánh).
+  //   Nếu user đang lọc nhiều chi nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng) thì
+  //   giữ nguyên, không ghi đè bằng chi nhánh mới chọn trên header.
   const isFirstRenderRef = useRef(true);
   const lastSyncedBranchIdRef = useRef<number | null>(
     selectedBranch?.id ?? null
@@ -895,7 +1051,9 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     }
     if (currentBranchId !== lastSyncedBranchIdRef.current) {
       lastSyncedBranchIdRef.current = currentBranchId;
-      setSelectedBranchIds(currentBranchId ? [currentBranchId] : []);
+      setSelectedBranchIds((prev) =>
+        prev.length === 1 ? (currentBranchId ? [currentBranchId] : []) : prev
+      );
     }
   }, [selectedBranch?.id]);
 
@@ -929,6 +1087,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     if (soldByIds.length > 0) n++;
     if (saleChannelId) n++;
     if (paymentMethod) n++;
+    if (showMisaEmployeeFilter && misaEmployeeCodes.length > 0) n++;
     return n;
   }, [
     selectedBranchIds,
@@ -939,6 +1098,8 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     soldByIds,
     saleChannelId,
     paymentMethod,
+    misaEmployeeCodes,
+    showMisaEmployeeFilter,
   ]);
 
   useEffect(() => {
@@ -978,6 +1139,10 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
       if (paymentMethod) f.paymentMethod = paymentMethod;
       if (paymentMethod === "transfer" && selectedBankAccountIds.length > 0)
         f.bankAccountIds = selectedBankAccountIds;
+      // Chỉ áp filter nhân viên phụ trách ở trang bật flag (hóa đơn VAT) — tránh
+      // rò filter sang trang hóa đơn thường vì hai trang share sessionStorage.
+      if (showMisaEmployeeFilter && misaEmployeeCodes.length > 0)
+        f.misaEmployeeCodes = misaEmployeeCodes;
 
       onFiltersChange(f);
     }, 300);
@@ -996,6 +1161,8 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     saleChannelId,
     paymentMethod,
     selectedBankAccountIds,
+    misaEmployeeCodes,
+    showMisaEmployeeFilter,
   ]);
 
   const clearAll = () => {
@@ -1013,6 +1180,7 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
     setSaleChannelId("");
     setPaymentMethod("");
     setSelectedBankAccountIds([]);
+    setMisaEmployeeCodes([]);
     onFiltersChange({});
     sessionStorage.removeItem(STORAGE_KEY);
   };
@@ -1264,6 +1432,20 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
 
         <div className="border-t border-gray-100" />
 
+        {/* ── Chi nhánh ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Chi nhánh
+          </label>
+          <BranchMultiSelectDropdown
+            branches={activeBranches}
+            selectedIds={selectedBranchIds}
+            onChange={setSelectedBranchIds}
+          />
+        </div>
+
+        <div className="border-t border-gray-100" />
+
         {/* ── Trạng thái hóa đơn ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1434,17 +1616,6 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
 
         <div className="border-t border-gray-100" />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Chi nhánh
-          </label>
-          <BranchMultiSelectDropdown
-            branches={activeBranches}
-            selectedIds={selectedBranchIds}
-            onChange={setSelectedBranchIds}
-          />
-        </div>
-
         {/* ── Người tạo ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1480,6 +1651,27 @@ export function InvoicesSidebar({ onFiltersChange }: InvoicesSidebarProps) {
             onChange={setSoldByIds}
           />
         </div>
+
+        {/* ── Nhân viên phụ trách (Misa) — chỉ hiện ở trang hóa đơn VAT ── */}
+        {showMisaEmployeeFilter && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nhân viên phụ trách
+            </label>
+            <SearchableMultiDropdown
+              options={
+                misaEmployees?.map((e) => ({
+                  value: e.code,
+                  label: e.name || e.code,
+                })) ?? []
+              }
+              values={misaEmployeeCodes}
+              placeholder="Tất cả"
+              searchPlaceholder="Tìm theo tên nhân viên..."
+              onChange={setMisaEmployeeCodes}
+            />
+          </div>
+        )}
 
         {/* ── Kênh bán ── */}
         {/* <div>

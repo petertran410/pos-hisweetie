@@ -1,6 +1,15 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { misaApi } from "../api/misa";
 import { toast } from "sonner";
+
+/** Danh sách nhân viên phụ trách (Misa) cho dropdown filter */
+export function useMisaEmployees() {
+  return useQuery({
+    queryKey: ["misa-employees"],
+    queryFn: () => misaApi.getEmployees(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
 /** Invalidate cả list + totals của trang hóa đơn VAT sau mỗi thao tác Misa */
 function useInvalidateVat() {
@@ -66,6 +75,30 @@ export function useDeleteVoucher() {
     },
     onError: (error: any) => {
       toast.error(error?.message || "Xóa chứng từ Misa thất bại");
+    },
+  });
+}
+
+/** Đẩy hàng loạt hóa đơn lên Misa theo danh sách mã */
+export function useCreateVouchersBulk() {
+  const invalidate = useInvalidateVat();
+  return useMutation({
+    mutationFn: (invoiceCodes: string[]) =>
+      misaApi.createVouchersBulk(invoiceCodes),
+    onSuccess: (res) => {
+      if (res.failedCount === 0) {
+        toast.success(res.message || "Đẩy hàng loạt thành công");
+      } else if (res.successCount > 0) {
+        toast.success(
+          `Đẩy thành công ${res.successCount}/${res.total} hóa đơn, ${res.failedCount} thất bại`
+        );
+      } else {
+        toast.error(`Tất cả ${res.total} hóa đơn đẩy thất bại`);
+      }
+      invalidate();
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || "Đẩy hàng loạt thất bại");
     },
   });
 }
