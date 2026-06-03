@@ -644,8 +644,7 @@ export function InvoiceDetailRow({
               {/* Action footer */}
               <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
                 <div className="flex gap-2">
-                  {/* TODO: Khôi phục logic ràng quyền + trạng thái cho nút "Hủy" khi cần
-                  {(canCancel && hasPermCancel) && (
+                  {canCancel && hasPermCancel && (
                     <button
                       onClick={handleCancel}
                       disabled={isSaving}
@@ -653,13 +652,6 @@ export function InvoiceDetailRow({
                       {isSaving ? "Đang xử lý..." : "Hủy"}
                     </button>
                   )}
-                  */}
-                  <button
-                    onClick={handleCancel}
-                    disabled={isSaving}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    {isSaving ? "Đang xử lý..." : "Hủy"}
-                  </button>
                   <button
                     onClick={handleCopy}
                     title="Sao chép hóa đơn sang tab mới"
@@ -669,8 +661,7 @@ export function InvoiceDetailRow({
                   </button>
                 </div>
                 <div className="flex gap-2">
-                  {/* TODO: Khôi phục logic ràng quyền + trạng thái cho nút "Xử lý hóa đơn" khi cần
-                  {(canProcess && hasPermUpdate) && (
+                  {canProcess && hasPermUpdate && (
                     <button
                       onClick={handleProcessInvoice}
                       disabled={isSaving}
@@ -678,13 +669,6 @@ export function InvoiceDetailRow({
                       Xử lý hóa đơn
                     </button>
                   )}
-                  */}
-                  <button
-                    onClick={handleProcessInvoice}
-                    disabled={isSaving}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                    Xử lý hóa đơn
-                  </button>
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
