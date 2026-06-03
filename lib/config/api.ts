@@ -93,6 +93,9 @@ export const apiClient = {
     const url = new URL(`${API_URL}${endpoint}`);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
+        // Bỏ qua các param meta chỉ dùng ở client (prefix "_", vd "_preset").
+        // Backend bật ValidationPipe forbidNonWhitelisted → gửi lên sẽ bị 400.
+        if (key.startsWith("_")) return;
         if (value !== undefined && value !== null) {
           if (Array.isArray(value)) {
             value.forEach((v) => url.searchParams.append(key, String(v)));

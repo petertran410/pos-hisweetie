@@ -5,7 +5,7 @@ import { useQueries } from "@tanstack/react-query";
 import { useOrders } from "@/lib/hooks/useOrders";
 import { useBranchStore } from "@/lib/store/branch";
 import { ordersApi } from "@/lib/api/orders";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, getDateRangeFromPreset } from "@/lib/utils";
 import type { Order } from "@/lib/types/order";
 import {
   Search,
@@ -72,8 +72,7 @@ const ACTIVE_FILTER_KEYS = [
   "status",
   "customerId",
   "branchId",
-  "fromDate",
-  "toDate",
+  "_preset",
   "paymentStatus",
 ];
 
@@ -198,8 +197,13 @@ function OrdersMobileFilterSheet({
       orderDirection: "desc",
     };
     if (localStatus) newFilters.status = localStatus;
-    if (localPreset && localPreset !== "all_time")
+    if (localPreset && localPreset !== "all_time") {
+      // _preset chỉ là marker UI; gửi lên backend bằng fromCreatedDate/toCreatedDate.
+      const range = getDateRangeFromPreset(localPreset);
       newFilters._preset = localPreset;
+      newFilters.fromCreatedDate = range.from.toISOString();
+      newFilters.toCreatedDate = range.to.toISOString();
+    }
     onApply(newFilters);
   };
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useInvoicesVat } from "@/lib/hooks/useInvoices";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, getDateRangeFromPreset } from "@/lib/utils";
 import type { InvoiceVat } from "@/lib/api/invoices";
 import {
   Search,
@@ -70,8 +70,7 @@ const ACTIVE_FILTER_KEYS = [
   "statusIds",
   "customerId",
   "branchId",
-  "fromDate",
-  "toDate",
+  "_preset",
 ];
 
 function MisaStatusBadge({ status }: { status?: MisaStatus }) {
@@ -184,8 +183,13 @@ function HoaDonVatMobileFilterSheet({
       orderBy: "createdAt",
       orderDirection: "desc",
     };
-    if (localPreset && localPreset !== "all_time")
+    if (localPreset && localPreset !== "all_time") {
+      // _preset chỉ là marker UI; gửi lên backend bằng fromCreatedDate/toCreatedDate.
+      const range = getDateRangeFromPreset(localPreset);
       newFilters._preset = localPreset;
+      newFilters.fromCreatedDate = range.from.toISOString();
+      newFilters.toCreatedDate = range.to.toISOString();
+    }
     onApply(newFilters);
   };
 
