@@ -31,12 +31,13 @@ export function useOrder(id: number) {
 export function useProductPriceHistory(
   customerId?: number,
   productId?: number,
-  type?: "order" | "invoice"
+  type?: "order" | "invoice",
+  branchId?: number
 ) {
   return useQuery({
-    queryKey: ["product-price-history", customerId, productId, type],
+    queryKey: ["product-price-history", customerId, productId, type, branchId ?? null],
     queryFn: () =>
-      ordersApi.getProductPriceHistory(customerId!, productId!, type),
+      ordersApi.getProductPriceHistory(customerId!, productId!, type, branchId),
     enabled: !!customerId && !!productId,
   });
 }

@@ -13,6 +13,7 @@ interface ProductPriceHistoryProps {
   customerId?: number;
   productId: number;
   documentType: "order" | "invoice";
+  branchId?: number;
 }
 
 const POPUP_WIDTH = 320;
@@ -21,6 +22,7 @@ export function ProductPriceHistory({
   customerId,
   productId,
   documentType,
+  branchId,
 }: ProductPriceHistoryProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -31,7 +33,8 @@ export function ProductPriceHistory({
   const { data: history = [], isLoading } = useProductPriceHistory(
     customerId,
     productId,
-    documentType
+    documentType,
+    branchId
   );
 
   // Đảm bảo portal chỉ render sau khi client mount — tránh hydration mismatch
