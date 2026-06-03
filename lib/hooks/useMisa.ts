@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { misaApi } from "../api/misa";
+import { misaApi, MisaBuyerOverride } from "../api/misa";
 import { toast } from "sonner";
 
 /** Danh sách nhân viên phụ trách (Misa) cho dropdown filter */
@@ -25,7 +25,10 @@ function useInvalidateVat() {
 export function useCreateVoucher() {
   const invalidate = useInvalidateVat();
   return useMutation({
-    mutationFn: (invoiceCode: string) => misaApi.createVoucher(invoiceCode),
+    mutationFn: (vars: {
+      invoiceCode: string;
+      buyerOverride?: MisaBuyerOverride;
+    }) => misaApi.createVoucher(vars.invoiceCode, vars.buyerOverride),
     onSuccess: (res) => {
       if (res.success) {
         toast.success(res.message || "Đẩy hóa đơn lên Misa thành công");
@@ -84,8 +87,10 @@ export function useDeleteVoucher() {
 export function useCreateVouchersBulk() {
   const invalidate = useInvalidateVat();
   return useMutation({
-    mutationFn: (invoiceCodes: string[]) =>
-      misaApi.createVouchersBulk(invoiceCodes),
+    mutationFn: (vars: {
+      invoiceCodes: string[];
+      buyerOverrides?: Record<string, MisaBuyerOverride>;
+    }) => misaApi.createVouchersBulk(vars.invoiceCodes, vars.buyerOverrides),
     onSuccess: (res) => {
       if (res.failedCount === 0) {
         toast.success(res.message || "Đẩy hàng loạt thành công");

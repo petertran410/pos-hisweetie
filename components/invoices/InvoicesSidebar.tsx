@@ -975,8 +975,12 @@ export function InvoicesSidebar({
   );
   const [fromDate, setFromDate] = useState(saved.current?.fromDate || "");
   const [toDate, setToDate] = useState(saved.current?.toDate || "");
-  const [creatorIds, setCreatorIds] = useState<string[]>(saved.current?.creatorIds || []);
-  const [soldByIds, setSoldByIds] = useState<string[]>(saved.current?.soldByIds || []);
+  const [creatorIds, setCreatorIds] = useState<string[]>(
+    saved.current?.creatorIds || []
+  );
+  const [soldByIds, setSoldByIds] = useState<string[]>(
+    saved.current?.soldByIds || []
+  );
   const [misaEmployeeCodes, setMisaEmployeeCodes] = useState<string[]>(
     saved.current?.misaEmployeeCodes || []
   );
@@ -1121,7 +1125,8 @@ export function InvoicesSidebar({
       const f: any = {};
       if (selectedBranchIds.length > 0) f.branchIds = selectedBranchIds;
       if (customerId) f.customerIds = [parseInt(customerId)];
-      if (selectedStatuses.length > 0) f.statusIds = selectedStatuses.map(Number);
+      if (selectedStatuses.length > 0)
+        f.statusIds = selectedStatuses.map(Number);
       if (selectedDeliveryStatus) f.deliveryStatus = selectedDeliveryStatus;
       if (creatorIds.length > 0) f.createdByIds = creatorIds.map(Number);
       if (soldByIds.length > 0) f.soldByIds = soldByIds.map(Number);
@@ -1459,6 +1464,27 @@ export function InvoicesSidebar({
           />
         </div>
 
+        {/* ── Nhân viên phụ trách (Misa) — chỉ hiện ở trang hóa đơn VAT ── */}
+        {showMisaEmployeeFilter && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nhân viên phụ trách
+            </label>
+            <SearchableMultiDropdown
+              options={
+                misaEmployees?.map((e) => ({
+                  value: e.code,
+                  label: e.name || e.code,
+                })) ?? []
+              }
+              values={misaEmployeeCodes}
+              placeholder="Tất cả"
+              searchPlaceholder="Tìm theo tên nhân viên..."
+              onChange={setMisaEmployeeCodes}
+            />
+          </div>
+        )}
+
         {/* ── Trạng thái giao hàng ── */}
         {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1651,27 +1677,6 @@ export function InvoicesSidebar({
             onChange={setSoldByIds}
           />
         </div>
-
-        {/* ── Nhân viên phụ trách (Misa) — chỉ hiện ở trang hóa đơn VAT ── */}
-        {showMisaEmployeeFilter && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nhân viên phụ trách
-            </label>
-            <SearchableMultiDropdown
-              options={
-                misaEmployees?.map((e) => ({
-                  value: e.code,
-                  label: e.name || e.code,
-                })) ?? []
-              }
-              values={misaEmployeeCodes}
-              placeholder="Tất cả"
-              searchPlaceholder="Tìm theo tên nhân viên..."
-              onChange={setMisaEmployeeCodes}
-            />
-          </div>
-        )}
 
         {/* ── Kênh bán ── */}
         {/* <div>

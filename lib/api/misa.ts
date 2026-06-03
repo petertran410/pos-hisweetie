@@ -43,6 +43,16 @@ export interface MisaBulkVoucherResult {
   }>;
 }
 
+/**
+ * Thông tin người mua ghi đè (nhập tay trên giao diện hóa đơn VAT).
+ * Chỉ có hiệu lực khi cả 3 trường đều có dữ liệu (backend tự kiểm tra).
+ */
+export interface MisaBuyerOverride {
+  taxCode?: string;
+  buyerName?: string;
+  buyerAddress?: string;
+}
+
 export const misaApi = {
   /** Danh sách nhân viên phụ trách (Misa account object, isEmployee = true) */
   getEmployees: (): Promise<MisaEmployee[]> => {
@@ -54,14 +64,24 @@ export const misaApi = {
   },
   /** Đẩy hàng loạt hóa đơn lên Misa theo danh sách mã */
   createVouchersBulk: (
-    invoiceCodes: string[]
+    invoiceCodes: string[],
+    buyerOverrides?: Record<string, MisaBuyerOverride>
   ): Promise<MisaBulkVoucherResult> => {
-    return apiClient.post(`/misa/voucher/bulk-create`, { invoiceCodes });
+    return apiClient.post(`/misa/voucher/bulk-create`, {
+      invoiceCodes,
+      ...(buyerOverrides && Object.keys(buyerOverrides).length > 0
+        ? { buyerOverrides }
+        : {}),
+    });
   },
   /** Đẩy 1 hóa đơn lên Misa (sinh chứng từ bán hàng) */
-  createVoucher: (invoiceCode: string): Promise<MisaVoucherResult> => {
+  createVoucher: (
+    invoiceCode: string,
+    buyerOverride?: MisaBuyerOverride
+  ): Promise<MisaVoucherResult> => {
     return apiClient.post(
-      `/misa/voucher/create/${encodeURIComponent(invoiceCode)}`
+      `/misa/voucher/create/${encodeURIComponent(invoiceCode)}`,
+      buyerOverride ? { buyerOverride } : undefined
     );
   },
   /** Retry các hóa đơn đẩy Misa bị FAILED */

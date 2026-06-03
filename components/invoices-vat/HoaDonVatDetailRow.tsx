@@ -18,10 +18,16 @@ import { printDeliverySlip } from "@/lib/utils/print";
 import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 import { CodeLink } from "../shared/CodeLink";
+import {
+  InvoiceBuyerTaxInfo,
+  InvoiceBuyerInfoValue,
+} from "./InvoiceBuyerTaxInfo";
 
 interface HoaDonVatDetailRowProps {
   invoiceId: number;
   colSpan: number;
+  buyerInfo: InvoiceBuyerInfoValue;
+  onBuyerInfoChange: (next: InvoiceBuyerInfoValue) => void;
 }
 
 const getInvoiceStatusBadgeColor = (status: number) => {
@@ -50,6 +56,8 @@ const getInvoiceStatusBadgeColor = (status: number) => {
 export function HoaDonVatDetailRow({
   invoiceId,
   colSpan,
+  buyerInfo,
+  onBuyerInfoChange,
 }: HoaDonVatDetailRowProps) {
   const { data: invoice, isLoading } = useInvoice(invoiceId);
   const updateInvoice = useUpdateInvoice();
@@ -311,6 +319,12 @@ export function HoaDonVatDetailRow({
                       </div>
                     </div>
                   )}
+
+                  {/* Thông tin xuất hóa đơn (chỉ hiển thị, không lưu) */}
+                  <InvoiceBuyerTaxInfo
+                    value={buyerInfo}
+                    onChange={onBuyerInfoChange}
+                  />
 
                   <div>
                     <div className="flex items-center justify-between mb-3">

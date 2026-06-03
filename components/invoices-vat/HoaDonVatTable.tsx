@@ -33,6 +33,8 @@ import {
 } from "lucide-react";
 import type { InvoiceVat } from "@/lib/api/invoices";
 import { HoaDonVatDetailRow } from "@/components/invoices-vat/HoaDonVatDetailRow";
+import type { InvoiceBuyerInfoValue } from "@/components/invoices-vat/InvoiceBuyerTaxInfo";
+import type { MisaBuyerOverride } from "@/lib/api/misa";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
@@ -298,6 +300,84 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
+  // Thông tin xuất hóa đơn nhập tay theo từng hóa đơn (key = invoice.id).
+  // Chỉ khi cả 3 ô (MST, tên người mua, địa chỉ) đều có dữ liệu thì mới gửi
+  // override khi đẩy Misa; ngược lại backend dùng thông tin từ database.
+  // Lưu vào localStorage để không mất khi F5 / chuyển trang (không lưu DB).
+  // Mỗi mục có thời hạn BUYER_INFO_TTL_MS — quá hạn sẽ tự bị dọn khi mở trang.
+  const BUYER_INFO_STORAGE_KEY = "hoaDonVatBuyerInfo";
+  const BUYER_INFO_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 ngày kể từ lần sửa cuối
+
+  const [buyerInfoMap, setBuyerInfoMap] = useState<
+    Record<number, { value: InvoiceBuyerInfoValue; savedAt: number }>
+  >(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const saved = localStorage.getItem(BUYER_INFO_STORAGE_KEY);
+      if (!saved) return {};
+      const parsed = JSON.parse(saved) as Record<
+        number,
+        { value: InvoiceBuyerInfoValue; savedAt: number }
+      >;
+      const now = Date.now();
+      const fresh: Record<
+        number,
+        { value: InvoiceBuyerInfoValue; savedAt: number }
+      > = {};
+      for (const [id, entry] of Object.entries(parsed)) {
+        if (
+          entry &&
+          typeof entry.savedAt === "number" &&
+          now - entry.savedAt < BUYER_INFO_TTL_MS
+        ) {
+          fresh[Number(id)] = entry;
+        }
+      }
+      return fresh;
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(
+        BUYER_INFO_STORAGE_KEY,
+        JSON.stringify(buyerInfoMap)
+      );
+    } catch {
+      // localStorage đầy hoặc bị chặn — bỏ qua, vẫn dùng được trong phiên.
+    }
+  }, [buyerInfoMap]);
+
+  const getBuyerInfo = (inv: InvoiceVat): InvoiceBuyerInfoValue =>
+    buyerInfoMap[inv.id]?.value ?? {
+      taxCode:
+        inv.customer?.taxCode || inv.customer?.identificationNumber || "",
+      buyerName: inv.customer?.invoiceBuyerName || "",
+      buyerAddress: inv.customer?.invoiceAddress || "",
+    };
+
+  const setBuyerInfo = (id: number, next: InvoiceBuyerInfoValue) =>
+    setBuyerInfoMap((prev) => ({
+      ...prev,
+      [id]: { value: next, savedAt: Date.now() },
+    }));
+
+  /** Trả về override nếu cả 3 ô đều có dữ liệu, ngược lại undefined. */
+  const buildBuyerOverride = (
+    info: InvoiceBuyerInfoValue
+  ): MisaBuyerOverride | undefined => {
+    const taxCode = (info.taxCode || "").trim();
+    const buyerName = (info.buyerName || "").trim();
+    const buyerAddress = (info.buyerAddress || "").trim();
+    if (taxCode && buyerName && buyerAddress) {
+      return { taxCode, buyerName, buyerAddress };
+    }
+    return undefined;
+  };
+
   const createVoucher = useCreateVoucher();
   const retryVouchers = useRetryVouchers();
   const deleteVoucher = useDeleteVoucher();
@@ -536,7 +616,10 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
       confirmButtonColor: "#2563eb",
     });
     if (result.isConfirmed) {
-      createVoucher.mutate(invoice.code);
+      createVoucher.mutate({
+        invoiceCode: invoice.code,
+        buyerOverride: buildBuyerOverride(getBuyerInfo(invoice)),
+      });
     }
   };
 
@@ -573,9 +656,17 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
 
   const handleBulkPush = async () => {
     if (selectedIds.length === 0) return;
-    const selectedCodes = invoices
-      .filter((inv) => selectedIds.includes(inv.id))
-      .map((inv) => inv.code);
+    const selectedInvoices = invoices.filter((inv) =>
+      selectedIds.includes(inv.id)
+    );
+    const selectedCodes = selectedInvoices.map((inv) => inv.code);
+
+    // Gom override theo mã hóa đơn (chỉ những hóa đơn nhập đủ 3 ô).
+    const buyerOverrides: Record<string, MisaBuyerOverride> = {};
+    for (const inv of selectedInvoices) {
+      const override = buildBuyerOverride(getBuyerInfo(inv));
+      if (override) buyerOverrides[inv.code] = override;
+    }
 
     const result = await Swal.fire({
       title: `Đẩy ${selectedCodes.length} hóa đơn lên Misa?`,
@@ -587,9 +678,12 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
       confirmButtonColor: "#2563eb",
     });
     if (result.isConfirmed) {
-      createVouchersBulk.mutate(selectedCodes, {
-        onSuccess: () => setSelectedIds([]),
-      });
+      createVouchersBulk.mutate(
+        { invoiceCodes: selectedCodes, buyerOverrides },
+        {
+          onSuccess: () => setSelectedIds([]),
+        }
+      );
     }
   };
 
@@ -1032,6 +1126,10 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                       <HoaDonVatDetailRow
                         invoiceId={invoice.id}
                         colSpan={colSpan}
+                        buyerInfo={getBuyerInfo(invoice)}
+                        onBuyerInfoChange={(next) =>
+                          setBuyerInfo(invoice.id, next)
+                        }
                       />
                     )}
                   </Fragment>
