@@ -77,12 +77,51 @@ const DATE_PRESETS = [
   { value: "all_time", label: "Toàn thời gian" },
 ];
 
+// Đổi preset → khoảng ngày lọc theo createdAt (giống InvoicesSidebar desktop).
+// Backend dùng fromCreatedDate/toCreatedDate; KHÔNG nhận "_preset" (ValidationPipe
+// forbidNonWhitelisted → 400). Vì vậy mobile phải gửi ngày đã tính sẵn.
+const getDateRangeFromPreset = (preset: string): { from: Date; to: Date } => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (preset) {
+    case "today":
+      return { from: today, to: now };
+    case "yesterday": {
+      const y = new Date(today.getTime() - 86400000);
+      return { from: y, to: new Date(y.getTime() + 86400000 - 1) };
+    }
+    case "this_week": {
+      const s = new Date(today);
+      s.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      return { from: s, to: now };
+    }
+    case "last_7_days":
+      return { from: new Date(today.getTime() - 7 * 86400000), to: now };
+    case "this_month":
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+    case "last_30_days":
+      return { from: new Date(today.getTime() - 30 * 86400000), to: now };
+    default:
+      return { from: today, to: now };
+  }
+};
+
+// Các key chỉ phục vụ UI, KHÔNG được gửi lên backend (DTO không whitelist).
+const UI_ONLY_FILTER_KEYS = ["_preset"];
+
+// Loại bỏ các key UI-only trước khi gọi API để tránh 400 (forbidNonWhitelisted).
+const toApiFilters = (f: any) => {
+  if (!f) return f;
+  const clean = { ...f };
+  for (const k of UI_ONLY_FILTER_KEYS) delete clean[k];
+  return clean;
+};
+
 const ACTIVE_FILTER_KEYS = [
   "statusIds",
   "customerId",
   "branchId",
-  "fromDate",
-  "toDate",
+  "_preset",
   "paymentStatus",
 ];
 
@@ -196,8 +235,13 @@ function InvoicesMobileFilterSheet({
       orderDirection: "desc",
     };
     if (localStatus) newFilters.statusIds = [Number(localStatus)];
-    if (localPreset && localPreset !== "all_time")
+    if (localPreset && localPreset !== "all_time") {
+      // _preset chỉ là marker UI; gửi lên backend bằng fromCreatedDate/toCreatedDate.
+      const range = getDateRangeFromPreset(localPreset);
       newFilters._preset = localPreset;
+      newFilters.fromCreatedDate = range.from.toISOString();
+      newFilters.toCreatedDate = range.to.toISOString();
+    }
     onApply(newFilters);
   };
 
@@ -333,8 +377,10 @@ export function InvoicesMobileView({
     setPage(1);
   }, [debouncedSearch, filters, activeTab]);
 
+  const apiFilters = toApiFilters(filters);
+
   const effectiveFilters = {
-    ...filters,
+    ...apiFilters,
     ...(activeTab !== "all" ? { statusIds: [Number(activeTab)] } : {}),
   };
 
@@ -353,13 +399,13 @@ export function InvoicesMobileView({
         "count-mobile",
         tab.apiStatus,
         selectedBranch?.id,
-        filters,
+        apiFilters,
       ],
       queryFn: () =>
         invoicesApi.getInvoices({
           limit: 1,
           page: 1,
-          ...filters,
+          ...apiFilters,
           ...(tab.apiStatus ? { statusIds: [Number(tab.apiStatus)] } : {}),
         }),
       staleTime: 30_000,
