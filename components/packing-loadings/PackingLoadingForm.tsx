@@ -88,6 +88,7 @@ export function PackingLoadingForm({
   };
 
   const [showLoadingByDropdown, setShowLoadingByDropdown] = useState(false);
+  const [loadingBySearch, setLoadingBySearch] = useState("");
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
   const [invoiceSearch, setInvoiceSearch] = useState("");
@@ -114,6 +115,12 @@ export function PackingLoadingForm({
     () => (branches || []).filter((b) => b.isActive),
     [branches]
   );
+  const filteredLoadingByUsers = useMemo(() => {
+    const list = users || [];
+    const q = loadingBySearch.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((u) => u.name.toLowerCase().includes(q));
+  }, [users, loadingBySearch]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -122,6 +129,7 @@ export function PackingLoadingForm({
         !loadingByDropdownRef.current.contains(event.target as Node)
       ) {
         setShowLoadingByDropdown(false);
+        setLoadingBySearch("");
       }
       if (
         branchDropdownRef.current &&
@@ -300,19 +308,36 @@ export function PackingLoadingForm({
 
               {showLoadingByDropdown && (
                 <div className="absolute z-50 left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {users?.map((user) => (
-                    <div
-                      key={user.id}
-                      onClick={() => {
-                        setLoadingById(user.id);
-                        setShowLoadingByDropdown(false);
-                      }}
-                      className={`px-4 py-2 hover:bg-gray-50 cursor-pointer ${
-                        user.id === loadingById ? "bg-blue-50" : ""
-                      }`}>
-                      {user.name}
+                  <div className="sticky top-0 bg-white p-2 border-b">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={loadingBySearch}
+                      onChange={(e) => setLoadingBySearch(e.target.value)}
+                      placeholder="Tìm người loading..."
+                      className="w-full border rounded px-3 py-2 text-sm outline-none"
+                    />
+                  </div>
+                  {filteredLoadingByUsers.length > 0 ? (
+                    filteredLoadingByUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        onClick={() => {
+                          setLoadingById(user.id);
+                          setLoadingBySearch("");
+                          setShowLoadingByDropdown(false);
+                        }}
+                        className={`px-4 py-2 hover:bg-gray-50 cursor-pointer ${
+                          user.id === loadingById ? "bg-blue-50" : ""
+                        }`}>
+                        {user.name}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-500 text-sm">
+                      Không tìm thấy người dùng
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>

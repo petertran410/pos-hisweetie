@@ -24,6 +24,8 @@ export interface CashFlow {
   usedForFinancialReporting?: number;
   createdBy: number;
   creatorName?: string;
+  collectorName?: string;
+  collectorUserId?: number;
   createdAt: string;
   updatedAt: string;
   branch?: {
@@ -41,6 +43,10 @@ export interface CashFlow {
     accountNumber: string;
   };
   creator?: {
+    id: number;
+    name: string;
+  };
+  collector?: {
     id: number;
     name: string;
   };

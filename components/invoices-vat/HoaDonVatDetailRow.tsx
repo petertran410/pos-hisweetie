@@ -1,4 +1,3 @@
-// components/invoices/InvoiceDetailRow.tsx
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -345,21 +344,21 @@ export function HoaDonVatDetailRow({
                             <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
                               Số lượng
                             </th>
-                            <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
+                            {/* <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
                               Đơn giá trước thuế
-                            </th>
+                            </th> */}
                             <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
                               Đơn giá sau thuế
                             </th>
                             <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
                               % VAT
                             </th>
-                            <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
+                            {/* <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
                               Giảm giá
-                            </th>
-                            <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
+                            </th> */}
+                            {/* <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
                               Thành tiền trước thuế
-                            </th>
+                            </th> */}
                             <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
                               Thành tiền sau thuế
                             </th>
@@ -391,8 +390,7 @@ export function HoaDonVatDetailRow({
                                       <span
                                         className="text-sm text-orange-600"
                                         title="Sản phẩm chưa map mã Misa">
-                                        {item.product?.code ||
-                                          item.productCode}{" "}
+                                        {item.product?.code || item.productCode}{" "}
                                         (chưa map Misa)
                                       </span>
                                     )}
@@ -426,11 +424,11 @@ export function HoaDonVatDetailRow({
                                       {item.quantity}
                                     </span>
                                   </td>
-                                  <td className="px-[10px] py-2 text-right">
+                                  {/* <td className="px-[10px] py-2 text-right">
                                     <span className="text-md text-gray-900">
                                       {formatCurrency(vat.unitPriceBeforeTax)}
                                     </span>
-                                  </td>
+                                  </td> */}
                                   <td className="px-[10px] py-2 text-right">
                                     <span className="text-md text-gray-900">
                                       {formatCurrency(vat.unitPriceAfterTax)}
@@ -441,18 +439,18 @@ export function HoaDonVatDetailRow({
                                       {vat.vatRate}%
                                     </span>
                                   </td>
-                                  <td className="px-[10px] py-2 text-right">
+                                  {/* <td className="px-[10px] py-2 text-right">
                                     <span className="text-md text-gray-900">
                                       {vat.discount
                                         ? formatCurrency(vat.discount)
                                         : "-"}
                                     </span>
-                                  </td>
-                                  <td className="px-[10px] py-2 text-right">
+                                  </td> */}
+                                  {/* <td className="px-[10px] py-2 text-right">
                                     <span className="text-md text-gray-900">
                                       {formatCurrency(vat.amountBeforeTax)}
                                     </span>
-                                  </td>
+                                  </td> */}
                                   <td className="px-[10px] py-2 text-right">
                                     <span className="text-md font-semibold text-blue-600">
                                       {formatCurrency(vat.amountAfterTax)}
@@ -500,7 +498,8 @@ export function HoaDonVatDetailRow({
                             <>
                               <div className="flex justify-between items-center text-md">
                                 <span className="text-gray-600">
-                                  Tổng tiền hàng ({invoice.details?.length || 0}):
+                                  Tổng tiền hàng ({invoice.details?.length || 0}
+                                  ):
                                 </span>
                                 <span className="font-semibold text-gray-900">
                                   {formatCurrency(Number(invoice.totalAmount))}

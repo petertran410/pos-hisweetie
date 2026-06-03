@@ -341,7 +341,9 @@ export function CashFlowDetailRow({
                           {cashFlow.isReceipt ? "Người thu:" : "Người chi:"}
                         </label>
                         <span className="block text-sm text-gray-900">
-                          {cashFlow.creatorName ||
+                          {cashFlow.collectorName ||
+                            cashFlow.collector?.name ||
+                            cashFlow.creatorName ||
                             cashFlow.creator?.name ||
                             "-"}
                         </span>
