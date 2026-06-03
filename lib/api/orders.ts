@@ -37,7 +37,8 @@ export const ordersApi = {
   getProductPriceHistory: (
     customerId: number,
     productId: number,
-    type?: "order" | "invoice"
+    type?: "order" | "invoice",
+    branchId?: number
   ): Promise<
     Array<{
       code: string;
@@ -54,6 +55,9 @@ export const ordersApi = {
     queryParams.append("productId", productId.toString());
     if (type) {
       queryParams.append("type", type);
+    }
+    if (branchId) {
+      queryParams.append("branchId", branchId.toString());
     }
     return apiClient.get(
       `/orders/product-price-history?${queryParams.toString()}`

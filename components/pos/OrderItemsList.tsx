@@ -14,6 +14,8 @@ import { NoteDropdown } from "./NoteDropdown";
 import { NoteTemplateModal } from "./NoteTemplateModal";
 import { ItemDiscountModal } from "./ItemDiscountModal";
 import { ProductPriceHistory } from "./ProductPriceHistory";
+import { PriceMismatchNote } from "./PriceMismatchNote";
+import type { PriceWarning } from "@/lib/utils/price-warning";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   formatCurrency,
@@ -43,6 +45,7 @@ interface CartItemsListProps {
   canEditPrice?: boolean;
   canEditDiscount?: boolean;
   canViewInventory?: boolean;
+  priceWarnings?: Record<string, PriceWarning | null>;
   className?: string;
 }
 
@@ -61,6 +64,7 @@ export function OrderItemsList({
   canEditPrice = true,
   canEditDiscount = true,
   canViewInventory = true,
+  priceWarnings,
   className,
 }: CartItemsListProps) {
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
@@ -500,6 +504,9 @@ export function OrderItemsList({
                     </button>
                   )}
                 </div>
+
+                {/* Cảnh báo lệch giá so với giá bán gần nhất */}
+                <PriceMismatchNote warning={priceWarnings?.[item.rowId]} />
               </div>
 
               {/* ── DESKTOP LAYOUT ── hidden lg:flex ──────────── */}
@@ -596,6 +603,13 @@ export function OrderItemsList({
                     </span>
                   </div>
                 </div>
+
+                {/* Cảnh báo lệch giá so với giá bán gần nhất */}
+                {priceWarnings?.[item.rowId] && (
+                  <div className="w-full flex justify-end">
+                    <PriceMismatchNote warning={priceWarnings[item.rowId]} />
+                  </div>
+                )}
               </div>
             </div>
           ))}

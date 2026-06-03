@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductSearchDropdown } from "@/components/pos/ProductSearchDropdown";
 import { OrderItemsList } from "@/components/pos/OrderItemsList";
@@ -36,6 +36,13 @@ import {
   printDeliverySlip,
   queuePrintAfterRedirect,
 } from "@/lib/utils/print";
+import { useLatestSalePrices } from "@/lib/hooks/useLatestSalePrices";
+import {
+  getPriceWarning,
+  type PriceWarning,
+} from "@/lib/utils/price-warning";
+import { formatCurrency } from "@/lib/utils";
+import Swal from "sweetalert2";
 
 export interface CartItem {
   rowId: string;
@@ -164,6 +171,93 @@ export default function BanHangPage() {
   const fromPageRef = useRef<string | null>(fromPage);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
+
+  // ── Cảnh báo lệch giá: so đơn giá hiện tại với giá bán gần nhất (hóa đơn) ──
+  const activeProductIds = useMemo(
+    () =>
+      (activeTab?.cartItems || []).map((item) => Number(item.product?.id)),
+    [activeTab?.cartItems]
+  );
+
+  const { pricesByProduct, isLoading: isLoadingLatestPrices } =
+    useLatestSalePrices(
+      activeTab?.selectedCustomer?.id,
+      activeProductIds,
+      "invoice",
+      selectedBranch?.id
+    );
+
+  // Map rowId → cảnh báo lệch giá (null nếu không lệch). Tự cập nhật khi đổi
+  // khách hàng, đổi sản phẩm hoặc sửa đơn giá.
+  const priceWarnings = useMemo(() => {
+    const map: Record<string, PriceWarning | null> = {};
+    (activeTab?.cartItems || []).forEach((item) => {
+      const latestPrice = pricesByProduct[Number(item.product?.id)];
+      const currentPrice = item.price - item.discount;
+      map[item.rowId] = getPriceWarning(currentPrice, latestPrice);
+    });
+    return map;
+  }, [activeTab?.cartItems, pricesByProduct]);
+
+  /**
+   * Hiển thị popup xác nhận nếu còn sản phẩm lệch giá so với giá bán gần nhất.
+   * Trả về true nếu được phép tiếp tục submit (không lệch giá, hoặc user chọn
+   * "Vẫn tạo"). Không chặn người dùng khi chưa lấy được giá gần nhất.
+   */
+  const confirmPriceMismatch = async (
+    documentLabel: "đơn hàng" | "hóa đơn"
+  ): Promise<boolean> => {
+    // Chưa lấy được giá gần nhất → không chặn người dùng.
+    if (isLoadingLatestPrices) return true;
+
+    const mismatched = (activeTab?.cartItems || [])
+      .map((item) => ({ item, warning: priceWarnings[item.rowId] }))
+      .filter(
+        (
+          entry
+        ): entry is { item: CartItem; warning: PriceWarning } => !!entry.warning
+      );
+
+    if (mismatched.length === 0) return true;
+
+    const directions = new Set(mismatched.map((m) => m.warning.direction));
+    const directionLabel =
+      directions.size === 1
+        ? directions.has("lower")
+          ? "thấp hơn"
+          : "cao hơn"
+        : null;
+
+    const headline = directionLabel
+      ? `Giá bán hiện tại đang ${directionLabel} giá bán gần nhất của khách hàng.`
+      : "Có sản phẩm có giá bán hiện tại khác với giá bán gần nhất của khách hàng.";
+
+    const listItems = mismatched
+      .map(
+        (m) =>
+          `<li style="margin-bottom:2px">${m.item.product?.name ?? ""}: giá gần nhất <strong>${formatCurrency(
+            m.warning.latestPrice
+          )} VNĐ</strong></li>`
+      )
+      .join("");
+
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Cảnh báo lệch giá",
+      html: `
+        <p>${headline}</p>
+        <ul style="text-align:left;margin-top:8px;padding-left:18px;font-size:14px">${listItems}</ul>
+        <p style="margin-top:8px">Bạn vẫn muốn tạo ${documentLabel} này chứ?</p>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Vẫn tạo",
+      cancelButtonText: "Huỷ / Xem lại",
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+    });
+
+    return result.isConfirmed;
+  };
 
   const [mobilePrintData, setMobilePrintData] = useState<{
     templateFor: string;
@@ -1147,6 +1241,9 @@ export default function BanHangPage() {
       return;
     }
 
+    const proceed = await confirmPriceMismatch("hóa đơn");
+    if (!proceed) return;
+
     const actualPayment = activeTab.paymentAmount || 0;
 
     try {
@@ -1562,6 +1659,9 @@ export default function BanHangPage() {
         return;
       }
 
+      const proceed = await confirmPriceMismatch("đơn hàng");
+      if (!proceed) return;
+
       const actualPayment = activeTab.paymentAmount || 0;
 
       const orderData = {
@@ -1681,6 +1781,9 @@ export default function BanHangPage() {
       return;
     }
 
+    const proceed = await confirmPriceMismatch("hóa đơn");
+    if (!proceed) return;
+
     const actualPayment = activeTab.paymentAmount || 0;
 
     const invoiceData = {
@@ -1793,6 +1896,11 @@ export default function BanHangPage() {
       );
       return;
     }
+
+    const proceed = await confirmPriceMismatch(
+      activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+    );
+    if (!proceed) return;
 
     const actualPayment = activeTab.paymentAmount || 0;
 
@@ -2060,6 +2168,7 @@ export default function BanHangPage() {
                 canEditPrice={canEditPrice}
                 canEditDiscount={canEditDiscount}
                 canViewInventory={canViewInventory}
+                priceWarnings={priceWarnings}
                 className="w-full flex-1 bg-white flex flex-col min-h-0"
               />
               {/* Mobile action buttons */}
@@ -2163,6 +2272,7 @@ export default function BanHangPage() {
                 canEditPrice={canEditPrice}
                 canEditDiscount={canEditDiscount}
                 canViewInventory={canViewInventory}
+                priceWarnings={priceWarnings}
                 className="w-full flex-1 bg-white flex flex-col min-h-0"
               />
               {/* Mobile action buttons */}
