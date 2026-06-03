@@ -5,7 +5,7 @@ import { useQueries } from "@tanstack/react-query";
 import { useInvoices } from "@/lib/hooks/useInvoices";
 import { useBranchStore } from "@/lib/store/branch";
 import { invoicesApi } from "@/lib/api/invoices";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, getDateRangeFromPreset } from "@/lib/utils";
 import type { Invoice } from "@/lib/types/invoice";
 import {
   Search,
@@ -76,35 +76,6 @@ const DATE_PRESETS = [
   { value: "last_30_days", label: "30 ngày qua" },
   { value: "all_time", label: "Toàn thời gian" },
 ];
-
-// Đổi preset → khoảng ngày lọc theo createdAt (giống InvoicesSidebar desktop).
-// Backend dùng fromCreatedDate/toCreatedDate; KHÔNG nhận "_preset" (ValidationPipe
-// forbidNonWhitelisted → 400). Vì vậy mobile phải gửi ngày đã tính sẵn.
-const getDateRangeFromPreset = (preset: string): { from: Date; to: Date } => {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  switch (preset) {
-    case "today":
-      return { from: today, to: now };
-    case "yesterday": {
-      const y = new Date(today.getTime() - 86400000);
-      return { from: y, to: new Date(y.getTime() + 86400000 - 1) };
-    }
-    case "this_week": {
-      const s = new Date(today);
-      s.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-      return { from: s, to: now };
-    }
-    case "last_7_days":
-      return { from: new Date(today.getTime() - 7 * 86400000), to: now };
-    case "this_month":
-      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
-    case "last_30_days":
-      return { from: new Date(today.getTime() - 30 * 86400000), to: now };
-    default:
-      return { from: today, to: now };
-  }
-};
 
 // Các key chỉ phục vụ UI, KHÔNG được gửi lên backend (DTO không whitelist).
 const UI_ONLY_FILTER_KEYS = ["_preset"];
