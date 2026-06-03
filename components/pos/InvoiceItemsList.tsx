@@ -409,7 +409,8 @@ export function InvoiceItemsList({
                     <ProductPriceHistory
                       customerId={selectedCustomerId}
                       productId={item.product.id}
-                      documentType="order"
+                      documentType="invoice"
+                      branchId={selectedBranch?.id}
                     />
                   )}
                   <button
