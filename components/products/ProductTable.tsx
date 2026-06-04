@@ -465,7 +465,8 @@ export function ProductsTable({
   );
 
   const { data: supplierSummary } = useOrderSuppliersConfirmedSummary(
-    productIdsForSupplier
+    productIdsForSupplier,
+    selectedBranch?.id
   );
   const supplierMap = supplierSummary || {};
 

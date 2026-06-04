@@ -62,11 +62,13 @@ export interface CreateStockAuditItem {
 
 export interface CreateStockAuditDto {
   branchId: number;
+  checkDate?: string;
   note?: string;
   items: CreateStockAuditItem[];
 }
 
 export interface UpdateStockAuditDto {
+  checkDate?: string;
   note?: string;
   items?: CreateStockAuditItem[];
 }

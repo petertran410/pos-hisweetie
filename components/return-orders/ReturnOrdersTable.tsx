@@ -254,6 +254,7 @@ export function ReturnOrdersTable({
     search,
     branchId: selectedBranch?.id,
     ...filters,
+    refundType: "returns_only", // ẩn CTN (manual_offset) khỏi trang trả hàng
   });
 
   useEffect(() => {

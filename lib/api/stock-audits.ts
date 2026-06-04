@@ -38,4 +38,17 @@ export const stockAuditsApi = {
 
   cancel: (id: number): Promise<StockAudit> =>
     apiClient.put(`/stock-audits/${id}/cancel`),
+
+  // Preview tồn tại thời điểm checkDate cho danh sách sản phẩm.
+  // Trả về map { [productId]: stockAtMoment }.
+  previewStock: (
+    branchId: number,
+    productIds: number[],
+    checkDate: string
+  ): Promise<Record<number, number>> =>
+    apiClient.post("/stock-audits/preview-stock", {
+      branchId,
+      productIds,
+      checkDate,
+    }),
 };

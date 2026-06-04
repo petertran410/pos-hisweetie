@@ -63,7 +63,13 @@ export default function TraHangPage() {
     } else if (item.status === 2) {
       setSelectedReturnOrderId(item.id);
       setModalType("confirm-refund");
-    } else if (item.status === 4) {
+    } else if (
+      item.status === 3 ||
+      item.status === 4 ||
+      item.status === 5
+    ) {
+      // Phiếu đã chốt (Yêu cầu hoàn tiền / Hoàn thành / Đã hủy):
+      // mở ConfirmRefundModal ở chế độ chỉ-xem (modal tự nhận biết qua isActionable)
       setSelectedReturnOrderId(item.id);
       setModalType("confirm-refund");
     }

@@ -22,6 +22,7 @@ import {
   Pencil,
   Trash2,
   ChevronDown,
+  Send,
 } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -347,11 +348,13 @@ function PackingMobileDetailSheet({
   onClose,
   onEdit,
   onDelete,
+  onResend,
 }: {
   item: any;
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onResend?: () => void;
 }) {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
 
@@ -519,23 +522,37 @@ function PackingMobileDetailSheet({
           </div>
 
           {/* Footer */}
-          <div className="px-4 pb-6 pt-3 border-t border-gray-100 flex-shrink-0 flex gap-2">
-            <button
-              onClick={() => {
-                if (confirm("Bạn có chắc chắn muốn xóa báo đơn này?")) {
-                  onDelete();
-                }
-              }}
-              className="flex-1 py-3 border border-red-200 text-red-600 rounded-2xl font-semibold text-sm hover:bg-red-50 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-              <Trash2 className="w-4 h-4" />
-              Xóa
-            </button>
-            <button
-              onClick={onEdit}
-              className="flex-[2] py-3 bg-blue-600 text-white rounded-2xl font-semibold text-sm hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-              <Pencil className="w-4 h-4" />
-              Sửa
-            </button>
+          <div className="px-4 pb-6 pt-3 border-t border-gray-100 flex-shrink-0 flex flex-col gap-2">
+            {onResend && typeKey === "giao-hang" && (
+              <button
+                onClick={() => {
+                  if (confirm("Gửi lại tin nhắn Zalo cho báo đơn này?")) {
+                    onResend();
+                  }
+                }}
+                className="w-full py-3 border border-emerald-200 text-emerald-700 bg-emerald-50 rounded-2xl font-semibold text-sm hover:bg-emerald-100 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
+                <Send className="w-4 h-4" />
+                Gửi lại Zalo
+              </button>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (confirm("Bạn có chắc chắn muốn xóa báo đơn này?")) {
+                    onDelete();
+                  }
+                }}
+                className="flex-1 py-3 border border-red-200 text-red-600 rounded-2xl font-semibold text-sm hover:bg-red-50 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
+                <Trash2 className="w-4 h-4" />
+                Xóa
+              </button>
+              <button
+                onClick={onEdit}
+                className="flex-[2] py-3 bg-blue-600 text-white rounded-2xl font-semibold text-sm hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
+                <Pencil className="w-4 h-4" />
+                Sửa
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -683,6 +700,7 @@ interface PackingSlipsMobileViewProps {
   onCreateLoadingClick: () => void;
   onEditClick: (item: any) => void;
   onDeleteClick: (id: number) => void;
+  onResendClick?: (id: number) => void;
 }
 
 export function PackingSlipsMobileView({
@@ -691,6 +709,7 @@ export function PackingSlipsMobileView({
   onCreateLoadingClick,
   onEditClick,
   onDeleteClick,
+  onResendClick,
 }: PackingSlipsMobileViewProps) {
   const { selectedBranch } = useBranchStore();
   const { data: branches } = useBranches();
@@ -771,6 +790,14 @@ export function PackingSlipsMobileView({
       const id = selectedItem.id;
       setSelectedItem(null);
       onDeleteClick(id);
+    }
+  };
+
+  const handleResend = () => {
+    if (selectedItem && onResendClick) {
+      const id = selectedItem.id;
+      setSelectedItem(null);
+      onResendClick(id);
     }
   };
 
@@ -924,6 +951,7 @@ export function PackingSlipsMobileView({
           onClose={() => setSelectedItem(null)}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onResend={onResendClick ? handleResend : undefined}
         />
       )}
     </div>

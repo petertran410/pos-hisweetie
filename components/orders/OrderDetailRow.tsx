@@ -30,6 +30,7 @@ import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
+import Swal from "sweetalert2";
 
 const getOrderStatusBadgeColor = (status: number) => {
   switch (status) {
@@ -186,6 +187,33 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
       toast.success("Lưu đơn hàng thành công");
     } catch (error) {
       toast.error("Không thể lưu đơn hàng");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!order) return;
+    const result = await Swal.fire({
+      title: "Kết thúc đơn hàng",
+      text: `Bạn có chắc chắn muốn chuyển đơn ${order.code} sang Hoàn thành?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Xác nhận",
+      cancelButtonText: "Hủy bỏ",
+      confirmButtonColor: "#16a34a",
+      cancelButtonColor: "#6b7280",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      setIsSaving(true);
+      await updateOrder.mutateAsync({
+        id: order.id,
+        data: { orderStatus: "completed" },
+      });
+      toast.success("Đã chuyển đơn hàng sang Hoàn thành");
+    } catch {
+      toast.error("Không thể kết thúc đơn hàng");
     } finally {
       setIsSaving(false);
     }
@@ -779,8 +807,10 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           {isSaving ? "Đang lưu..." : "Lưu"}
                         </button>
                         <button
-                          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
-                          hidden={!hasPermUpdate}>
+                          onClick={handleComplete}
+                          disabled={isSaving}
+                          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          hidden={!hasPermUpdate || isFinalState}>
                           Kết thúc
                         </button>
                         <button

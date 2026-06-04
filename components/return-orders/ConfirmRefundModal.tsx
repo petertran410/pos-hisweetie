@@ -41,6 +41,10 @@ export function ConfirmRefundModal({
 
   const refundAmount = Number(returnOrder?.refundAmount || 0);
 
+  // Chỉ phiếu ở trạng thái "Nhập hàng trả" (STOCK_RECEIVED = 2) mới được
+  // xác nhận hoàn tiền. Các trạng thái khác (3/4/5) mở ở chế độ chỉ-xem.
+  const isActionable = returnOrder?.status === 2;
+
   // ── Tính effectiveRefundAmount: phần dư vượt quá nợ còn lại
   const invoiceGrandTotal = Number(returnOrder?.invoice?.grandTotal || 0);
   const invoicePaidAmount = Number(returnOrder?.invoice?.paidAmount || 0);
@@ -106,7 +110,8 @@ export function ConfirmRefundModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-lg font-semibold">
-            Xác nhận hoàn tiền - {returnOrder?.code}
+            {isActionable ? "Xác nhận hoàn tiền" : "Chi tiết phiếu trả hàng"} -{" "}
+            {returnOrder?.code}
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
             <X className="w-5 h-5" />
@@ -202,8 +207,8 @@ export function ConfirmRefundModal({
             )}
           </div>
 
-          {/* Hình thức xử lý — chỉ hiển thị khi có khoản dư */}
-          {hasExcessRefund && (
+          {/* Hình thức xử lý — chỉ hiển thị khi phiếu đang chờ xác nhận và có khoản dư */}
+          {isActionable && hasExcessRefund && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium mb-2">
@@ -345,18 +350,59 @@ export function ConfirmRefundModal({
               )}
             </div>
           )}
+
+          {/* Tóm tắt xử lý (chỉ-xem) — khi phiếu đã chốt (status 3/4/5) */}
+          {!isActionable && (
+            <div className="bg-gray-50 p-3 rounded-lg text-sm space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Hình thức xử lý:</span>
+                <span className="font-medium">
+                  {returnOrder?.refundType === "cash_refund"
+                    ? "Đã tạo phiếu chi (hoàn tiền cho khách)"
+                    : returnOrder?.refundType === "debt_offset" ||
+                        returnOrder?.refundType === "manual_offset"
+                      ? "Đã cấn trừ công nợ"
+                      : "—"}
+                </span>
+              </div>
+              {returnOrder?.refundConfirmedByName && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Người xác nhận:</span>
+                  <span className="font-medium">
+                    {returnOrder.refundConfirmedByName}
+                  </span>
+                </div>
+              )}
+              {returnOrder?.refundConfirmedAt && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Thời gian xác nhận:</span>
+                  <span className="font-medium">
+                    {new Date(returnOrder.refundConfirmedAt).toLocaleString(
+                      "vi-VN"
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Ghi chú */}
         <div className="px-4 py-3 border-t shrink-0">
           <label className="block text-sm font-medium mb-1">Ghi chú</label>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value.slice(0, 1000))}
-            maxLength={1000}
-            rows={2}
-            className="w-full px-3 py-2 border rounded-lg resize-none text-sm"
-          />
+          {isActionable ? (
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value.slice(0, 1000))}
+              maxLength={1000}
+              rows={2}
+              className="w-full px-3 py-2 border rounded-lg resize-none text-sm"
+            />
+          ) : (
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              {returnOrder?.note || "—"}
+            </p>
+          )}
         </div>
 
         {/* Footer */}
@@ -364,17 +410,19 @@ export function ConfirmRefundModal({
           <button
             onClick={onClose}
             className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">
-            Hủy
+            {isActionable ? "Hủy" : "Đóng"}
           </button>
-          <button
-            onClick={handleSubmit}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
-            {hasExcessRefund
-              ? refundType === "cash_refund"
-                ? "Xác nhận & Tạo phiếu chi"
-                : "Xác nhận & Cấn trừ nợ"
-              : "Xác nhận hoàn thành"}
-          </button>
+          {isActionable && (
+            <button
+              onClick={handleSubmit}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+              {hasExcessRefund
+                ? refundType === "cash_refund"
+                  ? "Xác nhận & Tạo phiếu chi"
+                  : "Xác nhận & Cấn trừ nợ"
+                : "Xác nhận hoàn thành"}
+            </button>
+          )}
         </div>
       </div>
     </div>

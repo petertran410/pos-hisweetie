@@ -33,6 +33,7 @@ import { useCan } from "@/lib/hooks/useCan";
 import { CancelOrderModal } from "./CancelOrderModal";
 import { CodeLink } from "../shared/CodeLink";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
+import Swal from "sweetalert2";
 
 // ─── Helpers (giống OrderDetailRow) ──────────────────────────────────────────
 const getOrderStatusBadgeColor = (status: number) => {
@@ -161,6 +162,8 @@ export function OrdersMobileDetailSheet({
       order?.status === ORDER_STATUS.PARTIALLY_INVOICED ||
       order?.status === ORDER_STATUS.CONFIRMED);
 
+  const showCompleteButton = hasPermUpdate && !isSaving && !isFinalState;
+
   // ─── Handlers (giống OrderDetailRow) ─────────────────────────────────────
   const handleCancelClick = () => {
     if (!order) return;
@@ -199,6 +202,33 @@ export function OrdersMobileDetailSheet({
       toast.success("Lưu đơn hàng thành công");
     } catch {
       toast.error("Không thể lưu đơn hàng");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!order) return;
+    const result = await Swal.fire({
+      title: "Kết thúc đơn hàng",
+      text: `Bạn có chắc chắn muốn chuyển đơn ${order.code} sang Hoàn thành?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Xác nhận",
+      cancelButtonText: "Hủy bỏ",
+      confirmButtonColor: "#16a34a",
+      cancelButtonColor: "#6b7280",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      setIsSaving(true);
+      await updateOrder.mutateAsync({
+        id: order.id,
+        data: { orderStatus: "completed" },
+      });
+      toast.success("Đã chuyển đơn hàng sang Hoàn thành");
+    } catch {
+      toast.error("Không thể kết thúc đơn hàng");
     } finally {
       setIsSaving(false);
     }
@@ -682,6 +712,15 @@ export function OrdersMobileDetailSheet({
                 ) : (
                   "Lưu"
                 )}
+              </button>
+            )}
+
+            {showCompleteButton && (
+              <button
+                onClick={handleComplete}
+                disabled={isSaving}
+                className="px-3.5 py-2.5 text-sm font-medium text-white bg-green-600 rounded-xl hover:bg-green-700 active:scale-95 transition-all disabled:opacity-50 flex-shrink-0">
+                Kết thúc
               </button>
             )}
 

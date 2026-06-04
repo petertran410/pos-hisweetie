@@ -10,6 +10,7 @@ import {
 } from "@/lib/hooks/useStockAudits";
 import { Search, Trash2, Loader2, X } from "lucide-react";
 import { StockAudit } from "@/lib/types/stock-audit";
+import { stockAuditsApi } from "@/lib/api/stock-audits";
 import { formatNumberInput } from "@/lib/utils";
 
 interface AuditItem {
@@ -28,6 +29,15 @@ interface StockAuditFormProps {
   audit?: StockAudit; // nếu có → edit mode
 }
 
+// ISO → giá trị cho <input type="datetime-local"> (giờ local, không có TZ).
+function toDatetimeLocal(iso?: string): string {
+  const d = iso ? new Date(iso) : new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+    d.getDate()
+  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
   const { selectedBranch } = useBranchStore();
   const createAudit = useCreateStockAudit();
@@ -39,6 +49,10 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [note, setNote] = useState(audit?.note || "");
+  // Thời điểm kiểm — cho phép lùi ngày (backdated) giống KiotViet.
+  const [checkDate, setCheckDate] = useState<string>(() =>
+    toDatetimeLocal(audit?.checkDate)
+  );
   const searchRef = useRef<HTMLDivElement>(null);
 
   const [items, setItems] = useState<AuditItem[]>(() => {
@@ -72,6 +86,50 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+
+  // Chi nhánh hiệu lực của phiếu (edit giữ nguyên branch của phiếu).
+  const effectiveBranchId = isEditMode ? audit!.branchId : selectedBranch?.id;
+
+  // Khóa danh sách productId để effect chỉ chạy khi tập sản phẩm đổi.
+  const productIdsKey = items.map((i) => i.productId).join(",");
+
+  // Refresh cột "Tồn kho" = tồn tại thời điểm checkDate (point-in-time) mỗi khi
+  // đổi thời điểm kiểm hoặc thêm/bớt sản phẩm. Khớp với cách backend tính lệch.
+  useEffect(() => {
+    if (!effectiveBranchId || !checkDate) return;
+    const productIds = productIdsKey
+      ? productIdsKey.split(",").map(Number).filter(Boolean)
+      : [];
+    if (productIds.length === 0) return;
+
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const iso = new Date(checkDate).toISOString();
+        const map = await stockAuditsApi.previewStock(
+          effectiveBranchId,
+          productIds,
+          iso
+        );
+        if (cancelled) return;
+        setItems((prev) =>
+          prev.map((i) =>
+            map[i.productId] != null
+              ? { ...i, onHand: Number(map[i.productId]) }
+              : i
+          )
+        );
+      } catch {
+        // im lặng — giữ giá trị onHand hiện có nếu preview lỗi
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkDate, productIdsKey, effectiveBranchId]);
 
   const addProduct = (product: any) => {
     if (items.some((i) => i.productId === product.id)) return;
@@ -123,11 +181,17 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
       note: i.note || undefined,
     }));
 
+    const checkDateIso = checkDate ? new Date(checkDate).toISOString() : undefined;
+
     if (isEditMode) {
       updateAudit.mutate(
         {
           id: audit!.id,
-          data: { note: note || undefined, items: itemsPayload },
+          data: {
+            checkDate: checkDateIso,
+            note: note || undefined,
+            items: itemsPayload,
+          },
         },
         { onSuccess: () => onClose() }
       );
@@ -136,6 +200,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
       createAudit.mutate(
         {
           branchId: selectedBranch.id,
+          checkDate: checkDateIso,
           note: note || undefined,
           items: itemsPayload,
         },
@@ -153,17 +218,24 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
       note: i.note || undefined,
     }));
 
+    const checkDateIso = checkDate ? new Date(checkDate).toISOString() : undefined;
+
     try {
       if (isEditMode) {
         await updateAudit.mutateAsync({
           id: audit!.id,
-          data: { note: note || undefined, items: itemsPayload },
+          data: {
+            checkDate: checkDateIso,
+            note: note || undefined,
+            items: itemsPayload,
+          },
         });
         await completeAudit.mutateAsync(audit!.id);
       } else {
         if (!selectedBranch) return;
         const created = await createAudit.mutateAsync({
           branchId: selectedBranch.id,
+          checkDate: checkDateIso,
           note: note || undefined,
           items: itemsPayload,
         });
@@ -208,6 +280,22 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Thời điểm kiểm — cho phép lùi ngày (backdated) */}
+        <div className="px-6 py-3 border-b flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+            Thời điểm kiểm
+          </label>
+          <input
+            type="datetime-local"
+            value={checkDate}
+            onChange={(e) => setCheckDate(e.target.value)}
+            className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <span className="text-xs text-gray-400">
+            Tồn kho lệch sẽ tính theo tồn tại đúng thời điểm này
+          </span>
         </div>
 
         {/* Search */}

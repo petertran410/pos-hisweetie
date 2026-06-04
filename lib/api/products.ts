@@ -187,5 +187,8 @@ export interface InventoryLog {
   partnerName?: string | null;
   note?: string | null;
   createdAt: string;
+  transactionDate?: string;
   createdByName?: string | null;
+  /** Tồn cuối tại thời điểm giao dịch — backend tính (neo ngược từ onHand). */
+  tonCuoi?: number;
 }

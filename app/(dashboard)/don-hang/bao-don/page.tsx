@@ -12,6 +12,7 @@ import {
   useCreatePackingSlip,
   useUpdatePackingSlip,
   useDeletePackingSlip,
+  useResendPackingSlipNotification,
 } from "@/lib/hooks/usePackingSlips";
 import {
   useCreatePackingHang,
@@ -43,6 +44,19 @@ export default function BaoDonPage() {
   const [formType, setFormType] = useState<FormType>(null);
   const [formKey, setFormKey] = useState(0);
 
+  // Search ở header của bảng (desktop) — search server-side, debounce 300ms.
+  // Khi đang lọc theo Code (URL param) → bỏ qua.
+  const [tableSearch, setTableSearch] = useState("");
+  const [debouncedTableSearch, setDebouncedTableSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedTableSearch(tableSearch), 300);
+    return () => clearTimeout(t);
+  }, [tableSearch]);
+  // Reset về trang 1 khi search thay đổi
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedTableSearch]);
+
   // Khi đang lọc theo Code: bỏ qua toàn bộ filter sidebar
   const handleFiltersChange = (newFilters: any) => {
     if (codeParam) return;
@@ -56,8 +70,18 @@ export default function BaoDonPage() {
   const [editingPackingLoading, setEditingPackingLoading] =
     useState<PackingLoading | null>(null);
 
+  // Khi user gõ ở ô search của bảng → ưu tiên hơn filters.search từ sidebar.
+  // Nếu đang có codeParam thì giữ nguyên hành vi cũ (lọc theo Code).
+  const mergedFilters = (() => {
+    if (codeParam) return filters;
+    if (debouncedTableSearch) {
+      return { ...filters, search: debouncedTableSearch };
+    }
+    return filters;
+  })();
+
   const { data, isLoading } = useAllPacking({
-    ...filters,
+    ...mergedFilters,
     pageSize: limit,
     currentItem: (page - 1) * limit,
   });
@@ -65,6 +89,7 @@ export default function BaoDonPage() {
   const createPackingSlip = useCreatePackingSlip();
   const updatePackingSlip = useUpdatePackingSlip();
   const deletePackingSlip = useDeletePackingSlip();
+  const resendPackingSlipNotification = useResendPackingSlipNotification();
 
   const createPackingHang = useCreatePackingHang();
   const updatePackingHang = useUpdatePackingHang();
@@ -199,6 +224,17 @@ export default function BaoDonPage() {
     }
   };
 
+  const handleResend = async (id: number) => {
+    try {
+      await resendPackingSlipNotification.mutateAsync(id);
+      toast.success("Đã gửi lại thông báo Zalo");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Gửi lại thông báo Zalo thất bại"
+      );
+    }
+  };
+
   const handleCloseForm = () => {
     setFormType(null);
     setEditingPackingSlip(null);
@@ -231,6 +267,9 @@ export default function BaoDonPage() {
           onCreatePackingLoadingClick={handleCreateLoadingClick}
           onEditClick={handleEditClick}
           onDeleteClick={handleDelete}
+          onResendClick={handleResend}
+          search={tableSearch}
+          onSearchChange={setTableSearch}
         />
 
         {formType === "giao-hang" && (
@@ -274,6 +313,7 @@ export default function BaoDonPage() {
             if (item) handleMobileDelete(item);
             else handleDelete(id);
           }}
+          onResendClick={handleResend}
         />
 
         {formType === "giao-hang" && (

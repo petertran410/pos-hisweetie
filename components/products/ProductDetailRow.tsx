@@ -15,7 +15,9 @@ import { ComboProductForm } from "./ComboProductForm";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { ProductInventoryLogTab } from "./ProductInventoryLogTab";
 import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
+import { ProductCustomerOrdersModal } from "./ProductCustomerOrdersModal";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
+import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import Link from "next/link";
 import { CodeLink } from "../shared/CodeLink";
@@ -43,6 +45,42 @@ function SupplierOrderCell({
     [productId],
     branch.id
   );
+  const total = data?.[productId] ?? 0;
+
+  if (isLoading) {
+    return <span className="text-gray-300">…</span>;
+  }
+
+  if (total <= 0) {
+    return <span>0</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(branch)}
+      className="text-blue-600 hover:underline font-medium">
+      {total.toLocaleString()}
+    </button>
+  );
+}
+
+/**
+ * Cell hiển thị "KH đặt" cho từng dòng (mỗi chi nhánh) trong tab Tồn kho.
+ * Đối xứng `SupplierOrderCell`: fetch summary đơn khách đang đặt (Phiếu tạm/
+ * Đã xác nhận) cho cặp (productId, branchId) — KHÔNG dùng `inv.reserved` tĩnh.
+ * Nếu > 0 → button click mở `ProductCustomerOrdersModal` lọc đúng chi nhánh.
+ */
+function CustomerOrderCell({
+  productId,
+  branch,
+  onOpen,
+}: {
+  productId: number;
+  branch: { id: number; name: string };
+  onOpen: (branch: { id: number; name: string }) => void;
+}) {
+  const { data, isLoading } = useOrdersPendingSummary([productId], branch.id);
   const total = data?.[productId] ?? 0;
 
   if (isLoading) {
@@ -107,6 +145,11 @@ export function ProductDetailRow({
   }>({ damaged: "", nearExpiry: "" });
 
   const [supplierOrdersBranch, setSupplierOrdersBranch] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+
+  const [customerOrdersBranch, setCustomerOrdersBranch] = useState<{
     id: number;
     name: string;
   } | null>(null);
@@ -727,7 +770,14 @@ export function ProductDetailRow({
                               </td>
 
                               <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
-                                {Number(inv.reserved).toLocaleString()}
+                                <CustomerOrderCell
+                                  productId={product.id}
+                                  branch={{
+                                    id: inv.branchId,
+                                    name: inv.branchName,
+                                  }}
+                                  onOpen={(b) => setCustomerOrdersBranch(b)}
+                                />
                               </td>
 
                               <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
@@ -784,6 +834,17 @@ export function ProductDetailRow({
             branchId={supplierOrdersBranch.id}
             branchName={supplierOrdersBranch.name}
             onClose={() => setSupplierOrdersBranch(null)}
+          />
+        )}
+
+        {customerOrdersBranch && (
+          <ProductCustomerOrdersModal
+            productId={product.id}
+            productName={product.name}
+            productCode={product.code}
+            branchId={customerOrdersBranch.id}
+            branchName={customerOrdersBranch.name}
+            onClose={() => setCustomerOrdersBranch(null)}
           />
         )}
       </td>

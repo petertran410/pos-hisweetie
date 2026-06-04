@@ -27,6 +27,10 @@ interface PackingSlipsTableProps {
   onCreatePackingLoadingClick: () => void;
   onEditClick: (packingSlip: PackingSlip) => void;
   onDeleteClick: (id: number) => void;
+  onResendClick?: (id: number) => void;
+  /** Search server-side: do parent điều khiển. Nếu không truyền sẽ dùng search nội bộ (client-side). */
+  search?: string;
+  onSearchChange?: (value: string) => void;
 }
 
 interface PackingSlipsTableProps {
@@ -47,8 +51,17 @@ export function PackingSlipsTable({
   onCreatePackingLoadingClick,
   onEditClick,
   onDeleteClick,
+  onResendClick,
+  search: searchProp,
+  onSearchChange,
 }: PackingSlipsTableProps) {
-  const [search, setSearch] = useState("");
+  const [internalSearch, setInternalSearch] = useState("");
+  const isControlled = searchProp !== undefined;
+  const search = isControlled ? (searchProp as string) : internalSearch;
+  const handleSearchChange = (value: string) => {
+    if (onSearchChange) onSearchChange(value);
+    if (!isControlled) setInternalSearch(value);
+  };
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [viewingExpenseFiles, setViewingExpenseFiles] =
     useState<PackingSlip | null>(null);
@@ -281,9 +294,11 @@ export function PackingSlipsTable({
     }
   }, [columns]);
 
-  const filteredSlips = packingSlips.filter((slip) =>
-    slip.code.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredSlips = isControlled
+    ? packingSlips
+    : packingSlips.filter((slip) =>
+        slip.code.toLowerCase().includes(search.toLowerCase())
+      );
 
   const visibleColumns = columns.filter((col) => col.visible);
 
@@ -302,9 +317,9 @@ export function PackingSlipsTable({
           <h2 className="text-xl font-semibold w-[150px]">Báo đơn</h2>
           <input
             type="text"
-            placeholder="Tìm theo mã báo đơn..."
+            placeholder="Tìm theo mã báo đơn, ghi chú..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -438,6 +453,21 @@ export function PackingSlipsTable({
                         className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded">
                         Sửa
                       </button>
+                      {onResendClick && slip.type === "giao-hang" && (
+                        <button
+                          onClick={() => {
+                            if (
+                              confirm(
+                                "Gửi lại tin nhắn Zalo cho báo đơn này?"
+                              )
+                            ) {
+                              onResendClick(slip.id);
+                            }
+                          }}
+                          className="px-3 py-1 text-sm text-emerald-600 hover:bg-emerald-50 rounded">
+                          Gửi lại
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           if (

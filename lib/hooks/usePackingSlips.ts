@@ -92,6 +92,31 @@ export function useDeletePackingSlip() {
   });
 }
 
+export function useResendPackingSlipNotification() {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(
+        `${API_URL}/packing-slips/${id}/resend-notification`,
+        {
+          method: "POST",
+          headers: getAuthHeaders(),
+        }
+      );
+      if (!res.ok) {
+        let message = "Gửi lại thông báo Zalo thất bại";
+        try {
+          const body = await res.json();
+          if (body?.message) message = body.message;
+        } catch {
+          // ignore parse error
+        }
+        throw new Error(message);
+      }
+      return res.json();
+    },
+  });
+}
+
 export async function uploadPackingSlipImage(file: File): Promise<string> {
   const token = useAuthStore.getState().token;
   const formData = new FormData();

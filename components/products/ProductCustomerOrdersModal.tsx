@@ -12,6 +12,13 @@ interface ProductCustomerOrdersModalProps {
   productId: number;
   productName?: string;
   productCode?: string;
+  /**
+   * Chi nhánh cần lọc. Nếu không truyền sẽ fallback về chi nhánh đang chọn ở
+   * DashboardHeader (useBranchStore). Truyền tường minh khi cần lọc theo dòng
+   * chi nhánh cụ thể (vd tab Tồn kho trong ProductDetailRow).
+   */
+  branchId?: number;
+  branchName?: string;
   onClose: () => void;
 }
 
@@ -27,13 +34,19 @@ export function ProductCustomerOrdersModal({
   productId,
   productName,
   productCode,
+  branchId,
+  branchName,
   onClose,
 }: ProductCustomerOrdersModalProps) {
   const selectedBranch = useBranchStore((s) => s.selectedBranch);
 
+  // Ưu tiên branch truyền vào (dòng chi nhánh cụ thể), fallback branch đang chọn.
+  const effectiveBranchId = branchId ?? selectedBranch?.id;
+  const effectiveBranchName = branchName ?? selectedBranch?.name;
+
   const { data, isLoading, isError, error } = useOrdersPendingByProduct(
     productId,
-    selectedBranch?.id
+    effectiveBranchId
   );
 
   const orders = data || [];
@@ -59,9 +72,9 @@ export function ProductCustomerOrdersModal({
               ) : null}
               {productCode && productName ? " — " : ""}
               {productName || ""}
-              {selectedBranch?.name ? (
+              {effectiveBranchName ? (
                 <span className="ml-2 text-gray-400">
-                  • Chi nhánh: {selectedBranch.name}
+                  • Chi nhánh: {effectiveBranchName}
                 </span>
               ) : null}
             </p>

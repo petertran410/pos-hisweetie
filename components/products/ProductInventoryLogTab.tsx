@@ -131,6 +131,9 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
             <th className="px-4 py-3 text-right font-medium text-gray-700">
               Số lượng
             </th>
+            <th className="px-4 py-3 text-right font-medium text-gray-700">
+              Tồn cuối
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -150,7 +153,7 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
                 )}
               </td>
               <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                {formatDateTime(log.createdAt)}
+                {formatDateTime(log.transactionDate || log.createdAt)}
               </td>
               <td className="px-4 py-3">
                 {TRANSACTION_TYPE_LABELS[log.transactionType] ||
@@ -169,6 +172,9 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
               </td>
               <td className="px-4 py-3 text-right font-medium">
                 {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
+              </td>
+              <td className="px-4 py-3 text-right font-medium text-gray-700">
+                {log.tonCuoi != null ? formatMoney(log.tonCuoi) : "-"}
               </td>
             </tr>
           ))}
