@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import {
   useCreateCustomer,
@@ -14,7 +14,6 @@ import { Customer } from "@/lib/types/customer";
 import { useBranchStore } from "@/lib/store/branch";
 import { useTaxCodeLookup } from "@/lib/hooks/useVietQr";
 import { sanitizeAddresses } from "@/lib/utils/sanitize-address";
-import { SearchableSelect } from "../ui/SearchableSelect";
 import { CustomerAddressFormModal } from "../pos/CustomerAddressFormModal";
 
 interface CustomerFormProps {
@@ -144,15 +143,6 @@ export function CustomerForm({
     mode: "create" | "edit";
     index?: number;
   }>({ open: false, mode: "create" });
-
-  const selectedInvoiceCityCode = watch("invoiceCityCode");
-
-  const filteredInvoiceCommunes = useMemo(() => {
-    if (!selectedInvoiceCityCode) return [];
-    return invoiceCommunes.filter(
-      (c) => String(c.provinceCode) === String(selectedInvoiceCityCode)
-    );
-  }, [selectedInvoiceCityCode, invoiceCommunes]);
 
   const formatAddressLine = (a: any): string => {
     const newLine = [a.address, a.newWardName, a.newCityName]
@@ -471,6 +461,28 @@ export function CustomerForm({
     if (validationError) {
       toast.error(validationError);
       return;
+    }
+
+    // Thông tin xuất hóa đơn: nếu đã điền 1 trong 3 trường (Tên người mua,
+    // Mã số thuế, Địa chỉ) thì bắt buộc phải điền đủ cả 3 + Email.
+    const invoiceBuyerName = (data.invoiceBuyerName || "").trim();
+    const invoiceTaxCode = (data.taxCode || "").trim();
+    const invoiceAddress = (data.invoiceAddress || "").trim();
+    const invoiceEmail = (data.invoiceEmail || "").trim();
+
+    if (invoiceBuyerName || invoiceTaxCode || invoiceAddress) {
+      const missing: string[] = [];
+      if (!invoiceBuyerName) missing.push("Tên người mua");
+      if (!invoiceTaxCode) missing.push("Mã số thuế");
+      if (!invoiceAddress) missing.push("Địa chỉ");
+      if (!invoiceEmail) missing.push("Email");
+      if (missing.length > 0) {
+        toast.error(
+          `Thông tin xuất hóa đơn: vui lòng điền đầy đủ ${missing.join(", ")}`
+        );
+        setActiveFormTab("invoice");
+        return;
+      }
     }
 
     // Sanitize addresses — loại bỏ null, extra fields, đảm bảo đúng type
@@ -978,50 +990,6 @@ export function CustomerForm({
 
                 <div>
                   <label className="block text-sm font-medium mb-1.5">
-                    Tỉnh/Thành phố
-                  </label>
-                  <SearchableSelect
-                    options={(invoiceProvinces || []).map((p) => ({
-                      value: p.code,
-                      label: p.name,
-                    }))}
-                    value={watch("invoiceCityCode") || ""}
-                    onChange={(value) => {
-                      const prov = invoiceProvinces.find(
-                        (p) => p.code === value
-                      );
-                      setValue("invoiceCityCode", value);
-                      setValue("invoiceCityName", prov?.name || "");
-                      setValue("invoiceWardCode", "");
-                      setValue("invoiceWardName", "");
-                    }}
-                    placeholder="Tìm Tỉnh/Thành phố"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Phường/Xã
-                  </label>
-                  <SearchableSelect
-                    options={filteredInvoiceCommunes.map((c) => ({
-                      value: c.code,
-                      label: c.name,
-                    }))}
-                    value={watch("invoiceWardCode") || ""}
-                    onChange={(value) => {
-                      const com = filteredInvoiceCommunes.find(
-                        (c) => c.code === value
-                      );
-                      setValue("invoiceWardCode", value);
-                      setValue("invoiceWardName", com?.name || "");
-                    }}
-                    placeholder="Tìm Phường/Xã"
-                    disabled={!watch("invoiceCityCode")}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
                     Số CCCD/CMND
                   </label>
                   <input
@@ -1113,50 +1081,6 @@ export function CustomerForm({
                     {...register("invoiceAddress")}
                     placeholder="Nhập địa chỉ"
                     className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Tỉnh/Thành phố
-                  </label>
-                  <SearchableSelect
-                    options={(invoiceProvinces || []).map((p) => ({
-                      value: p.code,
-                      label: p.name,
-                    }))}
-                    value={watch("invoiceCityCode") || ""}
-                    onChange={(value) => {
-                      const prov = invoiceProvinces.find(
-                        (p) => p.code === value
-                      );
-                      setValue("invoiceCityCode", value);
-                      setValue("invoiceCityName", prov?.name || "");
-                      setValue("invoiceWardCode", "");
-                      setValue("invoiceWardName", "");
-                    }}
-                    placeholder="Tìm Tỉnh/Thành phố"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Phường/Xã
-                  </label>
-                  <SearchableSelect
-                    options={filteredInvoiceCommunes.map((c) => ({
-                      value: c.code,
-                      label: c.name,
-                    }))}
-                    value={watch("invoiceWardCode") || ""}
-                    onChange={(value) => {
-                      const com = filteredInvoiceCommunes.find(
-                        (c) => c.code === value
-                      );
-                      setValue("invoiceWardCode", value);
-                      setValue("invoiceWardName", com?.name || "");
-                    }}
-                    placeholder="Tìm Phường/Xã"
-                    disabled={!watch("invoiceCityCode")}
                   />
                 </div>
 

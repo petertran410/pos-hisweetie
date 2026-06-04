@@ -402,12 +402,8 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
       return;
     }
 
-    if (newQuantity > currentProduct.fromInventory) {
-      toast.error(
-        `Số lượng chuyển vượt quá tồn kho (${currentProduct.fromInventory})`
-      );
-      return;
-    }
+    // Cho phép số lượng chuyển vượt quá tồn kho hiện có — tồn kho chi nhánh
+    // nguồn được phép âm (cộng dồn). Cảnh báo hiển thị trực tiếp trên bảng.
 
     const updatedProducts = [...products];
     updatedProducts[index] = {
@@ -450,12 +446,8 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
 
     if (quantity < 0) return;
 
-    if (quantity > products[index].fromInventory) {
-      toast.error(
-        `Số lượng chuyển vượt quá tồn kho (${products[index].fromInventory})`
-      );
-      return;
-    }
+    // Cho phép số lượng chuyển vượt quá tồn kho hiện có — tồn kho chi nhánh
+    // nguồn được phép âm (cộng dồn). Cảnh báo hiển thị trực tiếp trên bảng.
 
     setProducts((prev) => {
       const updated = [...prev];
@@ -775,7 +767,10 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {products.map((item, index) => (
+                      {products.map((item, index) => {
+                        const isOverStock =
+                          item.sendQuantity > item.fromInventory;
+                        return (
                         <tr
                           key={item.productId}
                           className="hover:bg-gray-50 transition-colors">
@@ -793,8 +788,18 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                               </div>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-600">
+                          <td
+                            className={`px-4 py-3 text-right ${
+                              isOverStock
+                                ? "text-red-600 font-semibold"
+                                : "text-gray-600"
+                            }`}>
                             {Number(item.fromInventory).toLocaleString()}
+                            {isOverStock && (
+                              <div className="text-[11px] font-normal text-red-500">
+                                Vượt tồn, kho sẽ âm
+                              </div>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-right text-gray-600">
                             {Number(item.toInventory).toLocaleString()}
@@ -951,7 +956,8 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                             </td>
                           )}
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

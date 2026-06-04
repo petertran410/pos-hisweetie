@@ -37,10 +37,7 @@ import {
   queuePrintAfterRedirect,
 } from "@/lib/utils/print";
 import { useLatestSalePrices } from "@/lib/hooks/useLatestSalePrices";
-import {
-  getPriceWarning,
-  type PriceWarning,
-} from "@/lib/utils/price-warning";
+import { getPriceWarning, type PriceWarning } from "@/lib/utils/price-warning";
 import { formatCurrency } from "@/lib/utils";
 import Swal from "sweetalert2";
 
@@ -174,8 +171,7 @@ export default function BanHangPage() {
 
   // ── Cảnh báo lệch giá: so đơn giá hiện tại với giá bán gần nhất (hóa đơn) ──
   const activeProductIds = useMemo(
-    () =>
-      (activeTab?.cartItems || []).map((item) => Number(item.product?.id)),
+    () => (activeTab?.cartItems || []).map((item) => Number(item.product?.id)),
     [activeTab?.cartItems]
   );
 
@@ -213,9 +209,8 @@ export default function BanHangPage() {
     const mismatched = (activeTab?.cartItems || [])
       .map((item) => ({ item, warning: priceWarnings[item.rowId] }))
       .filter(
-        (
-          entry
-        ): entry is { item: CartItem; warning: PriceWarning } => !!entry.warning
+        (entry): entry is { item: CartItem; warning: PriceWarning } =>
+          !!entry.warning
       );
 
     if (mismatched.length === 0) return true;
