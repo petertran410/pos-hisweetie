@@ -1,4 +1,5 @@
 export const RESOURCE_LABELS: Record<string, string> = {
+  dashboard: "Tổng quan",
   products: "Sản phẩm",
   categories: "Danh mục",
   trademarks: "Thương hiệu",

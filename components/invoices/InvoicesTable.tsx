@@ -80,6 +80,18 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     ),
   },
   {
+    key: "order",
+    label: "Đơn hàng",
+    visible: true,
+    width: "140px",
+    render: (inv) =>
+      inv.order?.code ? (
+        <CodeLink entity="order" code={inv.order.code} />
+      ) : (
+        "-"
+      ),
+  },
+  {
     key: "orderCode",
     label: "Mã vận đơn",
     visible: false,

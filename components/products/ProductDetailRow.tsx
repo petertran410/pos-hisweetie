@@ -661,10 +661,10 @@ export function ProductDetailRow({
                             Hàng tốt
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
-                            Đặt NCC
+                            KH đặt
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
-                            KH đặt
+                            Đặt NCC
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
                             Giá vốn
@@ -759,17 +759,6 @@ export function ProductDetailRow({
                               </td>
 
                               <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
-                                <SupplierOrderCell
-                                  productId={product.id}
-                                  branch={{
-                                    id: inv.branchId,
-                                    name: inv.branchName,
-                                  }}
-                                  onOpen={(b) => setSupplierOrdersBranch(b)}
-                                />
-                              </td>
-
-                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
                                 <CustomerOrderCell
                                   productId={product.id}
                                   branch={{
@@ -777,6 +766,17 @@ export function ProductDetailRow({
                                     name: inv.branchName,
                                   }}
                                   onOpen={(b) => setCustomerOrdersBranch(b)}
+                                />
+                              </td>
+
+                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
+                                <SupplierOrderCell
+                                  productId={product.id}
+                                  branch={{
+                                    id: inv.branchId,
+                                    name: inv.branchName,
+                                  }}
+                                  onOpen={(b) => setSupplierOrdersBranch(b)}
                                 />
                               </td>
 

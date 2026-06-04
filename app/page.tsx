@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/lib/store/auth";
+import { useCan } from "@/lib/hooks/useCan";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -73,6 +74,10 @@ function timeAgo(dateStr: string): string {
 export default function Home() {
   const router = useRouter();
   const { isAuthenticated, _hasHydrated } = useAuthStore();
+  // Dashboard chứa dữ liệu nhạy cảm — chỉ ai có quyền dashboard:view mới xem nội dung.
+  // (Seed gán sẵn cho Super Admin + Admin; cấp thêm qua trang Cài đặt → Vai trò.)
+  // Role không có quyền vẫn vào được trang nhưng phần thân để trống, không gọi API.
+  const canViewDashboard = useCan("dashboard", "view");
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -92,6 +97,13 @@ export default function Home() {
 
   useEffect(() => {
     if (!_hasHydrated || !isAuthenticated) return;
+
+    // Không có quyền dashboard:view: không gọi API dashboard (backend sẽ trả 403),
+    // tắt loading để render phần thân trống.
+    if (!canViewDashboard) {
+      setLoading(false);
+      return;
+    }
 
     const fetchData = async () => {
       try {
@@ -121,12 +133,23 @@ export default function Home() {
       }
     };
     fetchData();
-  }, [_hasHydrated, isAuthenticated]);
+  }, [_hasHydrated, isAuthenticated, canViewDashboard]);
 
   if (!_hasHydrated || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  // Không có quyền dashboard:view: chỉ hiển thị header, phần thân để trống.
+  // Không số liệu, không thông báo quyền — người dùng vẫn điều hướng qua menu.
+  if (!canViewDashboard) {
+    return (
+      <div>
+        <DashboardHeader />
+        <div className="p-6 bg-gray-50 min-h-[calc(100vh-56px)] overflow-auto" />
       </div>
     );
   }

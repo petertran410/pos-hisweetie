@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useInvoicesVat } from "@/lib/hooks/useInvoices";
+import { useBranches } from "@/lib/hooks/useBranches";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { useSearchCustomers } from "@/lib/hooks/useCustomers";
+import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
+import { useMisaEmployees } from "@/lib/hooks/useMisa";
 import { formatCurrency, formatDate, getDateRangeFromPreset } from "@/lib/utils";
 import type { InvoiceVat } from "@/lib/api/invoices";
 import {
@@ -18,6 +23,21 @@ import {
   MinusCircle,
 } from "lucide-react";
 import { InvoicesMobileDetailSheet } from "@/components/invoices/InvoicesMobileDetailSheet";
+import {
+  MobileFilterSheet,
+  FilterSection,
+  ChipGroup,
+  SearchableChecklist,
+  DateRangeFilter,
+  dateInputToIsoStart,
+  dateInputToIsoEnd,
+  isoToDateInput,
+  readMobileFilters,
+  writeMobileFilters,
+  type ChipOption,
+} from "@/components/shared/MobileFilters";
+
+const STORAGE_KEY = "invoices-vat-mobile-filters";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 type MisaStatus = "PENDING" | "SYNCED" | "FAILED" | "SKIP";
@@ -63,15 +83,63 @@ const DATE_PRESETS = [
   { value: "last_7_days", label: "7 ngày qua" },
   { value: "this_month", label: "Tháng này" },
   { value: "last_30_days", label: "30 ngày qua" },
-  { value: "all_time", label: "Toàn thời gian" },
 ];
 
-const ACTIVE_FILTER_KEYS = [
-  "statusIds",
-  "customerId",
-  "branchId",
-  "_preset",
+const FILTER_STATUS_OPTIONS: ChipOption[] = [
+  { value: "3", label: "Đang xử lý", dot: "bg-blue-400" },
+  { value: "5", label: "Đóng hàng", dot: "bg-orange-400" },
+  { value: "6", label: "Loading", dot: "bg-purple-400" },
+  { value: "7", label: "Giao thành công", dot: "bg-teal-500" },
+  { value: "1", label: "Hoàn thành", dot: "bg-green-500" },
+  { value: "4", label: "Không giao được", dot: "bg-yellow-400" },
+  { value: "8", label: "Trả hàng", dot: "bg-pink-400" },
+  { value: "2", label: "Đã hủy", dot: "bg-red-400" },
 ];
+
+const MISA_FILTER_OPTIONS: ChipOption[] = [
+  { value: "PENDING", label: "Chờ xử lý", dot: "bg-yellow-400" },
+  { value: "SYNCED", label: "Đã đồng bộ", dot: "bg-green-500" },
+  { value: "FAILED", label: "Thất bại", dot: "bg-red-400" },
+  { value: "SKIP", label: "Bỏ qua", dot: "bg-gray-400" },
+];
+
+const PAYMENT_METHOD_OPTIONS: ChipOption[] = [
+  { value: "cash", label: "Tiền mặt" },
+  { value: "transfer", label: "Ngân hàng" },
+];
+
+// Các key chỉ phục vụ UI, KHÔNG được gửi lên backend (DTO không whitelist).
+const UI_ONLY_FILTER_KEYS = [
+  "_preset",
+  "_dateMode",
+  "_fromDate",
+  "_toDate",
+  "_customerLabel",
+];
+
+// Loại bỏ các key UI-only trước khi gọi API để tránh 400 (forbidNonWhitelisted).
+const toApiFilters = (f: any) => {
+  if (!f) return f;
+  const clean = { ...f };
+  for (const k of UI_ONLY_FILTER_KEYS) delete clean[k];
+  return clean;
+};
+
+// Đếm số nhóm filter đang bật (để hiện badge). Mỗi nhóm tính 1.
+const countActiveFilters = (f: any): number => {
+  if (!f) return 0;
+  let n = 0;
+  if (Array.isArray(f.statusIds) && f.statusIds.length > 0) n++;
+  if (Array.isArray(f.misaSyncStatus) && f.misaSyncStatus.length > 0) n++;
+  if (Array.isArray(f.misaEmployeeCodes) && f.misaEmployeeCodes.length > 0) n++;
+  if (Array.isArray(f.branchIds) && f.branchIds.length > 0) n++;
+  if (Array.isArray(f.customerIds) && f.customerIds.length > 0) n++;
+  if (Array.isArray(f.createdByIds) && f.createdByIds.length > 0) n++;
+  if (Array.isArray(f.soldByIds) && f.soldByIds.length > 0) n++;
+  if (f.paymentMethod) n++;
+  if (f._preset || f.fromCreatedDate || f.toCreatedDate) n++;
+  return n;
+};
 
 function MisaStatusBadge({ status }: { status?: MisaStatus }) {
   const meta = MISA_STATUS_META[status ?? "SKIP"];
@@ -164,91 +232,376 @@ function HoaDonVatMobileFilterSheet({
   onApply: (f: any) => void;
   onClose: () => void;
 }) {
-  const [localPreset, setLocalPreset] = useState<string>(
-    filters._preset || "all_time"
+  // ── Dữ liệu cho các filter động ──
+  const { data: branches } = useBranches();
+  const activeBranches = useMemo(
+    () => (branches ?? []).filter((b: any) => b.isActive),
+    [branches]
+  );
+  const { data: users } = useUsersForFilter();
+  const { data: bankAccounts } = useBankAccountsForPayment();
+  const { data: misaEmployees } = useMisaEmployees(true);
+
+  // ── Local state ──
+  const [statusIds, setStatusIds] = useState<string[]>(
+    (filters.statusIds ?? []).map(String)
+  );
+  const [misaSyncStatus, setMisaSyncStatus] = useState<string[]>(
+    filters.misaSyncStatus ?? []
+  );
+  const [misaEmployeeCodes, setMisaEmployeeCodes] = useState<string[]>(
+    filters.misaEmployeeCodes ?? []
+  );
+  const [branchIds, setBranchIds] = useState<string[]>(
+    (filters.branchIds ?? []).map(String)
+  );
+  const [createdByIds, setCreatedByIds] = useState<string[]>(
+    (filters.createdByIds ?? []).map(String)
+  );
+  const [soldByIds, setSoldByIds] = useState<string[]>(
+    (filters.soldByIds ?? []).map(String)
+  );
+  const [paymentMethod, setPaymentMethod] = useState<string>(
+    filters.paymentMethod || ""
+  );
+  const [bankAccountIds, setBankAccountIds] = useState<string[]>(
+    (filters.bankAccountIds ?? []).map(String)
   );
 
-  // Lock scroll
+  // Khách hàng
+  const [customerIds, setCustomerIds] = useState<number[]>(
+    filters.customerIds ?? []
+  );
+  const [customerLabel, setCustomerLabel] = useState<string>(
+    filters._customerLabel || ""
+  );
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerQueryDebounced, setCustomerQueryDebounced] = useState("");
+  const { data: customerSearchData } = useSearchCustomers(
+    customerQueryDebounced || undefined
+  );
+  const customerResults = customerSearchData?.data || [];
   useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
+    const t = setTimeout(() => setCustomerQueryDebounced(customerQuery), 300);
+    return () => clearTimeout(t);
+  }, [customerQuery]);
+
+  // Thời gian
+  const [dateMode, setDateMode] = useState<"preset" | "custom">(
+    filters._dateMode || "preset"
+  );
+  const [preset, setPreset] = useState<string>(filters._preset || "all_time");
+  const [fromDate, setFromDate] = useState<string>(
+    filters._fromDate || isoToDateInput(filters.fromCreatedDate)
+  );
+  const [toDate, setToDate] = useState<string>(
+    filters._toDate || isoToDateInput(filters.toCreatedDate)
+  );
 
   const handleApply = () => {
-    const newFilters: any = {
+    const f: any = {
       pageSize: 15,
       currentItem: 0,
       orderBy: "createdAt",
       orderDirection: "desc",
     };
-    if (localPreset && localPreset !== "all_time") {
-      // _preset chỉ là marker UI; gửi lên backend bằng fromCreatedDate/toCreatedDate.
-      const range = getDateRangeFromPreset(localPreset);
-      newFilters._preset = localPreset;
-      newFilters.fromCreatedDate = range.from.toISOString();
-      newFilters.toCreatedDate = range.to.toISOString();
+
+    if (statusIds.length > 0) f.statusIds = statusIds.map(Number);
+    if (misaSyncStatus.length > 0) f.misaSyncStatus = misaSyncStatus;
+    if (misaEmployeeCodes.length > 0) f.misaEmployeeCodes = misaEmployeeCodes;
+    if (branchIds.length > 0) f.branchIds = branchIds.map(Number);
+    if (createdByIds.length > 0) f.createdByIds = createdByIds.map(Number);
+    if (soldByIds.length > 0) f.soldByIds = soldByIds.map(Number);
+    if (customerIds.length > 0) {
+      f.customerIds = customerIds;
+      f._customerLabel = customerLabel;
     }
-    onApply(newFilters);
+    if (paymentMethod) {
+      f.paymentMethod = paymentMethod;
+      if (paymentMethod === "transfer" && bankAccountIds.length > 0)
+        f.bankAccountIds = bankAccountIds.map(Number);
+    }
+
+    if (dateMode === "preset" && preset && preset !== "all_time") {
+      const range = getDateRangeFromPreset(preset);
+      f._preset = preset;
+      f.fromCreatedDate = range.from.toISOString();
+      f.toCreatedDate = range.to.toISOString();
+    } else if (dateMode === "custom" && (fromDate || toDate)) {
+      f._dateMode = "custom";
+      f._fromDate = fromDate;
+      f._toDate = toDate;
+      if (fromDate) f.fromCreatedDate = dateInputToIsoStart(fromDate);
+      if (toDate) f.toCreatedDate = dateInputToIsoEnd(toDate);
+    }
+
+    onApply(f);
   };
 
   const handleReset = () => {
-    setLocalPreset("all_time");
+    setStatusIds([]);
+    setMisaSyncStatus([]);
+    setMisaEmployeeCodes([]);
+    setBranchIds([]);
+    setCreatedByIds([]);
+    setSoldByIds([]);
+    setPaymentMethod("");
+    setBankAccountIds([]);
+    setCustomerIds([]);
+    setCustomerLabel("");
+    setCustomerQuery("");
+    setDateMode("preset");
+    setPreset("all_time");
+    setFromDate("");
+    setToDate("");
   };
 
-  const activeCount = [localPreset !== "all_time" ? localPreset : ""].filter(
-    Boolean
-  ).length;
+  const dateSummary =
+    dateMode === "custom" && (fromDate || toDate)
+      ? `${fromDate || "…"} → ${toDate || "…"}`
+      : preset !== "all_time"
+        ? DATE_PRESETS.find((p) => p.value === preset)?.label
+        : undefined;
+
+  const userOptions: ChipOption[] = (users ?? []).map((u: any) => ({
+    value: String(u.id),
+    label: u.name,
+  }));
+  const branchOptions: ChipOption[] = activeBranches.map((b: any) => ({
+    value: String(b.id),
+    label: b.name,
+  }));
+  const misaEmployeeOptions: ChipOption[] = (misaEmployees ?? []).map((e) => ({
+    value: e.code,
+    label: e.name || e.code,
+  }));
+
+  const activeCount = [
+    statusIds.length > 0,
+    misaSyncStatus.length > 0,
+    misaEmployeeCodes.length > 0,
+    branchIds.length > 0,
+    customerIds.length > 0,
+    createdByIds.length > 0,
+    soldByIds.length > 0,
+    !!paymentMethod,
+    dateMode === "custom" ? !!(fromDate || toDate) : preset !== "all_time",
+  ].filter(Boolean).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-t-3xl max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-200">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-base font-semibold text-gray-900">Bộ lọc</h3>
-          <button onClick={onClose} className="p-1 text-gray-400">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <MobileFilterSheet
+      title="Bộ lọc"
+      activeCount={activeCount}
+      onReset={handleReset}
+      onApply={handleApply}
+      onClose={onClose}>
+      {/* Trạng thái đồng bộ Misa */}
+      <FilterSection
+        label="Trạng thái Misa"
+        defaultOpen
+        summary={
+          misaSyncStatus.length > 0
+            ? `${misaSyncStatus.length} đã chọn`
+            : undefined
+        }>
+        <ChipGroup
+          options={MISA_FILTER_OPTIONS}
+          values={misaSyncStatus}
+          onChange={setMisaSyncStatus}
+        />
+      </FilterSection>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-5">
-          {/* Date preset */}
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">
-              Khoảng thời gian
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {DATE_PRESETS.map((preset) => (
-                <button
-                  key={preset.value}
-                  onClick={() => setLocalPreset(preset.value)}
-                  className={`px-3 py-2.5 text-sm rounded-xl border transition-colors ${
-                    localPreset === preset.value
-                      ? "border-blue-600 bg-blue-50 text-blue-600 font-medium"
-                      : "border-gray-200 text-gray-600"
-                  }`}>
-                  {preset.label}
-                </button>
-              ))}
+      {/* Thời gian */}
+      <FilterSection label="Thời gian" defaultOpen summary={dateSummary}>
+        <DateRangeFilter
+          presets={DATE_PRESETS}
+          mode={dateMode}
+          preset={preset}
+          fromDate={fromDate}
+          toDate={toDate}
+          onChange={(next) => {
+            setDateMode(next.mode);
+            setPreset(next.preset);
+            setFromDate(next.fromDate);
+            setToDate(next.toDate);
+          }}
+        />
+      </FilterSection>
+
+      {/* Trạng thái hóa đơn */}
+      <FilterSection
+        label="Trạng thái hóa đơn"
+        summary={
+          statusIds.length > 0 ? `${statusIds.length} đã chọn` : undefined
+        }>
+        <ChipGroup
+          options={FILTER_STATUS_OPTIONS}
+          values={statusIds}
+          onChange={setStatusIds}
+        />
+      </FilterSection>
+
+      {/* Nhân viên phụ trách (Misa) */}
+      <FilterSection
+        label="Nhân viên phụ trách"
+        summary={
+          misaEmployeeCodes.length > 0
+            ? `${misaEmployeeCodes.length} đã chọn`
+            : undefined
+        }>
+        <SearchableChecklist
+          options={misaEmployeeOptions}
+          values={misaEmployeeCodes}
+          searchPlaceholder="Tìm nhân viên..."
+          emptyText="Không có nhân viên"
+          onChange={setMisaEmployeeCodes}
+        />
+      </FilterSection>
+
+      {/* Chi nhánh */}
+      <FilterSection
+        label="Chi nhánh"
+        summary={
+          branchIds.length > 0 ? `${branchIds.length} đã chọn` : undefined
+        }>
+        <SearchableChecklist
+          options={branchOptions}
+          values={branchIds}
+          searchPlaceholder="Tìm chi nhánh..."
+          emptyText="Không có chi nhánh"
+          onChange={setBranchIds}
+        />
+      </FilterSection>
+
+      {/* Khách hàng */}
+      <FilterSection
+        label="Khách hàng"
+        summary={customerIds.length > 0 ? customerLabel : undefined}>
+        {customerIds.length > 0 ? (
+          <div className="flex items-center justify-between gap-2 border border-blue-300 bg-blue-50 rounded-xl px-3 py-2.5">
+            <span className="text-sm text-blue-700 font-medium truncate">
+              {customerLabel}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setCustomerIds([]);
+                setCustomerLabel("");
+                setCustomerQuery("");
+              }}
+              className="text-blue-400 hover:text-blue-600 flex-shrink-0">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="p-2 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <input
+                  value={customerQuery}
+                  onChange={(e) => setCustomerQuery(e.target.value)}
+                  placeholder="Tìm theo tên, SĐT, mã KH..."
+                  className="w-full pl-8 pr-2 py-2 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                />
+              </div>
+            </div>
+            <div className="max-h-52 overflow-y-auto">
+              {customerResults.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                  {customerQuery ? "Không tìm thấy" : "Nhập để tìm khách hàng"}
+                </div>
+              ) : (
+                customerResults.map((c: any, idx: number) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setCustomerIds([c.id]);
+                      setCustomerLabel(c.name);
+                      setCustomerQuery("");
+                    }}
+                    className={`w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors ${
+                      idx > 0 ? "border-t border-gray-50" : ""
+                    }`}>
+                    <div className="text-sm font-medium text-gray-800">
+                      {c.name}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {c.code ? `Mã: ${c.code}` : "Chưa có mã"}
+                      {c.contactNumber ? ` · ${c.contactNumber}` : ""}
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </div>
-        </div>
+        )}
+      </FilterSection>
 
-        <div className="flex items-center gap-3 p-4 border-t">
-          <button
-            onClick={handleReset}
-            className="flex-1 py-3 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl">
-            Đặt lại
-          </button>
-          <button
-            onClick={handleApply}
-            className="flex-1 py-3 text-sm font-medium text-white bg-blue-600 rounded-xl">
-            Áp dụng{activeCount > 0 ? ` (${activeCount})` : ""}
-          </button>
+      {/* Người tạo */}
+      <FilterSection
+        label="Người tạo"
+        summary={
+          createdByIds.length > 0 ? `${createdByIds.length} đã chọn` : undefined
+        }>
+        <SearchableChecklist
+          options={userOptions}
+          values={createdByIds}
+          searchPlaceholder="Tìm người tạo..."
+          emptyText="Không có nhân viên"
+          onChange={setCreatedByIds}
+        />
+      </FilterSection>
+
+      {/* Người bán */}
+      <FilterSection
+        label="Người bán"
+        summary={
+          soldByIds.length > 0 ? `${soldByIds.length} đã chọn` : undefined
+        }>
+        <SearchableChecklist
+          options={userOptions}
+          values={soldByIds}
+          searchPlaceholder="Tìm người bán..."
+          emptyText="Không có nhân viên"
+          onChange={setSoldByIds}
+        />
+      </FilterSection>
+
+      {/* Phương thức thanh toán */}
+      <FilterSection
+        label="Phương thức thanh toán"
+        summary={
+          PAYMENT_METHOD_OPTIONS.find((o) => o.value === paymentMethod)?.label
+        }>
+        <div className="space-y-3">
+          <ChipGroup
+            options={PAYMENT_METHOD_OPTIONS}
+            values={paymentMethod ? [paymentMethod] : []}
+            multiple={false}
+            onChange={(v) => {
+              setPaymentMethod(v[0] || "");
+              setBankAccountIds([]);
+            }}
+          />
+          {paymentMethod === "transfer" && (
+            <SearchableChecklist
+              options={(Array.isArray(bankAccounts) ? bankAccounts : []).map(
+                (a: any) => ({
+                  value: String(a.id),
+                  label: `${a.bankCode || a.bankName || ""} · ${a.accountNumber || ""}`,
+                })
+              )}
+              values={bankAccountIds}
+              searchPlaceholder="Tìm tài khoản..."
+              emptyText="Không có tài khoản"
+              onChange={setBankAccountIds}
+            />
+          )}
         </div>
-      </div>
-    </div>
+      </FilterSection>
+    </MobileFilterSheet>
   );
 }
 
@@ -262,8 +615,14 @@ export function HoaDonVatMobileView({
   filters,
   onFiltersChange,
 }: HoaDonVatMobileViewProps) {
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  // ── Filter của riêng mobile (khôi phục từ sessionStorage) ──
+  const [localFilters, setLocalFilters] = useState<any>(
+    () => readMobileFilters(STORAGE_KEY) ?? filters ?? {}
+  );
+  const [search, setSearch] = useState(
+    () => filters?.search ?? localFilters?.search ?? ""
+  );
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
@@ -271,6 +630,16 @@ export function HoaDonVatMobileView({
   );
   const [showFilter, setShowFilter] = useState(false);
   const limit = 20;
+
+  // Lưu lại filter mỗi khi đổi
+  useEffect(() => {
+    writeMobileFilters(STORAGE_KEY, localFilters);
+  }, [localFilters]);
+
+  const applyFilters = (f: any) => {
+    setLocalFilters(f);
+    onFiltersChange?.(f);
+  };
 
   // Debounce search 300ms
   useEffect(() => {
@@ -281,11 +650,17 @@ export function HoaDonVatMobileView({
   // Reset page khi filter / search / tab thay đổi
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, filters, activeTab]);
+  }, [debouncedSearch, localFilters, activeTab]);
 
+  const apiFilters = toApiFilters(localFilters);
+
+  // Tab nhanh ghi đè trạng thái Misa — chỉ khi sheet không lọc đa trạng thái Misa.
   const effectiveFilters = {
-    ...filters,
-    ...(activeTab !== "all" ? { misaSyncStatus: [activeTab] } : {}),
+    ...apiFilters,
+    ...(activeTab !== "all" &&
+    (!apiFilters.misaSyncStatus || apiFilters.misaSyncStatus.length === 0)
+      ? { misaSyncStatus: [activeTab] }
+      : {}),
   };
 
   const { data, isLoading } = useInvoicesVat({
@@ -299,9 +674,7 @@ export function HoaDonVatMobileView({
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
 
-  const activeFilterCount = ACTIVE_FILTER_KEYS.filter(
-    (k) => filters[k] != null
-  ).length;
+  const activeFilterCount = countActiveFilters(localFilters);
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -424,9 +797,9 @@ export function HoaDonVatMobileView({
       {/* ─── Filter bottom sheet ─── */}
       {showFilter && (
         <HoaDonVatMobileFilterSheet
-          filters={filters}
+          filters={localFilters}
           onApply={(f) => {
-            onFiltersChange(f);
+            applyFilters(f);
             setShowFilter(false);
           }}
           onClose={() => setShowFilter(false)}

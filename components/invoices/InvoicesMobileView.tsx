@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { useInvoices } from "@/lib/hooks/useInvoices";
+import { useBranches } from "@/lib/hooks/useBranches";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { useSearchCustomers } from "@/lib/hooks/useCustomers";
+import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { useBranchStore } from "@/lib/store/branch";
 import { invoicesApi } from "@/lib/api/invoices";
 import { formatCurrency, formatDate, getDateRangeFromPreset } from "@/lib/utils";
@@ -16,10 +20,24 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Check,
 } from "lucide-react";
 import { InvoicesMobileDetailSheet } from "./InvoicesMobileDetailSheet";
 import { CodeLink } from "../shared/CodeLink";
+import {
+  MobileFilterSheet,
+  FilterSection,
+  ChipGroup,
+  SearchableChecklist,
+  DateRangeFilter,
+  dateInputToIsoStart,
+  dateInputToIsoEnd,
+  isoToDateInput,
+  readMobileFilters,
+  writeMobileFilters,
+  type ChipOption,
+} from "../shared/MobileFilters";
+
+const STORAGE_KEY = "invoices-mobile-filters";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_TEXT: Record<number, string> = {
@@ -56,15 +74,20 @@ const MOBILE_STATUS_TABS = [
   { value: "2", label: "Đã hủy", apiStatus: "2" },
 ] as const;
 
-const FILTER_STATUS_OPTIONS = [
-  { value: "3", label: "Đang xử lý" },
-  { value: "5", label: "Đóng hàng" },
-  { value: "6", label: "Loading" },
-  { value: "7", label: "Giao thành công" },
-  { value: "1", label: "Hoàn thành" },
-  { value: "4", label: "Không giao được" },
-  { value: "8", label: "Trả hàng" },
-  { value: "2", label: "Đã hủy" },
+const FILTER_STATUS_OPTIONS: ChipOption[] = [
+  { value: "3", label: "Đang xử lý", dot: "bg-blue-400" },
+  { value: "5", label: "Đóng hàng", dot: "bg-orange-400" },
+  { value: "6", label: "Loading", dot: "bg-purple-400" },
+  { value: "7", label: "Giao thành công", dot: "bg-teal-500" },
+  { value: "1", label: "Hoàn thành", dot: "bg-green-500" },
+  { value: "4", label: "Không giao được", dot: "bg-yellow-400" },
+  { value: "8", label: "Trả hàng", dot: "bg-pink-400" },
+  { value: "2", label: "Đã hủy", dot: "bg-red-400" },
+];
+
+const PAYMENT_METHOD_OPTIONS: ChipOption[] = [
+  { value: "cash", label: "Tiền mặt" },
+  { value: "transfer", label: "Ngân hàng" },
 ];
 
 const DATE_PRESETS = [
@@ -74,11 +97,10 @@ const DATE_PRESETS = [
   { value: "last_7_days", label: "7 ngày qua" },
   { value: "this_month", label: "Tháng này" },
   { value: "last_30_days", label: "30 ngày qua" },
-  { value: "all_time", label: "Toàn thời gian" },
 ];
 
 // Các key chỉ phục vụ UI, KHÔNG được gửi lên backend (DTO không whitelist).
-const UI_ONLY_FILTER_KEYS = ["_preset"];
+const UI_ONLY_FILTER_KEYS = ["_preset", "_dateMode", "_fromDate", "_toDate"];
 
 // Loại bỏ các key UI-only trước khi gọi API để tránh 400 (forbidNonWhitelisted).
 const toApiFilters = (f: any) => {
@@ -88,13 +110,19 @@ const toApiFilters = (f: any) => {
   return clean;
 };
 
-const ACTIVE_FILTER_KEYS = [
-  "statusIds",
-  "customerId",
-  "branchId",
-  "_preset",
-  "paymentStatus",
-];
+// Đếm số nhóm filter đang bật (để hiện badge). Mỗi nhóm tính 1.
+const countActiveFilters = (f: any): number => {
+  if (!f) return 0;
+  let n = 0;
+  if (Array.isArray(f.statusIds) && f.statusIds.length > 0) n++;
+  if (Array.isArray(f.branchIds) && f.branchIds.length > 0) n++;
+  if (Array.isArray(f.customerIds) && f.customerIds.length > 0) n++;
+  if (Array.isArray(f.createdByIds) && f.createdByIds.length > 0) n++;
+  if (Array.isArray(f.soldByIds) && f.soldByIds.length > 0) n++;
+  if (f.paymentMethod) n++;
+  if (f._preset || f.fromCreatedDate || f.toCreatedDate) n++;
+  return n;
+};
 
 // ─── InvoiceMobileCard ────────────────────────────────────────────────────────
 function InvoiceMobileCard({
@@ -183,134 +211,329 @@ function InvoicesMobileFilterSheet({
   onApply: (f: any) => void;
   onClose: () => void;
 }) {
-  const [localStatus, setLocalStatus] = useState<string>(
-    filters.statusIds?.[0]?.toString() || ""
+  // ── Dữ liệu cho các filter động ──
+  const { data: branches } = useBranches();
+  const activeBranches = useMemo(
+    () => (branches ?? []).filter((b: any) => b.isActive),
+    [branches]
   );
-  const [localPreset, setLocalPreset] = useState<string>(
-    filters._preset || "all_time"
+  const { data: users } = useUsersForFilter();
+  const { data: bankAccounts } = useBankAccountsForPayment();
+
+  // ── Local state (mirror filters hiện tại) ──
+  const [statusIds, setStatusIds] = useState<string[]>(
+    (filters.statusIds ?? []).map(String)
+  );
+  const [branchIds, setBranchIds] = useState<string[]>(
+    (filters.branchIds ?? []).map(String)
+  );
+  const [createdByIds, setCreatedByIds] = useState<string[]>(
+    (filters.createdByIds ?? []).map(String)
+  );
+  const [soldByIds, setSoldByIds] = useState<string[]>(
+    (filters.soldByIds ?? []).map(String)
+  );
+  const [paymentMethod, setPaymentMethod] = useState<string>(
+    filters.paymentMethod || ""
+  );
+  const [bankAccountIds, setBankAccountIds] = useState<string[]>(
+    (filters.bankAccountIds ?? []).map(String)
   );
 
-  // Lock scroll
+  // Khách hàng: tìm theo tên/SĐT/mã (autocomplete)
+  const [customerIds, setCustomerIds] = useState<number[]>(
+    filters.customerIds ?? []
+  );
+  const [customerLabel, setCustomerLabel] = useState<string>(
+    filters._customerLabel || ""
+  );
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerQueryDebounced, setCustomerQueryDebounced] = useState("");
+  const { data: customerSearchData } = useSearchCustomers(
+    customerQueryDebounced || undefined
+  );
+  const customerResults = customerSearchData?.data || [];
   useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
+    const t = setTimeout(() => setCustomerQueryDebounced(customerQuery), 300);
+    return () => clearTimeout(t);
+  }, [customerQuery]);
+
+  // Thời gian: preset hoặc tùy chọn ngày cụ thể
+  const [dateMode, setDateMode] = useState<"preset" | "custom">(
+    filters._dateMode || (filters._preset ? "preset" : "preset")
+  );
+  const [preset, setPreset] = useState<string>(filters._preset || "all_time");
+  const [fromDate, setFromDate] = useState<string>(
+    filters._fromDate || isoToDateInput(filters.fromCreatedDate)
+  );
+  const [toDate, setToDate] = useState<string>(
+    filters._toDate || isoToDateInput(filters.toCreatedDate)
+  );
 
   const handleApply = () => {
-    const newFilters: any = {
+    const f: any = {
       pageSize: 15,
       currentItem: 0,
       orderBy: "createdAt",
       orderDirection: "desc",
     };
-    if (localStatus) newFilters.statusIds = [Number(localStatus)];
-    if (localPreset && localPreset !== "all_time") {
-      // _preset chỉ là marker UI; gửi lên backend bằng fromCreatedDate/toCreatedDate.
-      const range = getDateRangeFromPreset(localPreset);
-      newFilters._preset = localPreset;
-      newFilters.fromCreatedDate = range.from.toISOString();
-      newFilters.toCreatedDate = range.to.toISOString();
+
+    if (statusIds.length > 0) f.statusIds = statusIds.map(Number);
+    if (branchIds.length > 0) f.branchIds = branchIds.map(Number);
+    if (createdByIds.length > 0) f.createdByIds = createdByIds.map(Number);
+    if (soldByIds.length > 0) f.soldByIds = soldByIds.map(Number);
+    if (customerIds.length > 0) {
+      f.customerIds = customerIds;
+      f._customerLabel = customerLabel; // marker UI, không gửi backend
     }
-    onApply(newFilters);
+    if (paymentMethod) {
+      f.paymentMethod = paymentMethod;
+      if (paymentMethod === "transfer" && bankAccountIds.length > 0)
+        f.bankAccountIds = bankAccountIds.map(Number);
+    }
+
+    // Thời gian → fromCreatedDate/toCreatedDate (giống desktop)
+    if (dateMode === "preset" && preset && preset !== "all_time") {
+      const range = getDateRangeFromPreset(preset);
+      f._preset = preset; // marker UI
+      f.fromCreatedDate = range.from.toISOString();
+      f.toCreatedDate = range.to.toISOString();
+    } else if (dateMode === "custom" && (fromDate || toDate)) {
+      f._dateMode = "custom"; // marker UI
+      f._fromDate = fromDate;
+      f._toDate = toDate;
+      if (fromDate) f.fromCreatedDate = dateInputToIsoStart(fromDate);
+      if (toDate) f.toCreatedDate = dateInputToIsoEnd(toDate);
+    }
+
+    onApply(f);
   };
 
   const handleReset = () => {
-    setLocalStatus("");
-    setLocalPreset("all_time");
+    setStatusIds([]);
+    setBranchIds([]);
+    setCreatedByIds([]);
+    setSoldByIds([]);
+    setPaymentMethod("");
+    setBankAccountIds([]);
+    setCustomerIds([]);
+    setCustomerLabel("");
+    setCustomerQuery("");
+    setDateMode("preset");
+    setPreset("all_time");
+    setFromDate("");
+    setToDate("");
   };
 
+  // Summary cho header accordion
+  const dateSummary =
+    dateMode === "custom" && (fromDate || toDate)
+      ? `${fromDate || "…"} → ${toDate || "…"}`
+      : preset !== "all_time"
+        ? DATE_PRESETS.find((p) => p.value === preset)?.label
+        : undefined;
+
+  const userOptions: ChipOption[] = (users ?? []).map((u: any) => ({
+    value: String(u.id),
+    label: u.name,
+  }));
+  const branchOptions: ChipOption[] = activeBranches.map((b: any) => ({
+    value: String(b.id),
+    label: b.name,
+  }));
+
   const activeCount = [
-    localStatus,
-    localPreset !== "all_time" ? localPreset : "",
+    statusIds.length > 0,
+    branchIds.length > 0,
+    customerIds.length > 0,
+    createdByIds.length > 0,
+    soldByIds.length > 0,
+    !!paymentMethod,
+    dateMode === "custom" ? !!(fromDate || toDate) : preset !== "all_time",
   ].filter(Boolean).length;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full bg-white rounded-t-3xl max-h-[80vh] flex flex-col">
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-          <div className="w-10 h-1 bg-gray-200 rounded-full" />
-        </div>
+    <MobileFilterSheet
+      title="Bộ lọc"
+      activeCount={activeCount}
+      onReset={handleReset}
+      onApply={handleApply}
+      onClose={onClose}>
+      {/* Trạng thái */}
+      <FilterSection
+        label="Trạng thái hóa đơn"
+        defaultOpen
+        summary={
+          statusIds.length > 0 ? `${statusIds.length} đã chọn` : undefined
+        }>
+        <ChipGroup
+          options={FILTER_STATUS_OPTIONS}
+          values={statusIds}
+          onChange={setStatusIds}
+        />
+      </FilterSection>
 
-        {/* Title */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-          <h3 className="font-semibold text-gray-900">Bộ lọc</h3>
-          {activeCount > 0 && (
+      {/* Thời gian */}
+      <FilterSection label="Thời gian" defaultOpen summary={dateSummary}>
+        <DateRangeFilter
+          presets={DATE_PRESETS}
+          mode={dateMode}
+          preset={preset}
+          fromDate={fromDate}
+          toDate={toDate}
+          onChange={(next) => {
+            setDateMode(next.mode);
+            setPreset(next.preset);
+            setFromDate(next.fromDate);
+            setToDate(next.toDate);
+          }}
+        />
+      </FilterSection>
+
+      {/* Chi nhánh */}
+      <FilterSection
+        label="Chi nhánh"
+        summary={
+          branchIds.length > 0 ? `${branchIds.length} đã chọn` : undefined
+        }>
+        <SearchableChecklist
+          options={branchOptions}
+          values={branchIds}
+          searchPlaceholder="Tìm chi nhánh..."
+          emptyText="Không có chi nhánh"
+          onChange={setBranchIds}
+        />
+      </FilterSection>
+
+      {/* Khách hàng */}
+      <FilterSection
+        label="Khách hàng"
+        summary={customerIds.length > 0 ? customerLabel : undefined}>
+        {customerIds.length > 0 ? (
+          <div className="flex items-center justify-between gap-2 border border-blue-300 bg-blue-50 rounded-xl px-3 py-2.5">
+            <span className="text-sm text-blue-700 font-medium truncate">
+              {customerLabel}
+            </span>
             <button
-              onClick={handleReset}
-              className="text-xs text-blue-600 font-medium hover:text-blue-700">
-              Xóa bộ lọc ({activeCount})
+              type="button"
+              onClick={() => {
+                setCustomerIds([]);
+                setCustomerLabel("");
+                setCustomerQuery("");
+              }}
+              className="text-blue-400 hover:text-blue-600 flex-shrink-0">
+              <X className="w-4 h-4" />
             </button>
+          </div>
+        ) : (
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="p-2 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <input
+                  value={customerQuery}
+                  onChange={(e) => setCustomerQuery(e.target.value)}
+                  placeholder="Tìm theo tên, SĐT, mã KH..."
+                  className="w-full pl-8 pr-2 py-2 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                />
+              </div>
+            </div>
+            <div className="max-h-52 overflow-y-auto">
+              {customerResults.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                  {customerQuery ? "Không tìm thấy" : "Nhập để tìm khách hàng"}
+                </div>
+              ) : (
+                customerResults.map((c: any, idx: number) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setCustomerIds([c.id]);
+                      setCustomerLabel(c.name);
+                      setCustomerQuery("");
+                    }}
+                    className={`w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors ${
+                      idx > 0 ? "border-t border-gray-50" : ""
+                    }`}>
+                    <div className="text-sm font-medium text-gray-800">
+                      {c.name}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {c.code ? `Mã: ${c.code}` : "Chưa có mã"}
+                      {c.contactNumber ? ` · ${c.contactNumber}` : ""}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </FilterSection>
+
+      {/* Người tạo */}
+      <FilterSection
+        label="Người tạo"
+        summary={
+          createdByIds.length > 0 ? `${createdByIds.length} đã chọn` : undefined
+        }>
+        <SearchableChecklist
+          options={userOptions}
+          values={createdByIds}
+          searchPlaceholder="Tìm người tạo..."
+          emptyText="Không có nhân viên"
+          onChange={setCreatedByIds}
+        />
+      </FilterSection>
+
+      {/* Người bán */}
+      <FilterSection
+        label="Người bán"
+        summary={
+          soldByIds.length > 0 ? `${soldByIds.length} đã chọn` : undefined
+        }>
+        <SearchableChecklist
+          options={userOptions}
+          values={soldByIds}
+          searchPlaceholder="Tìm người bán..."
+          emptyText="Không có nhân viên"
+          onChange={setSoldByIds}
+        />
+      </FilterSection>
+
+      {/* Phương thức thanh toán */}
+      <FilterSection
+        label="Phương thức thanh toán"
+        summary={
+          PAYMENT_METHOD_OPTIONS.find((o) => o.value === paymentMethod)?.label
+        }>
+        <div className="space-y-3">
+          <ChipGroup
+            options={PAYMENT_METHOD_OPTIONS}
+            values={paymentMethod ? [paymentMethod] : []}
+            multiple={false}
+            onChange={(v) => {
+              setPaymentMethod(v[0] || "");
+              setBankAccountIds([]);
+            }}
+          />
+          {paymentMethod === "transfer" && (
+            <SearchableChecklist
+              options={(Array.isArray(bankAccounts) ? bankAccounts : []).map(
+                (a: any) => ({
+                  value: String(a.id),
+                  label: `${a.bankCode || a.bankName || ""} · ${a.accountNumber || ""}`,
+                })
+              )}
+              values={bankAccountIds}
+              searchPlaceholder="Tìm tài khoản..."
+              emptyText="Không có tài khoản"
+              onChange={setBankAccountIds}
+            />
           )}
         </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-          {/* Status */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              Trạng thái
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {FILTER_STATUS_OPTIONS.map((opt) => {
-                const active = localStatus === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setLocalStatus(active ? "" : opt.value)}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                      active
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-blue-300"
-                    }`}>
-                    {active && <Check className="w-3.5 h-3.5" />}
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Date preset */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              Khoảng thời gian
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {DATE_PRESETS.map((opt) => {
-                const active = localPreset === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setLocalPreset(opt.value)}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                      active
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-blue-300"
-                    }`}>
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="h-2" />
-        </div>
-
-        {/* Footer */}
-        <div className="px-4 pb-6 pt-3 border-t border-gray-100 flex-shrink-0">
-          <button
-            onClick={handleApply}
-            className="w-full py-3.5 bg-blue-600 text-white rounded-2xl font-semibold text-sm hover:bg-blue-700 active:scale-[0.98] transition-all">
-            Áp dụng
-          </button>
-        </div>
-      </div>
-    </div>
+      </FilterSection>
+    </MobileFilterSheet>
   );
 }
 
@@ -327,8 +550,19 @@ export function InvoicesMobileView({
   onCreateClick,
 }: InvoicesMobileViewProps) {
   const { selectedBranch } = useBranchStore();
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // ── Filter của riêng mobile (khôi phục từ sessionStorage) ──
+  // Dùng làm nguồn sự thật cho query, KHÔNG bám `filters` prop vì sidebar desktop
+  // (vẫn mount ẩn) có thể ghi đè prop này sau ~300ms.
+  const [localFilters, setLocalFilters] = useState<any>(
+    () => readMobileFilters(STORAGE_KEY) ?? filters ?? {}
+  );
+
+  // Nếu page truyền search từ deep-link (?Code=...) thì ưu tiên áp vào.
+  const [search, setSearch] = useState(
+    () => filters?.search ?? localFilters?.search ?? ""
+  );
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [activeTab, setActiveTab] = useState("all");
   const [page, setPage] = useState(1);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
@@ -336,6 +570,17 @@ export function InvoicesMobileView({
   );
   const [showFilter, setShowFilter] = useState(false);
   const limit = 20;
+
+  // Lưu lại filter mỗi khi đổi
+  useEffect(() => {
+    writeMobileFilters(STORAGE_KEY, localFilters);
+  }, [localFilters]);
+
+  // Áp filter từ sheet: cập nhật local + đẩy lên page (giữ tương thích)
+  const applyFilters = (f: any) => {
+    setLocalFilters(f);
+    onFiltersChange?.(f);
+  };
 
   // Debounce search 300ms
   useEffect(() => {
@@ -346,9 +591,9 @@ export function InvoicesMobileView({
   // Reset page khi filter / search / tab thay đổi
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, filters, activeTab]);
+  }, [debouncedSearch, localFilters, activeTab]);
 
-  const apiFilters = toApiFilters(filters);
+  const apiFilters = toApiFilters(localFilters);
 
   const effectiveFilters = {
     ...apiFilters,
@@ -395,9 +640,7 @@ export function InvoicesMobileView({
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
 
-  const activeFilterCount = ACTIVE_FILTER_KEYS.filter(
-    (k) => filters[k] != null
-  ).length;
+  const activeFilterCount = countActiveFilters(localFilters);
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -536,9 +779,9 @@ export function InvoicesMobileView({
       {/* ─── Filter bottom sheet ─── */}
       {showFilter && (
         <InvoicesMobileFilterSheet
-          filters={filters}
+          filters={localFilters}
           onApply={(f) => {
-            onFiltersChange(f);
+            applyFilters(f);
             setShowFilter(false);
           }}
           onClose={() => setShowFilter(false)}

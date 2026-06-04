@@ -21,6 +21,8 @@ export interface Invoice {
   createdBy: number;
   createdAt: string;
   updatedAt: string;
+  orderId?: number | null;
+  order?: { id: number; code: string } | null;
   customer?: any;
   branch?: any;
   soldBy?: any;
