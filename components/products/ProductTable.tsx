@@ -453,7 +453,8 @@ export function ProductsTable({
   );
 
   const { data: pendingSummary } = useOrdersPendingSummary(
-    productIdsForPending
+    productIdsForPending,
+    selectedBranch?.id
   );
   const pendingMap = pendingSummary || {};
 

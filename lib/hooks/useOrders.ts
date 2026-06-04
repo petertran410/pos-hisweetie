@@ -113,13 +113,17 @@ export function useCancelOrder() {
 
 /**
  * Tổng số "Khách đặt" cho 1 batch productIds.
- * Chỉ tính các đơn ở trạng thái Phiếu tạm hoặc Đã xác nhận, mọi chi nhánh.
+ * Chỉ tính các đơn ở trạng thái Phiếu tạm hoặc Đã xác nhận.
+ * Truyền branchId để lọc theo chi nhánh đang chọn (khớp với modal).
  */
-export function useOrdersPendingSummary(productIds: number[]) {
+export function useOrdersPendingSummary(
+  productIds: number[],
+  branchId?: number
+) {
   const sortedKey = [...productIds].sort((a, b) => a - b).join(",");
   return useQuery({
-    queryKey: ["orders-pending-summary", sortedKey],
-    queryFn: () => ordersApi.getPendingSummary(productIds),
+    queryKey: ["orders-pending-summary", sortedKey, branchId ?? null],
+    queryFn: () => ordersApi.getPendingSummary(productIds, branchId),
     enabled: productIds.length > 0,
     staleTime: 30_000,
   });

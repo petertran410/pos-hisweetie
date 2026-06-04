@@ -82,18 +82,22 @@ export const ordersApi = {
 
   /**
    * Tổng số "Khách đặt" cho từng sản phẩm — chỉ tính các đơn ở
-   * trạng thái Phiếu tạm hoặc Đã xác nhận trên mọi chi nhánh.
+   * trạng thái Phiếu tạm hoặc Đã xác nhận.
+   * Nếu truyền branchId thì chỉ tính đơn thuộc chi nhánh đó (khớp với modal).
    * Trả về object: { [productId]: totalQuantity }
    */
   getPendingSummary: (
-    productIds: number[]
+    productIds: number[],
+    branchId?: number
   ): Promise<Record<number, number>> => {
     if (!productIds || productIds.length === 0) {
       return Promise.resolve({});
     }
-    return apiClient.get(`/orders/pending-summary`, {
+    const params: Record<string, any> = {
       productIds: productIds.join(","),
-    });
+    };
+    if (branchId) params.branchId = branchId;
+    return apiClient.get(`/orders/pending-summary`, params);
   },
 
   /**

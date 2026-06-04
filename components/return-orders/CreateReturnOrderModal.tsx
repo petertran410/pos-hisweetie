@@ -307,7 +307,8 @@ export function CreateReturnOrderModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Selector cố định — nằm ngoài vùng cuộn để dropdown không bị clip */}
+        <div className="px-4 pt-4 pb-2 shrink-0">
           <div className="grid grid-cols-2 gap-4">
             <div ref={branchDropdownRef} className="relative">
               <label className="block text-sm font-medium mb-1">
@@ -410,7 +411,10 @@ export function CreateReturnOrderModal({
               )}
             </div>
           </div>
+        </div>
 
+        {/* Vùng cuộn: chip hóa đơn + bảng sản phẩm */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
           {selectedInvoices.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {selectedInvoices.map((inv) => (
