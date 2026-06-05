@@ -34,10 +34,10 @@ export function DeliveryInfoCard({
     customerAddresses?.find((a) => a.isDefault) || customerAddresses?.[0];
 
   // Phát hiện địa chỉ đã sáp nhập (newWardName tồn tại) và khác với snapshot delivery
-  // const hasAddressChange =
-  //   !!defaultAddr?.newWardName &&
-  //   (defaultAddr.newWardName !== delivery.wardName ||
-  //     defaultAddr.newCityName !== delivery.locationName);
+  const hasAddressChange =
+    !!defaultAddr?.newWardName &&
+    (defaultAddr.newWardName !== delivery.wardName ||
+      defaultAddr.newCityName !== delivery.locationName);
 
   const rows = [
     { label: "Người nhận", value: delivery.receiver },
@@ -60,7 +60,7 @@ export function DeliveryInfoCard({
         </div>
       ))}
 
-      {/* {hasAddressChange && defaultAddr && (
+      {hasAddressChange && defaultAddr && (
         <div className="px-3 py-2 bg-amber-50 border-t border-amber-200">
           <div className="flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -92,7 +92,7 @@ export function DeliveryInfoCard({
             )}
           </div>
         </div>
-      )} */}
+      )}
     </div>
   );
 }
