@@ -21,6 +21,7 @@ import { ComboProductForm } from "./ComboProductForm";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { ProductCustomerOrdersModal } from "./ProductCustomerOrdersModal";
 import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
+import { ProductExportModal } from "./ProductExportModal";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "../shared/CodeLink";
 
@@ -327,6 +328,7 @@ export function ProductsTable({
     null
   );
   const [showColumnModal, setShowColumnModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -340,6 +342,7 @@ export function ProductsTable({
 
   const canCreate = usePermission("products", "create");
   const canViewCostPrice = usePermission("products", "view_cost_price");
+  const canExport = usePermission("products", "export");
 
   // Debounce search
   useEffect(() => {
@@ -556,9 +559,13 @@ export function ProductsTable({
             <Upload className="w-4 h-4" />
             Import
           </button>
-          <button className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm">
-            Xuất file
-          </button>
+          {canExport && (
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm">
+              Xuất file
+            </button>
+          )}
           <button
             onClick={() => setShowColumnModal(true)}
             className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-2">
@@ -841,6 +848,16 @@ export function ProductsTable({
           branchId={selectedBranch?.id}
           branchName={selectedBranch?.name}
           onClose={() => setSupplierModalProduct(null)}
+        />
+      )}
+
+      {showExportModal && (
+        <ProductExportModal
+          filters={{
+            ...effectiveFilters,
+            search: codeFilter || debouncedSearch || undefined,
+          }}
+          onClose={() => setShowExportModal(false)}
         />
       )}
     </div>

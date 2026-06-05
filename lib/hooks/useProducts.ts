@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ProductQueryParams, productsApi } from "@/lib/api/products";
 import { toast } from "sonner";
+import { useState } from "react";
+import { API_URL } from "@/lib/config/api";
+import { useAuthStore } from "@/lib/store/auth";
+import { useBranchStore } from "@/lib/store/branch";
 
 export function useProducts(params?: ProductQueryParams) {
   return useQuery({
@@ -118,4 +122,82 @@ export function useUpdateProductCondition() {
       toast.error(error.message || "Cập nhật tình trạng hàng thất bại");
     },
   });
+}
+
+/**
+ * Xuất danh sách sản phẩm ra Excel.
+ * - `filters`: bộ lọc hiện tại của bảng (search, category, status, stockStatus...).
+ * - `columns`: danh sách key cột cần xuất (CSV gửi lên backend).
+ * Xuất theo chi nhánh đang chọn (gửi qua header X-Branch-Id + query branchId).
+ */
+export function useExportProducts() {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportToFile = async (
+    filters: Record<string, any>,
+    columns: string[]
+  ) => {
+    setIsExporting(true);
+    try {
+      const token = useAuthStore.getState().token;
+      const selectedBranch = useBranchStore.getState().selectedBranch;
+
+      const url = new URL(`${API_URL}/products/export`);
+
+      // Bỏ các param phân trang / meta chỉ dùng ở client.
+      const { page: _p, limit: _l, ...exportFilters } = filters || {};
+      Object.entries(exportFilters).forEach(([k, v]) => {
+        if (k.startsWith("_")) return;
+        if (v === undefined || v === null || v === "") return;
+        if (Array.isArray(v)) {
+          v.forEach((item) => url.searchParams.append(k, String(item)));
+        } else {
+          url.searchParams.append(k, String(v));
+        }
+      });
+
+      if (selectedBranch?.id) {
+        url.searchParams.set("branchId", String(selectedBranch.id));
+      }
+      url.searchParams.set("columns", columns.join(","));
+
+      const res = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(selectedBranch?.id
+            ? { "X-Branch-Id": String(selectedBranch.id) }
+            : {}),
+        },
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Lỗi khi xuất dữ liệu");
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const match = disposition.match(/filename=([^;]+)/);
+      const filename = match
+        ? match[1].trim()
+        : `DanhSachSanPham_${Date.now()}.xlsx`;
+
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+
+      toast.success("Xuất file thành công");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return { exportToFile, isExporting };
 }

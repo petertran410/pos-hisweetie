@@ -386,7 +386,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
       receivedQuantity: 0,
     };
 
-    setProducts((prev) => [...prev, newProduct]);
+    setProducts((prev) => [newProduct, ...prev]);
     setSearchQuery("");
     setShowSearchResults(false);
   };
@@ -805,7 +805,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                             {Number(item.toInventory).toLocaleString()}
                           </td>
                           <td className="px-4 py-3">
-                            {isSender && (!transfer || copyMode) ? (
+                            {canEditProducts ? (
                               <div className="flex items-center justify-center gap-1">
                                 <button
                                   type="button"
@@ -907,7 +907,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                           )}
 
                           <td className="px-4 py-3 text-right text-sm text-gray-700">
-                            {isSender && (!transfer || copyMode) ? (
+                            {canEditProducts ? (
                               <input
                                 type="text"
                                 inputMode="numeric"
