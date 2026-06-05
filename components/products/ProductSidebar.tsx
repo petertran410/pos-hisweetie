@@ -30,6 +30,14 @@ const STOCK_OPTIONS = [
   { value: "outstock", label: "Hết hàng" },
 ];
 
+// Loại sản phẩm — khớp map ở ProductTable.getProductTypeLabel & backend.
+const PRODUCT_TYPE_OPTIONS = [
+  { value: 2, label: "Hàng hóa" },
+  { value: 3, label: "Dịch vụ" },
+  { value: 1, label: "Combo - đóng gói" },
+  { value: 4, label: "Hàng sản xuất" },
+];
+
 const DIRECT_SALE_OPTIONS = [
   { value: "yes", label: "Có" },
   { value: "no", label: "Không" },
@@ -119,6 +127,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
 
   // Mặc định lọc "Hoạt động".
   const [selectedStatus, setSelectedStatus] = useState("active");
+  const [selectedTypes, setSelectedTypes] = useState<number[]>([]);
   const [parentName, setParentName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [childName, setChildName] = useState("");
@@ -167,7 +176,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
     stockStatus,
     tradeMarkId,
     directSale,
-  ].filter(Boolean).length;
+  ].filter(Boolean).length + (selectedTypes.length > 0 ? 1 : 0);
 
   // Debounce emit filters
   useEffect(() => {
@@ -175,6 +184,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
       const f: any = {};
       if (selectedStatus === "active") f.isActive = true;
       if (selectedStatus === "inactive") f.isActive = false;
+      if (selectedTypes.length > 0) f.types = selectedTypes;
       if (parentName) f.parentName = parentName;
       if (middleName) f.middleName = middleName;
       if (childName) f.childName = childName;
@@ -187,6 +197,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
     return () => clearTimeout(timer);
   }, [
     selectedStatus,
+    selectedTypes,
     parentName,
     middleName,
     childName,
@@ -197,6 +208,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
 
   const clearAll = () => {
     setSelectedStatus("");
+    setSelectedTypes([]);
     setParentName("");
     setMiddleName("");
     setChildName("");
@@ -251,6 +263,38 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
                 {opt.label}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* ── Loại sản phẩm ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Loại sản phẩm
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {PRODUCT_TYPE_OPTIONS.map((opt) => {
+              const isActive = selectedTypes.includes(opt.value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() =>
+                    setSelectedTypes((prev) =>
+                      prev.includes(opt.value)
+                        ? prev.filter((t) => t !== opt.value)
+                        : [...prev, opt.value]
+                    )
+                  }
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    isActive
+                      ? "bg-blue-100 text-blue-700 border-blue-300"
+                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                  }`}>
+                  {isActive && <Check className="w-3 h-3" />}
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 

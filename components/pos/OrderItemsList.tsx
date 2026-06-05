@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Copy, Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 import { NoteTemplate } from "@/lib/api/note-templates";
@@ -215,11 +215,50 @@ export function OrderItemsList({
     }
   };
 
+  // Ghi nhớ cặp giá trị ta vừa đẩy lên parent để tránh effect hydrate ghi đè khi đang gõ.
+  const lastPushedRef = useRef<{ discount: number; ratio: number } | null>(
+    null
+  );
+
+  const roundRatio = (ratio: number): number =>
+    Math.round((ratio + Number.EPSILON) * 100) / 100;
+
+  const approxEq = (a: number, b: number): boolean => Math.abs(a - b) < 0.01;
+
+  const formatNumber = (value: number): string => {
+    if (!value) return "";
+    return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  };
+
+  // Hiển thị % theo đúng những gì lưu (cho phép thập phân, vd 8.33)
+  const formatRatio = (value: number): string => {
+    if (!value) return "";
+    return String(value);
+  };
+
+  // Đẩy đồng thời cả số tiền và % lên parent để lưu cùng lúc.
+  const pushDiscount = (discountAmt: number, ratioPct: number) => {
+    lastPushedRef.current = { discount: discountAmt, ratio: ratioPct };
+    onDiscountChange(discountAmt);
+    onDiscountRatioChange(ratioPct);
+  };
+
+  // Hydrate state từ parent (load đơn/hóa đơn, đổi tab, copy...).
+  // Ưu tiên hiển thị mode % nếu có discountRatio. Bỏ qua nếu props chính là
+  // giá trị ta vừa đẩy lên (tránh nhảy mode khi đang gõ).
   useEffect(() => {
+    if (
+      lastPushedRef.current &&
+      lastPushedRef.current.discount === discount &&
+      lastPushedRef.current.ratio === discountRatio
+    ) {
+      return;
+    }
+    lastPushedRef.current = { discount, ratio: discountRatio };
     if (discountRatio > 0) {
       setDiscountType("ratio");
       setDiscountValue(discountRatio);
-      setDisplayValue(formatNumber(discountRatio));
+      setDisplayValue(formatRatio(discountRatio));
     } else if (discount > 0) {
       setDiscountType("amount");
       setDiscountValue(discount);
@@ -231,38 +270,62 @@ export function OrderItemsList({
     }
   }, [discount, discountRatio]);
 
-  const formatNumber = (value: number): string => {
-    if (!value) return "";
-    return value.toLocaleString("en-US");
-  };
+  // Giữ 2 field đồng bộ với tổng tiền hàng khi giỏ thay đổi.
+  // amount mode: số tiền cố định → tính lại %. ratio mode: % cố định → tính lại số tiền.
+  useEffect(() => {
+    if (discountValue <= 0) return;
+    const subtotal = calculateSubtotal();
+    if (discountType === "ratio") {
+      const amount = (subtotal * discountValue) / 100;
+      if (!approxEq(amount, discount)) pushDiscount(amount, discountValue);
+    } else {
+      const ratio =
+        subtotal > 0 ? roundRatio((discountValue / subtotal) * 100) : 0;
+      if (!approxEq(ratio, discountRatio)) pushDiscount(discountValue, ratio);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartItems]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    const onlyNumbers = inputValue.replace(/[^\d]/g, "");
-
-    if (onlyNumbers === "") {
-      setDisplayValue("");
-      setDiscountValue(0);
-      if (discountType === "amount") {
-        onDiscountChange(0);
-        onDiscountRatioChange(0);
-      } else {
-        onDiscountChange(0);
-        onDiscountRatioChange(0);
-      }
-      return;
-    }
-
-    const numericValue = parseInt(onlyNumbers, 10);
-    setDiscountValue(numericValue);
-    setDisplayValue(formatNumber(numericValue));
+    const subtotal = calculateSubtotal();
 
     if (discountType === "amount") {
-      onDiscountChange(numericValue);
-      onDiscountRatioChange(0);
+      const onlyNumbers = e.target.value.replace(/[^\d]/g, "");
+      if (onlyNumbers === "") {
+        setDisplayValue("");
+        setDiscountValue(0);
+        pushDiscount(0, 0);
+        return;
+      }
+      const amount = parseInt(onlyNumbers, 10);
+      setDiscountValue(amount);
+      setDisplayValue(formatNumber(amount));
+      const ratio = subtotal > 0 ? roundRatio((amount / subtotal) * 100) : 0;
+      pushDiscount(amount, ratio);
     } else {
-      onDiscountChange(0);
-      onDiscountRatioChange(numericValue);
+      // % cho phép thập phân (vd 8.33)
+      let cleaned = e.target.value.replace(/[^\d.]/g, "");
+      const firstDot = cleaned.indexOf(".");
+      if (firstDot !== -1) {
+        cleaned =
+          cleaned.slice(0, firstDot + 1) +
+          cleaned.slice(firstDot + 1).replace(/\./g, "");
+      }
+      if (cleaned === "" || cleaned === ".") {
+        setDisplayValue(cleaned);
+        setDiscountValue(0);
+        pushDiscount(0, 0);
+        return;
+      }
+      let ratio = parseFloat(cleaned);
+      if (ratio > 100) {
+        ratio = 100;
+        cleaned = "100";
+      }
+      setDiscountValue(ratio);
+      setDisplayValue(cleaned);
+      const amount = (subtotal * ratio) / 100;
+      pushDiscount(amount, ratio);
     }
   };
 
@@ -291,12 +354,32 @@ export function OrderItemsList({
     return calculateSubtotal() - calculateDiscountAmount();
   };
 
+  // Đổi mode: GIỮ giá trị giảm và convert sang đơn vị tương ứng (không reset).
   const handleDiscountTypeChange = (type: "amount" | "ratio") => {
+    if (type === discountType) return;
+    const subtotal = calculateSubtotal();
     setDiscountType(type);
-    setDiscountValue(0);
-    setDisplayValue("");
-    onDiscountChange(0);
-    onDiscountRatioChange(0);
+
+    if (discountValue <= 0) {
+      setDisplayValue("");
+      pushDiscount(0, 0);
+      return;
+    }
+
+    if (type === "ratio") {
+      // đang là số tiền → quy ra %
+      const ratio =
+        subtotal > 0 ? roundRatio((discountValue / subtotal) * 100) : 0;
+      setDiscountValue(ratio);
+      setDisplayValue(formatRatio(ratio));
+      pushDiscount(discountValue, ratio);
+    } else {
+      // đang là % → quy ra số tiền
+      const amount = (subtotal * discountValue) / 100;
+      setDiscountValue(amount);
+      setDisplayValue(formatNumber(amount));
+      pushDiscount(amount, discountValue);
+    }
   };
 
   if (cartItems.length === 0) {
@@ -646,14 +729,20 @@ export function OrderItemsList({
             <span className="text-gray-600 text-sm lg:text-md">Giảm giá</span>
             <span className="text-sm lg:text-md font-medium text-red-600 min-w-[100px] text-right">
               - {calculateDiscountAmount().toLocaleString()}
-              {discountType === "ratio" && ` (${discountValue}%)`}
+              {(() => {
+                const subtotal = calculateSubtotal();
+                const amount = calculateDiscountAmount();
+                if (amount <= 0 || subtotal <= 0) return null;
+                const pct = roundRatio((amount / subtotal) * 100);
+                return ` (${pct}%)`;
+              })()}
             </span>
           </div>
           {canEditDiscount ? (
             <div className="flex items-center gap-2 w-full">
               <input
                 type="text"
-                inputMode="numeric"
+                inputMode="decimal"
                 value={displayValue}
                 onChange={handleInputChange}
                 onBlur={handleInputBlur}

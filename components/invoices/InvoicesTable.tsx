@@ -19,6 +19,7 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  AlertTriangle,
 } from "lucide-react";
 import type { Invoice } from "@/lib/types/invoice";
 import { InvoiceDetailRow } from "./InvoiceDetailRow";
@@ -26,6 +27,7 @@ import { formatCurrency } from "@/lib/utils";
 import { InvoiceImportModal } from "./InvoiceImportModal";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
+import { useInvoicePriceBookWarnings } from "@/lib/hooks/useInvoicePriceBookWarnings";
 
 interface ColumnConfig {
   key: string;
@@ -688,6 +690,9 @@ export function InvoicesTable({
   const total = (data as any)?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
 
+  // Hóa đơn nào (bảng giá 2/3) có giá thực bán thấp hơn giá niêm yết → cảnh báo.
+  const priceWarningIds = useInvoicePriceBookWarnings(invoices);
+
   const visibleColumns = useMemo(
     () => columns.filter((c) => c.key !== "discount" && c.visible),
     [columns]
@@ -753,7 +758,8 @@ export function InvoicesTable({
         : EXPORT_DETAIL_COLUMNS.map((c) => c.key)
     );
 
-  const colSpan = visibleColumns.length + 2;
+  // +1 checkbox, +1 cột cảnh báo (ngầm), +1 cột chevron mở rộng
+  const colSpan = visibleColumns.length + 3;
 
   // Map cột → giá trị tổng tương ứng. Chỉ những cột có ý nghĩa cộng tổng
   // mới render số; các cột còn lại để trống (cell vẫn tồn tại để giữ layout).
@@ -1172,6 +1178,8 @@ export function InvoicesTable({
                     className="cursor-pointer"
                   />
                 </th>
+                {/* Cột ngầm cảnh báo lệch giá — luôn giữ chỗ để không thụt mã hóa đơn */}
+                <th className="w-8 px-2 py-2.5" />
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
@@ -1205,6 +1213,7 @@ export function InvoicesTable({
               {hasTotalRow && (
                 <tr className="bg-gray-50/60 border-b">
                   <td className="px-4 py-2.5 sticky left-0 bg-gray-50/60" />
+                  <td className="w-8 px-2 py-2.5" />
                   {visibleColumns.map((col) => (
                     <td
                       key={col.key}
@@ -1260,6 +1269,21 @@ export function InvoicesTable({
                           onChange={() => toggleSelect(invoice.id)}
                           className="cursor-pointer"
                         />
+                      </td>
+                      {/* Cột ngầm cảnh báo lệch giá bảng giá 2/3 */}
+                      <td
+                        className={`w-8 px-2 py-2.5 text-center ${
+                          expandedInvoiceId === invoice.id
+                            ? "border-t-2 border-blue-500"
+                            : ""
+                        }`}>
+                        {priceWarningIds.has(invoice.id) && (
+                          <span
+                            title="Có sản phẩm bán thấp hơn giá niêm yết của bảng giá"
+                            className="inline-flex">
+                            <AlertTriangle className="w-4 h-4 text-yellow-500 fill-yellow-100" />
+                          </span>
+                        )}
                       </td>
                       {visibleColumns.map((col) => (
                         <td

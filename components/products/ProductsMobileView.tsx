@@ -40,6 +40,14 @@ const DIRECT_SALE_OPTIONS = [
   { value: "no", label: "Không" },
 ];
 
+// Loại sản phẩm — khớp map getProductTypeLabel & backend.
+const PRODUCT_TYPE_OPTIONS = [
+  { value: 2, label: "Hàng hóa" },
+  { value: 3, label: "Dịch vụ" },
+  { value: 1, label: "Combo" },
+  { value: 4, label: "Hàng sản xuất" },
+];
+
 const getProductTypeLabel = (type: number) => {
   switch (type) {
     case 1:
@@ -203,6 +211,9 @@ function ProductsMobileFilterSheet({
   const [localParentName, setLocalParentName] = useState<string>(
     filters.parentName || ""
   );
+  const [localTypes, setLocalTypes] = useState<number[]>(
+    Array.isArray(filters.types) ? filters.types : []
+  );
   const [localMiddleName, setLocalMiddleName] = useState<string>(
     filters.middleName || ""
   );
@@ -266,6 +277,7 @@ function ProductsMobileFilterSheet({
 
   const handleApply = () => {
     const f: any = {};
+    if (localTypes.length > 0) f.types = localTypes;
     if (localParentName) f.parentName = localParentName;
     if (localMiddleName) f.middleName = localMiddleName;
     if (localChildName) f.childName = localChildName;
@@ -277,6 +289,7 @@ function ProductsMobileFilterSheet({
   };
 
   const handleReset = () => {
+    setLocalTypes([]);
     setLocalParentName("");
     setLocalMiddleName("");
     setLocalChildName("");
@@ -292,7 +305,7 @@ function ProductsMobileFilterSheet({
     localStockStatus,
     localTradeMarkId,
     localDirectSale,
-  ].filter(Boolean).length;
+  ].filter(Boolean).length + (localTypes.length > 0 ? 1 : 0);
 
   return (
     <div
@@ -335,6 +348,37 @@ function ProductsMobileFilterSheet({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+          {/* Loại sản phẩm */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2.5">
+              Loại sản phẩm
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {PRODUCT_TYPE_OPTIONS.map((opt) => {
+                const isActive = localTypes.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() =>
+                      setLocalTypes((prev) =>
+                        prev.includes(opt.value)
+                          ? prev.filter((t) => t !== opt.value)
+                          : [...prev, opt.value]
+                      )
+                    }
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+                      isActive
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-blue-300"
+                    }`}>
+                    {isActive && <Check className="w-3.5 h-3.5" />}
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Loại Hàng */}
           {parentOptions.length > 0 && (
             <div>
@@ -584,7 +628,8 @@ export function ProductsMobileView({
     filters.stockStatus,
     filters.tradeMarkId,
     filters.isDirectSale !== undefined ? "yes" : "",
-  ].filter(Boolean).length;
+  ].filter(Boolean).length +
+    (Array.isArray(filters.types) && filters.types.length > 0 ? 1 : 0);
 
   return (
     <div className="flex flex-col h-full bg-gray-50">

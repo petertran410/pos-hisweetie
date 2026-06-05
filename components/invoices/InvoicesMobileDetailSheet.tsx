@@ -574,7 +574,23 @@ export function InvoicesMobileDetailSheet({
 
                 {Number(invoice.discount) > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Chiết khấu</span>
+                    <span className="text-gray-500">
+                      Chiết khấu
+                      {(() => {
+                        const total = Number(invoice.totalAmount);
+                        const amt = Number(invoice.discount);
+                        const stored = Number(invoice.discountRatio) || 0;
+                        const pct =
+                          stored > 0
+                            ? stored
+                            : total > 0
+                              ? Math.round(
+                                  ((amt / total) * 100 + Number.EPSILON) * 100
+                                ) / 100
+                              : 0;
+                        return pct > 0 ? ` (${pct}%)` : null;
+                      })()}
+                    </span>
                     <span className="text-orange-500">
                       -{formatCurrency(Number(invoice.discount))}
                     </span>

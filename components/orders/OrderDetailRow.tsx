@@ -718,15 +718,36 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                               Giảm giá đơn hàng:
                             </span>
                             <span className="font-semibold text-red-600">
-                              -{" "}
-                              {formatCurrency(
-                                Number(order.discount) +
-                                  (Number(order.totalAmount) *
-                                    Number(order.discountRatio || 0)) /
-                                    100
-                              )}
-                              {Number(order.discountRatio) > 0 &&
-                                ` (${order.discountRatio}%)`}
+                              {(() => {
+                                const total = Number(order.totalAmount);
+                                const amt = Number(order.discount);
+                                // Giảm giá hiệu dụng: ưu tiên số tiền, fallback sang %.
+                                const effective =
+                                  amt > 0
+                                    ? amt
+                                    : (total *
+                                        Number(order.discountRatio || 0)) /
+                                      100;
+                                if (effective <= 0)
+                                  return <>- {formatCurrency(0)}</>;
+                                const stored = Number(order.discountRatio) || 0;
+                                const pct =
+                                  stored > 0
+                                    ? stored
+                                    : total > 0
+                                      ? Math.round(
+                                          ((effective / total) * 100 +
+                                            Number.EPSILON) *
+                                            100
+                                        ) / 100
+                                      : 0;
+                                return (
+                                  <>
+                                    - {formatCurrency(effective)}
+                                    {pct > 0 && ` (${pct}%)`}
+                                  </>
+                                );
+                              })()}
                             </span>
                           </div>
 

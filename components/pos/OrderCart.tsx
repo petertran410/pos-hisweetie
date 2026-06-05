@@ -300,7 +300,10 @@ export function OrderCart({
 
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
-    return subtotal - discount - (subtotal * discountRatio) / 100;
+    // Giảm giá hiệu dụng: ưu tiên số tiền (discount), fallback sang % cho data cũ.
+    const effectiveDiscount =
+      discount > 0 ? discount : (subtotal * discountRatio) / 100;
+    return subtotal - effectiveDiscount;
   };
 
   const displayDebt = (() => {

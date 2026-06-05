@@ -20,9 +20,11 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 import { InvoicesMobileDetailSheet } from "./InvoicesMobileDetailSheet";
 import { CodeLink } from "../shared/CodeLink";
+import { useInvoicePriceBookWarnings } from "@/lib/hooks/useInvoicePriceBookWarnings";
 import {
   MobileFilterSheet,
   FilterSection,
@@ -128,9 +130,11 @@ const countActiveFilters = (f: any): number => {
 function InvoiceMobileCard({
   invoice,
   onClick,
+  hasWarning,
 }: {
   invoice: Invoice;
   onClick: () => void;
+  hasWarning?: boolean;
 }) {
   const paid = Number(invoice.paidAmount);
   const debt = Number(invoice.debtAmount);
@@ -139,10 +143,15 @@ function InvoiceMobileCard({
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 cursor-pointer active:scale-[0.98] transition-transform select-none">
+      className={`bg-white rounded-2xl shadow-sm p-4 cursor-pointer active:scale-[0.98] transition-transform select-none border ${
+        hasWarning ? "border-2 border-yellow-400" : "border-gray-100"
+      }`}>
       {/* Row 1: code + status */}
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-blue-600 font-bold text-[15px]">
+        <span className="text-blue-600 font-bold text-[15px] flex items-center gap-1.5">
+          {hasWarning && (
+            <AlertTriangle className="w-4 h-4 text-yellow-500 fill-yellow-100 flex-shrink-0" />
+          )}
           <CodeLink entity="invoice" code={invoice.code} />
         </span>
         <div className="flex items-center gap-1.5">
@@ -640,6 +649,9 @@ export function InvoicesMobileView({
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
 
+  // Hóa đơn (bảng giá 2/3) có giá thực bán thấp hơn giá niêm yết → cảnh báo.
+  const priceWarningIds = useInvoicePriceBookWarnings(invoices);
+
   const activeFilterCount = countActiveFilters(localFilters);
 
   return (
@@ -731,6 +743,7 @@ export function InvoicesMobileView({
               <InvoiceMobileCard
                 key={invoice.id}
                 invoice={invoice}
+                hasWarning={priceWarningIds.has(invoice.id)}
                 onClick={() => setSelectedInvoiceId(invoice.id)}
               />
             ))}
