@@ -3,7 +3,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { AddressAutocompleteInput } from "@/components/pos/AddressAutocompleteInput";
+import {
+  extractAddressParts,
+  TrackAsiaPrediction,
+} from "@/lib/api/trackasia";
 import { createPortal } from "react-dom";
+
+/**
+ * Chuẩn hóa tên địa giới để so khớp: bỏ dấu cách thừa, hạ chữ thường,
+ * và lược bỏ tiền tố hành chính (Tỉnh/Thành phố/Phường/Xã/Thị trấn...).
+ */
+function normalizeAdminName(name: string): string {
+  return (name || "")
+    .toLowerCase()
+    .replace(
+      /^(tỉnh|thành phố|tp\.?|phường|xã|thị trấn|quận|huyện|thị xã)\s+/,
+      ""
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 interface City {
   name: string;
@@ -161,6 +181,41 @@ export function CustomerAddressFormModal({
     }));
   };
 
+  // Chọn 1 gợi ý từ TrackAsia: điền số nhà/đường + tự map Tỉnh/Phường mới.
+  const handleSelectSuggestion = (prediction: TrackAsiaPrediction) => {
+    const { streetAddress, provinceName, wardName } =
+      extractAddressParts(prediction);
+
+    const province = provinceName
+      ? invoiceProvinces.find(
+          (p) => normalizeAdminName(p.name) === normalizeAdminName(provinceName)
+        )
+      : undefined;
+
+    const ward =
+      province && wardName
+        ? invoiceCommunes.find(
+            (c) =>
+              String(c.provinceCode) === String(province.code) &&
+              normalizeAdminName(c.name) === normalizeAdminName(wardName)
+          )
+        : undefined;
+
+    setForm((p: any) => ({
+      ...p,
+      address: streetAddress || p.address,
+      ...(province
+        ? {
+            newCityCode: province.code,
+            newCityName: province.name,
+            // Đổi tỉnh thì reset phường nếu phường không khớp tỉnh mới.
+            newWardCode: ward?.code,
+            newWardName: ward?.name,
+          }
+        : {}),
+    }));
+  };
+
   const handleSubmit = () => {
     if (!form.cityCode && !form.newCityCode) {
       setError("Phải điền ít nhất 1 trong 2 loại địa chỉ (cũ hoặc mới)");
@@ -242,10 +297,10 @@ export function CustomerAddressFormModal({
             <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-1.5">
               Địa chỉ chi tiết (số nhà, tên đường)
             </label>
-            <input
-              type="text"
+            <AddressAutocompleteInput
               value={form.address || ""}
-              onChange={(e) => set("address", e.target.value || undefined)}
+              onChange={(text) => set("address", text || undefined)}
+              onSelect={handleSelectSuggestion}
               placeholder="VD: 123 Nguyễn Trãi"
               className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
             />
