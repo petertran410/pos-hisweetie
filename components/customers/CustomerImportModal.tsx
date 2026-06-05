@@ -156,13 +156,27 @@ function normalizeCBHeader(raw: string): keyof CBRow | null {
   return CB_HEADER_MAP[key] ?? null;
 }
 
+// Chuyển giá trị ô Excel (Date | Excel serial number | chuỗi) thành Date
+function excelValueToDate(val: any): Date | null {
+  if (val instanceof Date && !isNaN(val.getTime())) return val;
+
+  // Excel serial number (vd: 45824) — số ngày tính từ 1899-12-30
+  const num = typeof val === "number" ? val : Number(String(val).trim());
+  if (!isNaN(num) && num > 30000 && num < 60000) {
+    const d = new Date(Math.round((num - 25569) * 86400000));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  return null;
+}
+
 function parseCBExcelFile(file: File): Promise<CBRow[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
+        const wb = XLSX.read(data, { type: "array", cellDates: true });
         const ws = wb.Sheets[wb.SheetNames[0]];
         if (!ws) return reject(new Error("File Excel trống"));
 
@@ -186,9 +200,14 @@ function parseCBExcelFile(file: File): Promise<CBRow[]> {
             if (field === "amount") {
               const num = Number(String(val).replace(/,/g, ""));
               if (!isNaN(num)) row[field] = num;
-            } else if (field === "transDate" && val instanceof Date) {
-              row[field] =
-                `${String(val.getDate()).padStart(2, "0")}/${String(val.getMonth() + 1).padStart(2, "0")}/${val.getFullYear()} ${String(val.getHours()).padStart(2, "0")}:${String(val.getMinutes()).padStart(2, "0")}`;
+            } else if (field === "transDate") {
+              const dateVal = excelValueToDate(val);
+              if (dateVal) {
+                row[field] =
+                  `${String(dateVal.getDate()).padStart(2, "0")}/${String(dateVal.getMonth() + 1).padStart(2, "0")}/${dateVal.getFullYear()} ${String(dateVal.getHours()).padStart(2, "0")}:${String(dateVal.getMinutes()).padStart(2, "0")}`;
+              } else {
+                row[field] = String(val).trim();
+              }
             } else {
               row[field] = String(val).trim();
             }
