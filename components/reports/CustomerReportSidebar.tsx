@@ -422,8 +422,14 @@ export function CustomerReportSidebar({
     return () => document.removeEventListener("mousedown", h);
   }, [openCal]);
 
+  // Validate: nếu user chỉ chọn "Đến ngày" mà chưa chọn "Từ ngày" → invalid
+  const isFromMissing = dateMode === "custom" && !!toDate && !fromDate;
+
   // Debounce emit filters
   useEffect(() => {
+    // Trạng thái invalid: chặn emit để tránh request lệch (toàn lịch sử bị gộp vào ghi nợ)
+    if (isFromMissing) return;
+
     const timer = setTimeout(() => {
       const f: any = {};
       if (branchId) f.branchId = parseInt(branchId);
@@ -455,6 +461,7 @@ export function CustomerReportSidebar({
     selectedPreset,
     fromDate,
     toDate,
+    isFromMissing,
   ]);
 
   const clearAll = () => {
@@ -581,20 +588,37 @@ export function CustomerReportSidebar({
                   const label = isFrom ? "Từ ngày" : "Đến ngày";
                   const setVal = isFrom ? setFromDate : setToDate;
                   const isOpen = openCal === field;
+                  const isInvalid = isFrom && isFromMissing;
 
                   return (
                     <div key={field}>
-                      <span className="text-xs text-gray-500 mb-1 block">
+                      <span
+                        className={`text-xs mb-1 block ${
+                          isInvalid
+                            ? "text-red-600 font-medium"
+                            : "text-gray-500"
+                        }`}>
                         {label}
+                        {isInvalid && " *"}
                       </span>
                       <button
                         type="button"
                         onClick={() => setOpenCal(isOpen ? null : field)}
                         className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all ${
-                          val
-                            ? "border-blue-300 bg-blue-50 text-gray-800"
-                            : "border-gray-200 text-gray-400"
-                        } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                          isInvalid
+                            ? "border-red-400 bg-red-50 text-red-600"
+                            : val
+                              ? "border-blue-300 bg-blue-50 text-gray-800"
+                              : "border-gray-200 text-gray-400"
+                        } ${
+                          isOpen
+                            ? isInvalid
+                              ? "ring-2 ring-red-100 border-red-500"
+                              : "ring-2 ring-blue-100 border-blue-400"
+                            : isInvalid
+                              ? "hover:border-red-500"
+                              : "hover:border-gray-300"
+                        }`}>
                         <span>
                           {val
                             ? new Date(val + "T00:00:00").toLocaleDateString(
@@ -607,7 +631,11 @@ export function CustomerReportSidebar({
                               )
                             : "Chọn ngày"}
                         </span>
-                        <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <Calendar
+                          className={`w-4 h-4 flex-shrink-0 ${
+                            isInvalid ? "text-red-500" : "text-gray-400"
+                          }`}
+                        />
                       </button>
                       {isOpen && (
                         <MiniCalendar
@@ -622,6 +650,11 @@ export function CustomerReportSidebar({
                     </div>
                   );
                 })}
+                {isFromMissing && (
+                  <p className="text-xs text-red-600 -mt-1">
+                    Vui lòng chọn &quot;Từ ngày&quot;
+                  </p>
+                )}
               </div>
             )}
 

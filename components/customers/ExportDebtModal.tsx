@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { X, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Loader2, Calendar } from "lucide-react";
 import { createPortal } from "react-dom";
+import { MiniCalendar } from "@/components/shared/MiniCalendar";
 
 const TIME_PRESETS = [
   { label: "Hôm nay", value: "today" },
@@ -41,6 +42,8 @@ export function ExportDebtModal({
   const [preset, setPreset] = useState("all_time");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
+  const customDateRef = useRef<HTMLDivElement>(null);
   const [includeDetails, setIncludeDetails] = useState(true);
   const [showUnit, setShowUnit] = useState(true);
   const [showQty, setShowQty] = useState(true);
@@ -48,6 +51,21 @@ export function ExportDebtModal({
   const [showDiscount, setShowDiscount] = useState(true);
   const [showTotal, setShowTotal] = useState(true);
   const [showNote, setShowNote] = useState(true);
+
+  // Đóng MiniCalendar khi click ngoài
+  useEffect(() => {
+    if (!openCal) return;
+    const onDown = (e: MouseEvent) => {
+      if (
+        customDateRef.current &&
+        !customDateRef.current.contains(e.target as Node)
+      ) {
+        setOpenCal(null);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [openCal]);
 
   const handleConfirm = () => {
     onConfirm({
@@ -75,7 +93,7 @@ export function ExportDebtModal({
 
   return createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h2 className="text-base font-semibold text-gray-900">
@@ -119,20 +137,60 @@ export function ExportDebtModal({
             </div>
 
             {preset === "custom" && (
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="flex-1 border rounded-lg px-2 py-1.5 text-sm"
-                />
-                <span className="text-gray-500 text-sm">→</span>
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="flex-1 border rounded-lg px-2 py-1.5 text-sm"
-                />
+              <div ref={customDateRef} className="flex gap-2 mt-2">
+                {(["from", "to"] as const).map((field) => {
+                  const isFrom = field === "from";
+                  const val = isFrom ? fromDate : toDate;
+                  const label = isFrom ? "Từ ngày" : "Đến ngày";
+                  const setVal = isFrom ? setFromDate : setToDate;
+                  const isOpen = openCal === field;
+
+                  return (
+                    <div key={field} className="flex-1 relative">
+                      <button
+                        type="button"
+                        onClick={() => setOpenCal(isOpen ? null : field)}
+                        className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 border rounded-lg text-sm transition-all ${
+                          val
+                            ? "border-blue-300 bg-blue-50 text-gray-800"
+                            : "border-gray-200 text-gray-400"
+                        } ${
+                          isOpen
+                            ? "ring-2 ring-blue-100 border-blue-400"
+                            : "hover:border-gray-300"
+                        }`}>
+                        <span className="truncate">
+                          {val
+                            ? new Date(val + "T00:00:00").toLocaleDateString(
+                                "vi-VN",
+                                {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                }
+                              )
+                            : label}
+                        </span>
+                        <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      </button>
+                      {isOpen && (
+                        <div
+                          className={`absolute z-10 top-full mt-1 w-64 ${
+                            isFrom ? "left-0" : "right-0"
+                          }`}>
+                          <MiniCalendar
+                            value={val}
+                            onChange={setVal}
+                            onClose={() => setOpenCal(null)}
+                            minDate={
+                              field === "to" ? fromDate || undefined : undefined
+                            }
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
