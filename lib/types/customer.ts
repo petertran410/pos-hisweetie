@@ -105,6 +105,7 @@ export interface CustomerFilters {
   pointFrom?: number;
   pointTo?: number;
   isActive?: boolean;
+  includeInactive?: boolean;
 }
 
 export interface CustomerGroup {

@@ -13,7 +13,8 @@ export default function ProductListPage() {
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("Code");
 
-  const [filters, setFilters] = useState<any>({});
+  // Mặc định luôn hiển thị sản phẩm "Đang hoạt động".
+  const [filters, setFilters] = useState<any>({ isActive: true });
   const [showImportModal, setShowImportModal] = useState(false);
 
   const handleFiltersChange = useCallback(

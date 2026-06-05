@@ -362,6 +362,7 @@ function CustomersMobileFilterSheet({
     };
     if (localStatus === "active") newFilters.isActive = true;
     else if (localStatus === "inactive") newFilters.isActive = false;
+    else newFilters.includeInactive = true; // "all" → lấy cả KH hoạt động & ngừng HĐ
     onApply(newFilters);
   };
 

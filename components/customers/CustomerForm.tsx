@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import {
   useCreateCustomer,
@@ -121,6 +122,15 @@ export function CustomerForm({
   const [activeFormTab, setActiveFormTab] = useState<"basic" | "invoice">(
     "basic"
   );
+
+  // Portal mount guard — render modal lên document.body để overlay luôn phủ
+  // toàn màn hình, tránh bị "kẹt" trong stacking/overflow context của trang cha
+  // (ví dụ trong /ban-hang form bị lồng sâu trong panel cuộn).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   const [selectedParent, setSelectedParent] = useState<{
     id: number;
@@ -543,7 +553,9 @@ export function CustomerForm({
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div className="bg-white rounded-t-2xl sm:rounded-lg w-full sm:max-w-4xl h-[92dvh] sm:h-auto sm:max-h-[90vh] sm:m-4 flex flex-col overflow-hidden">
         {/* Header */}
@@ -990,11 +1002,12 @@ export function CustomerForm({
 
                 <div>
                   <label className="block text-sm font-medium mb-1.5">
-                    Số CCCD/CMND
+                    Email
                   </label>
                   <input
-                    {...register("invoiceCccdCmnd")}
-                    placeholder="Nhập số CCCD/CMND"
+                    type="email"
+                    {...register("invoiceEmail")}
+                    placeholder="email@gmail.com"
                     className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
@@ -1011,12 +1024,11 @@ export function CustomerForm({
 
                 <div>
                   <label className="block text-sm font-medium mb-1.5">
-                    Email
+                    Số CCCD/CMND
                   </label>
                   <input
-                    type="email"
-                    {...register("invoiceEmail")}
-                    placeholder="email@gmail.com"
+                    {...register("invoiceCccdCmnd")}
+                    placeholder="Nhập số CCCD/CMND"
                     className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
                 </div>
@@ -1165,6 +1177,7 @@ export function CustomerForm({
             : handleEditFromModal(addr)
         }
       />
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -333,7 +333,7 @@ export function ProductsTable({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
-  const [activeStatusTab, setActiveStatusTab] = useState("all");
+  const [activeStatusTab, setActiveStatusTab] = useState("active");
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
@@ -360,20 +360,19 @@ export function ProductsTable({
     const f = { ...filters };
     if (activeStatusTab === "active") f.isActive = true;
     else if (activeStatusTab === "inactive") f.isActive = false;
-    // Nếu "all" thì không set isActive → lấy tất cả
+    else delete f.isActive; // "all" → bỏ filter trạng thái, lấy tất cả
     return f;
   }, [filters, activeStatusTab]);
 
-  // Sync tab với sidebar
+  // Sync tab với filters (nguồn sự thật từ sidebar/page).
+  // Phụ thuộc cả object `filters` (mỗi onFiltersChange tạo object mới, kể cả
+  // "Xóa tất cả" emit {}), nên tab luôn reset đúng theo trạng thái filters.
   useEffect(() => {
     const isActive = filters.isActive;
-    if (isActive === true && activeStatusTab !== "active")
-      setActiveStatusTab("active");
-    else if (isActive === false && activeStatusTab !== "inactive")
-      setActiveStatusTab("inactive");
-    else if (isActive === undefined && activeStatusTab !== "all")
-      setActiveStatusTab("all");
-  }, [filters.isActive]);
+    if (isActive === true) setActiveStatusTab("active");
+    else if (isActive === false) setActiveStatusTab("inactive");
+    else setActiveStatusTab("all");
+  }, [filters]);
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {

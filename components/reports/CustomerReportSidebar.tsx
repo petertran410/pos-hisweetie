@@ -10,8 +10,8 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useCustomerGroups } from "@/lib/hooks/useCustomers";
+import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 
@@ -336,7 +336,6 @@ export function CustomerReportSidebar({
   onReportTypeChange,
 }: CustomerReportSidebarProps) {
   const { data: branches } = useBranches();
-  const { data: customersData } = useCustomers({ pageSize: 1000 });
   const { data: groupsData } = useCustomerGroups();
   const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
@@ -344,6 +343,14 @@ export function CustomerReportSidebar({
   const [branchId, setBranchId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerSearchDebounced, setCustomerSearchDebounced] = useState("");
+  // Lưu object KH đã chọn để vẫn hiển thị tên sau khi xoá ô tìm (không còn
+  // fetch toàn bộ KH để dò tên nữa).
+  const [selectedCustomer, setSelectedCustomer] = useState<{
+    id: number;
+    name: string;
+    code?: string;
+  } | null>(null);
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
   const [customerGroupId, setCustomerGroupId] = useState("");
   const [soldById, setSoldById] = useState("");
@@ -362,23 +369,23 @@ export function CustomerReportSidebar({
   const customDateRef = useRef<HTMLDivElement>(null);
   const customerRef = useRef<HTMLDivElement>(null);
 
-  const customers = useMemo(() => customersData?.data || [], [customersData]);
-  const selectedCustomer = useMemo(
-    () => customers.find((c) => String(c.id) === customerId),
-    [customers, customerId]
+  // Debounce từ khoá tìm khách hàng (gọi backend /customers/search → khớp
+  // từ trọn vẹn, không còn giới hạn 1000 KH như trước).
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setCustomerSearchDebounced(customerSearch.trim()),
+      300
+    );
+    return () => clearTimeout(timer);
+  }, [customerSearch]);
+
+  const { data: customerSearchData } = useSearchCustomers(
+    customerSearchDebounced
   );
-  const filteredCustomers = useMemo(() => {
-    if (!customerSearch) return customers.slice(0, 50);
-    const q = customerSearch.toLowerCase();
-    return customers
-      .filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          (c.contactNumber ?? "").includes(q) ||
-          (c.code ?? "").toLowerCase().includes(q)
-      )
-      .slice(0, 50);
-  }, [customers, customerSearch]);
+  const filteredCustomers = useMemo(
+    () => customerSearchData?.data || [],
+    [customerSearchData]
+  );
 
   const groups = useMemo(() => groupsData?.data || [], [groupsData]);
 
@@ -714,6 +721,7 @@ export function CustomerReportSidebar({
                 onClick={() => {
                   setCustomerId("");
                   setCustomerSearch("");
+                  setSelectedCustomer(null);
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">
                 ✕
@@ -726,6 +734,11 @@ export function CustomerReportSidebar({
                     key={c.id}
                     onClick={() => {
                       setCustomerId(String(c.id));
+                      setSelectedCustomer({
+                        id: c.id,
+                        name: c.name,
+                        code: c.code,
+                      });
                       setCustomerSearch("");
                       setShowCustomerDrop(false);
                     }}

@@ -539,7 +539,7 @@ export function ProductsMobileView({
   const { selectedBranch } = useBranchStore();
   const [search, setSearch] = useState(codeFilter || "");
   const [debouncedSearch, setDebouncedSearch] = useState(codeFilter || "");
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("active");
   const [page, setPage] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
@@ -566,7 +566,8 @@ export function ProductsMobileView({
     };
     if (debouncedSearch) params.search = debouncedSearch;
     if (activeTab === "active") params.isActive = true;
-    if (activeTab === "inactive") params.isActive = false;
+    else if (activeTab === "inactive") params.isActive = false;
+    else delete params.isActive; // "all" → bỏ filter trạng thái, lấy tất cả
     return params;
   }, [page, limit, selectedBranch?.id, filters, debouncedSearch, activeTab]);
 

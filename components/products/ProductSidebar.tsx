@@ -117,7 +117,8 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
   const { data: childCategories } = useCategories("child");
   const { data: trademarks } = useTrademarks();
 
-  const [selectedStatus, setSelectedStatus] = useState("");
+  // Mặc định lọc "Hoạt động".
+  const [selectedStatus, setSelectedStatus] = useState("active");
   const [parentName, setParentName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [childName, setChildName] = useState("");

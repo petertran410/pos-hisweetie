@@ -12,6 +12,9 @@ import {
   Upload,
   Download,
   Loader2,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from "lucide-react";
 import type { Customer, CustomerFilters } from "@/lib/types/customer";
 import { CustomerDetailRow } from "./CustomerDetailRow";
@@ -46,7 +49,13 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
     label: "Mã khách hàng",
     visible: true,
     width: "160px",
-    render: (c) => <CodeLink entity="customer" code={c.code} />,
+    render: (c) => (
+      <CodeLink
+        entity="customer"
+        code={c.code}
+        className="text-blue-600 hover:underline font-medium break-all"
+      />
+    ),
   },
   {
     key: "name",
@@ -237,6 +246,35 @@ export function CustomersTable({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
+
+  // Map cột (key trong bảng) → field sort của backend (field thật trên model Customer)
+  const COLUMN_ORDER_BY: Record<string, string> = {
+    code: "code",
+    name: "name",
+    createdAt: "createdAt",
+    updatedAt: "updatedAt",
+    debtAmount: "totalDebt",
+    totalPurchased: "totalPurchased",
+    totalRevenue: "totalRevenue",
+  };
+
+  const SORTABLE_COLUMNS = new Set(Object.keys(COLUMN_ORDER_BY));
+
+  const handleSort = (colKey: string) => {
+    if (!SORTABLE_COLUMNS.has(colKey)) return;
+    if (sortBy !== colKey) {
+      setSortBy(colKey);
+      setSortDir("desc");
+    } else if (sortDir === "desc") {
+      setSortDir("asc");
+    } else {
+      setSortBy(null);
+      setSortDir(null);
+    }
+    setPage(1);
+  };
 
   const canViewDebt = useCan("customers", "view_debt");
   const { exportToFile, isExporting } = useExportCustomers();
@@ -285,6 +323,9 @@ export function CustomersTable({
     name: debouncedSearch || undefined,
     pageSize: limit,
     currentItem: (page - 1) * limit,
+    ...(sortBy && sortDir
+      ? { orderBy: COLUMN_ORDER_BY[sortBy], orderDirection: sortDir }
+      : {}),
   });
 
   // Tổng các cột tiền của TOÀN BỘ khách hàng match filter — không phụ thuộc page/limit.
@@ -450,9 +491,27 @@ export function CustomersTable({
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
-                    className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide"
-                    style={{ width: col.width, minWidth: col.width }}>
-                    {col.label}
+                    className={`px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide ${
+                      SORTABLE_COLUMNS.has(col.key)
+                        ? "cursor-pointer select-none hover:bg-gray-100"
+                        : ""
+                    }`}
+                    style={{ width: col.width, minWidth: col.width }}
+                    onClick={() => handleSort(col.key)}>
+                    <span className="flex items-center gap-1">
+                      {col.label}
+                      {SORTABLE_COLUMNS.has(col.key) && (
+                        <span className="inline-flex text-gray-400">
+                          {sortBy === col.key && sortDir === "desc" ? (
+                            <ArrowDown className="w-3 h-3 text-blue-500" />
+                          ) : sortBy === col.key && sortDir === "asc" ? (
+                            <ArrowUp className="w-3 h-3 text-blue-500" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 opacity-40" />
+                          )}
+                        </span>
+                      )}
+                    </span>
                   </th>
                 ))}
                 <th className="px-4 py-2.5 w-8" />

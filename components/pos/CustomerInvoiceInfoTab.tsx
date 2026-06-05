@@ -1,26 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useUpdateCustomer } from "@/lib/hooks/useCustomers";
+import { useTaxCodeLookup } from "@/lib/hooks/useVietQr";
 import { toast } from "sonner";
-import { Pencil, Save, X as XIcon } from "lucide-react";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Pencil, Save, X as XIcon, Search, Loader2 } from "lucide-react";
 
 interface CustomerInvoiceInfoTabProps {
   customer: any;
   onUpdate?: (customer: any) => void;
-}
-
-interface Province {
-  code: string;
-  name: string;
-}
-
-interface Commune {
-  code: string;
-  name: string;
-  provinceCode: string;
 }
 
 export function CustomerInvoiceInfoTab({
@@ -34,8 +23,6 @@ export function CustomerInvoiceInfoTab({
       type: customer.type?.toString() || "0",
       invoiceBuyerName: customer.invoiceBuyerName || "",
       invoiceAddress: customer.invoiceAddress || "",
-      invoiceCityCode: customer.invoiceCityCode || "",
-      invoiceWardCode: customer.invoiceWardCode || "",
       invoiceEmail: customer.invoiceEmail || "",
       invoicePhone: customer.invoicePhone || "",
       invoiceCccdCmnd: customer.invoiceCccdCmnd || "",
@@ -46,56 +33,56 @@ export function CustomerInvoiceInfoTab({
     },
   });
 
-  const [invoiceProvinces, setInvoiceProvinces] = useState<Province[]>([]);
-  const [invoiceCommunes, setInvoiceCommunes] = useState<Commune[]>([]);
-  const [filteredInvoiceCommunes, setFilteredInvoiceCommunes] = useState<
-    Commune[]
-  >([]);
-
   const customerType = watch("type");
-  const selectedInvoiceCityCode = watch("invoiceCityCode");
 
-  useEffect(() => {
-    const loadInvoiceData = async () => {
-      try {
-        const [provincesRes, communesRes] = await Promise.all([
-          fetch("/data/new-province-location.json"),
-          fetch("/data/new-commune-location.json"),
-        ]);
+  // ── Tra cứu mã số thuế qua VietQR ──
+  const taxLookup = useTaxCodeLookup();
+  const lastLookedUpTaxCode = useRef<string>("");
 
-        const provincesData = await provincesRes.json();
-        const communesData = await communesRes.json();
-
-        if (Array.isArray(provincesData)) {
-          setInvoiceProvinces(provincesData);
-        } else if (provincesData && Array.isArray(provincesData.provinces)) {
-          setInvoiceProvinces(provincesData.provinces);
-        }
-
-        if (Array.isArray(communesData)) {
-          setInvoiceCommunes(communesData);
-        } else if (communesData && Array.isArray(communesData.communes)) {
-          setInvoiceCommunes(communesData.communes);
-        }
-      } catch (error) {
-        console.error("Error loading invoice data:", error);
-        toast.error("Không thể tải dữ liệu địa chỉ xuất hóa đơn");
-      }
-    };
-    loadInvoiceData();
-  }, []);
-
-  useEffect(() => {
-    if (selectedInvoiceCityCode && invoiceCommunes.length > 0) {
-      const filtered = invoiceCommunes.filter(
-        (commune) =>
-          String(commune.provinceCode) === String(selectedInvoiceCityCode)
-      );
-      setFilteredInvoiceCommunes(filtered);
-    } else {
-      setFilteredInvoiceCommunes([]);
+  const handleTaxLookup = async () => {
+    const taxCode = (watch("taxCode") || "").trim();
+    if (!taxCode) {
+      toast.error("Vui lòng nhập mã số thuế");
+      return;
     }
-  }, [selectedInvoiceCityCode, invoiceCommunes]);
+    lastLookedUpTaxCode.current = taxCode;
+    try {
+      const data = await taxLookup.mutateAsync(taxCode);
+      const currentType = watch("type");
+
+      // Tên: tổ chức → Tên công ty (organization), cá nhân → Tên người mua
+      if (currentType === "1") {
+        setValue("organization", data.name || "");
+      } else {
+        setValue("invoiceBuyerName", data.name || "");
+      }
+
+      // Địa chỉ: điền toàn bộ chuỗi vào ô Địa chỉ
+      if (data.address) {
+        setValue("invoiceAddress", data.address);
+      }
+
+      toast.success(
+        data.status
+          ? `Đã điền thông tin từ mã số thuế (${data.status})`
+          : "Đã điền thông tin từ mã số thuế"
+      );
+    } catch (err: any) {
+      toast.error(err?.message || "Không thể tra cứu mã số thuế");
+    }
+  };
+
+  const handleTaxCodeBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const taxCode = (e.target.value || "").trim();
+    // Tự tra cứu khi độ dài hợp lệ (10 hoặc 13 số) và khác mã đã tra trước đó
+    if (
+      /^\d{10}(\d{3})?$/.test(taxCode) &&
+      taxCode !== lastLookedUpTaxCode.current &&
+      !taxLookup.isPending
+    ) {
+      handleTaxLookup();
+    }
+  };
 
   const onSubmit = async (data: any) => {
     try {
@@ -108,38 +95,9 @@ export function CustomerInvoiceInfoTab({
         invoiceDvqhnsCode: data.invoiceDvqhnsCode || null,
         invoiceEmail: data.invoiceEmail || null,
         invoicePhone: data.invoicePhone || null,
+        taxCode: data.taxCode || null,
+        organization: data.organization || null,
       };
-
-      if (data.type === "1") {
-        updateData.taxCode = data.taxCode || null;
-        updateData.organization = data.organization || null;
-      }
-
-      if (data.invoiceCityCode) {
-        updateData.invoiceCityCode = data.invoiceCityCode;
-        const province = invoiceProvinces.find(
-          (p) => p.code === data.invoiceCityCode
-        );
-        if (province) {
-          updateData.invoiceCityName = province.name;
-        }
-      } else {
-        updateData.invoiceCityCode = null;
-        updateData.invoiceCityName = null;
-      }
-
-      if (data.invoiceWardCode) {
-        updateData.invoiceWardCode = data.invoiceWardCode;
-        const commune = invoiceCommunes.find(
-          (c) => c.code === data.invoiceWardCode
-        );
-        if (commune) {
-          updateData.invoiceWardName = commune.name;
-        }
-      } else {
-        updateData.invoiceWardCode = null;
-        updateData.invoiceWardName = null;
-      }
 
       await updateCustomer.mutateAsync({
         id: customer.id,
@@ -162,8 +120,6 @@ export function CustomerInvoiceInfoTab({
     setValue("type", customer.type?.toString() || "0");
     setValue("invoiceBuyerName", customer.invoiceBuyerName || "");
     setValue("invoiceAddress", customer.invoiceAddress || "");
-    setValue("invoiceCityCode", customer.invoiceCityCode || "");
-    setValue("invoiceWardCode", customer.invoiceWardCode || "");
     setValue("invoiceEmail", customer.invoiceEmail || "");
     setValue("invoicePhone", customer.invoicePhone || "");
     setValue("invoiceCccdCmnd", customer.invoiceCccdCmnd || "");
@@ -212,6 +168,15 @@ export function CustomerInvoiceInfoTab({
 
               <div className="py-2 lg:py-0">
                 <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
+                  Mã số thuế
+                </label>
+                <div className="text-sm lg:text-base">
+                  {customer.taxCode || "Chưa có"}
+                </div>
+              </div>
+
+              <div className="py-2 lg:py-0">
+                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
                   Số CCCD/CMND
                 </label>
                 <div className="text-sm lg:text-base">
@@ -225,15 +190,6 @@ export function CustomerInvoiceInfoTab({
                 </label>
                 <div className="text-sm lg:text-base">
                   {customer.invoiceBankAccount || "Chưa có"}
-                </div>
-              </div>
-
-              <div className="py-2 lg:py-0">
-                <label className="block text-sm lg:text-sm font-medium text-gray-500 mb-0.5 lg:mb-1">
-                  Mã ĐVQHNS
-                </label>
-                <div className="text-sm lg:text-base">
-                  {customer.invoiceDvqhnsCode || "Chưa có"}
                 </div>
               </div>
 
@@ -320,13 +276,7 @@ export function CustomerInvoiceInfoTab({
               Địa chỉ xuất hóa đơn
             </label>
             <div className="text-sm lg:text-base">
-              {[
-                customer.invoiceAddress,
-                customer.invoiceWardName,
-                customer.invoiceCityName,
-              ]
-                .filter(Boolean)
-                .join(", ") || "Chưa có"}
+              {customer.invoiceAddress || "Chưa có"}
             </div>
           </div>
         </div>
@@ -389,7 +339,34 @@ export function CustomerInvoiceInfoTab({
             />
           </div>
 
-          <div className="sm:col-span-2">
+          <div>
+            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
+              Mã số thuế
+            </label>
+            <div className="flex gap-2">
+              <input
+                {...register("taxCode")}
+                onBlur={handleTaxCodeBlur}
+                className="flex-1 border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
+                placeholder="Nhập mã số thuế"
+              />
+              <button
+                type="button"
+                onClick={handleTaxLookup}
+                disabled={taxLookup.isPending}
+                title="Tra cứu thông tin từ mã số thuế"
+                className="px-2.5 py-1.5 lg:px-3 lg:py-2 border rounded text-sm font-medium text-blue-600 border-blue-200 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
+                {taxLookup.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
+                Tra cứu
+              </button>
+            </div>
+          </div>
+
+          <div className="sm:col-span-2 lg:col-span-1">
             <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Địa chỉ
             </label>
@@ -402,50 +379,13 @@ export function CustomerInvoiceInfoTab({
 
           <div>
             <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
-              Tỉnh/Thành phố
-            </label>
-            <SearchableSelect
-              options={(invoiceProvinces || []).map((province) => ({
-                value: province.code,
-                label: province.name,
-              }))}
-              value={watch("invoiceCityCode") || ""}
-              onChange={(value) => {
-                setValue("invoiceCityCode", value);
-                setValue("invoiceWardCode", "");
-              }}
-              placeholder="Tìm Tỉnh/Thành phố"
-              size="sm"
-            />
-          </div>
-
-          <div className="col-span-1 sm:col-span-2">
-            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
-              Phường/Xã
-            </label>
-            <SearchableSelect
-              options={filteredInvoiceCommunes.map(
-                (commune: { code: any; name: any }) => ({
-                  value: commune.code,
-                  label: commune.name,
-                })
-              )}
-              value={watch("invoiceWardCode") || ""}
-              onChange={(value) => setValue("invoiceWardCode", value)}
-              placeholder="Tìm Phường/Xã"
-              disabled={!selectedInvoiceCityCode}
-              size="sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
-              Số CCCD/CMND
+              Email
             </label>
             <input
-              {...register("invoiceCccdCmnd")}
+              {...register("invoiceEmail")}
+              type="email"
               className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
-              placeholder="Nhập số CCCD/CMND"
+              placeholder="email@example.com"
             />
           </div>
 
@@ -462,24 +402,12 @@ export function CustomerInvoiceInfoTab({
 
           <div>
             <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
-              Mã ĐVQHNS
+              Số CCCD/CMND
             </label>
             <input
-              {...register("invoiceDvqhnsCode")}
+              {...register("invoiceCccdCmnd")}
               className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
-              placeholder="Nhập mã đơn vị"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
-              Email
-            </label>
-            <input
-              {...register("invoiceEmail")}
-              type="email"
-              className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
-              placeholder="email@example.com"
+              placeholder="Nhập số CCCD/CMND"
             />
           </div>
 
@@ -503,11 +431,27 @@ export function CustomerInvoiceInfoTab({
             <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Mã số thuế <span className="text-red-500">*</span>
             </label>
-            <input
-              {...register("taxCode", { required: customerType === "1" })}
-              className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
-              placeholder="Bắt buộc"
-            />
+            <div className="flex gap-2">
+              <input
+                {...register("taxCode", { required: customerType === "1" })}
+                onBlur={handleTaxCodeBlur}
+                className="flex-1 border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
+                placeholder="Bắt buộc"
+              />
+              <button
+                type="button"
+                onClick={handleTaxLookup}
+                disabled={taxLookup.isPending}
+                title="Tra cứu thông tin từ mã số thuế"
+                className="px-2.5 py-1.5 lg:px-3 lg:py-2 border rounded text-sm font-medium text-blue-600 border-blue-200 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
+                {taxLookup.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
+                Tra cứu
+              </button>
+            </div>
           </div>
 
           <div>
@@ -521,7 +465,7 @@ export function CustomerInvoiceInfoTab({
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
               Địa chỉ
             </label>
@@ -534,61 +478,12 @@ export function CustomerInvoiceInfoTab({
 
           <div>
             <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
-              Tỉnh/Thành phố
-            </label>
-            <SearchableSelect
-              options={(invoiceProvinces || []).map((province) => ({
-                value: province.code,
-                label: province.name,
-              }))}
-              value={watch("invoiceCityCode") || ""}
-              onChange={(value) => {
-                setValue("invoiceCityCode", value);
-                setValue("invoiceWardCode", "");
-              }}
-              placeholder="Tìm Tỉnh/Thành phố"
-              size="sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
-              Phường/Xã
-            </label>
-            <SearchableSelect
-              options={filteredInvoiceCommunes.map(
-                (commune: { code: any; name: any }) => ({
-                  value: commune.code,
-                  label: commune.name,
-                })
-              )}
-              value={watch("invoiceWardCode") || ""}
-              onChange={(value) => setValue("invoiceWardCode", value)}
-              placeholder="Tìm Phường/Xã"
-              disabled={!selectedInvoiceCityCode}
-              size="sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
-              Số CCCD/CMND
+              Tên người mua
             </label>
             <input
-              {...register("invoiceCccdCmnd")}
+              {...register("invoiceBuyerName")}
               className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
-              placeholder="Nhập số CCCD/CMND"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm lg:text-sm font-medium mb-1 lg:mb-2">
-              Số hộ chiếu
-            </label>
-            <input
-              {...register("invoiceBankAccount")}
-              className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
-              placeholder="Nhập số hộ chiếu"
+              placeholder="Nhập tên người mua"
             />
           </div>
 

@@ -1059,6 +1059,7 @@ export function CustomersSidebar({
       if (groupId) f.groupId = groupId;
       if (isActive === "true") f.isActive = true;
       else if (isActive === "false") f.isActive = false;
+      else f.includeInactive = true; // "all" → lấy cả KH hoạt động & ngừng HĐ
 
       if (totalPurchasedFrom !== undefined)
         f.totalPurchasedFrom = totalPurchasedFrom;
