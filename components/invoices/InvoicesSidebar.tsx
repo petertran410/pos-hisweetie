@@ -984,6 +984,9 @@ export function InvoicesSidebar({
   const [misaEmployeeCodes, setMisaEmployeeCodes] = useState<string[]>(
     saved.current?.misaEmployeeCodes || []
   );
+  const [taxCodeStatus, setTaxCodeStatus] = useState<"" | "empty" | "filled">(
+    saved.current?.taxCodeStatus || ""
+  );
   const [saleChannelId, setSaleChannelId] = useState(
     saved.current?.saleChannelId || ""
   );
@@ -1018,6 +1021,7 @@ export function InvoicesSidebar({
       paymentMethod,
       selectedBankAccountIds,
       misaEmployeeCodes,
+      taxCodeStatus,
     };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [
@@ -1035,6 +1039,7 @@ export function InvoicesSidebar({
     paymentMethod,
     selectedBankAccountIds,
     misaEmployeeCodes,
+    taxCodeStatus,
   ]);
 
   // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó.
@@ -1092,6 +1097,7 @@ export function InvoicesSidebar({
     if (saleChannelId) n++;
     if (paymentMethod) n++;
     if (showMisaEmployeeFilter && misaEmployeeCodes.length > 0) n++;
+    if (showMisaEmployeeFilter && taxCodeStatus) n++;
     return n;
   }, [
     selectedBranchIds,
@@ -1103,6 +1109,7 @@ export function InvoicesSidebar({
     saleChannelId,
     paymentMethod,
     misaEmployeeCodes,
+    taxCodeStatus,
     showMisaEmployeeFilter,
   ]);
 
@@ -1148,6 +1155,8 @@ export function InvoicesSidebar({
       // rò filter sang trang hóa đơn thường vì hai trang share sessionStorage.
       if (showMisaEmployeeFilter && misaEmployeeCodes.length > 0)
         f.misaEmployeeCodes = misaEmployeeCodes;
+      if (showMisaEmployeeFilter && taxCodeStatus)
+        f.taxCodeStatus = taxCodeStatus;
 
       onFiltersChange(f);
     }, 300);
@@ -1167,6 +1176,7 @@ export function InvoicesSidebar({
     paymentMethod,
     selectedBankAccountIds,
     misaEmployeeCodes,
+    taxCodeStatus,
     showMisaEmployeeFilter,
   ]);
 
@@ -1186,6 +1196,7 @@ export function InvoicesSidebar({
     setPaymentMethod("");
     setSelectedBankAccountIds([]);
     setMisaEmployeeCodes([]);
+    setTaxCodeStatus("");
     onFiltersChange({});
     sessionStorage.removeItem(STORAGE_KEY);
   };
@@ -1481,6 +1492,26 @@ export function InvoicesSidebar({
               placeholder="Tất cả"
               searchPlaceholder="Tìm theo tên nhân viên..."
               onChange={setMisaEmployeeCodes}
+            />
+          </div>
+        )}
+
+        {/* ── Mã số thuế (trống / không trống) — chỉ hiện ở trang hóa đơn VAT ── */}
+        {showMisaEmployeeFilter && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Mã số thuế
+            </label>
+            <SimpleDropdown
+              options={[
+                { value: "filled", label: "Có mã số thuế" },
+                { value: "empty", label: "Không có mã số thuế" },
+              ]}
+              value={taxCodeStatus}
+              placeholder="Tất cả"
+              onChange={(v) =>
+                setTaxCodeStatus(v as "" | "empty" | "filled")
+              }
             />
           </div>
         )}

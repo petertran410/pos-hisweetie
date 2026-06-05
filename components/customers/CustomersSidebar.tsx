@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups";
-import { useBranches } from "@/lib/hooks/useBranches";
 import { CustomerFilters } from "@/lib/types/customer";
 import {
   ChevronDown,
@@ -741,7 +740,6 @@ function MiniCalendar({
 // ─── DateFilterBlock (tái sử dụng cho cả 2 filter ngày) ─────────────────────
 function DateFilterBlock({
   label,
-  onToggle,
   dateMode,
   setDateMode,
   selectedPreset,
@@ -760,7 +758,6 @@ function DateFilterBlock({
   customDateRef,
 }: {
   label: string;
-  onToggle: (v: boolean) => void;
   dateMode: "preset" | "custom";
   setDateMode: (v: "preset" | "custom") => void;
   selectedPreset: string;
@@ -933,11 +930,9 @@ export function CustomersSidebar({
   onFiltersChange,
 }: CustomersSidebarProps) {
   const { data: groupsData } = useCustomerGroups();
-  const { data: branchesData } = useBranches();
 
   // ─── Local state ───
   const [groupId, setGroupId] = useState<number | undefined>(filters.groupId);
-  const [branchId, setBranchId] = useState("");
   const [customerType, setCustomerType] = useState("all");
   const [gender, setGender] = useState("all");
   const [isActive, setIsActive] = useState("true"); // "true" | "false" | "all"
@@ -957,7 +952,6 @@ export function CustomersSidebar({
   const [editingGroup, setEditingGroup] = useState<any>(null);
 
   // ─── Date filter: Ngày tạo KH ───
-  const [enableCreatedDate, setEnableCreatedDate] = useState(false);
   const [createdDateMode, setCreatedDateMode] = useState<"preset" | "custom">(
     "preset"
   );
@@ -974,7 +968,6 @@ export function CustomersSidebar({
   const createdCustomDateRef = useRef<HTMLDivElement>(null);
 
   // ─── Date filter: Ngày giao dịch cuối ───
-  const [enableLastTx, setEnableLastTx] = useState(false);
   const [lastTxDateMode, setLastTxDateMode] = useState<"preset" | "custom">(
     "preset"
   );
@@ -1011,7 +1004,6 @@ export function CustomersSidebar({
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (groupId) count++;
-    if (branchId) count++;
     if (customerType !== "all") count++;
     if (gender !== "all") count++;
     if (isActive !== "true") count++;
@@ -1019,14 +1011,13 @@ export function CustomersSidebar({
       count++;
     if (debtFrom !== undefined || debtTo !== undefined) count++;
     if (pointFrom !== undefined || pointTo !== undefined) count++;
-    if (enableCreatedDate) count++;
-    if (enableLastTx) count++;
+    if (createdPreset !== "all_time" || createdDateMode === "custom") count++;
+    if (lastTxPreset !== "all_time" || lastTxDateMode === "custom") count++;
     if (purchasedSort !== "none") count++;
     if (debtSort !== "none") count++;
     return count;
   }, [
     groupId,
-    branchId,
     customerType,
     gender,
     isActive,
@@ -1036,8 +1027,12 @@ export function CustomersSidebar({
     debtTo,
     pointFrom,
     pointTo,
-    enableCreatedDate,
-    enableLastTx,
+    createdPreset,
+    createdDateMode,
+    lastTxPreset,
+    lastTxDateMode,
+    purchasedSort,
+    debtSort,
   ]);
 
   // ─── Debounce emit filters (giống OrdersSidebar) ───
@@ -1062,7 +1057,6 @@ export function CustomersSidebar({
       };
 
       if (groupId) f.groupId = groupId;
-      if (branchId) f.branchId = Number(branchId);
       if (isActive === "true") f.isActive = true;
       else if (isActive === "false") f.isActive = false;
 
@@ -1073,27 +1067,35 @@ export function CustomersSidebar({
       if (debtTo !== undefined) f.debtTo = debtTo;
 
       // ── Ngày tạo KH ──
-      if (createdPreset !== "all_time" || createdDateMode === "custom") {
-        const createdRange =
-          createdDateMode === "preset"
-            ? getDateRangeFromPreset(createdPreset)
-            : createdFromDate && createdToDate
-              ? { from: new Date(createdFromDate), to: new Date(createdToDate) }
-              : getDateRangeFromPreset("this_month");
-        f.createdDateFrom = createdRange.from.toISOString();
-        f.createdDateTo = createdRange.to.toISOString();
+      if (createdDateMode === "preset") {
+        if (createdPreset !== "all_time") {
+          const r = getDateRangeFromPreset(createdPreset);
+          f.createdDateFrom = r.from.toISOString();
+          f.createdDateTo = r.to.toISOString();
+        }
+      } else if (
+        createdDateMode === "custom" &&
+        createdFromDate &&
+        createdToDate
+      ) {
+        f.createdDateFrom = new Date(createdFromDate).toISOString();
+        f.createdDateTo = new Date(createdToDate).toISOString();
       }
 
       // ── Ngày giao dịch cuối ──
-      if (lastTxPreset !== "all_time" || lastTxDateMode === "custom") {
-        const lastTxRange =
-          lastTxDateMode === "preset"
-            ? getDateRangeFromPreset(lastTxPreset)
-            : lastTxFromDate && lastTxToDate
-              ? { from: new Date(lastTxFromDate), to: new Date(lastTxToDate) }
-              : getDateRangeFromPreset("this_month");
-        f.lastTransactionFrom = lastTxRange.from.toISOString();
-        f.lastTransactionTo = lastTxRange.to.toISOString();
+      if (lastTxDateMode === "preset") {
+        if (lastTxPreset !== "all_time") {
+          const r = getDateRangeFromPreset(lastTxPreset);
+          f.lastTransactionFrom = r.from.toISOString();
+          f.lastTransactionTo = r.to.toISOString();
+        }
+      } else if (
+        lastTxDateMode === "custom" &&
+        lastTxFromDate &&
+        lastTxToDate
+      ) {
+        f.lastTransactionFrom = new Date(lastTxFromDate).toISOString();
+        f.lastTransactionTo = new Date(lastTxToDate).toISOString();
       }
 
       onFiltersChange(f);
@@ -1101,7 +1103,6 @@ export function CustomersSidebar({
     return () => clearTimeout(timer);
   }, [
     groupId,
-    branchId,
     customerType,
     gender,
     isActive,
@@ -1126,7 +1127,6 @@ export function CustomersSidebar({
   // ─── Clear all ───
   const clearAll = () => {
     setGroupId(undefined);
-    setBranchId("");
     setCustomerType("all");
     setGender("all");
     setIsActive("true");
@@ -1136,12 +1136,10 @@ export function CustomersSidebar({
     setDebtTo(undefined);
     setPointFrom(undefined);
     setPointTo(undefined);
-    setEnableCreatedDate(false);
     setCreatedDateMode("preset");
     setCreatedPreset("all_time");
     setCreatedFromDate("");
     setCreatedToDate("");
-    setEnableLastTx(false);
     setLastTxDateMode("preset");
     setLastTxPreset("all_time");
     setLastTxFromDate("");
@@ -1188,33 +1186,9 @@ export function CustomersSidebar({
 
           <div className="border-t border-gray-100" />
 
-          {/* ── Chi nhánh ── */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Chi nhánh
-            </label>
-            <SimpleDropdown
-              options={
-                branchesData
-                  ?.filter((b) => b.isActive)
-                  .map((b) => ({
-                    value: String(b.id),
-                    label: b.name,
-                  })) ?? []
-              }
-              value={branchId}
-              placeholder="Tất cả chi nhánh"
-              onChange={setBranchId}
-              searchable
-            />
-          </div>
-
-          <div className="border-t border-gray-100" />
-
           {/* ── Ngày tạo khách hàng ── */}
           <DateFilterBlock
             label="Thời gian"
-            onToggle={setEnableCreatedDate}
             dateMode={createdDateMode}
             setDateMode={setCreatedDateMode}
             selectedPreset={createdPreset}
@@ -1238,7 +1212,6 @@ export function CustomersSidebar({
           {/* ── Ngày giao dịch cuối ── */}
           <DateFilterBlock
             label="Giao dịch cuối"
-            onToggle={setEnableLastTx}
             dateMode={lastTxDateMode}
             setDateMode={setLastTxDateMode}
             selectedPreset={lastTxPreset}

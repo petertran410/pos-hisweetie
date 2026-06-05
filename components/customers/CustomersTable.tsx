@@ -237,7 +237,6 @@ export function CustomersTable({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
-  const [activeStatusTab, setActiveStatusTab] = useState("all");
 
   const canViewDebt = useCan("customers", "view_debt");
   const { exportToFile, isExporting } = useExportCustomers();
@@ -248,19 +247,10 @@ export function CustomersTable({
     return () => clearTimeout(t);
   }, [search]);
 
-  // Reset page khi filter/search/tab thay đổi
+  // Reset page khi filter/search thay đổi
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, filters, activeStatusTab]);
-
-  // Tab status override sidebar isActive filter
-  const effectiveFilters = useMemo(() => {
-    const f = { ...filters };
-    if (activeStatusTab === "active") f.isActive = true;
-    else if (activeStatusTab === "inactive") f.isActive = false;
-    else if (activeStatusTab === "all") delete f.isActive;
-    return f;
-  }, [filters, activeStatusTab]);
+  }, [debouncedSearch, filters]);
 
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     if (typeof window !== "undefined") {
@@ -291,7 +281,7 @@ export function CustomersTable({
   );
 
   const { data, isLoading } = useCustomers({
-    ...effectiveFilters,
+    ...filters,
     name: debouncedSearch || undefined,
     pageSize: limit,
     currentItem: (page - 1) * limit,
@@ -299,7 +289,7 @@ export function CustomersTable({
 
   // Tổng các cột tiền của TOÀN BỘ khách hàng match filter — không phụ thuộc page/limit.
   const { data: totals } = useCustomersTotals({
-    ...effectiveFilters,
+    ...filters,
     name: debouncedSearch || undefined,
   });
 
@@ -418,7 +408,7 @@ export function CustomersTable({
               <button
                 onClick={() =>
                   exportToFile({
-                    ...effectiveFilters,
+                    ...filters,
                     name: debouncedSearch || undefined,
                   })
                 }

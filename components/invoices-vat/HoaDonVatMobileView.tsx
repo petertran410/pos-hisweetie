@@ -132,6 +132,7 @@ const countActiveFilters = (f: any): number => {
   if (Array.isArray(f.statusIds) && f.statusIds.length > 0) n++;
   if (Array.isArray(f.misaSyncStatus) && f.misaSyncStatus.length > 0) n++;
   if (Array.isArray(f.misaEmployeeCodes) && f.misaEmployeeCodes.length > 0) n++;
+  if (f.taxCodeStatus) n++;
   if (Array.isArray(f.branchIds) && f.branchIds.length > 0) n++;
   if (Array.isArray(f.customerIds) && f.customerIds.length > 0) n++;
   if (Array.isArray(f.createdByIds) && f.createdByIds.length > 0) n++;
@@ -252,6 +253,9 @@ function HoaDonVatMobileFilterSheet({
   const [misaEmployeeCodes, setMisaEmployeeCodes] = useState<string[]>(
     filters.misaEmployeeCodes ?? []
   );
+  const [taxCodeStatus, setTaxCodeStatus] = useState<string>(
+    filters.taxCodeStatus || ""
+  );
   const [branchIds, setBranchIds] = useState<string[]>(
     (filters.branchIds ?? []).map(String)
   );
@@ -309,6 +313,7 @@ function HoaDonVatMobileFilterSheet({
     if (statusIds.length > 0) f.statusIds = statusIds.map(Number);
     if (misaSyncStatus.length > 0) f.misaSyncStatus = misaSyncStatus;
     if (misaEmployeeCodes.length > 0) f.misaEmployeeCodes = misaEmployeeCodes;
+    if (taxCodeStatus) f.taxCodeStatus = taxCodeStatus;
     if (branchIds.length > 0) f.branchIds = branchIds.map(Number);
     if (createdByIds.length > 0) f.createdByIds = createdByIds.map(Number);
     if (soldByIds.length > 0) f.soldByIds = soldByIds.map(Number);
@@ -342,6 +347,7 @@ function HoaDonVatMobileFilterSheet({
     setStatusIds([]);
     setMisaSyncStatus([]);
     setMisaEmployeeCodes([]);
+    setTaxCodeStatus("");
     setBranchIds([]);
     setCreatedByIds([]);
     setSoldByIds([]);
@@ -380,6 +386,7 @@ function HoaDonVatMobileFilterSheet({
     statusIds.length > 0,
     misaSyncStatus.length > 0,
     misaEmployeeCodes.length > 0,
+    !!taxCodeStatus,
     branchIds.length > 0,
     customerIds.length > 0,
     createdByIds.length > 0,
@@ -455,6 +462,27 @@ function HoaDonVatMobileFilterSheet({
           searchPlaceholder="Tìm nhân viên..."
           emptyText="Không có nhân viên"
           onChange={setMisaEmployeeCodes}
+        />
+      </FilterSection>
+
+      {/* Mã số thuế (trống / không trống) */}
+      <FilterSection
+        label="Mã số thuế"
+        summary={
+          taxCodeStatus === "filled"
+            ? "Có mã số thuế"
+            : taxCodeStatus === "empty"
+              ? "Không có mã số thuế"
+              : undefined
+        }>
+        <ChipGroup
+          options={[
+            { value: "filled", label: "Có mã số thuế" },
+            { value: "empty", label: "Không có mã số thuế" },
+          ]}
+          values={taxCodeStatus ? [taxCodeStatus] : []}
+          multiple={false}
+          onChange={(v) => setTaxCodeStatus(v[0] ?? "")}
         />
       </FilterSection>
 
