@@ -25,6 +25,8 @@ export interface ProductQueryParams {
   stockStatus?: string;
   priceBookId?: number;
   onlyInPriceBook?: boolean;
+  orderBy?: string;
+  orderDirection?: "asc" | "desc";
 }
 
 export interface Inventory {

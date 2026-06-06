@@ -11,6 +11,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Upload,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from "lucide-react";
 import type { Product } from "@/lib/api/products";
 import { ProductDetailRow } from "./ProductDetailRow";
@@ -328,6 +331,33 @@ export function ProductsTable({
   const [limit, setLimit] = useState(15);
   const [activeStatusTab, setActiveStatusTab] = useState("active");
 
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
+
+  // Các cột số được phép sắp xếp (server-side). Key khớp với column key,
+  // value là tên trường backend hiểu trong query `orderBy`.
+  const SORTABLE_COLUMNS: Record<string, string> = {
+    basePrice: "basePrice",
+    "inventory.cost": "cost",
+    stock: "onHand",
+    minStock: "minQuality",
+    maxStock: "maxQuality",
+  };
+
+  const handleSort = (colKey: string) => {
+    if (!SORTABLE_COLUMNS[colKey]) return;
+    if (sortBy !== colKey) {
+      setSortBy(colKey);
+      setSortDir("desc");
+    } else if (sortDir === "desc") {
+      setSortDir("asc");
+    } else {
+      setSortBy(null);
+      setSortDir(null);
+    }
+    setPage(1);
+  };
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [productType, setProductType] = useState<number | null>(null);
@@ -386,6 +416,12 @@ export function ProductsTable({
     search: codeFilter || debouncedSearch,
     branchId: selectedBranch?.id,
     ...effectiveFilters,
+    ...(sortBy && sortDir && SORTABLE_COLUMNS[sortBy]
+      ? {
+          orderBy: SORTABLE_COLUMNS[sortBy],
+          orderDirection: sortDir,
+        }
+      : {}),
   });
 
   // Đóng dropdown tạo mới khi click ngoài
@@ -571,13 +607,31 @@ export function ProductsTable({
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-2.5 text-left font-medium text-gray-700 whitespace-nowrap"
+                  className={`px-4 py-2.5 text-left font-medium text-gray-700 whitespace-nowrap ${
+                    SORTABLE_COLUMNS[col.key]
+                      ? "cursor-pointer select-none hover:bg-gray-100"
+                      : ""
+                  }`}
                   style={{
                     width: col.width,
                     minWidth: col.width,
                     maxWidth: col.width,
-                  }}>
-                  {col.label}
+                  }}
+                  onClick={() => handleSort(col.key)}>
+                  <span className="flex items-center gap-1">
+                    {col.label}
+                    {SORTABLE_COLUMNS[col.key] && (
+                      <span className="inline-flex text-gray-400">
+                        {sortBy === col.key && sortDir === "desc" ? (
+                          <ArrowDown className="w-3 h-3 text-blue-500" />
+                        ) : sortBy === col.key && sortDir === "asc" ? (
+                          <ArrowUp className="w-3 h-3 text-blue-500" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-40" />
+                        )}
+                      </span>
+                    )}
+                  </span>
                 </th>
               ))}
               <th className="px-4 py-2.5 w-8" />

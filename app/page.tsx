@@ -24,6 +24,7 @@ import { FinancePanel } from "@/components/dashboard/FinancePanel";
 import { TaskTabs, type TaskType } from "@/components/dashboard/TaskTabs";
 import { TopProducts } from "@/components/dashboard/TopProducts";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { DashboardMobileView } from "@/components/dashboard/mobile/DashboardMobileView";
 import {
   DollarSign,
   TrendingUp,
@@ -224,7 +225,14 @@ export default function Home() {
   return (
     <div>
       <DashboardHeader />
-      <div className="dt-dash min-h-[calc(100vh-56px)] overflow-auto">
+
+      {/* ── Mobile (dưới md) ── */}
+      <div className="md:hidden">
+        <DashboardMobileView />
+      </div>
+
+      {/* ── Desktop (từ md) ── */}
+      <div className="hidden md:block dt-dash min-h-[calc(100vh-56px)] overflow-auto">
         {/* Subbar */}
         <div className="flex items-center gap-[14px] flex-wrap px-7 pt-4 pb-[14px]">
           <div className="mr-auto">

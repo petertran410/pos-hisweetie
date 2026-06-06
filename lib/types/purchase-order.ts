@@ -97,6 +97,7 @@ export interface PurchaseOrderSurcharge {
 
 export interface PurchaseOrderFilters {
   branchId?: number;
+  branchIds?: number[];
   supplierId?: number;
   status?: number;
   createdById?: number;

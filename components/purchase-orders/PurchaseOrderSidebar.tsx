@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useBranchStore } from "@/lib/store/branch";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import {
@@ -10,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
+  X,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { PurchaseOrderFilters } from "@/lib/types/purchase-order";
@@ -504,6 +506,101 @@ function SimpleDropdown({
   );
 }
 
+// ─── BranchMultiSelectDropdown ────────────────────────────────────────────────
+function BranchMultiSelectDropdown({
+  branches,
+  selectedIds,
+  onChange,
+}: {
+  branches: { id: number; name: string }[];
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const toggle = (id: number) => {
+    onChange(
+      selectedIds.includes(id)
+        ? selectedIds.filter((x) => x !== id)
+        : [...selectedIds, id]
+    );
+  };
+
+  const label =
+    selectedIds.length === 0
+      ? null
+      : selectedIds.length === 1
+        ? (branches.find((b) => b.id === selectedIds[0])?.name ?? "")
+        : `${selectedIds.length} chi nhánh`;
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((p) => !p)}
+        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "hover:border-gray-400"
+        }`}>
+        <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
+          {label ?? "Tất cả chi nhánh"}
+        </span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange([]);
+              }}
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </div>
+      </div>
+
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          {branches.map((b, idx) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => toggle(b.id)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
+                selectedIds.includes(b.id) ? "bg-blue-50" : "hover:bg-gray-50"
+              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(b.id)}
+                onChange={() => {}}
+                className="w-3.5 h-3.5 accent-blue-600 flex-shrink-0"
+              />
+              <span className="text-gray-700">{b.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function PurchaseOrderSidebar({
   filters,
@@ -512,6 +609,7 @@ export function PurchaseOrderSidebar({
   const { data: branches } = useBranches();
   const { data: suppliersData } = useSuppliers({ pageSize: 1000 });
   const { data: users } = useUsersForFilter();
+  const { selectedBranch } = useBranchStore();
 
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState("all_time");
@@ -521,9 +619,15 @@ export function PurchaseOrderSidebar({
   const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
 
-  const [branchValue, setBranchValue] = useState(
-    filters.branchId ? String(filters.branchId) : ""
-  );
+  // Mặc định bám theo chi nhánh đang chọn ở DashboardHeader. Nếu filter đã có
+  // branchIds (vd restore từ chỗ khác) thì ưu tiên, fallback branchId đơn lẻ.
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>(() => {
+    if (filters.branchIds && filters.branchIds.length > 0)
+      return filters.branchIds;
+    if (filters.branchId) return [filters.branchId];
+    if (selectedBranch) return [selectedBranch.id];
+    return [];
+  });
   const [statusValue, setStatusValue] = useState(
     filters.status !== undefined ? String(filters.status) : ""
   );
@@ -554,6 +658,39 @@ export function PurchaseOrderSidebar({
     return () => document.removeEventListener("mousedown", h);
   }, [openCal]);
 
+  // Đẩy chi nhánh đã chọn lên filters (dạng branchIds[]). Mảng rỗng = "Tất cả
+  // chi nhánh" → xem chéo mọi chi nhánh.
+  useEffect(() => {
+    setFilters({
+      branchIds: selectedBranchIds.length > 0 ? selectedBranchIds : undefined,
+      branchId: undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchIds]);
+
+  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại
+  // chi nhánh đó. Skip lần mount đầu để không ghi đè lựa chọn ban đầu. Chỉ ghi
+  // đè khi đang ở chế độ "bám theo header" (đúng 1 chi nhánh); nếu user đang lọc
+  // nhiều chi nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng) thì giữ nguyên.
+  const isFirstRenderRef = useRef(true);
+  const lastSyncedBranchIdRef = useRef<number | null>(
+    selectedBranch?.id ?? null
+  );
+  useEffect(() => {
+    const currentBranchId = selectedBranch?.id ?? null;
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      lastSyncedBranchIdRef.current = currentBranchId;
+      return;
+    }
+    if (currentBranchId !== lastSyncedBranchIdRef.current) {
+      lastSyncedBranchIdRef.current = currentBranchId;
+      setSelectedBranchIds((prev) =>
+        prev.length === 1 ? (currentBranchId ? [currentBranchId] : []) : prev
+      );
+    }
+  }, [selectedBranch?.id]);
+
   const applyPreset = (preset: string) => {
     const range = getDateRangeFromPreset(preset);
     if (!range) {
@@ -568,7 +705,7 @@ export function PurchaseOrderSidebar({
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
-    if (branchValue) n++;
+    if (selectedBranchIds.length > 0) n++;
     if (statusValue) n++;
     if (supplierValue) n++;
     if (createdByValue) n++;
@@ -577,7 +714,7 @@ export function PurchaseOrderSidebar({
     if (dateMode === "preset" && selectedPreset !== "all_time") n++;
     return n;
   }, [
-    branchValue,
+    selectedBranchIds,
     statusValue,
     supplierValue,
     createdByValue,
@@ -589,7 +726,7 @@ export function PurchaseOrderSidebar({
   ]);
 
   const resetFilters = () => {
-    setBranchValue("");
+    setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setStatusValue("");
     setSupplierValue("");
     setCreatedByValue("");
@@ -599,7 +736,6 @@ export function PurchaseOrderSidebar({
     setFromDate("");
     setToDate("");
     setFilters({
-      branchId: undefined,
       status: undefined,
       supplierId: undefined,
       createdById: undefined,
@@ -609,11 +745,11 @@ export function PurchaseOrderSidebar({
     });
   };
 
-  const branchOptions = useMemo<SimpleOption[]>(
+  const activeBranches = useMemo(
     () =>
       branches
         ?.filter((b) => b.isActive)
-        .map((b) => ({ value: String(b.id), label: b.name })) ?? [],
+        .map((b) => ({ id: b.id, name: b.name })) ?? [],
     [branches]
   );
   const supplierOptions = useMemo<SimpleOption[]>(
@@ -784,14 +920,10 @@ export function PurchaseOrderSidebar({
           <label className="text-sm font-medium text-gray-700 mb-2 block">
             Chi nhánh
           </label>
-          <SimpleDropdown
-            options={branchOptions}
-            value={branchValue}
-            placeholder="Tất cả chi nhánh"
-            onChange={(v) => {
-              setBranchValue(v);
-              setFilters({ branchId: v ? Number(v) : undefined });
-            }}
+          <BranchMultiSelectDropdown
+            branches={activeBranches}
+            selectedIds={selectedBranchIds}
+            onChange={setSelectedBranchIds}
           />
         </div>
 
