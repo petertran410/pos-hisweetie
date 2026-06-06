@@ -9,11 +9,9 @@ import {
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
-  Settings,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  X,
   Download,
   Loader2,
 } from "lucide-react";
@@ -24,14 +22,11 @@ import { CreateCashFlowModal } from "./CreateCashFlowModal";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
-
-interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  width?: string;
-  render: (cf: CashFlow) => React.ReactNode;
-}
+import { ColumnToggle } from "../shared/ColumnToggle";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 
 interface CashFlowsTableProps {
   filters: any;
@@ -66,7 +61,7 @@ const METHOD_TEXT: Record<string, string> = {
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
 
-const DEFAULT_COLUMNS: ColumnConfig[] = [
+const DEFAULT_COLUMNS: ColumnConfig<CashFlow>[] = [
   {
     key: "code",
     label: "Mã phiếu",
@@ -199,7 +194,6 @@ export function CashFlowsTable({
   const [expandedCashFlowId, setExpandedCashFlowId] = useState<number | null>(
     null
   );
-  const [showColumnModal, setShowColumnModal] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -240,25 +234,10 @@ export function CashFlowsTable({
     return f;
   }, [filters, activeStatusTab]);
 
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("cashFlowTableColumns");
-      if (saved) {
-        try {
-          const savedCols = JSON.parse(saved);
-          return DEFAULT_COLUMNS.map((col) => ({
-            ...col,
-            visible:
-              savedCols.find((s: any) => s.key === col.key)?.visible ??
-              col.visible,
-          }));
-        } catch {
-          return DEFAULT_COLUMNS;
-        }
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
+  const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
+    "cashFlowTableColumns",
+    DEFAULT_COLUMNS
+  );
 
   const { data, isLoading } = useCashFlows({
     pageSize: limit,
@@ -269,12 +248,6 @@ export function CashFlowsTable({
     ...(debouncedSearch ? { search: debouncedSearch } : {}),
     ...effectiveFilters,
   });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("cashFlowTableColumns", JSON.stringify(columns));
-    }
-  }, [columns]);
 
   // Đóng dropdown khi click ngoài
   useEffect(() => {
@@ -334,16 +307,6 @@ export function CashFlowsTable({
     () => Number(openingBalance || 0) + totalReceipt - totalPayment,
     [openingBalance, totalReceipt, totalPayment]
   );
-
-  const visibleColumns = useMemo(
-    () => columns.filter((c) => c.visible),
-    [columns]
-  );
-
-  const toggleColumnVisibility = (key: string) =>
-    setColumns((prev) =>
-      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
-    );
 
   const toggleSelectAll = () =>
     setSelectedIds(
@@ -485,12 +448,7 @@ export function CashFlowsTable({
                 </div>
               )}
             </div>
-            <button
-              onClick={() => setShowColumnModal(true)}
-              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
-              <Settings className="w-4 h-4" />
-              Cột
-            </button>
+            <ColumnToggle columns={columns} onToggle={toggleColumn} />
           </div>
         </div>
 
@@ -661,39 +619,6 @@ export function CashFlowsTable({
             </button>
           </div>
         </div>
-
-        {/* Column modal — giống InvoicesTable */}
-        {showColumnModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-xl shadow-2xl w-[480px] max-h-[80vh] flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="text-base font-semibold text-gray-800">
-                  Tùy chỉnh cột hiển thị
-                </h3>
-                <button
-                  onClick={() => setShowColumnModal(false)}
-                  className="text-gray-400 hover:text-gray-600">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-2">
-                {columns.map((col) => (
-                  <label
-                    key={col.key}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={col.visible}
-                      onChange={() => toggleColumnVisibility(col.key)}
-                      className="accent-blue-600"
-                    />
-                    <span className="text-sm text-gray-700">{col.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Create Modal */}
         {createModalType && (

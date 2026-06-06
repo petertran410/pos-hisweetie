@@ -13,25 +13,20 @@ import {
 import { PurchaseOrderDetailRow } from "./PurchaseOrderDetailRow";
 import {
   Plus,
-  Settings,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
-
-interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  width: string;
-  render: (po: PurchaseOrder) => React.ReactNode;
-}
+import { ColumnToggle } from "../shared/ColumnToggle";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 
 interface PurchaseOrdersTableProps {
   filters: PurchaseOrderFilters;
@@ -47,7 +42,7 @@ const STATUS_COLOR: Record<number, string> = {
 const formatDateTime = (date?: string) =>
   date ? new Date(date).toLocaleString("vi-VN") : "-";
 
-const DEFAULT_COLUMNS: ColumnConfig[] = [
+const DEFAULT_COLUMNS: ColumnConfig<PurchaseOrder>[] = [
   {
     key: "code",
     label: "Mã nhập hàng",
@@ -183,7 +178,6 @@ export function PurchaseOrdersTable({
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [showColumnModal, setShowColumnModal] = useState(false);
   const [search, setSearch] = useState(filters.search || "");
   const [debouncedSearch, setDebouncedSearch] = useState(filters.search || "");
   const [page, setPage] = useState(1);
@@ -225,25 +219,10 @@ export function PurchaseOrdersTable({
     return f;
   }, [filters, activeStatusTab]);
 
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("purchaseOrderTableColumns");
-      if (saved) {
-        try {
-          const savedCols = JSON.parse(saved);
-          return DEFAULT_COLUMNS.map((col) => ({
-            ...col,
-            visible:
-              savedCols.find((s: any) => s.key === col.key)?.visible ??
-              col.visible,
-          }));
-        } catch {
-          return DEFAULT_COLUMNS;
-        }
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
+  const { columns, toggleColumn } = useColumnVisibility(
+    "purchaseOrderTableColumns",
+    DEFAULT_COLUMNS
+  );
 
   const { data, isLoading } = usePurchaseOrders({
     ...effectiveFilters,
@@ -251,15 +230,6 @@ export function PurchaseOrdersTable({
     pageSize: limit,
     currentItem: (page - 1) * limit,
   });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "purchaseOrderTableColumns",
-        JSON.stringify(columns)
-      );
-    }
-  }, [columns]);
 
   const purchaseOrders = data?.data || [];
   const total = data?.total || 0;
@@ -275,11 +245,6 @@ export function PurchaseOrdersTable({
   );
 
   const colSpan = visibleColumns.length + 2;
-
-  const toggleColumnVisibility = (key: string) =>
-    setColumns((prev) =>
-      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
-    );
 
   const toggleSelectAll = () =>
     setSelectedIds(
@@ -322,12 +287,7 @@ export function PurchaseOrdersTable({
                 Tạo phiếu
               </button>
             </PermissionGate>
-            <button
-              onClick={() => setShowColumnModal(true)}
-              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
-              <Settings className="w-4 h-4" />
-              Cột
-            </button>
+            <ColumnToggle columns={columns} onToggle={toggleColumn} />
           </div>
         </div>
 
@@ -493,41 +453,6 @@ export function PurchaseOrdersTable({
           </span>
         </div>
       </div>
-
-      {/* ── Column modal ── */}
-      {showColumnModal && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
-          onClick={() => setShowColumnModal(false)}>
-          <div
-            className="bg-white rounded-xl shadow-xl w-72 p-5"
-            onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900 text-sm">
-                Cột hiển thị
-              </h3>
-              <button onClick={() => setShowColumnModal(false)}>
-                <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
-              </button>
-            </div>
-            <div className="space-y-0.5 max-h-80 overflow-y-auto">
-              {columns.map((col) => (
-                <label
-                  key={col.key}
-                  className="flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={col.visible}
-                    onChange={() => toggleColumnVisibility(col.key)}
-                    className="cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-700">{col.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </PermissionGate>
   );
 }

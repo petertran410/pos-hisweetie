@@ -490,6 +490,137 @@ function SimpleDropdown({
   );
 }
 
+// ─── SearchableMultiDropdown (multi-select + ô tìm theo tên) ─────────────────
+function SearchableMultiDropdown({
+  options,
+  values,
+  placeholder,
+  searchPlaceholder,
+  onChange,
+}: {
+  options: SimpleOption[];
+  values: string[];
+  placeholder: string;
+  searchPlaceholder?: string;
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  const selectedOptions = options.filter((o) => values.includes(o.value));
+  const label =
+    selectedOptions.length === 0
+      ? null
+      : selectedOptions.length === 1
+        ? selectedOptions[0].label
+        : `${selectedOptions.length} đã chọn`;
+
+  const filteredOptions = useMemo(() => {
+    if (!search.trim()) return options;
+    const q = search.trim().toLowerCase();
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, search]);
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((p) => !p)}
+        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
+          open
+            ? "border-blue-400 ring-2 ring-blue-100"
+            : "hover:border-gray-400"
+        } bg-white`}>
+        <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
+          {label ?? placeholder}
+        </span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {selectedOptions.length > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange([]);
+              }}
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </div>
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholder ?? "Tìm theo tên..."}
+              className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="max-h-52 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2.5 text-sm text-gray-400 text-center">
+                Không tìm thấy
+              </div>
+            ) : (
+              filteredOptions.map((opt, idx) => {
+                const isSelected = values.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(
+                        isSelected
+                          ? values.filter((v) => v !== opt.value)
+                          : [...values, opt.value]
+                      );
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                      isSelected
+                        ? "bg-blue-50 text-blue-700 font-medium"
+                        : "hover:bg-gray-50 text-gray-700"
+                    } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                    <span className="truncate">{opt.label}</span>
+                    {isSelected && (
+                      <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 const MONTH_NAMES = [
   "Tháng 1",
@@ -711,7 +842,7 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     () => (branches ?? []).filter((b: any) => b.isActive),
     [branches]
   );
-  const { data: customersData } = useCustomers({ pageSize: 1000 });
+  const { data: customersData } = useCustomers();
   const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
   const { data: bankAccounts } = useBankAccountsForPayment();
@@ -724,7 +855,9 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   };
   const saved = useRef(getSavedFilters());
 
@@ -751,15 +884,32 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   const [customerId, setCustomerId] = useState(saved.current?.customerId || "");
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(saved.current?.selectedStatuses || []);
-  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState(saved.current?.selectedPaymentStatus || "");
-  const [enableOrderDate, setEnableOrderDate] = useState(saved.current?.enableOrderDate ?? false);
-  const [dateMode, setDateMode] = useState<"preset" | "custom">(saved.current?.dateMode || "preset");
-  const [selectedPreset, setSelectedPreset] = useState(saved.current?.selectedPreset || "all_time");
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(
+    saved.current?.selectedStatuses || []
+  );
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState(
+    saved.current?.selectedPaymentStatus || ""
+  );
+  const [enableOrderDate, setEnableOrderDate] = useState(
+    saved.current?.enableOrderDate ?? false
+  );
+  const [dateMode, setDateMode] = useState<"preset" | "custom">(
+    saved.current?.dateMode || "preset"
+  );
+  const [selectedPreset, setSelectedPreset] = useState(
+    saved.current?.selectedPreset || "all_time"
+  );
   const [fromDate, setFromDate] = useState(saved.current?.fromDate || "");
   const [toDate, setToDate] = useState(saved.current?.toDate || "");
-  const [creatorId, setCreatorId] = useState(saved.current?.creatorId || "");
-  const [saleChannelId, setSaleChannelId] = useState(saved.current?.saleChannelId || "");
+  const [creatorIds, setCreatorIds] = useState<string[]>(
+    saved.current?.creatorIds || []
+  );
+  const [soldByIds, setSoldByIds] = useState<string[]>(
+    saved.current?.soldByIds || []
+  );
+  const [saleChannelId, setSaleChannelId] = useState(
+    saved.current?.saleChannelId || ""
+  );
   const [showPresetPanel, setShowPresetPanel] = useState(false);
   const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
@@ -780,7 +930,8 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
       selectedPreset,
       fromDate,
       toDate,
-      creatorId,
+      creatorIds,
+      soldByIds,
       saleChannelId,
       paymentMethod,
       selectedBankAccountIds,
@@ -796,7 +947,8 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     selectedPreset,
     fromDate,
     toDate,
-    creatorId,
+    creatorIds,
+    soldByIds,
     saleChannelId,
     paymentMethod,
     selectedBankAccountIds,
@@ -830,7 +982,8 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     if (selectedStatuses.length > 0) n++;
     if (selectedPaymentStatus) n++;
     if (enableOrderDate) n++;
-    if (creatorId) n++;
+    if (creatorIds.length > 0) n++;
+    if (soldByIds.length > 0) n++;
     if (saleChannelId) n++;
     if (paymentMethod) n++;
     return n;
@@ -840,7 +993,8 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     selectedStatuses,
     selectedPaymentStatus,
     enableOrderDate,
-    creatorId,
+    creatorIds,
+    soldByIds,
     saleChannelId,
   ]);
 
@@ -865,7 +1019,8 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
       if (customerId) f.customerId = parseInt(customerId);
       if (selectedStatuses.length > 0) f.statuses = selectedStatuses;
       if (selectedPaymentStatus) f.paymentStatus = selectedPaymentStatus;
-      if (creatorId) f.soldById = parseInt(creatorId);
+      if (creatorIds.length > 0) f.createdByIds = creatorIds.map(Number);
+      if (soldByIds.length > 0) f.soldByIds = soldByIds.map(Number);
       if (saleChannelId) f.saleChannelId = parseInt(saleChannelId);
       if (selectedPreset !== "all_time" || dateMode === "custom") {
         const range =
@@ -894,7 +1049,8 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     selectedPreset,
     fromDate,
     toDate,
-    creatorId,
+    creatorIds,
+    soldByIds,
     saleChannelId,
     paymentMethod,
     selectedBankAccountIds,
@@ -911,7 +1067,8 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     setSelectedPreset("all_time");
     setFromDate("");
     setToDate("");
-    setCreatorId("");
+    setCreatorIds([]);
+    setSoldByIds([]);
     setSaleChannelId("");
     onFiltersChange({});
     setPaymentMethod("");
@@ -925,7 +1082,9 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   //   Nếu user đang lọc nhiều chi nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng) thì
   //   giữ nguyên, không ghi đè bằng chi nhánh mới chọn trên header.
   const isFirstRenderRef = useRef(true);
-  const lastSyncedBranchIdRef = useRef<number | null>(selectedBranch?.id ?? null);
+  const lastSyncedBranchIdRef = useRef<number | null>(
+    selectedBranch?.id ?? null
+  );
   useEffect(() => {
     const currentBranchId = selectedBranch?.id ?? null;
     if (isFirstRenderRef.current) {
@@ -1190,8 +1349,6 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
           </div>
         </div>
 
-        <div className="border-t border-gray-100" />
-
         {/* ── Chi nhánh ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1203,8 +1360,6 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
             onChange={setSelectedBranchIds}
           />
         </div>
-
-        <div className="border-t border-gray-100" />
 
         {/* ── Trạng thái đơn hàng ── */}
         <div>
@@ -1231,8 +1386,6 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
             onChange={setSelectedPaymentStatus}
           />
         </div>
-
-        <div className="border-t border-gray-100" />
 
         {/* ── Phương thức thanh toán ── */}
         <div>
@@ -1317,85 +1470,41 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
           )}
         </div>
 
-        <div className="border-t border-gray-100" />
-
-        {/* ── Khách hàng ── */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Khách hàng
-          </label>
-          {customerId && selectedCustomer ? (
-            <div className="flex items-center gap-2 border rounded-lg px-2 py-1 bg-blue-50 border-blue-200">
-              <span className="text-sm text-blue-700 font-medium flex-1 truncate">
-                {selectedCustomer.name}
-              </span>
-              <button
-                onClick={() => {
-                  setCustomerId("");
-                  setCustomerSearch("");
-                }}
-                className="text-blue-400 hover:text-blue-600 flex-shrink-0">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <div ref={customerRef} className="relative">
-              <input
-                type="text"
-                value={customerSearch}
-                onChange={(e) => {
-                  setCustomerSearch(e.target.value);
-                  setShowCustomerDrop(true);
-                }}
-                onFocus={() => setShowCustomerDrop(true)}
-                onBlur={() => setTimeout(() => setShowCustomerDrop(false), 150)}
-                placeholder="Tìm theo tên, SĐT, mã KH..."
-                className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {showCustomerDrop && filteredCustomers.length > 0 && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
-                  {filteredCustomers.map((c, idx) => (
-                    <button
-                      key={c.id}
-                      onMouseDown={() => {
-                        setCustomerId(String(c.id));
-                        setCustomerSearch("");
-                        setShowCustomerDrop(false);
-                      }}
-                      className={`w-full text-left px-2 py-1.5 hover:bg-blue-50 transition-colors ${
-                        idx > 0 ? "border-t border-gray-50" : ""
-                      }`}>
-                      <div className="text-sm font-medium text-gray-800">
-                        {c.name}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {c.contactNumber || c.code || ""}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="border-t border-gray-100" />
-
         {/* ── Người tạo ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Người tạo
           </label>
-          <SimpleDropdown
+          <SearchableMultiDropdown
             options={
               users?.map((u: any) => ({
                 value: String(u.id),
                 label: u.name,
               })) ?? []
             }
-            value={creatorId}
+            values={creatorIds}
             placeholder="Tất cả"
-            onChange={setCreatorId}
+            searchPlaceholder="Tìm theo tên người tạo..."
+            onChange={setCreatorIds}
+          />
+        </div>
+
+        {/* ── Người bán ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Người bán
+          </label>
+          <SearchableMultiDropdown
+            options={
+              users?.map((u: any) => ({
+                value: String(u.id),
+                label: u.name,
+              })) ?? []
+            }
+            values={soldByIds}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm theo tên người bán..."
+            onChange={setSoldByIds}
           />
         </div>
 

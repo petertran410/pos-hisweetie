@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { Plus, Settings, Upload } from "lucide-react";
+import { useState } from "react";
+import { Plus, Upload } from "lucide-react";
 import { useSupplierReturns } from "@/lib/hooks/useSupplierReturns";
 import { useBranchStore } from "@/lib/store/branch";
 import type { SupplierReturn } from "@/lib/types/supplier-return";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { CodeLink } from "@/components/shared/CodeLink";
+import { ColumnToggle } from "../shared/ColumnToggle";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 
 interface Props {
   filters: any;
@@ -42,14 +47,7 @@ const MODE_LABEL: Record<string, string> = {
   by_product: "Sản phẩm lẻ",
 };
 
-interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  render: (item: SupplierReturn) => React.ReactNode;
-}
-
-const DEFAULT_COLUMNS: ColumnConfig[] = [
+const DEFAULT_COLUMNS: ColumnConfig<SupplierReturn>[] = [
   {
     key: "code",
     label: "Mã trả hàng nhập",
@@ -145,31 +143,12 @@ export function SupplierReturnsTable({
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
-  const [showColumnModal, setShowColumnModal] = useState(false);
 
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("supplierReturnTableColumns");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          return DEFAULT_COLUMNS.map((col) => ({
-            ...col,
-            visible:
-              parsed.find((s: any) => s.key === col.key)?.visible ??
-              col.visible,
-          }));
-        } catch {
-          return DEFAULT_COLUMNS;
-        }
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
-
-  useEffect(() => {
-    localStorage.setItem("supplierReturnTableColumns", JSON.stringify(columns));
-  }, [columns]);
+  const { columns, visibleColumns, toggleColumn } =
+    useColumnVisibility<SupplierReturn>(
+      "supplierReturnTableColumns",
+      DEFAULT_COLUMNS
+    );
 
   const { data, isLoading } = useSupplierReturns({
     page,
@@ -182,10 +161,6 @@ export function SupplierReturnsTable({
   const items = data?.data || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / limit);
-  const visibleColumns = useMemo(
-    () => columns.filter((c) => c.visible),
-    [columns]
-  );
 
   return (
     <PermissionGate resource="supplier_returns" action="view">
@@ -203,12 +178,7 @@ export function SupplierReturnsTable({
             className="px-3 py-2 border rounded-lg text-sm w-80"
           />
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowColumnModal(true)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-              title="Cấu hình cột">
-              <Settings className="w-4 h-4" />
-            </button>
+            <ColumnToggle columns={columns} onToggle={toggleColumn} />
             {onImportClick && (
               <PermissionGate resource="supplier_returns" action="create">
                 <button
@@ -311,42 +281,6 @@ export function SupplierReturnsTable({
             </button>
           </div>
         </div>
-
-        {/* Column modal */}
-        {showColumnModal && (
-          <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-xl p-6 w-80 shadow-xl">
-              <h3 className="font-semibold mb-4">Cấu hình cột hiển thị</h3>
-              <div className="space-y-2">
-                {columns.map((col) => (
-                  <label
-                    key={col.key}
-                    className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={col.visible}
-                      onChange={() =>
-                        setColumns((prev) =>
-                          prev.map((c) =>
-                            c.key === col.key
-                              ? { ...c, visible: !c.visible }
-                              : c
-                          )
-                        )
-                      }
-                    />
-                    <span className="text-sm">{col.label}</span>
-                  </label>
-                ))}
-              </div>
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="mt-4 w-full py-2 bg-blue-600 text-white rounded-lg text-sm">
-                Xong
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </PermissionGate>
   );

@@ -1,19 +1,17 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
+import { useState, Fragment } from "react";
 import type { Destruction } from "@/lib/api/destructions";
 import { formatDate, formatCurrency } from "../../lib/utils";
-import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { DestructionDetailRow } from "./DestructionDetailRow";
 import { CodeLink } from "@/components/shared/CodeLink";
-
-interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  render: (destruction: Destruction) => React.ReactNode;
-}
+import { ColumnToggle } from "../shared/ColumnToggle";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 
 interface DestructionsTableProps {
   destructions: Destruction[];
@@ -53,7 +51,7 @@ const getStatusColor = (status: number) => {
   }
 };
 
-const DEFAULT_COLUMNS: ColumnConfig[] = [
+const DEFAULT_COLUMNS: ColumnConfig<Destruction>[] = [
   {
     key: "code",
     label: "Mã xuất hủy",
@@ -170,43 +168,11 @@ export function DestructionsTable({
   const [expandedDestructionId, setExpandedDestructionId] = useState<
     number | null
   >(null);
-  const [showColumnModal, setShowColumnModal] = useState(false);
 
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("destructionTableColumns");
-      if (saved) {
-        try {
-          const savedColumns = JSON.parse(saved);
-          return DEFAULT_COLUMNS.map((col) => ({
-            ...col,
-            visible:
-              savedColumns.find((s: any) => s.key === col.key)?.visible ??
-              col.visible,
-          }));
-        } catch {
-          return DEFAULT_COLUMNS;
-        }
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("destructionTableColumns", JSON.stringify(columns));
-    }
-  }, [columns]);
-
-  const visibleColumns = columns.filter((col) => col.visible);
-
-  const toggleColumnVisibility = (key: string) => {
-    setColumns((prev) =>
-      prev.map((col) =>
-        col.key === key ? { ...col, visible: !col.visible } : col
-      )
-    );
-  };
+  const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
+    "destructionTableColumns",
+    DEFAULT_COLUMNS
+  );
 
   const toggleSelectAll = () => {
     if (selectedIds.length === destructions.length) {
@@ -258,39 +224,7 @@ export function DestructionsTable({
             Tạo Xuất Hủy
           </button>
 
-          <button
-            onClick={() => setShowColumnModal(!showColumnModal)}
-            className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Cột hiển thị
-          </button>
-          {showColumnModal && (
-            <div className="absolute right-0 top-full mt-2 bg-white border rounded shadow-lg z-50 p-4 w-64 max-h-96 overflow-y-auto">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Hiển thị cột</h3>
-                <button
-                  onClick={() => setShowColumnModal(false)}
-                  className="text-gray-400 hover:text-gray-600">
-                  ✕
-                </button>
-              </div>
-              <div className="space-y-2">
-                {columns.map((col) => (
-                  <label
-                    key={col.key}
-                    className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={col.visible}
-                      onChange={() => toggleColumnVisibility(col.key)}
-                      className="cursor-pointer"
-                    />
-                    <span className="text-sm">{col.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
+          <ColumnToggle columns={columns} onToggle={toggleColumn} />
         </div>
       </div>
 

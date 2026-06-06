@@ -4,11 +4,9 @@ import { useState, useEffect, Fragment, useMemo } from "react";
 import { useCustomers, useCustomersTotals, useExportCustomers } from "@/lib/hooks/useCustomers";
 import {
   Plus,
-  Settings,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  X,
   Upload,
   Download,
   Loader2,
@@ -22,14 +20,11 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
-
-interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  width?: string;
-  render: (customer: Customer) => React.ReactNode;
-}
+import { ColumnToggle } from "../shared/ColumnToggle";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 
 interface CustomersTableProps {
   filters: CustomerFilters;
@@ -43,7 +38,7 @@ const formatDateTime = (date?: string) => {
   return new Date(date).toLocaleString("vi-VN");
 };
 
-const DEFAULT_COLUMNS: ColumnConfig[] = [
+const DEFAULT_COLUMNS: ColumnConfig<Customer>[] = [
   {
     key: "code",
     label: "Mã khách hàng",
@@ -241,7 +236,6 @@ export function CustomersTable({
   const [expandedCustomerId, setExpandedCustomerId] = useState<number | null>(
     null
   );
-  const [showColumnModal, setShowColumnModal] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -290,25 +284,10 @@ export function CustomersTable({
     setPage(1);
   }, [debouncedSearch, filters]);
 
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("customerTableColumns");
-      if (saved) {
-        try {
-          const savedCols = JSON.parse(saved);
-          return DEFAULT_COLUMNS.map((col) => ({
-            ...col,
-            visible:
-              savedCols.find((s: any) => s.key === col.key)?.visible ??
-              col.visible,
-          }));
-        } catch {
-          return DEFAULT_COLUMNS;
-        }
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
+  const { columns, toggleColumn } = useColumnVisibility(
+    "customerTableColumns",
+    DEFAULT_COLUMNS
+  );
 
   const DEBT_KEYS = ["debtAmount", "debtDays"];
 
@@ -333,12 +312,6 @@ export function CustomersTable({
     ...filters,
     name: debouncedSearch || undefined,
   });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("customerTableColumns", JSON.stringify(columns));
-    }
-  }, [columns]);
 
   const customers: Customer[] = data?.data || [];
   const total = (data as any)?.total ?? 0;
@@ -392,11 +365,6 @@ export function CustomersTable({
     "totalRevenue",
   ]);
   const hasTotalRow = visibleColumns.some((c) => TOTAL_KEYS.has(c.key));
-
-  const toggleColumnVisibility = (key: string) =>
-    setColumns((prev) =>
-      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
-    );
 
   const toggleSelectAll = () =>
     setSelectedIds(
@@ -463,12 +431,7 @@ export function CustomersTable({
                 {isExporting ? "Đang xuất..." : "Xuất file"}
               </button>
             </PermissionGate>
-            <button
-              onClick={() => setShowColumnModal(true)}
-              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
-              <Settings className="w-4 h-4" />
-              Cột
-            </button>
+            <ColumnToggle columns={displayColumns} onToggle={toggleColumn} />
           </div>
         </div>
 
@@ -684,44 +647,6 @@ export function CustomersTable({
           </span>
         </div>
       </div>
-
-      {showColumnModal && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
-          onClick={() => setShowColumnModal(false)}>
-          <div
-            className="bg-white rounded-xl shadow-xl w-72 p-5"
-            onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900 text-sm">
-                Cột hiển thị
-              </h3>
-              <button onClick={() => setShowColumnModal(false)}>
-                <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
-              </button>
-            </div>
-            <div className="space-y-0.5 max-h-80 overflow-y-auto">
-              {displayColumns
-                .filter(
-                  (c) => c.key !== "discount" && c.key !== "discountRatio"
-                )
-                .map((col) => (
-                  <label
-                    key={col.key}
-                    className="flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={col.visible}
-                      onChange={() => toggleColumnVisibility(col.key)}
-                      className="cursor-pointer"
-                    />
-                    <span className="text-sm text-gray-700">{col.label}</span>
-                  </label>
-                ))}
-            </div>
-          </div>
-        </div>
-      )}
     </PermissionGate>
   );
 }

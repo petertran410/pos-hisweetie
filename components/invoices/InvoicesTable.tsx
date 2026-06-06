@@ -7,7 +7,6 @@ import type { CustomerSearchResult } from "@/lib/types/customer";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
-  Settings,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -28,14 +27,8 @@ import { InvoiceImportModal } from "./InvoiceImportModal";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
 import { useInvoicePriceBookWarnings } from "@/lib/hooks/useInvoicePriceBookWarnings";
-
-interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  width?: string;
-  render: (invoice: Invoice) => React.ReactNode;
-}
+import { ColumnToggle } from "../shared/ColumnToggle";
+import { useColumnVisibility, type ColumnConfig } from "@/lib/hooks/useColumnVisibility";
 
 interface InvoicesTableProps {
   filters: any;
@@ -71,7 +64,7 @@ const STATUS_TEXT: Record<number, string> = {
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
 
-const DEFAULT_COLUMNS: ColumnConfig[] = [
+const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
   {
     key: "code",
     label: "Mã hóa đơn",
@@ -405,7 +398,6 @@ export function InvoicesTable({
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
     null
   );
-  const [showColumnModal, setShowColumnModal] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -578,25 +570,8 @@ export function InvoicesTable({
     }
   }, [filters.statusIds]);
 
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("invoiceTableColumns");
-      if (saved) {
-        try {
-          const savedCols = JSON.parse(saved);
-          return DEFAULT_COLUMNS.map((col) => ({
-            ...col,
-            visible:
-              savedCols.find((s: any) => s.key === col.key)?.visible ??
-              col.visible,
-          }));
-        } catch {
-          return DEFAULT_COLUMNS;
-        }
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
+  const { columns, toggleColumn } =
+    useColumnVisibility<Invoice>("invoiceTableColumns", DEFAULT_COLUMNS);
 
   const { data, isLoading } = useInvoices({
     page,
@@ -663,12 +638,6 @@ export function InvoicesTable({
   });
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("invoiceTableColumns", JSON.stringify(columns));
-    }
-  }, [columns]);
-
-  useEffect(() => {
     const h = (e: MouseEvent) => {
       if (baoDonRef.current && !baoDonRef.current.contains(e.target as Node))
         setShowBaoDonDropdown(false);
@@ -697,11 +666,6 @@ export function InvoicesTable({
     () => columns.filter((c) => c.key !== "discount" && c.visible),
     [columns]
   );
-
-  const toggleColumnVisibility = (key: string) =>
-    setColumns((prev) =>
-      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
-    );
 
   const toggleSelectAll = () =>
     setSelectedIds(
@@ -1153,12 +1117,10 @@ export function InvoicesTable({
               )}
             </div>
 
-            <button
-              onClick={() => setShowColumnModal(true)}
-              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
-              <Settings className="w-4 h-4" />
-              Cột
-            </button>
+            <ColumnToggle
+              columns={columns.filter((c) => c.key !== "discount")}
+              onToggle={toggleColumn}
+            />
           </div>
         </div>
 
@@ -1388,39 +1350,7 @@ export function InvoicesTable({
           </span>
         </div>
 
-        {/* Column modal */}
-        {showColumnModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-xl shadow-2xl w-[480px] max-h-[80vh] flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="text-base font-semibold text-gray-800">
-                  Tùy chỉnh cột hiển thị
-                </h3>
-                <button
-                  onClick={() => setShowColumnModal(false)}
-                  className="text-gray-400 hover:text-gray-600">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-2">
-                {columns.map((col) => (
-                  <label
-                    key={col.key}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={col.visible}
-                      onChange={() => toggleColumnVisibility(col.key)}
-                      className="accent-blue-600"
-                    />
-                    <span className="text-sm text-gray-700">{col.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
 
       {showExportDetailModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">

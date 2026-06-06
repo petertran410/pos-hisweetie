@@ -1,18 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
-import { X, Plus, Settings, FileText } from "lucide-react";
+import { X, Plus, FileText } from "lucide-react";
 import { CodeLink } from "@/components/shared/CodeLink";
-
-interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  width?: string;
-  render: (slip: PackingSlip) => React.ReactNode;
-}
+import { ColumnToggle } from "../shared/ColumnToggle";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 
 interface PackingSlipsTableProps {
   packingSlips: (PackingSlip & { type?: string })[];
@@ -65,10 +62,9 @@ export function PackingSlipsTable({
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [viewingExpenseFiles, setViewingExpenseFiles] =
     useState<PackingSlip | null>(null);
-  const [showColumnModal, setShowColumnModal] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
 
-  const DEFAULT_COLUMNS: ColumnConfig[] = [
+  const DEFAULT_COLUMNS: ColumnConfig<PackingSlip>[] = [
     {
       key: "type",
       label: "Loại",
@@ -268,47 +264,16 @@ export function PackingSlipsTable({
   ];
 
   const [viewingInvoices, setViewingInvoices] = useState<any>(null);
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("packingSlipTableColumns");
-      if (saved) {
-        try {
-          const savedColumns = JSON.parse(saved);
-          return DEFAULT_COLUMNS.map((col) => ({
-            ...col,
-            visible:
-              savedColumns.find((s: any) => s.key === col.key)?.visible ??
-              col.visible,
-          }));
-        } catch {
-          return DEFAULT_COLUMNS;
-        }
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("packingSlipTableColumns", JSON.stringify(columns));
-    }
-  }, [columns]);
+  const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
+    "packingSlipTableColumns",
+    DEFAULT_COLUMNS
+  );
 
   const filteredSlips = isControlled
     ? packingSlips
     : packingSlips.filter((slip) =>
         slip.code.toLowerCase().includes(search.toLowerCase())
       );
-
-  const visibleColumns = columns.filter((col) => col.visible);
-
-  const toggleColumnVisibility = (key: string) => {
-    setColumns((prev) =>
-      prev.map((col) =>
-        col.key === key ? { ...col, visible: !col.visible } : col
-      )
-    );
-  };
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
@@ -365,12 +330,7 @@ export function PackingSlipsTable({
               </div>
             )}
           </div>
-          <button
-            onClick={() => setShowColumnModal(true)}
-            className="px-4 py-2 border rounded hover:bg-gray-50 text-md flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Cột Hiển Thị
-          </button>
+          <ColumnToggle columns={columns} onToggle={toggleColumn} />
         </div>
       </div>
 
@@ -526,45 +486,6 @@ export function PackingSlipsTable({
           </button>
         </div>
       </div>
-
-      {showColumnModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto custom-sidebar-scroll">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Tùy chỉnh cột hiển thị</h3>
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="text-gray-400 hover:text-gray-600">
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-              {columns.map((col) => (
-                <label
-                  key={col.key}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                  <input
-                    type="checkbox"
-                    checked={col.visible}
-                    onChange={() => toggleColumnVisibility(col.key)}
-                    className="cursor-pointer"
-                  />
-                  <span className="text-md">{col.label}</span>
-                </label>
-              ))}
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="px-4 py-2 border rounded hover:bg-gray-50">
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {viewingInvoices && (
         <div

@@ -4,40 +4,19 @@ import { useState, useEffect, useMemo, Fragment } from "react";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { SupplierFilters, Supplier } from "@/lib/types/supplier";
 import { formatCurrency } from "@/lib/utils";
-import {
-  Plus,
-  Upload,
-  Settings,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  X,
-} from "lucide-react";
+import { Plus, Upload, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { SupplierDetailRow } from "./SupplierDetailRow";
 import { SupplierForm } from "./SupplierForm";
 import { SupplierImportBalanceModal } from "./SupplierImportBalanceModal";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { CodeLink } from "@/components/shared/CodeLink";
+import { ColumnToggle } from "../shared/ColumnToggle";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type ColumnKey =
-  | "code"
-  | "name"
-  | "contactNumber"
-  | "groups"
-  | "branch"
-  | "debt"
-  | "totalInvoiced"
-  | "status";
-
-interface ColumnConfig {
-  key: ColumnKey;
-  label: string;
-  visible: boolean;
-  width: string;
-  render: (supplier: Supplier) => React.ReactNode;
-}
-
 interface SuppliersTableProps {
   filters: SupplierFilters;
 }
@@ -46,7 +25,7 @@ const formatDateTime = (date?: string) =>
   date ? new Date(date).toLocaleString("vi-VN") : "-";
 
 // ─── Columns ──────────────────────────────────────────────────────────────────
-const DEFAULT_COLUMNS: ColumnConfig[] = [
+const DEFAULT_COLUMNS: ColumnConfig<Supplier>[] = [
   {
     key: "code",
     label: "Mã nhà cung cấp",
@@ -111,7 +90,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
 export function SuppliersTable({ filters }: SuppliersTableProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [showColumnModal, setShowColumnModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [search, setSearch] = useState("");
@@ -140,25 +118,10 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
     return f;
   }, [filters, activeStatusTab]);
 
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("supplierTableColumns");
-      if (saved) {
-        try {
-          const savedCols = JSON.parse(saved);
-          return DEFAULT_COLUMNS.map((col) => ({
-            ...col,
-            visible:
-              savedCols.find((s: any) => s.key === col.key)?.visible ??
-              col.visible,
-          }));
-        } catch {
-          return DEFAULT_COLUMNS;
-        }
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
+  const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
+    "supplierTableColumns",
+    DEFAULT_COLUMNS
+  );
 
   const { data, isLoading } = useSuppliers({
     ...effectiveFilters,
@@ -167,23 +130,10 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
     name: debouncedSearch || undefined,
   });
 
-  useEffect(() => {
-    localStorage.setItem("supplierTableColumns", JSON.stringify(columns));
-  }, [columns]);
-
   const suppliers: Supplier[] = data?.data || [];
   const total: number = data?.total || 0;
   const totalPages = Math.ceil(total / limit) || 1;
-  const visibleColumns = useMemo(
-    () => columns.filter((c) => c.visible),
-    [columns]
-  );
   const colSpan = visibleColumns.length + 2; // checkbox + chevron
-
-  const toggleColumnVisibility = (key: ColumnKey) =>
-    setColumns((prev) =>
-      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
-    );
 
   const toggleSelectAll = () =>
     setSelectedIds(
@@ -231,12 +181,7 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
               Import cân bằng nợ
             </button>
           </PermissionGate>
-          <button
-            onClick={() => setShowColumnModal(true)}
-            className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
-            <Settings className="w-4 h-4" />
-            Cột
-          </button>
+          <ColumnToggle columns={columns} onToggle={toggleColumn} />
         </div>
       </div>
 
@@ -413,41 +358,6 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
           {total > 0 ? ` · ${total} nhà cung cấp` : ""}
         </span>
       </div>
-
-      {/* ── Column visibility modal ── */}
-      {showColumnModal && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
-          onClick={() => setShowColumnModal(false)}>
-          <div
-            className="bg-white rounded-xl shadow-xl w-72 p-5"
-            onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900 text-sm">
-                Cột hiển thị
-              </h3>
-              <button onClick={() => setShowColumnModal(false)}>
-                <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
-              </button>
-            </div>
-            <div className="space-y-0.5 max-h-80 overflow-y-auto">
-              {columns.map((col) => (
-                <label
-                  key={col.key}
-                  className="flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={col.visible}
-                    onChange={() => toggleColumnVisibility(col.key)}
-                    className="cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-700">{col.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Modals ── */}
       {showCreateModal && (

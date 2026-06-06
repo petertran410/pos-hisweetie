@@ -12,11 +12,9 @@ import {
   useCreateVouchersBulk,
 } from "@/lib/hooks/useMisa";
 import {
-  Settings,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  X,
   SlidersHorizontal,
   Loader2,
   ArrowUp,
@@ -38,15 +36,12 @@ import type { MisaBuyerOverride } from "@/lib/api/misa";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
+import { ColumnToggle } from "../shared/ColumnToggle";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 import Swal from "sweetalert2";
-
-interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  width?: string;
-  render: (invoice: InvoiceVat) => React.ReactNode;
-}
 
 interface HoaDonVatTableProps {
   filters: any;
@@ -103,7 +98,7 @@ function MisaStatusBadge({ status }: { status?: MisaStatus }) {
   );
 }
 
-const DEFAULT_COLUMNS: ColumnConfig[] = [
+const DEFAULT_COLUMNS: ColumnConfig<InvoiceVat>[] = [
   {
     key: "code",
     label: "Mã hóa đơn",
@@ -262,7 +257,6 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
     null
   );
-  const [showColumnModal, setShowColumnModal] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -480,25 +474,10 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
     }
   }, [filters.statusIds]);
 
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("hoaDonVatTableColumns");
-      if (saved) {
-        try {
-          const savedCols = JSON.parse(saved);
-          return DEFAULT_COLUMNS.map((col) => ({
-            ...col,
-            visible:
-              savedCols.find((s: any) => s.key === col.key)?.visible ??
-              col.visible,
-          }));
-        } catch {
-          return DEFAULT_COLUMNS;
-        }
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
+  const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
+    "hoaDonVatTableColumns",
+    DEFAULT_COLUMNS
+  );
 
   const queryParams = useMemo(
     () => ({
@@ -550,25 +529,9 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
   }, [queryParams]);
   const { data: totals } = useInvoicesVatTotals(totalsParams);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("hoaDonVatTableColumns", JSON.stringify(columns));
-    }
-  }, [columns]);
-
   const invoices = data?.data || [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
-
-  const visibleColumns = useMemo(
-    () => columns.filter((c) => c.visible),
-    [columns]
-  );
-
-  const toggleColumnVisibility = (key: string) =>
-    setColumns((prev) =>
-      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
-    );
 
   const toggleExpand = (id: number) =>
     setExpandedInvoiceId((prev) => (prev === id ? null : id));
@@ -943,12 +906,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
               </button>
             </PermissionGate>
 
-            <button
-              onClick={() => setShowColumnModal(true)}
-              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600">
-              <Settings className="w-4 h-4" />
-              Cột
-            </button>
+            <ColumnToggle columns={columns} onToggle={toggleColumn} />
           </div>
         </div>
 
@@ -1197,39 +1155,6 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
             {total > 0 ? ` • ${total.toLocaleString()} HĐ` : ""}
           </span>
         </div>
-
-        {/* Column modal */}
-        {showColumnModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-xl shadow-2xl w-[480px] max-h-[80vh] flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="text-base font-semibold text-gray-800">
-                  Tùy chỉnh cột hiển thị
-                </h3>
-                <button
-                  onClick={() => setShowColumnModal(false)}
-                  className="text-gray-400 hover:text-gray-600">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-2">
-                {columns.map((col) => (
-                  <label
-                    key={col.key}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={col.visible}
-                      onChange={() => toggleColumnVisibility(col.key)}
-                      className="accent-blue-600"
-                    />
-                    <span className="text-sm text-gray-700">{col.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </PermissionGate>
   );

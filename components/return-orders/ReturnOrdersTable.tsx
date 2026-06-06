@@ -1,20 +1,18 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useReturnOrders } from "@/lib/hooks/useReturnOrders";
 import { useBranchStore } from "@/lib/store/branch";
-import { Plus, Settings } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { ReturnOrder } from "@/lib/types/return-order";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
-
-interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  render: (item: ReturnOrder) => React.ReactNode;
-}
+import { ColumnToggle } from "../shared/ColumnToggle";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 
 interface ReturnOrdersTableProps {
   filters: any;
@@ -75,7 +73,7 @@ const getStatusText = (status: number) => {
   }
 };
 
-const DEFAULT_COLUMNS: ColumnConfig[] = [
+const DEFAULT_COLUMNS: ColumnConfig<ReturnOrder>[] = [
   {
     key: "code",
     label: "Mã cấn trừ nợ",
@@ -207,32 +205,16 @@ export function ReturnOrdersTable({
   initialSearch,
 }: ReturnOrdersTableProps) {
   const { selectedBranch } = useBranchStore();
-  const [showColumnModal, setShowColumnModal] = useState(false);
   const [search, setSearch] = useState(initialSearch ?? "");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
 
   const canViewTotalPrices = useCan("return_orders_total_prices", "view");
 
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("returnOrderTableColumns");
-      if (saved) {
-        try {
-          const savedColumns = JSON.parse(saved);
-          return DEFAULT_COLUMNS.map((col) => ({
-            ...col,
-            visible:
-              savedColumns.find((s: any) => s.key === col.key)?.visible ??
-              col.visible,
-          }));
-        } catch {
-          return DEFAULT_COLUMNS;
-        }
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
+  const { columns, toggleColumn } = useColumnVisibility(
+    "returnOrderTableColumns",
+    DEFAULT_COLUMNS
+  );
 
   const TOTAL_PRICE_KEYS = [
     "invoiceTotalAmount",
@@ -257,26 +239,12 @@ export function ReturnOrdersTable({
     refundType: "returns_only", // ẩn CTN (manual_offset) khỏi trang trả hàng
   });
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("returnOrderTableColumns", JSON.stringify(columns));
-    }
-  }, [columns]);
-
   const returnOrders = data?.data || [];
   const total = data?.total || 0;
   const visibleColumns = useMemo(
     () => displayColumns.filter((c) => c.visible),
     [displayColumns]
   );
-
-  const toggleColumnVisibility = (key: string) => {
-    setColumns((prev) =>
-      prev.map((col) =>
-        col.key === key ? { ...col, visible: !col.visible } : col
-      )
-    );
-  };
 
   const totalPages = Math.ceil(total / limit);
 
@@ -297,12 +265,7 @@ export function ReturnOrdersTable({
             />
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowColumnModal(true)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-              title="Cấu hình cột">
-              <Settings className="w-4 h-4" />
-            </button>
+            <ColumnToggle columns={displayColumns} onToggle={toggleColumn} />
             <button
               onClick={onCreateClick}
               className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
@@ -393,33 +356,6 @@ export function ReturnOrdersTable({
             </button>
           </div>
         </div>
-
-        {showColumnModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-96 max-h-[80vh] overflow-y-auto">
-              <h3 className="font-semibold mb-4">Cấu hình cột hiển thị</h3>
-              <div className="space-y-2">
-                {displayColumns.map((col) => (
-                  <label
-                    key={col.key}
-                    className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={col.visible}
-                      onChange={() => toggleColumnVisibility(col.key)}
-                    />
-                    <span className="text-sm">{col.label}</span>
-                  </label>
-                ))}
-              </div>
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="mt-4 w-full py-2 bg-blue-600 text-white rounded-lg text-sm">
-                Đóng
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </PermissionGate>
   );

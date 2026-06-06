@@ -7,11 +7,9 @@ import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
-  Settings,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  X,
   Upload,
 } from "lucide-react";
 import type { Product } from "@/lib/api/products";
@@ -24,22 +22,11 @@ import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
 import { ProductExportModal } from "./ProductExportModal";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "../shared/CodeLink";
-
-interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  width?: string;
-  render: (
-    product: Product,
-    ctx?: {
-      pendingMap: Record<number, number>;
-      onOpenPending: (p: Product) => void;
-      supplierMap: Record<number, number>;
-      onOpenSupplier: (p: Product) => void;
-    }
-  ) => React.ReactNode;
-}
+import { ColumnToggle } from "../shared/ColumnToggle";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 
 interface ProductsTableProps {
   filters: any;
@@ -85,7 +72,14 @@ const calculateComboPurchasePrice = (product: Product): number => {
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
 
-const DEFAULT_COLUMNS: ColumnConfig[] = [
+interface ProductColumnCtx {
+  pendingMap: Record<string | number, number>;
+  onOpenPending: (product: Product) => void;
+  supplierMap: Record<string | number, number>;
+  onOpenSupplier: (product: Product) => void;
+}
+
+const DEFAULT_COLUMNS: ColumnConfig<Product, ProductColumnCtx>[] = [
   {
     key: "image",
     label: "Hình ảnh",
@@ -327,7 +321,6 @@ export function ProductsTable({
   const [expandedProductId, setExpandedProductId] = useState<number | null>(
     null
   );
-  const [showColumnModal, setShowColumnModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -374,25 +367,10 @@ export function ProductsTable({
     else setActiveStatusTab("all");
   }, [filters]);
 
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("productTableColumnsV2");
-      if (saved) {
-        try {
-          const savedCols = JSON.parse(saved);
-          return DEFAULT_COLUMNS.map((col) => ({
-            ...col,
-            visible:
-              savedCols.find((s: any) => s.key === col.key)?.visible ??
-              col.visible,
-          }));
-        } catch {
-          return DEFAULT_COLUMNS;
-        }
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
+  const { columns, toggleColumn } = useColumnVisibility<Product, ProductColumnCtx>(
+    "productTableColumnsV2",
+    DEFAULT_COLUMNS
+  );
 
   const displayColumns = useMemo(
     () =>
@@ -409,12 +387,6 @@ export function ProductsTable({
     branchId: selectedBranch?.id,
     ...effectiveFilters,
   });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("productTableColumnsV2", JSON.stringify(columns));
-    }
-  }, [columns]);
 
   // Đóng dropdown tạo mới khi click ngoài
   useEffect(() => {
@@ -479,11 +451,6 @@ export function ProductsTable({
     useState<Product | null>(null);
 
   const colSpan = visibleColumns.length + 2; // +checkbox +chevron
-
-  const toggleColumnVisibility = (key: string) =>
-    setColumns((prev) =>
-      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
-    );
 
   const toggleSelectAll = () =>
     setSelectedIds(
@@ -565,12 +532,7 @@ export function ProductsTable({
               Xuất file
             </button>
           )}
-          <button
-            onClick={() => setShowColumnModal(true)}
-            className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Cột hiển thị
-          </button>
+          <ColumnToggle columns={displayColumns} onToggle={toggleColumn} />
         </div>
       </div>
 
@@ -589,37 +551,6 @@ export function ProductsTable({
           </button>
         ))}
       </div>
-
-      {/* Column modal */}
-      {showColumnModal && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-start justify-center pt-20">
-          <div className="bg-white border rounded-xl shadow-2xl p-4 w-72 max-h-[70vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm">Hiển thị cột</h3>
-              <button
-                onClick={() => setShowColumnModal(false)}
-                className="text-gray-400 hover:text-gray-600">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="space-y-2">
-              {displayColumns.map((col) => (
-                <label
-                  key={col.key}
-                  className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={col.visible}
-                    onChange={() => toggleColumnVisibility(col.key)}
-                    className="cursor-pointer"
-                  />
-                  <span className="text-sm">{col.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Table */}
       <div className="flex-1 overflow-auto">
