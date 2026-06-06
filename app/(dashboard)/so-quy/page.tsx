@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CashFlowsTable } from "@/components/cashflows/CashFlowsTable";
 import { CashFlowsSidebar } from "@/components/cashflows/CashFlowsSidebar";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import "@/app/dashboard.css";
 
 export default function SoQuyPage() {
   const searchParams = useSearchParams();
@@ -29,7 +30,7 @@ export default function SoQuyPage() {
 
   return (
     <PagePermissionGuard resource="cash_flows" action="view">
-      <div className="flex h-full border-t bg-gray-50">
+      <div className="dt-dash flex h-full border-t" style={{ borderColor: "var(--dt-border)" }}>
         <CashFlowsSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}

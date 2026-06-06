@@ -335,11 +335,15 @@ export function CashFlowsTable({
 
   return (
     <PermissionGate resource="cash_flows" action="view">
-      <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
+      <div className="dt-panel flex-1 flex flex-col overflow-hidden mt-4 mr-4 mb-4 min-w-0">
         {/* Toolbar */}
-        <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
+        <div
+          className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0"
+          style={{ borderColor: "var(--dt-border)" }}>
           <div className="flex items-center gap-3 min-w-0">
-            <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+            <h2
+              className="text-base font-semibold whitespace-nowrap"
+              style={{ color: "var(--dt-text)" }}>
               Sổ quỹ
             </h2>
             <input
@@ -347,7 +351,7 @@ export function CashFlowsTable({
               placeholder="Tìm mã phiếu, người nộp..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="dt-input w-64"
             />
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -359,7 +363,7 @@ export function CashFlowsTable({
                     setShowReceiptDropdown((v) => !v);
                     setShowPaymentDropdown(false);
                   }}
-                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium flex items-center gap-1.5">
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-[4px] hover:bg-green-700 text-sm font-medium flex items-center gap-1.5">
                   <Plus className="w-4 h-4" />
                   Phiếu thu
                   <ChevronDown
@@ -367,21 +371,25 @@ export function CashFlowsTable({
                   />
                 </button>
                 {showReceiptDropdown && (
-                  <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-44 overflow-hidden">
+                  <div
+                    className="absolute left-0 top-full mt-1 bg-white border rounded-[8px] shadow-lg z-20 w-44 overflow-hidden"
+                    style={{ borderColor: "var(--dt-border)" }}>
                     <div className="py-1">
                       <button
                         onClick={() => openCreateModal("cash", true)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                        className="dt-menu-item w-full text-left px-3 py-2 text-sm">
                         Thu tiền mặt
                       </button>
                       <button
                         onClick={() => openCreateModal("bank", true)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
+                        className="dt-menu-item w-full text-left px-3 py-2 text-sm border-t"
+                        style={{ borderColor: "var(--dt-border)" }}>
                         Thu chuyển khoản
                       </button>
                       <button
                         onClick={() => openCreateModal("ewallet", true)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
+                        className="dt-menu-item w-full text-left px-3 py-2 text-sm border-t"
+                        style={{ borderColor: "var(--dt-border)" }}>
                         Thu ví điện tử
                       </button>
                     </div>
@@ -396,7 +404,7 @@ export function CashFlowsTable({
                     setShowPaymentDropdown((v) => !v);
                     setShowReceiptDropdown(false);
                   }}
-                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium flex items-center gap-1.5">
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-[4px] hover:bg-red-700 text-sm font-medium flex items-center gap-1.5">
                   <Plus className="w-4 h-4" />
                   Phiếu chi
                   <ChevronDown
@@ -404,21 +412,25 @@ export function CashFlowsTable({
                   />
                 </button>
                 {showPaymentDropdown && (
-                  <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-44 overflow-hidden">
+                  <div
+                    className="absolute left-0 top-full mt-1 bg-white border rounded-[8px] shadow-lg z-20 w-44 overflow-hidden"
+                    style={{ borderColor: "var(--dt-border)" }}>
                     <div className="py-1">
                       <button
                         onClick={() => openCreateModal("cash", false)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                        className="dt-menu-item w-full text-left px-3 py-2 text-sm">
                         Chi tiền mặt
                       </button>
                       <button
                         onClick={() => openCreateModal("bank", false)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
+                        className="dt-menu-item w-full text-left px-3 py-2 text-sm border-t"
+                        style={{ borderColor: "var(--dt-border)" }}>
                         Chi chuyển khoản
                       </button>
                       <button
                         onClick={() => openCreateModal("ewallet", false)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
+                        className="dt-menu-item w-full text-left px-3 py-2 text-sm border-t"
+                        style={{ borderColor: "var(--dt-border)" }}>
                         Chi ví điện tử
                       </button>
                     </div>
@@ -430,7 +442,8 @@ export function CashFlowsTable({
               <button
                 onClick={() => setShowExportDropdown((p) => !p)}
                 disabled={isExportingOverview}
-                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 disabled:opacity-50">
+                className="px-3 py-1.5 border rounded-[4px] text-sm font-medium flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+                style={{ borderColor: "var(--dt-border)", color: "var(--dt-text-secondary)" }}>
                 {isExportingOverview ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
@@ -439,10 +452,12 @@ export function CashFlowsTable({
                 Xuất file
               </button>
               {showExportDropdown && (
-                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-44 overflow-hidden">
+                <div
+                  className="absolute right-0 top-full mt-1 bg-white border rounded-[8px] shadow-lg z-20 w-44 overflow-hidden"
+                  style={{ borderColor: "var(--dt-border)" }}>
                   <button
                     onClick={handleExportOverview}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                    className="dt-menu-item w-full text-left px-3 py-2 text-sm">
                     Tổng quan
                   </button>
                 </div>
@@ -453,28 +468,30 @@ export function CashFlowsTable({
         </div>
 
         {canViewBalance && (
-          <div className="px-4 py-2 border-b bg-blue-50 flex items-center gap-6 text-sm shrink-0">
+          <div
+            className="px-4 py-2 border-b flex items-center gap-6 text-sm shrink-0"
+            style={{ background: "var(--dt-cyan-bg)", borderColor: "var(--dt-border)" }}>
             <div className="flex items-center gap-2">
-              <span className="text-gray-500">Tồn đầu kỳ:</span>
-              <span className="font-semibold text-gray-800">
+              <span style={{ color: "var(--dt-text-muted)" }}>Tồn đầu kỳ:</span>
+              <span className="font-semibold dt-mono" style={{ color: "var(--dt-text)" }}>
                 {formatCurrency(Number(openingBalance || 0))}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-gray-500">Tổng thu:</span>
-              <span className="font-semibold text-green-600">
+              <span style={{ color: "var(--dt-text-muted)" }}>Tổng thu:</span>
+              <span className="font-semibold dt-mono text-green-600">
                 +{formatCurrency(totalReceipt)}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-gray-500">Tổng chi:</span>
-              <span className="font-semibold text-red-600">
+              <span style={{ color: "var(--dt-text-muted)" }}>Tổng chi:</span>
+              <span className="font-semibold dt-mono text-red-600">
                 -{formatCurrency(totalPayment)}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-gray-500">Tồn cuối kỳ:</span>
-              <span className="font-semibold text-blue-600">
+              <span style={{ color: "var(--dt-text-muted)" }}>Tồn cuối kỳ:</span>
+              <span className="font-semibold dt-mono" style={{ color: "var(--dt-primary)" }}>
                 {formatCurrency(closingBalance)}
               </span>
             </div>
@@ -484,9 +501,11 @@ export function CashFlowsTable({
         {/* Table */}
         <div className="flex-1 overflow-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 sticky top-0 z-10">
+            <thead className="sticky top-0 z-10" style={{ background: "var(--dt-bg-soft)" }}>
               <tr>
-                <th className="px-4 py-2.5 text-left w-10 sticky left-0 bg-gray-50">
+                <th
+                  className="px-4 py-2.5 text-left w-10 sticky left-0"
+                  style={{ background: "var(--dt-bg-soft)" }}>
                   <input
                     type="checkbox"
                     checked={
@@ -500,8 +519,8 @@ export function CashFlowsTable({
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
-                    className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide"
-                    style={{ width: col.width, minWidth: col.width }}>
+                    className="px-4 py-2.5 text-left font-medium whitespace-nowrap text-xs uppercase tracking-wide"
+                    style={{ width: col.width, minWidth: col.width, color: "var(--dt-text-muted)" }}>
                     {col.label}
                   </th>
                 ))}
@@ -512,8 +531,11 @@ export function CashFlowsTable({
               {isLoading ? (
                 <tr>
                   <td colSpan={colSpan} className="py-16 text-center">
-                    <div className="flex flex-col items-center gap-2 text-gray-400">
-                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                    <div className="flex flex-col items-center gap-2" style={{ color: "var(--dt-text-muted)" }}>
+                      <div
+                        className="animate-spin rounded-full h-6 w-6 border-2 border-t-transparent"
+                        style={{ borderColor: "var(--dt-primary)", borderTopColor: "transparent" }}
+                      />
                       <span className="text-xs">Đang tải...</span>
                     </div>
                   </td>
@@ -522,7 +544,8 @@ export function CashFlowsTable({
                 <tr>
                   <td
                     colSpan={colSpan}
-                    className="py-20 text-center text-gray-400">
+                    className="py-20 text-center"
+                    style={{ color: "var(--dt-text-muted)" }}>
                     <div className="text-sm">Không có phiếu thu/chi nào</div>
                   </td>
                 </tr>
@@ -530,18 +553,13 @@ export function CashFlowsTable({
                 cashFlows.map((cf) => (
                   <Fragment key={cf.id}>
                     <tr
-                      className={`border-b cursor-pointer transition-colors ${
-                        expandedCashFlowId === cf.id
-                          ? "bg-blue-50"
-                          : "hover:bg-gray-50"
-                      }`}
+                      className="border-b cursor-pointer transition-colors dt-row"
+                      data-expanded={expandedCashFlowId === cf.id}
+                      style={{ borderColor: "var(--dt-border)" }}
                       onClick={() => toggleExpand(cf.id)}>
                       <td
-                        className={`px-4 py-2.5 sticky left-0 z-10 ${
-                          expandedCashFlowId === cf.id
-                            ? "bg-blue-50"
-                            : "bg-white"
-                        }`}
+                        className="px-4 py-2.5 sticky left-0 z-10 dt-row-sticky"
+                        data-expanded={expandedCashFlowId === cf.id}
                         onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
@@ -566,9 +584,10 @@ export function CashFlowsTable({
                       ))}
                       <td className="px-4 py-2.5">
                         <ChevronDown
-                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                          className={`w-4 h-4 transition-transform ${
                             expandedCashFlowId === cf.id ? "rotate-180" : ""
                           }`}
+                          style={{ color: "var(--dt-text-muted)" }}
                         />
                       </td>
                     </tr>
@@ -583,8 +602,10 @@ export function CashFlowsTable({
         </div>
 
         {/* Pagination — giống InvoicesTable */}
-        <div className="border-t px-4 py-2 flex items-center justify-between text-sm shrink-0">
-          <div className="flex items-center gap-2 text-gray-600">
+        <div
+          className="border-t px-4 py-2 flex items-center justify-between text-sm shrink-0"
+          style={{ borderColor: "var(--dt-border)" }}>
+          <div className="flex items-center gap-2" style={{ color: "var(--dt-text-secondary)" }}>
             <span>Hiển thị</span>
             <select
               value={limit}
@@ -592,7 +613,7 @@ export function CashFlowsTable({
                 setLimit(Number(e.target.value));
                 setPage(1);
               }}
-              className="border border-gray-200 rounded px-1.5 py-0.5 text-sm">
+              className="dt-select dt-select-sm">
               {[15, 25, 50, 100].map((n) => (
                 <option key={n} value={n}>
                   {n}
@@ -605,16 +626,16 @@ export function CashFlowsTable({
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="p-1 rounded hover:bg-gray-100 disabled:opacity-40">
+              className="dt-icon-btn p-1 rounded disabled:opacity-40">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm text-gray-700 px-2">
+            <span className="text-sm px-2 dt-mono" style={{ color: "var(--dt-text-secondary)" }}>
               {page} / {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="p-1 rounded hover:bg-gray-100 disabled:opacity-40">
+              className="dt-icon-btn p-1 rounded disabled:opacity-40">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

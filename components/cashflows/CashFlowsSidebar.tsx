@@ -187,20 +187,23 @@ function SimpleDropdown({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white hover:border-blue-300 transition-colors">
-        <span className={selected ? "text-gray-900" : "text-gray-400"}>
+        className="dt-input dt-input-sm w-full flex items-center justify-between text-left">
+        <span style={{ color: selected ? "var(--dt-text)" : "var(--dt-text-muted)" }}>
           {selected?.label || placeholder}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+        <ChevronDown className="w-3.5 h-3.5" style={{ color: "var(--dt-text-muted)" }} />
       </button>
       {open && (
-        <div className="absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <div
+          className="absolute z-30 mt-1 w-full bg-white border rounded-[8px] shadow-lg max-h-48 overflow-y-auto"
+          style={{ borderColor: "var(--dt-border)" }}>
           <button
             onClick={() => {
               onChange("");
               setOpen(false);
             }}
-            className="w-full text-left px-3 py-1.5 text-sm text-gray-400 hover:bg-gray-50">
+            className="dt-menu-item w-full text-left px-3 py-1.5 text-sm"
+            style={{ color: "var(--dt-text-muted)" }}>
             {placeholder}
           </button>
           {options.map((o) => (
@@ -210,9 +213,12 @@ function SimpleDropdown({
                 onChange(o.value);
                 setOpen(false);
               }}
-              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 flex items-center justify-between ${
-                value === o.value ? "text-blue-600 bg-blue-50" : "text-gray-700"
-              }`}>
+              className="dt-menu-item w-full text-left px-3 py-1.5 text-sm flex items-center justify-between"
+              style={
+                value === o.value
+                  ? { color: "var(--dt-primary)", background: "var(--dt-cyan-bg)" }
+                  : { color: "var(--dt-text-secondary)" }
+              }>
               {o.label}
               {value === o.value && <Check className="w-3.5 h-3.5" />}
             </button>
@@ -266,11 +272,14 @@ function PresetPanel({
         left: anchorRect.left,
         width: anchorRect.width,
         zIndex: 50,
+        borderColor: "var(--dt-border)",
       }}
-      className="bg-white border border-gray-200 rounded-xl shadow-lg p-2 space-y-2">
+      className="bg-white border rounded-[8px] shadow-lg p-2 space-y-2">
       {groups.map((g) => (
         <div key={g.label}>
-          <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">
+          <div
+            className="text-[10px] font-semibold uppercase tracking-wider px-1 mb-1"
+            style={{ color: "var(--dt-text-muted)" }}>
             {g.label}
           </div>
           <div className="flex flex-wrap gap-1">
@@ -282,11 +291,8 @@ function PresetPanel({
                   onSelect(opt.value);
                   onClose();
                 }}
-                className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
-                  selected === opt.value
-                    ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
-                    : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
-                }`}>
+                className="dt-chip px-2 py-0.5 text-xs rounded-full border transition-colors"
+                data-on={selected === opt.value}>
                 {opt.label}
               </button>
             ))}
@@ -330,21 +336,23 @@ function MiniCalendar({
     vm === 11 ? (setVm(0), setVy((y) => y + 1)) : setVm((m) => m + 1);
 
   return (
-    <div className="mt-2 bg-white border border-gray-200 rounded-xl p-3 shadow-sm select-none">
+    <div
+      className="mt-2 bg-white border rounded-[8px] p-3 shadow-sm select-none"
+      style={{ borderColor: "var(--dt-border)" }}>
       <div className="flex items-center justify-between mb-2">
         <button
           type="button"
           onClick={prev}
-          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+          className="dt-icon-btn p-1 rounded-lg">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-semibold text-gray-800">
+        <span className="text-sm font-semibold" style={{ color: "var(--dt-text)" }}>
           {MONTH_NAMES[vm]} {vy}
         </span>
         <button
           type="button"
           onClick={next}
-          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+          className="dt-icon-btn p-1 rounded-lg">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -352,7 +360,8 @@ function MiniCalendar({
         {DAY_NAMES.map((d) => (
           <div
             key={d}
-            className="text-center text-[10px] font-medium text-gray-400 py-0.5">
+            className="text-center text-[10px] font-medium py-0.5"
+            style={{ color: "var(--dt-text-muted)" }}>
             {d}
           </div>
         ))}
@@ -367,6 +376,17 @@ function MiniCalendar({
             todayObj.getMonth() === vm &&
             todayObj.getDate() === day;
           const isDisabled = !!minDate && ds < minDate;
+          const cellStyle: React.CSSProperties = isSel
+            ? { background: "var(--dt-primary)", color: "#fff", fontWeight: 700 }
+            : isToday
+              ? {
+                  border: "1px solid var(--dt-primary)",
+                  color: "var(--dt-primary)",
+                  fontWeight: 600,
+                }
+              : isDisabled
+                ? { color: "var(--dt-border)", cursor: "not-allowed" }
+                : { color: "var(--dt-text-secondary)", cursor: "pointer" };
           return (
             <button
               key={i}
@@ -376,29 +396,24 @@ function MiniCalendar({
                 onChange(ds);
                 onClose();
               }}
-              className={[
-                "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
-                isSel
-                  ? "bg-blue-600 text-white font-bold"
-                  : isToday
-                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
-                    : isDisabled
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
-              ].join(" ")}>
+              className="dt-cal-cell aspect-square text-xs rounded-lg flex items-center justify-center transition-colors"
+              data-plain={!isSel && !isToday && !isDisabled}
+              style={cellStyle}>
               {day}
             </button>
           );
         })}
       </div>
-      <div className="flex justify-between mt-2 pt-2 border-t border-gray-100">
+      <div
+        className="flex justify-between mt-2 pt-2 border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <button
           type="button"
           onClick={() => {
             onChange("");
             onClose();
           }}
-          className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100">
+          className="dt-icon-btn text-xs px-2 py-1 rounded">
           Xóa
         </button>
         <button
@@ -407,7 +422,8 @@ function MiniCalendar({
             onChange(todayObj.toISOString().split("T")[0]);
             onClose();
           }}
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50">
+          className="text-xs font-medium px-2 py-1 rounded transition-colors"
+          style={{ color: "var(--dt-primary)" }}>
           Hôm nay
         </button>
       </div>
@@ -458,33 +474,41 @@ function BranchMultiSelectDropdown({
         tabIndex={0}
         onClick={() => setOpen((p) => !p)}
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
+        className="dt-input dt-input-sm w-full flex items-center justify-between gap-2 cursor-pointer select-none"
+        style={
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
-            : "hover:border-gray-400"
-        }`}>
-        <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
+            ? { borderColor: "var(--dt-primary)", boxShadow: "0 0 0 3px rgba(0,183,204,.1)" }
+            : undefined
+        }>
+        <span
+          className="truncate"
+          style={{ color: label ? "var(--dt-text)" : "var(--dt-text-muted)" }}>
           {label ?? "Tất cả chi nhánh"}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--dt-text-muted)" }} />
       </div>
       {open && (
-        <div className="absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <div
+          className="absolute z-30 mt-1 w-full bg-white border rounded-[8px] shadow-lg max-h-48 overflow-y-auto"
+          style={{ borderColor: "var(--dt-border)" }}>
           {branches.map((b, idx) => (
             <button
               key={b.id}
               type="button"
               onClick={() => toggle(b.id)}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left transition-colors ${
-                selectedIds.includes(b.id) ? "bg-blue-50" : "hover:bg-gray-50"
-              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+              className="dt-menu-item w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left"
+              style={{
+                ...(selectedIds.includes(b.id) ? { background: "var(--dt-cyan-bg)" } : {}),
+                ...(idx > 0 ? { borderTop: "1px solid var(--dt-border)" } : {}),
+              }}>
               <input
                 type="checkbox"
                 checked={selectedIds.includes(b.id)}
                 onChange={() => {}}
-                className="w-3.5 h-3.5 accent-blue-600 flex-shrink-0"
+                className="w-3.5 h-3.5 flex-shrink-0"
+                style={{ accentColor: "var(--dt-primary)" }}
               />
-              <span className="text-gray-700">{b.name}</span>
+              <span style={{ color: "var(--dt-text-secondary)" }}>{b.name}</span>
             </button>
           ))}
         </div>
@@ -616,16 +640,19 @@ export function CashFlowsSidebar({
   };
 
   return (
-    <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
+    <aside className="dt-panel w-64 m-4 custom-sidebar-scroll flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-xl">
+      <div
+        className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-[8px]"
+        style={{ borderColor: "var(--dt-border)" }}>
         <div className="flex items-center gap-2">
-          <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
+          <h2 className="text-base font-semibold" style={{ color: "var(--dt-text)" }}>Bộ lọc</h2>
         </div>
         {activeFilterCount > 0 && (
           <button
             onClick={clearAll}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            className="text-sm font-medium"
+            style={{ color: "var(--dt-primary)" }}>
             Xóa tất cả
           </button>
         )}
@@ -635,7 +662,7 @@ export function CashFlowsSidebar({
         {/* ── Thời gian ── */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium" style={{ color: "var(--dt-text-secondary)" }}>
               Thời gian
             </label>
           </div>
@@ -656,26 +683,21 @@ export function CashFlowsSidebar({
                   setShowPresetPanel(true);
                 }
               }}
-              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
-                dateMode === "preset"
-                  ? "border-blue-400 bg-blue-50"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}>
+              className="dt-radio-row flex items-center gap-2.5 px-2 py-1 rounded-[4px] border cursor-pointer select-none"
+              data-on={dateMode === "preset"}>
               <div
-                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  dateMode === "preset" ? "border-blue-600" : "border-gray-300"
-                }`}>
+                className="w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+                style={{ borderColor: dateMode === "preset" ? "var(--dt-primary)" : "var(--dt-border)" }}>
                 {dateMode === "preset" && (
-                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                  <div className="w-1 h-1 rounded-full" style={{ background: "var(--dt-primary)" }} />
                 )}
               </div>
-              <span className="text-sm text-gray-700 flex-1 font-medium">
+              <span className="text-sm flex-1 font-medium" style={{ color: "var(--dt-text-secondary)" }}>
                 {PRESET_LABEL[selectedPreset] ?? "Chọn thời gian"}
               </span>
               <ChevronRight
-                className={`w-4 h-4 transition-colors flex-shrink-0 ${
-                  showPresetPanel ? "text-blue-500" : "text-gray-400"
-                }`}
+                className="w-4 h-4 transition-colors flex-shrink-0"
+                style={{ color: showPresetPanel ? "var(--dt-primary)" : "var(--dt-text-muted)" }}
               />
             </div>
 
@@ -685,21 +707,17 @@ export function CashFlowsSidebar({
                 setDateMode("custom");
                 setShowPresetPanel(false);
               }}
-              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
-                dateMode === "custom"
-                  ? "border-blue-400 bg-blue-50"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}>
+              className="dt-radio-row flex items-center gap-2.5 px-2 py-1 rounded-[4px] border cursor-pointer"
+              data-on={dateMode === "custom"}>
               <div
-                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  dateMode === "custom" ? "border-blue-600" : "border-gray-300"
-                }`}>
+                className="w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+                style={{ borderColor: dateMode === "custom" ? "var(--dt-primary)" : "var(--dt-border)" }}>
                 {dateMode === "custom" && (
-                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                  <div className="w-1 h-1 rounded-full" style={{ background: "var(--dt-primary)" }} />
                 )}
               </div>
-              <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
-              <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <span className="text-sm flex-1" style={{ color: "var(--dt-text-secondary)" }}>Tùy chỉnh</span>
+              <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: "var(--dt-text-muted)" }} />
             </div>
 
             {/* Custom date fields — BÊN NGOÀI div "Tùy chỉnh" */}
@@ -713,18 +731,20 @@ export function CashFlowsSidebar({
                   const isOpen = openCal === field;
                   return (
                     <div key={field}>
-                      <span className="text-xs text-gray-500 mb-1 block">
+                      <span className="text-xs mb-1 block" style={{ color: "var(--dt-text-muted)" }}>
                         {label}
                       </span>
                       <button
                         type="button"
                         onClick={() => setOpenCal(isOpen ? null : field)}
-                        className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
-                          val
-                            ? "border-blue-300 bg-blue-50 text-gray-800"
-                            : "border-gray-200 text-gray-400"
-                        } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
-                        <span>
+                        className="dt-input dt-input-sm w-full flex items-center justify-between"
+                        style={{
+                          ...(val ? { background: "var(--dt-cyan-bg)" } : { color: "var(--dt-text-muted)" }),
+                          ...(isOpen
+                            ? { borderColor: "var(--dt-primary)", boxShadow: "0 0 0 3px rgba(0,183,204,.1)" }
+                            : {}),
+                        }}>
+                        <span style={{ color: val ? "var(--dt-text)" : "var(--dt-text-muted)" }}>
                           {val
                             ? new Date(val + "T00:00:00").toLocaleDateString(
                                 "vi-VN",
@@ -736,7 +756,7 @@ export function CashFlowsSidebar({
                               )
                             : "Chọn ngày"}
                         </span>
-                        <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: "var(--dt-text-muted)" }} />
                       </button>
                       {isOpen && (
                         <MiniCalendar
@@ -770,7 +790,7 @@ export function CashFlowsSidebar({
 
         {/* ── Loại phiếu — Dropdown ── */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
             Loại phiếu
           </label>
           <SimpleDropdown
@@ -786,7 +806,7 @@ export function CashFlowsSidebar({
 
         {/* ── Trạng thái — Dropdown ── */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
             Trạng thái
           </label>
           <SimpleDropdown
@@ -802,7 +822,7 @@ export function CashFlowsSidebar({
 
         {/* ── Phương thức ── */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
             Phương thức
           </label>
           <SimpleDropdown
@@ -815,7 +835,7 @@ export function CashFlowsSidebar({
 
         {/* ── Chi nhánh ── */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
             Chi nhánh
           </label>
           <BranchMultiSelectDropdown
@@ -827,7 +847,7 @@ export function CashFlowsSidebar({
 
         {/* ── Người tạo ── */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
             Người tạo
           </label>
           <SimpleDropdown
@@ -845,7 +865,7 @@ export function CashFlowsSidebar({
 
         {/* ── Người nộp/nhận ── */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
             Người nộp/nhận
           </label>
           <input
@@ -853,7 +873,7 @@ export function CashFlowsSidebar({
             value={partnerName}
             onChange={(e) => setPartnerName(e.target.value)}
             placeholder="Tìm theo tên..."
-            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white hover:border-blue-300 transition-colors focus:outline-none focus:border-blue-400"
+            className="dt-input dt-input-sm w-full"
           />
         </div>
       </div>

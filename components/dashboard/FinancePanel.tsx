@@ -1,24 +1,25 @@
 "use client";
 
-import type { FinanceData, FinRangeKey } from "@/lib/api/dashboard";
+import type { FinanceData, PeriodKey } from "@/lib/api/dashboard";
+import { PERIOD_LABEL, FINANCE_PERIODS } from "@/lib/api/dashboard";
 import { money, vi } from "@/lib/dashboard/format";
 import { Wallet, FileText, Truck } from "lucide-react";
 
 interface Props {
   data?: FinanceData;
-  finRange: FinRangeKey;
-  onFinRangeChange: (r: FinRangeKey) => void;
+  finRange: PeriodKey;
+  onFinRangeChange: (r: PeriodKey) => void;
 }
 
-const FIN_RANGES: { key: FinRangeKey; label: string }[] = [
-  { key: "d7", label: "7 ngày" },
-  { key: "m30", label: "30 ngày" },
-  { key: "all", label: "Tất cả" },
-];
-
-const FIN_RANGE_LABEL: Record<FinRangeKey, string> = {
+// Phụ đề mô tả mốc đang chọn.
+const FIN_RANGE_SUBTITLE: Record<PeriodKey, string> = {
+  today: "hôm nay",
+  yesterday: "hôm qua",
   d7: "7 ngày gần nhất",
-  m30: "30 ngày gần nhất",
+  d30: "30 ngày gần nhất",
+  thisWeek: "tuần này",
+  thisMonth: "tháng này",
+  lastMonth: "tháng trước",
   all: "toàn bộ công nợ",
 };
 
@@ -84,19 +85,19 @@ export function FinancePanel({ data, finRange, onFinRangeChange }: Props) {
         <div>
           <h3 className="text-[15.5px] font-bold">Công nợ &amp; COD</h3>
           <div className="text-[12.5px] mt-0.5" style={{ color: "var(--dt-text-muted)" }}>
-            Dòng tiền cần thu hồi · {FIN_RANGE_LABEL[finRange]}
+            Dòng tiền cần thu hồi · {FIN_RANGE_SUBTITLE[finRange]}
           </div>
         </div>
-        <div className="ml-auto dt-seg dt-seg-sm">
-          {FIN_RANGES.map((r) => (
-            <button
-              key={r.key}
-              data-on={finRange === r.key}
-              onClick={() => onFinRangeChange(r.key)}>
-              {r.label}
-            </button>
+        <select
+          className="dt-select dt-select-sm ml-auto"
+          value={finRange}
+          onChange={(e) => onFinRangeChange(e.target.value as PeriodKey)}>
+          {FINANCE_PERIODS.map((p) => (
+            <option key={p} value={p}>
+              {PERIOD_LABEL[p]}
+            </option>
           ))}
-        </div>
+        </select>
       </div>
 
       <div className="p-[18px_20px] flex-1">

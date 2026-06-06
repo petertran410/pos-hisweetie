@@ -16,9 +16,18 @@ import { money, moneyAxis, DT_COLORS } from "@/lib/dashboard/format";
 interface Props {
   data: TrendPoint[];
   showProfit: boolean;
+  showRevenue?: boolean;
+  showProfitLine?: boolean;
 }
 
-export function RevenueTrendChart({ data, showProfit }: Props) {
+export function RevenueTrendChart({
+  data,
+  showProfit,
+  showRevenue = true,
+  showProfitLine,
+}: Props) {
+  // Đường lợi nhuận chỉ hiển thị khi có quyền xem và toggle đang bật.
+  const profitVisible = showProfit && (showProfitLine ?? true);
   if (!data.length) {
     return (
       <div
@@ -34,7 +43,7 @@ export function RevenueTrendChart({ data, showProfit }: Props) {
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={data}
-          margin={{ top: 8, right: showProfit ? 8 : 4, left: -8, bottom: 0 }}>
+          margin={{ top: 8, right: profitVisible ? 8 : 4, left: -8, bottom: 0 }}>
           <defs>
             <linearGradient id="dtRevGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={DT_COLORS.primary} stopOpacity={0.28} />
@@ -50,13 +59,14 @@ export function RevenueTrendChart({ data, showProfit }: Props) {
           />
           <YAxis
             yAxisId="rev"
+            hide={!showRevenue}
             tickLine={false}
             axisLine={false}
             tick={{ fill: "#5A8A92", fontSize: 11 }}
             tickFormatter={(v) => moneyAxis(Number(v))}
             width={48}
           />
-          {showProfit && (
+          {profitVisible && (
             <YAxis
               yAxisId="profit"
               orientation="right"
@@ -78,18 +88,20 @@ export function RevenueTrendChart({ data, showProfit }: Props) {
             labelStyle={{ color: "#A8D8E0" }}
             formatter={(value: number, name: string) => [money(value), name]}
           />
-          <Area
-            yAxisId="rev"
-            type="monotone"
-            dataKey="revenue"
-            name="Doanh thu"
-            stroke={DT_COLORS.primary}
-            strokeWidth={2.5}
-            fill="url(#dtRevGrad)"
-            dot={false}
-            activeDot={{ r: 5 }}
-          />
-          {showProfit && (
+          {showRevenue && (
+            <Area
+              yAxisId="rev"
+              type="monotone"
+              dataKey="revenue"
+              name="Doanh thu"
+              stroke={DT_COLORS.primary}
+              strokeWidth={2.5}
+              fill="url(#dtRevGrad)"
+              dot={false}
+              activeDot={{ r: 5 }}
+            />
+          )}
+          {profitVisible && (
             <Line
               yAxisId="profit"
               type="monotone"

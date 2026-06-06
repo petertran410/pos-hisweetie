@@ -11,9 +11,11 @@ import { branchesApi } from "@/lib/api/branches";
 import {
   dashboardApi,
   type RangeKey,
-  type FinRangeKey,
+  type PeriodKey,
   type TopMetric,
   type CategoryDimension,
+  PERIOD_LABEL,
+  BRANCH_PERIODS,
 } from "@/lib/api/dashboard";
 import { money, vi, deltaPct } from "@/lib/dashboard/format";
 import { KpiCard, type DeltaDir } from "@/components/dashboard/KpiCard";
@@ -49,7 +51,7 @@ const RANGES: { key: RangeKey; label: string }[] = [
 const RANGE_LABEL: Record<RangeKey, string> = {
   today: "Theo giờ · hôm nay",
   week: "Theo ngày · 7 ngày qua",
-  month: "Theo tuần · tháng này",
+  month: "Theo ngày · tháng này",
 };
 
 const TOP_METRICS: { key: TopMetric; label: string }[] = [
@@ -71,9 +73,9 @@ export default function Home() {
   // ── Bộ lọc dashboard ──
   const [range, setRange] = useState<RangeKey>("today");
   const [branchId, setBranchId] = useState<number | undefined>(undefined); // undefined = tất cả
-  const [finRange, setFinRange] = useState<FinRangeKey>("all");
+  const [finRange, setFinRange] = useState<PeriodKey>("all");
   const [branchMetric, setBranchMetric] = useState<"rev" | "profit">("rev");
-  const [branchRange, setBranchRange] = useState<RangeKey>("week");
+  const [branchRange, setBranchRange] = useState<PeriodKey>("d7");
   const [taskTab, setTaskTab] = useState<TaskType>("orders");
   const [orderStatus, setOrderStatus] = useState<string>("");
   const [topMetric, setTopMetric] = useState<TopMetric>("rev");
@@ -81,6 +83,9 @@ export default function Home() {
   const [topCat, setTopCat] = useState<string>("");
   const [topCount, setTopCount] = useState<number>(5);
   const [catDim, setCatDim] = useState<CategoryDimension>("parent");
+  // Toggle hiển thị đường trên biểu đồ doanh thu/lợi nhuận (luôn giữ tối thiểu 1).
+  const [showRev, setShowRev] = useState(true);
+  const [showLn, setShowLn] = useState(true);
 
   useEffect(() => {
     if (_hasHydrated && !isAuthenticated) router.replace("/login");
@@ -386,21 +391,50 @@ export default function Home() {
                     {RANGE_LABEL[range]}
                   </div>
                 </div>
-                <span
-                  className="ml-auto text-[11.5px] font-semibold px-[11px] py-1 rounded-[20px]"
-                  style={{ color: "var(--dt-primary)", background: "rgba(0,183,204,.08)" }}>
+                <button
+                  type="button"
+                  aria-pressed={showRev}
+                  title={showRev ? "Ẩn đường doanh thu" : "Hiện đường doanh thu"}
+                  onClick={() => {
+                    // Không tắt nếu DT đang là chỉ số active duy nhất.
+                    if (showRev && !showLn) return;
+                    setShowRev((v) => !v);
+                  }}
+                  className="ml-auto text-[11.5px] font-semibold px-[11px] py-1 rounded-[20px] cursor-pointer transition-opacity"
+                  style={{
+                    color: "var(--dt-primary)",
+                    background: "rgba(0,183,204,.08)",
+                    opacity: showRev ? 1 : 0.45,
+                  }}>
                   DT {money(s?.currentRevenue ?? 0)}
-                </span>
+                </button>
                 {canSeeProfit && (
-                  <span
-                    className="text-[11.5px] font-semibold px-[11px] py-1 rounded-[20px]"
-                    style={{ color: "#9A7A2A", background: "rgba(201,168,76,.13)" }}>
+                  <button
+                    type="button"
+                    aria-pressed={showLn}
+                    title={showLn ? "Ẩn đường lợi nhuận" : "Hiện đường lợi nhuận"}
+                    onClick={() => {
+                      // Không tắt nếu LN đang là chỉ số active duy nhất.
+                      if (showLn && !showRev) return;
+                      setShowLn((v) => !v);
+                    }}
+                    className="text-[11.5px] font-semibold px-[11px] py-1 rounded-[20px] cursor-pointer transition-opacity"
+                    style={{
+                      color: "#9A7A2A",
+                      background: "rgba(201,168,76,.13)",
+                      opacity: showLn ? 1 : 0.45,
+                    }}>
                     LN {money(s?.profit ?? 0)}
-                  </span>
+                  </button>
                 )}
               </div>
               <div className="p-[18px_20px]">
-                <RevenueTrendChart data={trend.data ?? []} showProfit={canSeeProfit} />
+                <RevenueTrendChart
+                  data={trend.data ?? []}
+                  showProfit={canSeeProfit}
+                  showRevenue={showRev}
+                  showProfitLine={canSeeProfit && showLn}
+                />
               </div>
             </div>
 
@@ -448,14 +482,16 @@ export default function Home() {
                       </button>
                     </div>
                   )}
-                  <div className="dt-seg dt-seg-sm">
-                    <button data-on={branchRange === "week"} onClick={() => setBranchRange("week")}>
-                      7 ngày
-                    </button>
-                    <button data-on={branchRange === "month"} onClick={() => setBranchRange("month")}>
-                      Tháng này
-                    </button>
-                  </div>
+                  <select
+                    className="dt-select dt-select-sm"
+                    value={branchRange}
+                    onChange={(e) => setBranchRange(e.target.value as PeriodKey)}>
+                    {BRANCH_PERIODS.map((p) => (
+                      <option key={p} value={p}>
+                        {PERIOD_LABEL[p]}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="p-[18px_20px]">

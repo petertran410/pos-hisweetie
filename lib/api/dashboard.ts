@@ -1,9 +1,45 @@
 import { apiClient } from "@/lib/config/api";
 
 export type RangeKey = "today" | "week" | "month";
-export type FinRangeKey = "d7" | "m30" | "all";
 export type TopMetric = "rev" | "qty" | "profit";
 export type CategoryDimension = "parent" | "middle" | "child";
+
+// Bộ mốc thời gian chi tiết dùng chung cho So sánh chi nhánh & Công nợ/COD.
+export type PeriodKey =
+  | "today"
+  | "yesterday"
+  | "d7"
+  | "d30"
+  | "thisWeek"
+  | "thisMonth"
+  | "lastMonth"
+  | "all";
+
+// Nhãn ngắn (dropdown) và nhãn phụ đề cho từng mốc.
+export const PERIOD_LABEL: Record<PeriodKey, string> = {
+  today: "Hôm nay",
+  yesterday: "Hôm qua",
+  d7: "7 ngày",
+  d30: "30 ngày",
+  thisWeek: "Tuần này",
+  thisMonth: "Tháng này",
+  lastMonth: "Tháng trước",
+  all: "Tất cả",
+};
+
+// Danh sách mốc cho dropdown So sánh chi nhánh (không có 'Tất cả').
+export const BRANCH_PERIODS: PeriodKey[] = [
+  "today",
+  "yesterday",
+  "d7",
+  "d30",
+  "thisWeek",
+  "thisMonth",
+  "lastMonth",
+];
+
+// Danh sách mốc cho dropdown Công nợ & COD (có 'Tất cả').
+export const FINANCE_PERIODS: PeriodKey[] = [...BRANCH_PERIODS, "all"];
 
 export interface DashboardStats {
   range: RangeKey;
@@ -69,7 +105,7 @@ export interface BranchComparison {
 }
 
 export interface FinanceData {
-  finRange: FinRangeKey;
+  finRange: PeriodKey;
   debt: number;
   overdue: number;
   unpaidCount: number;
@@ -183,14 +219,14 @@ export const dashboardApi = {
   },
 
   getBranchComparison: (
-    range: RangeKey = "week",
+    period: PeriodKey = "d7",
     metric: "rev" | "profit" = "rev"
   ): Promise<BranchComparison> => {
-    return apiClient.get("/dashboard/branch-comparison", { range, metric });
+    return apiClient.get("/dashboard/branch-comparison", { period, metric });
   },
 
-  getFinance: (finRange: FinRangeKey = "all", branchId?: number): Promise<FinanceData> => {
-    return apiClient.get("/dashboard/finance", { finRange, branchId });
+  getFinance: (period: PeriodKey = "all", branchId?: number): Promise<FinanceData> => {
+    return apiClient.get("/dashboard/finance", { period, branchId });
   },
 
   getTasks: (
