@@ -22,18 +22,43 @@ interface Props {
   rows: TaskRow[];
   counts: Record<string, number>;
   loading?: boolean;
-  orderStatus?: string;
-  onOrderStatusChange?: (s: string) => void;
+  /** Filter trạng thái hiện tại theo tab đang mở. */
+  statusFilter?: string;
+  onStatusFilterChange?: (s: string) => void;
 }
 
-/** Các trạng thái đơn cho bộ lọc tab "Đơn cần xử lý". */
-export const ORDER_STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: "", label: "Tất cả trạng thái" },
-  { value: "pending", label: "Phiếu tạm" },
-  { value: "confirmed", label: "Đã xác nhận" },
-  { value: "partially_invoiced", label: "Đã ra 1 phần HĐ" },
-  { value: "completed", label: "Hoàn thành" },
-];
+/** Bộ lọc riêng cho từng tab. Key rỗng = "Tất cả". */
+export const TASK_FILTER_OPTIONS: Record<
+  TaskType,
+  { value: string; label: string }[]
+> = {
+  orders: [
+    { value: "", label: "Tất cả trạng thái" },
+    { value: "pending", label: "Phiếu tạm" },
+    { value: "confirmed", label: "Đã xác nhận" },
+    { value: "partially_invoiced", label: "Đã ra 1 phần HĐ" },
+  ],
+  debt: [
+    { value: "", label: "Tất cả tuổi nợ" },
+    { value: "in_term", label: "Trong hạn" },
+    { value: "due", label: "Đến hạn (1–30 ngày)" },
+    { value: "overdue", label: "Quá hạn (> 30 ngày)" },
+  ],
+  cod: [
+    { value: "", label: "Tất cả trạng thái" },
+    { value: "3", label: "Đang xử lý" },
+    { value: "5", label: "Đóng hàng" },
+    { value: "6", label: "Đang giao hàng" },
+    { value: "4", label: "Không giao được" },
+    { value: "8", label: "Trả hàng" },
+  ],
+  stock: [
+    { value: "", label: "Tất cả cảnh báo" },
+    { value: "negative", label: "Âm kho" },
+    { value: "out", label: "Hết hàng" },
+    { value: "low", label: "Sắp hết" },
+  ],
+};
 
 function timeText(r: TaskRow, type: TaskType): string {
   if (type === "debt") {
@@ -147,8 +172,8 @@ export function TaskTabs({
   rows,
   counts,
   loading,
-  orderStatus = "",
-  onOrderStatusChange,
+  statusFilter = "",
+  onStatusFilterChange,
 }: Props) {
   const heads = HEAD[active];
 
@@ -193,38 +218,40 @@ export function TaskTabs({
   return (
     <div className="dt-panel flex flex-col">
       <div
-        className="flex items-center gap-1 px-5 border-b flex-wrap"
+        className="flex items-center gap-2 px-5 border-b"
         style={{ borderColor: "var(--dt-border)" }}>
-        {tabs.map((t) => {
-          const on = active === t.key;
-          return (
-            <button
-              key={t.key}
-              onClick={() => onTabChange(t.key)}
-              className="py-[13px] px-[14px] text-[13.5px] font-semibold inline-flex items-center gap-2 -mb-px border-b-2 transition"
-              style={{
-                color: on ? "var(--dt-primary)" : "var(--dt-text-secondary)",
-                borderColor: on ? "var(--dt-primary)" : "transparent",
-              }}>
-              {t.label}
-              <span
-                className="text-[11px] font-bold dt-mono px-[7px] py-px rounded-[20px]"
+        <div className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto dt-no-scrollbar">
+          {tabs.map((t) => {
+            const on = active === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => onTabChange(t.key)}
+                className="py-[13px] px-[14px] text-[13.5px] font-semibold inline-flex items-center gap-2 -mb-px border-b-2 transition whitespace-nowrap flex-none"
                 style={{
-                  background: on ? "var(--dt-primary)" : "var(--dt-cyan-bg)",
-                  color: on ? "#fff" : "var(--dt-primary-deep)",
+                  color: on ? "var(--dt-primary)" : "var(--dt-text-secondary)",
+                  borderColor: on ? "var(--dt-primary)" : "transparent",
                 }}>
-                {counts[t.key] ?? 0}
-              </span>
-            </button>
-          );
-        })}
+                {t.label}
+                <span
+                  className="text-[11px] font-bold dt-mono px-[7px] py-px rounded-[20px]"
+                  style={{
+                    background: on ? "var(--dt-primary)" : "var(--dt-cyan-bg)",
+                    color: on ? "#fff" : "var(--dt-primary-deep)",
+                  }}>
+                  {counts[t.key] ?? 0}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-        {active === "orders" && onOrderStatusChange && (
+        {onStatusFilterChange && (
           <select
-            className="dt-select dt-select-sm ml-auto my-2"
-            value={orderStatus}
-            onChange={(e) => onOrderStatusChange(e.target.value)}>
-            {ORDER_STATUS_OPTIONS.map((o) => (
+            className="dt-select dt-select-sm flex-none my-2"
+            value={statusFilter}
+            onChange={(e) => onStatusFilterChange(e.target.value)}>
+            {TASK_FILTER_OPTIONS[active].map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>

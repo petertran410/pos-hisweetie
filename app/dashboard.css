@@ -979,3 +979,12 @@
   background: rgba(192, 57, 43, 0.1);
   color: var(--dt-error);
 }
+
+/* Ẩn scrollbar nhưng vẫn cuộn được (dùng cho dải tab task). */
+.dt-no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.dt-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

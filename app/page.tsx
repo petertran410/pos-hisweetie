@@ -80,7 +80,16 @@ export default function Home() {
   const [branchMetric, setBranchMetric] = useState<"rev" | "profit">("rev");
   const [branchRange, setBranchRange] = useState<PeriodKey>("d7");
   const [taskTab, setTaskTab] = useState<TaskType>("orders");
-  const [orderStatus, setOrderStatus] = useState<string>("");
+  // Mỗi tab giữ bộ lọc riêng.
+  const [taskFilters, setTaskFilters] = useState<Record<TaskType, string>>({
+    orders: "",
+    debt: "",
+    cod: "",
+    stock: "",
+  });
+  const taskStatus = taskFilters[taskTab];
+  const setTaskStatus = (s: string) =>
+    setTaskFilters((prev) => ({ ...prev, [taskTab]: s }));
   const [topMetric, setTopMetric] = useState<TopMetric>("rev");
   const [topDim, setTopDim] = useState<CategoryDimension | "all">("all");
   const [topCat, setTopCat] = useState<string>("");
@@ -134,14 +143,9 @@ export default function Home() {
   });
 
   const tasks = useQuery({
-    queryKey: ["dash-tasks", taskTab, branchId, orderStatus],
+    queryKey: ["dash-tasks", taskTab, branchId, taskStatus],
     queryFn: () =>
-      dashboardApi.getTasks(
-        taskTab,
-        branchId,
-        20,
-        taskTab === "orders" ? orderStatus || undefined : undefined
-      ),
+      dashboardApi.getTasks(taskTab, branchId, 20, taskStatus || undefined),
     enabled,
   });
 
@@ -521,8 +525,8 @@ export default function Home() {
               rows={tasks.data ?? []}
               counts={taskCounts.data ?? {}}
               loading={tasks.isLoading}
-              orderStatus={orderStatus}
-              onOrderStatusChange={setOrderStatus}
+              statusFilter={taskStatus}
+              onStatusFilterChange={setTaskStatus}
             />
             <div className="dt-panel flex flex-col">
               <div className="flex items-center gap-3 p-[17px_20px] border-b" style={{ borderColor: "var(--dt-border)" }}>

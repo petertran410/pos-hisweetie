@@ -265,7 +265,7 @@ export function OrdersMobileDetailSheet({
   // ─── invoicedQuantities (giống OrderDetailRow) ───────────────────────────
   const invoicedQuantities: Record<number, number> = {};
   order?.invoices?.forEach((inv) => {
-    if (inv.status !== 5) {
+    if (inv.status !== INVOICE_STATUS.CANCELLED) {
       inv.details?.forEach((detail: any) => {
         invoicedQuantities[detail.productId] =
           (invoicedQuantities[detail.productId] || 0) + Number(detail.quantity);

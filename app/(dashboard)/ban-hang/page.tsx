@@ -1154,7 +1154,7 @@ export default function BanHangPage() {
 
     const invoicedQuantities: Record<number, number> = {};
     (order.invoices || []).forEach((inv: any) => {
-      if (inv.status !== 5) {
+      if (inv.status !== 2 && inv.status !== 5) {
         (inv.details || []).forEach((d: any) => {
           invoicedQuantities[d.productId] =
             (invoicedQuantities[d.productId] || 0) + Number(d.quantity);
@@ -1184,7 +1184,7 @@ export default function BanHangPage() {
     }
 
     const usedDiscount = (order.invoices || [])
-      .filter((inv: any) => inv.status !== 5)
+      .filter((inv: any) => inv.status !== 2 && inv.status !== 5)
       .reduce((sum: number, inv: any) => sum + Number(inv.discount || 0), 0);
     const remainingDiscount = Number(order.discount || 0) - usedDiscount;
 
