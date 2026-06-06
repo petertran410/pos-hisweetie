@@ -233,7 +233,7 @@ export function CashFlowDetailRow({
       <tr>
         <td colSpan={colSpan} className="p-0">
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--dt-text-muted)" }} />
           </div>
         </td>
       </tr>
@@ -244,21 +244,23 @@ export function CashFlowDetailRow({
 
   return (
     <>
-      <tr className="border-b-2 border-blue-400">
-        <td colSpan={colSpan} className="p-0 bg-gray-50">
+      <tr style={{ borderBottom: "2px solid var(--dt-primary)" }}>
+        <td colSpan={colSpan} className="p-0" style={{ background: "var(--dt-bg-soft)" }}>
           <div ref={wrapperRef} className="overflow-hidden">
-            <div className="bg-white border border-gray-200 overflow-hidden">
+            <div
+              className="bg-white border overflow-hidden"
+              style={{ borderColor: "var(--dt-border)" }}>
               {/* ── Header ── */}
-              <div className="flex items-center justify-between px-6 pt-3 border-gray-100">
+              <div className="flex items-center justify-between px-6 pt-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-gray-900">
+                  <span className="text-lg font-bold">
                     <CodeLink
                       entity="cashflow"
                       code={cashFlow.code}
-                      className="text-lg font-bold text-blue-600 hover:underline"
+                      className="text-lg font-bold hover:underline"
                     />
                   </span>
-                  <span className="text-gray-400">-</span>
+                  <span style={{ color: "var(--dt-text-muted)" }}>-</span>
                   {/* Title + status */}
                   <div className="flex items-center gap-2 flex-wrap">
                     {partnerName ? (
@@ -268,12 +270,13 @@ export function CashFlowDetailRow({
                             href={`/khach-hang?Code=${partnerCode}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-lg font-semibold text-blue-600 hover:underline"
+                            className="text-lg font-semibold hover:underline"
+                            style={{ color: "var(--dt-primary)" }}
                             onClick={(e) => e.stopPropagation()}>
                             {partnerName}
                           </Link>
                         ) : (
-                          <span className="text-lg font-semibold text-gray-800">
+                          <span className="text-lg font-semibold" style={{ color: "var(--dt-text)" }}>
                             {partnerName}
                           </span>
                         )}
@@ -282,14 +285,15 @@ export function CashFlowDetailRow({
                             href={`/khach-hang?Code=${partnerCode}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                            className="transition-colors"
+                            style={{ color: "var(--dt-text-muted)" }}
                             onClick={(e) => e.stopPropagation()}>
                             <ExternalLink className="w-4 h-4" />
                           </Link>
                         )}
                       </>
                     ) : (
-                      <span className="text-lg font-semibold text-gray-800">
+                      <span className="text-lg font-semibold" style={{ color: "var(--dt-text)" }}>
                         Không xác định
                       </span>
                     )}
@@ -302,13 +306,13 @@ export function CashFlowDetailRow({
                 </div>
 
                 {/* Right: mã phiếu + chi nhánh */}
-                <span className="text-sm text-gray-600 font-medium">
+                <span className="text-sm font-medium" style={{ color: "var(--dt-text-secondary)" }}>
                   {cashFlow.branchName || cashFlow.branch?.name || "-"}
                 </span>
               </div>
 
               {/* ── Tabs ── */}
-              <div className="flex gap-1 px-6 border-b border-gray-100">
+              <div className="flex gap-1 px-6 border-b" style={{ borderColor: "var(--dt-border)" }}>
                 {[
                   { key: "info", label: "Thông tin" },
                   {
@@ -319,11 +323,12 @@ export function CashFlowDetailRow({
                   <button
                     key={t.key}
                     onClick={() => setActiveTab(t.key as any)}
-                    className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                    className="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors"
+                    style={
                       activeTab === t.key
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}>
+                        ? { borderColor: "var(--dt-primary)", color: "var(--dt-primary)" }
+                        : { borderColor: "transparent", color: "var(--dt-text-muted)" }
+                    }>
                     {t.label}
                   </button>
                 ))}
@@ -335,12 +340,12 @@ export function CashFlowDetailRow({
                 {activeTab === "info" && (
                   <>
                     {/* Row 1: Người thu/chi | Thời gian | Chi nhánh | Loại phiếu */}
-                    <div className="grid grid-cols-4 gap-x-5 border-gray-200">
-                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                        <label className="block text-sm text-gray-500">
+                    <div className="grid grid-cols-4 gap-x-5">
+                      <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                        <label className="dt-field-label">
                           {cashFlow.isReceipt ? "Người thu:" : "Người chi:"}
                         </label>
-                        <span className="block text-sm text-gray-900">
+                        <span className="dt-field-value">
                           {cashFlow.collectorName ||
                             cashFlow.collector?.name ||
                             cashFlow.creatorName ||
@@ -348,67 +353,67 @@ export function CashFlowDetailRow({
                             "-"}
                         </span>
                       </div>
-                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                        <label className="block text-sm text-gray-500">
+                      <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                        <label className="dt-field-label">
                           Thời gian:
                         </label>
-                        <span className="block text-sm text-gray-900">
+                        <span className="dt-field-value">
                           {formatDateTime(cashFlow.transDate)}
                         </span>
                       </div>
-                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                        <label className="block text-sm text-gray-500">
+                      <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                        <label className="dt-field-label">
                           Chi nhánh:
                         </label>
-                        <span className="block text-sm text-gray-900">
+                        <span className="dt-field-value">
                           {cashFlow.branchName || cashFlow.branch?.name || "-"}
                         </span>
                       </div>
-                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                        <label className="block text-sm text-gray-500">
+                      <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                        <label className="dt-field-label">
                           Loại phiếu:
                         </label>
-                        <span className="block text-sm text-gray-900">
+                        <span className="dt-field-value">
                           {cashFlow.isReceipt ? "Phiếu thu" : "Phiếu chi"}
                         </span>
                       </div>
                     </div>
 
                     {/* Row 2: Số tiền | Loại thu/chi | Phương thức | Tài khoản NH */}
-                    <div className="grid grid-cols-4 gap-x-5 border-gray-200">
-                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                        <label className="block text-sm text-gray-500">
+                    <div className="grid grid-cols-4 gap-x-5">
+                      <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                        <label className="dt-field-label">
                           Số tiền:
                         </label>
-                        <span className="block text-sm text-gray-900">
+                        <span className="dt-field-value">
                           {cashFlow.isReceipt ? "+" : "-"}
                           {formatCurrency(Number(cashFlow.amount))}
                         </span>
                       </div>
-                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                        <label className="block text-sm text-gray-500">
+                      <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                        <label className="dt-field-label">
                           {cashFlow.isReceipt ? "Loại thu:" : "Loại chi:"}
                         </label>
-                        <span className="block text-sm text-gray-900">
+                        <span className="dt-field-value">
                           {cashFlow.cashFlowGroupName ||
                             cashFlow.cashFlowGroup?.name ||
                             "-"}
                         </span>
                       </div>
-                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                        <label className="block text-sm text-gray-500">
+                      <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                        <label className="dt-field-label">
                           Phương thức:
                         </label>
-                        <span className="block text-sm text-gray-900">
+                        <span className="dt-field-value">
                           {getMethodText(cashFlow.method)}
                         </span>
                       </div>
                       {cashFlow.account ? (
-                        <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                          <label className="block text-sm text-gray-500">
+                        <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                          <label className="dt-field-label">
                             Tài khoản ngân hàng:
                           </label>
-                          <span className="block text-sm text-gray-900">
+                          <span className="dt-field-value">
                             {cashFlow.account.bankCode} -{" "}
                             {cashFlow.account.accountNumber}
                           </span>
@@ -421,24 +426,24 @@ export function CashFlowDetailRow({
                     {/* Row 3: Đối tượng */}
                     {partnerName && (
                       <div className="grid grid-cols-4 gap-5">
-                        <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                          <label className="block text-sm text-gray-500">
+                        <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                          <label className="dt-field-label">
                             {cashFlow.isReceipt
                               ? "Đối tượng nộp:"
                               : "Đối tượng nhận:"}
                           </label>
-                          <span className="block text-sm text-gray-900">
+                          <span className="dt-field-value">
                             {partnerName}
                           </span>
                         </div>
                         {(cashFlow.customer?.contactNumber ||
                           cashFlow.supplier?.contactNumber ||
                           cashFlow.contactNumber) && (
-                          <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                            <label className="block text-sm text-gray-500">
+                          <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                            <label className="dt-field-label">
                               Số điện thoại:
                             </label>
-                            <span className="block text-sm text-gray-900">
+                            <span className="dt-field-value">
                               {cashFlow.customer?.contactNumber ||
                                 cashFlow.supplier?.contactNumber ||
                                 cashFlow.contactNumber}
@@ -446,11 +451,11 @@ export function CashFlowDetailRow({
                           </div>
                         )}
                         {cashFlow.address && (
-                          <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                            <label className="block text-sm text-gray-500">
+                          <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                            <label className="dt-field-label">
                               Địa chỉ:
                             </label>
-                            <span className="block text-sm text-gray-900">
+                            <span className="dt-field-value">
                               {cashFlow.customer?.invoiceAddress} -{" "}
                               {cashFlow.customer?.invoiceCityName} -{" "}
                               {cashFlow.customer?.invoiceWardName}
@@ -462,11 +467,13 @@ export function CashFlowDetailRow({
 
                     {/* Ghi chú */}
                     <div>
-                      <label className="block text-sm text-gray-500">
+                      <label className="dt-field-label">
                         Ghi chú:
                       </label>
-                      <div className="w-full px-3 py-2 text-md border rounded bg-gray-50 min-h-[60px]">
-                        <p className="text-md text-gray-900">
+                      <div
+                        className="w-full px-3 py-2 text-md border rounded min-h-[60px]"
+                        style={{ background: "var(--dt-bg-soft)", borderColor: "var(--dt-border)" }}>
+                        <p className="text-md" style={{ color: "var(--dt-text)" }}>
                           {cashFlow.description || "Chưa có ghi chú"}
                         </p>
                       </div>
@@ -477,40 +484,40 @@ export function CashFlowDetailRow({
                 {activeTab === "invoices" && (
                   <div className="space-y-4">
                     {!hasInvoicePayments ? (
-                      <div className="flex items-center justify-center py-10 text-gray-400 text-sm">
+                      <div className="flex items-center justify-center py-10 text-sm" style={{ color: "var(--dt-text-muted)" }}>
                         Không có hóa đơn hay đơn hàng liên quan
                       </div>
                     ) : (
                       <>
                         {mergedInvoices.length > 0 && (
-                          <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div className="border rounded-[8px] overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
                             <table className="w-full">
-                              <thead className="bg-gray-100 border-b border-gray-200">
+                              <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                 <tr>
-                                  <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 w-[120px]">
+                                  <th className="px-4 py-3 text-left text-md font-semibold dt-th w-[120px]">
                                     Hóa đơn
                                   </th>
-                                  <th className="px-4 py-3 text-left text-md font-semibold text-gray-700 w-[160px]">
+                                  <th className="px-4 py-3 text-left text-md font-semibold dt-th w-[160px]">
                                     Thời gian
                                   </th>
-                                  <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 w-[120px]">
+                                  <th className="px-4 py-3 text-right text-md font-semibold dt-th w-[120px]">
                                     Giá trị HĐ
                                   </th>
-                                  <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 w-[120px]">
+                                  <th className="px-4 py-3 text-right text-md font-semibold dt-th w-[120px]">
                                     Đã thu trước
                                   </th>
-                                  <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 w-[120px]">
+                                  <th className="px-4 py-3 text-right text-md font-semibold dt-th w-[120px]">
                                     Giá trị
                                   </th>
-                                  <th className="px-4 py-3 text-right text-md font-semibold text-gray-700 w-[120px]">
+                                  <th className="px-4 py-3 text-right text-md font-semibold dt-th w-[120px]">
                                     Còn cần thu
                                   </th>
-                                  <th className="px-4 py-3 text-center text-md font-semibold text-gray-700 w-[100px]">
+                                  <th className="px-4 py-3 text-center text-md font-semibold dt-th w-[100px]">
                                     Trạng thái
                                   </th>
                                 </tr>
                               </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
+                              <tbody className="bg-white dt-divide">
                                 {mergedInvoices.map((row) => {
                                   const totalPayment = row.payments.reduce(
                                     (s: number, p: any) => s + Number(p.amount),
@@ -538,11 +545,11 @@ export function CashFlowDetailRow({
                                   return (
                                     <tr
                                       key={`merged-${row.invoiceId}`}
-                                      className="hover:bg-gray-50">
+                                      className="dt-row">
                                       {/* Hóa đơn */}
                                       <td className="px-4 py-3">
                                         <Link
-                                          className="text-md text-blue-600 hover:underline"
+                                          className="text-md hover:underline" style={{ color: "var(--dt-primary)" }}
                                           href={`/don-hang/hoa-don?Code=${row.invoiceCode}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
@@ -552,12 +559,12 @@ export function CashFlowDetailRow({
                                       </td>
 
                                       {/* Thời gian */}
-                                      <td className="px-4 py-3 text-md text-gray-900">
+                                      <td className="px-4 py-3 text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatDateTime(row.latestDate)}
                                       </td>
 
                                       {/* Giá trị HĐ */}
-                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(row.grandTotal)}
                                       </td>
 
@@ -581,14 +588,14 @@ export function CashFlowDetailRow({
                                             </span>
                                             {visibleTooltipId ===
                                               `ctn-${row.invoiceId}` && (
-                                              <div className="absolute z-10 bottom-full right-0 mb-1 px-2.5 py-1.5 bg-gray-800 text-white text-xs rounded shadow-lg whitespace-nowrap">
+                                              <div className="absolute z-10 bottom-full right-0 mb-1 px-2.5 py-1.5 text-white text-xs rounded shadow-lg whitespace-nowrap" style={{ background: "var(--dt-primary-dark)" }}>
                                                 {offsetCodes}
-                                                <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800" />
+                                                <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent" style={{ borderTopColor: "var(--dt-primary-dark)" }} />
                                               </div>
                                             )}
                                           </div>
                                         ) : (
-                                          <span className="text-gray-900">
+                                          <span style={{ color: "var(--dt-text)" }}>
                                             {formatCurrency(daThutruoc)}
                                           </span>
                                         )}
@@ -614,21 +621,21 @@ export function CashFlowDetailRow({
                                             </span>
                                             {visibleTooltipId ===
                                               `ip-${row.invoiceId}` && (
-                                              <div className="absolute z-10 bottom-full right-0 mb-1 px-2.5 py-1.5 bg-gray-800 text-white text-xs rounded shadow-lg whitespace-nowrap">
+                                              <div className="absolute z-10 bottom-full right-0 mb-1 px-2.5 py-1.5 text-white text-xs rounded shadow-lg whitespace-nowrap" style={{ background: "var(--dt-primary-dark)" }}>
                                                 {paymentCodes}
-                                                <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800" />
+                                                <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent" style={{ borderTopColor: "var(--dt-primary-dark)" }} />
                                               </div>
                                             )}
                                           </div>
                                         ) : (
-                                          <span className="text-gray-400">
+                                          <span style={{ color: "var(--dt-text-muted)" }}>
                                             -
                                           </span>
                                         )}
                                       </td>
 
                                       {/* Còn cần thu */}
-                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(row.debtAmount)}
                                       </td>
 
@@ -656,44 +663,44 @@ export function CashFlowDetailRow({
                         {/* Bảng đơn hàng liên quan */}
                         {orderPayments.length > 0 && (
                           <div>
-                            <p className="text-sm font-semibold text-gray-600 mb-2">
+                            <p className="text-sm font-semibold mb-2" style={{ color: "var(--dt-text-secondary)" }}>
                               Đơn hàng liên quan
                             </p>
-                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="border rounded-[8px] overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
                               <table className="w-full">
-                                <thead className="bg-gray-100 border-b border-gray-200">
+                                <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                   <tr>
-                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
                                       Mã đơn hàng
                                     </th>
-                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
                                       Thời gian
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Giá trị ĐH
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Đã thu trước
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Giá trị thu
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Còn cần thu
                                     </th>
-                                    <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-center text-md font-semibold dt-th">
                                       Trạng thái
                                     </th>
                                   </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
+                                <tbody className="bg-white dt-divide">
                                   {orderPayments.map((payment: any) => (
                                     <tr
                                       key={payment.id}
-                                      className="hover:bg-gray-50">
+                                      className="dt-row">
                                       <td className="px-4 py-3">
                                         <Link
-                                          className="text-md font-medium text-blue-600 hover:underline"
+                                          className="text-md font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
                                           href={`/don-hang/dat-hang?Code=${payment.order?.code}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
@@ -701,15 +708,15 @@ export function CashFlowDetailRow({
                                           {payment.order?.code}
                                         </Link>
                                       </td>
-                                      <td className="px-4 py-3 text-md text-gray-900">
+                                      <td className="px-4 py-3 text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatDateTime(payment.paymentDate)}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(payment.order?.grandTotal || 0)
                                         )}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.order?.paidAmount || 0
@@ -719,7 +726,7 @@ export function CashFlowDetailRow({
                                       <td className="px-4 py-3 text-right text-md font-medium text-green-600">
                                         {formatCurrency(Number(payment.amount))}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(payment.order?.debtAmount || 0)
                                         )}
@@ -756,44 +763,44 @@ export function CashFlowDetailRow({
                             "Hóa đơn liên quan" của KH. */}
                         {purchaseOrderPayments.length > 0 && (
                           <div>
-                            <p className="text-sm font-semibold text-gray-600 mb-2">
+                            <p className="text-sm font-semibold mb-2" style={{ color: "var(--dt-text-secondary)" }}>
                               Phiếu nhập hàng liên quan
                             </p>
-                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="border rounded-[8px] overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
                               <table className="w-full">
-                                <thead className="bg-gray-100 border-b border-gray-200">
+                                <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                   <tr>
-                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
                                       Mã phiếu nhập
                                     </th>
-                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
                                       Thời gian
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Giá trị PN
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Đã trả trước
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Giá trị chi
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Còn cần trả
                                     </th>
-                                    <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-center text-md font-semibold dt-th">
                                       Trạng thái
                                     </th>
                                   </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
+                                <tbody className="bg-white dt-divide">
                                   {purchaseOrderPayments.map((payment: any) => (
                                     <tr
                                       key={payment.id}
-                                      className="hover:bg-gray-50">
+                                      className="dt-row">
                                       <td className="px-4 py-3">
                                         <Link
-                                          className="text-md font-medium text-blue-600 hover:underline"
+                                          className="text-md font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
                                           href={`/san-pham/nhap-hang?Code=${payment.purchaseOrder?.code}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
@@ -801,10 +808,10 @@ export function CashFlowDetailRow({
                                           {payment.purchaseOrder?.code}
                                         </Link>
                                       </td>
-                                      <td className="px-4 py-3 text-md text-gray-900">
+                                      <td className="px-4 py-3 text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatDateTime(payment.paymentDate)}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.purchaseOrder?.subTotal ||
@@ -813,7 +820,7 @@ export function CashFlowDetailRow({
                                           )
                                         )}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.purchaseOrder?.paidAmount ||
@@ -824,7 +831,7 @@ export function CashFlowDetailRow({
                                       <td className="px-4 py-3 text-right text-md font-medium text-red-600">
                                         {formatCurrency(Number(payment.amount))}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.purchaseOrder?.debtAmount ||
@@ -863,44 +870,44 @@ export function CashFlowDetailRow({
                             "Đơn hàng liên quan" của KH. */}
                         {orderSupplierPayments.length > 0 && (
                           <div>
-                            <p className="text-sm font-semibold text-gray-600 mb-2">
+                            <p className="text-sm font-semibold mb-2" style={{ color: "var(--dt-text-secondary)" }}>
                               Phiếu đặt hàng nhập liên quan
                             </p>
-                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="border rounded-[8px] overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
                               <table className="w-full">
-                                <thead className="bg-gray-100 border-b border-gray-200">
+                                <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                   <tr>
-                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
                                       Mã PDN
                                     </th>
-                                    <th className="px-4 py-3 text-left text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
                                       Thời gian
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Giá trị PDN
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Đã trả trước
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Giá trị chi
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
                                       Còn cần trả
                                     </th>
-                                    <th className="px-4 py-3 text-center text-md font-semibold text-gray-700">
+                                    <th className="px-4 py-3 text-center text-md font-semibold dt-th">
                                       Trạng thái
                                     </th>
                                   </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
+                                <tbody className="bg-white dt-divide">
                                   {orderSupplierPayments.map((payment: any) => (
                                     <tr
                                       key={payment.id}
-                                      className="hover:bg-gray-50">
+                                      className="dt-row">
                                       <td className="px-4 py-3">
                                         <Link
-                                          className="text-md font-medium text-blue-600 hover:underline"
+                                          className="text-md font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
                                           href={`/san-pham/dat-hang-nhap?Code=${payment.orderSupplier?.code}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
@@ -908,10 +915,10 @@ export function CashFlowDetailRow({
                                           {payment.orderSupplier?.code}
                                         </Link>
                                       </td>
-                                      <td className="px-4 py-3 text-md text-gray-900">
+                                      <td className="px-4 py-3 text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatDateTime(payment.paymentDate)}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.orderSupplier?.subTotal ||
@@ -920,7 +927,7 @@ export function CashFlowDetailRow({
                                           )
                                         )}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.orderSupplier?.paidAmount ||
@@ -931,7 +938,7 @@ export function CashFlowDetailRow({
                                       <td className="px-4 py-3 text-right text-md font-medium text-red-600">
                                         {formatCurrency(Number(payment.amount))}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md text-gray-900">
+                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.orderSupplier
@@ -966,7 +973,9 @@ export function CashFlowDetailRow({
                 )}
 
                 {/* ── Footer actions ── */}
-                <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-200">
+                <div
+                  className="flex items-center justify-between pt-4 mt-2 border-t"
+                  style={{ borderColor: "var(--dt-border)" }}>
                   <div className="flex gap-2">
                     {canCancel && canDeleteCashFlow && (
                       <button
@@ -982,7 +991,7 @@ export function CashFlowDetailRow({
                     {!isCancelled && canUpdateCashFlow && (
                       <button
                         onClick={() => setShowEditModal(true)}
-                        className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2">
+                        className="dt-btn-ghost px-4 py-2 text-md font-medium rounded flex items-center gap-2">
                         <Pencil className="w-4 h-4" />
                         Chỉnh sửa
                       </button>
@@ -991,7 +1000,7 @@ export function CashFlowDetailRow({
                       <button
                         onClick={handlePrint}
                         disabled={isPrinting || isCancelled}
-                        className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        className="dt-btn-ghost px-4 py-2 text-md font-medium rounded flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                         <Printer className="w-4 h-4" />
                         {isPrinting ? "Đang in..." : "In"}
                       </button>

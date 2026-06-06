@@ -153,6 +153,135 @@
   font-size: 12.5px;
 }
 
+/* Input kiểu Diệp Trà */
+.dt-input {
+  border: 1.5px solid var(--dt-border);
+  border-radius: var(--dt-r-sm);
+  background: #fff;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  color: var(--dt-text);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.dt-input::placeholder {
+  color: var(--dt-text-muted);
+}
+.dt-input:focus {
+  outline: none;
+  border-color: var(--dt-primary);
+  box-shadow: 0 0 0 3px rgba(0, 183, 204, 0.1);
+}
+.dt-input.dt-input-sm {
+  padding: 6px 11px;
+  font-size: 12.5px;
+}
+
+/* Item trong menu dropdown */
+.dt-menu-item {
+  color: var(--dt-text);
+  transition: background 0.15s;
+}
+.dt-menu-item:hover {
+  background: var(--dt-bg-soft);
+}
+
+/* Hàng bảng có hover + trạng thái mở rộng (đồng bộ ô sticky) */
+.dt-row:hover {
+  background: var(--dt-bg-soft);
+}
+.dt-row[data-expanded="true"] {
+  background: var(--dt-cyan-bg);
+}
+.dt-row-sticky {
+  background: #fff;
+}
+.dt-row:hover .dt-row-sticky {
+  background: var(--dt-bg-soft);
+}
+.dt-row-sticky[data-expanded="true"] {
+  background: var(--dt-cyan-bg);
+}
+
+/* Nút icon (pagination, mũi tên...) */
+.dt-icon-btn {
+  color: var(--dt-text-secondary);
+  transition: background 0.15s;
+}
+.dt-icon-btn:hover:not(:disabled) {
+  background: var(--dt-bg-soft);
+}
+
+/* Chip chọn nhanh (preset thời gian...) */
+.dt-chip {
+  border-color: var(--dt-border);
+  color: var(--dt-text-secondary);
+}
+.dt-chip:hover {
+  border-color: var(--dt-primary);
+  background: var(--dt-cyan-bg);
+}
+.dt-chip[data-on="true"] {
+  background: var(--dt-primary);
+  color: #fff;
+  border-color: var(--dt-primary);
+  font-weight: 600;
+}
+
+/* Ô ngày lịch ở trạng thái thường */
+.dt-cal-cell[data-plain="true"]:hover {
+  background: var(--dt-cyan-bg);
+}
+
+/* Hàng radio chọn chế độ (preset/custom) */
+.dt-radio-row {
+  border-color: var(--dt-border);
+  transition: background 0.15s, border-color 0.15s;
+}
+.dt-radio-row:hover {
+  border-color: var(--dt-primary);
+}
+.dt-radio-row[data-on="true"] {
+  border-color: var(--dt-primary);
+  background: var(--dt-cyan-bg);
+}
+
+/* Trường thông tin trong khối chi tiết phiếu */
+.dt-field-label {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--dt-text-muted);
+}
+.dt-field-value {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--dt-text);
+}
+.dt-field-divider {
+  border-bottom: 1px solid var(--dt-border);
+}
+
+/* Header ô của bảng con trong chi tiết phiếu */
+.dt-th {
+  color: var(--dt-text-secondary);
+}
+/* Divider giữa các hàng bảng con */
+.dt-divide > tr + tr {
+  border-top: 1px solid var(--dt-border);
+}
+
+/* Nút phụ viền (Chỉnh sửa, In...) */
+.dt-btn-ghost {
+  background: #fff;
+  border: 1px solid var(--dt-border);
+  color: var(--dt-text-secondary);
+  transition: background 0.15s;
+}
+.dt-btn-ghost:hover:not(:disabled) {
+  background: var(--dt-bg-soft);
+}
+
 /* Status chip */
 .dt-st {
   display: inline-flex;
