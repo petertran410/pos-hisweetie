@@ -41,7 +41,7 @@ const STATUS_OPTIONS = [
   },
   {
     value: "6",
-    label: "Loading",
+    label: "Đang giao hàng",
     color: "bg-purple-100 text-purple-700",
     dot: "bg-purple-400",
   },
@@ -70,6 +70,12 @@ const STATUS_OPTIONS = [
     dot: "bg-red-400",
   },
 ];
+
+// Mặc định khi user CHƯA chọn trạng thái và CHƯA lưu vào localStorage:
+// hiển thị toàn bộ trạng thái TRỪ "Trả hàng" (8) và "Đã hủy" (2).
+const DEFAULT_STATUSES = STATUS_OPTIONS.filter(
+  (o) => o.value !== "8" && o.value !== "2"
+).map((o) => o.value);
 
 const DELIVERY_STATUS_OPTIONS = [
   {
@@ -837,12 +843,12 @@ export function InvoicesSidebar({
   const { data: misaEmployees } = useMisaEmployees(showMisaEmployeeFilter);
   const { selectedBranch } = useBranchStore();
 
-  // Restore filter state từ sessionStorage
+  // Restore filter state từ localStorage
   const STORAGE_KEY = "invoices-sidebar-filters";
   const getSavedFilters = () => {
     if (typeof window === "undefined") return null;
     try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
@@ -860,16 +866,22 @@ export function InvoicesSidebar({
     }
     // Còn lại (1 chi nhánh hoặc chưa có gì): bám theo chi nhánh đang chọn ở
     // DashboardHeader. Quan trọng vì khi đổi chi nhánh ở header, guard
-    // unmount→mount lại sidebar, nên không thể dựa vào sessionStorage cũ.
+    // unmount→mount lại sidebar, nên không thể dựa vào localStorage cũ.
     if (selectedBranch) return [selectedBranch.id];
     return Array.isArray(savedIds) ? savedIds : [];
   });
   const [customerId, setCustomerId] = useState(saved.current?.customerId || "");
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(
-    saved.current?.selectedStatuses || []
-  );
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(() => {
+    const savedStatuses = saved.current?.selectedStatuses;
+    // Chỉ khôi phục khi user đã lưu một lựa chọn cụ thể (mảng có phần tử).
+    // Nếu chưa lưu (undefined) hoặc rỗng ([]) → dùng mặc định: tất cả trạng
+    // thái TRỪ "Trả hàng" và "Đã hủy", và hiển thị sẵn các chip này.
+    if (Array.isArray(savedStatuses) && savedStatuses.length > 0)
+      return savedStatuses;
+    return DEFAULT_STATUSES;
+  });
   const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState(
     saved.current?.selectedDeliveryStatus || ""
   );
@@ -910,7 +922,7 @@ export function InvoicesSidebar({
   const customDateRef = useRef<HTMLDivElement>(null);
   const customerRef = useRef<HTMLDivElement>(null);
 
-  // Persist filter state vào sessionStorage khi thay đổi
+  // Persist filter state vào localStorage khi thay đổi
   useEffect(() => {
     const state = {
       selectedBranchIds,
@@ -929,7 +941,7 @@ export function InvoicesSidebar({
       misaEmployeeCodes,
       taxCodeStatus,
     };
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [
     selectedBranchIds,
     customerId,
@@ -949,7 +961,7 @@ export function InvoicesSidebar({
   ]);
 
   // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó.
-  // - Skip lần mount đầu tiên (hydrate) để không ghi đè sessionStorage đã restore.
+  // - Skip lần mount đầu tiên (hydrate) để không ghi đè localStorage đã restore.
   // - Chỉ ghi đè khi sidebar đang ở chế độ "bám theo header" (đúng 1 chi nhánh).
   //   Nếu user đang lọc nhiều chi nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng) thì
   //   giữ nguyên, không ghi đè bằng chi nhánh mới chọn trên header.
@@ -1058,7 +1070,7 @@ export function InvoicesSidebar({
       if (paymentMethod === "transfer" && selectedBankAccountIds.length > 0)
         f.bankAccountIds = selectedBankAccountIds;
       // Chỉ áp filter nhân viên phụ trách ở trang bật flag (hóa đơn VAT) — tránh
-      // rò filter sang trang hóa đơn thường vì hai trang share sessionStorage.
+      // rò filter sang trang hóa đơn thường vì hai trang share localStorage.
       if (showMisaEmployeeFilter && misaEmployeeCodes.length > 0)
         f.misaEmployeeCodes = misaEmployeeCodes;
       if (showMisaEmployeeFilter && taxCodeStatus)
@@ -1090,7 +1102,7 @@ export function InvoicesSidebar({
     setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setCustomerId("");
     setCustomerSearch("");
-    setSelectedStatuses([]);
+    setSelectedStatuses(DEFAULT_STATUSES);
     setSelectedDeliveryStatus("");
     setDateMode("preset");
     setSelectedPreset("all_time");
@@ -1104,7 +1116,7 @@ export function InvoicesSidebar({
     setMisaEmployeeCodes([]);
     setTaxCodeStatus("");
     onFiltersChange({});
-    sessionStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   function BranchMultiSelectDropdown({

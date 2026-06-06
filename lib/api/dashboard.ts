@@ -1,6 +1,6 @@
 import { apiClient } from "@/lib/config/api";
 
-export type RangeKey = "today" | "week" | "month";
+export type RangeKey = "today" | "yesterday" | "week" | "month";
 export type TopMetric = "rev" | "qty" | "profit";
 export type CategoryDimension = "parent" | "middle" | "child";
 
@@ -129,6 +129,7 @@ export interface TaskRow {
   usingCod?: boolean;
   ageDays?: number;
   deliveryStatus?: number;
+  invoiceStatus?: number;
   minQuality?: number;
   unit?: string;
 }

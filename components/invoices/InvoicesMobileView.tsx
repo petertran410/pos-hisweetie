@@ -48,7 +48,7 @@ const STATUS_TEXT: Record<number, string> = {
   3: "Đang xử lý",
   4: "Không giao được",
   5: "Đóng hàng",
-  6: "Loading",
+  6: "Đang giao hàng",
   7: "Giao thành công",
   8: "Trả hàng",
 };
@@ -68,7 +68,7 @@ const MOBILE_STATUS_TABS = [
   { value: "all", label: "Tất cả", apiStatus: undefined },
   { value: "3", label: "Đang xử lý", apiStatus: "3" },
   { value: "5", label: "Đóng hàng", apiStatus: "5" },
-  { value: "6", label: "Loading", apiStatus: "6" },
+  { value: "6", label: "Đang giao hàng", apiStatus: "6" },
   { value: "7", label: "Giao thành công", apiStatus: "7" },
   { value: "1", label: "Hoàn thành", apiStatus: "1" },
   { value: "4", label: "Không giao được", apiStatus: "4" },
@@ -79,7 +79,7 @@ const MOBILE_STATUS_TABS = [
 const FILTER_STATUS_OPTIONS: ChipOption[] = [
   { value: "3", label: "Đang xử lý", dot: "bg-blue-400" },
   { value: "5", label: "Đóng hàng", dot: "bg-orange-400" },
-  { value: "6", label: "Loading", dot: "bg-purple-400" },
+  { value: "6", label: "Đang giao hàng", dot: "bg-purple-400" },
   { value: "7", label: "Giao thành công", dot: "bg-teal-500" },
   { value: "1", label: "Hoàn thành", dot: "bg-green-500" },
   { value: "4", label: "Không giao được", dot: "bg-yellow-400" },
@@ -560,7 +560,7 @@ export function InvoicesMobileView({
 }: InvoicesMobileViewProps) {
   const { selectedBranch } = useBranchStore();
 
-  // ── Filter của riêng mobile (khôi phục từ sessionStorage) ──
+  // ── Filter của riêng mobile (khôi phục từ localStorage) ──
   // Dùng làm nguồn sự thật cho query, KHÔNG bám `filters` prop vì sidebar desktop
   // (vẫn mount ẩn) có thể ghi đè prop này sau ~300ms.
   const [localFilters, setLocalFilters] = useState<any>(

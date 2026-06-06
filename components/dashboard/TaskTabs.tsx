@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { TaskRow } from "@/lib/api/dashboard";
+import { INVOICE_STATUS, INVOICE_STATUS_LABELS } from "@/lib/types/invoice";
 import { money, vi, DT_COLORS } from "@/lib/dashboard/format";
 import { ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
@@ -74,6 +75,16 @@ function statusChip(r: TaskRow, type: TaskType) {
         : r.status === "out"
           ? "Hết hàng"
           : "Sắp hết";
+  } else if (type === "cod") {
+    // Trạng thái hóa đơn (1-8) — map nhãn giống trang Hóa đơn.
+    const st = r.invoiceStatus ?? Number(r.status);
+    cls =
+      st === INVOICE_STATUS.FAILED_DELIVERY
+        ? "err"
+        : st === INVOICE_STATUS.PROCESSING
+          ? "warn"
+          : "info";
+    label = INVOICE_STATUS_LABELS[st] || r.status;
   } else if (type === "orders") {
     const s = r.status;
     cls =
@@ -117,10 +128,17 @@ const HEAD: Record<TaskType, string[]> = {
 
 const LINK: Record<TaskType, string> = {
   orders: "/don-hang/dat-hang",
-  debt: "/khach-hang",
-  cod: "/don-hang/dat-hang",
+  debt: "/don-hang/hoa-don",
+  cod: "/don-hang/hoa-don",
   stock: "/san-pham/danh-sach",
 };
+
+/** Link mở chứng từ theo mã: đơn hàng tab orders, hóa đơn cho debt/cod. */
+function rowHref(type: TaskType, code: string): string {
+  if (type === "stock") return "/san-pham/danh-sach";
+  if (type === "orders") return `/don-hang/dat-hang?Code=${code}`;
+  return `/don-hang/hoa-don?Code=${code}`;
+}
 
 export function TaskTabs({
   tabs,
@@ -281,7 +299,7 @@ export function TaskTabs({
                     <Link
                       className="dt-mono font-semibold"
                       style={{ color: "var(--dt-primary-deep)" }}
-                      href={`/don-hang/dat-hang?Code=${r.code}`}
+                      href={rowHref(active, r.code)}
                       target="_blank">
                       {r.code}
                     </Link>
@@ -314,7 +332,7 @@ export function TaskTabs({
                   </td>
                   <td className="px-5 py-[13px] text-right">
                     <Link
-                      href={`/don-hang/dat-hang?Code=${r.code}`}
+                      href={rowHref(active, r.code)}
                       target="_blank"
                       className="inline-flex"
                       style={{ color: "var(--dt-text-muted)" }}>

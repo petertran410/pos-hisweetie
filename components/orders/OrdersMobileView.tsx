@@ -536,7 +536,7 @@ export function OrdersMobileView({
 }: OrdersMobileViewProps) {
   const { selectedBranch } = useBranchStore();
 
-  // ── Filter của riêng mobile (khôi phục từ sessionStorage) ──
+  // ── Filter của riêng mobile (khôi phục từ localStorage) ──
   // Nguồn sự thật cho query, không bám `filters` prop (sidebar desktop vẫn mount
   // ẩn có thể ghi đè prop sau ~300ms).
   const [localFilters, setLocalFilters] = useState<any>(

@@ -67,7 +67,7 @@ const getConditionLabel = (conditionType?: string) => {
 const EDITABLE_STATUSES = [
   { value: INVOICE_STATUS.PROCESSING, label: "Đang xử lý" },
   { value: INVOICE_STATUS.PACKED, label: "Đóng hàng" },
-  { value: INVOICE_STATUS.LOADING, label: "Loading" },
+  { value: INVOICE_STATUS.LOADING, label: "Đang giao hàng" },
   { value: INVOICE_STATUS.DELIVERED, label: "Giao thành công" },
   { value: INVOICE_STATUS.FAILED_DELIVERY, label: "Không giao được" },
   { value: INVOICE_STATUS.RETURNED, label: "Trả hàng" },

@@ -848,12 +848,12 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   const { data: bankAccounts } = useBankAccountsForPayment();
   const { selectedBranch } = useBranchStore();
 
-  // Restore filter state từ sessionStorage
+  // Restore filter state từ localStorage
   const STORAGE_KEY = "orders-sidebar-filters";
   const getSavedFilters = () => {
     if (typeof window === "undefined") return null;
     try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
@@ -877,7 +877,7 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     }
     // Còn lại (1 chi nhánh hoặc chưa có gì): bám theo chi nhánh đang chọn ở
     // DashboardHeader. Quan trọng vì khi đổi chi nhánh ở header, guard
-    // unmount→mount lại sidebar, nên không thể dựa vào sessionStorage cũ.
+    // unmount→mount lại sidebar, nên không thể dựa vào localStorage cũ.
     if (selectedBranch) return [selectedBranch.id];
     return Array.isArray(savedIds) ? savedIds : [];
   });
@@ -918,7 +918,7 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   const customDateRef = useRef<HTMLDivElement>(null);
   const customerRef = useRef<HTMLDivElement>(null);
 
-  // Persist filter state vào sessionStorage khi thay đổi
+  // Persist filter state vào localStorage khi thay đổi
   useEffect(() => {
     const state = {
       selectedBranchIds,
@@ -936,7 +936,7 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
       paymentMethod,
       selectedBankAccountIds,
     };
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [
     selectedBranchIds,
     customerId,
@@ -1073,11 +1073,11 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     onFiltersChange({});
     setPaymentMethod("");
     setSelectedBankAccountIds([]);
-    sessionStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó.
-  // - Skip lần mount đầu tiên (hydrate) để không ghi đè sessionStorage đã restore.
+  // - Skip lần mount đầu tiên (hydrate) để không ghi đè localStorage đã restore.
   // - Chỉ ghi đè khi sidebar đang ở chế độ "bám theo header" (đúng 1 chi nhánh).
   //   Nếu user đang lọc nhiều chi nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng) thì
   //   giữ nguyên, không ghi đè bằng chi nhánh mới chọn trên header.

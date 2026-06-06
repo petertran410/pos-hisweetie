@@ -45,12 +45,14 @@ import "./dashboard.css";
 
 const RANGES: { key: RangeKey; label: string }[] = [
   { key: "today", label: "Hôm nay" },
+  { key: "yesterday", label: "Hôm qua" },
   { key: "week", label: "7 ngày" },
   { key: "month", label: "Tháng này" },
 ];
 
 const RANGE_LABEL: Record<RangeKey, string> = {
   today: "Theo giờ · hôm nay",
+  yesterday: "Theo giờ · hôm qua",
   week: "Theo ngày · 7 ngày qua",
   month: "Theo ngày · tháng này",
 };
@@ -326,7 +328,7 @@ export default function Home() {
               iconBg="rgba(46,139,143,.14)"
               iconColor="#2E8B8F"
               accent="#2E8B8F"
-              name="Số đơn hàng"
+              name="Số hóa đơn"
               value={vi(s?.invoiceCount ?? 0)}
               delta={s ? deltaPct(s.invoiceChange) : undefined}
               deltaDir={dir(s?.invoiceChange ?? 0)}

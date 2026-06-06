@@ -566,7 +566,7 @@ export function isoToDateInput(iso?: string): string {
   return `${y}-${m}-${day}`;
 }
 
-// ─── Lưu / khôi phục filter mobile qua sessionStorage ─────────────────────────
+// ─── Lưu / khôi phục filter mobile qua localStorage ──────────────────────────
 // Mỗi trang mobile (hóa đơn, đơn hàng, hóa đơn VAT) tự giữ filter của mình bằng
 // một key riêng. Khác desktop (sidebar lưu từng field), ở đây ta lưu nguyên cục
 // object filter đã build sẵn để gọi API — vừa đủ để khôi phục sau khi reload.
@@ -578,7 +578,7 @@ export function isoToDateInput(iso?: string): string {
 export function readMobileFilters(storageKey: string): any | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(storageKey);
+    const raw = localStorage.getItem(storageKey);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -588,7 +588,7 @@ export function readMobileFilters(storageKey: string): any | null {
 export function writeMobileFilters(storageKey: string, filters: any) {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.setItem(storageKey, JSON.stringify(filters ?? {}));
+    localStorage.setItem(storageKey, JSON.stringify(filters ?? {}));
   } catch {
     /* ignore quota / serialize errors */
   }

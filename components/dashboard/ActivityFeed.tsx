@@ -18,7 +18,7 @@ export function ActivityFeed({ items }: Props) {
   }
 
   return (
-    <div className="max-h-[540px] overflow-auto py-[6px]">
+    <div className="overflow-auto py-[6px]">
       {items.map((a, i) => (
         <div
           key={a.id}

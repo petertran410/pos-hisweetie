@@ -8,9 +8,11 @@ import { branchesApi } from "@/lib/api/branches";
 import {
   dashboardApi,
   type RangeKey,
+  type PeriodKey,
   type TaskRow,
 } from "@/lib/api/dashboard";
 import { money, vi, deltaPct, BRANCH_PALETTE } from "@/lib/dashboard/format";
+import { INVOICE_STATUS, INVOICE_STATUS_LABELS } from "@/lib/types/invoice";
 import { MobileSheet } from "./MobileSheet";
 import { MobileSparkline, MobileTrendChart } from "./MobileCharts";
 import {
@@ -35,14 +37,24 @@ import {
 
 const RANGES: { key: RangeKey; label: string; word: string }[] = [
   { key: "today", label: "Hôm nay", word: "hôm nay" },
+  { key: "yesterday", label: "Hôm qua", word: "hôm qua" },
   { key: "week", label: "7 ngày", word: "7 ngày qua" },
   { key: "month", label: "Tháng này", word: "tháng này" },
 ];
 
 const RANGE_SUB: Record<RangeKey, string> = {
   today: "Theo giờ · hôm nay",
+  yesterday: "Theo giờ · hôm qua",
   week: "Theo ngày · 7 ngày qua",
   month: "Theo tuần · tháng này",
+};
+
+// Map khoảng thời gian chung (RangeKey) sang PeriodKey cho So sánh chi nhánh.
+const RANGE_TO_PERIOD: Record<RangeKey, PeriodKey> = {
+  today: "today",
+  yesterday: "yesterday",
+  week: "d7",
+  month: "thisMonth",
 };
 
 type TaskType = "orders" | "debt" | "cod" | "stock";
@@ -73,8 +85,8 @@ const TASK_ICON: Record<TaskType, { cls: string; icon: React.ReactNode }> = {
 
 const LINK: Record<TaskType, string> = {
   orders: "/don-hang/dat-hang",
-  debt: "/khach-hang",
-  cod: "/don-hang/dat-hang",
+  debt: "/don-hang/hoa-don",
+  cod: "/don-hang/hoa-don",
   stock: "/san-pham/danh-sach",
 };
 
@@ -100,6 +112,17 @@ function statusInfo(r: TaskRow, type: TaskType): { cls: string; label: string } 
             ? "Hết hàng"
             : "Sắp hết",
     };
+  }
+  if (type === "cod") {
+    // Trạng thái hóa đơn (1-8) — nhãn giống trang Hóa đơn.
+    const st = r.invoiceStatus ?? Number(r.status);
+    const cls =
+      st === INVOICE_STATUS.FAILED_DELIVERY
+        ? "err"
+        : st === INVOICE_STATUS.PROCESSING
+          ? "warn"
+          : "info";
+    return { cls, label: INVOICE_STATUS_LABELS[st] || r.status };
   }
   if (type === "orders") {
     const s = r.status;
@@ -225,7 +248,8 @@ export function DashboardMobileView() {
   });
   const branchCmp = useQuery({
     queryKey: ["dash-branchcmp-m", range, branchMetric],
-    queryFn: () => dashboardApi.getBranchComparison(range, branchMetric),
+    queryFn: () =>
+      dashboardApi.getBranchComparison(RANGE_TO_PERIOD[range], branchMetric),
   });
   const tasks = useQuery({
     queryKey: ["dash-tasks-m", taskTab, branchId],
@@ -278,7 +302,7 @@ export function DashboardMobileView() {
         show: true,
         cls: "dt-ic-te",
         icon: <Receipt className="w-[18px] h-[18px]" />,
-        name: "Số đơn hàng",
+        name: "Số hóa đơn",
         value: vi(s?.invoiceCount ?? 0),
         delta: s ? deltaPct(s.invoiceChange) : undefined,
         dir: (s?.invoiceChange ?? 0) >= 0 ? "up" : "down",

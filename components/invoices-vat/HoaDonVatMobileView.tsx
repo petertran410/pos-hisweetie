@@ -88,7 +88,7 @@ const DATE_PRESETS = [
 const FILTER_STATUS_OPTIONS: ChipOption[] = [
   { value: "3", label: "Đang xử lý", dot: "bg-blue-400" },
   { value: "5", label: "Đóng hàng", dot: "bg-orange-400" },
-  { value: "6", label: "Loading", dot: "bg-purple-400" },
+  { value: "6", label: "Đang giao hàng", dot: "bg-purple-400" },
   { value: "7", label: "Giao thành công", dot: "bg-teal-500" },
   { value: "1", label: "Hoàn thành", dot: "bg-green-500" },
   { value: "4", label: "Không giao được", dot: "bg-yellow-400" },
@@ -643,7 +643,7 @@ export function HoaDonVatMobileView({
   filters,
   onFiltersChange,
 }: HoaDonVatMobileViewProps) {
-  // ── Filter của riêng mobile (khôi phục từ sessionStorage) ──
+  // ── Filter của riêng mobile (khôi phục từ localStorage) ──
   const [localFilters, setLocalFilters] = useState<any>(
     () => readMobileFilters(STORAGE_KEY) ?? filters ?? {}
   );
