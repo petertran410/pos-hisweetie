@@ -1,19 +1,22 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { ExternalLink, Loader2 } from "lucide-react";
 import {
   useCancelDestruction,
   useUpdateDestruction,
   useDestruction,
 } from "@/lib/hooks/useDestructions";
-import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { toast } from "sonner";
+import Link from "next/link";
 import { CodeLink } from "@/components/shared/CodeLink";
 
 interface DestructionDetailRowProps {
   destructionId: number;
+  colSpan: number;
   onClose: () => void;
 }
 
@@ -33,18 +36,19 @@ const getStatusText = (status: number) => {
 const getStatusColor = (status: number) => {
   switch (status) {
     case 1:
-      return "text-gray-600 bg-gray-100";
+      return "bg-gray-100 text-gray-700";
     case 2:
-      return "text-green-600 bg-green-100";
+      return "bg-green-100 text-green-700";
     case 3:
-      return "text-red-600 bg-red-100";
+      return "bg-red-100 text-red-700";
     default:
-      return "text-gray-600 bg-gray-100";
+      return "bg-gray-100 text-gray-700";
   }
 };
 
 export function DestructionDetailRow({
   destructionId,
+  colSpan,
   onClose,
 }: DestructionDetailRowProps) {
   const router = useRouter();
@@ -58,6 +62,28 @@ export function DestructionDetailRow({
   const [note, setNote] = useState("");
   const [createdById, setCreatedById] = useState(0);
   const [destructionDate, setDestructionDate] = useState("");
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Sticky width theo scroll container (giống OrderDetailRow)
+  useLayoutEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    let scrollEl: HTMLElement | null = el.parentElement;
+    while (scrollEl) {
+      const ox = getComputedStyle(scrollEl).overflowX;
+      if (ox === "auto" || ox === "scroll") break;
+      scrollEl = scrollEl.parentElement;
+    }
+    if (!scrollEl) return;
+    const update = () => {
+      el.style.width = `${scrollEl!.clientWidth}px`;
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(scrollEl);
+    return () => ro.disconnect();
+  }, [destruction]);
 
   useEffect(() => {
     if (destruction) {
@@ -88,7 +114,6 @@ export function DestructionDetailRow({
     if (!confirm("Bạn có chắc chắn muốn hủy phiếu xuất hủy này?")) {
       return;
     }
-
     try {
       await cancelDestruction.mutateAsync({
         id: destructionId,
@@ -111,11 +136,9 @@ export function DestructionDetailRow({
         note: note,
         createdById: createdById,
       };
-
       if (destructionDate) {
         updateData.destructionDate = new Date(destructionDate).toISOString();
       }
-
       await updateDestruction.mutateAsync({
         id: destructionId,
         data: updateData,
@@ -127,186 +150,257 @@ export function DestructionDetailRow({
     }
   };
 
-  if (isLoading || !destruction) {
+  if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="text-center text-gray-500">Đang tải...</div>
-      </div>
+      <tr className="bg-blue-50">
+        <td colSpan={colSpan} className="px-6 py-8">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <span className="text-gray-600">
+              Đang tải thông tin phiếu xuất hủy...
+            </span>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  if (!destruction) {
+    return (
+      <tr className="bg-red-50">
+        <td colSpan={colSpan} className="px-6 py-4 text-center text-red-600">
+          Không tìm thấy thông tin phiếu xuất hủy
+        </td>
+      </tr>
     );
   }
 
   const showCancelButton = destruction.status === 1 || destruction.status === 2;
   const showOpenButton = destruction.status === 1;
-  const showSaveButton = true;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden sm:max-w-[640px] md:max-w-[768px] lg:max-w-[830px] xl:max-w-[1090px] 2xl:max-w-[1520px]">
-      <div className="p-6">
-        <h3 className="text-xl font-semibold mb-4">Thông tin chi tiết</h3>
+    <tr>
+      <td
+        colSpan={colSpan}
+        className="border-b-2 border-l-2 border-r-2 border-blue-500 bg-gray-50">
+        <div
+          ref={wrapperRef}
+          className="sticky left-0 bg-gray-50"
+          style={{ width: 0 }}>
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="p-4">
+              {/* Header */}
+              <div className="flex border-b pb-2 items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-gray-900">
+                    <CodeLink
+                      entity="destruction"
+                      code={destruction.code}
+                      className="text-lg font-bold text-blue-600 hover:underline"
+                    />
+                  </span>
+                  <span
+                    className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(
+                      destruction.status
+                    )}`}>
+                    {getStatusText(destruction.status)}
+                  </span>
+                </div>
+                <span className="text-sm text-gray-600 font-medium">
+                  {destruction.branchName || "-"}
+                </span>
+              </div>
 
-        <div className="grid grid-cols-2 gap-6 mb-6">
-          <div>
-            <p className="text-md text-gray-600 mb-1">Mã phiếu</p>
-            <p className="text-md font-medium">
-              <CodeLink entity="destruction" code={destruction.code} />
-            </p>
-          </div>
-          <div>
-            <p className="text-md text-gray-600 mb-1">Chi nhánh</p>
-            <p className="text-md">{destruction.branchName}</p>
-          </div>
-          <div>
-            <p className="text-md text-gray-600 mb-1">Người xuất hủy</p>
-            <select
-              value={createdById}
-              onChange={(e) => setCreatedById(Number(e.target.value))}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              {users?.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <p className="text-md text-gray-600 mb-1">Ngày xuất hủy</p>
-            <input
-              type="datetime-local"
-              value={destructionDate}
-              onChange={(e) => setDestructionDate(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <p className="text-md text-gray-600 mb-1">Trạng thái</p>
-            <span
-              className={`px-2 py-1 rounded text-md font-medium ${getStatusColor(
-                destruction.status
-              )}`}>
-              {getStatusText(destruction.status)}
-            </span>
-          </div>
-          <div className="col-span-2">
-            <p className="text-md text-gray-600 mb-1">Ghi chú</p>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value.slice(0, 1000))}
-              maxLength={1000}
-              rows={3}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Nhập ghi chú..."
-            />
-          </div>
-        </div>
+              {/* Info grid — editable */}
+              <div className="grid grid-cols-3 gap-x-8 gap-y-3 pb-4 mb-4 border-b border-gray-200">
+                <div className="flex flex-col gap-1">
+                  <label className="block text-sm text-gray-500">
+                    Người xuất hủy:
+                  </label>
+                  <select
+                    value={createdById}
+                    onChange={(e) => setCreatedById(Number(e.target.value))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400">
+                    {users?.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Mã</label>
-            <input
-              type="text"
-              placeholder="Tìm theo mã"
-              value={searchCode}
-              onChange={(e) => setSearchCode(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Tên hàng</label>
-            <input
-              type="text"
-              placeholder="Tìm theo tên"
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
+                <div className="flex flex-col gap-1">
+                  <label className="block text-sm text-gray-500">
+                    Ngày xuất hủy:
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={destructionDate}
+                    onChange={(e) => setDestructionDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                  />
+                </div>
 
-        <div className="border rounded overflow-hidden mb-4">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Mã hàng
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Tên hàng
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Số lượng
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Giá vốn
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Giá trị hủy
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDetails.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-8 text-center text-gray-500">
-                    Không tìm thấy sản phẩm
-                  </td>
-                </tr>
-              ) : (
-                filteredDetails.map((detail, index) => (
-                  <tr key={index}>
-                    <td className="px-4 py-3 text-md text-blue-600 font-medium">
-                      {detail.productCode ? (
-                        <CodeLink entity="product" code={detail.productCode} />
+                <div className="flex flex-col gap-1">
+                  <label className="block text-sm text-gray-500">
+                    Tổng giá trị hủy:
+                  </label>
+                  <span className="block text-sm font-semibold text-gray-900 py-1.5">
+                    {formatCurrency(Number(destruction.totalValue))}
+                  </span>
+                </div>
+              </div>
+
+              {/* Product search */}
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Tìm theo mã
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Tìm theo mã"
+                    value={searchCode}
+                    onChange={(e) => setSearchCode(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Tìm theo tên
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Tìm theo tên"
+                    value={searchName}
+                    onChange={(e) => setSearchName(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                  />
+                </div>
+              </div>
+
+              {/* Product table */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-gray-700">
+                    Danh sách sản phẩm
+                  </h4>
+                </div>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-100 border-b border-gray-200">
+                        <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider">
+                          Mã hàng
+                        </th>
+                        <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider">
+                          Tên hàng
+                        </th>
+                        <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
+                          Số lượng
+                        </th>
+                        <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
+                          Giá vốn
+                        </th>
+                        <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
+                          Giá trị hủy
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredDetails.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="px-4 py-8 text-center text-sm text-gray-400">
+                            Không tìm thấy sản phẩm
+                          </td>
+                        </tr>
                       ) : (
-                        "-"
+                        filteredDetails.map((detail, index) => (
+                          <tr
+                            key={index}
+                            className="hover:bg-gray-50 transition-colors">
+                            <td className="px-[10px] py-2">
+                              {detail.productCode ? (
+                                <Link
+                                  href={`/san-pham/danh-sach?Code=${detail.productCode}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm font-medium text-blue-600 hover:underline inline-flex items-center gap-1"
+                                  onClick={(e) => e.stopPropagation()}>
+                                  {detail.productCode}
+                                  <ExternalLink className="w-3 h-3" />
+                                </Link>
+                              ) : (
+                                <span className="text-sm">-</span>
+                              )}
+                            </td>
+                            <td className="px-[10px] py-2 text-sm text-gray-900">
+                              {detail.productName}
+                            </td>
+                            <td className="px-[10px] py-2 text-center text-sm font-medium text-gray-900">
+                              {detail.quantity}
+                            </td>
+                            <td className="px-[10px] py-2 text-right text-sm text-gray-900">
+                              {formatCurrency(Number(detail.price))}
+                            </td>
+                            <td className="px-[10px] py-2 text-right text-sm font-semibold text-blue-600">
+                              {formatCurrency(Number(detail.totalValue))}
+                            </td>
+                          </tr>
+                        ))
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-md">{detail.productName}</td>
-                    <td className="px-4 py-3 text-center text-md">
-                      {detail.quantity}
-                    </td>
-                    <td className="px-4 py-3 text-right text-md">
-                      {formatCurrency(Number(detail.price))}
-                    </td>
-                    <td className="px-4 py-3 text-right text-md font-medium">
-                      {formatCurrency(Number(detail.totalValue))}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
 
-        <div className="mt-6 pt-4 border-t flex justify-between items-center">
-          <div>
-            {showCancelButton && (
-              <button
-                onClick={handleCancel}
-                className="px-4 py-2 border border-red-500 text-red-500 rounded hover:bg-red-50 text-md">
-                Hủy
-              </button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            {showOpenButton && (
-              <button
-                onClick={handleOpenEdit}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md">
-                Mở phiếu
-              </button>
-            )}
-            {showSaveButton && (
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-md">
-                Lưu
-              </button>
-            )}
+              {/* Note */}
+              <div className="mt-4">
+                <label className="block text-sm text-gray-500 mb-1.5">
+                  Ghi chú:
+                </label>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value.slice(0, 1000))}
+                  maxLength={1000}
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white resize-none focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                  placeholder="Nhập ghi chú..."
+                />
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
+                <div className="flex gap-2">
+                  {showCancelButton && (
+                    <button
+                      onClick={handleCancel}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors">
+                      Hủy
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {showOpenButton && (
+                    <button
+                      onClick={handleOpenEdit}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors">
+                      Mở phiếu
+                    </button>
+                  )}
+                  <button
+                    onClick={handleSave}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors">
+                    Lưu
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }

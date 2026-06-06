@@ -1,0 +1,204 @@
+/* Theme Diệp Trà — chỉ áp dụng trong phạm vi .dt-dash để không ảnh hưởng phần còn lại của app. */
+.dt-dash {
+  --dt-primary: #00b7cc;
+  --dt-primary-bright: #00a5b5;
+  --dt-primary-mid: #2e8b8f;
+  --dt-primary-deep: #1a5f6a;
+  --dt-primary-dark: #0d3b42;
+  --dt-cyan-soft: #a8d8e0;
+  --dt-cyan-bg: #e8f4f5;
+  --dt-gold: #c9a84c;
+  --dt-gold-dark: #9a7a2a;
+  --dt-text: #0d3b42;
+  --dt-text-secondary: #3a6b74;
+  --dt-text-muted: #5a8a92;
+  --dt-bg-soft: #f5fafb;
+  --dt-border: #d0e5e8;
+  --dt-success: #2e8b8f;
+  --dt-warning: #c9a84c;
+  --dt-error: #c0392b;
+  --dt-r: 8px;
+  --dt-r-sm: 4px;
+  --dt-sh-card: 0 1px 2px rgba(13, 59, 66, 0.04);
+  --dt-sh-hover: 0 12px 32px rgba(0, 183, 204, 0.12);
+  --dt-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  background: var(--dt-bg-soft);
+  color: var(--dt-text);
+  font-family: var(--font-be-vietnam), "Inter", -apple-system, "Segoe UI",
+    sans-serif;
+}
+
+.dt-dash h1,
+.dt-dash h2,
+.dt-dash h3,
+.dt-dash h4 {
+  font-family: var(--font-montserrat), "Manrope", "Inter", sans-serif;
+}
+
+.dt-dash .dt-mono {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-jetbrains), "Fira Code", ui-monospace, monospace;
+}
+
+/* KPI card */
+.dt-kpi {
+  background: #fff;
+  border: 1px solid var(--dt-border);
+  border-radius: var(--dt-r);
+  box-shadow: var(--dt-sh-card);
+  transition:
+    transform 0.25s var(--dt-ease),
+    box-shadow 0.25s var(--dt-ease);
+}
+.dt-kpi:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--dt-sh-hover);
+}
+
+/* Panel */
+.dt-panel {
+  background: #fff;
+  border: 1px solid var(--dt-border);
+  border-radius: var(--dt-r);
+  box-shadow: var(--dt-sh-card);
+}
+
+/* Pulse cho chấm live */
+@keyframes dt-pulse {
+  50% {
+    box-shadow: 0 0 0 6px rgba(46, 139, 143, 0);
+  }
+}
+.dt-pulse {
+  box-shadow: 0 0 0 3px rgba(46, 139, 143, 0.18);
+  animation: dt-pulse 2s var(--dt-ease) infinite;
+}
+
+/* Skeleton shimmer */
+@keyframes dt-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+.dt-sk {
+  background: linear-gradient(90deg, #eef6f7 25%, #dcecef 37%, #eef6f7 63%);
+  background-size: 400% 100%;
+  border-radius: 6px;
+  animation: dt-shimmer 1.3s ease infinite;
+}
+
+/* Thanh bar có animation width */
+.dt-bar-fill {
+  transition: width 0.8s var(--dt-ease);
+}
+
+/* Segmented control */
+.dt-seg {
+  display: flex;
+  border: 1.5px solid var(--dt-border);
+  border-radius: var(--dt-r-sm);
+  overflow: hidden;
+  background: #fff;
+}
+.dt-seg button {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dt-text-secondary);
+  border-right: 1px solid var(--dt-border);
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.dt-seg button:last-child {
+  border-right: none;
+}
+.dt-seg button[data-on="true"] {
+  background: var(--dt-primary);
+  color: #fff;
+}
+.dt-seg.dt-seg-sm button {
+  padding: 6px 11px;
+  font-size: 12px;
+}
+
+/* Select kiểu Diệp Trà */
+.dt-select {
+  border: 1.5px solid var(--dt-border);
+  border-radius: var(--dt-r-sm);
+  background: #fff;
+  padding: 8px 30px 8px 12px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--dt-text);
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235A8A92'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.dt-select:focus {
+  outline: none;
+  border-color: var(--dt-primary);
+  box-shadow: 0 0 0 3px rgba(0, 183, 204, 0.1);
+}
+.dt-select.dt-select-sm {
+  padding: 6px 28px 6px 11px;
+  font-size: 12.5px;
+}
+
+/* Status chip */
+.dt-st {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.dt-st i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.dt-st.warn {
+  background: rgba(201, 168, 76, 0.14);
+  color: #9a7a2a;
+}
+.dt-st.info {
+  background: rgba(0, 183, 204, 0.12);
+  color: var(--dt-primary);
+}
+.dt-st.ok {
+  background: rgba(46, 139, 143, 0.14);
+  color: var(--dt-primary-mid);
+}
+.dt-st.err {
+  background: rgba(192, 57, 43, 0.1);
+  color: var(--dt-error);
+}
+
+/* Feed item flash khi mới */
+@keyframes dt-flashin {
+  0% {
+    background: rgba(0, 183, 204, 0.18);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dt-dash * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,150 +1,209 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/store/auth";
-import { useCan } from "@/lib/hooks/useCan";
+import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { branchesApi } from "@/lib/api/branches";
 import {
   dashboardApi,
-  type DashboardStats,
-  type TodayStats,
-  type RevenueChartItem,
-  type TopCustomer,
-  type TopProduct,
-  type LowStockProduct,
-  type RecentOrder,
-  type RecentActivity,
+  type RangeKey,
+  type FinRangeKey,
+  type TopMetric,
+  type CategoryDimension,
 } from "@/lib/api/dashboard";
+import { money, vi, deltaPct } from "@/lib/dashboard/format";
+import { KpiCard, type DeltaDir } from "@/components/dashboard/KpiCard";
+import { RevenueTrendChart } from "@/components/dashboard/RevenueTrendChart";
+import { CategoryDonut } from "@/components/dashboard/CategoryDonut";
+import { BranchCompareChart } from "@/components/dashboard/BranchCompareChart";
+import { FinancePanel } from "@/components/dashboard/FinancePanel";
+import { TaskTabs, type TaskType } from "@/components/dashboard/TaskTabs";
+import { TopProducts } from "@/components/dashboard/TopProducts";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import {
-  TrendingUp,
-  TrendingDown,
-  ShoppingCart,
-  Users,
-  AlertTriangle,
-  Loader2,
   DollarSign,
-  Undo2,
-  BarChart3,
-  Clock,
+  TrendingUp,
+  Receipt,
+  AlignJustify,
+  CreditCard,
   FileText,
+  Truck,
+  AlertTriangle,
+  Plus,
+  Download,
+  MapPin,
+  Loader2,
 } from "lucide-react";
+import "./dashboard.css";
 
-// ===== HELPERS =====
+const RANGES: { key: RangeKey; label: string }[] = [
+  { key: "today", label: "Hôm nay" },
+  { key: "week", label: "7 ngày" },
+  { key: "month", label: "Tháng này" },
+];
 
-const ORDER_STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  pending: { label: "Chờ xử lý", cls: "bg-yellow-100 text-yellow-800" },
-  confirmed: { label: "Đã xác nhận", cls: "bg-blue-100 text-blue-800" },
-  processing: { label: "Đang xử lý", cls: "bg-indigo-100 text-indigo-800" },
-  completed: { label: "Hoàn thành", cls: "bg-green-100 text-green-800" },
-  cancelled: { label: "Đã hủy", cls: "bg-red-100 text-red-800" },
-  delivering: { label: "Đang giao", cls: "bg-purple-100 text-purple-800" },
+const RANGE_LABEL: Record<RangeKey, string> = {
+  today: "Theo giờ · hôm nay",
+  week: "Theo ngày · 7 ngày qua",
+  month: "Theo tuần · tháng này",
 };
 
-function formatCompact(value: number): string {
-  if (value === 0) return "0";
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) {
-    return (value / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + " tỷ";
-  }
-  if (abs >= 1_000_000) {
-    return (value / 1_000_000).toFixed(1).replace(/\.0$/, "") + " tr";
-  }
-  if (abs >= 1_000) {
-    return (value / 1_000).toFixed(0) + "k";
-  }
-  return value.toString();
-}
+const TOP_METRICS: { key: TopMetric; label: string }[] = [
+  { key: "rev", label: "Theo doanh thu" },
+  { key: "qty", label: "Theo sản lượng" },
+  { key: "profit", label: "Theo lợi nhuận" },
+];
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "vừa xong";
-  if (mins < 60) return `${mins} phút trước`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} giờ trước`;
-  const days = Math.floor(hours / 24);
-  return `${days} ngày trước`;
-}
-
-// ===== MAIN =====
+const dir = (n: number): DeltaDir => (n > 0 ? "up" : n < 0 ? "down" : "flat");
 
 export default function Home() {
   const router = useRouter();
   const { isAuthenticated, _hasHydrated } = useAuthStore();
-  // Dashboard chứa dữ liệu nhạy cảm — chỉ ai có quyền dashboard:view mới xem nội dung.
-  // (Seed gán sẵn cho Super Admin + Admin; cấp thêm qua trang Cài đặt → Vai trò.)
-  // Role không có quyền vẫn vào được trang nhưng phần thân để trống, không gọi API.
   const canViewDashboard = useCan("dashboard", "view");
+  const isAdmin = useIsAdmin();
+  // Lợi nhuận/biên là dữ liệu nhạy cảm — chỉ admin/super admin thấy.
+  const canSeeProfit = isAdmin;
 
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [todayStats, setTodayStats] = useState<TodayStats | null>(null);
-  const [revenueChart, setRevenueChart] = useState<RevenueChartItem[]>([]);
-  const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
-  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
-  const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
-  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
-  const [activities, setActivities] = useState<RecentActivity[]>([]);
+  // ── Bộ lọc dashboard ──
+  const [range, setRange] = useState<RangeKey>("today");
+  const [branchId, setBranchId] = useState<number | undefined>(undefined); // undefined = tất cả
+  const [finRange, setFinRange] = useState<FinRangeKey>("all");
+  const [branchMetric, setBranchMetric] = useState<"rev" | "profit">("rev");
+  const [branchRange, setBranchRange] = useState<RangeKey>("week");
+  const [taskTab, setTaskTab] = useState<TaskType>("orders");
+  const [orderStatus, setOrderStatus] = useState<string>("");
+  const [topMetric, setTopMetric] = useState<TopMetric>("rev");
+  const [topDim, setTopDim] = useState<CategoryDimension | "all">("all");
+  const [topCat, setTopCat] = useState<string>("");
+  const [topCount, setTopCount] = useState<number>(5);
+  const [catDim, setCatDim] = useState<CategoryDimension>("parent");
 
   useEffect(() => {
-    if (_hasHydrated && !isAuthenticated) {
-      router.replace("/login");
-    }
+    if (_hasHydrated && !isAuthenticated) router.replace("/login");
   }, [isAuthenticated, _hasHydrated, router]);
 
-  useEffect(() => {
-    if (!_hasHydrated || !isAuthenticated) return;
+  const enabled = _hasHydrated && isAuthenticated && canViewDashboard;
 
-    // Không có quyền dashboard:view: không gọi API dashboard (backend sẽ trả 403),
-    // tắt loading để render phần thân trống.
-    if (!canViewDashboard) {
-      setLoading(false);
-      return;
-    }
+  // ── Queries ──
+  const { data: branches } = useQuery({
+    queryKey: ["dash-branches"],
+    queryFn: () => branchesApi.getMyBranches(),
+    enabled,
+  });
 
-    const fetchData = async () => {
-      try {
-        const [s, t, chart, cust, prod, stock, orders, acts] =
-          await Promise.all([
-            dashboardApi.getStats(),
-            dashboardApi.getTodayStats(),
-            dashboardApi.getRevenueChart(6),
-            dashboardApi.getTopCustomers(10),
-            dashboardApi.getTopProducts(10),
-            dashboardApi.getLowStock(10),
-            dashboardApi.getRecentOrders(10),
-            dashboardApi.getRecentActivities(15),
-          ]);
-        setStats(s);
-        setTodayStats(t);
-        setRevenueChart(chart);
-        setTopCustomers(cust);
-        setTopProducts(prod);
-        setLowStock(stock);
-        setRecentOrders(orders);
-        setActivities(acts);
-      } catch (error) {
-        console.error("Failed to load dashboard:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [_hasHydrated, isAuthenticated, canViewDashboard]);
+  const stats = useQuery({
+    queryKey: ["dash-stats", range, branchId],
+    queryFn: () => dashboardApi.getStats(range, branchId),
+    enabled,
+  });
 
+  const trend = useQuery({
+    queryKey: ["dash-trend", range, branchId],
+    queryFn: () => dashboardApi.getRevenueTrend(range, branchId),
+    enabled,
+  });
+
+  const category = useQuery({
+    queryKey: ["dash-category", range, branchId, catDim],
+    queryFn: () => dashboardApi.getCategoryBreakdown(range, branchId, catDim),
+    enabled,
+  });
+
+  const branchCmp = useQuery({
+    queryKey: ["dash-branchcmp", branchRange, branchMetric],
+    queryFn: () => dashboardApi.getBranchComparison(branchRange, branchMetric),
+    enabled,
+  });
+
+  const finance = useQuery({
+    queryKey: ["dash-finance", finRange, branchId],
+    queryFn: () => dashboardApi.getFinance(finRange, branchId),
+    enabled,
+  });
+
+  const tasks = useQuery({
+    queryKey: ["dash-tasks", taskTab, branchId, orderStatus],
+    queryFn: () =>
+      dashboardApi.getTasks(
+        taskTab,
+        branchId,
+        20,
+        taskTab === "orders" ? orderStatus || undefined : undefined
+      ),
+    enabled,
+  });
+
+  // Đếm cho các tab task (gọi song song, không phụ thuộc tab đang xem).
+  const taskCounts = useQuery({
+    queryKey: ["dash-taskcounts", branchId],
+    queryFn: async () => {
+      const [orders, debt, cod, stock] = await Promise.all([
+        dashboardApi.getTasks("orders", branchId, 50),
+        dashboardApi.getTasks("debt", branchId, 50),
+        dashboardApi.getTasks("cod", branchId, 50),
+        dashboardApi.getTasks("stock", branchId, 50),
+      ]);
+      return {
+        orders: orders.length,
+        debt: debt.length,
+        cod: cod.length,
+        stock: stock.length,
+      };
+    },
+    enabled,
+  });
+
+  const topProducts = useQuery({
+    queryKey: ["dash-top", range, branchId, topMetric, topDim, topCat, topCount],
+    queryFn: () =>
+      dashboardApi.getTopProducts({
+        limit: topCount,
+        range,
+        branchId,
+        metric: topMetric,
+        dimension: topDim === "all" ? undefined : topDim,
+        categoryValue: topDim === "all" ? undefined : topCat || undefined,
+      }),
+    enabled,
+  });
+
+  const catOptions = useQuery({
+    queryKey: ["dash-catopts", topDim],
+    queryFn: () =>
+      dashboardApi.getCategoryOptions(
+        topDim === "all" ? "parent" : topDim
+      ),
+    enabled: enabled && topDim !== "all",
+  });
+
+  const activities = useQuery({
+    queryKey: ["dash-acts"],
+    queryFn: () => dashboardApi.getRecentActivities(12),
+    enabled,
+  });
+
+  const liveAt = useMemo(
+    () =>
+      new Date(stats.dataUpdatedAt || Date.now()).toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    [stats.dataUpdatedAt]
+  );
+
+  // ── Guards ──
   if (!_hasHydrated || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-600" />
       </div>
     );
   }
 
-  // Không có quyền dashboard:view: chỉ hiển thị header, phần thân để trống.
-  // Không số liệu, không thông báo quyền — người dùng vẫn điều hướng qua menu.
   if (!canViewDashboard) {
     return (
       <div>
@@ -154,573 +213,353 @@ export default function Home() {
     );
   }
 
-  const maxRevenue = Math.max(...revenueChart.map((d) => d.revenue), 1);
-  const maxProductRevenue = Math.max(
-    ...topProducts.map((p) => p.totalRevenue),
-    1
-  );
-  const maxCustomerPurchased = Math.max(
-    ...topCustomers.map((c) => Number(c.totalPurchased)),
-    1
-  );
+  const s = stats.data;
+  const taskTabs = [
+    { key: "orders" as TaskType, label: "Đơn cần xử lý", roles: [] },
+    { key: "debt" as TaskType, label: "Công nợ đến hạn", roles: [] },
+    { key: "cod" as TaskType, label: "Cần giao (COD)", roles: [] },
+    { key: "stock" as TaskType, label: "Tồn cảnh báo", roles: [] },
+  ];
 
   return (
     <div>
       <DashboardHeader />
-      <div className="p-6 bg-gray-50 min-h-[calc(100vh-56px)] overflow-auto">
-        {loading ? (
-          <div className="flex items-center justify-center py-32">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="dt-dash min-h-[calc(100vh-56px)] overflow-auto">
+        {/* Subbar */}
+        <div className="flex items-center gap-[14px] flex-wrap px-7 pt-4 pb-[14px]">
+          <div className="mr-auto">
+            <h1 className="text-[22px] font-bold tracking-tight">Tổng quan</h1>
+            <div className="text-[13px] mt-px" style={{ color: "var(--dt-text-muted)" }}>
+              Toàn cảnh vận hành &amp; tài chính các chi nhánh
+            </div>
           </div>
-        ) : (
-          <div className="space-y-5">
-            {/* =============== ROW 1: KẾT QUẢ HÔM NAY =============== */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-              <div className="lg:col-span-3 bg-white rounded-lg border p-5">
-                <h2 className="text-sm font-semibold text-gray-700 mb-4">
-                  Kết quả bán hàng hôm nay
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-7 h-7 bg-green-50 rounded-lg flex items-center justify-center">
-                        <DollarSign className="w-3.5 h-3.5 text-green-600" />
-                      </div>
-                      <span className="text-xs text-gray-500">Doanh thu</span>
-                    </div>
-                    <div className="text-lg font-bold text-gray-900">
-                      {formatCurrency(todayStats?.todayRevenue || 0)}
-                    </div>
-                    <div className="text-[11px] text-gray-400">
-                      {todayStats?.todayOrders || 0} đơn hàng
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center">
-                        <FileText className="w-3.5 h-3.5 text-blue-600" />
-                      </div>
-                      <span className="text-xs text-gray-500">Hóa đơn</span>
-                    </div>
-                    <div className="text-lg font-bold text-gray-900">
-                      {formatCurrency(todayStats?.todayInvoiceRevenue || 0)}
-                    </div>
-                    <div className="text-[11px] text-gray-400">
-                      {todayStats?.todayInvoiceCount || 0} hóa đơn
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-7 h-7 bg-orange-50 rounded-lg flex items-center justify-center">
-                        <Undo2 className="w-3.5 h-3.5 text-orange-600" />
-                      </div>
-                      <span className="text-xs text-gray-500">Trả hàng</span>
-                    </div>
-                    <div className="text-lg font-bold text-orange-600">
-                      {formatCurrency(todayStats?.todayReturns || 0)}
-                    </div>
-                    <div className="text-[11px] text-gray-400">
-                      {todayStats?.todayReturnCount || 0} phiếu trả
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                      </div>
-                      <span className="text-xs text-gray-500">
-                        Doanh thu thuần
-                      </span>
-                    </div>
-                    <div className="text-lg font-bold text-emerald-700">
-                      {formatCurrency(todayStats?.todayNetRevenue || 0)}
-                    </div>
-                    <div className="text-[11px] text-gray-400">
-                      DT - Trả hàng
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Cảnh báo công nợ */}
-              <div className="bg-white rounded-lg border p-5 flex flex-col justify-center">
-                <div className="flex items-center gap-2 mb-3">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-semibold text-gray-700">
-                    Công nợ
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  <div>
-                    <span className="text-xs text-gray-500">Khách hàng nợ</span>
-                    <div className="text-lg font-bold text-red-600">
-                      {formatCurrency(stats?.totalCustomerDebt || 0)}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500">Nợ NCC</span>
-                    <div className="text-sm font-semibold text-gray-700">
-                      {formatCurrency(stats?.totalSupplierDebt || 0)}
-                    </div>
-                  </div>
-                </div>
-                <Link
-                  href="/khach-hang"
-                  className="text-xs text-blue-600 hover:underline mt-2">
-                  Xem chi tiết →
-                </Link>
-              </div>
-            </div>
+          <div className="flex items-center gap-[7px]">
+            <MapPin className="w-4 h-4" style={{ color: "var(--dt-text-muted)" }} />
+            <select
+              className="dt-select"
+              value={branchId ?? "all"}
+              onChange={(e) =>
+                setBranchId(e.target.value === "all" ? undefined : Number(e.target.value))
+              }>
+              <option value="all">Tất cả chi nhánh</option>
+              {(branches ?? []).map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            {/* =============== ROW 2: 4 STAT CARDS THÁNG =============== */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg border p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-500">
-                    Doanh thu tháng này
-                  </span>
-                  <TrendingUp className="w-4 h-4 text-blue-400" />
+          <div className="dt-seg">
+            {RANGES.map((r) => (
+              <button key={r.key} data-on={range === r.key} onClick={() => setRange(r.key)}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-[10px]">
+            <span
+              className="inline-flex items-center gap-[7px] text-[12.5px] px-3 py-[6px] rounded-[20px]"
+              style={{ color: "var(--dt-text-secondary)", background: "var(--dt-cyan-bg)" }}>
+              <i className="w-[7px] h-[7px] rounded-full dt-pulse" style={{ background: "var(--dt-success)" }} />
+              Cập nhật <span className="dt-mono">{liveAt}</span>
+            </span>
+            <Link
+              href="/bao-cao/khach-hang"
+              className="inline-flex items-center gap-[7px] rounded-[4px] font-semibold px-4 py-[9px] text-[13.5px] border-[1.5px] transition"
+              style={{ borderColor: "var(--dt-border)", color: "var(--dt-text-secondary)" }}>
+              <Download className="w-4 h-4" /> Xuất báo cáo
+            </Link>
+            <Link
+              href="/ban-hang"
+              className="inline-flex items-center gap-[7px] rounded-[4px] font-semibold px-4 py-[9px] text-[13.5px] text-white transition"
+              style={{ background: "var(--dt-primary)" }}>
+              <Plus className="w-4 h-4" /> Tạo đơn mới
+            </Link>
+          </div>
+        </div>
+
+        <div className="px-7 pb-16">
+          {/* ── KPIs ── */}
+          <div className="grid gap-4 mb-2 grid-cols-[repeat(auto-fit,minmax(208px,1fr))]">
+            <KpiCard
+              icon={<DollarSign className="w-[18px] h-[18px]" />}
+              iconBg="rgba(0,183,204,.12)"
+              iconColor="#00B7CC"
+              accent="#00B7CC"
+              name="Doanh thu"
+              value={money(s?.currentRevenue ?? 0)}
+              delta={s ? deltaPct(s.revenueChange) : undefined}
+              deltaDir={dir(s?.revenueChange ?? 0)}
+              vs="so với kỳ trước"
+            />
+            {canSeeProfit && (
+              <KpiCard
+                icon={<TrendingUp className="w-[18px] h-[18px]" />}
+                iconBg="rgba(201,168,76,.16)"
+                iconColor="#9A7A2A"
+                accent="#C9A84C"
+                name="Lợi nhuận (tạm tính)"
+                value={money(s?.profit ?? 0)}
+                delta={s ? `biên ${Math.round((s.marginAvg ?? 0) * 100)}%` : undefined}
+                deltaDir={dir(s?.profitChange ?? 0)}
+                vs="theo giá vốn kho"
+              />
+            )}
+            <KpiCard
+              icon={<Receipt className="w-[18px] h-[18px]" />}
+              iconBg="rgba(46,139,143,.14)"
+              iconColor="#2E8B8F"
+              accent="#2E8B8F"
+              name="Số đơn hàng"
+              value={vi(s?.invoiceCount ?? 0)}
+              delta={s ? deltaPct(s.invoiceChange) : undefined}
+              deltaDir={dir(s?.invoiceChange ?? 0)}
+              vs="so với kỳ trước"
+            />
+            <KpiCard
+              icon={<AlignJustify className="w-[18px] h-[18px]" />}
+              iconBg="rgba(26,95,106,.14)"
+              iconColor="#1A5F6A"
+              accent="#1A5F6A"
+              name="Giá trị TB/đơn"
+              value={money(s?.aov ?? 0)}
+              delta={s ? deltaPct(s.aovChange) : undefined}
+              deltaDir={dir(s?.aovChange ?? 0)}
+              vs="so với kỳ trước"
+            />
+            <KpiCard
+              icon={<CreditCard className="w-[18px] h-[18px]" />}
+              iconBg="rgba(201,168,76,.16)"
+              iconColor="#9A7A2A"
+              accent="#C9A84C"
+              name="Công nợ phải thu"
+              value={money(s?.totalCustomerDebt ?? 0)}
+              delta={s ? money(s.unpaidAmount) : undefined}
+              deltaDir="down"
+              vs="chưa tất toán"
+            />
+            <KpiCard
+              icon={<FileText className="w-[18px] h-[18px]" />}
+              iconBg="rgba(46,139,143,.14)"
+              iconColor="#2E8B8F"
+              accent="#2E8B8F"
+              name="HĐ còn phải thu"
+              value={vi(s?.unpaidInvoices ?? 0)}
+              valueSuffix="đơn"
+              vs="chưa tất toán"
+            />
+            <KpiCard
+              icon={<Truck className="w-[18px] h-[18px]" />}
+              iconBg="rgba(0,183,204,.12)"
+              iconColor="#00A5B5"
+              accent="#00A5B5"
+              name="COD đang luân chuyển"
+              value={money(s?.codAmount ?? 0)}
+              delta={s ? `${s.codCount} đơn` : undefined}
+              deltaDir="up"
+            />
+            <KpiCard
+              icon={<AlertTriangle className="w-[18px] h-[18px]" />}
+              iconBg="rgba(192,57,43,.1)"
+              iconColor="#C0392B"
+              accent="#C0392B"
+              name="Tồn cảnh báo"
+              value={vi((s?.lowStockProducts ?? 0) + (s?.outOfStockProducts ?? 0))}
+              valueSuffix="mã"
+              delta={s && s.negativeStock > 0 ? `${s.negativeStock} mã âm kho` : "Ổn định"}
+              deltaDir={s && s.negativeStock > 0 ? "down" : "flat"}
+            />
+          </div>
+
+          {/* ── Trend + Category ── */}
+          <div className="grid gap-4 mb-4 lg:grid-cols-[1.7fr_1fr] grid-cols-1">
+            <div className="dt-panel">
+              <div className="flex items-center gap-3 p-[17px_20px] border-b" style={{ borderColor: "var(--dt-border)" }}>
+                <div>
+                  <h3 className="text-[15.5px] font-bold">
+                    Doanh thu{canSeeProfit ? " / lợi nhuận" : ""} theo thời gian
+                  </h3>
+                  <div className="text-[12.5px] mt-0.5" style={{ color: "var(--dt-text-muted)" }}>
+                    {RANGE_LABEL[range]}
+                  </div>
                 </div>
-                <div className="text-xl font-bold text-gray-900">
-                  {formatCurrency(stats?.currentRevenue || 0)}
-                </div>
-                <div className="flex items-center gap-1 mt-1">
-                  {(stats?.revenueChange || 0) >= 0 ? (
-                    <TrendingUp className="w-3 h-3 text-green-500" />
-                  ) : (
-                    <TrendingDown className="w-3 h-3 text-red-500" />
-                  )}
+                <span
+                  className="ml-auto text-[11.5px] font-semibold px-[11px] py-1 rounded-[20px]"
+                  style={{ color: "var(--dt-primary)", background: "rgba(0,183,204,.08)" }}>
+                  DT {money(s?.currentRevenue ?? 0)}
+                </span>
+                {canSeeProfit && (
                   <span
-                    className={`text-xs font-medium ${(stats?.revenueChange || 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    {(stats?.revenueChange || 0) >= 0 ? "+" : ""}
-                    {stats?.revenueChange || 0}% so với tháng trước
+                    className="text-[11.5px] font-semibold px-[11px] py-1 rounded-[20px]"
+                    style={{ color: "#9A7A2A", background: "rgba(201,168,76,.13)" }}>
+                    LN {money(s?.profit ?? 0)}
                   </span>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg border p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-500">
-                    Đơn hàng tháng này
-                  </span>
-                  <ShoppingCart className="w-4 h-4 text-green-400" />
-                </div>
-                <div className="text-xl font-bold text-gray-900">
-                  {formatCurrency(stats?.currentMonthOrders || 0)}
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Tháng trước: {formatCurrency(stats?.lastRevenue || 0)}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg border p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-500">
-                    Công nợ khách hàng
-                  </span>
-                  <Users className="w-4 h-4 text-red-400" />
-                </div>
-                <div className="text-xl font-bold text-red-600">
-                  {formatCurrency(stats?.totalCustomerDebt || 0)}
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Công nợ NCC: {formatCurrency(stats?.totalSupplierDebt || 0)}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg border p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-500">
-                    Cảnh báo tồn kho
-                  </span>
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                </div>
-                <div className="flex items-baseline gap-4">
-                  <div>
-                    <span className="text-xl font-bold text-amber-600">
-                      {stats?.lowStockProducts || 0}
-                    </span>
-                    <span className="text-xs text-gray-400 ml-1">sắp hết</span>
-                  </div>
-                  <div>
-                    <span className="text-xl font-bold text-red-600">
-                      {stats?.outOfStockProducts || 0}
-                    </span>
-                    <span className="text-xs text-gray-400 ml-1">hết hàng</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* =============== ROW 3: BIỂU ĐỒ + HOẠT ĐỘNG =============== */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
-              {/* Biểu đồ doanh thu */}
-              <div className="lg:col-span-3 bg-white rounded-lg border p-5">
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-sm font-semibold text-gray-700">
-                    Doanh thu 6 tháng gần nhất
-                  </h2>
-                  <span className="text-xs text-gray-400">Tháng này</span>
-                </div>
-
-                {revenueChart.length > 0 ? (
-                  <div className="mt-2">
-                    {/* Y-axis labels + bars */}
-                    <div className="flex">
-                      {/* Y axis */}
-                      <div className="flex flex-col justify-between h-52 pr-2 text-right">
-                        {[1, 0.75, 0.5, 0.25, 0].map((pct) => (
-                          <span
-                            key={pct}
-                            className="text-[10px] text-gray-400 leading-none">
-                            {formatCompact(maxRevenue * pct)}
-                          </span>
-                        ))}
-                      </div>
-                      {/* Bars */}
-                      <div className="flex-1 flex items-end gap-3 h-52 border-l border-b border-gray-100 pl-2 pb-1">
-                        {revenueChart.map((item, idx) => {
-                          const pct =
-                            maxRevenue > 0
-                              ? (item.revenue / maxRevenue) * 100
-                              : 0;
-                          return (
-                            <div
-                              key={idx}
-                              className="flex-1 flex flex-col items-center justify-end h-full">
-                              <div
-                                className="w-full max-w-[48px] bg-blue-500 rounded-t-sm hover:bg-blue-600 transition-colors cursor-default relative group"
-                                style={{
-                                  height: `${Math.max(pct, 1)}%`,
-                                }}>
-                                {/* Tooltip */}
-                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                                  {formatCurrency(item.revenue)}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    {/* X axis labels */}
-                    <div className="flex ml-10 pl-2 mt-1">
-                      {revenueChart.map((item, idx) => (
-                        <div key={idx} className="flex-1 text-center">
-                          <span className="text-[10px] text-gray-400">
-                            {item.month}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-52 flex items-center justify-center text-sm text-gray-400">
-                    Chưa có dữ liệu
-                  </div>
                 )}
               </div>
-
-              {/* Hoạt động gần đây */}
-              <div className="bg-white rounded-lg border p-4 flex flex-col">
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock className="w-4 h-4 text-gray-500" />
-                  <h2 className="text-sm font-semibold text-gray-700">
-                    Hoạt động gần đây
-                  </h2>
-                </div>
-                <div className="flex-1 overflow-y-auto max-h-[280px] space-y-0.5 pr-1">
-                  {activities.map((act) => (
-                    <div
-                      key={act.id}
-                      className="flex items-start gap-2 py-2 border-b border-gray-50 last:border-0">
-                      <FileText className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-gray-700 leading-relaxed">
-                          <span className="font-medium text-blue-600">
-                            {act.customerName}
-                          </span>{" "}
-                          vừa{" "}
-                          <span className="font-medium text-blue-600">
-                            đặt hàng
-                          </span>{" "}
-                          với giá trị{" "}
-                          <span className="font-semibold text-gray-900">
-                            {formatCurrency(act.grandTotal)}
-                          </span>
-                        </p>
-                        <span className="text-[10px] text-gray-400">
-                          {timeAgo(act.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {activities.length === 0 && (
-                    <div className="text-xs text-gray-400 text-center py-6">
-                      Chưa có hoạt động
-                    </div>
-                  )}
-                </div>
+              <div className="p-[18px_20px]">
+                <RevenueTrendChart data={trend.data ?? []} showProfit={canSeeProfit} />
               </div>
             </div>
 
-            {/* =============== ROW 4: TOP SẢN PHẨM + TOP KHÁCH HÀNG =============== */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {/* Top sản phẩm bán chạy */}
-              <div className="bg-white rounded-lg border p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold text-gray-700">
-                    <BarChart3 className="w-4 h-4 inline mr-1 text-blue-500" />
-                    Top 10 hàng bán chạy
-                  </h2>
-                  <span className="text-[11px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded">
-                    Tháng này
-                  </span>
+            <div className="dt-panel">
+              <div className="flex items-center gap-3 p-[17px_20px] border-b" style={{ borderColor: "var(--dt-border)" }}>
+                <div>
+                  <h3 className="text-[15.5px] font-bold">Cơ cấu theo nhóm hàng</h3>
+                  <div className="text-[12.5px] mt-0.5" style={{ color: "var(--dt-text-muted)" }}>
+                    Tỷ trọng doanh thu
+                  </div>
                 </div>
-                <div className="space-y-2.5">
-                  {topProducts.map((product, idx) => {
-                    const pct =
-                      maxProductRevenue > 0
-                        ? (product.totalRevenue / maxProductRevenue) * 100
-                        : 0;
-                    return (
-                      <div key={product.productId}>
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span
-                            className="text-xs text-gray-700 truncate max-w-[65%]"
-                            title={product.name}>
-                            {product.name}
-                          </span>
-                          <span className="text-xs font-semibold text-gray-900 flex-shrink-0">
-                            {formatCompact(product.totalRevenue)}
-                          </span>
-                        </div>
-                        <div className="h-4 bg-gray-100 rounded-sm overflow-hidden">
-                          <div
-                            className="h-full bg-blue-500 rounded-sm transition-all duration-500"
-                            style={{ width: `${Math.max(pct, 1)}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {topProducts.length === 0 && (
-                    <div className="text-sm text-gray-400 text-center py-6">
-                      Chưa có dữ liệu
-                    </div>
-                  )}
-                </div>
+                <select
+                  className="dt-select dt-select-sm ml-auto"
+                  value={catDim}
+                  onChange={(e) => setCatDim(e.target.value as CategoryDimension)}>
+                  <option value="parent">Loại hàng</option>
+                  <option value="middle">Nguồn gốc</option>
+                  <option value="child">Danh mục</option>
+                </select>
               </div>
-
-              {/* Top khách hàng */}
-              <div className="bg-white rounded-lg border p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold text-gray-700">
-                    <Users className="w-4 h-4 inline mr-1 text-green-500" />
-                    Top 10 khách mua nhiều nhất
-                  </h2>
-                  <Link
-                    href="/khach-hang"
-                    className="text-[11px] text-blue-600 hover:underline">
-                    Xem tất cả
-                  </Link>
-                </div>
-                <div className="space-y-2.5">
-                  {topCustomers.map((customer) => {
-                    const purchased = Number(customer.totalPurchased);
-                    const pct =
-                      maxCustomerPurchased > 0
-                        ? (purchased / maxCustomerPurchased) * 100
-                        : 0;
-                    return (
-                      <div key={customer.id}>
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span
-                            className="text-xs text-gray-700 truncate max-w-[60%]"
-                            title={customer.name}>
-                            {customer.name}
-                            {customer.customerType && (
-                              <span className="text-gray-400 ml-1">
-                                ({customer.customerType})
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-xs font-semibold text-gray-900 flex-shrink-0">
-                            {formatCompact(purchased)}
-                          </span>
-                        </div>
-                        <div className="h-4 bg-gray-100 rounded-sm overflow-hidden">
-                          <div
-                            className="h-full bg-green-500 rounded-sm transition-all duration-500"
-                            style={{ width: `${Math.max(pct, 1)}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {topCustomers.length === 0 && (
-                    <div className="text-sm text-gray-400 text-center py-6">
-                      Chưa có dữ liệu
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* =============== ROW 5: ĐƠN HÀNG + TỒN KHO =============== */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {/* Đơn hàng gần đây */}
-              <div className="bg-white rounded-lg border">
-                <div className="flex items-center justify-between p-4 border-b">
-                  <h2 className="text-sm font-semibold text-gray-700">
-                    Đơn hàng gần đây
-                  </h2>
-                  <Link
-                    href="/don-hang/dat-hang"
-                    className="text-xs text-blue-600 hover:underline">
-                    Xem tất cả
-                  </Link>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-50 text-gray-500 text-xs">
-                        <th className="px-4 py-2 text-left font-medium">
-                          Mã đơn
-                        </th>
-                        <th className="px-4 py-2 text-left font-medium">
-                          Khách hàng
-                        </th>
-                        <th className="px-4 py-2 text-right font-medium">
-                          Tổng tiền
-                        </th>
-                        <th className="px-4 py-2 text-center font-medium">
-                          Trạng thái
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentOrders.map((order) => {
-                        const si = ORDER_STATUS_MAP[order.orderStatus] || {
-                          label: order.orderStatus,
-                          cls: "bg-gray-100 text-gray-800",
-                        };
-                        return (
-                          <tr
-                            key={order.id}
-                            className="border-t hover:bg-gray-50">
-                            <td className="px-4 py-2.5">
-                              <span className="font-medium text-blue-600 text-xs">
-                                {order.code}
-                              </span>
-                              <div className="text-[10px] text-gray-400">
-                                {formatDate(order.orderDate)}
-                              </div>
-                            </td>
-                            <td className="px-4 py-2.5 text-xs text-gray-700 max-w-[180px] truncate">
-                              {order.customerName}
-                            </td>
-                            <td className="px-4 py-2.5 text-right text-xs font-medium">
-                              {formatCurrency(order.grandTotal)}
-                            </td>
-                            <td className="px-4 py-2.5 text-center">
-                              <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-medium ${si.cls}`}>
-                                {si.label}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {recentOrders.length === 0 && (
-                        <tr>
-                          <td
-                            colSpan={4}
-                            className="px-4 py-8 text-center text-gray-400 text-sm">
-                            Chưa có đơn hàng
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Sản phẩm sắp hết hàng */}
-              <div className="bg-white rounded-lg border">
-                <div className="flex items-center justify-between p-4 border-b">
-                  <h2 className="text-sm font-semibold text-gray-700">
-                    <AlertTriangle className="w-4 h-4 text-amber-500 inline mr-1" />
-                    Sản phẩm sắp hết hàng
-                  </h2>
-                  <Link
-                    href="/san-pham/danh-sach"
-                    className="text-xs text-blue-600 hover:underline">
-                    Xem kho
-                  </Link>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-50 text-gray-500 text-xs">
-                        <th className="px-4 py-2 text-left font-medium">
-                          Sản phẩm
-                        </th>
-                        <th className="px-4 py-2 text-left font-medium">
-                          Chi nhánh
-                        </th>
-                        <th className="px-4 py-2 text-right font-medium">
-                          Tồn
-                        </th>
-                        <th className="px-4 py-2 text-right font-medium">
-                          Tối thiểu
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lowStock.map((item) => (
-                        <tr key={item.id} className="border-t hover:bg-gray-50">
-                          <td className="px-4 py-2.5">
-                            <div className="text-xs font-medium text-gray-900 truncate max-w-[180px]">
-                              {item.productName}
-                            </div>
-                            <div className="text-[10px] text-gray-400">
-                              {item.productCode}
-                            </div>
-                          </td>
-                          <td className="px-4 py-2.5 text-xs text-gray-600">
-                            {item.branchName}
-                          </td>
-                          <td className="px-4 py-2.5 text-right">
-                            <span
-                              className={`text-xs font-bold ${item.onHand === 0 ? "text-red-600" : "text-amber-600"}`}>
-                              {item.onHand}
-                            </span>
-                            <span className="text-[10px] text-gray-400 ml-0.5">
-                              {item.unit}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2.5 text-right text-xs text-gray-500">
-                            {item.minQuality} {item.unit}
-                          </td>
-                        </tr>
-                      ))}
-                      {lowStock.length === 0 && (
-                        <tr>
-                          <td
-                            colSpan={4}
-                            className="px-4 py-8 text-center text-gray-400 text-sm">
-                            Không có sản phẩm sắp hết hàng
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+              <div className="p-[18px_20px]">
+                <CategoryDonut data={category.data ?? []} />
               </div>
             </div>
           </div>
-        )}
+
+          {/* ── Branch compare + Finance ── */}
+          <div className="grid gap-4 mb-4 lg:grid-cols-2 grid-cols-1">
+            <div className="dt-panel flex flex-col">
+              <div className="flex items-center gap-3 p-[17px_20px] border-b flex-wrap" style={{ borderColor: "var(--dt-border)" }}>
+                <div>
+                  <h3 className="text-[15.5px] font-bold">So sánh chi nhánh</h3>
+                  <div className="text-[12.5px] mt-0.5" style={{ color: "var(--dt-text-muted)" }}>
+                    {branchMetric === "profit" ? "Lợi nhuận" : "Doanh thu"} theo thời gian
+                  </div>
+                </div>
+                <div className="ml-auto flex items-center gap-2 flex-wrap">
+                  {canSeeProfit && (
+                    <div className="dt-seg dt-seg-sm">
+                      <button data-on={branchMetric === "rev"} onClick={() => setBranchMetric("rev")}>
+                        Doanh thu
+                      </button>
+                      <button data-on={branchMetric === "profit"} onClick={() => setBranchMetric("profit")}>
+                        Lợi nhuận
+                      </button>
+                    </div>
+                  )}
+                  <div className="dt-seg dt-seg-sm">
+                    <button data-on={branchRange === "week"} onClick={() => setBranchRange("week")}>
+                      7 ngày
+                    </button>
+                    <button data-on={branchRange === "month"} onClick={() => setBranchRange("month")}>
+                      Tháng này
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="p-[18px_20px]">
+                <BranchCompareChart data={branchCmp.data ?? { labels: [], branches: [] }} />
+              </div>
+            </div>
+
+            <FinancePanel data={finance.data} finRange={finRange} onFinRangeChange={setFinRange} />
+          </div>
+
+          {/* ── Tasks + Activity ── */}
+          <div className="grid gap-4 mb-4 lg:grid-cols-[1.7fr_1fr] grid-cols-1">
+            <TaskTabs
+              tabs={taskTabs}
+              active={taskTab}
+              onTabChange={setTaskTab}
+              rows={tasks.data ?? []}
+              counts={taskCounts.data ?? {}}
+              loading={tasks.isLoading}
+              orderStatus={orderStatus}
+              onOrderStatusChange={setOrderStatus}
+            />
+            <div className="dt-panel flex flex-col">
+              <div className="flex items-center gap-3 p-[17px_20px] border-b" style={{ borderColor: "var(--dt-border)" }}>
+                <div>
+                  <h3 className="text-[15.5px] font-bold">Hoạt động gần đây</h3>
+                  <div className="text-[12.5px] mt-0.5" style={{ color: "var(--dt-text-muted)" }}>
+                    Đơn hàng mới nhất toàn hệ thống
+                  </div>
+                </div>
+                <span
+                  className="ml-auto inline-flex items-center gap-[7px] text-[12.5px] px-3 py-[6px] rounded-[20px]"
+                  style={{ color: "var(--dt-text-secondary)", background: "var(--dt-cyan-bg)" }}>
+                  <i className="w-[7px] h-[7px] rounded-full dt-pulse" style={{ background: "var(--dt-success)" }} />
+                  Trực tiếp
+                </span>
+              </div>
+              <ActivityFeed items={activities.data ?? []} />
+            </div>
+          </div>
+
+          {/* ── Top products ── */}
+          <div className="dt-panel mb-4">
+            <div className="flex items-center gap-3 p-[17px_20px] border-b flex-wrap" style={{ borderColor: "var(--dt-border)" }}>
+              <div>
+                <h3 className="text-[15.5px] font-bold">Top sản phẩm</h3>
+                <div className="text-[12.5px] mt-0.5" style={{ color: "var(--dt-text-muted)" }}>
+                  Top {topCount} theo {TOP_METRICS.find((m) => m.key === topMetric)?.label.toLowerCase()}
+                </div>
+              </div>
+              <div className="ml-auto flex items-center gap-2 flex-wrap">
+                <select
+                  className="dt-select dt-select-sm"
+                  value={topDim}
+                  onChange={(e) => {
+                    setTopDim(e.target.value as CategoryDimension | "all");
+                    setTopCat("");
+                  }}>
+                  <option value="all">Tất cả nhóm</option>
+                  <option value="parent">Loại hàng</option>
+                  <option value="middle">Nguồn gốc</option>
+                  <option value="child">Danh mục</option>
+                </select>
+                {topDim !== "all" && (
+                  <select
+                    className="dt-select dt-select-sm"
+                    value={topCat}
+                    onChange={(e) => setTopCat(e.target.value)}>
+                    <option value="">— Chọn —</option>
+                    {(catOptions.data ?? []).map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <select
+                  className="dt-select dt-select-sm"
+                  value={topMetric}
+                  onChange={(e) => {
+                    const v = e.target.value as TopMetric;
+                    if (v === "profit" && !canSeeProfit) return;
+                    setTopMetric(v);
+                  }}>
+                  {TOP_METRICS.filter((m) => m.key !== "profit" || canSeeProfit).map((m) => (
+                    <option key={m.key} value={m.key}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="dt-seg dt-seg-sm">
+                  {[5, 10, 20].map((n) => (
+                    <button key={n} data-on={topCount === n} onClick={() => setTopCount(n)}>
+                      Top {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="p-[18px_20px]">
+              <TopProducts items={topProducts.data ?? []} metric={topMetric} />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

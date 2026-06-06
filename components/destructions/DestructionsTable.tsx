@@ -4,7 +4,13 @@ import { Fragment } from "react";
 import { useState } from "react";
 import type { Destruction } from "@/lib/api/destructions";
 import { formatCurrency } from "../../lib/utils";
-import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { DestructionDetailRow } from "./DestructionDetailRow";
 import { CodeLink } from "@/components/shared/CodeLink";
@@ -200,6 +206,7 @@ export function DestructionsTable({
   };
 
   const totalPages = Math.ceil(total / limit) || 1;
+  const colSpan = visibleColumns.length + 2; // checkbox + chevron
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
@@ -237,7 +244,7 @@ export function DestructionsTable({
         <table className="w-full text-sm" style={{ minWidth: "max-content" }}>
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-3 text-left sticky left-0 bg-gray-50">
+              <th className="px-4 py-2.5 text-left w-10 sticky left-0 bg-gray-50">
                 <input
                   type="checkbox"
                   checked={
@@ -251,18 +258,17 @@ export function DestructionsTable({
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-3 text-left font-medium text-gray-700 whitespace-nowrap">
+                  className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide">
                   {col.label}
                 </th>
               ))}
+              <th className="px-4 py-2.5 w-8" />
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td
-                  colSpan={visibleColumns.length + 1}
-                  className="py-16 text-center">
+                <td colSpan={colSpan} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-2 text-gray-400">
                     <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
                     <span className="text-xs">Đang tải...</span>
@@ -272,7 +278,7 @@ export function DestructionsTable({
             ) : destructions.length === 0 ? (
               <tr>
                 <td
-                  colSpan={visibleColumns.length + 1}
+                  colSpan={colSpan}
                   className="py-20 text-center text-gray-400">
                   <div className="text-sm">Chưa có phiếu xuất hủy nào</div>
                 </td>
@@ -281,10 +287,18 @@ export function DestructionsTable({
               destructions.map((destruction) => (
                 <Fragment key={destruction.id}>
                   <tr
-                    className="border-b hover:bg-gray-50 cursor-pointer"
+                    className={`cursor-pointer transition-colors ${
+                      expandedDestructionId === destruction.id
+                        ? "bg-blue-50"
+                        : "border-b hover:bg-gray-50"
+                    }`}
                     onClick={() => toggleExpand(destruction.id)}>
                     <td
-                      className="px-4 py-3 sticky left-0 bg-white"
+                      className={`px-4 py-2.5 sticky left-0 z-10 ${
+                        expandedDestructionId === destruction.id
+                          ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
+                          : "bg-white"
+                      }`}
                       onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
@@ -296,22 +310,35 @@ export function DestructionsTable({
                     {visibleColumns.map((col) => (
                       <td
                         key={col.key}
-                        className="px-4 py-3 text-sm whitespace-nowrap">
+                        className={`px-4 py-2.5 text-sm whitespace-nowrap ${
+                          expandedDestructionId === destruction.id
+                            ? "border-t-2 border-blue-500"
+                            : ""
+                        }`}>
                         {col.render(destruction)}
                       </td>
                     ))}
+                    <td
+                      className={`px-4 py-2.5 ${
+                        expandedDestructionId === destruction.id
+                          ? "border-t-2 border-r-2 border-blue-500"
+                          : ""
+                      }`}>
+                      <ChevronDown
+                        className={`w-4 h-4 text-gray-400 transition-transform ${
+                          expandedDestructionId === destruction.id
+                            ? "rotate-180"
+                            : ""
+                        }`}
+                      />
+                    </td>
                   </tr>
                   {expandedDestructionId === destruction.id && (
-                    <tr>
-                      <td
-                        colSpan={visibleColumns.length + 1}
-                        className="px-6 py-6 bg-gray-50">
-                        <DestructionDetailRow
-                          destructionId={destruction.id}
-                          onClose={() => setExpandedDestructionId(null)}
-                        />
-                      </td>
-                    </tr>
+                    <DestructionDetailRow
+                      destructionId={destruction.id}
+                      colSpan={colSpan}
+                      onClose={() => setExpandedDestructionId(null)}
+                    />
                   )}
                 </Fragment>
               ))
