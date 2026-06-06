@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DestructionsSidebar } from "@/components/destructions/DestructionsSidebar";
 import { DestructionsTable } from "@/components/destructions/DestructionsTable";
 import {
@@ -20,9 +20,21 @@ export default function DestructionsPage() {
   );
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
+  const [search, setSearch] = useState(codeParam ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(codeParam ?? "");
+
+  // Debounce ô tìm kiếm 300ms
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const { data, isLoading } = useDestructions({
     ...filters,
+    search: debouncedSearch || undefined,
     pageSize: limit,
     currentItem: (page - 1) * limit,
   });
@@ -60,6 +72,8 @@ export default function DestructionsPage() {
             router.push(`/san-pham/xuat-huy/${destruction.id}`);
           }}
           onDelete={handleDelete}
+          searchValue={search}
+          onSearchChange={setSearch}
         />
       </div>
     </PagePermissionGuard>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { Fragment } from "react";
+import { useState } from "react";
 import type { Destruction } from "@/lib/api/destructions";
-import { formatDate, formatCurrency } from "../../lib/utils";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { formatCurrency } from "../../lib/utils";
+import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { DestructionDetailRow } from "./DestructionDetailRow";
 import { CodeLink } from "@/components/shared/CodeLink";
@@ -23,6 +24,8 @@ interface DestructionsTableProps {
   onLimitChange: (limit: number) => void;
   onEdit: (destruction: Destruction) => void;
   onDelete?: (id: number) => void;
+  searchValue: string;
+  onSearchChange: (value: string) => void;
 }
 
 const getStatusText = (status: number) => {
@@ -162,6 +165,8 @@ export function DestructionsTable({
   onLimitChange,
   onEdit,
   onDelete,
+  searchValue,
+  onSearchChange,
 }: DestructionsTableProps) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -194,32 +199,32 @@ export function DestructionsTable({
     );
   };
 
-  const totalPages = Math.ceil(total / limit);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Đang tải...</div>
-      </div>
-    );
-  }
+  const totalPages = Math.ceil(total / limit) || 1;
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
-      <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4 w-[500px]">
-          <h2 className="text-xl font-semibold w-[150px]">Xuất hủy</h2>
-          <input
-            type="text"
-            placeholder="Tìm kiếm đơn hàng..."
-            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
+      {/* ── Toolbar ── */}
+      <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+            Xuất hủy
+          </h2>
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Tìm theo mã phiếu..."
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+            />
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 relative">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => router.push("/san-pham/xuat-huy/new")}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
             <Plus className="w-4 h-4" />
             Tạo Xuất Hủy
           </button>
@@ -229,7 +234,7 @@ export function DestructionsTable({
       </div>
 
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-md" style={{ minWidth: "max-content" }}>
+        <table className="w-full text-sm" style={{ minWidth: "max-content" }}>
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-4 py-3 text-left sticky left-0 bg-gray-50">
@@ -253,12 +258,23 @@ export function DestructionsTable({
             </tr>
           </thead>
           <tbody>
-            {destructions.length === 0 ? (
+            {isLoading ? (
               <tr>
                 <td
-                  colSpan={visibleColumns.length + 3}
-                  className="px-4 py-8 text-center text-gray-500">
-                  Chưa có phiếu xuất hủy nào
+                  colSpan={visibleColumns.length + 1}
+                  className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                    <span className="text-xs">Đang tải...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : destructions.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={visibleColumns.length + 1}
+                  className="py-20 text-center text-gray-400">
+                  <div className="text-sm">Chưa có phiếu xuất hủy nào</div>
                 </td>
               </tr>
             ) : (
@@ -280,7 +296,7 @@ export function DestructionsTable({
                     {visibleColumns.map((col) => (
                       <td
                         key={col.key}
-                        className="px-4 py-3 text-md whitespace-nowrap">
+                        className="px-4 py-3 text-sm whitespace-nowrap">
                         {col.render(destruction)}
                       </td>
                     ))}
@@ -288,7 +304,7 @@ export function DestructionsTable({
                   {expandedDestructionId === destruction.id && (
                     <tr>
                       <td
-                        colSpan={visibleColumns.length + 3}
+                        colSpan={visibleColumns.length + 1}
                         className="px-6 py-6 bg-gray-50">
                         <DestructionDetailRow
                           destructionId={destruction.id}
@@ -304,37 +320,62 @@ export function DestructionsTable({
         </table>
       </div>
 
-      <div className="border-t p-4 flex items-center justify-between bg-gray-50">
+      {/* ── Pagination ── */}
+      <div className="border-t px-4 py-2.5 flex items-center justify-between bg-white shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Hiển thị</span>
+          <span className="text-xs text-gray-500">Hiển thị</span>
           <select
             value={limit}
             onChange={(e) => onLimitChange(Number(e.target.value))}
-            className="border rounded px-2 py-1 text-sm">
-            <option value={15}>15 dòng</option>
-            <option value={30}>30 dòng</option>
-            <option value={50}>50 dòng</option>
-            <option value={100}>100 dòng</option>
+            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            {[15, 30, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
           </select>
+          <span className="text-xs text-gray-500">/ trang</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => onPageChange(Math.max(1, page - 1))}
             disabled={page === 1}
-            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
-            Trước
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm text-gray-600">
-            Trang {page} / {totalPages}
-          </span>
+
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            const p = Math.min(
+              Math.max(page - 2 + i, i + 1),
+              totalPages - (Math.min(5, totalPages) - 1 - i)
+            );
+            return (
+              <button
+                key={p}
+                onClick={() => onPageChange(p)}
+                className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
+                  p === page
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "hover:bg-gray-50 text-gray-600 border-gray-200"
+                }`}>
+                {p}
+              </button>
+            );
+          })}
+
           <button
             onClick={() => onPageChange(Math.min(totalPages, page + 1))}
             disabled={page >= totalPages}
-            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
-            Sau
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+
+        <span className="text-xs text-gray-400">
+          Trang {page}/{totalPages}
+          {total > 0 ? ` · ${total.toLocaleString("vi-VN")} phiếu` : ""}
+        </span>
       </div>
     </div>
   );

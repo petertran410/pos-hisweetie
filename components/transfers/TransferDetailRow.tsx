@@ -2,10 +2,12 @@
 
 import { useState, useRef, useLayoutEffect } from "react";
 import { useTransfer } from "@/lib/hooks/useTransfers";
-import { Copy, Loader2, Pencil } from "lucide-react";
+import { Copy, Loader2, Pencil, Printer } from "lucide-react";
 import type { Transfer } from "@/lib/api/transfers";
 import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
+import { printEntity } from "@/lib/utils/print";
+import { toast } from "sonner";
 
 interface TransferDetailRowProps {
   transferId: number;
@@ -43,7 +45,17 @@ export function TransferDetailRow({
   const { data: transfer, isLoading } = useTransfer(transferId);
   const canUpdate = useCan("transfers", "update");
   const canCreate = useCan("transfers", "create");
+  const canPrint = useCan("transfers", "print");
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = async () => {
+    if (!transfer) return;
+    try {
+      await printEntity("transfer", transfer.id);
+    } catch (e: any) {
+      toast.error(e?.message || "In thất bại");
+    }
+  };
 
   // ─── Sticky width — giống OrderDetailRow ────────────────────────────────
   useLayoutEffect(() => {
@@ -117,6 +129,15 @@ export function TransferDetailRow({
 
                   {/* Nút chỉnh sửa & sao chép */}
                   <div className="flex items-center gap-2">
+                    {canPrint && (
+                      <button
+                        onClick={handlePrint}
+                        title="In phiếu chuyển hàng"
+                        className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                        <Printer className="w-3.5 h-3.5" />
+                        In
+                      </button>
+                    )}
                     {canCreate && (
                       <button
                         onClick={() => onCopy(transfer)}
