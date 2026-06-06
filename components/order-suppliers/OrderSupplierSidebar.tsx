@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useBranchStore } from "@/lib/store/branch";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import {
   ChevronDown,
@@ -563,6 +564,7 @@ export function OrderSupplierSidebar({
 }: OrderSupplierSidebarProps) {
   const { data: branches } = useBranches();
   const { data: users } = useUsersForFilter();
+  const { selectedBranch } = useBranchStore();
 
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState("all_time");
@@ -572,9 +574,14 @@ export function OrderSupplierSidebar({
   const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
 
-  // Local string state cho các SimpleDropdown
+  // Local string state cho các SimpleDropdown.
+  // Mặc định bám theo chi nhánh đang chọn ở DashboardHeader.
   const [branchValue, setBranchValue] = useState(
-    filters.branchId ? String(filters.branchId) : ""
+    filters.branchId
+      ? String(filters.branchId)
+      : selectedBranch
+        ? String(selectedBranch.id)
+        : ""
   );
   const [statusValues, setStatusValues] = useState<string[]>(
     filters.status?.map(String) ?? []
@@ -603,7 +610,35 @@ export function OrderSupplierSidebar({
     return () => document.removeEventListener("mousedown", h);
   }, [openCal]);
 
-  // Apply preset date filter
+  // Đẩy chi nhánh mặc định (theo header) lên filters ngay khi mount, để danh
+  // sách lọc đúng chi nhánh đang chọn mà không cần user thao tác.
+  useEffect(() => {
+    if (selectedBranch && filters.branchId === undefined && branchValue) {
+      setFilters({ branchId: Number(branchValue) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh ở header
+  // thì cập nhật bộ lọc theo chi nhánh đó. Skip lần mount đầu.
+  const isFirstBranchSyncRef = useRef(true);
+  const lastSyncedBranchIdRef = useRef<number | null>(
+    selectedBranch?.id ?? null
+  );
+  useEffect(() => {
+    const cur = selectedBranch?.id ?? null;
+    if (isFirstBranchSyncRef.current) {
+      isFirstBranchSyncRef.current = false;
+      lastSyncedBranchIdRef.current = cur;
+      return;
+    }
+    if (cur !== lastSyncedBranchIdRef.current) {
+      lastSyncedBranchIdRef.current = cur;
+      setBranchValue(cur ? String(cur) : "");
+      setFilters({ branchId: cur ?? undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranch?.id]);
   const applyPreset = (preset: string) => {
     const range = getDateRangeFromPreset(preset);
     if (!range) {
@@ -637,7 +672,8 @@ export function OrderSupplierSidebar({
   ]);
 
   const resetFilters = () => {
-    setBranchValue("");
+    const headerBranchId = selectedBranch?.id;
+    setBranchValue(headerBranchId ? String(headerBranchId) : "");
     setStatusValues([]);
     setCreatedByValue("");
     setUserValue("");
@@ -646,7 +682,7 @@ export function OrderSupplierSidebar({
     setFromDate("");
     setToDate("");
     setFilters({
-      branchId: undefined,
+      branchId: headerBranchId ?? undefined,
       status: undefined,
       createdById: undefined,
       userId: undefined,

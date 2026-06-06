@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useBranchStore } from "@/lib/store/branch";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { ChevronDown, Calendar, X, Check, Search } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -276,8 +277,11 @@ export function InventoryChecksSidebar({
 }: InventoryChecksSidebarProps) {
   const { data: branches } = useBranches();
   const { data: users } = useUsersForFilter();
+  const { selectedBranch } = useBranchStore();
 
-  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>(() =>
+    selectedBranch ? [selectedBranch.id] : []
+  );
   const [creatorId, setCreatorId] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -320,6 +324,29 @@ export function InventoryChecksSidebar({
     return () => document.removeEventListener("mousedown", h);
   }, [branchDropdownOpen]);
 
+  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh ở header
+  // thì tick lại chi nhánh đó. Skip lần mount đầu. Chỉ ghi đè khi đang ở chế độ
+  // "bám theo header" (đúng 1 chi nhánh); giữ nguyên nếu user lọc nhiều chi
+  // nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng).
+  const isFirstBranchSyncRef = useRef(true);
+  const lastSyncedBranchIdRef = useRef<number | null>(
+    selectedBranch?.id ?? null
+  );
+  useEffect(() => {
+    const cur = selectedBranch?.id ?? null;
+    if (isFirstBranchSyncRef.current) {
+      isFirstBranchSyncRef.current = false;
+      lastSyncedBranchIdRef.current = cur;
+      return;
+    }
+    if (cur !== lastSyncedBranchIdRef.current) {
+      lastSyncedBranchIdRef.current = cur;
+      setSelectedBranchIds((prev) =>
+        prev.length === 1 ? (cur ? [cur] : []) : prev
+      );
+    }
+  }, [selectedBranch?.id]);
+
   const openCalendar = (type: "from" | "to") => {
     if (openCal === type) {
       setOpenCal(null);
@@ -355,7 +382,7 @@ export function InventoryChecksSidebar({
   }, [selectedBranchIds, creatorId, fromDate, toDate]);
 
   const clearAll = () => {
-    setSelectedBranchIds([]);
+    setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setCreatorId("");
     setFromDate("");
     setToDate("");

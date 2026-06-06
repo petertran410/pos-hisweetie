@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useBranchStore } from "@/lib/store/branch";
 import {
   ChevronDown,
   ChevronLeft,
@@ -358,8 +359,11 @@ export function ProductionSidebar({
 }: ProductionSidebarProps) {
   const { data: branchesData } = useBranches();
   const branches = (branchesData || []).filter((b) => b.isActive);
+  const { selectedBranch } = useBranchStore();
 
-  const [branchIds, setBranchIds] = useState<number[]>([]);
+  const [branchIds, setBranchIds] = useState<number[]>(() =>
+    selectedBranch ? [selectedBranch.id] : []
+  );
   const [statusList, setStatusList] = useState<number[]>([]);
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState("this_month");
@@ -393,6 +397,29 @@ export function ProductionSidebar({
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+
+  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh ở header
+  // thì tick lại chi nhánh đó. Skip lần mount đầu. Chỉ ghi đè khi đang ở chế độ
+  // "bám theo header" (đúng 1 chi nhánh); giữ nguyên nếu user lọc nhiều chi
+  // nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng).
+  const isFirstBranchSyncRef = useRef(true);
+  const lastSyncedBranchIdRef = useRef<number | null>(
+    selectedBranch?.id ?? null
+  );
+  useEffect(() => {
+    const cur = selectedBranch?.id ?? null;
+    if (isFirstBranchSyncRef.current) {
+      isFirstBranchSyncRef.current = false;
+      lastSyncedBranchIdRef.current = cur;
+      return;
+    }
+    if (cur !== lastSyncedBranchIdRef.current) {
+      lastSyncedBranchIdRef.current = cur;
+      setBranchIds((prev) =>
+        prev.length === 1 ? (cur ? [cur] : []) : prev
+      );
+    }
+  }, [selectedBranch?.id]);
 
   // Debounce emit filters
   useEffect(() => {
@@ -430,7 +457,7 @@ export function ProductionSidebar({
   );
 
   const clearAll = () => {
-    setBranchIds([]);
+    setBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setStatusList([]);
     setDateMode("preset");
     setSelectedPreset("this_month");
