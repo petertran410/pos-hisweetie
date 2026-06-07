@@ -257,20 +257,7 @@ export function DashboardMobileView() {
   });
   const taskCounts = useQuery({
     queryKey: ["dash-taskcounts-m", branchId],
-    queryFn: async () => {
-      const [orders, debt, cod, stock] = await Promise.all([
-        dashboardApi.getTasks("orders", branchId, 50),
-        dashboardApi.getTasks("debt", branchId, 50),
-        dashboardApi.getTasks("cod", branchId, 50),
-        dashboardApi.getTasks("stock", branchId, 50),
-      ]);
-      return {
-        orders: orders.length,
-        debt: debt.length,
-        cod: cod.length,
-        stock: stock.length,
-      };
-    },
+    queryFn: () => dashboardApi.getTaskCounts(branchId),
   });
   const activities = useQuery({
     queryKey: ["dash-acts"],

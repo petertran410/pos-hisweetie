@@ -37,6 +37,11 @@ export function vi(n: number): string {
   return Math.round(n).toLocaleString("vi-VN");
 }
 
+/** % kiểu Việt, tối đa 1 chữ số thập phân: 48.4 → "48,4%". */
+export function pct(n: number): string {
+  return n.toLocaleString("vi-VN", { maximumFractionDigits: 1 }) + "%";
+}
+
 /** % delta có dấu, format kiểu +12,4%. */
 export function deltaPct(n: number): string {
   const s = n.toLocaleString("vi-VN", { maximumFractionDigits: 1 });

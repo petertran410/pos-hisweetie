@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { useBankAccounts } from "@/lib/hooks/useBankAccounts";
 import {
   ChevronDown,
   ChevronLeft,
@@ -523,6 +524,7 @@ export function CashFlowsSidebar({
 }: CashFlowsSidebarProps) {
   const { data: branches } = useBranches();
   const { data: users } = useUsersForFilter();
+  const { data: bankAccounts } = useBankAccounts();
 
   const activeBranches = useMemo(
     () => (branches ?? []).filter((b) => b.isActive),
@@ -535,6 +537,7 @@ export function CashFlowsSidebar({
   const [branchId, setBranchId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedMethod, setSelectedMethod] = useState("");
+  const [selectedAccountId, setSelectedAccountId] = useState("");
   const [creatorId, setCreatorId] = useState("");
   const [partnerName, setPartnerName] = useState("");
 
@@ -555,6 +558,7 @@ export function CashFlowsSidebar({
     if (selectedType) n++;
     if (selectedStatus) n++;
     if (selectedMethod) n++;
+    if (selectedAccountId) n++;
     if (creatorId) n++;
     if (partnerName) n++;
     if (selectedPreset !== "all_time" || dateMode === "custom") n++;
@@ -564,6 +568,7 @@ export function CashFlowsSidebar({
     selectedType,
     selectedStatus,
     selectedMethod,
+    selectedAccountId,
     creatorId,
     partnerName,
     selectedPreset,
@@ -595,6 +600,7 @@ export function CashFlowsSidebar({
       if (selectedStatus) f.status = parseInt(selectedStatus);
 
       if (selectedMethod) f.method = [selectedMethod];
+      if (selectedAccountId) f.accountId = parseInt(selectedAccountId);
       if (creatorId) f.userId = parseInt(creatorId);
       if (partnerName) f.partnerName = partnerName;
 
@@ -617,6 +623,7 @@ export function CashFlowsSidebar({
     selectedType,
     selectedStatus,
     selectedMethod,
+    selectedAccountId,
     creatorId,
     partnerName,
     dateMode,
@@ -630,6 +637,7 @@ export function CashFlowsSidebar({
     setSelectedType("");
     setSelectedStatus("");
     setSelectedMethod("");
+    setSelectedAccountId("");
     setCreatorId("");
     setPartnerName("");
     setDateMode("preset");
@@ -830,6 +838,24 @@ export function CashFlowsSidebar({
             value={selectedMethod}
             placeholder="Tất cả"
             onChange={setSelectedMethod}
+          />
+        </div>
+
+        {/* ── Tài khoản ngân hàng ── */}
+        <div>
+          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
+            Tài khoản ngân hàng
+          </label>
+          <SimpleDropdown
+            options={(Array.isArray(bankAccounts) ? bankAccounts : []).map(
+              (acc: any) => ({
+                value: String(acc.id),
+                label: `${acc.bankCode || acc.bankName} - ${acc.accountNumber}`,
+              })
+            )}
+            value={selectedAccountId}
+            placeholder="Tất cả"
+            onChange={setSelectedAccountId}
           />
         </div>
 

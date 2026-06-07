@@ -145,27 +145,14 @@ export default function Home() {
   const tasks = useQuery({
     queryKey: ["dash-tasks", taskTab, branchId, taskStatus],
     queryFn: () =>
-      dashboardApi.getTasks(taskTab, branchId, 20, taskStatus || undefined),
+      dashboardApi.getTasks(taskTab, branchId, 500, taskStatus || undefined),
     enabled,
   });
 
-  // Đếm cho các tab task (gọi song song, không phụ thuộc tab đang xem).
+  // Đếm tổng thật cho badge các tab (count() phía backend, không cap theo limit).
   const taskCounts = useQuery({
     queryKey: ["dash-taskcounts", branchId],
-    queryFn: async () => {
-      const [orders, debt, cod, stock] = await Promise.all([
-        dashboardApi.getTasks("orders", branchId, 50),
-        dashboardApi.getTasks("debt", branchId, 50),
-        dashboardApi.getTasks("cod", branchId, 50),
-        dashboardApi.getTasks("stock", branchId, 50),
-      ]);
-      return {
-        orders: orders.length,
-        debt: debt.length,
-        cod: cod.length,
-        stock: stock.length,
-      };
-    },
+    queryFn: () => dashboardApi.getTaskCounts(branchId),
     enabled,
   });
 

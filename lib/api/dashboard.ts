@@ -239,6 +239,12 @@ export const dashboardApi = {
     return apiClient.get("/dashboard/tasks", { type, branchId, limit, status });
   },
 
+  getTaskCounts: (
+    branchId?: number
+  ): Promise<{ orders: number; debt: number; cod: number; stock: number }> => {
+    return apiClient.get("/dashboard/task-counts", { branchId });
+  },
+
   getTopCustomers: (limit = 10): Promise<TopCustomer[]> => {
     return apiClient.get("/dashboard/top-customers", { limit });
   },
