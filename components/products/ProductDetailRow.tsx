@@ -167,13 +167,24 @@ export function ProductDetailRow({
       scrollEl = scrollEl.parentElement;
     }
     if (!scrollEl) return;
+    let rafId = 0;
     const setWidth = () => {
-      el.style.width = `${scrollEl!.clientWidth}px`;
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const next = `${scrollEl!.clientWidth}px`;
+        // Chỉ ghi khi width thực sự đổi → cắt vòng lặp phản hồi của
+        // ResizeObserver (ghi width làm reflow → bật/tắt scrollbar dọc →
+        // clientWidth đổi → observer chạy lại → lắc liên tục).
+        if (el.style.width !== next) el.style.width = next;
+      });
     };
     setWidth();
     const ro = new ResizeObserver(setWidth);
     ro.observe(scrollEl);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
   }, [product]);
 
   if (isLoading || !product) {
