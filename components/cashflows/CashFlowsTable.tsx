@@ -113,6 +113,13 @@ const DEFAULT_COLUMNS: ColumnConfig<CashFlow>[] = [
     render: (cf) => METHOD_TEXT[cf.method] || cf.method || "-",
   },
   {
+    key: "sepayReferenceCode",
+    label: "Mã tham chiếu",
+    visible: true,
+    width: "150px",
+    render: (cf) => cf.sepayReferenceCode || "-",
+  },
+  {
     key: "partnerName",
     label: "Người nộp/nhận",
     visible: true,

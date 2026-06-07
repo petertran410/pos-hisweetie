@@ -49,6 +49,10 @@ export function UserPermissionModal({
   const [activeTab, setActiveTab] = useState<"role" | "other">("role");
   const [canViewOtherStaff, setCanViewOtherStaff] = useState(false);
   const [canViewOnlyOwnPackings, setCanViewOnlyOwnPackings] = useState(false);
+  const [
+    canViewOnlyOwnLoadingInvoices,
+    setCanViewOnlyOwnLoadingInvoices,
+  ] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState<number>(0);
   const [localActive, setLocalActive] = useState<number[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
@@ -141,6 +145,9 @@ export function UserPermissionModal({
     if (user) {
       setCanViewOtherStaff(user.canViewOtherStaffData || false);
       setCanViewOnlyOwnPackings(user.canViewOnlyOwnPackings || false);
+      setCanViewOnlyOwnLoadingInvoices(
+        user.canViewOnlyOwnLoadingInvoices || false
+      );
     }
   }, [user]);
 
@@ -324,6 +331,7 @@ export function UserPermissionModal({
         data: {
           canViewOtherStaffData: canViewOtherStaff,
           canViewOnlyOwnPackings: canViewOnlyOwnPackings,
+          canViewOnlyOwnLoadingInvoices: canViewOnlyOwnLoadingInvoices,
         },
       });
       toast.success("Cập nhật phân quyền khác thành công");
@@ -782,6 +790,31 @@ export function UserPermissionModal({
                       Khi bật, nhân viên chỉ thấy được các báo đơn (Giao hàng,
                       Đóng hàng, Loading) do chính mình tạo trong trang Báo
                       đơn. Tắt để xem tất cả báo đơn của chi nhánh.
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <div className="border rounded-lg p-4 mt-3">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={canViewOnlyOwnLoadingInvoices}
+                    onChange={(e) => {
+                      setCanViewOnlyOwnLoadingInvoices(e.target.checked);
+                      setHasChanges(true);
+                    }}
+                    className="w-5 h-5 mt-0.5 rounded"
+                  />
+                  <div>
+                    <div className="font-medium text-sm text-gray-900">
+                      Chỉ xem hóa đơn loading do chính mình loading
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Khi bật, ở danh sách "Đơn chờ giao" nhân viên chỉ thấy
+                      hóa đơn nằm trong phiếu loading mà chính mình là người
+                      loading. Tắt để xem tất cả hóa đơn chờ giao của chi
+                      nhánh.
                     </div>
                   </div>
                 </label>

@@ -42,6 +42,8 @@ export function useInvoicesForPacking(params?: {
 export function useDeliveryOverview(params?: {
   branchId?: number;
   date?: string;
+  fromDate?: string;
+  toDate?: string;
   search?: string;
   pageSize?: number;
   currentItem?: number;

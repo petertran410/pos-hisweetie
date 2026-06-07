@@ -181,6 +181,28 @@ export function PackingSlipForm({
     [branches]
   );
 
+  // Backfill cache cho các hóa đơn được chọn sẵn (preselect) nhưng chưa có
+  // thông tin để hiển thị chip. Lấy từ list server trả về theo branch.
+  useEffect(() => {
+    const missing = selectedInvoiceIds.filter((id) => !selectedInvoiceCache[id]);
+    if (missing.length === 0 || availableInvoices.length === 0) return;
+    const found: Record<number, InvoiceLite> = {};
+    for (const id of missing) {
+      const inv = availableInvoices.find((i) => i.id === id);
+      if (inv) {
+        found[id] = {
+          id: inv.id,
+          code: inv.code,
+          grandTotal: inv.grandTotal,
+          customer: inv.customer ?? null,
+        };
+      }
+    }
+    if (Object.keys(found).length > 0) {
+      setSelectedInvoiceCache((prev) => ({ ...prev, ...found }));
+    }
+  }, [selectedInvoiceIds, selectedInvoiceCache, availableInvoices]);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (

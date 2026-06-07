@@ -19,6 +19,7 @@ export interface CashFlow {
   address?: string;
   wardName?: string;
   description?: string;
+  sepayReferenceCode?: string;
   status: number;
   statusValue?: string;
   usedForFinancialReporting?: number;

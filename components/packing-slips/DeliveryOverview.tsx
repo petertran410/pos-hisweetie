@@ -13,9 +13,13 @@ import {
   Package,
   ChevronLeft,
   ChevronRight,
+  Truck,
 } from "lucide-react";
+import { toast } from "sonner";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { useDeliveryOverview } from "@/lib/hooks/useInvoices";
+import { useCreatePackingSlip } from "@/lib/hooks/usePackingSlips";
+import { PackingSlipForm } from "@/components/packing-slips/PackingSlipForm";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 
@@ -24,7 +28,7 @@ const STATUS_BADGE: Record<number, { text: string; className: string }> = {
   3: { text: "Đang xử lý", className: "bg-amber-100 text-amber-700" },
   4: { text: "Không giao được", className: "bg-red-100 text-red-700" },
   5: { text: "Đóng hàng", className: "bg-blue-100 text-blue-700" },
-  6: { text: "Lấy hàng", className: "bg-purple-100 text-purple-700" },
+  6: { text: "Loading", className: "bg-purple-100 text-purple-700" },
 };
 
 function StatusBadge({
@@ -46,13 +50,60 @@ function StatusBadge({
 }
 
 const PAGE_SIZE_DESKTOP = 15;
-const PAGE_SIZE_MOBILE = 5;
+const PAGE_SIZE_MOBILE = 3;
+
+type DatePreset = "today" | "yesterday" | "7days" | "month";
+
+const DATE_PRESETS: { value: DatePreset; label: string }[] = [
+  { value: "today", label: "Hôm nay" },
+  { value: "yesterday", label: "Hôm qua" },
+  { value: "7days", label: "7 ngày" },
+  { value: "month", label: "Tháng này" },
+];
+
+// Trả về { fromDate, toDate } dạng YYYY-MM-DD theo preset (giờ local trình duyệt)
+function getDateRange(preset: DatePreset): {
+  fromDate: string;
+  toDate: string;
+} {
+  const fmt = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  switch (preset) {
+    case "yesterday": {
+      const y = new Date(today);
+      y.setDate(y.getDate() - 1);
+      return { fromDate: fmt(y), toDate: fmt(y) };
+    }
+    case "7days": {
+      const from = new Date(today);
+      from.setDate(from.getDate() - 6);
+      return { fromDate: fmt(from), toDate: fmt(today) };
+    }
+    case "month": {
+      const from = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { fromDate: fmt(from), toDate: fmt(today) };
+    }
+    case "today":
+    default:
+      return { fromDate: fmt(today), toDate: fmt(today) };
+  }
+}
 
 export function DeliveryOverview() {
   const { selectedBranch } = useBranchStore();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [datePreset, setDatePreset] = useState<DatePreset>("today");
+
+  const { fromDate, toDate } = getDateRange(datePreset);
 
   // Mobile (dưới sm = 640px) chỉ hiển thị 3 dòng, desktop 15 dòng
   const [pageSize, setPageSize] = useState(PAGE_SIZE_DESKTOP);
@@ -70,13 +121,15 @@ export function DeliveryOverview() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Reset trang khi đổi search / chi nhánh / page size
+  // Reset trang khi đổi search / chi nhánh / page size / khoảng ngày
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, selectedBranch?.id, pageSize]);
+  }, [debouncedSearch, selectedBranch?.id, pageSize, datePreset]);
 
   const { data, isLoading } = useDeliveryOverview({
     branchId: selectedBranch?.id || undefined,
+    fromDate,
+    toDate,
     search: debouncedSearch || undefined,
     pageSize,
     currentItem: (page - 1) * pageSize,
@@ -87,8 +140,88 @@ export function DeliveryOverview() {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+  // ── Chọn hóa đơn để báo giao hàng ──
+  type Row = (typeof rows)[number];
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  // Cache thông tin row đã chọn (để giữ branchId khi đổi trang/lọc)
+  const [selectedCache, setSelectedCache] = useState<Record<number, Row>>({});
+  const [showForm, setShowForm] = useState(false);
+  const createPackingSlip = useCreatePackingSlip();
+
+  // Bỏ chọn khi đổi chi nhánh (branchId khác nhau không gộp 1 phiếu được)
+  useEffect(() => {
+    setSelectedIds([]);
+    setSelectedCache({});
+  }, [selectedBranch?.id]);
+
+  const toggleSelect = (row: Row) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(row.id)) {
+        return prev.filter((id) => id !== row.id);
+      }
+      // Chỉ cho chọn hóa đơn cùng chi nhánh
+      const firstId = prev[0];
+      if (firstId != null) {
+        const firstBranch = selectedCache[firstId]?.branchId;
+        if (firstBranch != null && firstBranch !== row.branchId) {
+          toast.error("Chỉ chọn được hóa đơn cùng chi nhánh");
+          return prev;
+        }
+      }
+      setSelectedCache((c) => ({ ...c, [row.id]: row }));
+      return [...prev, row.id];
+    });
+  };
+
+  const selectedBranchId = (() => {
+    const firstId = selectedIds[0];
+    if (firstId == null) return null;
+    return selectedCache[firstId]?.branchId ?? null;
+  })();
+
+  const handleProcess = () => {
+    if (selectedIds.length === 0) {
+      toast.error("Vui lòng chọn ít nhất 1 hóa đơn");
+      return;
+    }
+    setShowForm(true);
+  };
+
+  const handleSubmit = async (formData: any) => {
+    try {
+      await createPackingSlip.mutateAsync(formData);
+      toast.success("Tạo giao hàng thành công");
+      setShowForm(false);
+      setSelectedIds([]);
+      setSelectedCache({});
+    } catch {
+      toast.error("Tạo giao hàng thất bại");
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* ── Bộ lọc khoảng ngày ── */}
+      <div
+        className="flex gap-2 overflow-x-auto -mx-1 px-1"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        {DATE_PRESETS.map((p) => {
+          const active = datePreset === p.value;
+          return (
+            <button
+              key={p.value}
+              onClick={() => setDatePreset(p.value)}
+              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
+                active
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+              }`}>
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* ── 3 ô thống kê ── */}
       {/* Mobile: 3 ô nhỏ nằm ngang, gọn */}
       <div className="grid grid-cols-3 gap-2 sm:hidden">
@@ -152,7 +285,7 @@ export function DeliveryOverview() {
         {/* Header + search */}
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
           <h3 className="text-sm font-semibold text-gray-900">
-            Đơn chưa giao{" "}
+            Đơn chờ giao (lấy hàng){" "}
             <span className="text-gray-400 font-normal">({total})</span>
           </h3>
           <div className="relative w-44 sm:w-64">
@@ -182,9 +315,7 @@ export function DeliveryOverview() {
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Package className="w-10 h-10 text-gray-300 mb-2" />
-            <span className="text-gray-400 text-sm">
-              Không có đơn chưa giao
-            </span>
+            <span className="text-gray-400 text-sm">Không có đơn chờ giao</span>
           </div>
         ) : (
           <>
@@ -192,6 +323,7 @@ export function DeliveryOverview() {
             <table className="hidden sm:table w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-100">
+                  <th className="px-4 py-2.5 font-medium w-10"></th>
                   <th className="px-4 py-2.5 font-medium">Hóa đơn</th>
                   <th className="px-4 py-2.5 font-medium">Tên khách hàng</th>
                   <th className="px-4 py-2.5 font-medium text-right">
@@ -200,55 +332,87 @@ export function DeliveryOverview() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-gray-50 hover:bg-gray-50/60">
-                    <td className="px-4 py-2.5">
-                      <span className="font-semibold text-blue-600">
-                        {row.code}
-                      </span>
-                      <span className="ml-2 text-xs text-gray-400">
-                        {formatCurrency(row.grandTotal)}đ
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-gray-700">
-                      {row.customer?.name || "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <StatusBadge
-                        status={row.status}
-                        statusValue={row.statusValue}
-                      />
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((row) => {
+                  const checked = selectedIds.includes(row.id);
+                  return (
+                    <tr
+                      key={row.id}
+                      onClick={() => toggleSelect(row)}
+                      className={`border-b border-gray-50 cursor-pointer ${
+                        checked ? "bg-blue-50/70" : "hover:bg-gray-50/60"
+                      }`}>
+                      <td className="px-4 py-2.5">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSelect(row)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className="font-semibold text-blue-600">
+                          {row.code}
+                        </span>
+                        <span className="ml-2 text-xs text-gray-400">
+                          {formatCurrency(row.grandTotal)}đ
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-700">
+                        {row.customer?.name || "—"}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <StatusBadge
+                          status={row.status}
+                          statusValue={row.statusValue}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
             {/* Mobile: card list */}
             <div className="sm:hidden divide-y divide-gray-50">
-              {rows.map((row) => (
-                <div key={row.id} className="px-4 py-3">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="font-semibold text-blue-600 text-sm">
-                      {row.code}
-                    </span>
-                    <StatusBadge
-                      status={row.status}
-                      statusValue={row.statusValue}
+              {rows.map((row) => {
+                const checked = selectedIds.includes(row.id);
+                return (
+                  <div
+                    key={row.id}
+                    onClick={() => toggleSelect(row)}
+                    className={`flex items-start gap-3 px-4 py-3 cursor-pointer ${
+                      checked ? "bg-blue-50/70" : ""
+                    }`}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleSelect(row)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-1 cursor-pointer flex-shrink-0"
                     />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-semibold text-blue-600 text-sm">
+                          {row.code}
+                        </span>
+                        <StatusBadge
+                          status={row.status}
+                          statusValue={row.statusValue}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-gray-700 truncate">
+                          {row.customer?.name || "—"}
+                        </span>
+                        <span className="text-xs text-gray-400 flex-shrink-0">
+                          {formatCurrency(row.grandTotal)}đ
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-gray-700 truncate">
-                      {row.customer?.name || "—"}
-                    </span>
-                    <span className="text-xs text-gray-400 flex-shrink-0">
-                      {formatCurrency(row.grandTotal)}đ
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Pagination */}
@@ -276,6 +440,35 @@ export function DeliveryOverview() {
           </>
         )}
       </div>
+
+      {/* ── Thanh xử lý giao hàng (hiện khi đã chọn) ── */}
+      {selectedIds.length > 0 && (
+        <div className="sticky bottom-0 z-10 bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 flex items-center justify-between gap-3">
+          <span className="text-sm text-gray-700">
+            Đã chọn{" "}
+            <span className="font-semibold text-blue-600">
+              {selectedIds.length}
+            </span>{" "}
+            hóa đơn
+          </span>
+          <button
+            onClick={handleProcess}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-[0.98] text-sm font-semibold transition-all">
+            <Truck className="w-4 h-4" />
+            Xử lý giao hàng
+          </button>
+        </div>
+      )}
+
+      {/* ── Form giao hàng (fill sẵn hóa đơn đã chọn) ── */}
+      {showForm && (
+        <PackingSlipForm
+          preselectedInvoiceIds={selectedIds}
+          preselectedBranchId={selectedBranchId}
+          onClose={() => setShowForm(false)}
+          onSubmit={handleSubmit}
+        />
+      )}
     </div>
   );
 }

@@ -423,6 +423,20 @@ export function CashFlowDetailRow({
                       )}
                     </div>
 
+                    {/* Mã tham chiếu Sepay (chỉ hiện khi có) */}
+                    {cashFlow.sepayReferenceCode && (
+                      <div className="grid grid-cols-4 gap-x-5">
+                        <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                          <label className="dt-field-label">
+                            Mã tham chiếu:
+                          </label>
+                          <span className="dt-field-value">
+                            {cashFlow.sepayReferenceCode}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Row 3: Đối tượng */}
                     {partnerName && (
                       <div className="grid grid-cols-4 gap-5">
