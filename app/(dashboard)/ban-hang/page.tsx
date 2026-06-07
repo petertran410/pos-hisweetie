@@ -1707,7 +1707,6 @@ export default function BanHangPage() {
               amount: payment.amount,
               paymentMethod: payment.method,
               accountId: payment.accountId,
-              description: `Thanh toán bổ sung - ${payment.method}`,
             });
           }
         }
@@ -1836,7 +1835,6 @@ export default function BanHangPage() {
             amount: payment.amount,
             paymentMethod: payment.method,
             accountId: payment.accountId,
-            notes: `Thanh toán bổ sung - ${payment.method}`,
           });
         }
       }
@@ -1939,6 +1937,16 @@ export default function BanHangPage() {
       documentData.purchaseDate = new Date().toISOString();
       documentData.description = activeTab.orderNote;
       documentData.paidAmount = Number(actualPayment) || 0;
+      if (actualPayment > 0) {
+        documentData.payments =
+          activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+            ? activeTab.paymentMethods.map((p) => ({
+                method: p.method,
+                amount: p.amount,
+                accountId: p.accountId,
+              }))
+            : [{ method: "cash", amount: actualPayment }];
+      }
       documentData.items = activeTab.cartItems.map((item) => {
         const price = Number(item.price);
         const quantity = Number(item.quantity);
@@ -1989,7 +1997,7 @@ export default function BanHangPage() {
                 orderId: result.order.id,
                 amount: payment.amount,
                 paymentMethod: payment.method,
-                description: `Thanh toán khi tạo đơn - ${payment.method}`,
+                accountId: payment.accountId,
               });
             }
           }

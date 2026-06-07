@@ -192,7 +192,9 @@ export function MultiPaymentModal({
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
             {(
               Object.keys(methodLabels) as Array<keyof typeof methodLabels>
-            ).map((method) => (
+            )
+              .filter((method) => method === "cash" || method === "transfer")
+              .map((method) => (
               <button
                 key={method}
                 onClick={() => handleMethodClick(method)}

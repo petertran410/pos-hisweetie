@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PackingSlipsTable } from "@/components/packing-slips/PackingSlipsTable";
 import { PackingSlipsSidebar } from "@/components/packing-slips/PackingSlipsSidebar";
 import { PackingSlipsMobileView } from "@/components/packing-slips/PackingSlipsMobileView";
+import { DeliveryOverview } from "@/components/packing-slips/DeliveryOverview";
 import { PackingSlipForm } from "@/components/packing-slips/PackingSlipForm";
 import { PackingHangForm } from "@/components/packing-hangs/PackingHangForm";
 import { PackingLoadingForm } from "@/components/packing-loadings/PackingLoadingForm";
@@ -251,8 +252,13 @@ export default function BaoDonPage() {
 
   return (
     <PagePermissionGuard resource="packing_slips" action="view">
-      {/* ── Desktop (md+) — giữ nguyên ── */}
-      <div className="hidden md:flex h-full border-t bg-gray-50">
+      {/* ── Desktop (md+) ── */}
+      <div className="hidden md:flex md:flex-col h-full border-t bg-gray-50 overflow-y-auto">
+        {/* Tổng quan giao hàng hôm nay */}
+        <div className="px-4 pt-4">
+          <DeliveryOverview />
+        </div>
+        <div className="flex flex-1 min-h-[600px]">
         <PackingSlipsSidebar onFiltersChange={handleFiltersChange} />
         <PackingSlipsTable
           packingSlips={data?.data || []}
@@ -298,6 +304,7 @@ export default function BaoDonPage() {
             onSubmit={handleLoadingSubmit}
           />
         )}
+        </div>
       </div>
 
       {/* ── Mobile (dưới md) ── */}

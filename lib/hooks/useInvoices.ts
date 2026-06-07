@@ -35,6 +35,23 @@ export function useInvoicesForPacking(params?: {
   });
 }
 
+/**
+ * Tổng quan giao hàng trong ngày cho trang báo đơn:
+ * 3 ô thống kê (total/delivered/pending) + danh sách hóa đơn chưa giao.
+ */
+export function useDeliveryOverview(params?: {
+  branchId?: number;
+  date?: string;
+  search?: string;
+  pageSize?: number;
+  currentItem?: number;
+}) {
+  return useQuery({
+    queryKey: ["invoices", "delivery-overview", params],
+    queryFn: () => invoicesApi.getDeliveryOverview(params),
+  });
+}
+
 /** Danh sách hóa đơn VAT (dữ liệu Misa) cho trang /don-hang/hoa-don-vat */
 export function useInvoicesVat(params?: any) {
   return useQuery({

@@ -136,6 +136,27 @@ export const invoicesApi = {
   }): Promise<{ data: Invoice[]; total: number; page: number; limit: number }> => {
     return apiClient.get("/invoices/for-packing", params);
   },
+  getDeliveryOverview: (params?: {
+    branchId?: number;
+    date?: string;
+    search?: string;
+    pageSize?: number;
+    currentItem?: number;
+  }): Promise<{
+    stats: { total: number; delivered: number; pending: number };
+    data: Array<{
+      id: number;
+      code: string;
+      status: number;
+      statusValue: string | null;
+      grandTotal: number;
+      createdAt: string;
+      customer: { id: number; name: string } | null;
+    }>;
+    total: number;
+  }> => {
+    return apiClient.get("/invoices/delivery-overview", params);
+  },
   getInvoicesVat: (params?: any): Promise<InvoicesVatResponse> => {
     return apiClient.get("/invoices/vat", params);
   },
