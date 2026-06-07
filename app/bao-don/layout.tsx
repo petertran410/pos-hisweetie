@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
+import { DashboardHeader } from "@/components/layout/DashboardHeader";
 
 export default function BaoDonLayout({
   children,
@@ -27,5 +28,10 @@ export default function BaoDonLayout({
     );
   }
 
-  return <>{children}</>;
+  return (
+    <div className="flex flex-col min-h-screen">
+      <DashboardHeader />
+      <main className="flex-1">{children}</main>
+    </div>
+  );
 }
