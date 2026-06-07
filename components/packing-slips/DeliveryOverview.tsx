@@ -354,9 +354,9 @@ export function DeliveryOverview() {
                         <span className="font-semibold text-blue-600">
                           {row.code}
                         </span>
-                        <span className="ml-2 text-xs text-gray-400">
+                        {/* <span className="ml-2 text-xs text-gray-400">
                           {formatCurrency(row.grandTotal)}đ
-                        </span>
+                        </span> */}
                       </td>
                       <td className="px-4 py-2.5 text-gray-700">
                         {row.customer?.name || "—"}
@@ -405,9 +405,9 @@ export function DeliveryOverview() {
                         <span className="text-sm text-gray-700 truncate">
                           {row.customer?.name || "—"}
                         </span>
-                        <span className="text-xs text-gray-400 flex-shrink-0">
+                        {/* <span className="text-xs text-gray-400 flex-shrink-0">
                           {formatCurrency(row.grandTotal)}đ
-                        </span>
+                        </span> */}
                       </div>
                     </div>
                   </div>
@@ -465,6 +465,15 @@ export function DeliveryOverview() {
         <PackingSlipForm
           preselectedInvoiceIds={selectedIds}
           preselectedBranchId={selectedBranchId}
+          preselectedInvoices={selectedIds
+            .map((id) => selectedCache[id])
+            .filter(Boolean)
+            .map((r) => ({
+              id: r.id,
+              code: r.code,
+              grandTotal: r.grandTotal,
+              customer: r.customer ?? null,
+            }))}
           onClose={() => setShowForm(false)}
           onSubmit={handleSubmit}
         />

@@ -16,6 +16,12 @@ export interface PackingSlip {
   createdBy: number;
   createdAt: string;
   updatedAt: string;
+  cancelledAt?: string | null;
+  cancelledById?: number | null;
+  cancelledBy?: {
+    id: number;
+    name: string;
+  } | null;
   type?: string;
   branch?: {
     id: number;

@@ -103,6 +103,20 @@ export function useOpeningBalance(filters: any) {
   });
 }
 
+export function useCashFlowSummary(filters: any) {
+  return useQuery({
+    queryKey: ["cashflows", "summary", filters],
+    queryFn: async (): Promise<{
+      totalReceipt: number;
+      totalPayment: number;
+    }> => {
+      const response = await apiClient.get("/cashflows/summary", filters);
+      return response as { totalReceipt: number; totalPayment: number };
+    },
+    enabled: !!filters,
+  });
+}
+
 export function useExportCashFlows() {
   const [isExportingOverview, setIsExportingOverview] = useState(false);
 

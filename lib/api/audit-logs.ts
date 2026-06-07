@@ -8,6 +8,7 @@ export const auditLogsApi = {
     actionCode?: string;
     category?: string;
     severity?: string;
+    search?: string;
     startDate?: string;
     endDate?: string;
     page?: number;

@@ -83,7 +83,17 @@ export function useDeletePackingLoading() {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
-      if (!res.ok) throw new Error("Failed to delete packing loading");
+      if (!res.ok) {
+        let msg = "Xóa phiếu loading thất bại";
+        try {
+          const j = await res.json();
+          const m = j?.message;
+          if (typeof m === "string") msg = m;
+          else if (Array.isArray(m)) msg = m.join(", ");
+          else if (typeof m?.message === "string") msg = m.message;
+        } catch {}
+        throw new Error(msg);
+      }
       return res.json();
     },
     onSuccess: () => {

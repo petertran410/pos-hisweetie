@@ -77,11 +77,14 @@ export function InvoicePackingSlipsTab({
       ...item,
       type: "giao-hang",
     })),
-  ].sort((a, b) => {
-    const orderDiff = (TYPE_ORDER[a.type] ?? 99) - (TYPE_ORDER[b.type] ?? 99);
-    if (orderDiff !== 0) return orderDiff;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  ]
+    // Ẩn các phiếu đã hủy khỏi lịch sử giao hàng
+    .filter((item: any) => !item.cancelledAt)
+    .sort((a, b) => {
+      const orderDiff = (TYPE_ORDER[a.type] ?? 99) - (TYPE_ORDER[b.type] ?? 99);
+      if (orderDiff !== 0) return orderDiff;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
   if (allItems.length === 0) {
     return (

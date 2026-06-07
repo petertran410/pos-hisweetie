@@ -15,12 +15,21 @@ import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import { toast } from "sonner";
 
+interface PreselectedInvoiceLite {
+  id: number;
+  code: string;
+  grandTotal: number;
+  customer?: { id: number; name: string } | null;
+}
+
 interface PackingSlipFormProps {
   packingSlip?: PackingSlip;
   onClose: () => void;
   onSubmit: (data: any) => void;
   preselectedInvoiceIds?: number[];
   preselectedBranchId?: number | null;
+  /** Thông tin hóa đơn chọn sẵn để hiển thị chip ngay, không phụ thuộc fetch lại */
+  preselectedInvoices?: PreselectedInvoiceLite[];
 }
 
 export function PackingSlipForm({
@@ -29,6 +38,7 @@ export function PackingSlipForm({
   onSubmit,
   preselectedInvoiceIds = [],
   preselectedBranchId = null,
+  preselectedInvoices = [],
 }: PackingSlipFormProps) {
   const { data: branches } = useBranches();
   const [branchId, setBranchId] = useState(
@@ -57,6 +67,17 @@ export function PackingSlipForm({
           code: i.invoice.code,
           grandTotal: i.invoice.grandTotal,
           customer: i.invoice.customer ?? null,
+        };
+      }
+    });
+    // Seed từ hóa đơn chọn sẵn (preselect) để chip hiển thị ngay
+    preselectedInvoices.forEach((inv) => {
+      if (!init[inv.id]) {
+        init[inv.id] = {
+          id: inv.id,
+          code: inv.code,
+          grandTotal: inv.grandTotal,
+          customer: inv.customer ?? null,
         };
       }
     });
@@ -184,7 +205,9 @@ export function PackingSlipForm({
   // Backfill cache cho các hóa đơn được chọn sẵn (preselect) nhưng chưa có
   // thông tin để hiển thị chip. Lấy từ list server trả về theo branch.
   useEffect(() => {
-    const missing = selectedInvoiceIds.filter((id) => !selectedInvoiceCache[id]);
+    const missing = selectedInvoiceIds.filter(
+      (id) => !selectedInvoiceCache[id]
+    );
     if (missing.length === 0 || availableInvoices.length === 0) return;
     const found: Record<number, InvoiceLite> = {};
     for (const id of missing) {
@@ -269,9 +292,8 @@ export function PackingSlipForm({
     e.target.value = "";
     setIsUploadingExpense(true);
     try {
-      const { files: uploaded, errors } = await uploadPackingSlipExpenseFiles(
-        fileList
-      );
+      const { files: uploaded, errors } =
+        await uploadPackingSlipExpenseFiles(fileList);
       if (uploaded.length > 0) {
         setExpenseFiles((prev) => [...prev, ...uploaded]);
       }
@@ -493,8 +515,7 @@ export function PackingSlipForm({
                               {invoice.code}
                             </div>
                             <div className="text-xs text-gray-500 truncate">
-                              {invoice.customer?.name} -{" "}
-                              {formatCurrency(invoice.grandTotal)}
+                              {invoice.customer?.name}
                             </div>
                           </div>
                         </label>
@@ -807,9 +828,7 @@ export function PackingSlipForm({
                   </label>
                   <div className="flex flex-wrap gap-3">
                     {expenseFiles.map((file, index) => (
-                      <div
-                        key={index}
-                        className="relative w-24 h-24 group">
+                      <div key={index} className="relative w-24 h-24 group">
                         {isImageFile(file) ? (
                           <img
                             src={file.fileUrl}
@@ -856,9 +875,7 @@ export function PackingSlipForm({
                         disabled={isUploadingExpense}
                       />
                       <Upload className="w-6 h-6 text-gray-400" />
-                      <span className="text-xs text-gray-400 mt-1">
-                        Upload
-                      </span>
+                      <span className="text-xs text-gray-400 mt-1">Upload</span>
                     </label>
 
                     <label
@@ -888,9 +905,7 @@ export function PackingSlipForm({
                     </button>
                   </div>
                   {isUploadingExpense && (
-                    <p className="text-sm text-gray-500 mt-2">
-                      Đang upload...
-                    </p>
+                    <p className="text-sm text-gray-500 mt-2">Đang upload...</p>
                   )}
                   <p className="text-xs text-gray-400 mt-2">
                     Hỗ trợ ảnh, PDF, Word, Excel, CSV, TXT, ZIP

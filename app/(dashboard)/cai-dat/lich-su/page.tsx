@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { AuditLogsTable } from "@/components/admin/AuditLogsTable";
 import { useQuery } from "@tanstack/react-query";
 import { auditLogsApi } from "@/lib/api/audit-logs";
-import { Filter, X } from "lucide-react";
+import { Filter, X, Calendar, Search } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { MiniCalendar } from "@/components/ui/MiniCalendar";
 
 const CATEGORY_OPTIONS = [
   { value: "", label: "Tất cả" },
@@ -41,11 +42,44 @@ export default function AuditLogsPage() {
   const [filters, setFilters] = useState({
     category: "",
     severity: "",
+    search: "",
     startDate: "",
     endDate: "",
   });
+  const [openCal, setOpenCal] = useState<"start" | "end" | null>(null);
+  const dateRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!openCal) return;
+    const handler = (e: MouseEvent) => {
+      if (dateRef.current && !dateRef.current.contains(e.target as Node)) {
+        setOpenCal(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openCal]);
+
+  // Debounce ô tìm kiếm để tránh gọi API mỗi lần gõ
+  const [searchInput, setSearchInput] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFilters((prev) => ({ ...prev, search: searchInput }));
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
+  // yyyy-mm-dd → ISO đầu/cuối ngày (local) để lọc trọn ngày, kể cả khi
+  // chọn cùng một ngày cho "Từ ngày" và "Đến ngày".
+  const startDateIso = filters.startDate
+    ? new Date(`${filters.startDate}T00:00:00`).toISOString()
+    : undefined;
+  const endDateIso = filters.endDate
+    ? new Date(`${filters.endDate}T23:59:59.999`).toISOString()
+    : undefined;
 
   const { data, isLoading } = useQuery({
     queryKey: ["audit-logs", filters, page, limit],
@@ -53,15 +87,23 @@ export default function AuditLogsPage() {
       auditLogsApi.getAll({
         category: filters.category || undefined,
         severity: filters.severity || undefined,
-        startDate: filters.startDate || undefined,
-        endDate: filters.endDate || undefined,
+        search: filters.search || undefined,
+        startDate: startDateIso,
+        endDate: endDateIso,
         page,
         limit,
       }),
   });
 
   const handleResetFilters = () => {
-    setFilters({ category: "", severity: "", startDate: "", endDate: "" });
+    setFilters({
+      category: "",
+      severity: "",
+      search: "",
+      startDate: "",
+      endDate: "",
+    });
+    setSearchInput("");
     setPage(1);
   };
 
@@ -90,6 +132,25 @@ export default function AuditLogsPage() {
                 </span>
               )}
             </button>
+
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Tìm theo nội dung, nhân viên, mã chứng từ..."
+                className="w-full pl-9 pr-9 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
 
             {activeFilterCount > 0 && (
               <button
@@ -141,34 +202,97 @@ export default function AuditLogsPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Từ ngày
-                </label>
-                <input
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) => {
-                    setFilters({ ...filters, startDate: e.target.value });
-                    setPage(1);
-                  }}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-              </div>
+              <div ref={dateRef} className="contents">
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Từ ngày
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenCal(openCal === "start" ? null : "start")
+                    }
+                    className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                      filters.startDate
+                        ? "border-blue-300 bg-blue-50 text-gray-800"
+                        : "border-gray-300 text-gray-400"
+                    } ${
+                      openCal === "start"
+                        ? "ring-2 ring-blue-100 border-blue-400"
+                        : "hover:border-gray-400"
+                    }`}>
+                    <span>
+                      {filters.startDate
+                        ? new Date(
+                            filters.startDate + "T00:00:00"
+                          ).toLocaleDateString("vi-VN", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })
+                        : "Chọn ngày"}
+                    </span>
+                    <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </button>
+                  {openCal === "start" && (
+                    <div className="absolute z-50 top-full left-0 w-72">
+                      <MiniCalendar
+                        value={filters.startDate}
+                        onChange={(d) => {
+                          setFilters({ ...filters, startDate: d });
+                          setPage(1);
+                        }}
+                        onClose={() => setOpenCal(null)}
+                      />
+                    </div>
+                  )}
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Đến ngày
-                </label>
-                <input
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) => {
-                    setFilters({ ...filters, endDate: e.target.value });
-                    setPage(1);
-                  }}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Đến ngày
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenCal(openCal === "end" ? null : "end")
+                    }
+                    className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                      filters.endDate
+                        ? "border-blue-300 bg-blue-50 text-gray-800"
+                        : "border-gray-300 text-gray-400"
+                    } ${
+                      openCal === "end"
+                        ? "ring-2 ring-blue-100 border-blue-400"
+                        : "hover:border-gray-400"
+                    }`}>
+                    <span>
+                      {filters.endDate
+                        ? new Date(
+                            filters.endDate + "T00:00:00"
+                          ).toLocaleDateString("vi-VN", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })
+                        : "Chọn ngày"}
+                    </span>
+                    <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </button>
+                  {openCal === "end" && (
+                    <div className="absolute z-50 top-full left-0 w-72">
+                      <MiniCalendar
+                        value={filters.endDate}
+                        onChange={(d) => {
+                          setFilters({ ...filters, endDate: d });
+                          setPage(1);
+                        }}
+                        onClose={() => setOpenCal(null)}
+                        minDate={filters.startDate || undefined}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

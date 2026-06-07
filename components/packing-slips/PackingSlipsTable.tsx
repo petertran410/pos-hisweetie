@@ -407,39 +407,43 @@ export function PackingSlipsTable({
                     </td>
                   ))}
                   <td className="px-6 py-3 text-md text-center whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => onEditClick(slip)}
-                        className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded">
-                        Sửa
-                      </button>
-                      {onResendClick && slip.type === "giao-hang" && (
+                    {slip.cancelledAt ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                        Đã hủy
+                      </span>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => onEditClick(slip)}
+                          className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded">
+                          Sửa
+                        </button>
+                        {onResendClick && slip.type === "giao-hang" && (
+                          <button
+                            onClick={() => {
+                              if (
+                                confirm("Gửi lại tin nhắn Zalo cho báo đơn này?")
+                              ) {
+                                onResendClick(slip.id);
+                              }
+                            }}
+                            className="px-3 py-1 text-sm text-emerald-600 hover:bg-emerald-50 rounded">
+                            Gửi lại
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             if (
-                              confirm(
-                                "Gửi lại tin nhắn Zalo cho báo đơn này?"
-                              )
+                              confirm("Bạn có chắc chắn muốn hủy phiếu này?")
                             ) {
-                              onResendClick(slip.id);
+                              onDeleteClick(slip.id);
                             }
                           }}
-                          className="px-3 py-1 text-sm text-emerald-600 hover:bg-emerald-50 rounded">
-                          Gửi lại
+                          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded">
+                          Hủy phiếu
                         </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          if (
-                            confirm("Bạn có chắc chắn muốn xóa báo đơn này?")
-                          ) {
-                            onDeleteClick(slip.id);
-                          }
-                        }}
-                        className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded">
-                        Xóa
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))
@@ -516,20 +520,17 @@ export function PackingSlipsTable({
                   className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
                   <div>
                     <div className="font-medium">
-                      <CodeLink
-                        entity="invoice"
-                        code={inv.invoice?.code}
-                      />
+                      <CodeLink entity="invoice" code={inv.invoice?.code} />
                     </div>
                     <div className="text-sm text-gray-500">
                       {inv.invoice?.customer?.name || "-"}
                     </div>
                   </div>
-                  <div className="text-right">
+                  {/* <div className="text-right">
                     <div className="font-medium">
                       {formatCurrency(inv.invoice?.grandTotal || 0)}
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               ))}
             </div>

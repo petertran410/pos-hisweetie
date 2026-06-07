@@ -8,6 +8,12 @@ export interface PackingLoading {
   createdBy: number;
   createdAt: string;
   updatedAt: string;
+  cancelledAt?: string | null;
+  cancelledById?: number | null;
+  cancelledBy?: {
+    id: number;
+    name: string;
+  } | null;
   branch?: {
     id: number;
     name: string;

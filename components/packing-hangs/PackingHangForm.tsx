@@ -370,8 +370,7 @@ export function PackingHangForm({
                               {invoice.code}
                             </div>
                             <div className="text-xs text-gray-500 truncate">
-                              {invoice.customer?.name} -{" "}
-                              {formatCurrency(invoice.grandTotal)}
+                              {invoice.customer?.name}
                             </div>
                           </div>
                         </label>

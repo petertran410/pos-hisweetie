@@ -5,6 +5,7 @@ import {
   useCashFlows,
   useExportCashFlows,
   useOpeningBalance,
+  useCashFlowSummary,
 } from "@/lib/hooks/useCashflows";
 import { useBranchStore } from "@/lib/store/branch";
 import {
@@ -46,16 +47,11 @@ const STATUS_COLOR: Record<number, string> = {
   2: "bg-red-100 text-red-700",
 };
 
-const STATUS_TEXT: Record<number, string> = {
-  0: "Hoạt động",
-  2: "Đã hủy",
-};
-
 const METHOD_TEXT: Record<string, string> = {
   cash: "Tiền mặt",
   transfer: "Chuyển khoản",
-  ewallet: "Ví điện tử",
-  card: "Thẻ",
+  // ewallet: "Ví điện tử",
+  // card: "Thẻ",
 };
 
 const formatDateTime = (d?: string) =>
@@ -246,14 +242,24 @@ export function CashFlowsTable({
     DEFAULT_COLUMNS
   );
 
+  // Bộ filter dùng chung cho cả list, summary và opening-balance — KHÔNG kèm
+  // phân trang, để tổng thu/chi tính trên TOÀN BỘ tập đã lọc (không bị giới hạn
+  // theo số phiếu của 1 trang).
+  const summaryFilters = useMemo(
+    () => ({
+      ...(effectiveFilters.code
+        ? {}
+        : { branchIds: selectedBranch?.id ? [selectedBranch.id] : undefined }),
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+      ...effectiveFilters,
+    }),
+    [effectiveFilters, selectedBranch?.id, debouncedSearch]
+  );
+
   const { data, isLoading } = useCashFlows({
     pageSize: limit,
     currentItem: (page - 1) * limit,
-    ...(effectiveFilters.code
-      ? {}
-      : { branchIds: selectedBranch?.id ? [selectedBranch.id] : undefined }),
-    ...(debouncedSearch ? { search: debouncedSearch } : {}),
-    ...effectiveFilters,
+    ...summaryFilters,
   });
 
   // Đóng dropdown khi click ngoài
@@ -291,24 +297,14 @@ export function CashFlowsTable({
   const canViewBalance = useCan("cash_flows", "view_balance");
 
   const { data: openingBalance } = useOpeningBalance(
-    canViewBalance ? effectiveFilters : null
+    canViewBalance ? summaryFilters : null
   );
 
-  const totalReceipt = useMemo(
-    () =>
-      cashFlows
-        .filter((cf) => cf.isReceipt && cf.status !== 2)
-        .reduce((sum, cf) => sum + Number(cf.amount), 0),
-    [cashFlows]
-  );
+  // Tổng thu/chi lấy từ backend trên toàn bộ tập đã lọc (không theo trang).
+  const { data: summary } = useCashFlowSummary(summaryFilters);
 
-  const totalPayment = useMemo(
-    () =>
-      cashFlows
-        .filter((cf) => !cf.isReceipt && cf.status !== 2)
-        .reduce((sum, cf) => sum + Number(cf.amount), 0),
-    [cashFlows]
-  );
+  const totalReceipt = Number(summary?.totalReceipt || 0);
+  const totalPayment = Number(summary?.totalPayment || 0);
 
   const closingBalance = useMemo(
     () => Number(openingBalance || 0) + totalReceipt - totalPayment,
@@ -393,12 +389,12 @@ export function CashFlowsTable({
                         style={{ borderColor: "var(--dt-border)" }}>
                         Thu chuyển khoản
                       </button>
-                      <button
+                      {/* <button
                         onClick={() => openCreateModal("ewallet", true)}
                         className="dt-menu-item w-full text-left px-3 py-2 text-sm border-t"
                         style={{ borderColor: "var(--dt-border)" }}>
                         Thu ví điện tử
-                      </button>
+                      </button> */}
                     </div>
                   </div>
                 )}
@@ -434,12 +430,12 @@ export function CashFlowsTable({
                         style={{ borderColor: "var(--dt-border)" }}>
                         Chi chuyển khoản
                       </button>
-                      <button
+                      {/* <button
                         onClick={() => openCreateModal("ewallet", false)}
                         className="dt-menu-item w-full text-left px-3 py-2 text-sm border-t"
                         style={{ borderColor: "var(--dt-border)" }}>
                         Chi ví điện tử
-                      </button>
+                      </button> */}
                     </div>
                   </div>
                 )}
@@ -450,7 +446,10 @@ export function CashFlowsTable({
                 onClick={() => setShowExportDropdown((p) => !p)}
                 disabled={isExportingOverview}
                 className="px-3 py-1.5 border rounded-[4px] text-sm font-medium flex items-center gap-1.5 disabled:opacity-50 transition-colors"
-                style={{ borderColor: "var(--dt-border)", color: "var(--dt-text-secondary)" }}>
+                style={{
+                  borderColor: "var(--dt-border)",
+                  color: "var(--dt-text-secondary)",
+                }}>
                 {isExportingOverview ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
@@ -477,10 +476,15 @@ export function CashFlowsTable({
         {canViewBalance && (
           <div
             className="px-4 py-2 border-b flex items-center gap-6 text-sm shrink-0"
-            style={{ background: "var(--dt-cyan-bg)", borderColor: "var(--dt-border)" }}>
+            style={{
+              background: "var(--dt-cyan-bg)",
+              borderColor: "var(--dt-border)",
+            }}>
             <div className="flex items-center gap-2">
               <span style={{ color: "var(--dt-text-muted)" }}>Tồn đầu kỳ:</span>
-              <span className="font-semibold dt-mono" style={{ color: "var(--dt-text)" }}>
+              <span
+                className="font-semibold dt-mono"
+                style={{ color: "var(--dt-text)" }}>
                 {formatCurrency(Number(openingBalance || 0))}
               </span>
             </div>
@@ -497,8 +501,12 @@ export function CashFlowsTable({
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span style={{ color: "var(--dt-text-muted)" }}>Tồn cuối kỳ:</span>
-              <span className="font-semibold dt-mono" style={{ color: "var(--dt-primary)" }}>
+              <span style={{ color: "var(--dt-text-muted)" }}>
+                Tồn cuối kỳ:
+              </span>
+              <span
+                className="font-semibold dt-mono"
+                style={{ color: "var(--dt-primary)" }}>
                 {formatCurrency(closingBalance)}
               </span>
             </div>
@@ -508,7 +516,9 @@ export function CashFlowsTable({
         {/* Table */}
         <div className="flex-1 overflow-auto">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10" style={{ background: "var(--dt-bg-soft)" }}>
+            <thead
+              className="sticky top-0 z-10"
+              style={{ background: "var(--dt-bg-soft)" }}>
               <tr>
                 <th
                   className="px-4 py-2.5 text-left w-10 sticky left-0"
@@ -527,7 +537,11 @@ export function CashFlowsTable({
                   <th
                     key={col.key}
                     className="px-4 py-2.5 text-left font-medium whitespace-nowrap text-xs uppercase tracking-wide"
-                    style={{ width: col.width, minWidth: col.width, color: "var(--dt-text-muted)" }}>
+                    style={{
+                      width: col.width,
+                      minWidth: col.width,
+                      color: "var(--dt-text-muted)",
+                    }}>
                     {col.label}
                   </th>
                 ))}
@@ -538,10 +552,15 @@ export function CashFlowsTable({
               {isLoading ? (
                 <tr>
                   <td colSpan={colSpan} className="py-16 text-center">
-                    <div className="flex flex-col items-center gap-2" style={{ color: "var(--dt-text-muted)" }}>
+                    <div
+                      className="flex flex-col items-center gap-2"
+                      style={{ color: "var(--dt-text-muted)" }}>
                       <div
                         className="animate-spin rounded-full h-6 w-6 border-2 border-t-transparent"
-                        style={{ borderColor: "var(--dt-primary)", borderTopColor: "transparent" }}
+                        style={{
+                          borderColor: "var(--dt-primary)",
+                          borderTopColor: "transparent",
+                        }}
                       />
                       <span className="text-xs">Đang tải...</span>
                     </div>
@@ -612,7 +631,9 @@ export function CashFlowsTable({
         <div
           className="border-t px-4 py-2 flex items-center justify-between text-sm shrink-0"
           style={{ borderColor: "var(--dt-border)" }}>
-          <div className="flex items-center gap-2" style={{ color: "var(--dt-text-secondary)" }}>
+          <div
+            className="flex items-center gap-2"
+            style={{ color: "var(--dt-text-secondary)" }}>
             <span>Hiển thị</span>
             <select
               value={limit}
@@ -636,7 +657,9 @@ export function CashFlowsTable({
               className="dt-icon-btn p-1 rounded disabled:opacity-40">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm px-2 dt-mono" style={{ color: "var(--dt-text-secondary)" }}>
+            <span
+              className="text-sm px-2 dt-mono"
+              style={{ color: "var(--dt-text-secondary)" }}>
               {page} / {totalPages}
             </span>
             <button

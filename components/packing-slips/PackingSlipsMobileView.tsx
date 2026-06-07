@@ -80,10 +80,17 @@ function PackingMobileCard({
       {/* Row 1: code + type badge */}
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-blue-600 font-bold text-[15px]">{item.code}</span>
-        <div
-          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
-          <Icon className="w-3 h-3" />
-          {badge.text}
+        <div className="flex items-center gap-1.5">
+          {item.cancelledAt && (
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+              Đã hủy
+            </div>
+          )}
+          <div
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
+            <Icon className="w-3 h-3" />
+            {badge.text}
+          </div>
         </div>
       </div>
 
@@ -473,11 +480,11 @@ function PackingMobileDetailSheet({
                         <span className="font-semibold text-blue-600 text-sm">
                           {inv.invoice?.code}
                         </span>
-                        {inv.invoice?.grandTotal != null && (
+                        {/* {inv.invoice?.grandTotal != null && (
                           <span className="text-sm font-bold text-gray-900">
                             {formatCurrency(inv.invoice.grandTotal)}đ
                           </span>
-                        )}
+                        )} */}
                       </div>
                       {inv.invoice?.customer?.name && (
                         <p className="text-xs text-gray-500">
@@ -523,36 +530,47 @@ function PackingMobileDetailSheet({
 
           {/* Footer */}
           <div className="px-4 pb-6 pt-3 border-t border-gray-100 flex-shrink-0 flex flex-col gap-2">
-            {onResend && typeKey === "giao-hang" && (
-              <button
-                onClick={() => {
-                  if (confirm("Gửi lại tin nhắn Zalo cho báo đơn này?")) {
-                    onResend();
-                  }
-                }}
-                className="w-full py-3 border border-emerald-200 text-emerald-700 bg-emerald-50 rounded-2xl font-semibold text-sm hover:bg-emerald-100 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-                <Send className="w-4 h-4" />
-                Gửi lại Zalo
-              </button>
+            {item.cancelledAt ? (
+              <div className="w-full py-3 rounded-2xl bg-red-50 text-red-600 text-sm font-medium text-center">
+                Phiếu đã hủy
+                {item.cancelledBy?.name ? ` bởi ${item.cancelledBy.name}` : ""}
+                {" · "}
+                {new Date(item.cancelledAt).toLocaleString("vi-VN")}
+              </div>
+            ) : (
+              <>
+                {onResend && typeKey === "giao-hang" && (
+                  <button
+                    onClick={() => {
+                      if (confirm("Gửi lại tin nhắn Zalo cho báo đơn này?")) {
+                        onResend();
+                      }
+                    }}
+                    className="w-full py-3 border border-emerald-200 text-emerald-700 bg-emerald-50 rounded-2xl font-semibold text-sm hover:bg-emerald-100 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
+                    <Send className="w-4 h-4" />
+                    Gửi lại Zalo
+                  </button>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (confirm("Bạn có chắc chắn muốn hủy phiếu này?")) {
+                        onDelete();
+                      }
+                    }}
+                    className="flex-1 py-3 border border-red-200 text-red-600 rounded-2xl font-semibold text-sm hover:bg-red-50 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
+                    <Trash2 className="w-4 h-4" />
+                    Hủy phiếu
+                  </button>
+                  <button
+                    onClick={onEdit}
+                    className="flex-[2] py-3 bg-blue-600 text-white rounded-2xl font-semibold text-sm hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
+                    <Pencil className="w-4 h-4" />
+                    Sửa
+                  </button>
+                </div>
+              </>
             )}
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  if (confirm("Bạn có chắc chắn muốn xóa báo đơn này?")) {
-                    onDelete();
-                  }
-                }}
-                className="flex-1 py-3 border border-red-200 text-red-600 rounded-2xl font-semibold text-sm hover:bg-red-50 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-                <Trash2 className="w-4 h-4" />
-                Xóa
-              </button>
-              <button
-                onClick={onEdit}
-                className="flex-[2] py-3 bg-blue-600 text-white rounded-2xl font-semibold text-sm hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-                <Pencil className="w-4 h-4" />
-                Sửa
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -876,9 +894,7 @@ export function PackingSlipsMobileView({
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Package className="w-12 h-12 text-gray-300 mb-3" />
-            <span className="text-gray-400 text-sm">
-              Không có báo đơn nào
-            </span>
+            <span className="text-gray-400 text-sm">Không có báo đơn nào</span>
           </div>
         ) : (
           <>

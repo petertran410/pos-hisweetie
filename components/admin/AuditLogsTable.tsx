@@ -99,7 +99,7 @@ function renderSnapshot(entityType: string, snapshot: any): string {
     lines.push(`Công nợ: ${fmtCurrency(snapshot.debtAmount)}`);
     lines.push(`Chi nhánh: ${snapshot.branch?.name || "N/A"}`);
     if (entityType === "orders")
-      lines.push(`Người bán: ${snapshot.createdBy?.name || "N/A"}`);
+      lines.push(`Người bán: ${snapshot.soldBy?.name || "N/A"}`);
 
     lines.push(`Ghi chú: ${snapshot.description || "(trống)"}`);
 
@@ -463,6 +463,68 @@ function renderSnapshot(entityType: string, snapshot: any): string {
     lines.push(`Số TK: ${snapshot.accountNumber || "N/A"}`);
     lines.push(`Chủ TK: ${snapshot.accountHolder || "N/A"}`);
     if (snapshot.scope) lines.push(`Phạm vi: ${snapshot.scope}`);
+    return lines.join("\n");
+  }
+
+  if (entityType === "roles") {
+    lines.push(`Vai trò: ${snapshot.name || "N/A"}`);
+    if (snapshot.description) lines.push(`Mô tả: ${snapshot.description}`);
+    if (snapshot.branchName) lines.push(`Chi nhánh: ${snapshot.branchName}`);
+    if (snapshot.permissionCount !== undefined)
+      lines.push(`Số quyền: ${fmt(snapshot.permissionCount)}`);
+    return lines.join("\n");
+  }
+
+  if (entityType === "inventory_checks") {
+    lines.push(`Mã phiếu: ${snapshot.code || "N/A"}`);
+    lines.push(`Chi nhánh: ${snapshot.branchName || "N/A"}`);
+    if (snapshot.status) lines.push(`Trạng thái: ${snapshot.status}`);
+    if (snapshot.createdByName)
+      lines.push(`Người tạo: ${snapshot.createdByName}`);
+    if (snapshot.note) lines.push(`Ghi chú: ${snapshot.note}`);
+
+    if (snapshot.details?.length > 0) {
+      lines.push("");
+      lines.push("Sản phẩm:");
+      snapshot.details.forEach((d: any) => {
+        lines.push(
+          `  - ${d.productCode || d.productName}: tồn ${fmt(d.currentOnHand)}, loại B ${fmt(d.damagedQuantity)}, cận date ${fmt(d.nearExpiryQuantity)}`
+        );
+      });
+    }
+    return lines.join("\n");
+  }
+
+  if (entityType === "stock_audits") {
+    lines.push(`Mã phiếu: ${snapshot.code || "N/A"}`);
+    lines.push(`Chi nhánh: ${snapshot.branchName || "N/A"}`);
+    if (snapshot.status) lines.push(`Trạng thái: ${snapshot.status}`);
+    if (snapshot.createdByName)
+      lines.push(`Người tạo: ${snapshot.createdByName}`);
+    if (snapshot.totalDiff !== undefined)
+      lines.push(`Lệch tổng: ${fmt(snapshot.totalDiff)}`);
+    if (snapshot.note) lines.push(`Ghi chú: ${snapshot.note}`);
+
+    if (snapshot.details?.length > 0) {
+      lines.push("");
+      lines.push("Sản phẩm:");
+      snapshot.details.forEach((d: any) => {
+        lines.push(
+          `  - ${d.productCode || d.productName}: hệ thống ${fmt(d.systemQuantity)} → thực tế ${fmt(d.actualQuantity)} (lệch ${fmt(d.difference)})`
+        );
+      });
+    }
+    return lines.join("\n");
+  }
+
+  if (entityType === "inventory_condition") {
+    lines.push(
+      `Sản phẩm: ${snapshot.productName || "N/A"} (${snapshot.productCode || ""})`
+    );
+    lines.push(`Chi nhánh: ${snapshot.branchName || "N/A"}`);
+    lines.push(`Tồn kho: ${fmt(snapshot.onHand)}`);
+    lines.push(`Hàng loại B: ${fmt(snapshot.damagedQuantity)}`);
+    lines.push(`Hàng cận date: ${fmt(snapshot.nearExpiryQuantity)}`);
     return lines.join("\n");
   }
 

@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
+import { useBranchStore } from "@/lib/store/branch";
 import {
   ChevronDown,
   ChevronLeft,
@@ -21,7 +23,6 @@ interface CashFlowsSidebarProps {
 const METHOD_OPTIONS = [
   { value: "cash", label: "Tiền mặt" },
   { value: "transfer", label: "Chuyển khoản" },
-  { value: "ewallet", label: "Ví điện tử" },
 ];
 
 const PRESET_GROUPS = [
@@ -188,10 +189,16 @@ function SimpleDropdown({
         type="button"
         onClick={() => setOpen(!open)}
         className="dt-input dt-input-sm w-full flex items-center justify-between text-left">
-        <span style={{ color: selected ? "var(--dt-text)" : "var(--dt-text-muted)" }}>
+        <span
+          style={{
+            color: selected ? "var(--dt-text)" : "var(--dt-text-muted)",
+          }}>
           {selected?.label || placeholder}
         </span>
-        <ChevronDown className="w-3.5 h-3.5" style={{ color: "var(--dt-text-muted)" }} />
+        <ChevronDown
+          className="w-3.5 h-3.5"
+          style={{ color: "var(--dt-text-muted)" }}
+        />
       </button>
       {open && (
         <div
@@ -216,7 +223,10 @@ function SimpleDropdown({
               className="dt-menu-item w-full text-left px-3 py-1.5 text-sm flex items-center justify-between"
               style={
                 value === o.value
-                  ? { color: "var(--dt-primary)", background: "var(--dt-cyan-bg)" }
+                  ? {
+                      color: "var(--dt-primary)",
+                      background: "var(--dt-cyan-bg)",
+                    }
                   : { color: "var(--dt-text-secondary)" }
               }>
               {o.label}
@@ -346,7 +356,9 @@ function MiniCalendar({
           className="dt-icon-btn p-1 rounded-lg">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-semibold" style={{ color: "var(--dt-text)" }}>
+        <span
+          className="text-sm font-semibold"
+          style={{ color: "var(--dt-text)" }}>
           {MONTH_NAMES[vm]} {vy}
         </span>
         <button
@@ -377,7 +389,11 @@ function MiniCalendar({
             todayObj.getDate() === day;
           const isDisabled = !!minDate && ds < minDate;
           const cellStyle: React.CSSProperties = isSel
-            ? { background: "var(--dt-primary)", color: "#fff", fontWeight: 700 }
+            ? {
+                background: "var(--dt-primary)",
+                color: "#fff",
+                fontWeight: 700,
+              }
             : isToday
               ? {
                   border: "1px solid var(--dt-primary)",
@@ -477,7 +493,10 @@ function BranchMultiSelectDropdown({
         className="dt-input dt-input-sm w-full flex items-center justify-between gap-2 cursor-pointer select-none"
         style={
           open
-            ? { borderColor: "var(--dt-primary)", boxShadow: "0 0 0 3px rgba(0,183,204,.1)" }
+            ? {
+                borderColor: "var(--dt-primary)",
+                boxShadow: "0 0 0 3px rgba(0,183,204,.1)",
+              }
             : undefined
         }>
         <span
@@ -485,7 +504,10 @@ function BranchMultiSelectDropdown({
           style={{ color: label ? "var(--dt-text)" : "var(--dt-text-muted)" }}>
           {label ?? "Tất cả chi nhánh"}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--dt-text-muted)" }} />
+        <ChevronDown
+          className="w-3.5 h-3.5 flex-shrink-0"
+          style={{ color: "var(--dt-text-muted)" }}
+        />
       </div>
       {open && (
         <div
@@ -498,7 +520,9 @@ function BranchMultiSelectDropdown({
               onClick={() => toggle(b.id)}
               className="dt-menu-item w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left"
               style={{
-                ...(selectedIds.includes(b.id) ? { background: "var(--dt-cyan-bg)" } : {}),
+                ...(selectedIds.includes(b.id)
+                  ? { background: "var(--dt-cyan-bg)" }
+                  : {}),
                 ...(idx > 0 ? { borderTop: "1px solid var(--dt-border)" } : {}),
               }}>
               <input
@@ -508,7 +532,9 @@ function BranchMultiSelectDropdown({
                 className="w-3.5 h-3.5 flex-shrink-0"
                 style={{ accentColor: "var(--dt-primary)" }}
               />
-              <span style={{ color: "var(--dt-text-secondary)" }}>{b.name}</span>
+              <span style={{ color: "var(--dt-text-secondary)" }}>
+                {b.name}
+              </span>
             </button>
           ))}
         </div>
@@ -523,18 +549,25 @@ export function CashFlowsSidebar({
 }: CashFlowsSidebarProps) {
   const { data: branches } = useBranches();
   const { data: users } = useUsersForFilter();
+  const { data: bankAccounts } = useBankAccountsForPayment();
+  const { selectedBranch } = useBranchStore();
 
   const activeBranches = useMemo(
     () => (branches ?? []).filter((b) => b.isActive),
     [branches]
   );
 
-  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>(
+    selectedBranch ? [selectedBranch.id] : []
+  );
   const [selectedType, setSelectedType] = useState("");
 
   const [branchId, setBranchId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedMethod, setSelectedMethod] = useState("");
+  const [selectedBankAccountIds, setSelectedBankAccountIds] = useState<
+    number[]
+  >([]);
   const [creatorId, setCreatorId] = useState("");
   const [partnerName, setPartnerName] = useState("");
 
@@ -555,6 +588,7 @@ export function CashFlowsSidebar({
     if (selectedType) n++;
     if (selectedStatus) n++;
     if (selectedMethod) n++;
+    if (selectedBankAccountIds.length > 0) n++;
     if (creatorId) n++;
     if (partnerName) n++;
     if (selectedPreset !== "all_time" || dateMode === "custom") n++;
@@ -564,6 +598,7 @@ export function CashFlowsSidebar({
     selectedType,
     selectedStatus,
     selectedMethod,
+    selectedBankAccountIds,
     creatorId,
     partnerName,
     selectedPreset,
@@ -583,6 +618,29 @@ export function CashFlowsSidebar({
     return () => document.removeEventListener("mousedown", h);
   }, [openCal]);
 
+  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại
+  // chi nhánh đó. Bỏ qua lần mount đầu (đã init theo selectedBranch). Chỉ ghi đè
+  // khi đang ở chế độ "bám theo header" (đúng 1 chi nhánh); nếu user đang lọc
+  // nhiều chi nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng) thì giữ nguyên.
+  const isFirstRenderRef = useRef(true);
+  const lastSyncedBranchIdRef = useRef<number | null>(
+    selectedBranch?.id ?? null
+  );
+  useEffect(() => {
+    const currentBranchId = selectedBranch?.id ?? null;
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      lastSyncedBranchIdRef.current = currentBranchId;
+      return;
+    }
+    if (currentBranchId !== lastSyncedBranchIdRef.current) {
+      lastSyncedBranchIdRef.current = currentBranchId;
+      setSelectedBranchIds((prev) =>
+        prev.length === 1 ? (currentBranchId ? [currentBranchId] : []) : prev
+      );
+    }
+  }, [selectedBranch?.id]);
+
   // Debounce 300ms
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -595,6 +653,8 @@ export function CashFlowsSidebar({
       if (selectedStatus) f.status = parseInt(selectedStatus);
 
       if (selectedMethod) f.method = [selectedMethod];
+      if (selectedMethod === "transfer" && selectedBankAccountIds.length > 0)
+        f.accountIds = selectedBankAccountIds;
       if (creatorId) f.userId = parseInt(creatorId);
       if (partnerName) f.partnerName = partnerName;
 
@@ -614,9 +674,11 @@ export function CashFlowsSidebar({
     return () => clearTimeout(timer);
   }, [
     branchId,
+    selectedBranchIds,
     selectedType,
     selectedStatus,
     selectedMethod,
+    selectedBankAccountIds,
     creatorId,
     partnerName,
     dateMode,
@@ -626,10 +688,11 @@ export function CashFlowsSidebar({
   ]);
 
   const clearAll = () => {
-    setSelectedBranchIds([]);
+    setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setSelectedType("");
     setSelectedStatus("");
     setSelectedMethod("");
+    setSelectedBankAccountIds([]);
     setCreatorId("");
     setPartnerName("");
     setDateMode("preset");
@@ -646,7 +709,11 @@ export function CashFlowsSidebar({
         className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-[8px]"
         style={{ borderColor: "var(--dt-border)" }}>
         <div className="flex items-center gap-2">
-          <h2 className="text-base font-semibold" style={{ color: "var(--dt-text)" }}>Bộ lọc</h2>
+          <h2
+            className="text-base font-semibold"
+            style={{ color: "var(--dt-text)" }}>
+            Bộ lọc
+          </h2>
         </div>
         {activeFilterCount > 0 && (
           <button
@@ -662,7 +729,9 @@ export function CashFlowsSidebar({
         {/* ── Thời gian ── */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium" style={{ color: "var(--dt-text-secondary)" }}>
+            <label
+              className="text-sm font-medium"
+              style={{ color: "var(--dt-text-secondary)" }}>
               Thời gian
             </label>
           </div>
@@ -687,17 +756,31 @@ export function CashFlowsSidebar({
               data-on={dateMode === "preset"}>
               <div
                 className="w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
-                style={{ borderColor: dateMode === "preset" ? "var(--dt-primary)" : "var(--dt-border)" }}>
+                style={{
+                  borderColor:
+                    dateMode === "preset"
+                      ? "var(--dt-primary)"
+                      : "var(--dt-border)",
+                }}>
                 {dateMode === "preset" && (
-                  <div className="w-1 h-1 rounded-full" style={{ background: "var(--dt-primary)" }} />
+                  <div
+                    className="w-1 h-1 rounded-full"
+                    style={{ background: "var(--dt-primary)" }}
+                  />
                 )}
               </div>
-              <span className="text-sm flex-1 font-medium" style={{ color: "var(--dt-text-secondary)" }}>
+              <span
+                className="text-sm flex-1 font-medium"
+                style={{ color: "var(--dt-text-secondary)" }}>
                 {PRESET_LABEL[selectedPreset] ?? "Chọn thời gian"}
               </span>
               <ChevronRight
                 className="w-4 h-4 transition-colors flex-shrink-0"
-                style={{ color: showPresetPanel ? "var(--dt-primary)" : "var(--dt-text-muted)" }}
+                style={{
+                  color: showPresetPanel
+                    ? "var(--dt-primary)"
+                    : "var(--dt-text-muted)",
+                }}
               />
             </div>
 
@@ -711,13 +794,28 @@ export function CashFlowsSidebar({
               data-on={dateMode === "custom"}>
               <div
                 className="w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
-                style={{ borderColor: dateMode === "custom" ? "var(--dt-primary)" : "var(--dt-border)" }}>
+                style={{
+                  borderColor:
+                    dateMode === "custom"
+                      ? "var(--dt-primary)"
+                      : "var(--dt-border)",
+                }}>
                 {dateMode === "custom" && (
-                  <div className="w-1 h-1 rounded-full" style={{ background: "var(--dt-primary)" }} />
+                  <div
+                    className="w-1 h-1 rounded-full"
+                    style={{ background: "var(--dt-primary)" }}
+                  />
                 )}
               </div>
-              <span className="text-sm flex-1" style={{ color: "var(--dt-text-secondary)" }}>Tùy chỉnh</span>
-              <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: "var(--dt-text-muted)" }} />
+              <span
+                className="text-sm flex-1"
+                style={{ color: "var(--dt-text-secondary)" }}>
+                Tùy chỉnh
+              </span>
+              <Calendar
+                className="w-4 h-4 flex-shrink-0"
+                style={{ color: "var(--dt-text-muted)" }}
+              />
             </div>
 
             {/* Custom date fields — BÊN NGOÀI div "Tùy chỉnh" */}
@@ -731,7 +829,9 @@ export function CashFlowsSidebar({
                   const isOpen = openCal === field;
                   return (
                     <div key={field}>
-                      <span className="text-xs mb-1 block" style={{ color: "var(--dt-text-muted)" }}>
+                      <span
+                        className="text-xs mb-1 block"
+                        style={{ color: "var(--dt-text-muted)" }}>
                         {label}
                       </span>
                       <button
@@ -739,12 +839,22 @@ export function CashFlowsSidebar({
                         onClick={() => setOpenCal(isOpen ? null : field)}
                         className="dt-input dt-input-sm w-full flex items-center justify-between"
                         style={{
-                          ...(val ? { background: "var(--dt-cyan-bg)" } : { color: "var(--dt-text-muted)" }),
+                          ...(val
+                            ? { background: "var(--dt-cyan-bg)" }
+                            : { color: "var(--dt-text-muted)" }),
                           ...(isOpen
-                            ? { borderColor: "var(--dt-primary)", boxShadow: "0 0 0 3px rgba(0,183,204,.1)" }
+                            ? {
+                                borderColor: "var(--dt-primary)",
+                                boxShadow: "0 0 0 3px rgba(0,183,204,.1)",
+                              }
                             : {}),
                         }}>
-                        <span style={{ color: val ? "var(--dt-text)" : "var(--dt-text-muted)" }}>
+                        <span
+                          style={{
+                            color: val
+                              ? "var(--dt-text)"
+                              : "var(--dt-text-muted)",
+                          }}>
                           {val
                             ? new Date(val + "T00:00:00").toLocaleDateString(
                                 "vi-VN",
@@ -756,7 +866,10 @@ export function CashFlowsSidebar({
                               )
                             : "Chọn ngày"}
                         </span>
-                        <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: "var(--dt-text-muted)" }} />
+                        <Calendar
+                          className="w-4 h-4 flex-shrink-0"
+                          style={{ color: "var(--dt-text-muted)" }}
+                        />
                       </button>
                       {isOpen && (
                         <MiniCalendar
@@ -790,7 +903,9 @@ export function CashFlowsSidebar({
 
         {/* ── Loại phiếu — Dropdown ── */}
         <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
+          <label
+            className="block text-sm font-medium mb-2"
+            style={{ color: "var(--dt-text-secondary)" }}>
             Loại phiếu
           </label>
           <SimpleDropdown
@@ -806,7 +921,9 @@ export function CashFlowsSidebar({
 
         {/* ── Trạng thái — Dropdown ── */}
         <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
+          <label
+            className="block text-sm font-medium mb-2"
+            style={{ color: "var(--dt-text-secondary)" }}>
             Trạng thái
           </label>
           <SimpleDropdown
@@ -822,20 +939,108 @@ export function CashFlowsSidebar({
 
         {/* ── Phương thức ── */}
         <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
+          <label
+            className="block text-sm font-medium mb-2"
+            style={{ color: "var(--dt-text-secondary)" }}>
             Phương thức
           </label>
           <SimpleDropdown
             options={METHOD_OPTIONS}
             value={selectedMethod}
             placeholder="Tất cả"
-            onChange={setSelectedMethod}
+            onChange={(v) => {
+              setSelectedMethod(v);
+              setSelectedBankAccountIds([]);
+            }}
           />
+
+          {/* Tài khoản ngân hàng — chỉ hiện khi chọn Chuyển khoản */}
+          {selectedMethod === "transfer" && (
+            <div
+              className="mt-2 border rounded-[8px] overflow-hidden"
+              style={{ borderColor: "var(--dt-border)" }}>
+              {/* Chọn tất cả */}
+              <label
+                className="flex items-center gap-2.5 px-3 py-2 border-b cursor-pointer select-none"
+                style={{
+                  background: "var(--dt-bg-subtle, #f9fafb)",
+                  borderColor: "var(--dt-border)",
+                }}>
+                <input
+                  type="checkbox"
+                  checked={
+                    Array.isArray(bankAccounts) &&
+                    bankAccounts.length > 0 &&
+                    selectedBankAccountIds.length === bankAccounts.length
+                  }
+                  onChange={(e) => {
+                    if (!Array.isArray(bankAccounts)) return;
+                    setSelectedBankAccountIds(
+                      e.target.checked ? bankAccounts.map((a: any) => a.id) : []
+                    );
+                  }}
+                  className="w-3.5 h-3.5 flex-shrink-0 cursor-pointer"
+                  style={{ accentColor: "var(--dt-primary)" }}
+                />
+                <span
+                  className="text-xs font-medium"
+                  style={{ color: "var(--dt-text-secondary)" }}>
+                  Tất cả tài khoản
+                </span>
+              </label>
+
+              {/* Danh sách tài khoản */}
+              <div className="max-h-40 overflow-y-auto">
+                {!Array.isArray(bankAccounts) || bankAccounts.length === 0 ? (
+                  <div
+                    className="px-3 py-3 text-xs text-center"
+                    style={{ color: "var(--dt-text-muted)" }}>
+                    Không có tài khoản
+                  </div>
+                ) : (
+                  bankAccounts.map((acc: any) => (
+                    <label
+                      key={acc.id}
+                      className="flex items-center gap-2.5 px-3 py-2 border-t cursor-pointer select-none"
+                      style={{ borderColor: "var(--dt-border)" }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedBankAccountIds.includes(acc.id)}
+                        onChange={(e) =>
+                          setSelectedBankAccountIds((prev) =>
+                            e.target.checked
+                              ? [...prev, acc.id]
+                              : prev.filter((id) => id !== acc.id)
+                          )
+                        }
+                        className="w-3.5 h-3.5 flex-shrink-0 cursor-pointer"
+                        style={{ accentColor: "var(--dt-primary)" }}
+                      />
+                      <div className="min-w-0">
+                        <div
+                          className="text-xs font-medium truncate"
+                          style={{ color: "var(--dt-text-secondary)" }}>
+                          {acc.bankCode} · {acc.accountNumber}
+                        </div>
+                        <div
+                          className="text-[10px] truncate"
+                          style={{ color: "var(--dt-text-muted)" }}>
+                          {acc.accountHolder}
+                        </div>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Chi nhánh ── */}
         <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
+          <label
+            className="block text-sm font-medium mb-2"
+            style={{ color: "var(--dt-text-secondary)" }}>
             Chi nhánh
           </label>
           <BranchMultiSelectDropdown
@@ -847,7 +1052,9 @@ export function CashFlowsSidebar({
 
         {/* ── Người tạo ── */}
         <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
+          <label
+            className="block text-sm font-medium mb-2"
+            style={{ color: "var(--dt-text-secondary)" }}>
             Người tạo
           </label>
           <SimpleDropdown
@@ -865,7 +1072,9 @@ export function CashFlowsSidebar({
 
         {/* ── Người nộp/nhận ── */}
         <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: "var(--dt-text-secondary)" }}>
+          <label
+            className="block text-sm font-medium mb-2"
+            style={{ color: "var(--dt-text-secondary)" }}>
             Người nộp/nhận
           </label>
           <input

@@ -212,7 +212,9 @@ export default function BaoDonPage() {
       }
       toast.success("Xóa báo đơn thành công");
     } catch (error) {
-      toast.error("Xóa báo đơn thất bại");
+      toast.error(
+        error instanceof Error ? error.message : "Xóa báo đơn thất bại"
+      );
     }
   };
 
@@ -221,7 +223,9 @@ export default function BaoDonPage() {
       await deletePackingSlip.mutateAsync(id);
       toast.success("Xóa báo đơn thành công");
     } catch (error) {
-      toast.error("Xóa báo đơn thất bại");
+      toast.error(
+        error instanceof Error ? error.message : "Xóa báo đơn thất bại"
+      );
     }
   };
 
@@ -231,7 +235,9 @@ export default function BaoDonPage() {
       toast.success("Đã gửi lại thông báo Zalo");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Gửi lại thông báo Zalo thất bại"
+        error instanceof Error
+          ? error.message
+          : "Gửi lại thông báo Zalo thất bại"
       );
     }
   };
@@ -255,55 +261,55 @@ export default function BaoDonPage() {
       {/* ── Desktop (md+) ── */}
       <div className="hidden md:flex md:flex-col h-full border-t bg-gray-50 overflow-y-auto">
         {/* Tổng quan giao hàng hôm nay */}
-        <div className="px-4 pt-4">
+        {/* <div className="px-4 pt-4">
           <DeliveryOverview />
-        </div>
+        </div> */}
         <div className="flex flex-1 min-h-[600px]">
-        <PackingSlipsSidebar onFiltersChange={handleFiltersChange} />
-        <PackingSlipsTable
-          packingSlips={data?.data || []}
-          isLoading={isLoading}
-          total={data?.total || 0}
-          page={page}
-          limit={limit}
-          onPageChange={setPage}
-          onLimitChange={setLimit}
-          onCreateClick={handleCreateGiaoHangClick}
-          onCreatePackingHangClick={handleCreateDongHangClick}
-          onCreatePackingLoadingClick={handleCreateLoadingClick}
-          onEditClick={handleEditClick}
-          onDeleteClick={handleDelete}
-          onResendClick={handleResend}
-          search={tableSearch}
-          onSearchChange={setTableSearch}
-        />
-
-        {formType === "giao-hang" && (
-          <PackingSlipForm
-            key={formKey}
-            packingSlip={editingPackingSlip || undefined}
-            onClose={handleCloseForm}
-            onSubmit={handleGiaoHangSubmit}
+          <PackingSlipsSidebar onFiltersChange={handleFiltersChange} />
+          <PackingSlipsTable
+            packingSlips={data?.data || []}
+            isLoading={isLoading}
+            total={data?.total || 0}
+            page={page}
+            limit={limit}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+            onCreateClick={handleCreateGiaoHangClick}
+            onCreatePackingHangClick={handleCreateDongHangClick}
+            onCreatePackingLoadingClick={handleCreateLoadingClick}
+            onEditClick={handleEditClick}
+            onDeleteClick={handleDelete}
+            onResendClick={handleResend}
+            search={tableSearch}
+            onSearchChange={setTableSearch}
           />
-        )}
 
-        {formType === "dong-hang" && (
-          <PackingHangForm
-            key={formKey}
-            packingHang={editingPackingHang || undefined}
-            onClose={handleCloseForm}
-            onSubmit={handleDongHangSubmit}
-          />
-        )}
+          {formType === "giao-hang" && (
+            <PackingSlipForm
+              key={formKey}
+              packingSlip={editingPackingSlip || undefined}
+              onClose={handleCloseForm}
+              onSubmit={handleGiaoHangSubmit}
+            />
+          )}
 
-        {formType === "loading" && (
-          <PackingLoadingForm
-            key={formKey}
-            packingLoading={editingPackingLoading || undefined}
-            onClose={handleCloseForm}
-            onSubmit={handleLoadingSubmit}
-          />
-        )}
+          {formType === "dong-hang" && (
+            <PackingHangForm
+              key={formKey}
+              packingHang={editingPackingHang || undefined}
+              onClose={handleCloseForm}
+              onSubmit={handleDongHangSubmit}
+            />
+          )}
+
+          {formType === "loading" && (
+            <PackingLoadingForm
+              key={formKey}
+              packingLoading={editingPackingLoading || undefined}
+              onClose={handleCloseForm}
+              onSubmit={handleLoadingSubmit}
+            />
+          )}
         </div>
       </div>
 
