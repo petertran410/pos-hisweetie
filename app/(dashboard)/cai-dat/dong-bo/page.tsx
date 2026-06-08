@@ -1,6 +1,9 @@
 "use client";
 
-import { RefreshCw, XCircle, Loader2, Database } from "lucide-react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/lib/config/api";
+import { RefreshCw, XCircle, Loader2, Database, ShieldCheck } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { useSyncMisaDictionary } from "@/lib/hooks/useMisa";
@@ -8,6 +11,35 @@ import { useSyncSepayTransactions } from "@/lib/hooks/useSepay";
 import Swal from "sweetalert2";
 
 export default function SyncSettingsPage() {
+  const queryClient = useQueryClient();
+  const [togglingSepayFilter, setTogglingSepayFilter] = useState(false);
+
+  const { data: settings, isLoading: loadingSettings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => apiClient.get("/settings"),
+  });
+
+  const updateSepayFilter = useMutation({
+    mutationFn: (data: { sepayFilterByAccount: boolean }) =>
+      apiClient.put("/settings", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+    },
+  });
+
+  const sepayFilterByAccount = settings?.sepayFilterByAccount ?? false;
+
+  const handleToggleSepayFilter = async () => {
+    if (!settings) return;
+    setTogglingSepayFilter(true);
+    try {
+      await updateSepayFilter.mutateAsync({
+        sepayFilterByAccount: !settings.sepayFilterByAccount,
+      });
+    } finally {
+      setTogglingSepayFilter(false);
+    }
+  };
   // ===== ĐỒNG BỘ KIOTVIET (ĐÃ TẠM ẨN) =====
   // Toàn bộ logic đồng bộ KiotViet được comment lại theo yêu cầu.
   // Giữ nguyên code để có thể bật lại sau này.
@@ -227,6 +259,49 @@ export default function SyncSettingsPage() {
               </div>
             )}
           </div>
+          </PermissionGate>
+
+          {/* Sepay — Phân quyền theo tài khoản */}
+          <PermissionGate resource="sepay" action="view">
+            <div className="bg-white rounded-lg border p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-emerald-100">
+                    <ShieldCheck className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Phân quyền biến động số dư theo tài khoản
+                    </h2>
+                    <p className="text-sm text-gray-500 max-w-2xl">
+                      Khi bật, mỗi nhân viên chỉ thấy giao dịch của tài khoản
+                      ngân hàng được gán cho họ (cấu hình ở mục &quot;TK ngân hàng
+                      sale&quot;). Admin / Super Admin vẫn xem được tất cả. Nhân
+                      viên chưa được gán tài khoản sẽ không thấy giao dịch nào.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleToggleSepayFilter}
+                  disabled={loadingSettings || togglingSepayFilter}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 shrink-0 ${
+                    sepayFilterByAccount
+                      ? "bg-emerald-500 focus:ring-emerald-500"
+                      : "bg-gray-300 focus:ring-gray-400"
+                  } ${loadingSettings || togglingSepayFilter ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+                  {togglingSepayFilter ? (
+                    <Loader2 className="absolute left-1/2 -translate-x-1/2 w-4 h-4 text-white animate-spin" />
+                  ) : (
+                    <span
+                      className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+                        sepayFilterByAccount ? "translate-x-7" : "translate-x-1"
+                      }`}
+                    />
+                  )}
+                </button>
+              </div>
+            </div>
           </PermissionGate>
 
           {/* Misa Dictionary Sync Section */}

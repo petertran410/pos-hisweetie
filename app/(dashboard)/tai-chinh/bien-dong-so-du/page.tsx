@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSepayTransactions } from "@/lib/hooks/useSepay";
+import { useBankAccounts } from "@/lib/hooks/useBankAccounts";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { MiniCalendar } from "@/components/ui/MiniCalendar";
 import {
@@ -31,8 +32,14 @@ const formatDateLabel = (d: string) =>
 
 const PAGE_SIZE = 20;
 
-const formatDateTime = (d?: string | null) =>
-  d ? new Date(d).toLocaleString("vi-VN") : "-";
+const formatDateParts = (d?: string | null) => {
+  if (!d) return { time: "-", date: "" };
+  const dt = new Date(d);
+  return {
+    time: dt.toLocaleTimeString("vi-VN"),
+    date: dt.toLocaleDateString("vi-VN"),
+  };
+};
 
 interface Filters {
   search: string;
@@ -61,6 +68,15 @@ export default function BienDongSoDuPage() {
   // Lịch đang mở: "from" | "to" | null
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
   const dateBoxRef = useRef<HTMLDivElement>(null);
+
+  // Danh sách tài khoản ngân hàng cho dropdown filter
+  const { data: bankAccountsData } = useBankAccounts();
+  const bankAccounts: Array<{
+    id: number;
+    accountNumber: string;
+    bankCode?: string;
+    bankName?: string;
+  }> = Array.isArray(bankAccountsData) ? bankAccountsData : [];
 
   // Đóng lịch khi click ra ngoài
   useEffect(() => {
@@ -137,16 +153,20 @@ export default function BienDongSoDuPage() {
           </div>
 
           <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Số tài khoản</label>
-            <input
+            <label className="text-xs text-gray-500 mb-1">Tài khoản ngân hàng</label>
+            <select
               value={draft.accountNumber}
               onChange={(e) =>
                 setDraft((p) => ({ ...p, accountNumber: e.target.value }))
               }
-              onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              placeholder="Số TK ngân hàng"
-              className="px-3 py-2 border rounded-lg text-sm w-40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+              className="px-3 py-2 border rounded-lg text-sm w-52 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Tất cả</option>
+              {bankAccounts.map((b) => (
+                <option key={b.id} value={b.accountNumber}>
+                  {(b.bankCode || b.bankName || "TK") + " - " + b.accountNumber}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex flex-col">
@@ -263,34 +283,34 @@ export default function BienDongSoDuPage() {
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-gray-50 border-b z-10">
               <tr>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600">
+                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
                   Thời gian
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600">
+                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
                   Ngân hàng
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600">
+                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
                   Số tài khoản
                 </th>
-                <th className="px-4 py-2.5 text-right font-medium text-gray-600">
+                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
                   Tiền vào
                 </th>
-                <th className="px-4 py-2.5 text-right font-medium text-gray-600">
+                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
                   Tiền ra
                 </th>
                 <th className="px-4 py-2.5 text-left font-medium text-gray-600">
                   Nội dung
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600">
+                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
                   Mã tham chiếu
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600">
+                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
                   Khách hàng
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600">
+                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
                   Trạng thái
                 </th>
-                <th className="px-4 py-2.5 text-right font-medium text-gray-600">
+                <th className="px-4 py-2.5 text-right font-medium text-gray-600 whitespace-nowrap">
                   Thao tác
                 </th>
               </tr>
@@ -317,28 +337,31 @@ export default function BienDongSoDuPage() {
                     <tr
                       key={tx.id}
                       className="border-b hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        {formatDateTime(tx.transactionDate)}
+                      <td className="px-4 py-2.5 leading-tight">
+                        <div>{formatDateParts(tx.transactionDate).time}</div>
+                        <div className="text-xs text-gray-500">
+                          {formatDateParts(tx.transactionDate).date}
+                        </div>
                       </td>
-                      <td className="px-4 py-2.5">{tx.bankBrandName || "-"}</td>
-                      <td className="px-4 py-2.5">{tx.accountNumber || "-"}</td>
-                      <td className="px-4 py-2.5 text-right font-medium text-green-600">
+                      <td className="px-4 py-2.5 whitespace-nowrap">{tx.bankBrandName || "-"}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">{tx.accountNumber || "-"}</td>
+                      <td className="px-4 py-2.5 text-left font-medium text-green-600 whitespace-nowrap">
                         {amountIn > 0 ? `+${formatCurrency(amountIn)}` : "-"}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-red-600">
+                      <td className="px-4 py-2.5 text-left font-medium text-red-600 whitespace-nowrap">
                         {amountOut > 0 ? `-${formatCurrency(amountOut)}` : "-"}
                       </td>
-                      <td className="px-4 py-2.5 max-w-[280px] truncate" title={tx.transactionContent || ""}>
+                      <td className="px-4 py-2.5 w-[220px] max-w-[220px] break-words whitespace-normal align-top">
                         {tx.transactionContent || "-"}
                       </td>
-                      <td className="px-4 py-2.5">{tx.referenceNumber || "-"}</td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 whitespace-nowrap">{tx.referenceNumber || "-"}</td>
+                      <td className="px-4 py-2.5 w-[150px] max-w-[150px] break-words whitespace-normal align-top">
                         <SepayCustomerCell tx={tx} />
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
                         <SepayStatusBadge status={tx.match?.status} />
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
                         <SepayMatchActions tx={tx} />
                       </td>
                     </tr>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import {
   useAssignSepayCustomer,
@@ -42,38 +42,40 @@ export function SepayCustomerCell({ tx }: { tx: SepayTransaction }) {
     return (
       <div className="flex flex-col">
         <CodeLink entity="customer" code={cust.code} />
-        <span className="text-xs text-gray-500 truncate max-w-[160px]">
+        <span className="text-xs text-gray-500 break-words">
           {cust.name}
         </span>
       </div>
     );
   }
-  return <span>{cust.name}</span>;
+  return <span className="break-words">{cust.name}</span>;
 }
 
-/** Popover tìm + chọn khách hàng (autocomplete) */
-function CustomerPicker({
+/** Modal tìm + chọn khách hàng (căn giữa màn hình, rộng rãi) */
+function CustomerPickerModal({
+  tx,
   onSelect,
   onClose,
 }: {
+  tx: SepayTransaction;
   onSelect: (c: { id: number; code: string; name: string }) => void;
   onClose: () => void;
 }) {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 300);
     return () => clearTimeout(t);
   }, [search]);
 
+  // Đóng bằng phím ESC
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
   const { data, isFetching } = useSearchCustomers(debounced || undefined);
@@ -81,46 +83,89 @@ function CustomerPicker({
 
   return (
     <div
-      ref={ref}
-      className="absolute z-50 top-full right-0 mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg">
-      <div className="p-2 border-b">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            autoFocus
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Mã hoặc tên khách hàng"
-            className="pl-8 pr-3 py-2 border rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 p-4 pt-24"
+      onMouseDown={onClose}>
+      <div
+        className="w-full max-w-lg bg-white rounded-xl shadow-2xl flex flex-col max-h-[70vh]"
+        onMouseDown={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div>
+            <h3 className="text-base font-semibold text-gray-800">
+              Gán khách hàng cho giao dịch
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5 max-w-md truncate">
+              {tx.transactionContent || "-"}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-      </div>
-      <div className="max-h-64 overflow-auto">
-        {isFetching ? (
-          <div className="px-3 py-4 text-center text-gray-400 text-sm">
-            <Loader2 className="w-4 h-4 animate-spin inline mr-1" />
-            Đang tìm...
+
+        {/* Search */}
+        <div className="px-5 py-3 border-b">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Tìm theo mã hoặc tên khách hàng..."
+              className="pl-9 pr-3 py-2.5 border rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
           </div>
-        ) : customers.length === 0 ? (
-          <div className="px-3 py-4 text-center text-gray-400 text-sm">
-            {debounced ? "Không tìm thấy khách hàng" : "Nhập để tìm khách hàng"}
-          </div>
-        ) : (
-          customers.map((c: { id: number; code: string; name: string; contactNumber?: string | null }) => (
-            <button
-              key={c.id}
-              onClick={() =>
-                onSelect({ id: c.id, code: c.code, name: c.name })
-              }
-              className="w-full text-left px-3 py-2 hover:bg-emerald-50 transition-colors border-b last:border-0">
-              <div className="font-medium text-sm text-gray-800">{c.name}</div>
-              <div className="text-xs text-gray-500">
-                {c.code}
-                {c.contactNumber ? ` - ${c.contactNumber}` : ""}
-              </div>
-            </button>
-          ))
-        )}
+        </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-auto">
+          {isFetching ? (
+            <div className="px-4 py-8 text-center text-gray-400 text-sm">
+              <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
+              Đang tìm...
+            </div>
+          ) : customers.length === 0 ? (
+            <div className="px-4 py-8 text-center text-gray-400 text-sm">
+              {debounced
+                ? "Không tìm thấy khách hàng"
+                : "Nhập mã hoặc tên để tìm khách hàng"}
+            </div>
+          ) : (
+            customers.map(
+              (c: {
+                id: number;
+                code: string;
+                name: string;
+                contactNumber?: string | null;
+                totalDebt?: number;
+              }) => (
+                <button
+                  key={c.id}
+                  onClick={() =>
+                    onSelect({ id: c.id, code: c.code, name: c.name })
+                  }
+                  className="w-full text-left px-5 py-3 hover:bg-emerald-50 transition-colors border-b last:border-0 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium text-sm text-gray-800 truncate">
+                      {c.name}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {c.code}
+                      {c.contactNumber ? ` - ${c.contactNumber}` : ""}
+                    </div>
+                  </div>
+                  {typeof c.totalDebt === "number" && c.totalDebt > 0 && (
+                    <span className="text-xs text-red-600 whitespace-nowrap shrink-0">
+                      Nợ: {formatCurrency(c.totalDebt)}
+                    </span>
+                  )}
+                </button>
+              )
+            )
+          )}
+        </div>
       </div>
     </div>
   );
@@ -183,27 +228,28 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
 
   return (
     <div className="flex items-center gap-2 justify-end">
-      {/* Bước 1: gán / đổi khách (sale) */}
+      {/* Bước 1: gán / đổi khách (sale) — mở modal */}
       {canAssign && (
-        <div className="relative">
-          <button
-            onClick={() => setPickerOpen((o) => !o)}
-            disabled={assignMut.isPending}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50">
-            {assignMut.isPending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <UserPlus className="w-3.5 h-3.5" />
-            )}
-            {status === "assigned" ? "Đổi KH" : "Gán KH"}
-          </button>
-          {pickerOpen && (
-            <CustomerPicker
-              onSelect={handleAssign}
-              onClose={() => setPickerOpen(false)}
-            />
+        <button
+          onClick={() => setPickerOpen(true)}
+          disabled={assignMut.isPending}
+          title={status === "assigned" ? "Đổi khách hàng" : "Gán khách hàng"}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap">
+          {assignMut.isPending ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <UserPlus className="w-3.5 h-3.5" />
           )}
-        </div>
+          {status === "assigned" ? "Đổi KH" : "Gán KH"}
+        </button>
+      )}
+
+      {pickerOpen && (
+        <CustomerPickerModal
+          tx={tx}
+          onSelect={handleAssign}
+          onClose={() => setPickerOpen(false)}
+        />
       )}
 
       {/* Bỏ gán (khi đã gán, chưa tạo phiếu) */}
@@ -222,7 +268,7 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
         <button
           onClick={handleConfirm}
           disabled={confirmMut.isPending}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50">
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 whitespace-nowrap">
           {confirmMut.isPending ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
