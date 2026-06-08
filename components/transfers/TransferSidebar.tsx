@@ -118,6 +118,9 @@ const MONTH_NAMES = [
 const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+const endOfDay = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
 const getDateRangeFromPreset = (
   preset: string
 ): { from: Date; to: Date } | null => {
@@ -130,7 +133,7 @@ const getDateRangeFromPreset = (
       return { from: today, to: now };
     case "yesterday": {
       const d = new Date(today.getTime() - 86400000);
-      return { from: d, to: today };
+      return { from: d, to: endOfDay(d) };
     }
     case "this_week": {
       const s = new Date(today);
@@ -142,14 +145,14 @@ const getDateRangeFromPreset = (
       s.setDate(today.getDate() - today.getDay() - 6);
       const e = new Date(s);
       e.setDate(s.getDate() + 6);
-      return { from: s, to: e };
+      return { from: s, to: endOfDay(e) };
     }
     case "this_month":
       return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
     case "last_month":
       return {
         from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-        to: new Date(now.getFullYear(), now.getMonth(), 0),
+        to: endOfDay(new Date(now.getFullYear(), now.getMonth(), 0)),
       };
     case "last_7_days":
       return { from: new Date(today.getTime() - 7 * 86400000), to: now };
@@ -160,7 +163,7 @@ const getDateRangeFromPreset = (
     case "last_year":
       return {
         from: new Date(now.getFullYear() - 1, 0, 1),
-        to: new Date(now.getFullYear() - 1, 11, 31),
+        to: endOfDay(new Date(now.getFullYear() - 1, 11, 31)),
       };
     default:
       return { from: today, to: now };

@@ -162,6 +162,9 @@ const MONTH_NAMES = [
 ];
 const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
+const endOfDay = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
 const getDateRangeFromPreset = (preset: string) => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -182,7 +185,7 @@ const getDateRangeFromPreset = (preset: string) => {
       e.setDate(today.getDate() - ((today.getDay() + 6) % 7) - 1);
       const s = new Date(e);
       s.setDate(e.getDate() - 6);
-      return { from: s, to: e };
+      return { from: s, to: endOfDay(e) };
     }
     case "last_7_days":
       return { from: new Date(today.getTime() - 7 * 86400000), to: now };
@@ -206,7 +209,7 @@ const getDateRangeFromPreset = (preset: string) => {
           ? new Date(now.getFullYear() - 1, 9, 1)
           : new Date(now.getFullYear(), (q - 1) * 3, 1);
       const e = new Date(now.getFullYear(), q * 3, 0);
-      return { from: s, to: e };
+      return { from: s, to: endOfDay(e) };
     }
     case "this_year":
       return { from: new Date(now.getFullYear(), 0, 1), to: now };
@@ -1061,7 +1064,10 @@ export function InvoicesSidebar({
           dateMode === "preset"
             ? getDateRangeFromPreset(selectedPreset)
             : fromDate && toDate
-              ? { from: new Date(fromDate), to: new Date(toDate) }
+              ? {
+                  from: new Date(fromDate + "T00:00:00"),
+                  to: new Date(toDate + "T23:59:59.999"),
+                }
               : getDateRangeFromPreset("this_month");
         f.fromCreatedDate = range.from.toISOString();
         f.toCreatedDate = range.to.toISOString();

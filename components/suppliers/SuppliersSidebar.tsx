@@ -113,7 +113,7 @@ function getDateRangeFromPreset(
       e.setDate(today.getDate() - ((today.getDay() + 6) % 7) - 1);
       const s = new Date(e);
       s.setDate(e.getDate() - 6);
-      return { from: s, to: e };
+      return { from: s, to: new Date(e.getFullYear(), e.getMonth(), e.getDate(), 23, 59, 59, 999) };
     }
     case "last_7_days":
       return { from: new Date(today.getTime() - 7 * 86400000), to: now };

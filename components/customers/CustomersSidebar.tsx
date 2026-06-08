@@ -493,6 +493,9 @@ const MONTH_NAMES = [
 ];
 const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
+const endOfDay = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
 const getDateRangeFromPreset = (preset: string) => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -513,7 +516,7 @@ const getDateRangeFromPreset = (preset: string) => {
       s.setDate(today.getDate() - today.getDay() - 7);
       const e = new Date(s);
       e.setDate(s.getDate() + 6);
-      return { from: s, to: e };
+      return { from: s, to: endOfDay(e) };
     }
     case "last_7_days":
       return { from: new Date(today.getTime() - 7 * 86400000), to: now };
@@ -522,7 +525,7 @@ const getDateRangeFromPreset = (preset: string) => {
     case "last_month":
       return {
         from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-        to: new Date(now.getFullYear(), now.getMonth(), 0),
+        to: endOfDay(new Date(now.getFullYear(), now.getMonth(), 0)),
       };
     case "last_30_days":
       return { from: new Date(today.getTime() - 30 * 86400000), to: now };
@@ -540,14 +543,14 @@ const getDateRangeFromPreset = (preset: string) => {
         q === 0
           ? new Date(now.getFullYear() - 1, 11, 31)
           : new Date(now.getFullYear(), q * 3, 0);
-      return { from: s, to: e };
+      return { from: s, to: endOfDay(e) };
     }
     case "this_year":
       return { from: new Date(now.getFullYear(), 0, 1), to: now };
     case "last_year":
       return {
         from: new Date(now.getFullYear() - 1, 0, 1),
-        to: new Date(now.getFullYear() - 1, 11, 31),
+        to: endOfDay(new Date(now.getFullYear() - 1, 11, 31)),
       };
     default:
       return { from: today, to: now };
@@ -1079,8 +1082,8 @@ export function CustomersSidebar({
         createdFromDate &&
         createdToDate
       ) {
-        f.createdDateFrom = new Date(createdFromDate).toISOString();
-        f.createdDateTo = new Date(createdToDate).toISOString();
+        f.createdDateFrom = new Date(createdFromDate + "T00:00:00").toISOString();
+        f.createdDateTo = new Date(createdToDate + "T23:59:59.999").toISOString();
       }
 
       // ── Ngày giao dịch cuối ──
@@ -1095,8 +1098,8 @@ export function CustomersSidebar({
         lastTxFromDate &&
         lastTxToDate
       ) {
-        f.lastTransactionFrom = new Date(lastTxFromDate).toISOString();
-        f.lastTransactionTo = new Date(lastTxToDate).toISOString();
+        f.lastTransactionFrom = new Date(lastTxFromDate + "T00:00:00").toISOString();
+        f.lastTransactionTo = new Date(lastTxToDate + "T23:59:59.999").toISOString();
       }
 
       onFiltersChange(f);

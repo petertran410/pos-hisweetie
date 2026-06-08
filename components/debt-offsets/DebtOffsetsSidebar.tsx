@@ -32,7 +32,7 @@ const getDateRangeFromPreset = (preset: string) => {
     case "last_month":
       return {
         from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-        to: new Date(now.getFullYear(), now.getMonth(), 0),
+        to: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999),
       };
     case "last_30_days":
       return { from: new Date(today.getTime() - 30 * 86400000), to: now };

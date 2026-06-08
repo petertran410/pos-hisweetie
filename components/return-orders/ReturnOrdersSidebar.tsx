@@ -123,6 +123,9 @@ const MONTH_NAMES = [
 ];
 const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
+const endOfDay = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
 const getDateRangeFromPreset = (preset: string): { from: Date; to: Date } => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -143,14 +146,14 @@ const getDateRangeFromPreset = (preset: string): { from: Date; to: Date } => {
       s.setDate(today.getDate() - today.getDay() - 6);
       const e = new Date(s);
       e.setDate(s.getDate() + 6);
-      return { from: s, to: e };
+      return { from: s, to: endOfDay(e) };
     }
     case "this_month":
       return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
     case "last_month":
       return {
         from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-        to: new Date(now.getFullYear(), now.getMonth(), 0),
+        to: endOfDay(new Date(now.getFullYear(), now.getMonth(), 0)),
       };
     case "last_7_days":
       return { from: new Date(today.getTime() - 7 * 86400000), to: now };
@@ -160,14 +163,14 @@ const getDateRangeFromPreset = (preset: string): { from: Date; to: Date } => {
       const q = Math.floor(now.getMonth() / 3);
       return {
         from: new Date(now.getFullYear(), q * 3, 1),
-        to: new Date(now.getFullYear(), q * 3 + 3, 0),
+        to: endOfDay(new Date(now.getFullYear(), q * 3 + 3, 0)),
       };
     }
     case "last_quarter": {
       const q = Math.floor(now.getMonth() / 3);
       const lq = q === 0 ? 3 : q - 1;
       const ly = q === 0 ? now.getFullYear() - 1 : now.getFullYear();
-      return { from: new Date(ly, lq * 3, 1), to: new Date(ly, lq * 3 + 3, 0) };
+      return { from: new Date(ly, lq * 3, 1), to: endOfDay(new Date(ly, lq * 3 + 3, 0)) };
     }
     case "this_year":
       return { from: new Date(now.getFullYear(), 0, 1), to: now };
@@ -596,7 +599,10 @@ export function ReturnOrdersSidebar({
           dateMode === "preset"
             ? getDateRangeFromPreset(selectedPreset)
             : fromDate && toDate
-              ? { from: new Date(fromDate), to: new Date(toDate) }
+              ? {
+                  from: new Date(fromDate + "T00:00:00"),
+                  to: new Date(toDate + "T23:59:59.999"),
+                }
               : getDateRangeFromPreset("this_month");
         f.fromDate = range.from.toISOString();
         f.toDate = range.to.toISOString();

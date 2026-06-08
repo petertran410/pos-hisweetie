@@ -153,7 +153,7 @@ const getDateRangeFromPreset = (preset: string): { from: Date; to: Date } => {
       d.setDate(today.getDate() - ((today.getDay() + 6) % 7) - 7);
       const e = new Date(d);
       e.setDate(d.getDate() + 6);
-      return { from: d, to: e };
+      return { from: d, to: new Date(e.getFullYear(), e.getMonth(), e.getDate(), 23, 59, 59, 999) };
     }
     case "last_7_days": {
       const d = new Date(today);
@@ -180,7 +180,7 @@ const getDateRangeFromPreset = (preset: string): { from: Date; to: Date } => {
       const q = Math.floor(now.getMonth() / 3);
       const lq = q === 0 ? 3 : q - 1;
       const ly = q === 0 ? now.getFullYear() - 1 : now.getFullYear();
-      return { from: new Date(ly, lq * 3, 1), to: new Date(ly, lq * 3 + 3, 0) };
+      return { from: new Date(ly, lq * 3, 1), to: new Date(ly, lq * 3 + 3, 0, 23, 59, 59, 999) };
     }
     case "this_year":
       return { from: new Date(now.getFullYear(), 0, 1), to: now };
