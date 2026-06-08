@@ -62,6 +62,8 @@ export function ProductSearchDropdown({
     onlyInPriceBook: isStrictPriceBook ? true : undefined,
     // Chỉ cho phép bán những sản phẩm được đánh dấu bán trực tiếp.
     isDirectSale: true,
+    // Loại bỏ sản phẩm đã ngừng hoạt động.
+    isActive: true,
   });
 
   const products = productsData?.data || [];

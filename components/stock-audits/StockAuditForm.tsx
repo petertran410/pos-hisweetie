@@ -1,17 +1,23 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import * as XLSX from "xlsx";
 import { useBranchStore } from "@/lib/store/branch";
 import { useProducts } from "@/lib/hooks/useProducts";
+import { productsApi } from "@/lib/api/products";
 import {
   useCompleteStockAudit,
   useCreateStockAudit,
   useUpdateStockAudit,
 } from "@/lib/hooks/useStockAudits";
-import { Search, Trash2, Loader2, X } from "lucide-react";
+import { Search, Trash2, Loader2, X, Upload, Download } from "lucide-react";
 import { StockAudit } from "@/lib/types/stock-audit";
 import { stockAuditsApi } from "@/lib/api/stock-audits";
 import { formatNumberInput } from "@/lib/utils";
+import {
+  StockAuditImportModal,
+  type ImportedAuditItem,
+} from "./StockAuditImportModal";
 
 interface AuditItem {
   productId: number;
@@ -48,6 +54,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
 
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [note, setNote] = useState(audit?.note || "");
   // Thời điểm kiểm — cho phép lùi ngày (backdated) giống KiotViet.
   const [checkDate, setCheckDate] = useState<string>(() =>
@@ -154,6 +161,81 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
 
     setSearch("");
     setShowDropdown(false);
+  };
+
+  // Merge các item từ Excel import. Ghi đè mã trùng (số lượng + ghi chú mới).
+  const handleImported = (imported: ImportedAuditItem[]) => {
+    setItems((prev) => {
+      const map = new Map<number, AuditItem>();
+      for (const i of prev) map.set(i.productId, i);
+      for (const im of imported) {
+        const existing = map.get(im.productId);
+        map.set(im.productId, {
+          productId: im.productId,
+          productCode: im.productCode,
+          productName: im.productName,
+          unit: im.unit,
+          // giữ onHand/cost hiện có nếu đã trong bảng; effect previewStock sẽ
+          // tự cập nhật lại onHand theo checkDate sau đó.
+          onHand: existing ? existing.onHand : im.onHand,
+          cost: existing ? existing.cost : im.cost,
+          actualQuantity: im.actualQuantity,
+          note: im.note,
+        });
+      }
+      return Array.from(map.values());
+    });
+  };
+
+  // Xuất file Excel danh sách sản phẩm (theo chi nhánh) để điền thực tế offline.
+  // File này dùng làm mẫu Import: cột Mã hàng, Tên hàng, Tồn kho, Số lượng thực
+  // tế (để trống), Ghi chú.
+  const [exporting, setExporting] = useState(false);
+  const handleExportSuggested = async () => {
+    if (!effectiveBranchId || exporting) return;
+    setExporting(true);
+    try {
+      const res = await productsApi.getAll({
+        branchId: effectiveBranchId,
+        limit: 100000,
+        isActive: true,
+      });
+      const list = res?.data || [];
+      const headers = [
+        "Mã hàng",
+        "Tên hàng",
+        "Tồn kho",
+        "Số lượng thực tế",
+        "Ghi chú",
+      ];
+      const data = list.map((p: any) => {
+        const inv = p.inventories?.find(
+          (iv: any) => iv.branchId === effectiveBranchId
+        );
+        return [
+          p.code,
+          p.name,
+          inv ? Number(inv.onHand) : 0,
+          "",
+          "",
+        ];
+      });
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+      ws["!cols"] = [
+        { wch: 14 },
+        { wch: 36 },
+        { wch: 10 },
+        { wch: 16 },
+        { wch: 24 },
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Kiểm kho");
+      XLSX.writeFile(wb, "DanhSach_KiemKho.xlsx");
+    } catch {
+      // im lặng
+    } finally {
+      setExporting(false);
+    }
   };
 
   const removeItem = (productId: number) => {
@@ -300,19 +382,40 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
 
         {/* Search */}
         <div className="px-6 py-3 border-b" ref={searchRef}>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Tìm sản phẩm theo mã hoặc tên..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setShowDropdown(true);
-              }}
-              onFocus={() => search && setShowDropdown(true)}
-              className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Tìm sản phẩm theo mã hoặc tên..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => search && setShowDropdown(true)}
+                className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowImport(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 whitespace-nowrap">
+              <Upload className="w-4 h-4" />
+              Import Excel
+            </button>
+            <button
+              type="button"
+              onClick={handleExportSuggested}
+              disabled={exporting}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 whitespace-nowrap disabled:opacity-50">
+              {exporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Xuất file
+            </button>
           </div>
 
           {showDropdown && products.length > 0 && (
@@ -544,6 +647,14 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
           </div>
         </div>
       </div>
+
+      {showImport && (
+        <StockAuditImportModal
+          branchId={effectiveBranchId}
+          onClose={() => setShowImport(false)}
+          onConfirm={handleImported}
+        />
+      )}
     </div>
   );
 }
