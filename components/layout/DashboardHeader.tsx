@@ -105,6 +105,14 @@ export function DashboardHeader() {
     []
   );
 
+  const customerSubmenu = useMemo(
+    () => [
+      { label: "Danh sách khách hàng", href: "/khach-hang" },
+      { label: "Khuyến mãi", href: "/khach-hang/khuyen-mai" },
+    ],
+    []
+  );
+
   const filteredProductSubmenu = useFilteredSections(
     productSubmenu,
     ROUTE_PERMISSIONS
@@ -115,6 +123,10 @@ export function DashboardHeader() {
   );
   const filteredFinanceSubmenu = useFilteredMenuItems(
     financeSubmenu,
+    ROUTE_PERMISSIONS
+  );
+  const filteredCustomerSubmenu = useFilteredMenuItems(
+    customerSubmenu,
     ROUTE_PERMISSIONS
   );
 
@@ -212,13 +224,31 @@ export function DashboardHeader() {
                 </div>
               )}
 
-              <PermissionGate resource="customers" action="view">
-                <Link
-                  href="/khach-hang"
-                  className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
-                  Khách hàng
-                </Link>
-              </PermissionGate>
+              {filteredCustomerSubmenu.length > 0 && (
+                <div
+                  className="relative"
+                  onMouseEnter={() => setHoveredMenu("customers")}
+                  onMouseLeave={() => setHoveredMenu(null)}>
+                  <button className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
+                    Khách hàng
+                  </button>
+                  {hoveredMenu === "customers" && (
+                    <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md z-50 border">
+                      <ul>
+                        {filteredCustomerSubmenu.map((item) => (
+                          <li key={item.href}>
+                            <Link
+                              href={item.href}
+                              className="block px-5 py-2 min-w-max hover:bg-gray-400 rounded-md text-md transition-colors">
+                              {item.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {filteredFinanceSubmenu.length > 0 && (
                 <div
@@ -453,14 +483,32 @@ export function DashboardHeader() {
                 </div>
               )}
 
-              <PermissionGate resource="customers" action="view">
-                <Link
-                  href="/khach-hang"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
-                  Khách hàng
-                </Link>
-              </PermissionGate>
+              {/* Khách hàng accordion */}
+              {filteredCustomerSubmenu.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => toggleMobileSection("customers")}
+                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
+                    <span>Khách hàng</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-white transition-transform duration-200 ${expandedMobileSection === "customers" ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  {expandedMobileSection === "customers" && (
+                    <div className="bg-blue-800/40">
+                      {filteredCustomerSubmenu.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={closeMobileMenu}
+                          className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-blue-600 transition-colors">
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Tài chính accordion */}
               {filteredFinanceSubmenu.length > 0 && (

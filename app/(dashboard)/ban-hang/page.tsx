@@ -24,6 +24,7 @@ import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
 import { priceBooksApi } from "@/lib/api";
+import { promotionsApi } from "@/lib/api/promotions";
 import {
   getDefaultAddress,
   addressToDeliveryInfo,
@@ -49,6 +50,19 @@ export interface CartItem {
   discount: number;
   note?: string;
   conditionType?: string; // "normal" | "damaged" | "near_expiry"
+  // ── Khuyến mãi tự động (inline, KiotViet-style) ──
+  // Dòng quà/mua kèm do KM sinh ra
+  isPromoGift?: boolean;
+  promotionId?: number;
+  promotionName?: string;
+  promoLineType?: "gift" | "discounted_buy";
+  triggerRowId?: string; // rowId dòng SP X kích hoạt CT (để chèn dưới + gỡ cùng)
+  rewardOptions?: { productId: number; productCode?: string; productName?: string; availableStock: number }[];
+  requiresChoice?: boolean; // dòng quà cần thu ngân chọn SP
+  // Dòng SP thường: các promotionId bị thu ngân toggle tắt
+  promoDisabledIds?: number[];
+  // Dòng SP thường: các CT (id+tên) đang khớp dòng này (để hiện icon 🎁)
+  eligiblePromos?: { promotionId: number; name: string }[];
 }
 
 export interface DeliveryInfo {
@@ -194,6 +208,211 @@ export default function BanHangPage() {
     });
     return map;
   }, [activeTab?.cartItems, pricesByProduct]);
+
+  // ════════════════════════════════════════════════════════════
+  // KHUYẾN MÃI TỰ ĐỘNG (inline, KiotViet-style)
+  // Quan sát các dòng "thường" trong giỏ → gọi /promotions/evaluate →
+  // tự thêm/gỡ dòng quà (isPromoGift) ngay dưới dòng SP kích hoạt.
+  // ════════════════════════════════════════════════════════════
+  const promoSyncRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!activeTab) return;
+    const branchId = selectedBranch?.id;
+    const tabId = activeTab.id;
+    const normalItems = (activeTab.cartItems || []).filter(
+      (it) => !it.isPromoGift
+    );
+
+    // Chữ ký đầu vào để tránh chạy lặp vô hạn (effect tự sửa cartItems)
+    const signature = JSON.stringify({
+      tabId,
+      branchId,
+      customerId: activeTab.selectedCustomer?.id,
+      userId: activeTab.soldById ?? user?.id,
+      items: normalItems.map((it) => ({
+        rowId: it.rowId,
+        productId: Number(it.product?.id),
+        quantity: Number(it.quantity),
+        price: Number(it.price),
+        discount: Number(it.discount) || 0,
+        disabled: it.promoDisabledIds || [],
+        giftChoice: it.rowId, // placeholder để chữ ký đổi khi cần
+      })),
+      // lựa chọn quà hiện tại
+      choices: (activeTab.cartItems || [])
+        .filter((it) => it.isPromoGift)
+        .map((it) => ({ t: it.triggerRowId, p: it.promotionId, g: it.product?.id })),
+    });
+
+    if (!branchId || normalItems.length === 0) {
+      // Giỏ trống dòng thường → xóa hết dòng quà nếu có
+      if ((activeTab.cartItems || []).some((it) => it.isPromoGift)) {
+        setTabs((prev) =>
+          prev.map((t) =>
+            t.id === tabId
+              ? { ...t, cartItems: t.cartItems.filter((it) => !it.isPromoGift) }
+              : t
+          )
+        );
+      }
+      promoSyncRef.current = signature;
+      return;
+    }
+
+    if (signature === promoSyncRef.current) return;
+
+    const timer = setTimeout(async () => {
+      promoSyncRef.current = signature;
+      try {
+        const res = await promotionsApi.evaluate({
+          branchId,
+          customerId: activeTab.selectedCustomer?.id,
+          userId: activeTab.soldById ?? user?.id,
+          items: normalItems.map((it) => ({
+            productId: Number(it.product.id),
+            quantity: Number(it.quantity),
+            price: Number(it.price),
+            discount: Number(it.discount) || 0,
+          })),
+        });
+
+        // Chỉ lấy KM loại sinh quà / mua kèm
+        const giftPromos = res.eligiblePromotions.filter(
+          (p) =>
+            p.type === "BUY_X_GET_Y" ||
+            p.type === "BUY_N_GET_M_SAME" ||
+            p.type === "BUY_X_BUY_Y_PRICE"
+        );
+
+        setTabs((prev) =>
+          prev.map((t) => {
+            if (t.id !== tabId) return t;
+            const normals = t.cartItems.filter((it) => !it.isPromoGift);
+            const oldGifts = t.cartItems.filter((it) => it.isPromoGift);
+
+            // Gắn "CT đang khớp" cho từng dòng thường (để hiện icon 🎁)
+            const eligibleByRow: Record<string, { promotionId: number; name: string }[]> =
+              {};
+            for (const n of normals) {
+              const pid = Number(n.product?.id);
+              const matched = giftPromos.filter((p) =>
+                (p.matchedProductIds || []).includes(pid)
+              );
+              if (matched.length > 0) {
+                eligibleByRow[n.rowId] = matched.map((p) => ({
+                  promotionId: p.promotionId,
+                  name: p.name,
+                }));
+              }
+            }
+
+            // Sinh dòng quà: mỗi CT gắn vào dòng X khớp ĐẦU TIÊN chưa tắt CT đó
+            const newGifts: CartItem[] = [];
+            for (const promo of giftPromos) {
+              const trigger = normals.find(
+                (n) =>
+                  (promo.matchedProductIds || []).includes(
+                    Number(n.product?.id)
+                  ) && !(n.promoDisabledIds || []).includes(promo.promotionId)
+              );
+              if (!trigger) continue;
+
+              const prevGift = oldGifts.find(
+                (g) => g.promotionId === promo.promotionId
+              );
+
+              const isBuyY = promo.type === "BUY_X_BUY_Y_PRICE";
+              const qty = Number(promo.rewardQuantity || 0);
+
+              let giftProduct: any = null;
+              let requiresChoice = false;
+              if (promo.requiresChoice) {
+                const chosenId =
+                  prevGift?.product?.id || promo.rewardOptions?.[0]?.productId;
+                requiresChoice = !prevGift?.product?.id;
+                const opt = promo.rewardOptions?.find(
+                  (o) => o.productId === chosenId
+                );
+                if (opt) {
+                  giftProduct = {
+                    id: opt.productId,
+                    name: opt.productName,
+                    code: opt.productCode || "",
+                    basePrice: 0,
+                  };
+                }
+              } else {
+                const line = isBuyY
+                  ? promo.discountedBuyLines?.[0]
+                  : promo.giftLines?.[0];
+                if (line) {
+                  giftProduct = {
+                    id: line.productId,
+                    name: line.productName,
+                    code: line.productCode || "",
+                    basePrice: 0,
+                  };
+                }
+              }
+              if (!giftProduct) continue;
+
+              const promoPrice = isBuyY ? Number(promo.promoPrice || 0) : 0;
+
+              newGifts.push({
+                rowId: `promo_${promo.promotionId}_${trigger.rowId}`,
+                product: giftProduct,
+                quantity: qty || 1,
+                price: promoPrice,
+                discount: 0,
+                conditionType: "normal",
+                isPromoGift: true,
+                promotionId: promo.promotionId,
+                promotionName: promo.name,
+                promoLineType: isBuyY ? "discounted_buy" : "gift",
+                triggerRowId: trigger.rowId,
+                rewardOptions: promo.rewardOptions,
+                requiresChoice,
+              });
+            }
+
+            // Ghép lại: mỗi dòng thường (kèm eligiblePromos) + dòng quà dưới nó
+            const merged: CartItem[] = [];
+            for (const n of normals) {
+              merged.push({ ...n, eligiblePromos: eligibleByRow[n.rowId] });
+              newGifts
+                .filter((g) => g.triggerRowId === n.rowId)
+                .forEach((g) => merged.push(g));
+            }
+            return { ...t, cartItems: merged };
+          })
+        );
+      } catch (e) {
+        // Lỗi đánh giá KM không nên chặn bán hàng
+        console.error("Promotion evaluate error:", e);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activeTab?.id,
+    selectedBranch?.id,
+    activeTab?.selectedCustomer?.id,
+    activeTab?.soldById,
+    // theo dõi dòng thường + lựa chọn quà
+    JSON.stringify(
+      (activeTab?.cartItems || []).map((it) => ({
+        r: it.rowId,
+        p: it.product?.id,
+        q: it.quantity,
+        pr: it.price,
+        d: it.discount,
+        g: it.isPromoGift ? it.product?.id : undefined,
+        dis: it.promoDisabledIds,
+      }))
+    ),
+  ]);
 
   /**
    * Hiển thị popup xác nhận nếu còn sản phẩm lệch giá so với giá bán gần nhất.
@@ -686,6 +905,12 @@ export default function BanHangPage() {
           const invoiced = invoicedQuantities[item.product?.id] || 0;
           const remaining = Number(item.quantity) - invoiced;
           if (remaining <= 0) return null;
+          const promoLineType =
+            item.lineType === "discounted_buy"
+              ? "discounted_buy"
+              : item.isGift || item.lineType === "gift"
+                ? "gift"
+                : undefined;
           return {
             rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
             product: item.product,
@@ -694,6 +919,13 @@ export default function BanHangPage() {
             discount: Number(item.discount) || 0,
             note: item.note || "",
             conditionType: item.conditionType || "normal",
+            ...(promoLineType
+              ? {
+                  isPromoGift: true,
+                  promoLineType,
+                  promotionId: item.promotionId ?? undefined,
+                }
+              : {}),
           };
         })
         .filter(Boolean) as CartItem[];
@@ -754,15 +986,30 @@ export default function BanHangPage() {
             item.rowId ??
             `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
         }))
-      : existingOrder.items?.map((item: any) => ({
-          rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
-          product: item.product,
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-          discount: Number(item.discount) || 0,
-          note: item.note || "",
-          conditionType: item.conditionType || "normal",
-        })) || [];
+      : existingOrder.items?.map((item: any) => {
+          const promoLineType =
+            item.lineType === "discounted_buy"
+              ? "discounted_buy"
+              : item.isGift || item.lineType === "gift"
+                ? "gift"
+                : undefined;
+          return {
+            rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
+            product: item.product,
+            quantity: Number(item.quantity),
+            price: Number(item.price),
+            discount: Number(item.discount) || 0,
+            note: item.note || "",
+            conditionType: item.conditionType || "normal",
+            ...(promoLineType
+              ? {
+                  isPromoGift: true,
+                  promoLineType,
+                  promotionId: item.promotionId ?? undefined,
+                }
+              : {}),
+          };
+        }) || [];
 
     const editTab: Tab = {
       id: editTabId,
@@ -895,15 +1142,30 @@ export default function BanHangPage() {
             item.rowId ??
             `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
         }))
-      : existingInvoice.details?.map((item: any) => ({
-          rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
-          product: item.product,
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-          discount: Number(item.discount) || 0,
-          note: item.note || "",
-          conditionType: item.conditionType || "normal",
-        })) || [];
+      : existingInvoice.details?.map((item: any) => {
+          const promoLineType =
+            item.lineType === "discounted_buy"
+              ? "discounted_buy"
+              : item.isGift || item.lineType === "gift"
+                ? "gift"
+                : undefined;
+          return {
+            rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
+            product: item.product,
+            quantity: Number(item.quantity),
+            price: Number(item.price),
+            discount: Number(item.discount) || 0,
+            note: item.note || "",
+            conditionType: item.conditionType || "normal",
+            ...(promoLineType
+              ? {
+                  isPromoGift: true,
+                  promoLineType,
+                  promotionId: item.promotionId ?? undefined,
+                }
+              : {}),
+          };
+        }) || [];
 
     const editTab: Tab = {
       id: editTabId,
@@ -1166,6 +1428,12 @@ export default function BanHangPage() {
       .map((item: any) => {
         const invoiced = invoicedQuantities[item.productId] || 0;
         const remaining = Number(item.quantity) - invoiced;
+        const promoLineType: "gift" | "discounted_buy" | undefined =
+          item.lineType === "discounted_buy"
+            ? "discounted_buy"
+            : item.isGift || item.lineType === "gift"
+              ? "gift"
+              : undefined;
         return {
           rowId: `${item.productId}_normal_${Date.now()}_${Math.random()}`,
           product: item.product,
@@ -1174,6 +1442,13 @@ export default function BanHangPage() {
           discount: Number(item.discount) || 0,
           note: item.note || "",
           conditionType: item.conditionType || "normal",
+          ...(promoLineType
+            ? {
+                isPromoGift: true,
+                promoLineType,
+                promotionId: item.promotionId ?? undefined,
+              }
+            : {}),
         };
       })
       .filter((item: CartItem) => item.quantity > 0);
@@ -1254,9 +1529,12 @@ export default function BanHangPage() {
         additionalPayment: actualPayment,
         payments: payments,
         items: activeTab.cartItems.map((item) => {
-          const price = Number(item.price);
+          const isGift = item.isPromoGift && item.promoLineType === "gift";
+          const isDiscountedBuy =
+            item.isPromoGift && item.promoLineType === "discounted_buy";
+          const price = isGift ? 0 : Number(item.price);
           const quantity = Number(item.quantity);
-          const discount = Number(item.discount) || 0;
+          const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
           return {
             productId: Number(item.product.id),
             productCode: item.product.code,
@@ -1268,6 +1546,12 @@ export default function BanHangPage() {
             totalPrice: (price - discount) * quantity,
             note: item.note || "",
             conditionType: item.conditionType || "normal",
+            ...(isGift
+              ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
+              : {}),
+            ...(isDiscountedBuy
+              ? { lineType: "discounted_buy", promotionId: item.promotionId }
+              : {}),
           };
         }),
       });
@@ -1890,6 +2174,17 @@ export default function BanHangPage() {
       return;
     }
 
+    // Chặn nếu còn dòng quà KM chưa chọn sản phẩm tặng
+    const unchosenGift = activeTab.cartItems.find(
+      (it) => it.isPromoGift && it.requiresChoice
+    );
+    if (unchosenGift) {
+      toast.error(
+        `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`
+      );
+      return;
+    }
+
     const proceed = await confirmPriceMismatch(
       activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
     );
@@ -1911,57 +2206,24 @@ export default function BanHangPage() {
       documentData.orderStatus = "pending";
       documentData.description = activeTab.orderNote;
       documentData.depositAmount = Number(actualPayment) || 0;
-      documentData.items = activeTab.cartItems.map((item) => ({
-        productId: Number(item.product.id),
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.price),
-        discount: Number(item.discount) || 0,
-        discountRatio: 0,
-        note: item.note || "",
-        conditionType: item.conditionType || "normal",
-      }));
-      documentData.delivery = {
-        receiver: activeTab.deliveryInfo.receiver,
-        contactNumber: activeTab.deliveryInfo.contactNumber,
-        address: activeTab.deliveryInfo.detailAddress,
-        locationName: activeTab.deliveryInfo.locationName,
-        wardName: activeTab.deliveryInfo.wardName,
-        weight: Number(activeTab.deliveryInfo.weight) || 0,
-        weightUnit: activeTab.deliveryInfo.weightUnit || "g",
-        length: Number(activeTab.deliveryInfo.length) || 10,
-        width: Number(activeTab.deliveryInfo.width) || 10,
-        height: Number(activeTab.deliveryInfo.height) || 10,
-        noteForDriver: activeTab.deliveryInfo.noteForDriver,
-      };
-    } else {
-      documentData.purchaseDate = new Date().toISOString();
-      documentData.description = activeTab.orderNote;
-      documentData.paidAmount = Number(actualPayment) || 0;
-      if (actualPayment > 0) {
-        documentData.payments =
-          activeTab.paymentMethods && activeTab.paymentMethods.length > 0
-            ? activeTab.paymentMethods.map((p) => ({
-                method: p.method,
-                amount: p.amount,
-                accountId: p.accountId,
-              }))
-            : [{ method: "cash", amount: actualPayment }];
-      }
       documentData.items = activeTab.cartItems.map((item) => {
-        const price = Number(item.price);
-        const quantity = Number(item.quantity);
-        const discount = Number(item.discount) || 0;
+        const isGift = item.isPromoGift && item.promoLineType === "gift";
+        const isDiscountedBuy =
+          item.isPromoGift && item.promoLineType === "discounted_buy";
         return {
           productId: Number(item.product.id),
-          productCode: item.product.code,
-          productName: item.product.name,
-          quantity: quantity,
-          price: price,
-          discount: discount,
+          quantity: Number(item.quantity),
+          unitPrice: isGift ? 0 : Number(item.price),
+          discount: item.isPromoGift ? 0 : Number(item.discount) || 0,
           discountRatio: 0,
-          totalPrice: (price - discount) * quantity,
           note: item.note || "",
           conditionType: item.conditionType || "normal",
+          ...(isGift
+            ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
+            : {}),
+          ...(isDiscountedBuy
+            ? { lineType: "discounted_buy", promotionId: item.promotionId }
+            : {}),
         };
       });
       documentData.delivery = {
@@ -1977,6 +2239,80 @@ export default function BanHangPage() {
         height: Number(activeTab.deliveryInfo.height) || 10,
         noteForDriver: activeTab.deliveryInfo.noteForDriver,
       };
+      // Gửi lựa chọn KM để BE re-validate (dòng quà do KM sinh có promotionId)
+      const orderAppliedPromotions = activeTab.cartItems
+        .filter((it) => it.isPromoGift && it.promotionId)
+        .map((it) => ({
+          promotionId: it.promotionId!,
+          giftProductId: Number(it.product.id),
+          giftQuantity: Number(it.quantity),
+        }));
+      documentData.skipPromotions = false;
+      documentData.appliedPromotions = orderAppliedPromotions;
+    } else {
+      documentData.purchaseDate = new Date().toISOString();
+      documentData.description = activeTab.orderNote;
+      documentData.paidAmount = Number(actualPayment) || 0;
+      if (actualPayment > 0) {
+        documentData.payments =
+          activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+            ? activeTab.paymentMethods.map((p) => ({
+                method: p.method,
+                amount: p.amount,
+                accountId: p.accountId,
+              }))
+            : [{ method: "cash", amount: actualPayment }];
+      }
+      documentData.items = activeTab.cartItems.map((item) => {
+        const isGift =
+          item.isPromoGift && item.promoLineType === "gift";
+        const isDiscountedBuy =
+          item.isPromoGift && item.promoLineType === "discounted_buy";
+        const price = isGift ? 0 : Number(item.price);
+        const quantity = Number(item.quantity);
+        const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
+        return {
+          productId: Number(item.product.id),
+          productCode: item.product.code,
+          productName: item.product.name,
+          quantity: quantity,
+          price: price,
+          discount: discount,
+          discountRatio: 0,
+          totalPrice: (price - discount) * quantity,
+          note: item.note || "",
+          conditionType: item.conditionType || "normal",
+          ...(isGift
+            ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
+            : {}),
+          ...(isDiscountedBuy
+            ? { lineType: "discounted_buy", promotionId: item.promotionId }
+            : {}),
+        };
+      });
+      documentData.delivery = {
+        receiver: activeTab.deliveryInfo.receiver,
+        contactNumber: activeTab.deliveryInfo.contactNumber,
+        address: activeTab.deliveryInfo.detailAddress,
+        locationName: activeTab.deliveryInfo.locationName,
+        wardName: activeTab.deliveryInfo.wardName,
+        weight: Number(activeTab.deliveryInfo.weight) || 0,
+        weightUnit: activeTab.deliveryInfo.weightUnit || "g",
+        length: Number(activeTab.deliveryInfo.length) || 10,
+        width: Number(activeTab.deliveryInfo.width) || 10,
+        height: Number(activeTab.deliveryInfo.height) || 10,
+        noteForDriver: activeTab.deliveryInfo.noteForDriver,
+      };
+      // Gửi lựa chọn KM để BE re-validate (dòng quà do KM sinh có promotionId)
+      const appliedPromotions = activeTab.cartItems
+        .filter((it) => it.isPromoGift && it.promotionId)
+        .map((it) => ({
+          promotionId: it.promotionId!,
+          giftProductId: Number(it.product.id),
+          giftQuantity: Number(it.quantity),
+        }));
+      documentData.skipPromotions = false;
+      documentData.appliedPromotions = appliedPromotions;
     }
 
     try {

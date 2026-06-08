@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Copy, Minus, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, Copy, Gift, Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 import { NoteTemplate } from "@/lib/api/note-templates";
 import {
@@ -458,7 +458,48 @@ export function OrderItemsList({
                         </span>
                       );
                     })()}
+                    {item.isPromoGift && (
+                      <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-xs rounded-full border border-pink-300 bg-pink-50 text-pink-700 font-medium">
+                        KM
+                      </span>
+                    )}
                   </div>
+                  {item.isPromoGift && item.promotionName && (
+                    <div className="text-xs text-blue-600 font-medium">
+                      🎁 {item.promotionName}
+                    </div>
+                  )}
+                  {item.isPromoGift &&
+                    item.rewardOptions &&
+                    item.rewardOptions.length > 1 && (
+                      <select
+                        className="mt-1 w-full max-w-xs rounded border border-gray-300 px-2 py-1 text-xs"
+                        value={item.product?.id || ""}
+                        onChange={(e) => {
+                          const opt = item.rewardOptions!.find(
+                            (o) => o.productId === Number(e.target.value)
+                          );
+                          if (opt) {
+                            onUpdateItem(item.rowId, {
+                              product: {
+                                id: opt.productId,
+                                name: opt.productName,
+                                code: opt.productCode || "",
+                                basePrice: 0,
+                              },
+                              requiresChoice: false,
+                            });
+                          }
+                        }}>
+                        <option value="">-- Chọn quà tặng --</option>
+                        {item.rewardOptions.map((o) => (
+                          <option key={o.productId} value={o.productId}>
+                            {o.productName || `SP#${o.productId}`} (tồn{" "}
+                            {o.availableStock})
+                          </option>
+                        ))}
+                      </select>
+                    )}
 
                   {canViewInventory &&
                     (() => {
@@ -481,33 +522,73 @@ export function OrderItemsList({
                 </div>
 
                 <div className="flex-shrink-0 flex items-center gap-1">
-                  {canViewInventory && (
-                    <button
-                      onClick={() => setSelectedItemForInventory(item)}
-                      className="p-1 hover:bg-blue-50 rounded transition-colors"
-                      title="Xem tồn kho tất cả chi nhánh">
-                      <AlertCircle className="w-4 h-4 text-blue-400" />
-                    </button>
+                  {item.isPromoGift ? null : (
+                    <>
+                      {canViewInventory && (
+                        <button
+                          onClick={() => setSelectedItemForInventory(item)}
+                          className="p-1 hover:bg-blue-50 rounded transition-colors"
+                          title="Xem tồn kho tất cả chi nhánh">
+                          <AlertCircle className="w-4 h-4 text-blue-400" />
+                        </button>
+                      )}
+                      {canEditPrice && (
+                        <ProductPriceHistory
+                          customerId={selectedCustomerId}
+                          productId={item.product.id}
+                          documentType="invoice"
+                          branchId={selectedBranch?.id}
+                        />
+                      )}
+                      <button
+                        onClick={() => onDuplicateItem(item)}
+                        className="p-1 hover:bg-green-50 rounded transition-colors"
+                        title="Thêm dòng mới cho sản phẩm này">
+                        <Copy className="w-4 h-4 text-green-600" />
+                      </button>
+                      {item.eligiblePromos && item.eligiblePromos.length > 0 && (
+                        (() => {
+                          const disabled = item.promoDisabledIds || [];
+                          const allOn = item.eligiblePromos.every(
+                            (p) => !disabled.includes(p.promotionId)
+                          );
+                          return (
+                            <button
+                              onClick={() => {
+                                onUpdateItem(item.rowId, {
+                                  promoDisabledIds: allOn
+                                    ? item.eligiblePromos!.map(
+                                        (p) => p.promotionId
+                                      )
+                                    : [],
+                                });
+                              }}
+                              className={`p-1 rounded transition-colors ${
+                                allOn
+                                  ? "bg-pink-100 hover:bg-pink-200"
+                                  : "hover:bg-pink-50"
+                              }`}
+                              title={
+                                allOn
+                                  ? "Bỏ áp dụng khuyến mãi cho dòng này"
+                                  : "Áp dụng khuyến mãi cho dòng này"
+                              }>
+                              <Gift
+                                className={`w-4 h-4 ${
+                                  allOn ? "text-pink-600" : "text-gray-400"
+                                }`}
+                              />
+                            </button>
+                          );
+                        })()
+                      )}
+                      <button
+                        onClick={() => onRemoveItem(item.rowId)}
+                        className="p-1 hover:bg-red-50 rounded transition-colors">
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </button>
+                    </>
                   )}
-                  {canEditPrice && (
-                    <ProductPriceHistory
-                      customerId={selectedCustomerId}
-                      productId={item.product.id}
-                      documentType="invoice"
-                      branchId={selectedBranch?.id}
-                    />
-                  )}
-                  <button
-                    onClick={() => onDuplicateItem(item)}
-                    className="p-1 hover:bg-green-50 rounded transition-colors"
-                    title="Thêm dòng mới cho sản phẩm này">
-                    <Copy className="w-4 h-4 text-green-600" />
-                  </button>
-                  <button
-                    onClick={() => onRemoveItem(item.rowId)}
-                    className="p-1 hover:bg-red-50 rounded transition-colors">
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </button>
                 </div>
               </div>
 
