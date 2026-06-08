@@ -16,6 +16,7 @@ import {
   X,
   Check,
   Calendar,
+  AlertTriangle,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 
@@ -24,6 +25,15 @@ interface InvoicesSidebarProps {
   onFiltersChange: (filters: any) => void;
   /** Hiện filter "Nhân viên phụ trách" (Misa) — chỉ dùng cho trang hóa đơn VAT */
   showMisaEmployeeFilter?: boolean;
+  /**
+   * Tách filter thời gian thành 2 bộ độc lập:
+   * - "Thời gian mua hàng" → purchaseDate (fromPurchaseDate/toPurchaseDate)
+   * - "Thời gian tạo" → createdAt (fromCreatedDate/toCreatedDate)
+   * Chỉ dùng cho trang hóa đơn thường. Mặc định false (giữ hành vi cũ).
+   */
+  splitTimeFilters?: boolean;
+  /** Hiện toggle "Chỉ HĐ cảnh báo lệch giá" — chỉ dùng cho trang hóa đơn thường */
+  showPriceWarningFilter?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -221,6 +231,27 @@ const getDateRangeFromPreset = (preset: string) => {
     default:
       return { from: today, to: now };
   }
+};
+
+// Đổi một TimeRangeState → { from, to } dạng ISO để gửi backend.
+// Trả null khi đang ở "all_time" / chưa chọn gì (không áp filter thời gian).
+const rangeToIso = (r: {
+  dateMode: "preset" | "custom";
+  selectedPreset: string;
+  fromDate: string;
+  toDate: string;
+}): { from: string; to: string } | null => {
+  if (r.selectedPreset === "all_time" && r.dateMode !== "custom") return null;
+  const range =
+    r.dateMode === "preset"
+      ? getDateRangeFromPreset(r.selectedPreset)
+      : r.fromDate && r.toDate
+        ? {
+            from: new Date(r.fromDate + "T00:00:00"),
+            to: new Date(r.toDate + "T23:59:59.999"),
+          }
+        : getDateRangeFromPreset("this_month");
+  return { from: range.from.toISOString(), to: range.to.toISOString() };
 };
 
 // ─── StatusDropdown (dùng cho cả "Trạng thái HĐ" và "Trạng thái giao hàng") ──
@@ -829,10 +860,185 @@ function MiniCalendar({
   );
 }
 
+// ─── TimeRangeFilter (controlled — dùng chung cho "mua hàng" & "tạo") ────────
+interface TimeRangeState {
+  dateMode: "preset" | "custom";
+  selectedPreset: string;
+  fromDate: string;
+  toDate: string;
+}
+function TimeRangeFilter({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: TimeRangeState;
+  onChange: (next: TimeRangeState) => void;
+}) {
+  const { dateMode, selectedPreset, fromDate, toDate } = value;
+  const [showPresetPanel, setShowPresetPanel] = useState(false);
+  const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
+  const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
+  const presetRowRef = useRef<HTMLDivElement>(null);
+  const customDateRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!openCal) return;
+    const h = (e: MouseEvent) => {
+      if (
+        customDateRef.current &&
+        !customDateRef.current.contains(e.target as Node)
+      )
+        setOpenCal(null);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [openCal]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-sm font-medium text-gray-700">{label}</label>
+      </div>
+
+      <div className="space-y-1.5">
+        {/* Row Preset */}
+        <div
+          ref={presetRowRef}
+          onClick={() => {
+            onChange({ ...value, dateMode: "preset" });
+            setOpenCal(null);
+            if (showPresetPanel) {
+              setShowPresetPanel(false);
+            } else {
+              setPanelAnchorRect(
+                presetRowRef.current?.getBoundingClientRect() ?? null
+              );
+              setShowPresetPanel(true);
+            }
+          }}
+          className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
+            dateMode === "preset"
+              ? "border-blue-400 bg-blue-50"
+              : "border-gray-200 hover:border-gray-300"
+          }`}>
+          <div
+            className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+              dateMode === "preset" ? "border-blue-600" : "border-gray-300"
+            }`}>
+            {dateMode === "preset" && (
+              <div className="w-1 h-1 rounded-full bg-blue-600" />
+            )}
+          </div>
+          <span className="text-sm text-gray-700 flex-1 font-medium">
+            {PRESET_LABELS[selectedPreset] ?? "Chọn thời gian"}
+          </span>
+          <ChevronRight
+            className={`w-4 h-4 transition-colors flex-shrink-0 ${
+              showPresetPanel ? "text-blue-500" : "text-gray-400"
+            }`}
+          />
+        </div>
+
+        {/* Row Tùy chỉnh */}
+        <div
+          onClick={() => {
+            onChange({ ...value, dateMode: "custom" });
+            setShowPresetPanel(false);
+          }}
+          className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
+            dateMode === "custom"
+              ? "border-blue-400 bg-blue-50"
+              : "border-gray-200 hover:border-gray-300"
+          }`}>
+          <div
+            className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+              dateMode === "custom" ? "border-blue-600" : "border-gray-300"
+            }`}>
+            {dateMode === "custom" && (
+              <div className="w-1 h-1 rounded-full bg-blue-600" />
+            )}
+          </div>
+          <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
+          <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        </div>
+
+        {dateMode === "custom" && (
+          <div ref={customDateRef} className="space-y-2 pt-1">
+            {(["from", "to"] as const).map((field) => {
+              const isFrom = field === "from";
+              const val = isFrom ? fromDate : toDate;
+              const fieldLabel = isFrom ? "Từ ngày" : "Đến ngày";
+              const setVal = (d: string) =>
+                onChange(
+                  isFrom ? { ...value, fromDate: d } : { ...value, toDate: d }
+                );
+              const isOpen = openCal === field;
+              return (
+                <div key={field}>
+                  <span className="text-xs text-gray-500 mb-1 block">
+                    {fieldLabel}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setOpenCal(isOpen ? null : field)}
+                    className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                      val
+                        ? "border-blue-300 bg-blue-50 text-gray-800"
+                        : "border-gray-200 text-gray-400"
+                    } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                    <span>
+                      {val
+                        ? new Date(val + "T00:00:00").toLocaleDateString(
+                            "vi-VN",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            }
+                          )
+                        : "Chọn ngày"}
+                    </span>
+                    <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </button>
+                  {isOpen && (
+                    <MiniCalendar
+                      value={val}
+                      onChange={setVal}
+                      onClose={() => setOpenCal(null)}
+                      minDate={
+                        field === "to" ? fromDate || undefined : undefined
+                      }
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {showPresetPanel && (
+          <PresetPanel
+            groups={PRESET_GROUPS}
+            selected={selectedPreset}
+            onSelect={(v) => onChange({ ...value, selectedPreset: v })}
+            onClose={() => setShowPresetPanel(false)}
+            anchorRect={panelAnchorRect}
+            triggerRef={presetRowRef}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 export function InvoicesSidebar({
   onFiltersChange,
   showMisaEmployeeFilter = false,
+  splitTimeFilters = false,
+  showPriceWarningFilter = false,
 }: InvoicesSidebarProps) {
   const { data: branches } = useBranches();
   const activeBranches = useMemo(
@@ -888,14 +1094,27 @@ export function InvoicesSidebar({
   const [selectedDeliveryStatus, setSelectedDeliveryStatus] = useState(
     saved.current?.selectedDeliveryStatus || ""
   );
-  const [dateMode, setDateMode] = useState<"preset" | "custom">(
-    saved.current?.dateMode || "preset"
-  );
-  const [selectedPreset, setSelectedPreset] = useState(
-    saved.current?.selectedPreset || "all_time"
-  );
-  const [fromDate, setFromDate] = useState(saved.current?.fromDate || "");
-  const [toDate, setToDate] = useState(saved.current?.toDate || "");
+  // Thời gian tạo (createdAt). Khôi phục từ key mới `createdRange`, fallback
+  // sang các key cũ (dateMode/selectedPreset/fromDate/toDate) để tương thích
+  // ngược với state đã lưu trước đây.
+  const [createdRange, setCreatedRange] = useState<TimeRangeState>(() => ({
+    dateMode:
+      saved.current?.createdRange?.dateMode ?? saved.current?.dateMode ?? "preset",
+    selectedPreset:
+      saved.current?.createdRange?.selectedPreset ??
+      saved.current?.selectedPreset ??
+      "all_time",
+    fromDate:
+      saved.current?.createdRange?.fromDate ?? saved.current?.fromDate ?? "",
+    toDate: saved.current?.createdRange?.toDate ?? saved.current?.toDate ?? "",
+  }));
+  // Thời gian mua hàng (purchaseDate) — chỉ dùng khi splitTimeFilters bật.
+  const [purchaseRange, setPurchaseRange] = useState<TimeRangeState>(() => ({
+    dateMode: saved.current?.purchaseRange?.dateMode ?? "preset",
+    selectedPreset: saved.current?.purchaseRange?.selectedPreset ?? "all_time",
+    fromDate: saved.current?.purchaseRange?.fromDate ?? "",
+    toDate: saved.current?.purchaseRange?.toDate ?? "",
+  }));
   const [creatorIds, setCreatorIds] = useState<string[]>(
     saved.current?.creatorIds || []
   );
@@ -918,11 +1137,10 @@ export function InvoicesSidebar({
     number[]
   >(saved.current?.selectedBankAccountIds || []);
 
-  const [showPresetPanel, setShowPresetPanel] = useState(false);
-  const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
-  const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
-  const presetRowRef = useRef<HTMLDivElement>(null);
-  const customDateRef = useRef<HTMLDivElement>(null);
+  const [priceWarning, setPriceWarning] = useState<boolean>(
+    saved.current?.priceWarning || false
+  );
+
   const customerRef = useRef<HTMLDivElement>(null);
 
   // Persist filter state vào localStorage khi thay đổi
@@ -932,10 +1150,8 @@ export function InvoicesSidebar({
       customerId,
       selectedStatuses,
       selectedDeliveryStatus,
-      dateMode,
-      selectedPreset,
-      fromDate,
-      toDate,
+      createdRange,
+      purchaseRange,
       creatorIds,
       soldByIds,
       saleChannelId,
@@ -943,6 +1159,7 @@ export function InvoicesSidebar({
       selectedBankAccountIds,
       misaEmployeeCodes,
       taxCodeStatus,
+      priceWarning,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [
@@ -950,10 +1167,8 @@ export function InvoicesSidebar({
     customerId,
     selectedStatuses,
     selectedDeliveryStatus,
-    dateMode,
-    selectedPreset,
-    fromDate,
-    toDate,
+    createdRange,
+    purchaseRange,
     creatorIds,
     soldByIds,
     saleChannelId,
@@ -961,6 +1176,7 @@ export function InvoicesSidebar({
     selectedBankAccountIds,
     misaEmployeeCodes,
     taxCodeStatus,
+    priceWarning,
   ]);
 
   // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó.
@@ -1012,19 +1228,33 @@ export function InvoicesSidebar({
     if (customerId) n++;
     if (selectedStatuses.length > 0) n++;
     if (selectedDeliveryStatus) n++;
-    if (selectedPreset !== "all_time" || dateMode === "custom") n++;
+    if (
+      createdRange.selectedPreset !== "all_time" ||
+      createdRange.dateMode === "custom"
+    )
+      n++;
+    if (
+      splitTimeFilters &&
+      (purchaseRange.selectedPreset !== "all_time" ||
+        purchaseRange.dateMode === "custom")
+    )
+      n++;
     if (creatorIds.length > 0) n++;
     if (soldByIds.length > 0) n++;
     if (saleChannelId) n++;
     if (paymentMethod) n++;
     if (showMisaEmployeeFilter && misaEmployeeCodes.length > 0) n++;
     if (showMisaEmployeeFilter && taxCodeStatus) n++;
+    if (showPriceWarningFilter && priceWarning) n++;
     return n;
   }, [
     selectedBranchIds,
     customerId,
     selectedStatuses,
     selectedDeliveryStatus,
+    createdRange,
+    purchaseRange,
+    splitTimeFilters,
     creatorIds,
     soldByIds,
     saleChannelId,
@@ -1032,20 +1262,9 @@ export function InvoicesSidebar({
     misaEmployeeCodes,
     taxCodeStatus,
     showMisaEmployeeFilter,
+    showPriceWarningFilter,
+    priceWarning,
   ]);
-
-  useEffect(() => {
-    if (!openCal) return;
-    const h = (e: MouseEvent) => {
-      if (
-        customDateRef.current &&
-        !customDateRef.current.contains(e.target as Node)
-      )
-        setOpenCal(null);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [openCal]);
 
   // Debounce 300ms
   useEffect(() => {
@@ -1059,19 +1278,22 @@ export function InvoicesSidebar({
       if (creatorIds.length > 0) f.createdByIds = creatorIds.map(Number);
       if (soldByIds.length > 0) f.soldByIds = soldByIds.map(Number);
       if (saleChannelId) f.saleChannelId = parseInt(saleChannelId);
-      if (selectedPreset !== "all_time" || dateMode === "custom") {
-        const range =
-          dateMode === "preset"
-            ? getDateRangeFromPreset(selectedPreset)
-            : fromDate && toDate
-              ? {
-                  from: new Date(fromDate + "T00:00:00"),
-                  to: new Date(toDate + "T23:59:59.999"),
-                }
-              : getDateRangeFromPreset("this_month");
-        f.fromCreatedDate = range.from.toISOString();
-        f.toCreatedDate = range.to.toISOString();
+
+      // Thời gian tạo → createdAt
+      const createdIso = rangeToIso(createdRange);
+      if (createdIso) {
+        f.fromCreatedDate = createdIso.from;
+        f.toCreatedDate = createdIso.to;
       }
+      // Thời gian mua hàng → purchaseDate (chỉ khi bật split)
+      if (splitTimeFilters) {
+        const purchaseIso = rangeToIso(purchaseRange);
+        if (purchaseIso) {
+          f.fromPurchaseDate = purchaseIso.from;
+          f.toPurchaseDate = purchaseIso.to;
+        }
+      }
+
       if (paymentMethod) f.paymentMethod = paymentMethod;
       if (paymentMethod === "transfer" && selectedBankAccountIds.length > 0)
         f.bankAccountIds = selectedBankAccountIds;
@@ -1082,6 +1304,8 @@ export function InvoicesSidebar({
       if (showMisaEmployeeFilter && taxCodeStatus)
         f.taxCodeStatus = taxCodeStatus;
 
+      if (showPriceWarningFilter && priceWarning) f.priceWarning = true;
+
       onFiltersChange(f);
     }, 300);
     return () => clearTimeout(timer);
@@ -1090,10 +1314,9 @@ export function InvoicesSidebar({
     customerId,
     selectedStatuses,
     selectedDeliveryStatus,
-    dateMode,
-    selectedPreset,
-    fromDate,
-    toDate,
+    createdRange,
+    purchaseRange,
+    splitTimeFilters,
     creatorIds,
     soldByIds,
     saleChannelId,
@@ -1102,6 +1325,8 @@ export function InvoicesSidebar({
     misaEmployeeCodes,
     taxCodeStatus,
     showMisaEmployeeFilter,
+    showPriceWarningFilter,
+    priceWarning,
   ]);
 
   const clearAll = () => {
@@ -1110,10 +1335,18 @@ export function InvoicesSidebar({
     setCustomerSearch("");
     setSelectedStatuses(DEFAULT_STATUSES);
     setSelectedDeliveryStatus("");
-    setDateMode("preset");
-    setSelectedPreset("all_time");
-    setFromDate("");
-    setToDate("");
+    setCreatedRange({
+      dateMode: "preset",
+      selectedPreset: "all_time",
+      fromDate: "",
+      toDate: "",
+    });
+    setPurchaseRange({
+      dateMode: "preset",
+      selectedPreset: "all_time",
+      fromDate: "",
+      toDate: "",
+    });
     setCreatorIds([]);
     setSoldByIds([]);
     setSaleChannelId("");
@@ -1121,6 +1354,7 @@ export function InvoicesSidebar({
     setSelectedBankAccountIds([]);
     setMisaEmployeeCodes([]);
     setTaxCodeStatus("");
+    setPriceWarning(false);
     onFiltersChange({});
     localStorage.removeItem(STORAGE_KEY);
   };
@@ -1236,139 +1470,66 @@ export function InvoicesSidebar({
       </div>
 
       <div className="p-4 space-y-3">
-        {/* ── Thời gian (UI giống OrdersSidebar) ── */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">
-              Thời gian
-            </label>
-          </div>
-
-          <div className="space-y-1.5">
-            {/* Row Preset */}
-            <div
-              ref={presetRowRef}
-              onClick={() => {
-                setDateMode("preset");
-                setOpenCal(null);
-                if (showPresetPanel) {
-                  setShowPresetPanel(false);
-                } else {
-                  setPanelAnchorRect(
-                    presetRowRef.current?.getBoundingClientRect() ?? null
-                  );
-                  setShowPresetPanel(true);
-                }
-              }}
-              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
-                dateMode === "preset"
-                  ? "border-blue-400 bg-blue-50"
+        {/* ── Cảnh báo lệch giá ── */}
+        {showPriceWarningFilter && (
+          <>
+            <button
+              type="button"
+              onClick={() => setPriceWarning((p) => !p)}
+              className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border text-sm transition-all select-none ${
+                priceWarning
+                  ? "border-yellow-400 bg-yellow-50"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
-              <div
-                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  dateMode === "preset" ? "border-blue-600" : "border-gray-300"
-                }`}>
-                {dateMode === "preset" && (
-                  <div className="w-1 h-1 rounded-full bg-blue-600" />
-                )}
-              </div>
-              <span className="text-sm text-gray-700 flex-1 font-medium">
-                {PRESET_LABELS[selectedPreset] ?? "Chọn thời gian"}
+              <span className="flex items-center gap-2 min-w-0">
+                <AlertTriangle
+                  className={`w-4 h-4 flex-shrink-0 ${
+                    priceWarning
+                      ? "text-yellow-500 fill-yellow-100"
+                      : "text-gray-400"
+                  }`}
+                />
+                <span className="text-left font-medium text-gray-700">
+                  Chỉ HĐ cảnh báo lệch giá
+                </span>
               </span>
-              <ChevronRight
-                className={`w-4 h-4 transition-colors flex-shrink-0 ${
-                  showPresetPanel ? "text-blue-500" : "text-gray-400"
-                }`}
-              />
-            </div>
-
-            {/* Row Tùy chỉnh */}
-            <div
-              onClick={() => {
-                setDateMode("custom");
-                setShowPresetPanel(false);
-              }}
-              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
-                dateMode === "custom"
-                  ? "border-blue-400 bg-blue-50"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}>
-              <div
-                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  dateMode === "custom" ? "border-blue-600" : "border-gray-300"
+              <span
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${
+                  priceWarning ? "bg-yellow-400" : "bg-gray-200"
                 }`}>
-                {dateMode === "custom" && (
-                  <div className="w-1 h-1 rounded-full bg-blue-600" />
-                )}
-              </div>
-              <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
-              <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            </div>
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    priceWarning ? "translate-x-4" : "translate-x-0.5"
+                  }`}
+                />
+              </span>
+            </button>
+            <div className="border-t border-gray-100" />
+          </>
+        )}
 
-            {dateMode === "custom" && (
-              <div ref={customDateRef} className="space-y-2 pt-1">
-                {(["from", "to"] as const).map((field) => {
-                  const isFrom = field === "from";
-                  const val = isFrom ? fromDate : toDate;
-                  const label = isFrom ? "Từ ngày" : "Đến ngày";
-                  const setVal = isFrom ? setFromDate : setToDate;
-                  const isOpen = openCal === field;
-                  return (
-                    <div key={field}>
-                      <span className="text-xs text-gray-500 mb-1 block">
-                        {label}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setOpenCal(isOpen ? null : field)}
-                        className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
-                          val
-                            ? "border-blue-300 bg-blue-50 text-gray-800"
-                            : "border-gray-200 text-gray-400"
-                        } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
-                        <span>
-                          {val
-                            ? new Date(val + "T00:00:00").toLocaleDateString(
-                                "vi-VN",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                }
-                              )
-                            : "Chọn ngày"}
-                        </span>
-                        <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      </button>
-                      {isOpen && (
-                        <MiniCalendar
-                          value={val}
-                          onChange={setVal}
-                          onClose={() => setOpenCal(null)}
-                          minDate={
-                            field === "to" ? fromDate || undefined : undefined
-                          }
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {showPresetPanel && (
-              <PresetPanel
-                groups={PRESET_GROUPS}
-                selected={selectedPreset}
-                onSelect={setSelectedPreset}
-                onClose={() => setShowPresetPanel(false)}
-                anchorRect={panelAnchorRect}
-                triggerRef={presetRowRef}
-              />
-            )}
-          </div>
-        </div>
+        {/* ── Thời gian ── */}
+        {splitTimeFilters ? (
+          <>
+            <TimeRangeFilter
+              label="Thời gian mua hàng"
+              value={purchaseRange}
+              onChange={setPurchaseRange}
+            />
+            <div className="border-t border-gray-100" />
+            <TimeRangeFilter
+              label="Thời gian tạo"
+              value={createdRange}
+              onChange={setCreatedRange}
+            />
+          </>
+        ) : (
+          <TimeRangeFilter
+            label="Thời gian"
+            value={createdRange}
+            onChange={setCreatedRange}
+          />
+        )}
 
         <div className="border-t border-gray-100" />
 

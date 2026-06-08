@@ -97,12 +97,24 @@ export function DashboardHeader() {
     []
   );
 
+  const financeSubmenu = useMemo(
+    () => [
+      { label: "Sổ quỹ", href: "/tai-chinh/so-quy" },
+      { label: "Biến động số dư", href: "/tai-chinh/bien-dong-so-du" },
+    ],
+    []
+  );
+
   const filteredProductSubmenu = useFilteredSections(
     productSubmenu,
     ROUTE_PERMISSIONS
   );
   const filteredOrderSubmenu = useFilteredMenuItems(
     orderSubmenu,
+    ROUTE_PERMISSIONS
+  );
+  const filteredFinanceSubmenu = useFilteredMenuItems(
+    financeSubmenu,
     ROUTE_PERMISSIONS
   );
 
@@ -208,13 +220,31 @@ export function DashboardHeader() {
                 </Link>
               </PermissionGate>
 
-              <PermissionGate resource="cash_flows" action="view">
-                <Link
-                  href="/so-quy"
-                  className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
-                  Sổ quỹ
-                </Link>
-              </PermissionGate>
+              {filteredFinanceSubmenu.length > 0 && (
+                <div
+                  className="relative"
+                  onMouseEnter={() => setHoveredMenu("finance")}
+                  onMouseLeave={() => setHoveredMenu(null)}>
+                  <button className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
+                    Tài chính
+                  </button>
+                  {hoveredMenu === "finance" && (
+                    <div className="absolute top-full left-0 bg-white text-gray-800 shadow-2xl rounded-md z-50 border">
+                      <ul>
+                        {filteredFinanceSubmenu.map((item) => (
+                          <li key={item.href}>
+                            <Link
+                              href={item.href}
+                              className="block px-5 py-2 min-w-max hover:bg-gray-400 rounded-md text-md transition-colors">
+                              {item.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <Link
                 href="/bao-cao/khach-hang"
@@ -432,14 +462,32 @@ export function DashboardHeader() {
                 </Link>
               </PermissionGate>
 
-              <PermissionGate resource="cash_flows" action="view">
-                <Link
-                  href="/so-quy"
-                  onClick={closeMobileMenu}
-                  className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
-                  Sổ quỹ
-                </Link>
-              </PermissionGate>
+              {/* Tài chính accordion */}
+              {filteredFinanceSubmenu.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => toggleMobileSection("finance")}
+                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
+                    <span>Tài chính</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-white transition-transform duration-200 ${expandedMobileSection === "finance" ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  {expandedMobileSection === "finance" && (
+                    <div className="bg-blue-800/40">
+                      {filteredFinanceSubmenu.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={closeMobileMenu}
+                          className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-blue-600 transition-colors">
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <Link
                 href="/bao-cao/khach-hang"

@@ -132,6 +132,8 @@ export default function HoaDonPage() {
         <InvoicesSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}
+          splitTimeFilters
+          showPriceWarningFilter
         />
         <InvoicesTable
           filters={filters}

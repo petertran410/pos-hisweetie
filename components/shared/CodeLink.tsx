@@ -35,7 +35,7 @@ const ROUTES: Record<CodeEntity, string> = {
   "purchase-order": "/san-pham/nhap-hang",
   "order-supplier": "/san-pham/dat-hang-nhap",
   supplier: "/san-pham/nha-cung-cap",
-  cashflow: "/so-quy",
+  cashflow: "/tai-chinh/so-quy",
   "supplier-return": "/san-pham/tra-hang-nhap",
   transfer: "/san-pham/chuyen-hang",
   "stock-audit": "/san-pham/kiem-kho",

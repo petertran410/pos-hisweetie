@@ -115,7 +115,7 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
                         ? "text-blue-600 hover:underline cursor-pointer"
                         : "text-blue-600 hover:underline cursor-pointer"
                     }
-                    href={`/so-quy?Code=${row.code}`}
+                    href={`/tai-chinh/so-quy?Code=${row.code}`}
                     target="_blank"
                     rel="noopener noreferrer">
                     {row.code}

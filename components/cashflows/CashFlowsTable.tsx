@@ -123,6 +123,21 @@ const DEFAULT_COLUMNS: ColumnConfig<CashFlow>[] = [
     render: (cf) => cf.partnerName || "-",
   },
   {
+    key: "partnerCode",
+    label: "Mã KH/NCC",
+    visible: true,
+    width: "150px",
+    render: (cf) => {
+      if (cf.partnerType === "C" && cf.customer?.code) {
+        return <CodeLink entity="customer" code={cf.customer.code} withIcon />;
+      }
+      if (cf.partnerType === "S" && cf.supplier?.code) {
+        return <CodeLink entity="supplier" code={cf.supplier.code} withIcon />;
+      }
+      return "-";
+    },
+  },
+  {
     key: "cashFlowGroup",
     label: "Loại thu/chi",
     visible: true,

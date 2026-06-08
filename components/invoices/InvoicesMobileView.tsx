@@ -102,7 +102,17 @@ const DATE_PRESETS = [
 ];
 
 // Các key chỉ phục vụ UI, KHÔNG được gửi lên backend (DTO không whitelist).
-const UI_ONLY_FILTER_KEYS = ["_preset", "_dateMode", "_fromDate", "_toDate"];
+const UI_ONLY_FILTER_KEYS = [
+  "_purchasePreset",
+  "_purchaseDateMode",
+  "_purchaseFromDate",
+  "_purchaseToDate",
+  "_createdPreset",
+  "_createdDateMode",
+  "_createdFromDate",
+  "_createdToDate",
+  "_customerLabel",
+];
 
 // Loại bỏ các key UI-only trước khi gọi API để tránh 400 (forbidNonWhitelisted).
 const toApiFilters = (f: any) => {
@@ -122,7 +132,8 @@ const countActiveFilters = (f: any): number => {
   if (Array.isArray(f.createdByIds) && f.createdByIds.length > 0) n++;
   if (Array.isArray(f.soldByIds) && f.soldByIds.length > 0) n++;
   if (f.paymentMethod) n++;
-  if (f._preset || f.fromCreatedDate || f.toCreatedDate) n++;
+  if (f._purchasePreset || f.fromPurchaseDate || f.toPurchaseDate) n++;
+  if (f._createdPreset || f.fromCreatedDate || f.toCreatedDate) n++;
   return n;
 };
 
@@ -267,16 +278,32 @@ function InvoicesMobileFilterSheet({
     return () => clearTimeout(t);
   }, [customerQuery]);
 
-  // Thời gian: preset hoặc tùy chọn ngày cụ thể
-  const [dateMode, setDateMode] = useState<"preset" | "custom">(
-    filters._dateMode || (filters._preset ? "preset" : "preset")
+  // Thời gian mua hàng (purchaseDate)
+  const [purchaseDateMode, setPurchaseDateMode] = useState<"preset" | "custom">(
+    filters._purchaseDateMode || "preset"
   );
-  const [preset, setPreset] = useState<string>(filters._preset || "all_time");
-  const [fromDate, setFromDate] = useState<string>(
-    filters._fromDate || isoToDateInput(filters.fromCreatedDate)
+  const [purchasePreset, setPurchasePreset] = useState<string>(
+    filters._purchasePreset || "all_time"
   );
-  const [toDate, setToDate] = useState<string>(
-    filters._toDate || isoToDateInput(filters.toCreatedDate)
+  const [purchaseFromDate, setPurchaseFromDate] = useState<string>(
+    filters._purchaseFromDate || isoToDateInput(filters.fromPurchaseDate)
+  );
+  const [purchaseToDate, setPurchaseToDate] = useState<string>(
+    filters._purchaseToDate || isoToDateInput(filters.toPurchaseDate)
+  );
+
+  // Thời gian tạo (createdAt)
+  const [createdDateMode, setCreatedDateMode] = useState<"preset" | "custom">(
+    filters._createdDateMode || "preset"
+  );
+  const [createdPreset, setCreatedPreset] = useState<string>(
+    filters._createdPreset || "all_time"
+  );
+  const [createdFromDate, setCreatedFromDate] = useState<string>(
+    filters._createdFromDate || isoToDateInput(filters.fromCreatedDate)
+  );
+  const [createdToDate, setCreatedToDate] = useState<string>(
+    filters._createdToDate || isoToDateInput(filters.toCreatedDate)
   );
 
   const handleApply = () => {
@@ -301,18 +328,48 @@ function InvoicesMobileFilterSheet({
         f.bankAccountIds = bankAccountIds.map(Number);
     }
 
-    // Thời gian → fromCreatedDate/toCreatedDate (giống desktop)
-    if (dateMode === "preset" && preset && preset !== "all_time") {
-      const range = getDateRangeFromPreset(preset);
-      f._preset = preset; // marker UI
+    // Thời gian mua hàng → fromPurchaseDate/toPurchaseDate
+    if (
+      purchaseDateMode === "preset" &&
+      purchasePreset &&
+      purchasePreset !== "all_time"
+    ) {
+      const range = getDateRangeFromPreset(purchasePreset);
+      f._purchasePreset = purchasePreset; // marker UI
+      f.fromPurchaseDate = range.from.toISOString();
+      f.toPurchaseDate = range.to.toISOString();
+    } else if (
+      purchaseDateMode === "custom" &&
+      (purchaseFromDate || purchaseToDate)
+    ) {
+      f._purchaseDateMode = "custom"; // marker UI
+      f._purchaseFromDate = purchaseFromDate;
+      f._purchaseToDate = purchaseToDate;
+      if (purchaseFromDate)
+        f.fromPurchaseDate = dateInputToIsoStart(purchaseFromDate);
+      if (purchaseToDate) f.toPurchaseDate = dateInputToIsoEnd(purchaseToDate);
+    }
+
+    // Thời gian tạo → fromCreatedDate/toCreatedDate
+    if (
+      createdDateMode === "preset" &&
+      createdPreset &&
+      createdPreset !== "all_time"
+    ) {
+      const range = getDateRangeFromPreset(createdPreset);
+      f._createdPreset = createdPreset; // marker UI
       f.fromCreatedDate = range.from.toISOString();
       f.toCreatedDate = range.to.toISOString();
-    } else if (dateMode === "custom" && (fromDate || toDate)) {
-      f._dateMode = "custom"; // marker UI
-      f._fromDate = fromDate;
-      f._toDate = toDate;
-      if (fromDate) f.fromCreatedDate = dateInputToIsoStart(fromDate);
-      if (toDate) f.toCreatedDate = dateInputToIsoEnd(toDate);
+    } else if (
+      createdDateMode === "custom" &&
+      (createdFromDate || createdToDate)
+    ) {
+      f._createdDateMode = "custom"; // marker UI
+      f._createdFromDate = createdFromDate;
+      f._createdToDate = createdToDate;
+      if (createdFromDate)
+        f.fromCreatedDate = dateInputToIsoStart(createdFromDate);
+      if (createdToDate) f.toCreatedDate = dateInputToIsoEnd(createdToDate);
     }
 
     onApply(f);
@@ -328,18 +385,28 @@ function InvoicesMobileFilterSheet({
     setCustomerIds([]);
     setCustomerLabel("");
     setCustomerQuery("");
-    setDateMode("preset");
-    setPreset("all_time");
-    setFromDate("");
-    setToDate("");
+    setPurchaseDateMode("preset");
+    setPurchasePreset("all_time");
+    setPurchaseFromDate("");
+    setPurchaseToDate("");
+    setCreatedDateMode("preset");
+    setCreatedPreset("all_time");
+    setCreatedFromDate("");
+    setCreatedToDate("");
   };
 
   // Summary cho header accordion
-  const dateSummary =
-    dateMode === "custom" && (fromDate || toDate)
-      ? `${fromDate || "…"} → ${toDate || "…"}`
-      : preset !== "all_time"
-        ? DATE_PRESETS.find((p) => p.value === preset)?.label
+  const purchaseDateSummary =
+    purchaseDateMode === "custom" && (purchaseFromDate || purchaseToDate)
+      ? `${purchaseFromDate || "…"} → ${purchaseToDate || "…"}`
+      : purchasePreset !== "all_time"
+        ? DATE_PRESETS.find((p) => p.value === purchasePreset)?.label
+        : undefined;
+  const createdDateSummary =
+    createdDateMode === "custom" && (createdFromDate || createdToDate)
+      ? `${createdFromDate || "…"} → ${createdToDate || "…"}`
+      : createdPreset !== "all_time"
+        ? DATE_PRESETS.find((p) => p.value === createdPreset)?.label
         : undefined;
 
   const userOptions: ChipOption[] = (users ?? []).map((u: any) => ({
@@ -358,7 +425,12 @@ function InvoicesMobileFilterSheet({
     createdByIds.length > 0,
     soldByIds.length > 0,
     !!paymentMethod,
-    dateMode === "custom" ? !!(fromDate || toDate) : preset !== "all_time",
+    purchaseDateMode === "custom"
+      ? !!(purchaseFromDate || purchaseToDate)
+      : purchasePreset !== "all_time",
+    createdDateMode === "custom"
+      ? !!(createdFromDate || createdToDate)
+      : createdPreset !== "all_time",
   ].filter(Boolean).length;
 
   return (
@@ -382,19 +454,39 @@ function InvoicesMobileFilterSheet({
         />
       </FilterSection>
 
-      {/* Thời gian */}
-      <FilterSection label="Thời gian" defaultOpen summary={dateSummary}>
+      {/* Thời gian mua hàng */}
+      <FilterSection
+        label="Thời gian mua hàng"
+        defaultOpen
+        summary={purchaseDateSummary}>
         <DateRangeFilter
           presets={DATE_PRESETS}
-          mode={dateMode}
-          preset={preset}
-          fromDate={fromDate}
-          toDate={toDate}
+          mode={purchaseDateMode}
+          preset={purchasePreset}
+          fromDate={purchaseFromDate}
+          toDate={purchaseToDate}
           onChange={(next) => {
-            setDateMode(next.mode);
-            setPreset(next.preset);
-            setFromDate(next.fromDate);
-            setToDate(next.toDate);
+            setPurchaseDateMode(next.mode);
+            setPurchasePreset(next.preset);
+            setPurchaseFromDate(next.fromDate);
+            setPurchaseToDate(next.toDate);
+          }}
+        />
+      </FilterSection>
+
+      {/* Thời gian tạo */}
+      <FilterSection label="Thời gian tạo" summary={createdDateSummary}>
+        <DateRangeFilter
+          presets={DATE_PRESETS}
+          mode={createdDateMode}
+          preset={createdPreset}
+          fromDate={createdFromDate}
+          toDate={createdToDate}
+          onChange={(next) => {
+            setCreatedDateMode(next.mode);
+            setCreatedPreset(next.preset);
+            setCreatedFromDate(next.fromDate);
+            setCreatedToDate(next.toDate);
           }}
         />
       </FilterSection>

@@ -210,7 +210,7 @@ export function CustomerDebtsTab({
                           </Link>
                         ) : item.type === "payment" ? (
                           <Link
-                            href={`/so-quy?Code=${item.code}`}
+                            href={`/tai-chinh/so-quy?Code=${item.code}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs lg:text-md font-medium text-blue-600 hover:underline"

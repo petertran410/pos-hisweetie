@@ -1,58 +1,69 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/config/api";
-import {
-  RefreshCw,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  AlertTriangle,
-  Database,
-} from "lucide-react";
+import { RefreshCw, XCircle, Loader2, Database } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { useSyncMisaDictionary } from "@/lib/hooks/useMisa";
+import { useSyncSepayTransactions } from "@/lib/hooks/useSepay";
 import Swal from "sweetalert2";
 
 export default function SyncSettingsPage() {
-  const queryClient = useQueryClient();
-  const [togglingSync, setTogglingSync] = useState(false);
-
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ["settings"],
-    queryFn: () => apiClient.get("/settings"),
-  });
-
-  const { data: syncStatus, isLoading: isLoadingSyncStatus } = useQuery({
-    queryKey: ["sync-kiot-status"],
-    queryFn: () => apiClient.get("/sync-kiot/status"),
-    refetchInterval: 10000,
-  });
-
-  const updateSettings = useMutation({
-    mutationFn: (data: { syncKiotEnabled: boolean }) =>
-      apiClient.put("/settings", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings"] });
-    },
-  });
-
-  const handleToggleSync = async () => {
-    if (!settings) return;
-    setTogglingSync(true);
-    try {
-      await updateSettings.mutateAsync({
-        syncKiotEnabled: !settings.syncKiotEnabled,
-      });
-    } finally {
-      setTogglingSync(false);
-    }
-  };
-
-  const syncEnabled = settings?.syncKiotEnabled ?? true;
+  // ===== ĐỒNG BỘ KIOTVIET (ĐÃ TẠM ẨN) =====
+  // Toàn bộ logic đồng bộ KiotViet được comment lại theo yêu cầu.
+  // Giữ nguyên code để có thể bật lại sau này.
+  // const queryClient = useQueryClient();
+  // const [togglingSync, setTogglingSync] = useState(false);
+  //
+  // const { data: settings, isLoading } = useQuery({
+  //   queryKey: ["settings"],
+  //   queryFn: () => apiClient.get("/settings"),
+  // });
+  //
+  // const { data: syncStatus, isLoading: isLoadingSyncStatus } = useQuery({
+  //   queryKey: ["sync-kiot-status"],
+  //   queryFn: () => apiClient.get("/sync-kiot/status"),
+  //   refetchInterval: 10000,
+  // });
+  //
+  // const updateSettings = useMutation({
+  //   mutationFn: (data: { syncKiotEnabled: boolean }) =>
+  //     apiClient.put("/settings", data),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ["settings"] });
+  //   },
+  // });
+  //
+  // const handleToggleSync = async () => {
+  //   if (!settings) return;
+  //   setTogglingSync(true);
+  //   try {
+  //     await updateSettings.mutateAsync({
+  //       syncKiotEnabled: !settings.syncKiotEnabled,
+  //     });
+  //   } finally {
+  //     setTogglingSync(false);
+  //   }
+  // };
+  //
+  // const syncEnabled = settings?.syncKiotEnabled ?? true;
 
   const syncMisaDictionary = useSyncMisaDictionary();
+  const syncSepayTransactions = useSyncSepayTransactions();
+
+  const handleSyncSepay = async () => {
+    const result = await Swal.fire({
+      title: "Đồng bộ giao dịch Sepay?",
+      text: "Kéo toàn bộ lịch sử giao dịch từ Sepay về hệ thống để lưu trữ và đối soát. Thao tác này KHÔNG tạo phiếu thu và không ảnh hưởng đơn hàng, hóa đơn hay sổ quỹ. Quá trình có thể mất vài phút.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Đồng bộ ngay",
+      cancelButtonText: "Hủy",
+      confirmButtonColor: "#2563eb",
+    });
+    if (result.isConfirmed) {
+      syncSepayTransactions.mutate();
+    }
+  };
 
   const handleSyncMisa = async () => {
     const result = await Swal.fire({
@@ -75,12 +86,14 @@ export default function SyncSettingsPage() {
         <div className="p-6 border-b bg-white">
           <h1 className="text-2xl font-bold">Đồng bộ dữ liệu</h1>
           <p className="text-sm text-gray-600 mt-1">
-            Quản lý đồng bộ dữ liệu từ KiotViet và Misa
+            Quản lý đồng bộ dữ liệu từ Sepay và Misa
           </p>
         </div>
 
         <div className="p-6 space-y-6">
+          {/* ===== ĐỒNG BỘ KIOTVIET (ĐÃ TẠM ẨN) =====
           {/* Toggle Section */}
+          {/*
           <div className="bg-white rounded-lg border p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -135,6 +148,86 @@ export default function SyncSettingsPage() {
               </div>
             )}
           </div>
+          */}
+
+          {/* Sepay Transactions Sync Section */}
+          <PermissionGate resource="sepay" action="sync">
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-emerald-100">
+                  <Database className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    Đồng bộ giao dịch Sepay
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Kéo toàn bộ lịch sử giao dịch từ Sepay về hệ thống để lưu
+                    trữ và đối soát. Không tạo phiếu thu, không ảnh hưởng đơn
+                    hàng / hóa đơn / sổ quỹ.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleSyncSepay}
+                disabled={syncSepayTransactions.isPending}
+                className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                {syncSepayTransactions.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Đang đồng bộ...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    Đồng bộ ngay
+                  </>
+                )}
+              </button>
+            </div>
+
+            {syncSepayTransactions.isSuccess &&
+              syncSepayTransactions.data?.success &&
+              syncSepayTransactions.data.result && (
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  {[
+                    {
+                      label: "Tải về",
+                      value: syncSepayTransactions.data.result.fetched,
+                    },
+                    {
+                      label: "Thêm mới",
+                      value: syncSepayTransactions.data.result.created,
+                    },
+                    {
+                      label: "Cập nhật",
+                      value: syncSepayTransactions.data.result.updated,
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="p-3 bg-gray-50 border rounded-lg text-center">
+                      <p className="text-xs text-gray-500">{stat.label}</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {stat.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            {syncSepayTransactions.isError && (
+              <div className="mt-4 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700">
+                  Đồng bộ giao dịch Sepay thất bại. Vui lòng thử lại.
+                </p>
+              </div>
+            )}
+          </div>
+          </PermissionGate>
 
           {/* Misa Dictionary Sync Section */}
           <div className="bg-white rounded-lg border p-6">
@@ -214,7 +307,8 @@ export default function SyncSettingsPage() {
             )}
           </div>
 
-          {/* Sync Status Table */}
+          {/* Sync Status Table — KiotViet (ĐÃ TẠM ẨN) */}
+          {/*
           {syncStatus && Array.isArray(syncStatus) && syncStatus.length > 0 && (
             <div className="bg-white rounded-lg border">
               <div className="p-4 border-b">
@@ -280,6 +374,7 @@ export default function SyncSettingsPage() {
               </table>
             </div>
           )}
+          */}
         </div>
       </div>
     </PagePermissionGuard>

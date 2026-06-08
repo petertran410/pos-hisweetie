@@ -37,7 +37,10 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   // Khách hàng
   { prefix: "/khach-hang", title: "Khách hàng" },
 
-  // Sổ quỹ
+  // Tài chính
+  { prefix: "/tai-chinh/so-quy", title: "Sổ quỹ" },
+  { prefix: "/tai-chinh/bien-dong-so-du", title: "Biến động số dư" },
+  // Sổ quỹ (route cũ — redirect sang /tai-chinh/so-quy)
   { prefix: "/so-quy", title: "Sổ quỹ" },
 
   // Báo cáo

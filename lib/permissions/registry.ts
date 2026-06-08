@@ -49,6 +49,8 @@ export const ROUTE_PERMISSIONS: Record<
   "/don-hang/bao-don": { resource: "packing_slips", action: "view" },
   "/khach-hang": { resource: "customers", action: "view" },
   "/so-quy": { resource: "cash_flows", action: "view" },
+  "/tai-chinh/so-quy": { resource: "cash_flows", action: "view" },
+  "/tai-chinh/bien-dong-so-du": { resource: "sepay", action: "view" },
   "/ban-hang": [
     { resource: "orders", action: "create" },
     { resource: "invoices", action: "create" },
@@ -184,13 +186,19 @@ export const NAV_CONFIG: NavSection[] = [
   },
   {
     key: "cashflows",
-    label: "Sổ quỹ",
+    label: "Tài chính",
     items: [
       {
         key: "cashflow-list",
         label: "Sổ quỹ",
-        href: "/so-quy",
+        href: "/tai-chinh/so-quy",
         permission: { resource: "cash_flows", action: "view" },
+      },
+      {
+        key: "sepay-transactions",
+        label: "Biến động số dư",
+        href: "/tai-chinh/bien-dong-so-du",
+        permission: { resource: "sepay", action: "view" },
       },
     ],
   },
