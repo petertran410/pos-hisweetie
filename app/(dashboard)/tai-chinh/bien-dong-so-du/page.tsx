@@ -284,9 +284,6 @@ export default function BienDongSoDuPage() {
                 <th className="px-4 py-2.5 text-left font-medium text-gray-600">
                   Mã tham chiếu
                 </th>
-                <th className="px-4 py-2.5 text-right font-medium text-gray-600">
-                  Số dư lũy kế
-                </th>
                 <th className="px-4 py-2.5 text-left font-medium text-gray-600">
                   Khách hàng
                 </th>
@@ -301,14 +298,14 @@ export default function BienDongSoDuPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
                     <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
                     Đang tải...
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
                     Không có giao dịch nào
                   </td>
                 </tr>
@@ -335,9 +332,6 @@ export default function BienDongSoDuPage() {
                         {tx.transactionContent || "-"}
                       </td>
                       <td className="px-4 py-2.5">{tx.referenceNumber || "-"}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-500">
-                        {tx.accumulated ? formatCurrency(Number(tx.accumulated)) : "-"}
-                      </td>
                       <td className="px-4 py-2.5">
                         <SepayCustomerCell tx={tx} />
                       </td>
