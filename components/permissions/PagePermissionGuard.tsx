@@ -29,7 +29,7 @@ export function PagePermissionGuard({
   if (!_hasHydrated || (isAuthenticated && !isProfileSynced)) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -51,7 +51,7 @@ export function PagePermissionGuard({
           <div className="flex items-center justify-center gap-3">
             <Link
               href="/"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm">
               Về trang chủ
             </Link>
           </div>

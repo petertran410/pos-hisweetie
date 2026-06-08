@@ -166,7 +166,7 @@ export function MobilePrintPreviewModal({
           <button
             onClick={handlePrint}
             disabled={!iframeLoaded}
-            className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
+            className="flex-1 py-2.5 bg-brand text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
             <Printer className="w-4 h-4" />
             In phiếu
           </button>

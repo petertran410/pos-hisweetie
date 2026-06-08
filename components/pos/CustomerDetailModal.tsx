@@ -110,7 +110,7 @@ export function CustomerDetailModal({
                   <CodeLink
                     entity="customer"
                     code={customer.code}
-                    className="text-blue-600 hover:underline"
+                    className="text-brand hover:underline"
                   />
                 </span>
                 <span>
@@ -142,7 +142,7 @@ export function CustomerDetailModal({
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-3 lg:px-4 py-2.5 text-sm lg:text-sm font-medium border-b-2 whitespace-nowrap flex-shrink-0 transition-colors ${
                   activeTab === tab.key
-                    ? "border-blue-600 text-blue-600"
+                    ? "border-brand text-brand"
                     : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}>
                 {tab.label}
@@ -155,7 +155,7 @@ export function CustomerDetailModal({
         <div className="flex-1 overflow-y-auto p-4 lg:p-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              <Loader2 className="w-6 h-6 animate-spin text-brand" />
             </div>
           ) : customer ? (
             <>

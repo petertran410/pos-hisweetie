@@ -2058,7 +2058,7 @@ export default function BanHangPage() {
 
   if ((isLoadingOrder && orderId) || (isLoadingInvoice && invoiceId)) {
     return (
-      <div className="h-full flex items-center justify-center bg-blue-600">
+      <div className="h-full flex items-center justify-center bg-brand-dark">
         <div className="text-white text-lg">Đang tải dữ liệu...</div>
       </div>
     );
@@ -2066,7 +2066,7 @@ export default function BanHangPage() {
 
   if (!activeTab) {
     return (
-      <div className="h-full flex items-center justify-center bg-blue-600">
+      <div className="h-full flex items-center justify-center bg-brand-dark">
         <div className="text-white text-lg">Đang khởi tạo...</div>
       </div>
     );
@@ -2108,7 +2108,7 @@ export default function BanHangPage() {
   );
 
   return (
-    <div className="h-full flex flex-col bg-blue-600">
+    <div className="h-full flex flex-col bg-brand-dark">
       {/* ══════════════════════════════════════════
           DESKTOP HEADER — chỉ hiện lg+, giữ nguyên
       ══════════════════════════════════════════ */}
@@ -2174,7 +2174,7 @@ export default function BanHangPage() {
                       <button
                         onClick={handleConvertToInvoice}
                         disabled={activeTab.cartItems.length === 0}
-                        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                        className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                         TẠO HÓA ĐƠN
                       </button>
                     )}
@@ -2189,7 +2189,7 @@ export default function BanHangPage() {
                   <button
                     onClick={() => handleCreateDocument()}
                     disabled={activeTab.cartItems.length === 0}
-                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                    className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                     Tạo đơn hàng
                   </button>
                 )}
@@ -2290,7 +2290,7 @@ export default function BanHangPage() {
                   <button
                     onClick={() => handleCreateDocument()}
                     disabled={activeTab.cartItems.length === 0}
-                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                    className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                     Tạo hóa đơn
                   </button>
                 )}
@@ -2354,7 +2354,7 @@ export default function BanHangPage() {
           onClick={() => setMobilePosView("items")}
           className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
             mobilePosView === "items"
-              ? "text-blue-600 border-t-2 border-blue-600"
+              ? "text-brand border-t-2 border-brand"
               : "text-gray-500"
           }`}>
           <List className="w-5 h-5" />
@@ -2365,7 +2365,7 @@ export default function BanHangPage() {
           onClick={() => setMobilePosView("cart")}
           className={`flex-1 flex flex-col items-center justify-center gap-0.5 relative transition-colors ${
             mobilePosView === "cart"
-              ? "text-blue-600 border-t-2 border-blue-600"
+              ? "text-brand border-t-2 border-brand"
               : "text-gray-500"
           }`}>
           <div className="relative">

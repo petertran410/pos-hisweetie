@@ -84,7 +84,7 @@ export function PrintTemplateEditorModal({
             </h2>
             <button
               onClick={() => setTokenModalOpen(true)}
-              className="text-gray-400 hover:text-blue-500"
+              className="text-gray-400 hover:text-brand"
               title="Danh sách token">
               <Info className="w-4 h-4" />
             </button>
@@ -210,7 +210,7 @@ export function PrintTemplateEditorModal({
           <button
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50">
+            className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50">
             {saveMutation.isPending ? "Đang lưu..." : "Lưu"}
           </button>
         </div>

@@ -49,8 +49,8 @@ export function DeliveryAddressDropdown({
         onClick={() => setShowDropdown(!showDropdown)}
         className="w-full flex items-center justify-between gap-2 border rounded-lg px-1 py-1 text-md cursor-pointer transition-colors select-none bg-white">
         <div className="flex items-center gap-1 min-w-0 flex-1 pl-1">
-          <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" />
-          <span className="text-md text-blue-600 truncate">
+          <MapPin className="w-4 h-4 text-brand flex-shrink-0" />
+          <span className="text-md text-brand truncate">
             {selected
               ? selected.label ||
                 selected.receiver ||
@@ -73,14 +73,14 @@ export function DeliveryAddressDropdown({
               type="button"
               onClick={() => handleSelect(addr)}
               className={`w-full px-4 py-3 hover:bg-gray-50 text-left border-b last:border-b-0 ${
-                selected?.id === addr.id ? "bg-blue-50" : ""
+                selected?.id === addr.id ? "bg-brand-soft" : ""
               }`}>
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-medium text-sm">
                   {addr.label || addr.receiver || "Địa chỉ"}
                 </span>
                 {addr.isDefault && (
-                  <span className="px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded">
+                  <span className="px-1.5 py-0.5 text-xs bg-brand text-white rounded">
                     Mặc định
                   </span>
                 )}
@@ -89,7 +89,7 @@ export function DeliveryAddressDropdown({
                 {formatAddressFull(addr)}
               </div>
               {addr.contactNumber && (
-                <div className="text-xs text-blue-600 mt-1">
+                <div className="text-xs text-brand mt-1">
                   {addr.contactNumber}
                 </div>
               )}

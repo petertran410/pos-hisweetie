@@ -144,7 +144,7 @@ export function PackingSlipsTable({
                 e.stopPropagation();
                 setViewingInvoices(slip);
               }}
-              className="text-blue-600 hover:text-blue-800 text-xs whitespace-nowrap">
+              className="text-brand hover:text-brand-dark text-xs whitespace-nowrap">
               +{invoices.length - 2} khác
             </button>
           </div>
@@ -211,7 +211,7 @@ export function PackingSlipsTable({
               e.stopPropagation();
               setViewingExpenseFiles(slip);
             }}
-            className="text-blue-600 hover:text-blue-800">
+            className="text-brand hover:text-brand-dark">
             {files.length} file
           </button>
         );
@@ -234,7 +234,7 @@ export function PackingSlipsTable({
                 setViewingImage(slip.images[0].imageUrl);
               }
             }}
-            className="text-blue-600 hover:text-blue-800">
+            className="text-brand hover:text-brand-dark">
             {imageCount} hình
           </button>
         );
@@ -285,7 +285,7 @@ export function PackingSlipsTable({
             placeholder="Tìm theo mã báo đơn, ghi chú..."
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
 
@@ -294,7 +294,7 @@ export function PackingSlipsTable({
             <button
               onMouseEnter={() => setShowCreateDropdown(true)}
               onMouseLeave={() => setShowCreateDropdown(false)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-md flex items-center gap-2">
+              className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark text-md flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Tạo báo đơn
             </button>
@@ -410,7 +410,7 @@ export function PackingSlipsTable({
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => onEditClick(slip)}
-                        className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded">
+                        className="px-3 py-1 text-sm text-brand hover:bg-brand-soft rounded">
                         Sửa
                       </button>
                       {onResendClick && slip.type === "giao-hang" && (
@@ -500,7 +500,7 @@ export function PackingSlipsTable({
                 <CodeLink
                   entity="packing-slip"
                   code={viewingInvoices.code}
-                  className="text-blue-600 hover:underline font-semibold"
+                  className="text-brand hover:underline font-semibold"
                 />
               </h3>
               <button
@@ -660,7 +660,7 @@ export function PackingSlipsTable({
                             }}
                             className={`w-16 h-16 rounded border-2 overflow-hidden flex-shrink-0 ${
                               img.imageUrl === viewingImage
-                                ? "border-blue-500"
+                                ? "border-brand"
                                 : "border-gray-300"
                             }`}>
                             <img

@@ -318,7 +318,7 @@ export function CreateReturnOrderModal({
                 type="button"
                 onClick={() => setShowBranchDropdown(!showBranchDropdown)}
                 className={`w-full border rounded-lg px-3 py-2 text-left flex items-center justify-between bg-white text-sm ${
-                  showBranchDropdown ? "border-blue-500" : "border-gray-300"
+                  showBranchDropdown ? "border-brand" : "border-gray-300"
                 }`}>
                 <span className={branchId ? "text-gray-900" : "text-gray-400"}>
                   {selectedBranchObj
@@ -341,7 +341,7 @@ export function CreateReturnOrderModal({
                         value={branchSearchTerm}
                         onChange={(e) => setBranchSearchTerm(e.target.value)}
                         placeholder="Tìm chi nhánh..."
-                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm"
+                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-brand text-sm"
                         autoFocus
                       />
                     </div>
@@ -357,9 +357,9 @@ export function CreateReturnOrderModal({
                             setShowBranchDropdown(false);
                             setBranchSearchTerm("");
                           }}
-                          className={`w-full px-3 py-2 text-left hover:bg-blue-50 text-sm ${
+                          className={`w-full px-3 py-2 text-left hover:bg-brand-soft text-sm ${
                             branchId === branch.id
-                              ? "bg-blue-100 text-blue-700"
+                              ? "bg-brand-soft text-brand-dark"
                               : "text-gray-900"
                           }`}>
                           {branch.name}
@@ -420,13 +420,13 @@ export function CreateReturnOrderModal({
               {selectedInvoices.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-sm">
+                  className="flex items-center gap-1 px-3 py-1 bg-brand-soft border border-brand-border rounded-full text-sm">
                   <span className="font-medium">
                     <CodeLink entity="invoice" code={inv.code} />
                   </span>
                   <button
                     onClick={() => handleRemoveInvoice(inv.id)}
-                    className="ml-1 p-0.5 hover:bg-blue-100 rounded-full">
+                    className="ml-1 p-0.5 hover:bg-brand-soft rounded-full">
                     <X className="w-3 h-3" />
                   </button>
                 </div>
@@ -490,7 +490,7 @@ export function CreateReturnOrderModal({
                               <CodeLink
                                 entity="product"
                                 code={item.productCode}
-                                className="text-blue-600 hover:underline"
+                                className="text-brand hover:underline"
                               />
                             ) : null}
                           </div>
@@ -683,7 +683,7 @@ export function CreateReturnOrderModal({
                 !branchId ||
                 returnItems.filter((i) => i.requestQuantity > 0).length === 0
               }
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+              className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50">
               Tạo phiếu trả hàng
             </button>
           </div>

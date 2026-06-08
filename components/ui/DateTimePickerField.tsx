@@ -232,8 +232,8 @@ export function DateTimePickerField({
                   className={`w-8 h-8 rounded ${
                     isDisabled
                       ? "text-gray-300 cursor-not-allowed"
-                      : "hover:bg-blue-100"
-                  } ${isSelected ? "bg-blue-500 text-white" : ""}`}>
+                      : "hover:bg-brand-soft"
+                  } ${isSelected ? "bg-brand text-white" : ""}`}>
                   {dayNumber}
                 </button>
               );
@@ -255,9 +255,9 @@ export function DateTimePickerField({
                     onClick={() =>
                       handleTimeSelect(i, currentDate.getMinutes())
                     }
-                    className={`w-full px-2 py-1 text-left hover:bg-blue-100 ${
+                    className={`w-full px-2 py-1 text-left hover:bg-brand-soft ${
                       value !== null && i === currentDate.getHours()
-                        ? "bg-blue-500 text-white"
+                        ? "bg-brand text-white"
                         : ""
                     }`}>
                     {String(i).padStart(2, "0")}
@@ -273,9 +273,9 @@ export function DateTimePickerField({
                     key={i}
                     type="button"
                     onClick={() => handleTimeSelect(currentDate.getHours(), i)}
-                    className={`w-full px-2 py-1 text-left hover:bg-blue-100 ${
+                    className={`w-full px-2 py-1 text-left hover:bg-brand-soft ${
                       value !== null && i === currentDate.getMinutes()
-                        ? "bg-blue-500 text-white"
+                        ? "bg-brand text-white"
                         : ""
                     }`}>
                     {String(i).padStart(2, "0")}

@@ -291,7 +291,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
             type="datetime-local"
             value={checkDate}
             onChange={(e) => setCheckDate(e.target.value)}
-            className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
           />
           <span className="text-xs text-gray-400">
             Tồn kho lệch sẽ tính theo tồn tại đúng thời điểm này
@@ -311,7 +311,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                 setShowDropdown(true);
               }}
               onFocus={() => search && setShowDropdown(true)}
-              className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
 
@@ -406,7 +406,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                               }
                             }}
                             onFocus={(e) => e.target.select()}
-                            className="w-20 border rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            className="w-20 border rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-brand"
                           />
                         </td>
                         <td
@@ -443,7 +443,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                               updateItem(item.productId, "note", e.target.value)
                             }
                             placeholder="..."
-                            className="w-full border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            className="w-full border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand"
                           />
                         </td>
                         <td className="px-3 py-2 text-center">
@@ -510,7 +510,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
             placeholder="Ghi chú cho phiếu kiểm kho..."
             maxLength={1000}
             rows={2}
-            className="w-full border rounded px-3 py-2 resize-none text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full border rounded px-3 py-2 resize-none text-sm focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
 
@@ -526,7 +526,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
             <button
               onClick={handleSubmit}
               disabled={items.length === 0 || isBusy}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              className="px-4 py-2 text-sm bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
               {createAudit.isPending && !completeAudit.isPending && (
                 <Loader2 className="w-4 h-4 animate-spin" />
               )}

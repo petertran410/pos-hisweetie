@@ -301,7 +301,7 @@ export function CustomerInvoiceInfoTab({
           </button>
           <button
             type="submit"
-            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-sm lg:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1 lg:gap-2">
+            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-sm lg:text-sm bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1 lg:gap-2">
             <Save className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             Lưu
           </button>
@@ -355,7 +355,7 @@ export function CustomerInvoiceInfoTab({
                 onClick={handleTaxLookup}
                 disabled={taxLookup.isPending}
                 title="Tra cứu thông tin từ mã số thuế"
-                className="px-2.5 py-1.5 lg:px-3 lg:py-2 border rounded text-sm font-medium text-blue-600 border-blue-200 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
+                className="px-2.5 py-1.5 lg:px-3 lg:py-2 border rounded text-sm font-medium text-brand border-brand-border hover:bg-brand-soft disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
                 {taxLookup.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
@@ -443,7 +443,7 @@ export function CustomerInvoiceInfoTab({
                 onClick={handleTaxLookup}
                 disabled={taxLookup.isPending}
                 title="Tra cứu thông tin từ mã số thuế"
-                className="px-2.5 py-1.5 lg:px-3 lg:py-2 border rounded text-sm font-medium text-blue-600 border-blue-200 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
+                className="px-2.5 py-1.5 lg:px-3 lg:py-2 border rounded text-sm font-medium text-brand border-brand-border hover:bg-brand-soft disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
                 {taxLookup.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (

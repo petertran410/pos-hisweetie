@@ -268,7 +268,7 @@ export function PriceBookTable({
           <p className="text-gray-500 mb-4">Chưa chọn bảng giá nào</p>
           <button
             onClick={onCreateNew}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium inline-flex items-center gap-1.5 transition-colors">
+            className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium inline-flex items-center gap-1.5 transition-colors">
             <Plus className="w-4 h-4" />
             Tạo bảng giá mới
           </button>
@@ -292,7 +292,7 @@ export function PriceBookTable({
               placeholder="Tìm theo mã, tên hàng..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-72 border border-gray-200 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
+              className="w-72 border border-gray-200 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand transition-all"
             />
           </div>
         </div>
@@ -301,7 +301,7 @@ export function PriceBookTable({
             {canCreate && (
               <button
                 onClick={onCreateNew}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5 transition-colors">
+                className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5 transition-colors">
                 <Plus className="w-4 h-4" />
                 Bảng giá
               </button>
@@ -322,8 +322,8 @@ export function PriceBookTable({
 
       {/* ── Selected bar ── */}
       {selectedProductIds.length > 0 && (
-        <div className="border-b px-4 py-2 bg-blue-50 flex items-center justify-between shrink-0">
-          <span className="text-sm text-blue-700">
+        <div className="border-b px-4 py-2 bg-brand-soft flex items-center justify-between shrink-0">
+          <span className="text-sm text-brand-dark">
             Đã chọn{" "}
             <span className="font-semibold">{selectedProductIds.length}</span>{" "}
             sản phẩm
@@ -350,7 +350,7 @@ export function PriceBookTable({
               {canCreateProduct && !isDefaultOnly && onAddProducts && (
                 <button
                   onClick={onAddProducts}
-                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium inline-flex items-center gap-1.5 transition-colors">
+                  className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium inline-flex items-center gap-1.5 transition-colors">
                   <Plus className="w-4 h-4" />
                   Thêm sản phẩm
                 </button>
@@ -392,7 +392,7 @@ export function PriceBookTable({
                         <button
                           type="button"
                           onClick={() => onEditPriceBook(pb as PriceBook)}
-                          className="p-1 rounded hover:bg-blue-100 text-gray-400 hover:text-blue-600"
+                          className="p-1 rounded hover:bg-brand-soft text-gray-400 hover:text-brand"
                           title="Sửa bảng giá">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -438,7 +438,7 @@ export function PriceBookTable({
                       return (
                         <td
                           key={pb.id}
-                          className="p-3 text-right cursor-pointer hover:bg-blue-50 whitespace-nowrap"
+                          className="p-3 text-right cursor-pointer hover:bg-brand-soft whitespace-nowrap"
                           style={{ minWidth: "140px" }}
                           onClick={() => {
                             if (pb.id !== 0 && !priceExists) {
@@ -463,10 +463,10 @@ export function PriceBookTable({
                               onBlur={handleBlur}
                               onKeyDown={handleKeyDown}
                               autoFocus
-                              className="w-full border rounded px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full border rounded px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-brand"
                             />
                           ) : pb.id !== 0 && !priceExists && canCreate ? (
-                            <button className="text-blue-600 hover:text-blue-800 text-xl font-bold">
+                            <button className="text-brand hover:text-brand-dark text-xl font-bold">
                               +
                             </button>
                           ) : canViewProduct ? (
@@ -499,7 +499,7 @@ export function PriceBookTable({
               setLimit(Number(e.target.value));
               setPage(1);
             }}
-            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
             {[10, 15, 20, 50, 100].map((n) => (
               <option key={n} value={n}>
                 {n}
@@ -527,7 +527,7 @@ export function PriceBookTable({
                 onClick={() => setPage(p)}
                 className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
                   p === page
-                    ? "bg-blue-600 text-white border-blue-600"
+                    ? "bg-brand text-white border-brand"
                     : "hover:bg-gray-50 text-gray-600 border-gray-200"
                 }`}>
                 {p}

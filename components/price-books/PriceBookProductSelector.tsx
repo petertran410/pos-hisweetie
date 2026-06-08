@@ -103,7 +103,7 @@ export function PriceBookProductSelector({
                   <tr
                     key={product.id}
                     className={`border-b hover:bg-gray-50 ${
-                      isSelected ? "bg-blue-50" : ""
+                      isSelected ? "bg-brand-soft" : ""
                     }`}>
                     <td className="p-3">
                       <input
@@ -160,7 +160,7 @@ export function PriceBookProductSelector({
             <button
               onClick={handleSubmit}
               disabled={selectedProducts.size === 0 || addProducts.isPending}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+              className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
               {addProducts.isPending
                 ? "Đang thêm..."
                 : `Thêm ${selectedProducts.size} sản phẩm`}

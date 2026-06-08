@@ -127,9 +127,9 @@ function MiniCalendar({
               }}
               className={`aspect-square flex items-center justify-center text-xs rounded-lg transition-colors ${
                 isSel
-                  ? "bg-blue-600 text-white font-semibold"
+                  ? "bg-brand text-white font-semibold"
                   : isToday
-                    ? "border border-blue-400 text-blue-600 font-medium hover:bg-blue-50"
+                    ? "border border-brand text-brand font-medium hover:bg-brand-soft"
                     : "text-gray-700 hover:bg-gray-100"
               }`}>
               {day}
@@ -172,7 +172,7 @@ function TimePicker({
                 onClick={() => onChange(h, minute)}
                 className={`w-full text-center py-0.5 text-sm rounded transition-colors ${
                   hour === h
-                    ? "bg-blue-600 text-white font-medium"
+                    ? "bg-brand text-white font-medium"
                     : "hover:bg-gray-100 text-gray-700"
                 }`}>
                 {String(h).padStart(2, "0")}
@@ -193,7 +193,7 @@ function TimePicker({
                 }}
                 className={`w-full text-center py-0.5 text-sm rounded transition-colors ${
                   minute === m
-                    ? "bg-blue-600 text-white font-medium"
+                    ? "bg-brand text-white font-medium"
                     : "hover:bg-gray-100 text-gray-700"
                 }`}>
                 {String(m).padStart(2, "0")}
@@ -378,7 +378,7 @@ export function EditCashFlowModal({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}>
-                    <ExternalLink className="w-3.5 h-3.5 text-blue-500 hover:text-blue-700" />
+                    <ExternalLink className="w-3.5 h-3.5 text-brand hover:text-brand-dark" />
                   </Link>
                 )}
               </div>
@@ -437,7 +437,7 @@ export function EditCashFlowModal({
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-colors ${
                       showCal
-                        ? "border-blue-400 ring-2 ring-blue-100"
+                        ? "border-brand ring-2 ring-brand-soft"
                         : "border-gray-200 hover:border-gray-300"
                     }`}>
                     <span className="text-gray-800">
@@ -469,7 +469,7 @@ export function EditCashFlowModal({
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-colors ${
                       showTime
-                        ? "border-blue-400 ring-2 ring-blue-100"
+                        ? "border-brand ring-2 ring-brand-soft"
                         : "border-gray-200 hover:border-gray-300"
                     }`}>
                     <span className="text-gray-800">
@@ -503,7 +503,7 @@ export function EditCashFlowModal({
                 onClick={() => setShowUserDropdown((v) => !v)}
                 className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-colors ${
                   showUserDropdown
-                    ? "border-blue-400 ring-2 ring-blue-100"
+                    ? "border-brand ring-2 ring-brand-soft"
                     : "border-gray-200 hover:border-gray-300"
                 }`}>
                 <span
@@ -524,7 +524,7 @@ export function EditCashFlowModal({
                       }}
                       className={`w-full text-left px-3 py-2 text-sm transition-colors ${
                         collectorId === u.id
-                          ? "bg-blue-50 text-blue-700 font-medium"
+                          ? "bg-brand-soft text-brand-dark font-medium"
                           : "hover:bg-gray-50 text-gray-700"
                       }`}>
                       {u.name}
@@ -545,7 +545,7 @@ export function EditCashFlowModal({
               onClick={() => setShowMethodDropdown((v) => !v)}
               className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-colors ${
                 showMethodDropdown
-                  ? "border-blue-400 ring-2 ring-blue-100"
+                  ? "border-brand ring-2 ring-brand-soft"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
               <span className="text-gray-800">
@@ -567,7 +567,7 @@ export function EditCashFlowModal({
                     }}
                     className={`w-full text-left px-3 py-2 text-sm transition-colors ${
                       method === opt.value
-                        ? "bg-blue-50 text-blue-700 font-medium"
+                        ? "bg-brand-soft text-brand-dark font-medium"
                         : "hover:bg-gray-50 text-gray-700"
                     }`}>
                     {opt.label}
@@ -588,7 +588,7 @@ export function EditCashFlowModal({
                 onClick={() => setShowAccountDropdown((v) => !v)}
                 className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-colors ${
                   showAccountDropdown
-                    ? "border-blue-400 ring-2 ring-blue-100"
+                    ? "border-brand ring-2 ring-brand-soft"
                     : "border-gray-200 hover:border-gray-300"
                 }`}>
                 <span className={accountId ? "text-gray-800" : "text-gray-400"}>
@@ -626,7 +626,7 @@ export function EditCashFlowModal({
                       }}
                       className={`w-full text-left px-3 py-2 text-sm transition-colors ${
                         accountId === acc.id
-                          ? "bg-blue-50 text-blue-700 font-medium"
+                          ? "bg-brand-soft text-brand-dark font-medium"
                           : "hover:bg-gray-50 text-gray-700"
                       }`}>
                       {"  "}
@@ -662,7 +662,7 @@ export function EditCashFlowModal({
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Nhập ghi chú..."
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-border focus:border-brand transition-colors"
             />
           </div>
 
@@ -674,7 +674,7 @@ export function EditCashFlowModal({
                   type="checkbox"
                   checked
                   readOnly
-                  className="accent-blue-600"
+                  className="accent-brand"
                   id="allocate-check"
                 />
                 <label
@@ -710,7 +710,7 @@ export function EditCashFlowModal({
                   <tbody className="divide-y divide-gray-100">
                     {invoicePayments.map((p: any) => (
                       <tr key={p.id} className="hover:bg-gray-50">
-                        <td className="px-3 py-2 font-medium text-blue-600">
+                        <td className="px-3 py-2 font-medium text-brand">
                           {p.invoice?.code || "-"}
                         </td>
                         <td className="px-3 py-2 text-gray-700">
@@ -802,7 +802,7 @@ export function EditCashFlowModal({
             <button
               onClick={handleSave}
               disabled={isSaving || cashFlow.status === 2}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              className="px-4 py-2 text-sm font-medium text-white bg-brand rounded-lg hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {isSaving ? "Đang lưu..." : "Lưu"}
             </button>
           </div>

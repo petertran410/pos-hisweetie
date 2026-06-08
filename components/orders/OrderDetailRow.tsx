@@ -274,10 +274,10 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
   if (isLoading) {
     return (
-      <tr className="bg-blue-50">
+      <tr className="bg-brand-soft">
         <td colSpan={colSpan} className="px-6 py-8">
           <div className="flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
             <span className="text-gray-600">
               Đang tải thông tin đơn hàng...
             </span>
@@ -343,7 +343,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
       <tr>
         <td
           colSpan={colSpan}
-          className="border-b-2 border-l-2 border-r-2 border-blue-500 bg-gray-50">
+          className="border-b-2 border-l-2 border-r-2 border-brand bg-gray-50">
           <div
             ref={wrapperRef}
             className="sticky left-0 bg-gray-50"
@@ -357,7 +357,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         <CodeLink
                           entity="order"
                           code={order.code}
-                          className="text-lg font-bold text-blue-600 hover:underline"
+                          className="text-lg font-bold text-brand hover:underline"
                         />
                       </span>
                       <span className="text-gray-400">-</span>
@@ -367,7 +367,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                             href={`/khach-hang?Code=${order.customer.code}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-lg font-semibold text-blue-600 hover:underline"
+                            className="text-lg font-semibold text-brand hover:underline"
                             onClick={(e) => e.stopPropagation()}>
                             {order?.customer?.name}
                           </Link>
@@ -375,7 +375,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                             href={`/khach-hang?Code=${order.customer.code}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                            className="text-gray-400 hover:text-brand transition-colors"
                             onClick={(e) => e.stopPropagation()}>
                             <ExternalLink className="w-4 h-4" />
                           </Link>
@@ -451,7 +451,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                 onClick={() =>
                                   setShowStatusDropdown((prev) => !prev)
                                 }
-                                className="w-[200px] px-2 py-1 border border-gray-200 rounded bg-white text-left flex items-center justify-between hover:border-blue-400 transition-colors">
+                                className="w-[200px] px-2 py-1 border border-gray-200 rounded bg-white text-left flex items-center justify-between hover:border-brand transition-colors">
                                 <span
                                   className={`px-2 py-0.5 rounded text-xs font-medium ${getOrderStatusBadgeColor(
                                     isManualEditable
@@ -489,7 +489,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                     </span>
                                     {selectedStatus ===
                                       ORDER_STATUS.PENDING && (
-                                      <span className="text-blue-500 text-xs">
+                                      <span className="text-brand text-xs">
                                         ✓
                                       </span>
                                     )}
@@ -508,7 +508,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                     </span>
                                     {selectedStatus ===
                                       ORDER_STATUS.CONFIRMED && (
-                                      <span className="text-blue-500 text-xs">
+                                      <span className="text-brand text-xs">
                                         ✓
                                       </span>
                                     )}
@@ -605,7 +605,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                           href={`/san-pham/danh-sach?Code=${item.product?.code || item.productCode}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="text-sm font-medium text-blue-600 hover:underline"
+                                          className="text-sm font-medium text-brand hover:underline"
                                           onClick={(e) => e.stopPropagation()}>
                                           {item.product?.code ||
                                             item.productCode}
@@ -645,7 +645,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                       {item.quantity}
                                       {invoicedQuantities[item.productId] >
                                         0 && (
-                                        <span className="text-blue-600">
+                                         <span className="text-brand">
                                           {" "}
                                           | {invoicedQuantities[item.productId]}
                                         </span>
@@ -672,7 +672,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                     </span>
                                   </td>
                                   <td className="px-[10px] py-2 text-right">
-                                    <span className="text-sm font-semibold text-blue-600">
+                                    <span className="text-sm font-semibold text-brand">
                                       {formatCurrency(Number(item.totalPrice))}
                                     </span>
                                   </td>
@@ -763,7 +763,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                               <span className="text-md font-bold text-gray-900">
                                 Tổng cộng:
                               </span>
-                              <span className="text-md font-bold text-blue-600">
+                              <span className="text-md font-bold text-brand">
                                 {formatCurrency(Number(order.grandTotal))}
                               </span>
                             </div>
@@ -817,7 +817,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                 ORDER_STATUS.PARTIALLY_INVOICED &&
                               order.status !== ORDER_STATUS.CONFIRMED)
                           }
-                          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                          className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-dark transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                           Xử lý đơn hàng
                         </button>
                         <button

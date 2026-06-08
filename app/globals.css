@@ -5,6 +5,34 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* ---------- Diệp Trà brand tokens (nguồn: dieptra-theme/tokens.css) ---------- */
+  --dt-color-primary: #00b7cc;
+  --dt-color-primary-bright: #00a5b5;
+  --dt-color-primary-mid: #2e8b8f;
+  --dt-color-primary-deep: #1a5f6a;
+  --dt-color-primary-dark: #0d3b42;
+  --dt-color-cyan-soft: #a8d8e0;
+  --dt-color-cyan-pale: #c5e4e8;
+  --dt-color-cyan-bg: #e8f4f5;
+  --dt-color-gold: #c9a84c;
+  --dt-color-gold-light: #e8c96a;
+  --dt-color-border: #d0e5e8;
+  --dt-color-border-strong: #7aa5a8;
+  --dt-color-price: #0d3b42;
+  --dt-color-sale: #c0392b;
+  --dt-color-instock: #2e8b8f;
+  --dt-color-outofstock: #c0392b;
+  --dt-color-rating: #c9a84c;
+  --dt-color-primary-soft: rgba(0, 183, 204, 0.08);
+  --dt-color-primary-ring: rgba(0, 183, 204, 0.1);
+  --dt-color-gold-soft: rgba(201, 168, 76, 0.12);
+  --dt-color-overlay-dark: rgba(13, 59, 66, 0.4);
+  --dt-radius-sm: 8px;
+  --dt-radius-control: 12px;
+  --dt-radius-card: 16px;
+  --dt-shadow-nav: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --dt-shadow-card: 0 12px 32px rgba(0, 183, 204, 0.12);
 }
 
 @font-face {

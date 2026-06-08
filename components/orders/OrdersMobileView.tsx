@@ -138,7 +138,7 @@ function OrderMobileCard({
       className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 cursor-pointer active:scale-[0.98] transition-transform select-none">
       {/* Row 1: code + status */}
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-blue-600 font-bold text-[15px]">
+        <span className="text-brand font-bold text-[15px]">
           <CodeLink entity="order" code={order.code} />
         </span>
         <div className="flex items-center gap-1.5">
@@ -408,8 +408,8 @@ function OrdersMobileFilterSheet({
         label="Khách hàng"
         summary={customerId != null ? customerLabel : undefined}>
         {customerId != null ? (
-          <div className="flex items-center justify-between gap-2 border border-blue-300 bg-blue-50 rounded-xl px-3 py-2.5">
-            <span className="text-sm text-blue-700 font-medium truncate">
+          <div className="flex items-center justify-between gap-2 border border-brand bg-brand-soft rounded-xl px-3 py-2.5">
+            <span className="text-sm text-brand-dark font-medium truncate">
               {customerLabel}
             </span>
             <button
@@ -419,7 +419,7 @@ function OrdersMobileFilterSheet({
                 setCustomerLabel("");
                 setCustomerQuery("");
               }}
-              className="text-blue-400 hover:text-blue-600 flex-shrink-0">
+              className="text-brand hover:text-brand-dark flex-shrink-0">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -432,7 +432,7 @@ function OrdersMobileFilterSheet({
                   value={customerQuery}
                   onChange={(e) => setCustomerQuery(e.target.value)}
                   placeholder="Tìm theo tên, SĐT, mã KH..."
-                  className="w-full pl-8 pr-2 py-2 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                  className="w-full pl-8 pr-2 py-2 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white"
                 />
               </div>
             </div>
@@ -451,7 +451,7 @@ function OrdersMobileFilterSheet({
                       setCustomerLabel(c.name);
                       setCustomerQuery("");
                     }}
-                    className={`w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors ${
+                    className={`w-full text-left px-3 py-2.5 hover:bg-brand-soft transition-colors ${
                       idx > 0 ? "border-t border-gray-50" : ""
                     }`}>
                     <div className="text-sm font-medium text-gray-800">
@@ -641,7 +641,7 @@ export function OrdersMobileView({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Tìm mã đơn, khách hàng..."
-              className="w-full pl-9 pr-8 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              className="w-full pl-9 pr-8 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all"
             />
             {search && (
               <button
@@ -657,7 +657,7 @@ export function OrdersMobileView({
             onClick={() => setShowFilter(true)}
             className={`relative p-2.5 rounded-xl transition-colors flex-shrink-0 ${
               activeFilterCount > 0
-                ? "bg-blue-600 hover:bg-blue-700"
+                ? "bg-brand hover:bg-brand-dark"
                 : "bg-gray-100 hover:bg-gray-200"
             }`}>
             <SlidersHorizontal
@@ -684,13 +684,13 @@ export function OrdersMobileView({
                 onClick={() => setActiveTab(tab.value)}
                 className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
                   isActive
-                    ? "bg-blue-600 text-white shadow-sm"
+                    ? "bg-brand text-white shadow-sm"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}>
                 {tab.label}
                 {count != null && count > 0 && (
                   <span
-                    className={`ml-1 text-xs ${isActive ? "text-blue-100" : "text-gray-400"}`}>
+                    className={`ml-1 text-xs ${isActive ? "text-brand-soft" : "text-gray-400"}`}>
                     ({count})
                   </span>
                 )}
@@ -704,7 +704,7 @@ export function OrdersMobileView({
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 pb-24">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            <Loader2 className="w-6 h-6 animate-spin text-brand" />
             <span className="text-sm text-gray-400">Đang tải...</span>
           </div>
         ) : orders.length === 0 ? (
@@ -752,7 +752,7 @@ export function OrdersMobileView({
       {/* ─── FAB ─── */}
       <button
         onClick={onCreateClick}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 rounded-full shadow-xl flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all z-40">
+        className="fixed bottom-6 right-6 w-14 h-14 bg-brand rounded-full shadow-xl flex items-center justify-center hover:bg-brand-dark active:scale-95 transition-all z-40">
         <Plus className="w-7 h-7 text-white" />
       </button>
 

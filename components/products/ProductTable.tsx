@@ -219,7 +219,7 @@ const DEFAULT_COLUMNS: ColumnConfig<Product, ProductColumnCtx>[] = [
             e.stopPropagation();
             ctx?.onOpenPending(product);
           }}
-          className="text-blue-600 hover:underline font-medium">
+          className="text-brand hover:underline font-medium">
           {display}
         </button>
       );
@@ -243,7 +243,7 @@ const DEFAULT_COLUMNS: ColumnConfig<Product, ProductColumnCtx>[] = [
             e.stopPropagation();
             ctx?.onOpenSupplier(product);
           }}
-          className="text-blue-600 hover:underline font-medium">
+          className="text-brand hover:underline font-medium">
           {display}
         </button>
       );
@@ -516,7 +516,7 @@ export function ProductsTable({
             <div className="relative" ref={createDropdownRef}>
               <button
                 onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm font-medium">
+                className="bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark flex items-center gap-2 text-sm font-medium">
                 <Plus className="w-4 h-4" />
                 Tạo mới
               </button>
@@ -549,7 +549,7 @@ export function ProductsTable({
           <input
             type="text"
             placeholder="Theo mã, tên hàng"
-            className="border rounded-lg px-3 py-2 w-64 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="border rounded-lg px-3 py-2 w-64 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -580,7 +580,7 @@ export function ProductsTable({
             onClick={() => setActiveStatusTab(tab.value)}
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeStatusTab === tab.value
-                ? "border-blue-600 text-blue-600"
+                ? "border-brand text-brand"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}>
             {tab.label}
@@ -623,9 +623,9 @@ export function ProductsTable({
                     {SORTABLE_COLUMNS[col.key] && (
                       <span className="inline-flex text-gray-400">
                         {sortBy === col.key && sortDir === "desc" ? (
-                          <ArrowDown className="w-3 h-3 text-blue-500" />
+                          <ArrowDown className="w-3 h-3 text-brand" />
                         ) : sortBy === col.key && sortDir === "asc" ? (
-                          <ArrowUp className="w-3 h-3 text-blue-500" />
+                          <ArrowUp className="w-3 h-3 text-brand" />
                         ) : (
                           <ArrowUpDown className="w-3 h-3 opacity-40" />
                         )}
@@ -642,7 +642,7 @@ export function ProductsTable({
               <tr>
                 <td colSpan={colSpan} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-2 text-gray-400">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
                     <span className="text-xs">Đang tải...</span>
                   </div>
                 </td>
@@ -661,14 +661,14 @@ export function ProductsTable({
                   <tr
                     className={`cursor-pointer transition-colors ${
                       expandedProductId === product.id
-                        ? "bg-blue-50"
+                        ? "bg-brand-soft"
                         : "border-b hover:bg-gray-50"
                     }`}
                     onClick={() => toggleExpand(product.id)}>
                     <td
                       className={`px-4 py-2.5 sticky left-0 z-10 ${
                         expandedProductId === product.id
-                          ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
+                          ? "bg-brand-soft border-t-2 border-l-2 border-brand"
                           : "bg-white"
                       }`}
                       onClick={(e) => e.stopPropagation()}>
@@ -684,7 +684,7 @@ export function ProductsTable({
                         key={col.key}
                         className={`px-4 py-2.5 ${
                           expandedProductId === product.id
-                            ? "border-t-2 border-blue-500"
+                            ? "border-t-2 border-brand"
                             : ""
                         }`}
                         style={{
@@ -705,7 +705,7 @@ export function ProductsTable({
                     <td
                       className={`px-4 py-2.5 ${
                         expandedProductId === product.id
-                          ? "border-t-2 border-r-2 border-blue-500"
+                          ? "border-t-2 border-r-2 border-brand"
                           : ""
                       }`}>
                       <ChevronDown
@@ -738,7 +738,7 @@ export function ProductsTable({
               setLimit(Number(e.target.value));
               setPage(1);
             }}
-            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
             {[10, 15, 20, 50, 100].map((n) => (
               <option key={n} value={n}>
                 {n}
@@ -766,7 +766,7 @@ export function ProductsTable({
                 onClick={() => setPage(p)}
                 className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
                   p === page
-                    ? "bg-blue-600 text-white border-blue-600"
+                    ? "bg-brand text-white border-brand"
                     : "hover:bg-gray-50 text-gray-600 border-gray-200"
                 }`}>
                 {p}

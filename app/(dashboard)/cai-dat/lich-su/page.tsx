@@ -80,12 +80,12 @@ export default function AuditLogsPage() {
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 ${
-                activeFilterCount > 0 ? "border-blue-500 text-blue-600" : ""
+                activeFilterCount > 0 ? "border-brand text-brand" : ""
               }`}>
               <Filter className="w-4 h-4" />
               Lọc
               {activeFilterCount > 0 && (
-                <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="bg-brand text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {activeFilterCount}
                 </span>
               )}

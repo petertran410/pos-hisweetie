@@ -97,7 +97,7 @@ export function UserPermissionMatrix({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -119,7 +119,7 @@ export function UserPermissionMatrix({
           placeholder="Tìm kiếm quyền..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
         />
       </div>
 
@@ -155,20 +155,20 @@ export function UserPermissionMatrix({
                           <button
                             type="button"
                             onClick={() => handleToggleResource(resource)}
-                            className="flex items-center gap-2 hover:text-blue-600">
+                            className="flex items-center gap-2 hover:text-brand">
                             <div
                               className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 ${
                                 allSelected
-                                  ? "bg-blue-600 border-blue-600"
+                                  ? "bg-brand border-brand"
                                   : someSelected
-                                    ? "bg-blue-100 border-blue-600"
+                                    ? "bg-brand-soft border-brand"
                                     : "border-gray-300"
                               }`}>
                               {allSelected && (
                                 <Check className="w-3 h-3 text-white" />
                               )}
                               {someSelected && !allSelected && (
-                                <div className="w-2.5 h-0.5 bg-blue-600 rounded" />
+                                <div className="w-2.5 h-0.5 bg-brand rounded" />
                               )}
                             </div>
                             <span className="font-medium text-gray-900">
@@ -196,13 +196,13 @@ export function UserPermissionMatrix({
                                 onClick={() => handleToggle(perm.id)}
                                 className={`flex items-start gap-2 p-2 rounded border text-left transition-colors hover:bg-gray-50 ${
                                   isActive
-                                    ? "border-blue-200 bg-blue-50"
+                                    ? "border-brand-border bg-brand-soft"
                                     : "border-gray-200"
                                 }`}>
                                 <div
                                   className={`w-5 h-5 mt-0.5 rounded flex items-center justify-center flex-shrink-0 ${
                                     isActive
-                                      ? "bg-blue-600"
+                                      ? "bg-brand"
                                       : "bg-white border-2 border-gray-300"
                                   }`}>
                                   {isActive && (

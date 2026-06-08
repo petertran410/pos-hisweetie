@@ -98,7 +98,7 @@ export function CodeLink({
       onClick={(e) => e.stopPropagation()}
       className={
         className ??
-        "text-blue-600 hover:underline font-medium inline-flex items-center gap-1"
+        "text-brand hover:underline font-medium inline-flex items-center gap-1"
       }>
       {label ?? value}
       {withIcon && <ExternalLink className="w-3.5 h-3.5" />}

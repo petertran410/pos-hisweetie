@@ -17,7 +17,7 @@ interface SupplierFormProps {
 }
 
 const INPUT_CLASS =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all";
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand transition-all";
 
 export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
   const createSupplier = useCreateSupplier();
@@ -269,13 +269,13 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
                     onClick={() => setShowGroupDropdown(true)}
                     className={`border border-gray-200 rounded-lg px-3 py-2 min-h-[42px] flex flex-wrap gap-1.5 items-center cursor-text bg-white transition-all ${
                       showGroupDropdown
-                        ? "border-blue-400 ring-2 ring-blue-100"
+                        ? "border-brand ring-2 ring-brand-soft"
                         : "hover:border-gray-300"
                     }`}>
                     {selectedGroups.map((group) => (
                       <span
                         key={group.id}
-                        className="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
+                        className="bg-brand-soft text-brand-dark border border-brand-soft px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
                         {group.name}
                         <button
                           type="button"
@@ -283,7 +283,7 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
                             e.stopPropagation();
                             handleRemoveGroup(group.id);
                           }}
-                          className="text-blue-400 hover:text-blue-700 transition-colors">
+                          className="text-brand hover:text-brand-dark transition-colors">
                           <X className="w-3 h-3" />
                         </button>
                       </span>
@@ -320,12 +320,12 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
                               onClick={() => handleToggleGroup(group.id)}
                               className={`px-4 py-2.5 cursor-pointer flex items-center justify-between text-sm transition-colors ${
                                 isSelected
-                                  ? "bg-blue-50 text-blue-700 font-medium"
+                                  ? "bg-brand-soft text-brand-dark font-medium"
                                   : "hover:bg-gray-50 text-gray-700"
                               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                               <span className="truncate">{group.name}</span>
                               {isSelected && (
-                                <Check className="w-4 h-4 text-blue-500 flex-shrink-0 ml-2" />
+                                <Check className="w-4 h-4 text-brand flex-shrink-0 ml-2" />
                               )}
                             </div>
                           );
@@ -397,7 +397,7 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5 transition-colors">
+              className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5 transition-colors">
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? "Đang lưu..." : "Lưu"}
             </button>

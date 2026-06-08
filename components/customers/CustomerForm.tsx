@@ -578,7 +578,7 @@ export function CustomerForm({
               onClick={() => setActiveFormTab("basic")}
               className={`py-2 sm:py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeFormTab === "basic"
-                  ? "border-blue-600 text-blue-600"
+                  ? "border-brand text-brand"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}>
               Thông tin cơ bản
@@ -588,7 +588,7 @@ export function CustomerForm({
               onClick={() => setActiveFormTab("invoice")}
               className={`py-2 sm:py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeFormTab === "invoice"
-                  ? "border-blue-600 text-blue-600"
+                  ? "border-brand text-brand"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}>
               Thông tin xuất hóa đơn
@@ -613,15 +613,15 @@ export function CustomerForm({
                     </span>
                   </label>
                   {selectedParent ? (
-                    <div className="flex items-center gap-2 px-3 py-2 border rounded bg-blue-50">
-                      <span className="text-sm font-medium text-blue-700">
+                    <div className="flex items-center gap-2 px-3 py-2 border rounded bg-brand-soft">
+                      <span className="text-sm font-medium text-brand-dark">
                         {selectedParent.code} - {selectedParent.name}
                       </span>
                       <button
                         type="button"
                         onClick={() => setSelectedParent(null)}
-                        className="ml-auto p-1 hover:bg-blue-100 rounded">
-                        <X className="w-3 h-3 text-blue-600" />
+                        className="ml-auto p-1 hover:bg-brand-soft rounded">
+                        <X className="w-3 h-3 text-brand" />
                       </button>
                     </div>
                   ) : (
@@ -652,7 +652,7 @@ export function CustomerForm({
                                 setParentSearch("");
                                 setShowParentDropdown(false);
                               }}
-                              className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 flex items-center gap-2">
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-brand-soft flex items-center gap-2">
                               <span className="font-medium">{c.code}</span>
                               <span className="text-gray-400">-</span>
                               <span>{c.name}</span>
@@ -748,7 +748,7 @@ export function CustomerForm({
                 <button
                   type="button"
                   onClick={() => setAddrModal({ open: true, mode: "create" })}
-                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
+                  className="px-3 py-1.5 text-sm bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1">
                   <Plus className="w-4 h-4" /> Thêm địa chỉ
                 </button>
               </div>
@@ -764,7 +764,7 @@ export function CustomerForm({
                       key={index}
                       className={`border rounded-lg px-3 py-2 sm:py-2.5 flex items-start justify-between gap-3 ${
                         addr.isDefault
-                          ? "border-blue-500 bg-blue-50/50"
+                          ? "border-brand bg-brand-soft"
                           : "border-gray-200"
                       }`}>
                       <div className="flex-1 min-w-0">
@@ -775,7 +775,7 @@ export function CustomerForm({
                               `Địa chỉ #${index + 1}`}
                           </span>
                           {addr.isDefault && (
-                            <span className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded">
+                            <span className="px-2 py-0.5 text-xs bg-brand text-white rounded">
                               Mặc định
                             </span>
                           )}
@@ -796,7 +796,7 @@ export function CustomerForm({
                             type="button"
                             onClick={() => handleSetDefault(index)}
                             title="Đặt mặc định"
-                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded">
+                            className="p-1.5 text-gray-500 hover:text-brand hover:bg-brand-soft rounded">
                             <Star className="w-4 h-4" />
                           </button>
                         )}
@@ -806,7 +806,7 @@ export function CustomerForm({
                             setAddrModal({ open: true, mode: "edit", index })
                           }
                           title="Sửa"
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded">
+                          className="p-1.5 text-gray-500 hover:text-brand hover:bg-brand-soft rounded">
                           <Pencil className="w-4 h-4" />
                         </button>
                         {addresses.length > 1 && (
@@ -841,7 +841,7 @@ export function CustomerForm({
                     {selectedGroups.map((group) => (
                       <span
                         key={group.id}
-                        className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                        className="inline-flex items-center gap-1 bg-brand-soft text-brand-dark px-2 py-1 rounded text-sm">
                         {group.name}
                         <button
                           type="button"
@@ -849,7 +849,7 @@ export function CustomerForm({
                             e.stopPropagation();
                             handleRemoveGroup(group.id);
                           }}
-                          className="hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center">
+                          className="hover:bg-brand-border rounded-full w-4 h-4 flex items-center justify-center">
                           ×
                         </button>
                       </span>
@@ -884,7 +884,7 @@ export function CustomerForm({
                               <span className="text-sm">{group.name}</span>
                               {isSelected && (
                                 <svg
-                                  className="w-5 h-5 text-blue-600"
+                                  className="w-5 h-5 text-brand"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24">
@@ -978,7 +978,7 @@ export function CustomerForm({
                       onClick={handleTaxLookup}
                       disabled={taxLookup.isPending}
                       title="Tra cứu thông tin từ mã số thuế"
-                      className="px-3 py-1.5 sm:py-2 border rounded text-sm font-medium text-blue-600 border-blue-200 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
+                      className="px-3 py-1.5 sm:py-2 border rounded text-sm font-medium text-brand border-brand-border hover:bg-brand-soft disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
                       {taxLookup.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
@@ -1064,7 +1064,7 @@ export function CustomerForm({
                       onClick={handleTaxLookup}
                       disabled={taxLookup.isPending}
                       title="Tra cứu thông tin từ mã số thuế"
-                      className="px-3 py-1.5 sm:py-2 border rounded text-sm font-medium text-blue-600 border-blue-200 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
+                      className="px-3 py-1.5 sm:py-2 border rounded text-sm font-medium text-brand border-brand-border hover:bg-brand-soft disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
                       {taxLookup.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
@@ -1152,7 +1152,7 @@ export function CustomerForm({
             <button
               type="submit"
               disabled={createCustomer.isPending || updateCustomer.isPending}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm font-medium">
+              className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50 text-sm font-medium">
               {customer ? "Cập nhật" : "Tạo khách hàng"}
             </button>
           </div>

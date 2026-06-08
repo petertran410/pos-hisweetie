@@ -183,7 +183,7 @@ export function SupplierReturnsTable({
               <PermissionGate resource="supplier_returns" action="create">
                 <button
                   onClick={onImportClick}
-                  className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                  className="flex items-center gap-1 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm">
                   <Upload className="w-4 h-4" />
                   Import Excel
                 </button>

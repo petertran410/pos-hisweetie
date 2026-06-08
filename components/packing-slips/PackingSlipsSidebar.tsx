@@ -149,7 +149,7 @@ export function PackingSlipsSidebar({
           onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
           className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
             open
-              ? "border-blue-400 ring-2 ring-blue-100"
+              ? "border-brand ring-2 ring-brand-soft"
               : "hover:border-gray-400"
           }`}>
           <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
@@ -181,13 +181,13 @@ export function PackingSlipsSidebar({
                 type="button"
                 onClick={() => toggle(b.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
-                  selectedIds.includes(b.id) ? "bg-blue-50" : "hover:bg-gray-50"
+                  selectedIds.includes(b.id) ? "bg-brand-soft" : "hover:bg-gray-50"
                 } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                 <input
                   type="checkbox"
                   checked={selectedIds.includes(b.id)}
                   onChange={() => {}}
-                  className="w-3.5 h-3.5 accent-blue-600 flex-shrink-0"
+                  className="w-3.5 h-3.5 accent-brand flex-shrink-0"
                 />
                 <span className="text-gray-700">{b.name}</span>
               </button>
@@ -208,7 +208,7 @@ export function PackingSlipsSidebar({
         {activeFilterCount > 0 && (
           <button
             onClick={clearAllFilters}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            className="text-sm text-brand hover:text-brand-dark font-medium">
             Xóa tất cả
           </button>
         )}
@@ -227,7 +227,7 @@ export function PackingSlipsSidebar({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Mã báo đơn, ghi chú..."
-              className="w-full border rounded-lg pl-8 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg pl-8 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
             {search && (
               <button
@@ -251,7 +251,7 @@ export function PackingSlipsSidebar({
               value={invoiceSearch}
               onChange={(e) => setInvoiceSearch(e.target.value)}
               placeholder="Tìm theo mã hóa đơn..."
-              className="w-full border rounded-lg pl-8 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg pl-8 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
             {invoiceSearch && (
               <button
@@ -275,7 +275,7 @@ export function PackingSlipsSidebar({
               value={customerSearch}
               onChange={(e) => setCustomerSearch(e.target.value)}
               placeholder="Tìm theo tên khách hàng..."
-              className="w-full border rounded-lg pl-8 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg pl-8 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
             {customerSearch && (
               <button
@@ -298,7 +298,7 @@ export function PackingSlipsSidebar({
             onClick={() => setShowTypeDropdown(!showTypeDropdown)}
             className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
               showTypeDropdown
-                ? "border-blue-400 ring-2 ring-blue-100"
+                ? "border-brand ring-2 ring-brand-soft"
                 : "hover:border-gray-400"
             }`}>
             <span
@@ -337,12 +337,12 @@ export function PackingSlipsSidebar({
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
                     option.value === type
-                      ? "bg-blue-50 text-blue-700 font-medium"
+                      ? "bg-brand-soft text-brand-dark font-medium"
                       : "hover:bg-gray-50 text-gray-700"
                   } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                   <span>{option.label}</span>
                   {option.value === type && (
-                    <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
                   )}
                 </button>
               ))}

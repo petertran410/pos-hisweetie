@@ -115,7 +115,7 @@ export function AddressAutocompleteInput({
               type="button"
               onClick={() => handleSelect(p)}
               className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-start gap-2 transition-colors border-b last:border-b-0">
-              <MapPin className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+              <MapPin className="w-4 h-4 text-brand mt-0.5 shrink-0" />
               <span className="flex flex-col">
                 <span className="text-sm text-gray-900">
                   {p.structured_formatting?.main_text || p.description}

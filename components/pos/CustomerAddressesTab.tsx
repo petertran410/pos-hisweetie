@@ -212,7 +212,7 @@ export function CustomerAddressesTab({
   if (isLoadingData) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-brand" />
       </div>
     );
   }
@@ -226,7 +226,7 @@ export function CustomerAddressesTab({
         <button
           onClick={() => setModalState({ open: true, mode: "create" })}
           disabled={updateCustomer.isPending}
-          className="px-3 lg:px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50">
+          className="px-3 lg:px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1.5 disabled:opacity-50">
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">Thêm địa chỉ</span>
         </button>
@@ -247,18 +247,18 @@ export function CustomerAddressesTab({
                 key={addr.id ?? index}
                 className={`group border rounded-lg p-3 lg:p-4 transition-colors ${
                   addr.isDefault
-                    ? "border-blue-500 bg-blue-50/50"
+                    ? "border-brand bg-brand-soft/50"
                     : "border-gray-200 hover:border-gray-300"
                 }`}>
                 <div className="flex items-start justify-between gap-2 lg:gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5 lg:mb-2 flex-wrap">
-                      <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <MapPin className="w-4 h-4 text-brand flex-shrink-0" />
                       <span className="text-sm lg:text-base font-medium truncate">
                         {addr.label || addr.receiver || `Địa chỉ #${index + 1}`}
                       </span>
                       {addr.isDefault && (
-                        <span className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded flex items-center gap-1">
+                        <span className="px-2 py-0.5 text-xs bg-brand text-white rounded flex items-center gap-1">
                           <Star className="w-3 h-3" fill="currentColor" />
                           Mặc định
                         </span>
@@ -299,7 +299,7 @@ export function CustomerAddressesTab({
                         onClick={() => handleSetDefault(index)}
                         disabled={updateCustomer.isPending}
                         title="Đặt làm mặc định"
-                        className="p-1.5 lg:p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50">
+                        className="p-1.5 lg:p-2 text-gray-500 hover:text-brand hover:bg-brand-soft rounded disabled:opacity-50">
                         <Star className="w-4 h-4" />
                       </button>
                     )}
@@ -310,7 +310,7 @@ export function CustomerAddressesTab({
                       }
                       disabled={updateCustomer.isPending}
                       title="Chỉnh sửa"
-                      className="p-1.5 lg:p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50">
+                      className="p-1.5 lg:p-2 text-gray-500 hover:text-brand hover:bg-brand-soft rounded disabled:opacity-50">
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button

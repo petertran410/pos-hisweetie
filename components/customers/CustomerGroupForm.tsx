@@ -236,7 +236,7 @@ export function CustomerGroupForm({
               onClick={() => setActiveTab("info")}
               className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "info"
-                  ? "border-blue-600 text-blue-600"
+                  ? "border-brand text-brand"
                   : "border-transparent text-gray-600 hover:text-gray-900"
               }`}>
               Thông tin
@@ -246,7 +246,7 @@ export function CustomerGroupForm({
               onClick={() => setActiveTab("advanced")}
               className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "advanced"
-                  ? "border-blue-600 text-blue-600"
+                  ? "border-brand text-brand"
                   : "border-transparent text-gray-600 hover:text-gray-900"
               }`}>
               Nâng cao
@@ -305,7 +305,7 @@ export function CustomerGroupForm({
                   }
                   maxLength={1000}
                   placeholder="Nhập ghi chú"
-                  className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full border rounded-xl px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-brand resize-none"
                   rows={2}
                 />
               </div>
@@ -334,7 +334,7 @@ export function CustomerGroupForm({
                       selectedUsers.map((user: any) => (
                         <span
                           key={user.id}
-                          className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                          className="inline-flex items-center gap-1 bg-brand-soft text-brand-dark px-2 py-1 rounded text-sm">
                           {user.name}
                           <button
                             type="button"
@@ -342,7 +342,7 @@ export function CustomerGroupForm({
                               e.stopPropagation();
                               removeUser(user.id);
                             }}
-                            className="hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center">
+                            className="hover:bg-brand-border rounded-full w-4 h-4 flex items-center justify-center">
                             ×
                           </button>
                         </span>
@@ -386,7 +386,7 @@ export function CustomerGroupForm({
                   <button
                     type="button"
                     onClick={addCondition}
-                    className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
+                    className="text-brand hover:text-brand-dark text-sm flex items-center gap-1">
                     <Plus className="w-4 h-4" />
                     Thêm điều kiện
                   </button>
@@ -535,7 +535,7 @@ export function CustomerGroupForm({
                   type="submit"
                   onClick={handleSubmit}
                   disabled={updateGroup.isPending}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+                  className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
                   {updateGroup.isPending ? "Đang lưu..." : "Cập nhật"}
                 </button>
               </div>
@@ -552,7 +552,7 @@ export function CustomerGroupForm({
                 type="submit"
                 onClick={handleSubmit}
                 disabled={createGroup.isPending}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+                className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
                 {createGroup.isPending ? "Đang tạo..." : "Lưu"}
               </button>
             </div>

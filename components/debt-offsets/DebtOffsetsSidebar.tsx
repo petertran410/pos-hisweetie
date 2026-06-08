@@ -78,7 +78,7 @@ export function DebtOffsetsSidebar({
             setEnableDate(true);
             setSelectedPreset("this_month");
           }}
-          className="text-sm text-blue-600 hover:underline">
+          className="text-sm text-brand hover:underline">
           Xóa lọc
         </button>
       </div>

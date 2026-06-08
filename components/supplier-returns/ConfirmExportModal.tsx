@@ -216,7 +216,7 @@ export function ConfirmExportModal({
 
           <div className="flex items-center justify-between text-sm font-semibold">
             <span>Tổng tiền xuất kho</span>
-            <span className="text-blue-600">
+            <span className="text-brand">
               {formatCurrency(totalConfirmed)}
             </span>
           </div>
@@ -251,7 +251,7 @@ export function ConfirmExportModal({
                 </button>
                 <button
                   onClick={() => handleSubmit(false)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                  className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark">
                   Xác nhận xuất kho
                 </button>
               </PermissionGate>

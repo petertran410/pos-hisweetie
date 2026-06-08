@@ -309,7 +309,7 @@ export function ReturnOrdersTable({
                 returnOrders.map((item: ReturnOrder) => (
                   <tr
                     key={item.id}
-                    className="border-b hover:bg-blue-50 cursor-pointer"
+                    className="border-b hover:bg-brand-soft cursor-pointer"
                     onClick={() => onViewClick(item)}>
                     {visibleColumns.map((col) => (
                       <td key={col.key} className="px-4 py-3 whitespace-nowrap">

@@ -692,9 +692,9 @@ export function CreateCashFlowModal({
                               );
                               handleDateSelect(newDate);
                             }}
-                            className={`w-8 h-8 rounded hover:bg-blue-100 ${
+                            className={`w-8 h-8 rounded hover:bg-brand-soft ${
                               dayNumber === transDateTime.getDate()
-                                ? "bg-blue-500 text-white"
+                                ? "bg-brand text-white"
                                 : ""
                             }`}>
                             {dayNumber}
@@ -720,9 +720,9 @@ export function CreateCashFlowModal({
                               onClick={() =>
                                 handleTimeSelect(i, transDateTime.getMinutes())
                               }
-                              className={`w-full px-2 py-1 text-left hover:bg-blue-100 ${
+                              className={`w-full px-2 py-1 text-left hover:bg-brand-soft ${
                                 i === transDateTime.getHours()
-                                  ? "bg-blue-500 text-white"
+                                  ? "bg-brand text-white"
                                   : ""
                               }`}>
                               {String(i).padStart(2, "0")}
@@ -740,9 +740,9 @@ export function CreateCashFlowModal({
                               onClick={() =>
                                 handleTimeSelect(transDateTime.getHours(), i)
                               }
-                              className={`w-full px-2 py-1 text-left hover:bg-blue-100 ${
+                              className={`w-full px-2 py-1 text-left hover:bg-brand-soft ${
                                 i === transDateTime.getMinutes()
-                                  ? "bg-blue-500 text-white"
+                                  ? "bg-brand text-white"
                                   : ""
                               }`}>
                               {String(i).padStart(2, "0")}
@@ -787,7 +787,7 @@ export function CreateCashFlowModal({
                       setShowCreateGroupModal(true);
                       setShowGroupDropdown(false);
                     }}
-                    className="w-full px-3 py-2 text-left text-blue-500 hover:bg-gray-100 border-t">
+                    className="w-full px-3 py-2 text-left text-brand hover:bg-gray-100 border-t">
                     + Thêm loại thu/chi
                   </button>
                 </div>
@@ -832,7 +832,7 @@ export function CreateCashFlowModal({
                         setShowCreateCollectionBranchModal(true);
                         setShowCollectionBranchDropdown(false);
                       }}
-                      className="w-full px-3 py-2 text-left text-blue-500 hover:bg-gray-100 border-t">
+                      className="w-full px-3 py-2 text-left text-brand hover:bg-gray-100 border-t">
                       + Thêm chi nhánh
                     </button>
                   </div>
@@ -978,7 +978,7 @@ export function CreateCashFlowModal({
                   <button
                     type="button"
                     onClick={() => setShowAccountDropdown(!showAccountDropdown)}
-                    className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between hover:border-blue-500">
+                    className="w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between hover:border-brand">
                     <span className="text-sm">
                       {selectedAccountId && bankAccounts
                         ? (() => {
@@ -1005,7 +1005,7 @@ export function CreateCashFlowModal({
                               setSelectedAccountId(account.id);
                               setShowAccountDropdown(false);
                             }}
-                            className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors border-b last:border-b-0">
+                            className="w-full text-left px-3 py-2 hover:bg-brand-soft transition-colors border-b last:border-b-0">
                             <div className="font-medium text-sm">
                               {account.bankCode} - {account.accountNumber}
                             </div>
@@ -1086,7 +1086,7 @@ export function CreateCashFlowModal({
                     {allocateToInvoices && unpaidInvoices.length > 0 && (
                       <div className="border rounded-lg overflow-hidden mt-2">
                         {availableCredit > 0 && (
-                          <div className="px-4 py-2 bg-blue-50 border-b text-xs text-blue-700">
+                          <div className="px-4 py-2 bg-brand-soft border-b text-xs text-brand-dark">
                             Có thể cấn trừ tối đa{" "}
                             <span className="font-semibold">
                               {formatNumberInput(availableCredit.toString())}
@@ -1229,7 +1229,7 @@ export function CreateCashFlowModal({
             <button
               onClick={handleSubmit}
               disabled={createCashFlow.isPending}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50">
+              className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand disabled:opacity-50">
               {createCashFlow.isPending ? "Đang lưu..." : "Lưu"}
             </button>
           </div>

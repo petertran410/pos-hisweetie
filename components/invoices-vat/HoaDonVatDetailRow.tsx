@@ -127,10 +127,10 @@ export function HoaDonVatDetailRow({
 
   if (isLoading) {
     return (
-      <tr className="bg-blue-50">
+      <tr className="bg-brand-soft">
         <td colSpan={colSpan} className="px-6 py-8">
           <div className="flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
             <span className="text-gray-600">Đang tải thông tin hóa đơn...</span>
           </div>
         </td>
@@ -169,7 +169,7 @@ export function HoaDonVatDetailRow({
     <tr>
       <td
         colSpan={colSpan}
-        className="border-b-2 border-l-2 border-r-2 border-blue-500 p-0 bg-gray-50">
+        className="border-b-2 border-l-2 border-r-2 border-brand p-0 bg-gray-50">
         <div
           ref={wrapperRef}
           className="sticky left-0 bg-gray-50"
@@ -183,7 +183,7 @@ export function HoaDonVatDetailRow({
                       <CodeLink
                         entity="invoice"
                         code={invoice.code}
-                        className="text-lg font-bold text-blue-600 hover:underline"
+                        className="text-lg font-bold text-brand hover:underline"
                       />
                     </span>
                     <span className="text-gray-400">-</span>
@@ -194,7 +194,7 @@ export function HoaDonVatDetailRow({
                           href={`/khach-hang?Code=${invoice.customer.code}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-lg font-semibold text-blue-600 hover:underline"
+                          className="text-lg font-semibold text-brand hover:underline"
                           onClick={(e) => e.stopPropagation()}>
                           {invoice?.customer?.name}
                         </Link>
@@ -202,7 +202,7 @@ export function HoaDonVatDetailRow({
                           href={`/khach-hang?Code=${invoice.customer.code}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          className="text-gray-400 hover:text-brand transition-colors"
                           onClick={(e) => e.stopPropagation()}>
                           <ExternalLink className="w-4 h-4" />
                         </Link>
@@ -236,7 +236,7 @@ export function HoaDonVatDetailRow({
                       onClick={() => setActiveTab(t.key as any)}
                       className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                         activeTab === t.key
-                          ? "border-blue-600 text-blue-600"
+                          ? "border-brand text-brand"
                           : "border-transparent text-gray-600 hover:text-gray-900"
                       }`}>
                       {t.label}
@@ -452,7 +452,7 @@ export function HoaDonVatDetailRow({
                                     </span>
                                   </td> */}
                                   <td className="px-[10px] py-2 text-right">
-                                    <span className="text-md font-semibold text-blue-600">
+                                    <span className="text-md font-semibold text-brand">
                                       {formatCurrency(vat.amountAfterTax)}
                                     </span>
                                   </td>
@@ -523,7 +523,7 @@ export function HoaDonVatDetailRow({
                                 <span className="text-gray-600">
                                   Thuế VAT (8%):
                                 </span>
-                                <span className="font-semibold text-blue-700">
+                                <span className="font-semibold text-brand-dark">
                                   {formatCurrency(vatSummary.totalVat)}
                                 </span>
                               </div>
@@ -531,7 +531,7 @@ export function HoaDonVatDetailRow({
                                 <span className="text-gray-600">
                                   Tổng sau thuế:
                                 </span>
-                                <span className="text-md font-bold text-blue-600">
+                                <span className="text-md font-bold text-brand">
                                   {formatCurrency(vatSummary.totalAfterTax)}
                                 </span>
                               </div>

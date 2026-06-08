@@ -266,7 +266,7 @@ export function DestructionForm({
                   setTimeout(() => setShowSearchResults(false), 200)
                 }
                 disabled={isFormDisabled}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 pl-10 focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             </div>
@@ -358,7 +358,7 @@ export function DestructionForm({
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {index + 1}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600 font-medium">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-brand font-medium">
                           {item.productCode}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 min-w-[200px]">
@@ -380,7 +380,7 @@ export function DestructionForm({
                               handleQuantityChange(index, e.target.value)
                             }
                             disabled={isFormDisabled}
-                            className="w-20 px-2 py-1 border rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                            className="w-20 px-2 py-1 border rounded text-center focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100"
                             min="0"
                             step="1"
                           />
@@ -452,7 +452,7 @@ export function DestructionForm({
                   type="text"
                   value={formatCurrency(calculateTotalValue())}
                   disabled
-                  className="flex-1 px-3 py-2 border rounded bg-blue-50 text-right text-blue-600 font-semibold"
+                  className="flex-1 px-3 py-2 border rounded bg-brand-soft text-right text-brand font-semibold"
                 />
               </div>
             </div>
@@ -471,7 +471,7 @@ export function DestructionForm({
                 }
               }}
               disabled={!!destruction || isFormDisabled}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed">
               <option value="">Chọn chi nhánh</option>
               {branches?.map((branch) => (
                 <option key={branch.id} value={branch.id}>
@@ -489,7 +489,7 @@ export function DestructionForm({
               maxLength={1000}
               disabled={isFormDisabled}
               rows={4}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 resize-none"
+              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 resize-none"
               placeholder="Nhập ghi chú..."
             />
           </div>
@@ -501,7 +501,7 @@ export function DestructionForm({
                 disabled={
                   createDestruction.isPending || updateDestruction.isPending
                 }
-                className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                className="w-full px-4 py-2.5 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 <span>💾</span>
                 <span>Lưu tạm</span>
               </button>

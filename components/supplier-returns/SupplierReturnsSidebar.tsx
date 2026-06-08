@@ -256,8 +256,8 @@ function PresetPanel({
                 }}
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   selected === opt.value
-                    ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
-                    : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                    ? "bg-brand text-white border-brand font-medium shadow-sm"
+                    : "border-gray-200 text-gray-700 hover:border-brand hover:bg-brand-soft"
                 }`}>
                 {opt.label}
               </button>
@@ -353,12 +353,12 @@ function MiniCalendar({
               className={[
                 "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
                 isSel
-                  ? "bg-blue-600 text-white font-bold"
+                  ? "bg-brand text-white font-bold"
                   : isToday
-                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
+                    ? "border border-brand text-brand font-semibold hover:bg-brand-soft"
                     : isDisabled
                       ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
+                      : "text-gray-700 hover:bg-brand-soft cursor-pointer",
               ].join(" ")}>
               {day}
             </button>
@@ -381,7 +381,7 @@ function MiniCalendar({
             onChange(todayObj.toISOString().split("T")[0]);
             onClose();
           }}
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors">
+          className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft transition-colors">
           Hôm nay
         </button>
       </div>
@@ -431,7 +431,7 @@ function StatusDropdown({
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400"
         }`}>
         <div className="flex items-center gap-2 min-w-0">
@@ -477,7 +477,7 @@ function StatusDropdown({
                 setOpen(false);
               }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
-                value === opt.value ? "bg-blue-50" : "hover:bg-gray-50"
+                value === opt.value ? "bg-brand-soft" : "hover:bg-gray-50"
               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
               <span
                 className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dot}`}
@@ -487,7 +487,7 @@ function StatusDropdown({
                 {opt.label}
               </span>
               {value === opt.value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
               )}
             </button>
           ))}
@@ -537,7 +537,7 @@ function SimpleDropdown({
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400"
         }`}>
         <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
@@ -572,12 +572,12 @@ function SimpleDropdown({
               }}
               className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
                 value === opt.value
-                  ? "bg-blue-50 text-blue-700"
+                  ? "bg-brand-soft text-brand-dark"
                   : "hover:bg-gray-50 text-gray-700"
               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
               <span>{opt.label}</span>
               {value === opt.value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
               )}
             </button>
           ))}
@@ -638,7 +638,7 @@ function SearchableDropdown({
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400"
         }`}>
         <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
@@ -671,7 +671,7 @@ function SearchableDropdown({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={searchPlaceholder ?? "Tìm kiếm..."}
-              className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+              className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
@@ -692,12 +692,12 @@ function SearchableDropdown({
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
                     value === opt.value
-                      ? "bg-blue-50 text-blue-700"
+                      ? "bg-brand-soft text-brand-dark"
                       : "hover:bg-gray-50 text-gray-700"
                   } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                   <span>{opt.label}</span>
                   {value === opt.value && (
-                    <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
                   )}
                 </button>
               ))
@@ -859,7 +859,7 @@ export function SupplierReturnsSidebar({
         {activeFilterCount > 0 && (
           <button
             onClick={resetFilters}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            className="text-sm text-brand hover:text-brand-dark font-medium">
             Xóa tất cả
           </button>
         )}
@@ -889,7 +889,7 @@ export function SupplierReturnsSidebar({
               }}
               className={`flex items-center justify-between px-2 py-1 border rounded-lg text-sm cursor-pointer transition-colors select-none ${
                 dateMode === "preset"
-                  ? "border-blue-400 bg-blue-50 text-blue-700 ring-2 ring-blue-100"
+                  ? "border-brand bg-brand-soft text-brand-dark ring-2 ring-brand-soft"
                   : "hover:border-gray-300 text-gray-700"
               }`}>
               <span className="font-medium">
@@ -907,7 +907,7 @@ export function SupplierReturnsSidebar({
               ref={customDateRef}
               className={`border rounded-lg overflow-hidden transition-colors ${
                 dateMode === "custom"
-                  ? "border-blue-400 ring-2 ring-blue-100"
+                  ? "border-brand ring-2 ring-brand-soft"
                   : "border-gray-200"
               }`}>
               <button
@@ -919,7 +919,7 @@ export function SupplierReturnsSidebar({
                 }}
                 className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm transition-colors ${
                   dateMode === "custom"
-                    ? "bg-blue-50 text-blue-700 font-medium"
+                    ? "bg-brand-soft text-brand-dark font-medium"
                     : "text-gray-500 hover:bg-gray-50"
                 }`}>
                 <Calendar className="w-3.5 h-3.5" />
@@ -944,9 +944,9 @@ export function SupplierReturnsSidebar({
                           onClick={() => setOpenCal(isOpen ? null : field)}
                           className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all ${
                             val
-                              ? "border-blue-300 bg-blue-50 text-gray-800"
+                              ? "border-brand bg-brand-soft text-gray-800"
                               : "border-gray-200 text-gray-400"
-                          } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                          } ${isOpen ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
                           <span>
                             {val
                               ? new Date(val + "T00:00:00").toLocaleDateString(

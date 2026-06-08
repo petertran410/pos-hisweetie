@@ -31,7 +31,7 @@ export function UnitPicker({ value, options, onChange }: UnitPickerProps) {
         onClick={() => setOpen((prev) => !prev)}
         className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-xs font-medium transition-colors ${
           open
-            ? "border-blue-400 bg-blue-50 text-blue-600"
+            ? "border-brand bg-brand-soft text-brand"
             : "border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400"
         }`}>
         {selected?.label || value}
@@ -52,7 +52,7 @@ export function UnitPicker({ value, options, onChange }: UnitPickerProps) {
               }}
               className={`w-full flex items-center justify-between gap-2 px-2 py-1.5 text-xs transition-colors ${
                 value === opt.value
-                  ? "bg-blue-50 text-blue-600"
+                  ? "bg-brand-soft text-brand"
                   : "text-gray-700 hover:bg-gray-50"
               }`}>
               <span>{opt.label}</span>

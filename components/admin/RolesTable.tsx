@@ -37,7 +37,7 @@ export function RolesTable({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -50,13 +50,13 @@ export function RolesTable({
           onClick={() => onSelect(role)}
           className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
             selectedRole?.id === role.id
-              ? "bg-blue-50 border-l-4 border-blue-600"
+              ? "bg-brand-soft border-l-4 border-brand"
               : ""
           }`}>
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <Shield className="w-4 h-4 text-blue-600" />
+                <Shield className="w-4 h-4 text-brand" />
                 <h3 className="font-medium">{role.name}</h3>
               </div>
               {role.description && (

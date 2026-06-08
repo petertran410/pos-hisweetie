@@ -105,7 +105,7 @@ export function ConfirmRefundModal({
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Số tiền xử lý</span>
-              <span className="font-semibold text-blue-600">
+              <span className="font-semibold text-brand">
                 {formatCurrency(refundAmount)}
               </span>
             </div>
@@ -119,9 +119,9 @@ export function ConfirmRefundModal({
             <div className="space-y-2">
               <label className="flex items-center gap-3 cursor-pointer p-3 border rounded-lg hover:bg-gray-50">
                 <div
-                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${refundType === "debt_offset" ? "border-blue-600" : "border-gray-300"}`}>
+                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${refundType === "debt_offset" ? "border-brand" : "border-gray-300"}`}>
                   {refundType === "debt_offset" && (
-                    <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                    <div className="w-2 h-2 bg-brand rounded-full" />
                   )}
                 </div>
                 <div>
@@ -140,9 +140,9 @@ export function ConfirmRefundModal({
 
               <label className="flex items-center gap-3 cursor-pointer p-3 border rounded-lg hover:bg-gray-50">
                 <div
-                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${refundType === "cash_refund" ? "border-blue-600" : "border-gray-300"}`}>
+                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${refundType === "cash_refund" ? "border-brand" : "border-gray-300"}`}>
                   {refundType === "cash_refund" && (
-                    <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                    <div className="w-2 h-2 bg-brand rounded-full" />
                   )}
                 </div>
                 <div>
@@ -283,7 +283,7 @@ export function ConfirmRefundModal({
                 action="confirm_refund">
                 <button
                   onClick={handleSubmit}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                  className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark">
                   Xác nhận
                 </button>
               </PermissionGate>

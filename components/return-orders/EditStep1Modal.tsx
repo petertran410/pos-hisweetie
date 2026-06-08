@@ -462,7 +462,7 @@ export function EditStep1Modal({
             </button>
             <button
               onClick={handleComplete}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+              className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark">
               Hoàn thành bước 1
             </button>
           </div>

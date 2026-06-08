@@ -140,8 +140,8 @@ export default function SyncSettingsPage() {
           <div className="bg-white rounded-lg border p-6">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-100">
-                  <Database className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-brand-soft">
+                  <Database className="w-6 h-6 text-brand" />
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold">Đồng bộ danh mục Misa</h2>
@@ -155,7 +155,7 @@ export default function SyncSettingsPage() {
               <button
                 onClick={handleSyncMisa}
                 disabled={syncMisaDictionary.isPending}
-                className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 {syncMisaDictionary.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />

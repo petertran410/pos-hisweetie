@@ -159,12 +159,12 @@ function MiniCalendar({
               className={[
                 "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
                 isSel
-                  ? "bg-blue-600 text-white font-bold"
+                  ? "bg-brand text-white font-bold"
                   : isToday
-                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
+                    ? "border border-brand text-brand font-semibold hover:bg-brand-soft"
                     : isDisabled
                       ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
+                      : "text-gray-700 hover:bg-brand-soft cursor-pointer",
               ].join(" ")}>
               {day}
             </button>
@@ -189,7 +189,7 @@ function MiniCalendar({
             onChange(todayObj.toISOString().split("T")[0]);
             onClose();
           }}
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors">
+          className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft transition-colors">
           Hôm nay
         </button>
       </div>
@@ -575,7 +575,7 @@ export function OrderSupplierForm({
                 {products.map((item, index) => (
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="px-3 py-2 text-sm">{index + 1}</td>
-                    <td className="px-3 py-2 text-sm text-blue-600">
+                    <td className="px-3 py-2 text-sm text-brand">
                       {item.productCode}
                     </td>
                     <td className="px-3 py-2 text-sm">{item.productName}</td>
@@ -686,7 +686,7 @@ export function OrderSupplierForm({
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="VD: PDN000123 (để trống = tự sinh)"
                 maxLength={50}
-                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-gray-100"
                 disabled={!!isFormDisabled}
               />
             </div>
@@ -830,7 +830,7 @@ export function OrderSupplierForm({
                         value={supplierSearch}
                         onChange={(e) => setSupplierSearch(e.target.value)}
                         placeholder="Tìm nhà cung cấp..."
-                        className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand"
                       />
                     </div>
                   </div>
@@ -924,7 +924,7 @@ export function OrderSupplierForm({
                 onClick={() => setShowPaymentModal(true)}
                 disabled={isFormDisabled ? true : false}
                 className="p-1.5 border rounded hover:bg-gray-50 disabled:opacity-50">
-                <CreditCard className="w-4 h-4 text-blue-600" />
+                <CreditCard className="w-4 h-4 text-brand" />
               </button>
             </div>
             {paymentAmount > 0 && (
@@ -990,11 +990,11 @@ export function OrderSupplierForm({
                       }
                       className={`w-full flex items-center justify-between px-2 py-1.5 border rounded-lg text-sm transition-all disabled:bg-gray-100 disabled:cursor-not-allowed ${
                         orderDate
-                          ? "border-blue-300 bg-blue-50 text-gray-800"
+                          ? "border-brand bg-brand-soft text-gray-800"
                           : "border-gray-200 text-gray-400"
                       } ${
                         showOrderDateCalendar
-                          ? "ring-2 ring-blue-100 border-blue-400"
+                          ? "ring-2 ring-brand-soft border-brand"
                           : "hover:border-gray-300"
                       }`}>
                       <span>{displayLabel}</span>

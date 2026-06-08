@@ -192,10 +192,10 @@ export function OrderSupplierDetailRow({
   // ── Loading ──
   if (isLoading) {
     return (
-      <tr className="bg-blue-50">
+      <tr className="bg-brand-soft">
         <td colSpan={colSpan} className="px-6 py-8">
           <div className="flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
             <span className="text-gray-600">
               Đang tải thông tin phiếu đặt hàng nhập...
             </span>
@@ -251,7 +251,7 @@ export function OrderSupplierDetailRow({
       <tr>
         <td
           colSpan={colSpan}
-          className="border-b-2 border-l-2 border-r-2 border-blue-500 bg-gray-50">
+          className="border-b-2 border-l-2 border-r-2 border-brand bg-gray-50">
           <div
             ref={wrapperRef}
             className="sticky left-0 bg-gray-50"
@@ -266,7 +266,7 @@ export function OrderSupplierDetailRow({
                         <CodeLink
                           entity="order-supplier"
                           code={orderSupplier.code}
-                          className="text-lg font-bold text-blue-600 hover:underline"
+                          className="text-lg font-bold text-brand hover:underline"
                         />
                       </span>
                       <span className="text-gray-400">-</span>
@@ -276,7 +276,7 @@ export function OrderSupplierDetailRow({
                             href={`/san-pham/nha-cung-cap?id=${orderSupplier.supplier.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-lg font-semibold text-blue-600 hover:underline"
+                            className="text-lg font-semibold text-brand hover:underline"
                             onClick={(e) => e.stopPropagation()}>
                             {orderSupplier.supplier.name}
                           </Link>
@@ -284,7 +284,7 @@ export function OrderSupplierDetailRow({
                             href={`/san-pham/nha-cung-cap?id=${orderSupplier.supplier.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                            className="text-gray-400 hover:text-brand transition-colors"
                             onClick={(e) => e.stopPropagation()}>
                             <ExternalLink className="w-4 h-4" />
                           </Link>
@@ -312,7 +312,7 @@ export function OrderSupplierDetailRow({
                         onClick={() => setActiveTab(tab.value)}
                         className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                           activeTab === tab.value
-                            ? "border-blue-600 text-blue-600"
+                            ? "border-brand text-brand"
                             : "border-transparent text-gray-500 hover:text-gray-700"
                         }`}>
                         {tab.label}
@@ -387,7 +387,7 @@ export function OrderSupplierDetailRow({
                         disabled={!canUpdateOS}
                         rows={2}
                         placeholder="Nhập ghi chú..."
-                        className="w-full text-sm px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+                        className="w-full text-sm px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand disabled:bg-gray-50 disabled:text-gray-500"
                       />
                     </div>
 
@@ -408,7 +408,7 @@ export function OrderSupplierDetailRow({
                             onChange={(e) =>
                               setProductCodeSearch(e.target.value)
                             }
-                            className="text-xs border rounded-lg px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            className="text-xs border rounded-lg px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-brand"
                           />
                           <input
                             type="text"
@@ -417,7 +417,7 @@ export function OrderSupplierDetailRow({
                             onChange={(e) =>
                               setProductNameSearch(e.target.value)
                             }
-                            className="text-xs border rounded-lg px-2 py-1 w-32 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            className="text-xs border rounded-lg px-2 py-1 w-32 focus:outline-none focus:ring-1 focus:ring-brand"
                           />
                         </div>
                       </div>
@@ -465,7 +465,7 @@ export function OrderSupplierDetailRow({
                                         href={`/san-pham/danh-sach?Code=${item.productCode}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-sm font-medium text-blue-600 hover:underline"
+                                        className="text-sm font-medium text-brand hover:underline"
                                         onClick={(e) => e.stopPropagation()}>
                                         {item.productCode}
                                       </Link>
@@ -514,7 +514,7 @@ export function OrderSupplierDetailRow({
                         <button
                           onClick={handleSave}
                           disabled={isSaving}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-lg hover:bg-brand-dark disabled:opacity-50 transition-colors">
                           <Save className="w-4 h-4" />
                           {isSaving ? "Đang lưu..." : "Lưu ghi chú"}
                         </button>
@@ -586,7 +586,7 @@ export function OrderSupplierDetailRow({
                                   <td className="px-3 py-2">
                                     <Link
                                       href={`/san-pham/nhap-hang?Code=${po.code}`}
-                                      className="text-sm font-medium text-blue-600 hover:underline"
+                                      className="text-sm font-medium text-brand hover:underline"
                                       onClick={(e) => e.stopPropagation()}>
                                       {po.code}
                                     </Link>

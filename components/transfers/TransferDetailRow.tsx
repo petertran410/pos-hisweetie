@@ -83,9 +83,9 @@ export function TransferDetailRow({
       <tr>
         <td
           colSpan={colSpan}
-          className="border-b-2 border-l-2 border-r-2 border-blue-500 bg-gray-50 px-6 py-8">
+          className="border-b-2 border-l-2 border-r-2 border-brand bg-gray-50 px-6 py-8">
           <div className="flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
             <span className="text-gray-600 text-sm">Đang tải...</span>
           </div>
         </td>
@@ -103,7 +103,7 @@ export function TransferDetailRow({
     <tr>
       <td
         colSpan={colSpan}
-        className="border-b-2 border-l-2 border-r-2 border-blue-500 bg-gray-50 p-0">
+        className="border-b-2 border-l-2 border-r-2 border-brand bg-gray-50 p-0">
         <div
           ref={wrapperRef}
           className="sticky left-0 bg-gray-50"
@@ -118,7 +118,7 @@ export function TransferDetailRow({
                       <CodeLink
                         entity="transfer"
                         code={transfer.code}
-                        className="text-lg font-bold text-blue-600 hover:underline"
+                        className="text-lg font-bold text-brand hover:underline"
                       />
                     </span>
                     <span
@@ -150,7 +150,7 @@ export function TransferDetailRow({
                     {canEdit && (
                       <button
                         onClick={() => onEdit(transfer)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors">
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium transition-colors">
                         <Pencil className="w-3.5 h-3.5" />
                         Chỉnh sửa
                       </button>

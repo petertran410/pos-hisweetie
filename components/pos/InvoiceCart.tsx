@@ -116,14 +116,14 @@ function SellerDropdown({
         onKeyDown={(e) => e.key === "Enter" && setOpen((prev) => !prev)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400"
         } bg-white`}>
         <div className="flex items-center gap-2 min-w-0">
           <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
           <span
             className={`truncate ${
-              isOverridden ? "text-blue-600 font-medium" : "text-gray-700"
+              isOverridden ? "text-brand font-medium" : "text-gray-700"
             }`}>
             {displayName}
           </span>
@@ -161,7 +161,7 @@ function SellerDropdown({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Tìm người bán..."
-                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
           </div>
@@ -179,11 +179,11 @@ function SellerDropdown({
                     setOpen(false);
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
-                    u.id === effectiveId ? "bg-blue-50" : "hover:bg-gray-50"
+                    u.id === effectiveId ? "bg-brand-soft" : "hover:bg-gray-50"
                   } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                   <span className="flex-1 truncate">{u.name}</span>
                   {u.id === effectiveId && (
-                    <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
                   )}
                 </button>
               ))
@@ -423,7 +423,7 @@ export function InvoiceCart({
 
             <div className="border rounded-xl shadow-sm p-2 lg:p-3 space-y-1.5 lg:space-y-2">
               <div className="flex items-center gap-1.5">
-                <MapPin className="w-[14px] h-[14px] lg:w-[16px] lg:h-[16px] text-blue-500 flex-shrink-0" />
+                <MapPin className="w-[14px] h-[14px] lg:w-[16px] lg:h-[16px] text-brand flex-shrink-0" />
                 <span className="text-sm lg:text-[16px]">
                   {selectedBranch?.address || ""}
                 </span>
@@ -520,7 +520,7 @@ export function InvoiceCart({
                 }
                 maxLength={1000}
                 placeholder="Nhập ghi chú..."
-                className="w-full text-sm lg:text-md border rounded-xl p-2 outline-none focus:border-blue-500 resize-none"
+                className="w-full text-sm lg:text-md border rounded-xl p-2 outline-none focus:border-brand resize-none"
                 rows={3}
               />
             </div>
@@ -538,7 +538,7 @@ export function InvoiceCart({
                 disabled={true}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-blue-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+              <div className="w-9 h-5 bg-brand peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
             </label>
           </div>
           <span className="font-semibold text-md">
@@ -572,7 +572,7 @@ export function InvoiceCart({
                     onChange={handlePaymentInputChange}
                     onBlur={handlePaymentInputBlur}
                     placeholder="Nhập số tiền"
-                    className="border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-24 lg:w-32"
+                    className="border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand w-24 lg:w-32"
                   />
                 </div>
               ) : null}
@@ -636,7 +636,7 @@ export function InvoiceCart({
               )
             }
             disabled={cartItems.length === 0}
-            className="w-full bg-blue-600 text-white py-2 lg:py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
+            className="w-full bg-brand text-white py-2 lg:py-3 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
             {documentType === "invoice" ? "Tạo hóa đơn" : "Tạo đơn hàng"}
           </button>
         )}

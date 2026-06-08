@@ -29,7 +29,7 @@ export function SupplierDebtsTab({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-brand" />
       </div>
     );
   }
@@ -45,7 +45,7 @@ export function SupplierDebtsTab({
         </div>
         <button
           onClick={() => setShowPaymentModal(true)}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+          className="px-4 py-2 text-sm font-medium text-white bg-brand rounded-lg hover:bg-brand-dark">
           💵 Trả tiền NCC
         </button>
       </div>
@@ -96,7 +96,7 @@ export function SupplierDebtsTab({
                           href={`/san-pham/nhap-hang?Code=${item.code}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-md font-medium text-blue-600 hover:underline">
+                          className="text-md font-medium text-brand hover:underline">
                           {item.code}
                         </Link>
                       ) : isPayment ? (
@@ -104,17 +104,17 @@ export function SupplierDebtsTab({
                           href={`/so-quy?Code=${item.code}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-md font-medium text-blue-600 hover:underline">
+                          className="text-md font-medium text-brand hover:underline">
                           {item.code}
                         </Link>
                       ) : isSupplierReturn ? (
                         <CodeLink
                           entity="supplier-return"
                           code={item.code}
-                          className="text-md font-medium text-blue-600 hover:underline"
+                          className="text-md font-medium text-brand hover:underline"
                         />
                       ) : (
-                        <span className="text-blue-600">{item.code}</span>
+                        <span className="text-brand">{item.code}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-md">

@@ -47,7 +47,7 @@ export function InventoryCheckDetailRow({ checkId, colSpan }: Props) {
       <tr>
         <td colSpan={colSpan}>
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
             <span className="ml-2 text-sm text-gray-500">
               Đang tải chi tiết...
             </span>
@@ -73,9 +73,9 @@ export function InventoryCheckDetailRow({ checkId, colSpan }: Props) {
     <tr>
       <td
         colSpan={colSpan}
-        className="p-0 border-b-2 border-l-2 border-r-2 border-blue-500">
+        className="p-0 border-b-2 border-l-2 border-r-2 border-brand">
         <div ref={wrapperRef}>
-          <div className="px-5 pb-5 bg-blue-50/30">
+          <div className="px-5 pb-5 bg-brand-soft">
             {/* Header info */}
             <div className="grid grid-cols-4 gap-4 text-sm mb-4 pt-4">
               <div>
@@ -142,7 +142,7 @@ export function InventoryCheckDetailRow({ checkId, colSpan }: Props) {
                             href={`/san-pham/danh-sach?Code=${d.productCode}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm font-medium text-blue-600 hover:underline"
+                            className="text-sm font-medium text-brand hover:underline"
                             onClick={(e) => e.stopPropagation()}>
                             {d.productCode}
                           </Link>

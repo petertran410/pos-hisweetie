@@ -129,7 +129,7 @@ export function PriceBookDropdown({
               onClick={() => handleSelectPriceBook(null)}
               className={`w-full px-4 py-2 text-left hover:bg-gray-50 border-b ${
                 selectedPriceBookId === null || selectedPriceBookId === 0
-                  ? "bg-blue-50 font-medium"
+                  ? "bg-brand-soft font-medium"
                   : ""
               }`}>
               Bảng giá chung
@@ -142,7 +142,7 @@ export function PriceBookDropdown({
                     onClick={() => handleSelectPriceBook(priceBook.id)}
                     className={`w-full px-4 py-2 text-left hover:bg-gray-50 ${
                       selectedPriceBookId === priceBook.id
-                        ? "bg-blue-50 font-medium"
+                        ? "bg-brand-soft font-medium"
                         : ""
                     }`}>
                     {priceBook.name}

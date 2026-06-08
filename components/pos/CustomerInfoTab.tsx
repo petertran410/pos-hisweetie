@@ -192,7 +192,7 @@ export function CustomerInfoTab({ customer, onUpdate }: CustomerInfoTabProps) {
           </button>
           <button
             type="submit"
-            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1 lg:gap-2">
+            className="px-2.5 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1 lg:gap-2">
             <Save className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             Lưu
           </button>

@@ -183,7 +183,7 @@ export function InventoryCheckForm({ onClose }: Props) {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Tìm sản phẩm theo mã hoặc tên..."
-                className="w-full border rounded px-3 py-2 pl-9 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full border rounded px-3 py-2 pl-9 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
             {showDropdown && products.length > 0 && (
@@ -274,7 +274,7 @@ export function InventoryCheckForm({ onClose }: Props) {
                             className={`w-16 border rounded px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 ${
                               isOverflow
                                 ? "border-red-400 focus:ring-red-300"
-                                : "focus:ring-blue-400"
+                                : "focus:ring-brand"
                             }`}
                           />
                         </td>
@@ -292,7 +292,7 @@ export function InventoryCheckForm({ onClose }: Props) {
                             className={`w-16 border rounded px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 ${
                               isOverflow
                                 ? "border-red-400 focus:ring-red-300"
-                                : "focus:ring-blue-400"
+                                : "focus:ring-brand"
                             }`}
                           />
                         </td>
@@ -310,7 +310,7 @@ export function InventoryCheckForm({ onClose }: Props) {
                               updateItem(item.productId, "note", e.target.value)
                             }
                             placeholder="..."
-                            className="w-full border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            className="w-full border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand"
                           />
                         </td>
                         <td className="px-3 py-2 text-center">
@@ -345,7 +345,7 @@ export function InventoryCheckForm({ onClose }: Props) {
             placeholder="Ghi chú cho phiếu kiểm..."
             maxLength={1000}
             rows={3}
-            className="w-full border rounded px-3 py-2 resize-none text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full border rounded px-3 py-2 resize-none text-sm focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
 
@@ -361,7 +361,7 @@ export function InventoryCheckForm({ onClose }: Props) {
             <button
               onClick={handleSubmit}
               disabled={items.length === 0 || createCheck.isPending}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              className="px-4 py-2 text-sm bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
               {createCheck.isPending && (
                 <Loader2 className="w-4 h-4 animate-spin" />
               )}

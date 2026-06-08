@@ -87,7 +87,7 @@ export function ProductByCustomerPreview({ filters }: Props) {
           </div>
           <div>
             <span className="text-gray-500">Tổng thành tiền:</span>{" "}
-            <span className="font-semibold text-blue-700">
+            <span className="font-semibold text-brand-dark">
               {formatCurrency(summary.totalPrice)}
             </span>
           </div>
@@ -98,7 +98,7 @@ export function ProductByCustomerPreview({ filters }: Props) {
       <div className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-40">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+            <Loader2 className="h-6 w-6 animate-spin text-brand" />
           </div>
         ) : rows.length === 0 ? (
           <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
@@ -159,12 +159,12 @@ export function ProductByCustomerPreview({ filters }: Props) {
                         <CodeLink
                           entity="customer"
                           code={row.customerCode}
-                          className="text-blue-600 hover:underline"
+                          className="text-brand hover:underline"
                         />
                       ) : null}
                     </div>
                   </td>
-                  <td className="px-3 py-2 font-medium text-blue-700">
+                  <td className="px-3 py-2 font-medium text-brand-dark">
                     {row.invoiceCode ? (
                       <CodeLink entity="invoice" code={row.invoiceCode} />
                     ) : (
@@ -194,7 +194,7 @@ export function ProductByCustomerPreview({ filters }: Props) {
                   <td className="px-3 py-2 text-right">
                     {formatCurrency(row.sellingPrice)}
                   </td>
-                  <td className="px-3 py-2 text-right font-medium text-blue-700">
+                  <td className="px-3 py-2 text-right font-medium text-brand-dark">
                     {formatCurrency(row.totalPrice)}
                   </td>
                   <td className="px-3 py-2 text-center">

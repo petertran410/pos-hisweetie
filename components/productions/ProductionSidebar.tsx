@@ -177,8 +177,8 @@ function PresetPanel({
                 }}
                 className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors text-left ${
                   selected === opt.value
-                    ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
-                    : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                    ? "bg-brand text-white border-brand font-medium shadow-sm"
+                    : "border-gray-200 text-gray-700 hover:border-brand hover:bg-brand-soft"
                 }`}>
                 {opt.label}
               </button>
@@ -271,9 +271,9 @@ function MiniCalendar({
               }}
               className={`aspect-square flex items-center justify-center text-xs rounded-lg transition-colors ${
                 isSel
-                  ? "bg-blue-600 text-white font-semibold"
+                  ? "bg-brand text-white font-semibold"
                   : isToday
-                    ? "border border-blue-400 text-blue-600 font-medium hover:bg-blue-50"
+                    ? "border border-brand text-brand font-medium hover:bg-brand-soft"
                     : isDisabled
                       ? "text-gray-300 cursor-not-allowed"
                       : "hover:bg-gray-100 text-gray-700"
@@ -317,9 +317,9 @@ function SimpleDropdown({
         onClick={() => setOpen((o) => !o)}
         className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
           value
-            ? "border-blue-300 bg-blue-50 text-gray-800"
+            ? "border-brand bg-brand-soft text-gray-800"
             : "border-gray-200 text-gray-400"
-        } ${open ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+        } ${open ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
         <span className="truncate">{selected?.label || label}</span>
         <ChevronDown
           className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
@@ -337,12 +337,12 @@ function SimpleDropdown({
               }}
               className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
                 opt.value === value
-                  ? "bg-blue-50 text-blue-700 font-medium"
+                  ? "bg-brand-soft text-brand-dark font-medium"
                   : "hover:bg-gray-50 text-gray-700"
               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
               <span className="truncate">{opt.label}</span>
               {opt.value === value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
               )}
             </button>
           ))}
@@ -489,7 +489,7 @@ export function ProductionSidebar({
         {activeFilterCount > 0 && (
           <button
             onClick={clearAll}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            className="text-sm text-brand hover:text-brand-dark font-medium">
             Xóa tất cả
           </button>
         )}
@@ -507,9 +507,9 @@ export function ProductionSidebar({
               onClick={() => setShowBranchDropdown((o) => !o)}
               className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
                 branchIds.length > 0
-                  ? "border-blue-300 bg-blue-50 text-gray-800"
+                  ? "border-brand bg-brand-soft text-gray-800"
                   : "border-gray-200 text-gray-400"
-              } ${showBranchDropdown ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+              } ${showBranchDropdown ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
               <span className="truncate">
                 {branchIds.length > 0
                   ? `${branchIds.length} chi nhánh`
@@ -546,7 +546,7 @@ export function ProductionSidebar({
                 return b ? (
                   <span
                     key={id}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-soft text-brand-dark rounded-full text-xs">
                     {b.name}
                     <button onClick={() => toggleBranch(id)}>
                       <X className="w-3 h-3" />
@@ -569,9 +569,9 @@ export function ProductionSidebar({
               onClick={() => setShowStatusDropdown((o) => !o)}
               className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
                 statusList.length > 0
-                  ? "border-blue-300 bg-blue-50 text-gray-800"
+                  ? "border-brand bg-brand-soft text-gray-800"
                   : "border-gray-200 text-gray-400"
-              } ${showStatusDropdown ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+              } ${showStatusDropdown ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
               <span className="truncate">
                 {statusList.length > 0
                   ? STATUS_OPTIONS.filter((o) => statusList.includes(o.value))
@@ -631,17 +631,17 @@ export function ProductionSidebar({
               }}
               className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
                 dateMode === "preset"
-                  ? "border-blue-300 bg-blue-50"
+                  ? "border-brand bg-brand-soft"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
               <input
                 type="radio"
                 readOnly
                 checked={dateMode === "preset"}
-                className="accent-blue-600 flex-shrink-0"
+                className="accent-brand flex-shrink-0"
               />
               <span
-                className={`text-sm truncate flex-1 ${dateMode === "preset" ? "text-blue-700 font-medium" : "text-gray-500"}`}>
+                className={`text-sm truncate flex-1 ${dateMode === "preset" ? "text-brand-dark font-medium" : "text-gray-500"}`}>
                 {dateMode === "preset" ? presetLabel : "Chọn nhanh"}
               </span>
               <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
@@ -655,17 +655,17 @@ export function ProductionSidebar({
               }}
               className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
                 dateMode === "custom"
-                  ? "border-blue-300 bg-blue-50"
+                  ? "border-brand bg-brand-soft"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
               <input
                 type="radio"
                 readOnly
                 checked={dateMode === "custom"}
-                className="accent-blue-600 flex-shrink-0"
+                className="accent-brand flex-shrink-0"
               />
               <span
-                className={`text-sm ${dateMode === "custom" ? "text-blue-700 font-medium" : "text-gray-500"}`}>
+                className={`text-sm ${dateMode === "custom" ? "text-brand-dark font-medium" : "text-gray-500"}`}>
                 Tùy chỉnh
               </span>
             </div>
@@ -688,9 +688,9 @@ export function ProductionSidebar({
                         onClick={() => setOpenCal(isOpen ? null : field)}
                         className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
                           val
-                            ? "border-blue-300 bg-blue-50 text-gray-800"
+                            ? "border-brand bg-brand-soft text-gray-800"
                             : "border-gray-200 text-gray-400"
-                        } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                        } ${isOpen ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
                         <span>
                           {val
                             ? new Date(val + "T00:00:00").toLocaleDateString(

@@ -841,7 +841,7 @@ export function InvoicesTable({
                   placeholder="Theo mã hóa đơn"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                 />
                 <button
                   onClick={() => {
@@ -852,7 +852,7 @@ export function InvoicesTable({
                   }}
                   className={`relative p-1.5 border rounded-lg transition-colors ${
                     advancedFilterCount > 0
-                      ? "border-blue-500 bg-blue-50 text-blue-600"
+                      ? "border-brand bg-brand-soft text-brand"
                       : "border-gray-300 text-gray-500 hover:bg-gray-50"
                   }`}
                   title="Tìm kiếm nâng cao">
@@ -879,7 +879,7 @@ export function InvoicesTable({
                           invoiceCodeSearch: e.target.value,
                         }))
                       }
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                     />
                     <input
                       type="text"
@@ -891,16 +891,16 @@ export function InvoicesTable({
                           productSearch: e.target.value,
                         }))
                       }
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                     />
                     {/* ── Khách hàng: autocomplete theo tên (giống ban-hang) ── */}
                     <div ref={customerDropRef} className="relative">
                       {selectedCustomer ? (
-                        <div className="w-full flex items-center justify-between gap-2 border border-blue-300 bg-blue-50 rounded-lg px-3 py-2">
-                          <span className="text-sm text-blue-700 font-medium truncate">
+                        <div className="w-full flex items-center justify-between gap-2 border border-brand-border bg-brand-soft rounded-lg px-3 py-2">
+                          <span className="text-sm text-brand-dark font-medium truncate">
                             {selectedCustomer.name}
                             {selectedCustomer.code && (
-                              <span className="text-blue-400 ml-1 font-normal">
+                              <span className="text-brand ml-1 font-normal">
                                 ({selectedCustomer.code})
                               </span>
                             )}
@@ -911,7 +911,7 @@ export function InvoicesTable({
                               setSelectedCustomer(null);
                               setCustomerQuery("");
                             }}
-                            className="text-blue-400 hover:text-blue-600 flex-shrink-0">
+                            className="text-brand hover:text-brand-dark flex-shrink-0">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -925,7 +925,7 @@ export function InvoicesTable({
                             setShowCustomerDrop(true);
                           }}
                           onFocus={() => customerQuery && setShowCustomerDrop(true)}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                         />
                       )}
                       {showCustomerDrop &&
@@ -941,7 +941,7 @@ export function InvoicesTable({
                                   setCustomerQuery("");
                                   setShowCustomerDrop(false);
                                 }}
-                                className={`w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors ${
+                                className={`w-full text-left px-3 py-2 hover:bg-brand-soft transition-colors ${
                                   idx > 0 ? "border-t border-gray-50" : ""
                                 }`}>
                                 <div className="text-sm font-medium text-gray-800">
@@ -970,7 +970,7 @@ export function InvoicesTable({
                               deliveryCodeSearch: e.target.value,
                             }))
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                         />
                         <input
                           type="text"
@@ -982,7 +982,7 @@ export function InvoicesTable({
                               orderCodeSearch: e.target.value,
                             }))
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                         />
                         <input
                           type="text"
@@ -994,7 +994,7 @@ export function InvoicesTable({
                               descriptionSearch: e.target.value,
                             }))
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                         />
                         <input
                           type="text"
@@ -1006,7 +1006,7 @@ export function InvoicesTable({
                               productNoteSearch: e.target.value,
                             }))
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                         />
                       </>
                     )}
@@ -1024,7 +1024,7 @@ export function InvoicesTable({
                         setShowAdvancedSearch(false);
                         setPage(1);
                       }}
-                      className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                      className="px-4 py-1.5 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">
                       Tìm kiếm
                     </button>
                   </div>
@@ -1036,7 +1036,7 @@ export function InvoicesTable({
             <PermissionGate resource="invoices" action="create">
               <button
                 onClick={onCreateClick}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
+                className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
                 <Plus className="w-4 h-4" />
                 Tạo hóa đơn
               </button>
@@ -1157,9 +1157,9 @@ export function InvoicesTable({
                       {SORTABLE_COLUMNS.has(col.key) && (
                         <span className="inline-flex text-gray-400">
                           {sortBy === col.key && sortDir === "desc" ? (
-                            <ArrowDown className="w-3 h-3 text-blue-500" />
+                            <ArrowDown className="w-3 h-3 text-brand" />
                           ) : sortBy === col.key && sortDir === "asc" ? (
-                            <ArrowUp className="w-3 h-3 text-blue-500" />
+                            <ArrowUp className="w-3 h-3 text-brand" />
                           ) : (
                             <ArrowUpDown className="w-3 h-3 opacity-40" />
                           )}
@@ -1195,7 +1195,7 @@ export function InvoicesTable({
                 <tr>
                   <td colSpan={colSpan} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-400">
-                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
                       <span className="text-xs">Đang tải...</span>
                     </div>
                   </td>
@@ -1214,14 +1214,14 @@ export function InvoicesTable({
                     <tr
                       className={`cursor-pointer transition-colors ${
                         expandedInvoiceId === invoice.id
-                          ? "bg-blue-50"
+                          ? "bg-brand-soft"
                           : "border-b hover:bg-gray-50"
                       }`}
                       onClick={() => toggleExpand(invoice.id)}>
                       <td
                         className={`px-4 py-2.5 sticky left-0 z-10 ${
                           expandedInvoiceId === invoice.id
-                            ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
+                            ? "bg-brand-soft border-t-2 border-l-2 border-brand"
                             : "bg-white"
                         }`}
                         onClick={(e) => e.stopPropagation()}>
@@ -1236,7 +1236,7 @@ export function InvoicesTable({
                       <td
                         className={`w-8 px-2 py-2.5 text-center ${
                           expandedInvoiceId === invoice.id
-                            ? "border-t-2 border-blue-500"
+                            ? "border-t-2 border-brand"
                             : ""
                         }`}>
                         {priceWarningIds.has(invoice.id) && (
@@ -1252,7 +1252,7 @@ export function InvoicesTable({
                           key={col.key}
                           className={`px-4 py-2.5 ${
                             expandedInvoiceId === invoice.id
-                              ? "border-t-2 border-blue-500"
+                              ? "border-t-2 border-brand"
                               : ""
                           }`}
                           style={{
@@ -1268,7 +1268,7 @@ export function InvoicesTable({
                       <td
                         className={`px-4 py-2.5 ${
                           expandedInvoiceId === invoice.id
-                            ? "border-t-2 border-r-2 border-blue-500"
+                            ? "border-t-2 border-r-2 border-brand"
                             : ""
                         }`}>
                         <ChevronDown
@@ -1301,7 +1301,7 @@ export function InvoicesTable({
                 setLimit(Number(e.target.value));
                 setPage(1);
               }}
-              className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+              className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
               {[10, 15, 20, 50].map((n) => (
                 <option key={n} value={n}>
                   {n}
@@ -1329,7 +1329,7 @@ export function InvoicesTable({
                   onClick={() => setPage(p)}
                   className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
                     p === page
-                      ? "bg-blue-600 text-white border-blue-600"
+                      ? "bg-brand text-white border-brand"
                       : "hover:bg-gray-50 text-gray-600 border-gray-200"
                   }`}>
                   {p}
@@ -1370,7 +1370,7 @@ export function InvoicesTable({
             <div className="px-4 pt-3 pb-1 flex items-center gap-2">
               <button
                 onClick={toggleAllExportCols}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                className="text-sm text-brand hover:text-brand-dark font-medium">
                 {exportDetailCols.length === EXPORT_DETAIL_COLUMNS.length
                   ? "Bỏ tất cả"
                   : "Chọn tất cả"}
@@ -1390,7 +1390,7 @@ export function InvoicesTable({
                     type="checkbox"
                     checked={exportDetailCols.includes(col.key)}
                     onChange={() => toggleExportCol(col.key)}
-                    className="accent-blue-600"
+                    className="accent-brand"
                   />
                   <span className="text-sm text-gray-700">{col.label}</span>
                 </label>
@@ -1407,7 +1407,7 @@ export function InvoicesTable({
               <button
                 onClick={handleExportDetailConfirm}
                 disabled={exportDetailCols.length === 0 || isExportingDetail}
-                className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5">
+                className="px-4 py-1.5 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50 flex items-center gap-1.5">
                 {isExportingDetail && (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 )}

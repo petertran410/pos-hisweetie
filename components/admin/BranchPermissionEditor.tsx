@@ -195,7 +195,7 @@ export function BranchPermissionEditor({
             onClick={() => handleBranchChange(branch.id)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-colors ${
               selectedBranchId === branch.id
-                ? "bg-blue-50 border-blue-500 text-blue-700"
+                ? "bg-brand-soft border-brand text-brand-dark"
                 : "border-gray-200 hover:bg-gray-50"
             }`}>
             <Building2 className="w-4 h-4" />
@@ -231,7 +231,7 @@ export function BranchPermissionEditor({
             type="button"
             onClick={handleSave}
             disabled={assignBranchPerms.isPending}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50">
             <Save className="w-3.5 h-3.5" />
             {assignBranchPerms.isPending
               ? "Đang lưu..."
@@ -242,7 +242,7 @@ export function BranchPermissionEditor({
 
       {isLoading ? (
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
         </div>
       ) : (
         <>
@@ -253,7 +253,7 @@ export function BranchPermissionEditor({
               placeholder="Tìm kiếm quyền..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
 
@@ -290,16 +290,16 @@ export function BranchPermissionEditor({
                                 <div
                                   className={`w-4 h-4 rounded flex items-center justify-center border ${
                                     allSelected
-                                      ? "bg-blue-600 border-blue-600"
+                                      ? "bg-brand border-brand"
                                       : someSelected
-                                        ? "bg-blue-100 border-blue-600"
+                                        ? "bg-brand-soft border-brand"
                                         : "border-gray-300"
                                   }`}>
                                   {allSelected && (
                                     <Check className="w-3 h-3 text-white" />
                                   )}
                                   {someSelected && !allSelected && (
-                                    <div className="w-2 h-0.5 bg-blue-600 rounded" />
+                                    <div className="w-2 h-0.5 bg-brand rounded" />
                                   )}
                                 </div>
                                 <span className="font-medium text-sm">
@@ -332,7 +332,7 @@ export function BranchPermissionEditor({
                                       isActive
                                         ? isOverride
                                           ? "border-green-300 bg-green-50"
-                                          : "border-blue-200 bg-blue-50"
+                                          : "border-brand-border bg-brand-soft"
                                         : isOverride
                                           ? "border-red-300 bg-red-50"
                                           : "border-gray-200"
@@ -340,7 +340,7 @@ export function BranchPermissionEditor({
                                     <div
                                       className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${
                                         isActive
-                                          ? "bg-blue-600"
+                                          ? "bg-brand"
                                           : "bg-white border border-gray-300"
                                       }`}>
                                       {isActive && (

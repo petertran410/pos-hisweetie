@@ -190,7 +190,7 @@ export function ProductExportModal({
                           checked={checked}
                           disabled={opt.required}
                           onChange={() => toggle(opt.key)}
-                          className="cursor-pointer disabled:cursor-not-allowed accent-blue-600 w-4 h-4"
+                          className="cursor-pointer disabled:cursor-not-allowed accent-brand w-4 h-4"
                         />
                         <span>{opt.label}</span>
                       </label>
@@ -206,7 +206,7 @@ export function ProductExportModal({
         <div className="flex items-center justify-between px-6 py-4 border-t shrink-0">
           <button
             onClick={toggleSelectAll}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            className="text-sm text-brand hover:text-brand-dark font-medium">
             {allSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
           </button>
           <div className="flex items-center gap-3">
@@ -218,7 +218,7 @@ export function ProductExportModal({
             <button
               onClick={handleExport}
               disabled={isExporting || selected.size === 0}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 flex items-center gap-2">
+              className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium disabled:opacity-50 flex items-center gap-2">
               {isExporting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isExporting ? "Đang xuất..." : "Xuất file"}
             </button>

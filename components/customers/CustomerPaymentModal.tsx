@@ -571,9 +571,9 @@ export function CustomerPaymentModal({
                               );
                               handleDateSelect(newDate);
                             }}
-                            className={`w-8 h-8 rounded hover:bg-blue-100 ${
+                            className={`w-8 h-8 rounded hover:bg-brand-soft ${
                               dayNumber === transDateTime.getDate()
-                                ? "bg-blue-500 text-white"
+                                ? "bg-brand text-white"
                                 : ""
                             }`}>
                             {dayNumber}
@@ -599,9 +599,9 @@ export function CustomerPaymentModal({
                               onClick={() =>
                                 handleTimeSelect(i, transDateTime.getMinutes())
                               }
-                              className={`w-full px-2 py-1 text-left hover:bg-blue-100 ${
+                              className={`w-full px-2 py-1 text-left hover:bg-brand-soft ${
                                 i === transDateTime.getHours()
-                                  ? "bg-blue-500 text-white"
+                                  ? "bg-brand text-white"
                                   : ""
                               }`}>
                               {String(i).padStart(2, "0")}
@@ -619,9 +619,9 @@ export function CustomerPaymentModal({
                               onClick={() =>
                                 handleTimeSelect(transDateTime.getHours(), i)
                               }
-                              className={`w-full px-2 py-1 text-left hover:bg-blue-100 ${
+                              className={`w-full px-2 py-1 text-left hover:bg-brand-soft ${
                                 i === transDateTime.getMinutes()
-                                  ? "bg-blue-500 text-white"
+                                  ? "bg-brand text-white"
                                   : ""
                               }`}>
                               {String(i).padStart(2, "0")}
@@ -691,7 +691,7 @@ export function CustomerPaymentModal({
                       }}
                       className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2">
                       {method === "cash" && (
-                        <span className="text-blue-600">✓</span>
+                        <span className="text-brand">✓</span>
                       )}
                       <span>Tiền mặt</span>
                     </button>
@@ -702,7 +702,7 @@ export function CustomerPaymentModal({
                       }}
                       className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2">
                       {method === "wallet" && (
-                        <span className="text-blue-600">✓</span>
+                        <span className="text-brand">✓</span>
                       )}
                       <span>Thẻ</span>
                     </button> */}
@@ -713,7 +713,7 @@ export function CustomerPaymentModal({
                       }}
                       className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2">
                       {method === "transfer" && (
-                        <span className="text-blue-600">✓</span>
+                        <span className="text-brand">✓</span>
                       )}
                       <span>Chuyển khoản</span>
                     </button>
@@ -820,7 +820,7 @@ export function CustomerPaymentModal({
           {allocateToInvoices && (
             <div className="border rounded-lg overflow-hidden">
               {availableCredit > 0 && (
-                <div className="px-4 py-2 bg-blue-50 border-b text-xs text-blue-700">
+                <div className="px-4 py-2 bg-brand-soft border-b text-xs text-brand-dark">
                   Có thể cấn trừ tối đa{" "}
                   <span className="font-semibold">
                     {formatCurrency(availableCredit)}
@@ -899,7 +899,7 @@ export function CustomerPaymentModal({
                         key={invoice.id}
                         className="border-b hover:bg-gray-50">
                         <td className="px-4 py-3">
-                          <span className="text-blue-600">{invoice.code}</span>
+                          <span className="text-brand">{invoice.code}</span>
                         </td>
                         <td className="px-4 py-3">
                           {new Date(invoice.purchaseDate).toLocaleString(
@@ -1000,7 +1000,7 @@ export function CustomerPaymentModal({
           <button
             onClick={handleSubmit}
             disabled={createPayment.isPending}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50">
+            className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50">
             {createPayment.isPending ? "Đang lưu..." : "Lưu"}
           </button>
         </div>

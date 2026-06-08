@@ -249,7 +249,7 @@ export function SupplierImportBalanceModal({ onClose }: Props) {
               )}
               <button
                 onClick={handleReset}
-                className="mt-2 text-sm text-blue-600 hover:underline">
+                className="mt-2 text-sm text-brand hover:underline">
                 Import thêm
               </button>
             </div>
@@ -262,11 +262,11 @@ export function SupplierImportBalanceModal({ onClose }: Props) {
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+                className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:border-brand hover:bg-brand-soft transition-colors">
                 <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
                 <p className="text-sm text-gray-600 mb-1">
                   Kéo thả file Excel vào đây hoặc{" "}
-                  <span className="text-blue-600 font-medium">
+                  <span className="text-brand font-medium">
                     nhấn để chọn file
                   </span>
                 </p>
@@ -287,7 +287,7 @@ export function SupplierImportBalanceModal({ onClose }: Props) {
               )}
               <button
                 onClick={downloadTemplate}
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
+                className="flex items-center gap-2 text-sm text-brand hover:text-brand-dark font-medium">
                 <Download className="w-4 h-4" />
                 Tải file mẫu Excel
               </button>
@@ -380,7 +380,7 @@ export function SupplierImportBalanceModal({ onClose }: Props) {
             <button
               onClick={handleSubmit}
               disabled={validCount === 0 || importMutation.isPending}
-              className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium text-sm flex items-center justify-center gap-2">
+              className="flex-1 py-2.5 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50 font-medium text-sm flex items-center justify-center gap-2">
               {importMutation.isPending && (
                 <Loader2 className="w-4 h-4 animate-spin" />
               )}

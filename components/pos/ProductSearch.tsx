@@ -161,7 +161,7 @@ export function ProductSearch({
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <div className="text-blue-600 font-medium">
+                  <div className="text-brand font-medium">
                     {getDisplayPrice(product).toLocaleString()}
                   </div>
                   <div className="flex gap-1 mt-1">
@@ -253,7 +253,7 @@ export function ProductSearch({
                     </div>
 
                     <div className="text-right flex items-center gap-2">
-                      <div className="text-blue-600 font-medium text-xl">
+                      <div className="text-brand font-medium text-xl">
                         {(
                           item.quantity * item.price -
                           item.discount

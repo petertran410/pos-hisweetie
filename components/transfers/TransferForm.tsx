@@ -96,7 +96,7 @@ function BranchDropdown({
         onClick={() => setOpen((p) => !p)}
         className={`w-full flex items-center gap-2 border rounded-lg px-3 py-2.5 text-sm transition-all bg-white ${
           open
-            ? "border-blue-500 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "border-gray-300 hover:border-gray-400"
         }`}>
         <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -119,11 +119,11 @@ function BranchDropdown({
             }}
             className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left transition-colors ${
               value === 0
-                ? "bg-blue-50 text-blue-700 font-medium"
+                ? "bg-brand-soft text-brand-dark font-medium"
                 : "text-gray-500 hover:bg-gray-50"
             }`}>
             <span className="flex-1">{placeholder}</span>
-            {value === 0 && <Check className="w-3.5 h-3.5 text-blue-500" />}
+            {value === 0 && <Check className="w-3.5 h-3.5 text-brand" />}
           </button>
           {options.map((opt) => (
             <button
@@ -135,12 +135,12 @@ function BranchDropdown({
               }}
               className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left transition-colors border-t border-gray-50 ${
                 value === opt.id
-                  ? "bg-blue-50 text-blue-700 font-medium"
+                  ? "bg-brand-soft text-brand-dark font-medium"
                   : "text-gray-700 hover:bg-gray-50"
               }`}>
               <span className="flex-1 truncate">{opt.name}</span>
               {value === opt.id && (
-                <Check className="w-3.5 h-3.5 text-blue-500" />
+                <Check className="w-3.5 h-3.5 text-brand" />
               )}
             </button>
           ))}
@@ -585,7 +585,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                 : "Tạo phiếu chuyển hàng"}
             </h2>
             {transfer && !copyMode && (
-              <p className="text-sm text-blue-600 font-medium mt-0.5">
+              <p className="text-sm text-brand font-medium mt-0.5">
                 {transfer.code}
               </p>
             )}
@@ -658,7 +658,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                     setTimeout(() => setShowSearchResults(false), 200)
                   }
                   disabled={!canEditProducts}
-                  className="w-full border border-gray-300 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  className="w-full border border-gray-300 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-50 disabled:cursor-not-allowed"
                 />
 
                 {showSearchResults && searchQuery && searchResults?.data && (
@@ -679,7 +679,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                           <div
                             key={product.id}
                             onClick={() => handleAddProduct(product)}
-                            className="flex items-center justify-between px-4 py-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 transition-colors">
+                            className="flex items-center justify-between px-4 py-3 hover:bg-brand-soft cursor-pointer border-b last:border-b-0 transition-colors">
                             <div>
                               <div className="text-sm font-medium text-gray-900">
                                 {product.code} — {product.name}
@@ -703,7 +703,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                 </span>
                                 <span>
                                   Giá:{" "}
-                                  <span className="font-medium text-blue-600">
+                                  <span className="font-medium text-brand">
                                     {Number(
                                       fromInv?.cost ?? 0
                                     ).toLocaleString()}{" "}
@@ -712,7 +712,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                 </span>
                               </div>
                             </div>
-                            <Plus className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                            <Plus className="w-4 h-4 text-brand flex-shrink-0" />
                           </div>
                         );
                       })
@@ -980,7 +980,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                     disabled={isCancelled}
                     placeholder="Nhập ghi chú từ chi nhánh nhận..."
                     rows={3}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
                   />
                   {transfer?.noteBySource && (
                     <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -1004,11 +1004,11 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                     disabled={isCancelled}
                     placeholder="Nhập ghi chú cho phiếu chuyển hàng..."
                     rows={3}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
                   />
                   {transfer?.noteByDestination && isInTransit && (
-                    <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-xs text-blue-600 mb-1 font-medium">
+                    <div className="mt-2 p-3 bg-brand-soft rounded-lg border border-brand-border">
+                      <p className="text-xs text-brand mb-1 font-medium">
                         Ghi chú từ chi nhánh nhận:
                       </p>
                       <p className="text-sm text-gray-800">
@@ -1080,7 +1080,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                         updateTransfer.isPending ||
                         cancelTransfer.isPending
                       }
-                      className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                      className="px-5 py-2.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                       {createTransfer.isPending || updateTransfer.isPending ? (
                         <>
                           <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />

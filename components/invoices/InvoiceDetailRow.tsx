@@ -238,10 +238,10 @@ export function InvoiceDetailRow({
 
   if (isLoading) {
     return (
-      <tr className="bg-blue-50">
+      <tr className="bg-brand-soft">
         <td colSpan={colSpan} className="px-6 py-8">
           <div className="flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
             <span className="text-gray-600">Đang tải thông tin hóa đơn...</span>
           </div>
         </td>
@@ -289,7 +289,7 @@ export function InvoiceDetailRow({
     <tr>
       <td
         colSpan={colSpan}
-        className="border-b-2 border-l-2 border-r-2 border-blue-500 p-0 bg-gray-50">
+        className="border-b-2 border-l-2 border-r-2 border-brand p-0 bg-gray-50">
         <div
           ref={wrapperRef}
           className="sticky left-0 bg-gray-50"
@@ -303,7 +303,7 @@ export function InvoiceDetailRow({
                       <CodeLink
                         entity="invoice"
                         code={invoice.code}
-                        className="text-lg font-bold text-blue-600 hover:underline"
+                        className="text-lg font-bold text-brand hover:underline"
                       />
                     </span>
                     <span className="text-gray-400">-</span>
@@ -314,7 +314,7 @@ export function InvoiceDetailRow({
                           href={`/khach-hang?Code=${invoice.customer.code}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-lg font-semibold text-blue-600 hover:underline"
+                          className="text-lg font-semibold text-brand hover:underline"
                           onClick={(e) => e.stopPropagation()}>
                           {invoice?.customer?.name}
                         </Link>
@@ -322,7 +322,7 @@ export function InvoiceDetailRow({
                           href={`/khach-hang?Code=${invoice.customer.code}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          className="text-gray-400 hover:text-brand transition-colors"
                           onClick={(e) => e.stopPropagation()}>
                           <ExternalLink className="w-4 h-4" />
                         </Link>
@@ -356,7 +356,7 @@ export function InvoiceDetailRow({
                       onClick={() => setActiveTab(t.key as any)}
                       className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                         activeTab === t.key
-                          ? "border-blue-600 text-blue-600"
+                          ? "border-brand text-brand"
                           : "border-transparent text-gray-600 hover:text-gray-900"
                       }`}>
                       {t.label}
@@ -484,7 +484,7 @@ export function InvoiceDetailRow({
                                           href={`/san-pham/danh-sach?Code=${item.product?.code || item.productCode}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="text-sm font-medium text-blue-600 hover:underline"
+                                          className="text-sm font-medium text-brand hover:underline"
                                           onClick={(e) => e.stopPropagation()}>
                                           {item.product?.code ||
                                             item.productCode}
@@ -535,7 +535,7 @@ export function InvoiceDetailRow({
                                     </span>
                                   </td>
                                   <td className="px-[10px] py-2 text-right">
-                                    <span className="text-md font-semibold text-blue-600">
+                                    <span className="text-md font-semibold text-brand">
                                       {formatCurrency(Number(item.totalPrice))}
                                     </span>
                                   </td>
@@ -605,7 +605,7 @@ export function InvoiceDetailRow({
                         </div>
                         <div className="flex justify-between items-center text-md pt-2 border-t border-gray-200">
                           <span className="text-gray-600">Tổng cộng:</span>
-                          <span className="text-md font-bold text-blue-600">
+                          <span className="text-md font-bold text-brand">
                             {formatCurrency(Number(invoice.grandTotal))}
                           </span>
                         </div>
@@ -620,7 +620,7 @@ export function InvoiceDetailRow({
                         </div>
                         <div className="flex justify-between items-center text-md pt-2 border-t border-gray-200">
                           <span className="text-gray-600">Còn lại:</span>
-                          <span className="text-md font-bold text-blue-600">
+                          <span className="text-md font-bold text-brand">
                             {formatCurrency(
                               Number(invoice.grandTotal) -
                                 Number((invoice as any).returnOrderAmount)
@@ -685,7 +685,7 @@ export function InvoiceDetailRow({
                     <button
                       onClick={handleProcessInvoice}
                       disabled={isSaving}
-                      className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-dark transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                       Xử lý hóa đơn
                     </button>
                   )}

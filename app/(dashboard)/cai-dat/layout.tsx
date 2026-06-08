@@ -89,7 +89,7 @@ export default function SettingsLayout({
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
                   pathname === item.href
-                    ? "bg-blue-50 text-blue-600 font-medium"
+                    ? "bg-brand-soft text-brand font-medium"
                     : "text-gray-700 hover:bg-gray-50"
                 }`}>
                 <item.icon className="w-5 h-5" />

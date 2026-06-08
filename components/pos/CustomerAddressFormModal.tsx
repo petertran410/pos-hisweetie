@@ -351,7 +351,7 @@ export function CustomerAddressFormModal({
             <button
               type="button"
               onClick={() => setShowOld((v) => !v)}
-              className="flex items-center gap-1.5 text-xs lg:text-sm text-blue-600 hover:text-blue-700 font-medium">
+              className="flex items-center gap-1.5 text-xs lg:text-sm text-brand hover:text-brand-dark font-medium">
               {showOld ? (
                 <ChevronUp className="w-4 h-4" />
               ) : (
@@ -451,7 +451,7 @@ export function CustomerAddressFormModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="px-3 py-1.5 lg:px-4 lg:py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+            className="px-3 py-1.5 lg:px-4 lg:py-2 text-sm bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
             {isSaving
               ? "Đang lưu..."
               : mode === "create"

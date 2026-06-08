@@ -73,9 +73,9 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
     <tr>
       <td
         colSpan={colSpan}
-        className="p-0 border-b-2 border-l-2 border-r-2 border-blue-500">
+        className="p-0 border-b-2 border-l-2 border-r-2 border-brand">
         <div ref={wrapperRef}>
-          <div className="px-5 pb-5 bg-blue-50/30">
+          <div className="px-5 pb-5 bg-brand-soft">
             {/* Header info */}
             <div className="grid grid-cols-4 gap-4 text-sm mb-4 pt-4">
               <div>
@@ -153,7 +153,7 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                     const diffValue = Number(d.differenceValue);
                     return (
                       <tr key={d.id} className="border-t">
-                        <td className="px-3 py-2 text-blue-600 font-medium">
+                        <td className="px-3 py-2 text-brand font-medium">
                           {d.productCode ? (
                             <CodeLink entity="product" code={d.productCode} />
                           ) : (
@@ -206,7 +206,7 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                     </td>
                     <td></td>
                     <td></td>
-                    <td className={`px-3 py-2 text-right text-blue-600`}>
+                    <td className={`px-3 py-2 text-right text-brand`}>
                       {totalSystemQuantityValue > 0
                         ? `${totalSystemQuantityValue.toLocaleString()}`
                         : totalSystemQuantityValue.toLocaleString()}
@@ -262,7 +262,7 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                   {isDraft && canUpdate && (
                     <button
                       onClick={() => setShowEditForm(true)}
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors">
+                      className="px-4 py-2 text-sm font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors">
                       Chỉnh sửa
                     </button>
                   )}

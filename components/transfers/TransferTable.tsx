@@ -242,7 +242,7 @@ export function TransferTable({ filters }: TransferTableProps) {
               placeholder="Tìm mã phiếu chuyển..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -253,7 +253,7 @@ export function TransferTable({ filters }: TransferTableProps) {
                   setIsCopyMode(false);
                   setShowForm(true);
                 }}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
+                className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
                 <Plus className="w-4 h-4" />
                 Tạo phiếu
               </button>
@@ -294,7 +294,7 @@ export function TransferTable({ filters }: TransferTableProps) {
                 <tr>
                   <td colSpan={colSpan} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-400">
-                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
                       <span className="text-xs">Đang tải...</span>
                     </div>
                   </td>
@@ -313,14 +313,14 @@ export function TransferTable({ filters }: TransferTableProps) {
                     <tr
                       className={`cursor-pointer transition-colors ${
                         expandedId === transfer.id
-                          ? "bg-blue-50"
+                          ? "bg-brand-soft"
                           : "border-b hover:bg-gray-50"
                       }`}
                       onClick={() => toggleExpand(transfer.id)}>
                       <td
                         className={`px-4 py-2.5 sticky left-0 z-10 ${
                           expandedId === transfer.id
-                            ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
+                            ? "bg-brand-soft border-t-2 border-l-2 border-brand"
                             : "bg-white"
                         }`}
                         onClick={(e) => e.stopPropagation()}>
@@ -336,7 +336,7 @@ export function TransferTable({ filters }: TransferTableProps) {
                           key={col.key}
                           className={`px-4 py-2.5 ${
                             expandedId === transfer.id
-                              ? "border-t-2 border-blue-500"
+                              ? "border-t-2 border-brand"
                               : ""
                           }`}
                           style={{
@@ -352,7 +352,7 @@ export function TransferTable({ filters }: TransferTableProps) {
                       <td
                         className={`px-4 py-2.5 ${
                           expandedId === transfer.id
-                            ? "border-t-2 border-r-2 border-blue-500"
+                            ? "border-t-2 border-r-2 border-brand"
                             : ""
                         }`}>
                         <ChevronDown

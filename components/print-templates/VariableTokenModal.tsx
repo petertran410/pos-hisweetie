@@ -33,7 +33,7 @@ export function VariableTokenModal({ templateFor, onClose }: Props) {
               <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                 {vars.map((v: any) => (
                   <div key={v.key} className="flex gap-2 text-sm">
-                    <code className="text-blue-600 whitespace-nowrap">
+                    <code className="text-brand whitespace-nowrap">
                       {`{${v.key}}`}:
                     </code>
                     <span className="text-gray-700">{v.label}</span>

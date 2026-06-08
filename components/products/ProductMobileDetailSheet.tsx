@@ -90,7 +90,7 @@ function MobileSupplierOrderCell({
     <button
       type="button"
       onClick={() => onOpen(branch)}
-      className="text-xs font-medium text-blue-600 hover:underline">
+      className="text-xs font-medium text-brand hover:underline">
       {total.toLocaleString()}
     </button>
   );
@@ -177,7 +177,7 @@ export function ProductMobileDetailSheet({
         <div className="flex-1 overflow-y-auto">
           {isLoading || !product ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+              <Loader2 className="w-6 h-6 animate-spin text-brand" />
               <span className="text-sm text-gray-400">
                 Đang tải chi tiết...
               </span>
@@ -200,7 +200,7 @@ export function ProductMobileDetailSheet({
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-blue-600 font-bold text-sm mb-0.5">
+                  <p className="text-brand font-bold text-sm mb-0.5">
                     <CodeLink entity="product" code={product.code} />
                   </p>
                   <p className="font-semibold text-gray-900 text-base leading-tight mb-2">
@@ -220,7 +220,7 @@ export function ProductMobileDetailSheet({
                       {product.isActive ? "Hoạt động" : "Ngừng"}
                     </span>
                     {product.isDirectSale && (
-                      <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-[11px] font-medium">
+                      <span className="px-2 py-0.5 bg-brand-soft text-brand-dark rounded-md text-[11px] font-medium">
                         Bán trực tiếp
                       </span>
                     )}
@@ -246,7 +246,7 @@ export function ProductMobileDetailSheet({
                     onClick={() => setActiveTab(t.key)}
                     className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-xl transition-all ${
                       activeTab === t.key
-                        ? "bg-blue-600 text-white shadow-sm"
+                        ? "bg-brand text-white shadow-sm"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                     }`}>
                     {t.label}
@@ -349,7 +349,7 @@ export function ProductMobileDetailSheet({
                                       <CodeLink
                                         entity="product"
                                         code={cp.code}
-                                        className="text-blue-600 hover:underline"
+                                        className="text-brand hover:underline"
                                       />
                                     ) : (
                                       "-"

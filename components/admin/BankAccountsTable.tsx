@@ -43,7 +43,7 @@ export function BankAccountsTable({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -92,7 +92,7 @@ export function BankAccountsTable({
               {canUpdate && (
                 <button
                   onClick={() => onEdit(account)}
-                  className="text-blue-600 hover:text-blue-900 mr-3">
+                  className="text-brand hover:text-brand-dark mr-3">
                   <Edit className="w-4 h-4" />
                 </button>
               )}

@@ -236,11 +236,11 @@ export function SupplierReturnImportModal({
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+              className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:border-brand hover:bg-brand-soft transition-colors">
               <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
               <p className="text-sm text-gray-600 mb-1">
                 Kéo thả file Excel KiotViet vào đây hoặc{" "}
-                <span className="text-blue-600 font-medium">
+                <span className="text-brand font-medium">
                   nhấn để chọn file
                 </span>
               </p>
@@ -329,7 +329,7 @@ export function SupplierReturnImportModal({
                             err ? "bg-red-50" : i % 2 ? "bg-gray-50/50" : ""
                           }>
                           <td className="px-2 py-1.5 text-gray-400">{i + 1}</td>
-                          <td className="px-2 py-1.5 font-medium text-blue-600">
+                          <td className="px-2 py-1.5 font-medium text-brand">
                             {item.code}
                           </td>
                           <td className="px-2 py-1.5">
@@ -423,7 +423,7 @@ export function SupplierReturnImportModal({
 
               <button
                 onClick={handleReset}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                className="text-sm text-brand hover:text-brand-dark font-medium">
                 Import file khác
               </button>
             </div>
@@ -441,7 +441,7 @@ export function SupplierReturnImportModal({
             <button
               onClick={() => importMutation.mutate()}
               disabled={isImporting || validCount === 0}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              className="px-4 py-2 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
               {isImporting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isImporting ? "Đang import..." : `Import ${validCount} phiếu`}
             </button>

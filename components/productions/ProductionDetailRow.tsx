@@ -69,10 +69,10 @@ export function ProductionDetailRow({
 
   if (isLoading) {
     return (
-      <tr className="bg-blue-50">
+      <tr className="bg-brand-soft">
         <td colSpan={colSpan} className="px-6 py-8">
           <div className="flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
             <span className="text-gray-600">
               Đang tải thông tin phiếu sản xuất...
             </span>
@@ -96,7 +96,7 @@ export function ProductionDetailRow({
     <tr>
       <td
         colSpan={colSpan}
-        className="border-b-2 border-l-2 border-r-2 border-blue-500 p-0 bg-gray-50">
+        className="border-b-2 border-l-2 border-r-2 border-brand p-0 bg-gray-50">
         <div
           ref={wrapperRef}
           className="sticky left-0 bg-gray-50"
@@ -111,7 +111,7 @@ export function ProductionDetailRow({
                       <CodeLink
                         entity="production"
                         code={production.code}
-                        className="text-md font-bold text-blue-600 hover:underline"
+                        className="text-md font-bold text-brand hover:underline"
                       />
                     </p>
                     <span className="text-gray-300">-</span>
@@ -123,7 +123,7 @@ export function ProductionDetailRow({
                       href={`/san-pham/danh-sach?Code=${production.productCode}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-md text-blue-600 hover:underline font-medium"
+                      className="text-md text-brand hover:underline font-medium"
                       onClick={(e) => e.stopPropagation()}>
                       {production.productCode}
                     </Link>
@@ -131,7 +131,7 @@ export function ProductionDetailRow({
                       href={`/san-pham/danh-sach?Code=${production.productCode}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-gray-400 hover:text-blue-600 transition-colors"
+                      className="text-gray-400 hover:text-brand transition-colors"
                       onClick={(e) => e.stopPropagation()}>
                       <ExternalLink className="w-4 h-4" />
                     </Link>
@@ -234,7 +234,7 @@ export function ProductionDetailRow({
                 {onEdit && production.status !== 3 && (
                   <button
                     onClick={onEdit}
-                    className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors">
+                    className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors">
                     Chỉnh sửa
                   </button>
                 )}

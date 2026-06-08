@@ -46,7 +46,7 @@ export default function RolesPage() {
             <PermissionGate resource="roles" action="create">
               <button
                 onClick={handleCreate}
-                className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="p-2 bg-brand text-white rounded-lg hover:bg-brand-dark"
                 title="Thêm vai trò">
                 <Plus className="w-4 h-4" />
               </button>
@@ -74,7 +74,7 @@ export default function RolesPage() {
         {selectedRoleId ? (
           isLoadingRole ? (
             <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
             </div>
           ) : selectedRole ? (
             <PermissionMatrix role={selectedRole} />

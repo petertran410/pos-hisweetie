@@ -90,7 +90,7 @@ export function PrintPreviewModal({ template, onClose }: any) {
           <button
             onClick={handlePrint}
             disabled={!preview}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2">
+            className="px-4 py-2 bg-brand text-white rounded-lg flex items-center gap-2">
             <Printer className="w-4 h-4" />
             In thử
           </button>

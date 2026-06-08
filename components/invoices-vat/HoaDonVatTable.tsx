@@ -105,7 +105,7 @@ const DEFAULT_COLUMNS: ColumnConfig<InvoiceVat>[] = [
     visible: true,
     width: "140px",
     render: (inv) => (
-      <span className="font-medium text-blue-600">{inv.code}</span>
+      <span className="font-medium text-brand">{inv.code}</span>
     ),
   },
   {
@@ -174,7 +174,7 @@ const DEFAULT_COLUMNS: ColumnConfig<InvoiceVat>[] = [
     visible: true,
     width: "140px",
     render: (inv) => (
-      <span className="text-blue-700">
+      <span className="text-brand-dark">
         {formatCurrency(Number(inv.vat?.totalVat || 0))}
       </span>
     ),
@@ -663,7 +663,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
         );
       case "vat":
         return (
-          <span className="font-semibold text-blue-700">
+          <span className="font-semibold text-brand-dark">
             {formatCurrency(totals.totalVat)}
           </span>
         );
@@ -697,7 +697,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                   placeholder="Theo mã hóa đơn"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                 />
                 <button
                   onClick={() => {
@@ -708,7 +708,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                   }}
                   className={`relative p-1.5 border rounded-lg transition-colors ${
                     advancedFilterCount > 0
-                      ? "border-blue-500 bg-blue-50 text-blue-600"
+                      ? "border-brand bg-brand-soft text-brand"
                       : "border-gray-300 text-gray-500 hover:bg-gray-50"
                   }`}
                   title="Tìm kiếm nâng cao">
@@ -735,7 +735,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                           invoiceCodeSearch: e.target.value,
                         }))
                       }
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                     />
                     <input
                       type="text"
@@ -747,7 +747,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                           productSearch: e.target.value,
                         }))
                       }
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                     />
                     <input
                       type="text"
@@ -759,7 +759,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                           customerSearch: e.target.value,
                         }))
                       }
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                     />
 
                     {/* ── Expanded filters ── */}
@@ -775,7 +775,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                               orderCodeSearch: e.target.value,
                             }))
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                         />
                         <input
                           type="text"
@@ -787,7 +787,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                               descriptionSearch: e.target.value,
                             }))
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                         />
                         <input
                           type="text"
@@ -799,7 +799,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                               productNoteSearch: e.target.value,
                             }))
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                         />
                       </>
                     )}
@@ -817,7 +817,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                         setShowAdvancedSearch(false);
                         setPage(1);
                       }}
-                      className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                      className="px-4 py-1.5 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">
                       Tìm kiếm
                     </button>
                   </div>
@@ -831,12 +831,12 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                 onClick={() => setShowMisaFilter((p) => !p)}
                 className={`px-3 py-1.5 border rounded-lg text-sm flex items-center gap-1.5 transition-colors ${
                   misaStatusFilter.length > 0
-                    ? "border-blue-500 bg-blue-50 text-blue-600"
+                    ? "border-brand bg-brand-soft text-brand"
                     : "border-gray-300 text-gray-600 hover:bg-gray-50"
                 }`}>
                 Trạng thái Misa
                 {misaStatusFilter.length > 0 && (
-                  <span className="bg-blue-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  <span className="bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                     {misaStatusFilter.length}
                   </span>
                 )}
@@ -854,7 +854,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                         type="checkbox"
                         checked={misaStatusFilter.includes(opt.value)}
                         onChange={() => toggleMisaStatus(opt.value)}
-                        className="accent-blue-600"
+                        className="accent-brand"
                       />
                       <span className="text-sm text-gray-700">{opt.label}</span>
                     </label>
@@ -862,7 +862,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                   {misaStatusFilter.length > 0 && (
                     <button
                       onClick={() => setMisaStatusFilter([])}
-                      className="w-full mt-1 text-xs text-blue-600 hover:text-blue-700 py-1">
+                      className="w-full mt-1 text-xs text-brand hover:text-brand-dark py-1">
                       Bỏ chọn tất cả
                     </button>
                   )}
@@ -920,7 +920,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                     type="checkbox"
                     checked={allOnPageSelected}
                     onChange={toggleSelectAll}
-                    className="cursor-pointer accent-blue-600"
+                    className="cursor-pointer accent-brand"
                   />
                 </th>
                 {visibleColumns.map((col) => (
@@ -938,9 +938,9 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                       {SORTABLE_COLUMNS.has(col.key) && (
                         <span className="inline-flex text-gray-400">
                           {sortBy === col.key && sortDir === "desc" ? (
-                            <ArrowDown className="w-3 h-3 text-blue-500" />
+                            <ArrowDown className="w-3 h-3 text-brand" />
                           ) : sortBy === col.key && sortDir === "asc" ? (
-                            <ArrowUp className="w-3 h-3 text-blue-500" />
+                            <ArrowUp className="w-3 h-3 text-brand" />
                           ) : (
                             <ArrowUpDown className="w-3 h-3 opacity-40" />
                           )}
@@ -975,7 +975,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                 <tr>
                   <td colSpan={colSpan} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-400">
-                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
                       <span className="text-xs">Đang tải...</span>
                     </div>
                   </td>
@@ -994,14 +994,14 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                     <tr
                       className={`cursor-pointer transition-colors ${
                         expandedInvoiceId === invoice.id
-                          ? "bg-blue-50"
+                          ? "bg-brand-soft"
                           : "border-b hover:bg-gray-50"
                       }`}
                       onClick={() => toggleExpand(invoice.id)}>
                       <td
                         className={`px-4 py-2.5 sticky left-0 z-10 ${
                           expandedInvoiceId === invoice.id
-                            ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
+                            ? "bg-brand-soft border-t-2 border-l-2 border-brand"
                             : "bg-white"
                         }`}
                         onClick={(e) => e.stopPropagation()}>
@@ -1009,7 +1009,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                           type="checkbox"
                           checked={selectedIds.includes(invoice.id)}
                           onChange={() => toggleSelect(invoice.id)}
-                          className="cursor-pointer accent-blue-600"
+                    className="cursor-pointer accent-brand"
                         />
                       </td>
                       {visibleColumns.map((col) => (
@@ -1017,7 +1017,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                           key={col.key}
                           className={`px-4 py-2.5 ${
                             expandedInvoiceId === invoice.id
-                              ? "border-t-2 border-blue-500"
+                              ? "border-t-2 border-brand"
                               : ""
                           }`}
                           style={{
@@ -1033,7 +1033,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                       <td
                         className={`px-4 py-2.5 ${
                           expandedInvoiceId === invoice.id
-                            ? "border-t-2 border-r-2 border-blue-500"
+                            ? "border-t-2 border-r-2 border-brand"
                             : ""
                         }`}
                         onClick={(e) => e.stopPropagation()}>
@@ -1059,7 +1059,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                                     onClick={() => handlePush(invoice)}
                                     disabled={createVoucher.isPending}
                                     className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50">
-                                    <UploadCloud className="w-4 h-4 text-blue-600" />
+                                    <UploadCloud className="w-4 h-4 text-brand" />
                                     Đẩy Misa
                                   </button>
                                 </PermissionGate>
@@ -1107,7 +1107,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                 setLimit(Number(e.target.value));
                 setPage(1);
               }}
-              className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+              className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
               {[10, 15, 20, 50].map((n) => (
                 <option key={n} value={n}>
                   {n}
@@ -1135,7 +1135,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                   onClick={() => setPage(p)}
                   className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
                     p === page
-                      ? "bg-blue-600 text-white border-blue-600"
+                      ? "bg-brand text-white border-brand"
                       : "hover:bg-gray-50 text-gray-600 border-gray-200"
                   }`}>
                   {p}

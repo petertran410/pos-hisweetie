@@ -172,7 +172,7 @@ function InvoiceVatMobileCard({
       className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 cursor-pointer active:scale-[0.98] transition-transform select-none">
       {/* Row 1: code + misa status */}
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-blue-600 font-bold text-[15px]">
+        <span className="text-brand font-bold text-[15px]">
           {invoice.code}
         </span>
         <MisaStatusBadge status={invoice.misaSyncStatus} />
@@ -207,7 +207,7 @@ function InvoiceVatMobileCard({
             <p className="text-xs text-gray-400 leading-none mb-0.5">
               Thuế VAT 8%
             </p>
-            <p className="text-sm font-semibold text-blue-600 leading-none">
+            <p className="text-sm font-semibold text-brand leading-none">
               {formatCurrency(vat)}
             </p>
           </div>
@@ -506,8 +506,8 @@ function HoaDonVatMobileFilterSheet({
         label="Khách hàng"
         summary={customerIds.length > 0 ? customerLabel : undefined}>
         {customerIds.length > 0 ? (
-          <div className="flex items-center justify-between gap-2 border border-blue-300 bg-blue-50 rounded-xl px-3 py-2.5">
-            <span className="text-sm text-blue-700 font-medium truncate">
+          <div className="flex items-center justify-between gap-2 border border-brand-border bg-brand-soft rounded-xl px-3 py-2.5">
+            <span className="text-sm text-brand-dark font-medium truncate">
               {customerLabel}
             </span>
             <button
@@ -517,7 +517,7 @@ function HoaDonVatMobileFilterSheet({
                 setCustomerLabel("");
                 setCustomerQuery("");
               }}
-              className="text-blue-400 hover:text-blue-600 flex-shrink-0">
+              className="text-brand hover:text-brand-dark flex-shrink-0">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -530,7 +530,7 @@ function HoaDonVatMobileFilterSheet({
                   value={customerQuery}
                   onChange={(e) => setCustomerQuery(e.target.value)}
                   placeholder="Tìm theo tên, SĐT, mã KH..."
-                  className="w-full pl-8 pr-2 py-2 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                  className="w-full pl-8 pr-2 py-2 bg-gray-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white"
                 />
               </div>
             </div>
@@ -549,7 +549,7 @@ function HoaDonVatMobileFilterSheet({
                       setCustomerLabel(c.name);
                       setCustomerQuery("");
                     }}
-                    className={`w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors ${
+                    className={`w-full text-left px-3 py-2.5 hover:bg-brand-soft transition-colors ${
                       idx > 0 ? "border-t border-gray-50" : ""
                     }`}>
                     <div className="text-sm font-medium text-gray-800">
@@ -717,7 +717,7 @@ export function HoaDonVatMobileView({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Tìm mã hóa đơn, khách hàng..."
-              className="w-full pl-9 pr-8 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              className="w-full pl-9 pr-8 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all"
             />
             {search && (
               <button
@@ -733,7 +733,7 @@ export function HoaDonVatMobileView({
             onClick={() => setShowFilter(true)}
             className={`relative p-2.5 rounded-xl transition-colors flex-shrink-0 ${
               activeFilterCount > 0
-                ? "bg-blue-600 hover:bg-blue-700"
+                ? "bg-brand hover:bg-brand-dark"
                 : "bg-gray-100 hover:bg-gray-200"
             }`}>
             <SlidersHorizontal
@@ -757,7 +757,7 @@ export function HoaDonVatMobileView({
                 onClick={() => setActiveTab(tab.value)}
                 className={`flex-shrink-0 px-3 py-2.5 text-xs font-medium rounded-t-xl border-b-2 transition-colors whitespace-nowrap ${
                   isActive
-                    ? "border-blue-600 text-blue-600 bg-blue-50"
+                    ? "border-brand text-brand bg-brand-soft"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}>
                 {tab.label}
@@ -771,7 +771,7 @@ export function HoaDonVatMobileView({
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 pb-24">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            <Loader2 className="w-6 h-6 animate-spin text-brand" />
             <span className="text-sm text-gray-400">Đang tải...</span>
           </div>
         ) : invoices.length === 0 ? (

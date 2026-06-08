@@ -89,7 +89,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl p-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto"></div>
         </div>
       </div>
     );
@@ -271,7 +271,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
             <button
               type="submit"
               disabled={createUser.isPending || updateUser.isPending}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50">
               {userId ? "Cập nhật" : "Tạo mới"}
             </button>
           </div>

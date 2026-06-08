@@ -483,9 +483,9 @@ export function InvoiceItemsList({
                   {canViewInventory && (
                     <button
                       onClick={() => setSelectedItemForInventory(item)}
-                      className="p-1 hover:bg-blue-50 rounded transition-colors"
+                      className="p-1 hover:bg-brand-soft rounded transition-colors"
                       title="Xem tồn kho tất cả chi nhánh">
-                      <AlertCircle className="w-4 h-4 text-blue-400" />
+                      <AlertCircle className="w-4 h-4 text-brand" />
                     </button>
                   )}
                   {canEditPrice && (
@@ -532,7 +532,7 @@ export function InvoiceItemsList({
                         handleQuantityChange(item, e.target.value)
                       }
                       onBlur={() => handleQuantityBlur(item)}
-                      className="w-9 h-5 text-center border border-gray-300 rounded px-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-9 h-5 text-center border border-gray-300 rounded px-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                       min="1"
                     />
                     <button
@@ -567,7 +567,7 @@ export function InvoiceItemsList({
                       onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                       }}
-                      className="w-20 h-6 text-right border border-gray-300 rounded px-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-20 h-6 text-right border border-gray-300 rounded px-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand"
                     />
                   ) : (
                     <span className="text-xs text-gray-700">
@@ -582,7 +582,7 @@ export function InvoiceItemsList({
                   {canEditDiscount && (
                     <button
                       onClick={() => handleOpenDiscountModal(item)}
-                      className="ml-auto text-xs text-blue-600 font-medium">
+                      className="ml-auto text-xs text-brand font-medium">
                       Giảm giá
                     </button>
                   )}
@@ -610,7 +610,7 @@ export function InvoiceItemsList({
                     value={getQuantityDisplay(item)}
                     onChange={(e) => handleQuantityChange(item, e.target.value)}
                     onBlur={() => handleQuantityBlur(item)}
-                    className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-brand"
                     min="1"
                   />
                   <button
@@ -630,7 +630,7 @@ export function InvoiceItemsList({
                     <span className="mb-0.5"></span>
                     <button
                       onClick={() => handleOpenDiscountModal(item)}
-                      className="text-blue-600 hover:text-blue-700 text-md font-medium">
+                      className="text-brand hover:text-brand-dark text-md font-medium">
                       Giảm giá
                     </button>
                   </div>
@@ -639,7 +639,7 @@ export function InvoiceItemsList({
                       Chiết khấu
                     </span>
                     <span
-                      className={`text-md ${canEditDiscount ? "cursor-pointer hover:text-blue-600" : ""} ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}
+                      className={`text-md ${canEditDiscount ? "cursor-pointer hover:text-brand" : ""} ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}
                       onClick={
                         canEditDiscount
                           ? () => handleOpenDiscountModal(item)
@@ -666,7 +666,7 @@ export function InvoiceItemsList({
                         onKeyDown={(e) => {
                           if (e.key === "Enter") e.currentTarget.blur();
                         }}
-                        className="w-24 h-6 text-right border border-gray-300 rounded px-2 text-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                        className="w-24 h-6 text-right border border-gray-300 rounded px-2 text-md focus:outline-none focus:ring-2 focus:ring-brand text-gray-700"
                       />
                     ) : (
                       <span className="text-md text-gray-500">
@@ -709,7 +709,7 @@ export function InvoiceItemsList({
             onChange={(e) => onOrderNoteChange(e.target.value.slice(0, 1000))}
             maxLength={1000}
             placeholder="Nhập ghi chú cho hóa đơn..."
-            className="w-full border rounded-xl px-3 py-1.5 lg:py-2 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full border rounded-xl px-3 py-1.5 lg:py-2 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-brand resize-none"
             rows={2}
           />
         </div>
@@ -751,14 +751,14 @@ export function InvoiceItemsList({
                 placeholder={
                   discountType === "amount" ? "Nhập số tiền" : "Nhập %"
                 }
-                className="flex-1 min-w-0 text-center border rounded-xl px-2 lg:px-3 py-1 lg:py-1.5 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 min-w-0 text-center border rounded-xl px-2 lg:px-3 py-1 lg:py-1.5 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-brand"
               />
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => handleDiscountTypeChange("amount")}
                   className={`px-2 lg:px-3 py-0.5 lg:py-1 text-sm lg:text-md rounded transition-colors ${
                     discountType === "amount"
-                      ? "bg-blue-600 text-white"
+                      ? "bg-brand text-white"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                   }`}>
                   Số tiền
@@ -767,7 +767,7 @@ export function InvoiceItemsList({
                   onClick={() => handleDiscountTypeChange("ratio")}
                   className={`px-2 lg:px-3 py-0.5 lg:py-1 text-sm lg:text-md rounded transition-colors ${
                     discountType === "ratio"
-                      ? "bg-blue-600 text-white"
+                      ? "bg-brand text-white"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                   }`}>
                   %
@@ -779,7 +779,7 @@ export function InvoiceItemsList({
 
         <div className="flex items-center justify-between font-semibold text-base lg:text-lg pt-1 border-t">
           <span>Khách cần trả</span>
-          <span className="text-blue-600 text-base lg:text-lg">
+          <span className="text-brand text-base lg:text-lg">
             {calculateTotal().toLocaleString()}
           </span>
         </div>

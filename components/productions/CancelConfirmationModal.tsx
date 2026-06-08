@@ -89,8 +89,8 @@ export function CancelConfirmationModal({
           )}
 
           {productionStatus === 1 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-700">
+            <div className="bg-brand-soft border border-brand-border rounded-lg p-4">
+              <p className="text-sm text-brand-dark">
                 Phiếu tạm sẽ được đánh dấu là đã hủy. Tồn kho không thay đổi.
               </p>
             </div>
@@ -100,7 +100,7 @@ export function CancelConfirmationModal({
         <div className="flex justify-end gap-3 p-4 border-t bg-gray-50">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">
             Không, giữ lại
           </button>
           <button

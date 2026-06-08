@@ -262,7 +262,7 @@ export function EditStep1Modal({
 
           <div className="flex items-center justify-between text-sm font-semibold">
             <span>Tổng tiền trả</span>
-            <span className="text-blue-600">
+            <span className="text-brand">
               {formatCurrency(totalReturnAmount)}
             </span>
           </div>
@@ -297,7 +297,7 @@ export function EditStep1Modal({
                 <button
                   disabled={isSubmitting}
                   onClick={() => handleSubmit(false)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-40">
+                  className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark disabled:opacity-40">
                   Xác nhận yêu cầu trả
                 </button>
               </PermissionGate>
