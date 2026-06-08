@@ -165,12 +165,35 @@ export const apiClient = {
     }
   },
 
+  patch: async <T = any>(endpoint: string, data?: any): Promise<T> => {
+    const res = await fetch(`${API_URL}${endpoint}`, {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!res.ok) {
+      await handleApiError(res);
+    }
+
+    const text = await res.text();
+    if (!text || text.trim() === "") {
+      return null as T;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("Failed to parse JSON:", text);
+      return null as T;
+    }
+  },
+
   delete: async <T = any>(endpoint: string, data?: any): Promise<T> => {
     const options: RequestInit = {
       method: "DELETE",
       headers: getAuthHeaders(),
     };
-
     if (data) {
       options.body = JSON.stringify(data);
     }

@@ -35,6 +35,7 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/san-pham/tra-hang-nhap", title: "Trả hàng nhập" },
 
   // Khách hàng
+  { prefix: "/khach-hang/khuyen-mai", title: "Khuyến mãi" },
   { prefix: "/khach-hang", title: "Khách hàng" },
 
   // Tài chính
