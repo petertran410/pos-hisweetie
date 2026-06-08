@@ -60,6 +60,8 @@ export function ProductSearchDropdown({
     branchId: selectedBranch?.id,
     priceBookId: activePriceBookId ?? undefined,
     onlyInPriceBook: isStrictPriceBook ? true : undefined,
+    // Chỉ cho phép bán những sản phẩm được đánh dấu bán trực tiếp.
+    isDirectSale: true,
   });
 
   const products = productsData?.data || [];

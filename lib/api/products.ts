@@ -19,6 +19,7 @@ export interface ProductQueryParams {
   branchIds?: number[];
   type?: number;
   types?: number[];
+  isDirectSale?: boolean;
   parentName?: string;
   middleName?: string;
   childName?: string;
