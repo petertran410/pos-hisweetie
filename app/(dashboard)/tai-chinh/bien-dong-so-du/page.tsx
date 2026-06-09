@@ -123,7 +123,6 @@ const getPresetRange = (preset: string): { dateFrom: string; dateTo: string } =>
 interface Filters {
   search: string;
   accountNumber: string;
-  transferType: "" | "in" | "out";
   datePreset: string;
   dateFrom: string;
   dateTo: string;
@@ -133,7 +132,6 @@ interface Filters {
 const EMPTY_FILTERS: Filters = {
   search: "",
   accountNumber: "",
-  transferType: "",
   datePreset: "all_time",
   dateFrom: "",
   dateTo: "",
@@ -209,7 +207,6 @@ export default function BienDongSoDuPage() {
     limit: PAGE_SIZE,
     search: applied.search || undefined,
     accountNumber: applied.accountNumber || undefined,
-    transferType: applied.transferType || undefined,
     dateFrom: applied.dateFrom || undefined,
     dateTo: applied.dateTo || undefined,
     status: applied.status || undefined,
@@ -243,7 +240,6 @@ export default function BienDongSoDuPage() {
   const hasFilters =
     applied.search ||
     applied.accountNumber ||
-    applied.transferType ||
     applied.dateFrom ||
     applied.dateTo ||
     applied.status ||
@@ -294,23 +290,6 @@ export default function BienDongSoDuPage() {
                   {(b.bankCode || b.bankName || "TK") + " - " + b.accountNumber}
                 </option>
               ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Loại</label>
-            <select
-              value={draft.transferType}
-              onChange={(e) =>
-                setDraft((p) => ({
-                  ...p,
-                  transferType: e.target.value as Filters["transferType"],
-                }))
-              }
-              className="px-3 py-2 border rounded-lg text-sm w-32 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">Tất cả</option>
-              <option value="in">Tiền vào</option>
-              <option value="out">Tiền ra</option>
             </select>
           </div>
 
@@ -437,10 +416,7 @@ export default function BienDongSoDuPage() {
                   Số tài khoản
                 </th>
                 <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
-                  Tiền vào
-                </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
-                  Tiền ra
+                  Số tiền
                 </th>
                 <th className="px-4 py-2.5 text-left font-medium text-gray-600">
                   Nội dung
@@ -462,21 +438,20 @@ export default function BienDongSoDuPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={9} className="px-4 py-10 text-center text-gray-400">
                     <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
                     Đang tải...
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={9} className="px-4 py-10 text-center text-gray-400">
                     Không có giao dịch nào
                   </td>
                 </tr>
               ) : (
                 transactions.map((tx) => {
                   const amountIn = Number(tx.amountIn);
-                  const amountOut = Number(tx.amountOut);
                   return (
                     <tr
                       key={tx.id}
@@ -490,10 +465,7 @@ export default function BienDongSoDuPage() {
                       <td className="px-4 py-2.5 whitespace-nowrap">{tx.bankBrandName || "-"}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap">{tx.accountNumber || "-"}</td>
                       <td className="px-4 py-2.5 text-left font-medium text-green-600 whitespace-nowrap">
-                        {amountIn > 0 ? `+${formatCurrency(amountIn)}` : "-"}
-                      </td>
-                      <td className="px-4 py-2.5 text-left font-medium text-red-600 whitespace-nowrap">
-                        {amountOut > 0 ? `-${formatCurrency(amountOut)}` : "-"}
+                        +{formatCurrency(amountIn)}
                       </td>
                       <td className="px-4 py-2.5 w-[220px] max-w-[220px] break-words whitespace-normal align-top">
                         {tx.transactionContent || "-"}
