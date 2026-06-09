@@ -8,7 +8,12 @@ import { sepayApi } from "@/lib/api/sepay";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
-import { buildSepayTxHref } from "@/lib/sepay/notification";
+import {
+  buildSepayTxHref,
+  readSepayToastWatermark,
+  writeSepayToastWatermark,
+  SEPAY_TOAST_WATERMARK_KEY,
+} from "@/lib/sepay/notification";
 
 const POLL_INTERVAL = 10000; // 10s
 
@@ -17,12 +22,13 @@ const POLL_INTERVAL = 10000; // 10s
  * Mount 1 lần ở dashboard layout → chạy ở mọi trang.
  *
  * Nguồn thông báo "xem lại" (chuông) đã do backend lưu (model Notification);
- * component này KHÔNG còn ghi localStorage. Khi phát hiện giao dịch mới, ngoài
- * toast còn invalidate badge "unread-count" để chuông cập nhật ngay (không phải
- * chờ vòng poll 5s kế tiếp).
+ * component này KHÔNG ghi localStorage cho danh sách thông báo.
  *
- * Mốc "đã thấy" lưu RIÊNG từng tab (useRef) → mọi tab đều pop toast.
- * Lần đầu mount mỗi tab chỉ ghi nhận mốc, không pop lại giao dịch cũ.
+ * Chống trùng giữa các tab: mốc "đã toast" (latestId) lưu CHUNG trong
+ * localStorage + lắng nghe `storage` event. Tab nào toast xong thì ghi mốc,
+ * các tab khác nhận event và cập nhật mốc in-memory ngay → KHÔNG pop lại cùng
+ * một giao dịch. Lần đầu hệ thống chưa có mốc → ghi mốc hiện tại, không toast
+ * giao dịch cũ.
  */
 export function SepayPendingNotifier() {
   const router = useRouter();
@@ -39,8 +45,25 @@ export function SepayPendingNotifier() {
     refetchOnWindowFocus: true,
   });
 
-  // Mốc giao dịch đã thấy — riêng cho tab này.
+  // Mốc đã toast — đồng bộ với localStorage (dùng chung mọi tab).
   const lastSeenIdRef = useRef<number | null>(null);
+
+  // Khởi tạo mốc từ localStorage + lắng nghe thay đổi từ tab khác.
+  useEffect(() => {
+    lastSeenIdRef.current = readSepayToastWatermark();
+    const handler = (e: StorageEvent) => {
+      if (e.key !== SEPAY_TOAST_WATERMARK_KEY) return;
+      const n = e.newValue ? Number(e.newValue) : null;
+      if (n !== null && Number.isFinite(n)) {
+        // Tab khác đã toast giao dịch này → nâng mốc, tránh pop lại.
+        if (lastSeenIdRef.current === null || n > lastSeenIdRef.current) {
+          lastSeenIdRef.current = n;
+        }
+      }
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, []);
 
   useEffect(() => {
     if (!data) return;
@@ -57,14 +80,19 @@ export function SepayPendingNotifier() {
 
     const goToTx = () => router.push(buildSepayTxHref(latest));
 
-    // Lần đầu mount trong tab này: chỉ ghi nhận mốc, không bắn toast cũ.
+    // Lần đầu (chưa có mốc nào trong localStorage): chỉ ghi nhận mốc, không
+    // bắn toast cho giao dịch cũ.
     if (lastSeenIdRef.current === null) {
       lastSeenIdRef.current = latestId;
+      writeSepayToastWatermark(latestId);
       return;
     }
 
-    // Có giao dịch mới hơn mốc đã thấy trong tab → toast + làm mới badge chuông.
+    // Có giao dịch mới hơn mốc đã toast (mọi tab) → toast + nâng mốc dùng chung.
     if (latestId > lastSeenIdRef.current) {
+      lastSeenIdRef.current = latestId;
+      writeSepayToastWatermark(latestId);
+
       toast.success("Khách vừa chuyển khoản cần xử lý", {
         id: "sepay-pending",
         description: detail || undefined,
@@ -74,7 +102,6 @@ export function SepayPendingNotifier() {
       queryClient.invalidateQueries({
         queryKey: ["notifications-unread-count"],
       });
-      lastSeenIdRef.current = latestId;
     }
   }, [data, router, queryClient]);
 

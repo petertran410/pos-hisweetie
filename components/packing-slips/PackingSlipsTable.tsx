@@ -23,8 +23,9 @@ interface PackingSlipsTableProps {
   onCreatePackingHangClick: () => void;
   onCreatePackingLoadingClick: () => void;
   onEditClick: (packingSlip: PackingSlip) => void;
-  onDeleteClick: (id: number) => void;
+  onDeleteClick: (slip: PackingSlip & { type?: string }) => void;
   onResendClick?: (id: number) => void;
+  onResendLarkClick?: (id: number) => void;
   /** Search server-side: do parent điều khiển. Nếu không truyền sẽ dùng search nội bộ (client-side). */
   search?: string;
   onSearchChange?: (value: string) => void;
@@ -49,6 +50,7 @@ export function PackingSlipsTable({
   onEditClick,
   onDeleteClick,
   onResendClick,
+  onResendLarkClick,
   search: searchProp,
   onSearchChange,
 }: PackingSlipsTableProps) {
@@ -431,12 +433,27 @@ export function PackingSlipsTable({
                             Gửi lại
                           </button>
                         )}
+                        {onResendLarkClick && slip.type === "giao-hang" && (
+                          <button
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  "Đồng bộ lại phiếu chi của báo đơn này lên Lark?"
+                                )
+                              ) {
+                                onResendLarkClick(slip.id);
+                              }
+                            }}
+                            className="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded">
+                            Gửi Lark
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             if (
                               confirm("Bạn có chắc chắn muốn hủy phiếu này?")
                             ) {
-                              onDeleteClick(slip.id);
+                              onDeleteClick(slip);
                             }
                           }}
                           className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded">
