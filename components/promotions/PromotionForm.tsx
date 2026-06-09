@@ -262,7 +262,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
             onClick={() => setTab("info")}
             className={`py-3 text-sm font-medium ${
               tab === "info"
-                ? "border-b-2 border-blue-600 text-blue-600"
+                ? "border-b-2 border-brand text-brand"
                 : "text-gray-500"
             }`}
           >
@@ -272,7 +272,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
             onClick={() => setTab("scope")}
             className={`py-3 text-sm font-medium ${
               tab === "scope"
-                ? "border-b-2 border-blue-600 text-blue-600"
+                ? "border-b-2 border-brand text-brand"
                 : "text-gray-500"
             }`}
           >
@@ -595,7 +595,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
                         onClick={() => toggleWeekday(w.value)}
                         className={`rounded px-3 py-1 text-sm ${
                           form.applyWeekdays?.includes(w.value)
-                            ? "bg-blue-500 text-white"
+                            ? "bg-brand text-white"
                             : "bg-gray-100 text-gray-700"
                         }`}
                       >
@@ -690,7 +690,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
                         onClick={() => toggleId("branchIds", b.id)}
                         className={`rounded px-3 py-1 text-sm ${
                           form.branchIds?.includes(b.id)
-                            ? "bg-blue-500 text-white"
+                            ? "bg-brand text-white"
                             : "bg-gray-100 text-gray-700"
                         }`}
                       >
@@ -725,7 +725,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
                         onClick={() => toggleId("customerGroupIds", g.id)}
                         className={`rounded px-3 py-1 text-sm ${
                           form.customerGroupIds?.includes(g.id)
-                            ? "bg-blue-500 text-white"
+                            ? "bg-brand text-white"
                             : "bg-gray-100 text-gray-700"
                         }`}
                       >
@@ -819,7 +819,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
                         onClick={() => toggleId("userIds", u.id)}
                         className={`rounded px-3 py-1 text-sm ${
                           form.userIds?.includes(u.id)
-                            ? "bg-blue-500 text-white"
+                            ? "bg-brand text-white"
                             : "bg-gray-100 text-gray-700"
                         }`}
                       >
@@ -848,7 +848,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
           <button
             onClick={handleSubmit}
             disabled={createMut.isPending || updateMut.isPending}
-            className="rounded bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+            className="rounded bg-brand px-4 py-2 text-sm text-white hover:bg-brand-dark transition-colors disabled:opacity-50"
           >
             {isEdit ? "Lưu thay đổi" : "Lưu (F9)"}
           </button>
@@ -875,10 +875,10 @@ function RadioRow({
     >
       <span
         className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-          checked ? "border-blue-600" : "border-gray-300"
+          checked ? "border-brand" : "border-gray-300"
         }`}
       >
-        {checked && <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />}
+        {checked && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}
       </span>
       <span className="text-sm">{label}</span>
     </button>

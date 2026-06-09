@@ -37,11 +37,15 @@ export function PromotionsTable({ promotions, loading, onEdit }: Props) {
   const colSpan = 10;
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500">Đang tải...</div>;
+    return (
+      <div className="p-8 text-center" style={{ color: "var(--dt-text-muted)" }}>
+        Đang tải...
+      </div>
+    );
   }
   if (promotions.length === 0) {
     return (
-      <div className="p-8 text-center text-gray-500">
+      <div className="p-8 text-center" style={{ color: "var(--dt-text-muted)" }}>
         Chưa có chương trình khuyến mãi nào
       </div>
     );
@@ -50,7 +54,9 @@ export function PromotionsTable({ promotions, loading, onEdit }: Props) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
+        <thead
+          className="text-left text-xs uppercase"
+          style={{ background: "var(--dt-bg-soft)", color: "var(--dt-text-muted)" }}>
           <tr>
             <th className="w-8 px-3 py-2"></th>
             <th className="px-3 py-2">Mã</th>
@@ -70,22 +76,22 @@ export function PromotionsTable({ promotions, loading, onEdit }: Props) {
             return (
               <Fragment key={p.id}>
                 <tr
-                  className={`cursor-pointer transition-colors ${
-                    expanded ? "bg-blue-50" : "border-t hover:bg-gray-50"
-                  }`}
+                  className="cursor-pointer transition-colors border-t dt-row"
+                  data-expanded={expanded}
+                  style={{ borderColor: "var(--dt-border)" }}
                   onClick={() => setExpandedId(expanded ? null : p.id)}
                 >
-                  <td className="px-3 py-2 text-center text-gray-400">
+                  <td className="px-3 py-2 text-center" style={{ color: "var(--dt-text-muted)" }}>
                     <ChevronDown
                       className={`inline h-4 w-4 transition-transform ${
                         expanded ? "rotate-180" : ""
                       }`}
                     />
                   </td>
-                  <td className="px-3 py-2 font-medium">{p.code}</td>
+                  <td className="px-3 py-2 font-medium dt-mono">{p.code}</td>
                   <td className="px-3 py-2">{p.name}</td>
                   <td className="px-3 py-2">{PROMOTION_TYPE_LABELS[p.type]}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600">
+                  <td className="px-3 py-2 text-xs" style={{ color: "var(--dt-text-secondary)" }}>
                     {fmtDate(p.startDate)} - {fmtDate(p.endDate)}
                   </td>
                   <td className="px-3 py-2 text-center">{p.priority}</td>
@@ -124,7 +130,8 @@ export function PromotionsTable({ promotions, loading, onEdit }: Props) {
                       <button
                         title="Sửa"
                         onClick={() => onEdit(p)}
-                        className="text-gray-500 hover:text-blue-600"
+                        className="dt-icon-btn p-1 rounded transition-colors hover:text-[var(--dt-primary)]"
+                        style={{ color: "var(--dt-text-secondary)" }}
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
@@ -135,7 +142,7 @@ export function PromotionsTable({ promotions, loading, onEdit }: Props) {
                           if (confirm(`Ngừng chương trình "${p.name}"?`))
                             stopMut.mutate(p.id);
                         }}
-                        className="text-gray-500 hover:text-red-600 disabled:opacity-40"
+                        className="p-1 rounded transition-colors text-gray-500 hover:text-red-600 disabled:opacity-40"
                       >
                         <Ban className="h-4 w-4" />
                       </button>

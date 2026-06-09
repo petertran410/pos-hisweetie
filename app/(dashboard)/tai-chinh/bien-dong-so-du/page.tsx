@@ -19,7 +19,6 @@ import {
   X,
   Calendar,
 } from "lucide-react";
-import "@/app/dashboard.css";
 
 const formatDateLabel = (d: string) =>
   d
@@ -138,17 +137,23 @@ export default function BienDongSoDuPage() {
   return (
     <PagePermissionGuard resource="sepay" action="view">
       <div className="flex flex-col h-full">
-        <div className="p-4 border-b bg-white">
+        <div
+          className="p-4 border-b bg-white"
+          style={{ borderColor: "var(--dt-border)" }}>
           <h1 className="text-xl font-bold">Biến động số dư</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm mt-0.5" style={{ color: "var(--dt-text-muted)" }}>
             Lịch sử giao dịch ngân hàng đồng bộ từ Sepay
           </p>
         </div>
 
         {/* Filter bar */}
-        <div className="p-4 bg-white border-b flex flex-wrap items-end gap-3">
+        <div
+          className="p-4 bg-white border-b flex flex-wrap items-end gap-3"
+          style={{ borderColor: "var(--dt-border)" }}>
           <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Tìm kiếm</label>
+            <label className="text-xs mb-1" style={{ color: "var(--dt-text-muted)" }}>
+              Tìm kiếm
+            </label>
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -158,19 +163,21 @@ export default function BienDongSoDuPage() {
                 }
                 onKeyDown={(e) => e.key === "Enter" && applyFilters()}
                 placeholder="Nội dung / mã tham chiếu"
-                className="pl-8 pr-3 py-2 border rounded-lg text-sm w-60 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="dt-input dt-input-sm !rounded-lg pl-8 w-60"
               />
             </div>
           </div>
 
           <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Tài khoản ngân hàng</label>
+            <label className="text-xs mb-1" style={{ color: "var(--dt-text-muted)" }}>
+              Tài khoản ngân hàng
+            </label>
             <select
               value={draft.accountNumber}
               onChange={(e) =>
                 setDraft((p) => ({ ...p, accountNumber: e.target.value }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-52 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              className="dt-select dt-select-sm !rounded-lg w-52">
               <option value="">Tất cả</option>
               {bankAccounts.map((b) => (
                 <option key={b.id} value={b.accountNumber}>
@@ -181,7 +188,9 @@ export default function BienDongSoDuPage() {
           </div>
 
           <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Loại</label>
+            <label className="text-xs mb-1" style={{ color: "var(--dt-text-muted)" }}>
+              Loại
+            </label>
             <select
               value={draft.transferType}
               onChange={(e) =>
@@ -190,7 +199,7 @@ export default function BienDongSoDuPage() {
                   transferType: e.target.value as Filters["transferType"],
                 }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-32 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              className="dt-select dt-select-sm !rounded-lg w-32">
               <option value="">Tất cả</option>
               <option value="in">Tiền vào</option>
               <option value="out">Tiền ra</option>
@@ -198,7 +207,9 @@ export default function BienDongSoDuPage() {
           </div>
 
           <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Trạng thái</label>
+            <label className="text-xs mb-1" style={{ color: "var(--dt-text-muted)" }}>
+              Trạng thái
+            </label>
             <select
               value={draft.status}
               onChange={(e) =>
@@ -207,7 +218,7 @@ export default function BienDongSoDuPage() {
                   status: e.target.value as Filters["status"],
                 }))
               }
-              className="px-3 py-2 border rounded-lg text-sm w-40 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              className="dt-select dt-select-sm !rounded-lg w-40">
               <option value="">Tất cả</option>
               <option value="processing">Đang xử lý</option>
               <option value="assigned">Đã xác nhận KH</option>
@@ -217,18 +228,21 @@ export default function BienDongSoDuPage() {
 
           <div ref={dateBoxRef} className="flex items-end gap-3">
             <div className="flex flex-col">
-              <label className="text-xs text-gray-500 mb-1">Từ ngày</label>
+              <label className="text-xs mb-1" style={{ color: "var(--dt-text-muted)" }}>
+                Từ ngày
+              </label>
               <div className="relative">
                 <button
                   type="button"
                   onClick={() =>
                     setOpenCal((c) => (c === "from" ? null : "from"))
                   }
-                  className={`w-40 flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                  className="dt-input dt-input-sm !rounded-lg w-40 flex items-center justify-between"
+                  style={
                     draft.dateFrom
-                      ? "border-emerald-300 bg-emerald-50 text-gray-800"
-                      : "border-gray-300 text-gray-400"
-                  } ${openCal === "from" ? "ring-2 ring-emerald-100 border-emerald-400" : "hover:border-gray-400"}`}>
+                      ? { color: "var(--dt-text)" }
+                      : { color: "var(--dt-text-muted)" }
+                  }>
                   <span>{formatDateLabel(draft.dateFrom)}</span>
                   <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 </button>
@@ -247,16 +261,19 @@ export default function BienDongSoDuPage() {
             </div>
 
             <div className="flex flex-col">
-              <label className="text-xs text-gray-500 mb-1">Đến ngày</label>
+              <label className="text-xs mb-1" style={{ color: "var(--dt-text-muted)" }}>
+                Đến ngày
+              </label>
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setOpenCal((c) => (c === "to" ? null : "to"))}
-                  className={`w-40 flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                  className="dt-input dt-input-sm !rounded-lg w-40 flex items-center justify-between"
+                  style={
                     draft.dateTo
-                      ? "border-emerald-300 bg-emerald-50 text-gray-800"
-                      : "border-gray-300 text-gray-400"
-                  } ${openCal === "to" ? "ring-2 ring-emerald-100 border-emerald-400" : "hover:border-gray-400"}`}>
+                      ? { color: "var(--dt-text)" }
+                      : { color: "var(--dt-text-muted)" }
+                  }>
                   <span>{formatDateLabel(draft.dateTo)}</span>
                   <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 </button>
@@ -276,13 +293,13 @@ export default function BienDongSoDuPage() {
 
           <button
             onClick={applyFilters}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
+            className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors">
             Lọc
           </button>
           {hasFilters && (
             <button
               onClick={resetFilters}
-              className="inline-flex items-center gap-1 px-3 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              className="dt-btn-ghost inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm transition-colors">
               <X className="w-4 h-4" />
               Xóa lọc
             </button>
@@ -292,36 +309,38 @@ export default function BienDongSoDuPage() {
         {/* Table */}
         <div className="flex-1 overflow-auto">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-gray-50 border-b z-10">
+            <thead
+              className="sticky top-0 border-b z-10"
+              style={{ background: "var(--dt-bg-soft)" }}>
               <tr>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
+                <th className="px-4 py-2.5 text-left font-medium whitespace-nowrap" style={{ color: "var(--dt-text-muted)" }}>
                   Thời gian
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
+                <th className="px-4 py-2.5 text-left font-medium whitespace-nowrap" style={{ color: "var(--dt-text-muted)" }}>
                   Ngân hàng
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
+                <th className="px-4 py-2.5 text-left font-medium whitespace-nowrap" style={{ color: "var(--dt-text-muted)" }}>
                   Số tài khoản
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
+                <th className="px-4 py-2.5 text-left font-medium whitespace-nowrap" style={{ color: "var(--dt-text-muted)" }}>
                   Tiền vào
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
+                <th className="px-4 py-2.5 text-left font-medium whitespace-nowrap" style={{ color: "var(--dt-text-muted)" }}>
                   Tiền ra
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600">
+                <th className="px-4 py-2.5 text-left font-medium" style={{ color: "var(--dt-text-muted)" }}>
                   Nội dung
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
+                <th className="px-4 py-2.5 text-left font-medium whitespace-nowrap" style={{ color: "var(--dt-text-muted)" }}>
                   Mã tham chiếu
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
+                <th className="px-4 py-2.5 text-left font-medium whitespace-nowrap" style={{ color: "var(--dt-text-muted)" }}>
                   Khách hàng
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-600 whitespace-nowrap">
+                <th className="px-4 py-2.5 text-left font-medium whitespace-nowrap" style={{ color: "var(--dt-text-muted)" }}>
                   Trạng thái
                 </th>
-                <th className="px-4 py-2.5 text-right font-medium text-gray-600 whitespace-nowrap">
+                <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap" style={{ color: "var(--dt-text-muted)" }}>
                   Thao tác
                 </th>
               </tr>
@@ -329,14 +348,14 @@ export default function BienDongSoDuPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={10} className="px-4 py-10 text-center" style={{ color: "var(--dt-text-muted)" }}>
                     <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
                     Đang tải...
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={10} className="px-4 py-10 text-center" style={{ color: "var(--dt-text-muted)" }}>
                     Không có giao dịch nào
                   </td>
                 </tr>
@@ -347,25 +366,26 @@ export default function BienDongSoDuPage() {
                   return (
                     <tr
                       key={tx.id}
-                      className="border-b hover:bg-gray-50 transition-colors">
+                      className="border-b dt-row transition-colors"
+                      style={{ borderColor: "var(--dt-border)" }}>
                       <td className="px-4 py-2.5 leading-tight">
                         <div>{formatDateParts(tx.transactionDate).time}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs" style={{ color: "var(--dt-text-muted)" }}>
                           {formatDateParts(tx.transactionDate).date}
                         </div>
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap">{tx.bankBrandName || "-"}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">{tx.accountNumber || "-"}</td>
-                      <td className="px-4 py-2.5 text-left font-medium text-green-600 whitespace-nowrap">
+                      <td className="px-4 py-2.5 whitespace-nowrap dt-mono">{tx.accountNumber || "-"}</td>
+                      <td className="px-4 py-2.5 text-left font-medium text-green-600 whitespace-nowrap dt-mono">
                         {amountIn > 0 ? `+${formatCurrency(amountIn)}` : "-"}
                       </td>
-                      <td className="px-4 py-2.5 text-left font-medium text-red-600 whitespace-nowrap">
+                      <td className="px-4 py-2.5 text-left font-medium text-red-600 whitespace-nowrap dt-mono">
                         {amountOut > 0 ? `-${formatCurrency(amountOut)}` : "-"}
                       </td>
                       <td className="px-4 py-2.5 w-[220px] max-w-[220px] break-words whitespace-normal align-top">
                         {tx.transactionContent || "-"}
                       </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">{tx.referenceNumber || "-"}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap dt-mono">{tx.referenceNumber || "-"}</td>
                       <td className="px-4 py-2.5 w-[150px] max-w-[150px] break-words whitespace-normal align-top">
                         <SepayCustomerCell tx={tx} />
                       </td>
@@ -384,8 +404,10 @@ export default function BienDongSoDuPage() {
         </div>
 
         {/* Pagination */}
-        <div className="p-3 border-t bg-white flex items-center justify-between">
-          <div className="text-sm text-gray-500">
+        <div
+          className="p-3 border-t bg-white flex items-center justify-between"
+          style={{ borderColor: "var(--dt-border)" }}>
+          <div className="text-sm" style={{ color: "var(--dt-text-muted)" }}>
             {isFetching && (
               <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
             )}
@@ -395,16 +417,18 @@ export default function BienDongSoDuPage() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="p-1.5 border rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50">
+              className="dt-icon-btn p-1.5 border rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ borderColor: "var(--dt-border)" }}>
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm text-gray-600">
+            <span className="text-sm dt-mono" style={{ color: "var(--dt-text-secondary)" }}>
               Trang {page} / {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="p-1.5 border rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50">
+              className="dt-icon-btn p-1.5 border rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ borderColor: "var(--dt-border)" }}>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

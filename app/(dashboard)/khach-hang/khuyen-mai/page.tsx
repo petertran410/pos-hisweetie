@@ -41,12 +41,14 @@ export default function PromotionsPage() {
 
   return (
     <PagePermissionGuard resource="promotions" action="view">
-      <div className="h-full w-screen border-t bg-gray-50 p-4">
+      <div
+        className="h-full w-screen border-t p-4"
+        style={{ borderColor: "var(--dt-border)" }}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-semibold">Khuyến mãi</h1>
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm text-white"
+            className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm text-white hover:bg-brand-dark transition-colors"
           >
             <Plus className="h-4 w-4" />
             Tạo chương trình
@@ -54,10 +56,12 @@ export default function PromotionsPage() {
         </div>
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-2">
+          <div
+            className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2"
+            style={{ borderColor: "var(--dt-border)" }}>
             <Search className="h-4 w-4 text-gray-400" />
             <input
-              className="text-sm outline-none"
+              className="text-sm outline-none bg-transparent"
               placeholder="Tìm theo mã / tên..."
               value={search}
               onChange={(e) => {
@@ -67,7 +71,7 @@ export default function PromotionsPage() {
             />
           </div>
           <select
-            className="rounded border border-gray-300 bg-white px-3 py-2 text-sm"
+            className="dt-select dt-select-sm !rounded-lg"
             value={type}
             onChange={(e) => {
               setType(e.target.value);
@@ -82,7 +86,7 @@ export default function PromotionsPage() {
             ))}
           </select>
           <select
-            className="rounded border border-gray-300 bg-white px-3 py-2 text-sm"
+            className="dt-select dt-select-sm !rounded-lg"
             value={status}
             onChange={(e) => {
               setStatus(e.target.value);
@@ -97,7 +101,9 @@ export default function PromotionsPage() {
           </select>
         </div>
 
-        <div className="rounded-lg border bg-white">
+        <div
+          className="rounded-xl border bg-white"
+          style={{ borderColor: "var(--dt-border)" }}>
           <PromotionsTable
             promotions={promotions}
             loading={isLoading}
@@ -110,17 +116,17 @@ export default function PromotionsPage() {
             <button
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="rounded border px-3 py-1 disabled:opacity-40"
+              className="dt-btn-ghost rounded-lg px-3 py-1 disabled:opacity-40"
             >
               Trước
             </button>
-            <span>
+            <span className="dt-mono">
               {page} / {totalPages}
             </span>
             <button
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="rounded border px-3 py-1 disabled:opacity-40"
+              className="dt-btn-ghost rounded-lg px-3 py-1 disabled:opacity-40"
             >
               Sau
             </button>

@@ -56,22 +56,24 @@ export function MiniCalendar({
     vm === 11 ? (setVm(0), setVy((y) => y + 1)) : setVm((m) => m + 1);
 
   return (
-    <div className="mt-2 bg-white border border-gray-200 rounded-xl p-3 shadow-sm select-none">
+    <div
+      className="mt-2 bg-white border rounded-xl p-3 shadow-sm select-none"
+      style={{ borderColor: "var(--dt-border)" }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <button
           type="button"
           onClick={prev}
-          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          className="dt-icon-btn p-1 rounded-lg transition-colors">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-semibold text-gray-800">
+        <span className="text-sm font-semibold" style={{ color: "var(--dt-text)" }}>
           {MONTH_NAMES[vm]} {vy}
         </span>
         <button
           type="button"
           onClick={next}
-          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          className="dt-icon-btn p-1 rounded-lg transition-colors">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -81,7 +83,8 @@ export function MiniCalendar({
         {DAY_NAMES.map((d) => (
           <div
             key={d}
-            className="text-center text-[10px] font-medium text-gray-400 py-0.5">
+            className="text-center text-[10px] font-medium py-0.5"
+            style={{ color: "var(--dt-text-muted)" }}>
             {d}
           </div>
         ))}
@@ -108,16 +111,21 @@ export function MiniCalendar({
                 onChange(ds);
                 onClose();
               }}
-              className={[
-                "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
+              className="dt-cal-cell aspect-square text-xs rounded-lg flex items-center justify-center transition-colors"
+              data-plain={!isSel && !isToday && !isDisabled}
+              style={
                 isSel
-                  ? "bg-blue-600 text-white font-bold"
+                  ? { background: "var(--dt-primary)", color: "#fff", fontWeight: 700 }
                   : isToday
-                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
+                    ? {
+                        border: "1px solid var(--dt-primary)",
+                        color: "var(--dt-primary)",
+                        fontWeight: 600,
+                      }
                     : isDisabled
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
-              ].join(" ")}>
+                      ? { color: "var(--dt-border)", cursor: "not-allowed" }
+                      : { color: "var(--dt-text-secondary)", cursor: "pointer" }
+              }>
               {day}
             </button>
           );
@@ -125,14 +133,17 @@ export function MiniCalendar({
       </div>
 
       {/* Footer */}
-      <div className="flex justify-between mt-2 pt-2 border-t border-gray-100">
+      <div
+        className="flex justify-between mt-2 pt-2 border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <button
           type="button"
           onClick={() => {
             onChange("");
             onClose();
           }}
-          className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100 transition-colors">
+          className="dt-icon-btn text-xs px-2 py-1 rounded transition-colors"
+          style={{ color: "var(--dt-text-muted)" }}>
           Xóa
         </button>
         <button
@@ -141,7 +152,8 @@ export function MiniCalendar({
             onChange(todayObj.toISOString().split("T")[0]);
             onClose();
           }}
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors">
+          className="text-xs font-medium px-2 py-1 rounded transition-colors"
+          style={{ color: "var(--dt-primary)" }}>
           Hôm nay
         </button>
       </div>

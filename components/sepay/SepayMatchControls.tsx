@@ -20,7 +20,10 @@ const STATUS_BADGE: Record<
   { label: string; cls: string }
 > = {
   processing: { label: "Đang xử lý", cls: "bg-amber-100 text-amber-700" },
-  assigned: { label: "Đã xác nhận KH", cls: "bg-blue-100 text-blue-700" },
+  assigned: {
+    label: "Đã xác nhận KH",
+    cls: "bg-[var(--dt-cyan-bg)] text-[var(--dt-primary)]",
+  },
   completed: { label: "Hoàn thành", cls: "bg-green-100 text-green-700" },
 };
 
@@ -37,12 +40,12 @@ export function SepayStatusBadge({ status }: { status?: string | null }) {
 /** Ô hiển thị khách hàng (link nếu có code) */
 export function SepayCustomerCell({ tx }: { tx: SepayTransaction }) {
   const cust = tx.match?.customer;
-  if (!cust) return <span className="text-gray-400">-</span>;
+  if (!cust) return <span style={{ color: "var(--dt-text-muted)" }}>-</span>;
   if (cust.code) {
     return (
       <div className="flex flex-col">
         <CodeLink entity="customer" code={cust.code} />
-        <span className="text-xs text-gray-500 break-words">
+        <span className="text-xs break-words" style={{ color: "var(--dt-text-muted)" }}>
           {cust.name}
         </span>
       </div>
@@ -89,24 +92,26 @@ function CustomerPickerModal({
         className="w-full max-w-lg bg-white rounded-xl shadow-2xl flex flex-col max-h-[70vh]"
         onMouseDown={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+        <div
+          className="flex items-center justify-between px-5 py-4 border-b"
+          style={{ borderColor: "var(--dt-border)" }}>
           <div>
-            <h3 className="text-base font-semibold text-gray-800">
+            <h3 className="text-base font-semibold" style={{ color: "var(--dt-text)" }}>
               Gán khách hàng cho giao dịch
             </h3>
-            <p className="text-xs text-gray-500 mt-0.5 max-w-md truncate">
+            <p className="text-xs mt-0.5 max-w-md truncate" style={{ color: "var(--dt-text-muted)" }}>
               {tx.transactionContent || "-"}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+            className="dt-icon-btn p-1.5 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Search */}
-        <div className="px-5 py-3 border-b">
+        <div className="px-5 py-3 border-b" style={{ borderColor: "var(--dt-border)" }}>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -114,7 +119,7 @@ function CustomerPickerModal({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Tìm theo mã hoặc tên khách hàng..."
-              className="pl-9 pr-3 py-2.5 border rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="dt-input !rounded-lg pl-9 w-full"
             />
           </div>
         </div>
@@ -122,12 +127,12 @@ function CustomerPickerModal({
         {/* Results */}
         <div className="flex-1 overflow-auto">
           {isFetching ? (
-            <div className="px-4 py-8 text-center text-gray-400 text-sm">
+            <div className="px-4 py-8 text-center text-sm" style={{ color: "var(--dt-text-muted)" }}>
               <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
               Đang tìm...
             </div>
           ) : customers.length === 0 ? (
-            <div className="px-4 py-8 text-center text-gray-400 text-sm">
+            <div className="px-4 py-8 text-center text-sm" style={{ color: "var(--dt-text-muted)" }}>
               {debounced
                 ? "Không tìm thấy khách hàng"
                 : "Nhập mã hoặc tên để tìm khách hàng"}
@@ -146,12 +151,13 @@ function CustomerPickerModal({
                   onClick={() =>
                     onSelect({ id: c.id, code: c.code, name: c.name })
                   }
-                  className="w-full text-left px-5 py-3 hover:bg-emerald-50 transition-colors border-b last:border-0 flex items-center justify-between gap-3">
+                  className="dt-menu-item w-full text-left px-5 py-3 transition-colors border-b last:border-0 flex items-center justify-between gap-3"
+                  style={{ borderColor: "var(--dt-border)" }}>
                   <div className="min-w-0">
-                    <div className="font-medium text-sm text-gray-800 truncate">
+                    <div className="font-medium text-sm truncate" style={{ color: "var(--dt-text)" }}>
                       {c.name}
                     </div>
-                    <div className="text-xs text-gray-500 truncate">
+                    <div className="text-xs truncate" style={{ color: "var(--dt-text-muted)" }}>
                       {c.code}
                       {c.contactNumber ? ` - ${c.contactNumber}` : ""}
                     </div>
@@ -188,7 +194,7 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
   // Hoàn thành → không còn thao tác (ẩn)
   if (status === "completed") {
     return (
-      <span className="text-xs text-gray-400">
+      <span className="text-xs" style={{ color: "var(--dt-text-muted)" }}>
         {tx.match?.completedSource === "webhook"
           ? "Tự động (webhook)"
           : tx.match?.cashFlow?.code
@@ -219,7 +225,7 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
       showCancelButton: true,
       confirmButtonText: "Tạo phiếu thu",
       cancelButtonText: "Hủy",
-      confirmButtonColor: "#059669",
+      confirmButtonColor: "#00b7cc",
     });
     if (res.isConfirmed) {
       confirmMut.mutate({ id: tx.id, branchId: selectedBranch.id });
@@ -234,7 +240,7 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
           onClick={() => setPickerOpen(true)}
           disabled={assignMut.isPending}
           title={status === "assigned" ? "Đổi khách hàng" : "Gán khách hàng"}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap">
+          className="dt-btn-ghost inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-50 whitespace-nowrap">
           {assignMut.isPending ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
@@ -258,7 +264,7 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
           onClick={() => unassignMut.mutate(tx.id)}
           disabled={unassignMut.isPending}
           title="Bỏ gán khách hàng"
-          className="inline-flex items-center px-2 py-1.5 border rounded-lg text-xs text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50">
+          className="dt-btn-ghost inline-flex items-center px-2 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-50">
           <X className="w-3.5 h-3.5" />
         </button>
       )}
@@ -268,7 +274,7 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
         <button
           onClick={handleConfirm}
           disabled={confirmMut.isPending}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 whitespace-nowrap">
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-brand text-white rounded-lg text-xs font-medium hover:bg-brand-dark transition-colors disabled:opacity-50 whitespace-nowrap">
           {confirmMut.isPending ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
