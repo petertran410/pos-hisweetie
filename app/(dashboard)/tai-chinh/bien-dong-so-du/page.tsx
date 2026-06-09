@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSepayTransactions } from "@/lib/hooks/useSepay";
-import { useBankAccounts } from "@/lib/hooks/useBankAccounts";
+import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { MiniCalendar } from "@/components/ui/MiniCalendar";
 import {
@@ -61,16 +61,27 @@ const EMPTY_FILTERS: Filters = {
 
 export default function BienDongSoDuPage() {
   const [page, setPage] = useState(1);
+  // Mặc định khi vào trang: lọc "Đang xử lý" (processing).
+  // Vẫn ưu tiên query param ?status= nếu có (vd điều hướng từ toast thông báo).
+  const initialFilters: Filters = (() => {
+    const defaults: Filters = { ...EMPTY_FILTERS, status: "processing" };
+    if (typeof window === "undefined") return defaults;
+    const st = new URLSearchParams(window.location.search).get("status");
+    if (st === "processing" || st === "assigned" || st === "completed") {
+      return { ...EMPTY_FILTERS, status: st };
+    }
+    return defaults;
+  })();
   // Filter đang nhập trên form
-  const [draft, setDraft] = useState<Filters>(EMPTY_FILTERS);
+  const [draft, setDraft] = useState<Filters>(initialFilters);
   // Filter đã áp dụng (gửi lên API)
-  const [applied, setApplied] = useState<Filters>(EMPTY_FILTERS);
+  const [applied, setApplied] = useState<Filters>(initialFilters);
   // Lịch đang mở: "from" | "to" | null
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
   const dateBoxRef = useRef<HTMLDivElement>(null);
 
   // Danh sách tài khoản ngân hàng cho dropdown filter
-  const { data: bankAccountsData } = useBankAccounts();
+  const { data: bankAccountsData } = useBankAccountsForPayment();
   const bankAccounts: Array<{
     id: number;
     accountNumber: string;

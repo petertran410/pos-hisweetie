@@ -94,4 +94,16 @@ export const sepayApi = {
   ): Promise<{ success: boolean; cashFlow: { id: number; code: string } | null }> => {
     return apiClient.post(`/sepay/transactions/${id}/confirm`, data);
   },
+  /** Tổng hợp giao dịch cần xử lý (cho thông báo sale) */
+  getPendingSummary: (): Promise<{
+    count: number;
+    latestId: number | null;
+    latest: {
+      amountIn: string;
+      accountNumber: string | null;
+      bankBrandName: string | null;
+    } | null;
+  }> => {
+    return apiClient.get(`/sepay/transactions/pending`);
+  },
 };

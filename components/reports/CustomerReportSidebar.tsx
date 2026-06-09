@@ -362,6 +362,9 @@ export function CustomerReportSidebar({
   const [soldById, setSoldById] = useState("");
   const [saleChannelId, setSaleChannelId] = useState("");
 
+  // "Hàng bán theo khách" không dùng lọc theo kênh bán hàng
+  const showSaleChannel = reportType !== "product-by-customer";
+
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState("this_week");
   const [fromDate, setFromDate] = useState("");
@@ -401,9 +404,16 @@ export function CustomerReportSidebar({
     if (customerId) n++;
     if (customerGroupId) n++;
     if (soldById) n++;
-    if (saleChannelId) n++;
+    if (saleChannelId && showSaleChannel) n++;
     return n;
-  }, [branchId, customerId, customerGroupId, soldById, saleChannelId]);
+  }, [
+    branchId,
+    customerId,
+    customerGroupId,
+    soldById,
+    saleChannelId,
+    showSaleChannel,
+  ]);
 
   // Click outside customer dropdown
   useEffect(() => {
@@ -449,7 +459,8 @@ export function CustomerReportSidebar({
       if (customerId) f.customerId = parseInt(customerId);
       if (customerGroupId) f.customerGroupId = parseInt(customerGroupId);
       if (soldById) f.soldById = parseInt(soldById);
-      if (saleChannelId) f.saleChannelId = parseInt(saleChannelId);
+      if (saleChannelId && showSaleChannel)
+        f.saleChannelId = parseInt(saleChannelId);
 
       const range =
         dateMode === "preset"
@@ -475,6 +486,7 @@ export function CustomerReportSidebar({
     customerGroupId,
     soldById,
     saleChannelId,
+    showSaleChannel,
     dateMode,
     selectedPreset,
     fromDate,
@@ -802,22 +814,24 @@ export function CustomerReportSidebar({
         </div>
 
         {/* ── Kênh bán hàng ── */}
-        <div>
-          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-            Kênh bán hàng
-          </label>
-          <select
-            value={saleChannelId}
-            onChange={(e) => setSaleChannelId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
-            <option value="">Tất cả</option>
-            {(saleChannels || []).map((s: any) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {showSaleChannel && (
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+              Kênh bán hàng
+            </label>
+            <select
+              value={saleChannelId}
+              onChange={(e) => setSaleChannelId(e.target.value)}
+              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              <option value="">Tất cả</option>
+              {(saleChannels || []).map((s: any) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
     </aside>
   );

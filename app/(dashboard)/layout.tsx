@@ -3,6 +3,7 @@
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
+import { SepayPendingNotifier } from "@/components/sepay/SepayPendingNotifier";
 
 export default function DashboardLayout({
   children,
@@ -16,6 +17,7 @@ export default function DashboardLayout({
           <DashboardHeader />
           <main className="flex-1 overflow-hidden">{children}</main>
         </div>
+        <SepayPendingNotifier />
       </RouteGuard>
     </ProtectedRoute>
   );
