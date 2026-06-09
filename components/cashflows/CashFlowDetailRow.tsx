@@ -504,7 +504,7 @@ export function CashFlowDetailRow({
                     ) : (
                       <>
                         {mergedInvoices.length > 0 && (
-                          <div className="border rounded-[8px] overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
+                          <div className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
                             <table className="w-full">
                               <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                 <tr>
@@ -680,7 +680,7 @@ export function CashFlowDetailRow({
                             <p className="text-sm font-semibold mb-2" style={{ color: "var(--dt-text-secondary)" }}>
                               Đơn hàng liên quan
                             </p>
-                            <div className="border rounded-[8px] overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
+                            <div className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
                               <table className="w-full">
                                 <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                   <tr>
@@ -780,7 +780,7 @@ export function CashFlowDetailRow({
                             <p className="text-sm font-semibold mb-2" style={{ color: "var(--dt-text-secondary)" }}>
                               Phiếu nhập hàng liên quan
                             </p>
-                            <div className="border rounded-[8px] overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
+                            <div className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
                               <table className="w-full">
                                 <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                   <tr>
@@ -887,7 +887,7 @@ export function CashFlowDetailRow({
                             <p className="text-sm font-semibold mb-2" style={{ color: "var(--dt-text-secondary)" }}>
                               Phiếu đặt hàng nhập liên quan
                             </p>
-                            <div className="border rounded-[8px] overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
+                            <div className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
                               <table className="w-full">
                                 <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                   <tr>

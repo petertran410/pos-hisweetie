@@ -85,7 +85,7 @@ function SimpleDropdown({
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400"
         } bg-white`}>
         <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
@@ -121,12 +121,12 @@ function SimpleDropdown({
               }}
               className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
                 opt.value === value
-                  ? "bg-blue-50 text-blue-700 font-medium"
+                  ? "bg-brand-soft text-brand-dark font-medium"
                   : "hover:bg-gray-50 text-gray-700"
               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
               <span className="truncate">{opt.label}</span>
               {opt.value === value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
               )}
             </button>
           ))}
@@ -167,7 +167,7 @@ function StockDropdown({
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400"
         } bg-white`}>
         <div className="flex items-center gap-2 min-w-0">
@@ -214,7 +214,7 @@ function StockDropdown({
                 setOpen(false);
               }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
-                value === opt.value ? "bg-blue-50" : "hover:bg-gray-50"
+                value === opt.value ? "bg-brand-soft" : "hover:bg-gray-50"
               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
               <span
                 className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dot}`}
@@ -224,7 +224,7 @@ function StockDropdown({
                 {opt.label}
               </span>
               {value === opt.value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
               )}
             </button>
           ))}
@@ -320,7 +320,7 @@ function PriceBookPanel({
           <h3 className="text-sm font-semibold text-gray-800">Chọn bảng giá</h3>
           <p className="text-[11px] text-gray-400 mt-0.5">
             Đã chọn{" "}
-            <span className="font-semibold text-blue-600">
+            <span className="font-semibold text-brand">
               {selectedIds.length}
             </span>{" "}
             / {allIds.length}
@@ -344,7 +344,7 @@ function PriceBookPanel({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             autoFocus
-            className="w-full bg-white border border-gray-200 rounded-lg pl-8 pr-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
+            className="w-full bg-white border border-gray-200 rounded-lg pl-8 pr-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand transition-all"
           />
         </div>
 
@@ -356,7 +356,7 @@ function PriceBookPanel({
               onChange={(e) =>
                 e.target.checked ? onSelectAll() : onDeselectAll()
               }
-              className="w-4 h-4 rounded accent-blue-600 cursor-pointer flex-shrink-0"
+              className="w-4 h-4 rounded accent-brand cursor-pointer flex-shrink-0"
             />
             <span className="text-xs font-medium text-gray-600">
               Chọn tất cả
@@ -368,7 +368,7 @@ function PriceBookPanel({
               onCreateNew();
               onClose();
             }}
-            className="text-xs font-medium text-blue-600 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50 transition-colors flex-shrink-0">
+            className="text-xs font-medium text-brand hover:text-brand-dark px-2 py-1 rounded hover:bg-brand-soft transition-colors flex-shrink-0">
             + Tạo mới
           </button>
         </div>
@@ -378,20 +378,20 @@ function PriceBookPanel({
       <div className="overflow-y-auto" style={{ maxHeight: 360 }}>
         {matchDefault && (
           <label
-            className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-blue-50 transition-colors select-none ${
-              selectedIds.includes(0) ? "bg-blue-50" : ""
+            className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-brand-soft transition-colors select-none ${
+              selectedIds.includes(0) ? "bg-brand-soft" : ""
             }`}>
             <input
               type="checkbox"
               checked={selectedIds.includes(0)}
               onChange={() => onToggle(0)}
-              className="w-4 h-4 rounded accent-blue-600 cursor-pointer flex-shrink-0"
+              className="w-4 h-4 rounded accent-brand cursor-pointer flex-shrink-0"
             />
             <span className="text-sm font-semibold text-gray-800 flex-1">
               Bảng giá chung
             </span>
             {selectedIds.includes(0) && (
-              <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <Check className="w-4 h-4 text-brand flex-shrink-0" />
             )}
           </label>
         )}
@@ -404,20 +404,20 @@ function PriceBookPanel({
           filtered?.map((pb) => (
             <label
               key={pb.id}
-              className={`group flex items-center gap-3 px-4 py-2.5 border-t border-gray-50 cursor-pointer hover:bg-blue-50 transition-colors select-none ${
-                selectedIds.includes(pb.id) ? "bg-blue-50" : ""
+              className={`group flex items-center gap-3 px-4 py-2.5 border-t border-gray-50 cursor-pointer hover:bg-brand-soft transition-colors select-none ${
+                selectedIds.includes(pb.id) ? "bg-brand-soft" : ""
               }`}>
               <input
                 type="checkbox"
                 checked={selectedIds.includes(pb.id)}
                 onChange={() => onToggle(pb.id)}
-                className="w-4 h-4 rounded accent-blue-600 cursor-pointer flex-shrink-0"
+                className="w-4 h-4 rounded accent-brand cursor-pointer flex-shrink-0"
               />
               <span className="text-sm text-gray-700 flex-1 break-words">
                 {pb.name}
               </span>
               {selectedIds.includes(pb.id) && (
-                <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                <Check className="w-4 h-4 text-brand flex-shrink-0" />
               )}
               {onEditPriceBook && (
                 <button
@@ -428,7 +428,7 @@ function PriceBookPanel({
                     onEditPriceBook(pb);
                     onClose();
                   }}
-                  className="p-1 rounded hover:bg-blue-100 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  className="p-1 rounded hover:bg-brand-soft text-gray-400 hover:text-brand opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                   title="Sửa bảng giá">
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -581,7 +581,7 @@ export function PriceBookSidebar({
         {activeFilterCount > 0 && (
           <button
             onClick={clearAll}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            className="text-sm text-brand hover:text-brand-dark font-medium">
             Xóa tất cả
           </button>
         )}
@@ -617,9 +617,9 @@ export function PriceBookSidebar({
             }}
             className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg border cursor-pointer transition-all select-none ${
               showPanel
-                ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100"
+                ? "border-brand bg-brand-soft ring-2 ring-brand-soft"
                 : selectedIds.length > 0
-                  ? "border-blue-200 bg-blue-50/50 hover:border-blue-300"
+                  ? "border-brand-border bg-brand-soft hover:border-brand"
                   : "border-gray-200 hover:border-gray-300"
             }`}>
             <div className="flex flex-col flex-1 min-w-0">
@@ -634,7 +634,7 @@ export function PriceBookSidebar({
             </div>
             <ChevronRight
               className={`w-4 h-4 transition-colors flex-shrink-0 ${
-                showPanel ? "text-blue-500" : "text-gray-400"
+                showPanel ? "text-brand" : "text-gray-400"
               }`}
             />
           </div>

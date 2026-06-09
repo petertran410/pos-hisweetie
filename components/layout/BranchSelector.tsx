@@ -168,7 +168,7 @@ export function BranchSelector({
               onClick={() => handleSelectBranch(branch)}
               className={`w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center justify-between ${
                 selectedBranch?.id === branch.id
-                  ? "bg-blue-50 text-blue-600"
+                  ? "bg-brand-soft text-brand"
                   : ""
               }`}>
               <span className="text-sm">{branch.name}</span>

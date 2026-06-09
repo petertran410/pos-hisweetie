@@ -22,7 +22,7 @@ export default function GiaoHangPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <PackingSlipForm
         key={formKey}
         onClose={() => router.push("/bao-don")}

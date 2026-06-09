@@ -59,7 +59,7 @@ function SupplierOrderCell({
     <button
       type="button"
       onClick={() => onOpen(branch)}
-      className="text-blue-600 hover:underline font-medium">
+      className="text-brand hover:underline font-medium">
       {total.toLocaleString()}
     </button>
   );
@@ -95,7 +95,7 @@ function CustomerOrderCell({
     <button
       type="button"
       onClick={() => onOpen(branch)}
-      className="text-blue-600 hover:underline font-medium">
+      className="text-brand hover:underline font-medium">
       {total.toLocaleString()}
     </button>
   );
@@ -192,7 +192,7 @@ export function ProductDetailRow({
       <tr>
         <td colSpan={colSpan}>
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
             <span className="ml-2 text-sm text-gray-500">
               Đang tải chi tiết...
             </span>
@@ -321,7 +321,7 @@ export function ProductDetailRow({
     <tr>
       <td
         colSpan={colSpan}
-        className="border-b-2 border-l-2 border-r-2 border-blue-500 p-0"
+        className="border-b-2 border-l-2 border-r-2 border-brand p-0"
         style={{ width: 0 }}>
         <div ref={wrapperRef} className="sticky left-0">
           <div className="px-5 pb-5">
@@ -333,7 +333,7 @@ export function ProductDetailRow({
                   onClick={() => setActiveTab(t.key as any)}
                   className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === t.key
-                      ? "border-blue-600 text-blue-600"
+                      ? "border-brand text-brand"
                       : "border-transparent text-gray-600 hover:text-gray-900"
                   }`}>
                   {t.label}
@@ -385,7 +385,7 @@ export function ProductDetailRow({
                         {getProductTypeLabel(product.type)}
                       </span>
                       {product.isDirectSale && (
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                        <span className="px-2 py-0.5 bg-brand-soft text-brand-dark rounded text-xs font-medium">
                           Bán trực tiếp
                         </span>
                       )}
@@ -524,7 +524,7 @@ export function ProductDetailRow({
                                     <Link
                                       href={`/san-pham/danh-sach?Code=${cp?.code}`}
                                       target="_blank"
-                                      className="text-blue-600 hover:underline"
+                                      className="text-brand hover:underline"
                                       onClick={(e) => e.stopPropagation()}>
                                       {cp?.code || "-"}
                                     </Link>
@@ -828,7 +828,7 @@ export function ProductDetailRow({
                 {canUpdate && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors flex items-center gap-1.5">
+                    className="px-4 py-2 text-sm font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors flex items-center gap-1.5">
                     Chỉnh sửa
                   </button>
                 )}

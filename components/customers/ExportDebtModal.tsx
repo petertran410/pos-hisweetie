@@ -118,8 +118,8 @@ export function ExportDebtModal({
                   onClick={() => setPreset(p.value)}
                   className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
                     preset === p.value
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                      ? "bg-brand text-white border-brand"
+                      : "bg-white text-gray-600 border-gray-300 hover:border-brand"
                   }`}>
                   {p.label}
                 </button>
@@ -129,8 +129,8 @@ export function ExportDebtModal({
                 onClick={() => setPreset("custom")}
                 className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
                   preset === "custom"
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                    ? "bg-brand text-white border-brand"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-brand"
                 }`}>
                 Lựa chọn khác
               </button>
@@ -152,11 +152,11 @@ export function ExportDebtModal({
                         onClick={() => setOpenCal(isOpen ? null : field)}
                         className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 border rounded-lg text-sm transition-all ${
                           val
-                            ? "border-blue-300 bg-blue-50 text-gray-800"
+                            ? "border-brand bg-brand-soft text-gray-800"
                             : "border-gray-200 text-gray-400"
                         } ${
                           isOpen
-                            ? "ring-2 ring-blue-100 border-blue-400"
+                            ? "ring-2 ring-brand-soft border-brand"
                             : "hover:border-gray-300"
                         }`}>
                         <span className="truncate">
@@ -219,7 +219,7 @@ export function ExportDebtModal({
                   type="checkbox"
                   checked={includeDetails}
                   onChange={(e) => setIncludeDetails(e.target.checked)}
-                  className="mt-0.5 accent-blue-600"
+                  className="mt-0.5 accent-brand"
                 />
                 <div>
                   <p className="text-sm font-medium text-gray-700">
@@ -241,7 +241,7 @@ export function ExportDebtModal({
                         type="checkbox"
                         checked={cb.value}
                         onChange={(e) => cb.onChange(e.target.checked)}
-                        className="accent-blue-600"
+                        className="accent-brand"
                       />
                       <span className="text-sm text-gray-700">{cb.label}</span>
                     </label>
@@ -262,7 +262,7 @@ export function ExportDebtModal({
           <button
             onClick={handleConfirm}
             disabled={isExporting}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50 flex items-center gap-2">
             {isExporting && <Loader2 className="w-4 h-4 animate-spin" />}
             Đồng ý
           </button>

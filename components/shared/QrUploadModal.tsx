@@ -85,7 +85,7 @@ export function QrUploadModal({
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div className="flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-blue-600" />
+            <Smartphone className="w-5 h-5 text-brand" />
             <h2 className="text-lg font-semibold">Upload bằng điện thoại</h2>
           </div>
           <button
@@ -110,7 +110,7 @@ export function QrUploadModal({
                 <p className="text-sm text-red-600 mb-3">{error}</p>
                 <button
                   onClick={createSession}
-                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline">
+                  className="inline-flex items-center gap-1 text-sm text-brand hover:underline">
                   <RefreshCw className="w-4 h-4" /> Thử lại
                 </button>
               </div>
@@ -129,7 +129,7 @@ export function QrUploadModal({
                 </p>
                 <button
                   onClick={createSession}
-                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline">
+                  className="inline-flex items-center gap-1 text-sm text-brand hover:underline">
                   <RefreshCw className="w-4 h-4" /> Tạo mã mới
                 </button>
               </div>
@@ -145,7 +145,7 @@ export function QrUploadModal({
 
           <button
             onClick={handleClose}
-            className="mt-5 w-full px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            className="mt-5 w-full px-4 py-2.5 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark">
             Xong
           </button>
         </div>

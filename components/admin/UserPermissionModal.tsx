@@ -388,7 +388,7 @@ export function UserPermissionModal({
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto" />
         </div>
       </div>
     );
@@ -414,7 +414,7 @@ export function UserPermissionModal({
             onClick={() => setActiveTab("role")}
             className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "role"
-                ? "border-blue-600 text-blue-600"
+                ? "border-brand text-brand"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}>
             Phân quyền theo vai trò
@@ -423,7 +423,7 @@ export function UserPermissionModal({
             onClick={() => setActiveTab("other")}
             className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "other"
-                ? "border-blue-600 text-blue-600"
+                ? "border-brand text-brand"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}>
             Phân quyền khác
@@ -441,13 +441,13 @@ export function UserPermissionModal({
                   onClick={() => handleBranchChange(branch.id)}
                   className={`w-full text-left px-4 py-3 border-b transition-colors ${
                     selectedBranchId === branch.id
-                      ? "bg-blue-50 border-l-4 border-l-blue-600"
+                      ? "bg-brand-soft border-l-4 border-l-brand"
                       : "hover:bg-gray-100 border-l-4 border-l-transparent"
                   }`}>
                   <div
                     className={`text-sm font-medium ${
                       selectedBranchId === branch.id
-                        ? "text-blue-600"
+                        ? "text-brand"
                         : "text-gray-900"
                     }`}>
                     {branch.name}
@@ -505,11 +505,11 @@ export function UserPermissionModal({
                             type="button"
                             onClick={() => handleBranchRoleChange(role.id)}
                             className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm flex items-center gap-2 ${
-                              isSelected ? "text-blue-600 font-medium" : ""
+                              isSelected ? "text-brand font-medium" : ""
                             }`}>
                             <div className="w-4 flex-shrink-0">
                               {isSelected && (
-                                <Check className="w-3.5 h-3.5 text-blue-600" />
+                                <Check className="w-3.5 h-3.5 text-brand" />
                               )}
                             </div>
                             <span>{role.name}</span>
@@ -530,7 +530,7 @@ export function UserPermissionModal({
                     placeholder="Tìm phân quyền..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 pr-4 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="pl-9 pr-4 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand"
                   />
                 </div>
               </div>
@@ -542,7 +542,7 @@ export function UserPermissionModal({
                   className="flex-1 overflow-y-auto px-6 py-4">
                   {isLoadingBranch ? (
                     <div className="flex items-center justify-center h-32">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
                     </div>
                   ) : (
                     Object.entries(filteredPermissions || {}).map(
@@ -596,9 +596,9 @@ export function UserPermissionModal({
                                       }
                                       className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border mr-3 ${
                                         allSelected
-                                          ? "bg-blue-600 border-blue-600"
+                                          ? "bg-brand border-brand"
                                           : someSelected
-                                            ? "bg-blue-200 border-blue-400"
+                                            ? "bg-brand-border border-brand"
                                             : "border-gray-300"
                                       }`}>
                                       {(allSelected || someSelected) && (
@@ -646,7 +646,7 @@ export function UserPermissionModal({
                                                     isActive
                                                       ? isOverride
                                                         ? "bg-green-600 border-green-600"
-                                                        : "bg-blue-600 border-blue-600"
+                                                        : "bg-brand border-brand"
                                                       : "border-gray-300"
                                                   }`}>
                                                   {isActive && (
@@ -691,7 +691,7 @@ export function UserPermissionModal({
                                                       isActive
                                                         ? isOverride
                                                           ? "bg-green-600 border-green-600"
-                                                          : "bg-blue-600 border-blue-600"
+                                                          : "bg-brand border-brand"
                                                         : "border-gray-300"
                                                     }`}>
                                                     {isActive && (
@@ -729,7 +729,7 @@ export function UserPermissionModal({
                       onClick={() => scrollToCategory(category)}
                       className={`w-full text-left px-3 py-1.5 text-sm rounded transition-colors mb-0.5 ${
                         activeCategory === category
-                          ? "text-blue-600 font-medium border-l-2 border-blue-600 bg-blue-50"
+                          ? "text-brand font-medium border-l-2 border-brand bg-brand-soft"
                           : "text-gray-600 hover:bg-gray-50"
                       }`}>
                       {category}

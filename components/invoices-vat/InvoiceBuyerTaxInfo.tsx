@@ -93,7 +93,7 @@ export function InvoiceBuyerTaxInfo({
               onClick={handleTaxLookup}
               disabled={taxLookup.isPending}
               title="Tra cứu thông tin từ mã số thuế"
-              className="px-3 py-1.5 sm:py-2 border rounded text-sm font-medium text-blue-600 border-blue-200 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
+              className="px-3 py-1.5 sm:py-2 border rounded text-sm font-medium text-brand border-brand-border hover:bg-brand-soft disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap">
               {taxLookup.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (

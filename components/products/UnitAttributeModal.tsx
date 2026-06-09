@@ -74,7 +74,7 @@ export function UnitAttributeModal({
             <button
               type="button"
               onClick={() => setShowAddUnit(true)}
-              className="px-4 py-2 text-blue-600 border border-blue-600 rounded hover:bg-blue-50">
+              className="px-4 py-2 text-brand border border-brand rounded hover:bg-brand-soft">
               + Thêm đơn vị
             </button>
           </div>
@@ -121,7 +121,7 @@ export function UnitAttributeModal({
             <button
               type="button"
               onClick={() => setShowAddAttribute(true)}
-              className="text-blue-600 hover:underline text-sm">
+              className="text-brand hover:underline text-sm">
               + Thêm thuộc tính
             </button>
           </div>
@@ -136,7 +136,7 @@ export function UnitAttributeModal({
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark">
             Xong
           </button>
         </div>
@@ -190,12 +190,12 @@ export function UnitAttributeModal({
               </button>
               <button
                 onClick={() => setShowAddUnit(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark">
                 Xong & Thêm mới
               </button>
               <button
                 onClick={() => setShowAddUnit(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark">
                 Xong
               </button>
             </div>
@@ -227,7 +227,7 @@ export function UnitAttributeModal({
                 {newAttributeName && (
                   <button
                     onClick={() => addAttribute(newAttributeName)}
-                    className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    className="w-full px-3 py-2 bg-brand text-white rounded hover:bg-brand-dark">
                     Thêm "{newAttributeName}"
                   </button>
                 )}

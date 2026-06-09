@@ -118,12 +118,12 @@ export function CustomerSearch({
                 {/* MOBILE: tách 2 dòng, cho phép wrap */}
                 <div className="lg:hidden flex-1 min-w-0 pl-1">
                   <div
-                    className={`text-sm hover:underline break-words ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-blue-600"}`}>
+                    className={`text-sm hover:underline break-words ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-brand"}`}>
                     {selectedCustomer.name}
                   </div>
                   {selectedCustomer.contactNumber && (
                     <div
-                      className={`text-xs hover:underline break-words ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-blue-600"}`}>
+                      className={`text-xs hover:underline break-words ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-brand"}`}>
                       {selectedCustomer.contactNumber}
                     </div>
                   )}
@@ -131,7 +131,7 @@ export function CustomerSearch({
 
                 {/* DESKTOP: giữ NGUYÊN logic cũ */}
                 <span
-                  className={`hidden lg:inline hover:underline text-md pl-1 ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-blue-600"}`}>
+                  className={`hidden lg:inline hover:underline text-md pl-1 ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-brand"}`}>
                   {selectedCustomer.name} {selectedCustomer.contactNumber}
                 </span>
 
@@ -155,7 +155,7 @@ export function CustomerSearch({
                       Mã: {customer.code || "Chưa có mã"}
                     </div>
                     <div className="flex items-center gap-4 mt-1">
-                      <span className="text-xs text-blue-600">
+                      <span className="text-xs text-brand">
                         {customer.contactNumber || "Chưa có SĐT"}
                       </span>
                     </div>

@@ -165,7 +165,7 @@ export function MultiPaymentModal({
         <div className="space-y-3 lg:space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-base lg:text-lg">Số tiền</span>
-            <span className="text-xl lg:text-2xl font-bold text-blue-600">
+            <span className="text-xl lg:text-2xl font-bold text-brand">
               {getTotalPaid().toLocaleString()}
             </span>
           </div>
@@ -175,7 +175,7 @@ export function MultiPaymentModal({
             value={displayAmount}
             onChange={handleAmountChange}
             placeholder="Nhập số tiền"
-            className="w-full border rounded-lg px-3 lg:px-4 py-2 lg:py-3 text-base lg:text-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 lg:px-4 py-2 lg:py-3 text-base lg:text-lg text-center focus:outline-none focus:ring-2 focus:ring-brand"
           />
 
           <div className="grid grid-cols-4 gap-2">
@@ -198,7 +198,7 @@ export function MultiPaymentModal({
               <button
                 key={method}
                 onClick={() => handleMethodClick(method)}
-                className="border rounded-lg py-2 lg:py-3 text-sm lg:text-base hover:bg-blue-50 hover:border-blue-500">
+                className="border rounded-lg py-2 lg:py-3 text-sm lg:text-base hover:bg-brand-soft hover:border-brand">
                 {methodLabels[method]}
               </button>
             ))}
@@ -217,7 +217,7 @@ export function MultiPaymentModal({
                     <button
                       key={account.id}
                       onClick={() => handleAccountSelect(account.id)}
-                      className="w-full text-left px-3 py-2 border rounded hover:bg-white hover:border-blue-500 transition-colors">
+                      className="w-full text-left px-3 py-2 border rounded hover:bg-white hover:border-brand transition-colors">
                       <div className="font-medium text-sm">
                         {account.bankCode} - {account.accountNumber}
                       </div>
@@ -246,7 +246,7 @@ export function MultiPaymentModal({
           {payments.length > 0 && (
             <div className="border rounded-lg p-3 lg:p-4 space-y-2">
               <div className="font-medium mb-2">Khách cần trả</div>
-              <div className="text-xl lg:text-2xl font-bold text-blue-600 mb-3">
+              <div className="text-xl lg:text-2xl font-bold text-brand mb-3">
                 {totalAmount.toLocaleString()}
               </div>
 
@@ -296,7 +296,7 @@ export function MultiPaymentModal({
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm lg:text-base hover:bg-blue-700">
+            className="flex-1 px-4 py-2 bg-brand text-white rounded-lg text-sm lg:text-base hover:bg-brand-dark">
             Xong
           </button>
         </div>

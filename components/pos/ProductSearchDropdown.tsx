@@ -308,7 +308,7 @@ export function ProductSearchDropdown({
           title="Nhập số lượng bằng bàn phím"
           className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
             showQuantityInput
-              ? "bg-blue-100 text-blue-600"
+              ? "bg-brand-soft text-brand"
               : "text-gray-500 hover:bg-gray-100"
           }`}>
           <Barcode className="w-4 h-4 lg:w-5 lg:h-5" />
@@ -329,7 +329,7 @@ export function ProductSearchDropdown({
                 } else if (currentHighlightedCondition === "near_expiry") {
                   rowRing = "ring-2 ring-inset ring-amber-500";
                 } else {
-                  rowRing = "ring-2 ring-inset ring-blue-500";
+                  rowRing = "ring-2 ring-inset ring-brand";
                 }
               }
 
@@ -370,7 +370,7 @@ export function ProductSearchDropdown({
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className="text-blue-600 font-medium">
+                      <div className="text-price font-semibold">
                         {getDisplayPrice(product).toLocaleString()}
                       </div>
                     </div>

@@ -269,11 +269,11 @@ export function PriceBookImportModal({ onClose }: PriceBookImportModalProps) {
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+                className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:border-brand hover:bg-brand-soft transition-colors">
                 <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
                 <p className="text-sm text-gray-600 mb-1">
                   Kéo thả file Excel vào đây hoặc{" "}
-                  <span className="text-blue-600 font-medium">
+                  <span className="text-brand font-medium">
                     nhấn để chọn file
                   </span>
                 </p>
@@ -289,7 +289,7 @@ export function PriceBookImportModal({ onClose }: PriceBookImportModalProps) {
 
               <button
                 onClick={downloadTemplate}
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
+                className="flex items-center gap-2 text-sm text-brand hover:text-brand-dark font-medium">
                 <Download className="w-4 h-4" />
                 Tải file mẫu Import bảng giá
               </button>
@@ -323,7 +323,7 @@ export function PriceBookImportModal({ onClose }: PriceBookImportModalProps) {
               </div>
 
               {/* Detected price books */}
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+              <div className="p-3 bg-brand-soft border border-brand-border rounded-lg text-sm">
                 <span className="font-medium">
                   Bảng giá phát hiện ({priceBookNames.length}):
                 </span>{" "}
@@ -464,7 +464,7 @@ export function PriceBookImportModal({ onClose }: PriceBookImportModalProps) {
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium">
                 Đóng
               </button>
             </>
@@ -479,7 +479,7 @@ export function PriceBookImportModal({ onClose }: PriceBookImportModalProps) {
                 <button
                   onClick={handleImport}
                   disabled={isImporting || validCount === 0}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 flex items-center gap-2">
+                  className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium disabled:opacity-50 flex items-center gap-2">
                   {isImporting && <Loader2 className="w-4 h-4 animate-spin" />}
                   {isImporting
                     ? "Đang import..."

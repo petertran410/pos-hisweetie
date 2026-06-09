@@ -103,12 +103,12 @@ function SimpleDropdown({
               }}
               className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
                 opt.value === value
-                  ? "bg-blue-50 text-blue-700 font-medium"
+                  ? "bg-brand-soft text-brand-dark font-medium"
                   : "hover:bg-gray-50 text-gray-700"
               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
               <span className="truncate">{opt.label}</span>
               {opt.value === value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
               )}
             </button>
           ))}
@@ -228,7 +228,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
         {activeFilterCount > 0 && (
           <button
             onClick={clearAll}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            className="text-sm text-brand hover:text-brand-dark font-medium">
             Xóa tất cả
           </button>
         )}
@@ -287,7 +287,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
                   }
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                     isActive
-                      ? "bg-blue-100 text-blue-700 border-blue-300"
+                      ? "bg-brand-soft text-brand-dark border-brand"
                       : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                   }`}>
                   {isActive && <Check className="w-3 h-3" />}

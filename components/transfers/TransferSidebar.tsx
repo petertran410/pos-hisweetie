@@ -225,8 +225,8 @@ function PresetPanel({
               }}
               className={`px-3 py-1.5 rounded-full text-sm border transition-all whitespace-nowrap text-left ${
                 selected === opt.value
-                  ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
-                  : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                  ? "bg-brand text-white border-brand font-medium shadow-sm"
+                  : "border-gray-200 text-gray-700 hover:border-brand hover:bg-brand-soft"
               }`}>
               {opt.label}
             </button>
@@ -321,12 +321,12 @@ function MiniCalendar({
               className={[
                 "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
                 isSel
-                  ? "bg-blue-600 text-white font-bold"
+                  ? "bg-brand text-white font-bold"
                   : isToday
-                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
+                    ? "border border-brand text-brand font-semibold hover:bg-brand-soft"
                     : isDisabled
                       ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
+                      : "text-gray-700 hover:bg-brand-soft cursor-pointer",
               ].join(" ")}>
               {day}
             </button>
@@ -349,7 +349,7 @@ function MiniCalendar({
             onChange(todayObj.toISOString().split("T")[0]);
             onClose();
           }}
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors">
+          className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft transition-colors">
           Hôm nay
         </button>
       </div>
@@ -386,7 +386,7 @@ function StatusDropdown({
         role="button"
         tabIndex={0}
         onClick={() => setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${open ? "border-blue-400 ring-2 ring-blue-100" : "hover:border-gray-400"} bg-white`}>
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"} bg-white`}>
         {selected ? (
           <span
             className={`text-xs font-medium px-2 py-0.5 rounded-full ${selected.color}`}>
@@ -407,9 +407,9 @@ function StatusDropdown({
               onChange("");
               setOpen(false);
             }}
-            className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${!value ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-gray-50 text-gray-500"}`}>
+            className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${!value ? "bg-brand-soft text-brand-dark font-medium" : "hover:bg-gray-50 text-gray-500"}`}>
             <span>{placeholder}</span>
-            {!value && <Check className="w-3.5 h-3.5 text-blue-500" />}
+            {!value && <Check className="w-3.5 h-3.5 text-brand" />}
           </button>
           {options.map((opt) => (
             <button
@@ -419,7 +419,7 @@ function StatusDropdown({
                 onChange(value === opt.value ? "" : opt.value);
                 setOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors border-t border-gray-50 ${value === opt.value ? "bg-blue-50" : "hover:bg-gray-50"}`}>
+              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors border-t border-gray-50 ${value === opt.value ? "bg-brand-soft" : "hover:bg-gray-50"}`}>
               <span
                 className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dot}`}
               />
@@ -428,7 +428,7 @@ function StatusDropdown({
                 {opt.label}
               </span>
               {value === opt.value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
               )}
             </button>
           ))}
@@ -471,7 +471,7 @@ function SimpleDropdown({
         role="button"
         tabIndex={0}
         onClick={() => setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${open ? "border-blue-400 ring-2 ring-blue-100" : "hover:border-gray-400"} bg-white`}>
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"} bg-white`}>
         <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
           {selected ? selected.label : placeholder}
         </span>
@@ -487,9 +487,9 @@ function SimpleDropdown({
               onChange("");
               setOpen(false);
             }}
-            className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${!value ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-gray-50 text-gray-500"}`}>
+            className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${!value ? "bg-brand-soft text-brand-dark font-medium" : "hover:bg-gray-50 text-gray-500"}`}>
             <span>{placeholder}</span>
-            {!value && <Check className="w-3.5 h-3.5 text-blue-500" />}
+            {!value && <Check className="w-3.5 h-3.5 text-brand" />}
           </button>
           {options.map((opt) => (
             <button
@@ -499,10 +499,10 @@ function SimpleDropdown({
                 onChange(value === opt.value ? "" : opt.value);
                 setOpen(false);
               }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors border-t border-gray-50 ${value === opt.value ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-gray-50 text-gray-700"}`}>
+              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors border-t border-gray-50 ${value === opt.value ? "bg-brand-soft text-brand-dark font-medium" : "hover:bg-gray-50 text-gray-700"}`}>
               <span className="truncate">{opt.label}</span>
               {value === opt.value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
               )}
             </button>
           ))}
@@ -656,7 +656,7 @@ export function TransferSidebar({
         {activeFilterCount > 0 && (
           <button
             onClick={resetFilters}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            className="text-sm text-brand hover:text-brand-dark font-medium">
             Xóa tất cả
           </button>
         )}
@@ -691,17 +691,17 @@ export function TransferSidebar({
               }}
               className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
                 transferDateMode === "preset"
-                  ? "border-blue-400 bg-blue-50"
+                  ? "border-brand bg-brand-soft"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
               <div
                 className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                   transferDateMode === "preset"
-                    ? "border-blue-600"
+                    ? "border-brand"
                     : "border-gray-300"
                 }`}>
                 {transferDateMode === "preset" && (
-                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                  <div className="w-1 h-1 rounded-full bg-brand" />
                 )}
               </div>
               <span className="text-sm text-gray-700 flex-1 font-medium">
@@ -709,7 +709,7 @@ export function TransferSidebar({
               </span>
               <ChevronRight
                 className={`w-4 h-4 transition-colors flex-shrink-0 ${
-                  activePanel === "transfer" ? "text-blue-500" : "text-gray-400"
+                  activePanel === "transfer" ? "text-brand" : "text-gray-400"
                 }`}
               />
             </div>
@@ -721,17 +721,17 @@ export function TransferSidebar({
               }}
               className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
                 transferDateMode === "custom"
-                  ? "border-blue-400 bg-blue-50"
+                  ? "border-brand bg-brand-soft"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
               <div
                 className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                   transferDateMode === "custom"
-                    ? "border-blue-600"
+                    ? "border-brand"
                     : "border-gray-300"
                 }`}>
                 {transferDateMode === "custom" && (
-                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                  <div className="w-1 h-1 rounded-full bg-brand" />
                 )}
               </div>
               <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
@@ -757,9 +757,9 @@ export function TransferSidebar({
                         onClick={() => setOpenCal(isOpen ? null : calKey)}
                         className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all ${
                           val
-                            ? "border-blue-300 bg-blue-50 text-gray-800"
+                            ? "border-brand bg-brand-soft text-gray-800"
                             : "border-gray-200 text-gray-400"
-                        } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                        } ${isOpen ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
                         <span>
                           {val
                             ? new Date(val + "T00:00:00").toLocaleDateString(
@@ -836,17 +836,17 @@ export function TransferSidebar({
               }}
               className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
                 receiveDateMode === "preset"
-                  ? "border-blue-400 bg-blue-50"
+                  ? "border-brand bg-brand-soft"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
               <div
                 className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                   receiveDateMode === "preset"
-                    ? "border-blue-600"
+                    ? "border-brand"
                     : "border-gray-300"
                 }`}>
                 {receiveDateMode === "preset" && (
-                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                  <div className="w-1 h-1 rounded-full bg-brand" />
                 )}
               </div>
               <span className="text-sm text-gray-700 flex-1 font-medium">
@@ -854,7 +854,7 @@ export function TransferSidebar({
               </span>
               <ChevronRight
                 className={`w-4 h-4 transition-colors flex-shrink-0 ${
-                  activePanel === "receive" ? "text-blue-500" : "text-gray-400"
+                  activePanel === "receive" ? "text-brand" : "text-gray-400"
                 }`}
               />
             </div>
@@ -866,17 +866,17 @@ export function TransferSidebar({
               }}
               className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
                 receiveDateMode === "custom"
-                  ? "border-blue-400 bg-blue-50"
+                  ? "border-brand bg-brand-soft"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
               <div
                 className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                   receiveDateMode === "custom"
-                    ? "border-blue-600"
+                    ? "border-brand"
                     : "border-gray-300"
                 }`}>
                 {receiveDateMode === "custom" && (
-                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                  <div className="w-1 h-1 rounded-full bg-brand" />
                 )}
               </div>
               <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
@@ -902,9 +902,9 @@ export function TransferSidebar({
                         onClick={() => setOpenCal(isOpen ? null : calKey)}
                         className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all ${
                           val
-                            ? "border-blue-300 bg-blue-50 text-gray-800"
+                            ? "border-brand bg-brand-soft text-gray-800"
                             : "border-gray-200 text-gray-400"
-                        } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                        } ${isOpen ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
                         <span>
                           {val
                             ? new Date(val + "T00:00:00").toLocaleDateString(

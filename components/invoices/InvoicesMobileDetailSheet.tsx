@@ -302,7 +302,7 @@ export function InvoicesMobileDetailSheet({
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-20 gap-2">
-              <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+              <Loader2 className="w-5 h-5 animate-spin text-brand" />
               <span className="text-sm text-gray-400">
                 Đang tải thông tin hóa đơn...
               </span>
@@ -409,12 +409,12 @@ export function InvoicesMobileDetailSheet({
                               }}
                               className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors ${
                                 selectedStatus === opt.value
-                                  ? "bg-blue-50 text-blue-600 font-semibold"
+                                  ? "bg-brand-soft text-brand font-semibold"
                                   : "text-gray-700 hover:bg-gray-50"
                               }`}>
                               {opt.label}
                               {selectedStatus === opt.value && (
-                                <span className="text-blue-500 text-xs">✓</span>
+                                <span className="text-brand text-xs">✓</span>
                               )}
                             </button>
                           ))}
@@ -490,7 +490,7 @@ export function InvoicesMobileDetailSheet({
                           className="bg-white border border-gray-200 rounded-2xl px-4 py-3">
                           {/* Row 1: code + condition badge */}
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm font-semibold text-blue-600">
+                            <span className="text-sm font-semibold text-brand">
                               {detail.productCode || detail.product?.code ? (
                                 <CodeLink
                                   entity="product"
@@ -545,7 +545,7 @@ export function InvoicesMobileDetailSheet({
                                 </span>
                               )}
                             </div>
-                            <span className="text-sm font-bold text-blue-600 ml-2 flex-shrink-0">
+                            <span className="text-sm font-bold text-brand ml-2 flex-shrink-0">
                               {formatCurrency(
                                 Number(
                                   detail.totalPrice ??
@@ -600,7 +600,7 @@ export function InvoicesMobileDetailSheet({
                 {/* Tổng cộng */}
                 <div className="border-t border-gray-200 pt-2.5 flex justify-between">
                   <span className="font-bold text-gray-900">Tổng cộng</span>
-                  <span className="font-bold text-blue-600 text-base">
+                  <span className="font-bold text-brand text-base">
                     {formatCurrency(Number(invoice.grandTotal))}
                   </span>
                 </div>
@@ -635,7 +635,7 @@ export function InvoicesMobileDetailSheet({
                     onChange={(e) => setDescription(e.target.value)}
                     rows={3}
                     placeholder="Nhập ghi chú..."
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none"
                   />
                 </div>
               )}
@@ -668,7 +668,7 @@ export function InvoicesMobileDetailSheet({
             {showProcessButton && (
               <button
                 onClick={handleProcessInvoice}
-                className="flex-1 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 active:scale-95 transition-all truncate">
+                className="flex-1 py-2.5 text-sm font-semibold text-white bg-brand rounded-xl hover:bg-brand-dark active:scale-95 transition-all truncate">
                 Xử lý hóa đơn
               </button>
             )}

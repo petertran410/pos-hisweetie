@@ -197,7 +197,7 @@ export function ProductPickerDropdown({
           onKeyDown={handleSearchKeyDown}
           disabled={disabled}
           placeholder={placeholder}
-          className={`w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
+          className={`w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed ${
             selectedProduct ? "bg-gray-50" : "bg-white"
           }`}
         />
@@ -208,7 +208,7 @@ export function ProductPickerDropdown({
           disabled={disabled}
           className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors disabled:opacity-50 ${
             showQuantityInput
-              ? "bg-blue-100 text-blue-600"
+              ? "bg-brand-soft text-brand"
               : "text-gray-500 hover:bg-gray-100"
           }`}>
           <Barcode className="w-5 h-5" />
@@ -230,7 +230,7 @@ export function ProductPickerDropdown({
                   onClick={() => handleClickAdd(product)}
                   className={`px-4 py-3 hover:bg-gray-50 border-b last:border-b-0 cursor-pointer flex items-start gap-3 ${
                     isHighlighted
-                      ? "bg-blue-50 ring-2 ring-inset ring-blue-500"
+                      ? "bg-brand-soft ring-2 ring-inset ring-brand"
                       : ""
                   }`}>
                   <div className="w-12 h-12 bg-gray-100 rounded flex-shrink-0 overflow-hidden">
@@ -267,7 +267,7 @@ export function ProductPickerDropdown({
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-blue-600 font-medium text-sm">
+                    <div className="text-brand font-medium text-sm">
                       {formatCurrency(cost)}
                     </div>
                   </div>
@@ -295,7 +295,7 @@ export function ProductPickerDropdown({
           }
           onKeyDown={handleQuantityKeyDown}
           placeholder="SL"
-          className="w-20 px-3 py-2.5 border rounded-lg text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-20 px-3 py-2.5 border rounded-lg text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand"
         />
       )}
     </div>

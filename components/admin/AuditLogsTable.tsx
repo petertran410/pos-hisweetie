@@ -579,7 +579,7 @@ export function AuditLogsTable({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -661,11 +661,11 @@ export function AuditLogsTable({
                   </td>
                 </tr>
                 {expandedId === log.id && (
-                  <tr className="bg-blue-50">
+                  <tr className="bg-brand-soft">
                     <td colSpan={6} className="px-6 py-4">
-                      <div className="border-l-4 border-blue-500 pl-4">
+                      <div className="border-l-4 border-brand pl-4">
                         <div className="mb-2">
-                          <span className="font-semibold text-blue-600 border-b-2 border-blue-600 pb-1">
+                          <span className="font-semibold text-brand border-b-2 border-brand pb-1">
                             Chi tiết
                           </span>
                           {log.changes && log.changes.length > 0 && (

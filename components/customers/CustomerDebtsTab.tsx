@@ -102,7 +102,7 @@ export function CustomerDebtsTab({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-brand" />
       </div>
     );
   }
@@ -144,7 +144,7 @@ export function CustomerDebtsTab({
 
             <button
               onClick={() => setShowPaymentModal(true)}
-              className="px-2.5 py-1.5 lg:px-4 lg:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
+              className="px-2.5 py-1.5 lg:px-4 lg:py-2 bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
               💵 Thanh toán
             </button>
           </div>
@@ -204,7 +204,7 @@ export function CustomerDebtsTab({
                             href={`/don-hang/hoa-don?Code=${item.code}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs lg:text-md font-medium text-blue-600 hover:underline"
+                            className="text-xs lg:text-md font-medium text-brand hover:underline"
                             onClick={(e) => e.stopPropagation()}>
                             {item.code}
                           </Link>
@@ -213,7 +213,7 @@ export function CustomerDebtsTab({
                             href={`/tai-chinh/so-quy?Code=${item.code}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs lg:text-md font-medium text-blue-600 hover:underline"
+                            className="text-xs lg:text-md font-medium text-brand hover:underline"
                             onClick={(e) => e.stopPropagation()}>
                             {item.code}
                           </Link>
@@ -221,16 +221,16 @@ export function CustomerDebtsTab({
                           <CodeLink
                             entity="debt-offset"
                             code={item.code}
-                            className="text-xs lg:text-md font-medium text-blue-600 hover:underline"
+                            className="text-xs lg:text-md font-medium text-brand hover:underline"
                           />
                         ) : item.type === "return_order" ? (
                           <CodeLink
                             entity="return-order"
                             code={item.code}
-                            className="text-xs lg:text-md font-medium text-blue-600 hover:underline"
+                            className="text-xs lg:text-md font-medium text-brand hover:underline"
                           />
                         ) : (
-                          <span className="text-xs lg:text-md font-medium text-blue-600 hover:underline cursor-pointer">
+                          <span className="text-xs lg:text-md font-medium text-brand hover:underline cursor-pointer">
                             {item.code}
                           </span>
                         )}

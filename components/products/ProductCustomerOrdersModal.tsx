@@ -66,7 +66,7 @@ export function ProductCustomerOrdersModal({
             </h3>
             <p className="text-xs text-gray-500 mt-0.5 truncate">
               {productCode ? (
-                <span className="font-medium text-blue-600">
+                <span className="font-medium text-brand">
                   <CodeLink entity="product" code={productCode} />
                 </span>
               ) : null}
@@ -89,7 +89,7 @@ export function ProductCustomerOrdersModal({
         <div className="flex-1 overflow-auto">
           {isLoading ? (
             <div className="py-16 flex flex-col items-center gap-2 text-gray-400">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
               <span className="text-xs">Đang tải...</span>
             </div>
           ) : isError ? (
@@ -131,7 +131,7 @@ export function ProductCustomerOrdersModal({
               <tbody className="divide-y divide-gray-100">
                 {orders.map((o) => (
                   <tr key={o.orderId} className="hover:bg-gray-50">
-                    <td className="px-4 py-2.5 font-medium text-blue-600 whitespace-nowrap">
+                    <td className="px-4 py-2.5 font-medium text-brand whitespace-nowrap">
                       <Link
                         href={`/don-hang/dat-hang?Code=${o.code}`}
                         target="_blank">

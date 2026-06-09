@@ -230,12 +230,12 @@ function MiniCalendar({
               className={[
                 "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
                 isSel
-                  ? "bg-blue-600 text-white font-bold"
+                  ? "bg-brand text-white font-bold"
                   : isToday
-                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
+                    ? "border border-brand text-brand font-semibold hover:bg-brand-soft"
                     : isDisabled
                       ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
+                      : "text-gray-700 hover:bg-brand-soft cursor-pointer",
               ].join(" ")}>
               {day}
             </button>
@@ -258,7 +258,7 @@ function MiniCalendar({
             onChange(todayObj.toISOString().split("T")[0]);
             onClose();
           }}
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors">
+          className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft transition-colors">
           Hôm nay
         </button>
       </div>
@@ -323,7 +323,7 @@ function PresetPanel({
                   onSelect(opt.value);
                   onClose();
                 }}
-                className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${selected === opt.value ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm" : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"}`}>
+                className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${selected === opt.value ? "bg-brand text-white border-brand font-medium shadow-sm" : "border-gray-200 text-gray-700 hover:border-brand hover:bg-brand-soft"}`}>
                 {opt.label}
               </button>
             ))}
@@ -517,7 +517,7 @@ export function CustomerReportSidebar({
         {activeFilterCount > 0 && (
           <button
             onClick={clearAll}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            className="text-sm text-brand hover:text-brand-dark font-medium">
             Xóa tất cả
           </button>
         )}
@@ -532,7 +532,7 @@ export function CustomerReportSidebar({
           <select
             value={reportType}
             onChange={(e) => onReportTypeChange(e.target.value as ReportType)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
+            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
             <option value="customer-sales">Bán hàng</option>
             <option value="product-by-customer">Hàng bán theo khách</option>
             <option value="customer-debt">Công nợ</option>
@@ -565,15 +565,15 @@ export function CustomerReportSidebar({
               }}
               className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
                 dateMode === "preset"
-                  ? "border-blue-400 bg-blue-50"
+                  ? "border-brand bg-brand-soft"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
               <div
                 className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  dateMode === "preset" ? "border-blue-600" : "border-gray-300"
+                  dateMode === "preset" ? "border-brand" : "border-gray-300"
                 }`}>
                 {dateMode === "preset" && (
-                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                  <div className="w-1 h-1 rounded-full bg-brand" />
                 )}
               </div>
               <span className="text-sm text-gray-700 flex-1 font-medium">
@@ -581,7 +581,7 @@ export function CustomerReportSidebar({
               </span>
               <ChevronRight
                 className={`w-4 h-4 transition-colors flex-shrink-0 ${
-                  showPresetPanel ? "text-blue-500" : "text-gray-400"
+                  showPresetPanel ? "text-brand" : "text-gray-400"
                 }`}
               />
             </div>
@@ -594,15 +594,15 @@ export function CustomerReportSidebar({
               }}
               className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
                 dateMode === "custom"
-                  ? "border-blue-400 bg-blue-50"
+                  ? "border-brand bg-brand-soft"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
               <div
                 className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  dateMode === "custom" ? "border-blue-600" : "border-gray-300"
+                  dateMode === "custom" ? "border-brand" : "border-gray-300"
                 }`}>
                 {dateMode === "custom" && (
-                  <div className="w-1 h-1 rounded-full bg-blue-600" />
+                  <div className="w-1 h-1 rounded-full bg-brand" />
                 )}
               </div>
               <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
@@ -638,13 +638,13 @@ export function CustomerReportSidebar({
                           isInvalid
                             ? "border-red-400 bg-red-50 text-red-600"
                             : val
-                              ? "border-blue-300 bg-blue-50 text-gray-800"
+                              ? "border-brand bg-brand-soft text-gray-800"
                               : "border-gray-200 text-gray-400"
                         } ${
                           isOpen
                             ? isInvalid
                               ? "ring-2 ring-red-100 border-red-500"
-                              : "ring-2 ring-blue-100 border-blue-400"
+                              : "ring-2 ring-brand-soft border-brand"
                             : isInvalid
                               ? "hover:border-red-500"
                               : "hover:border-gray-300"
@@ -710,7 +710,7 @@ export function CustomerReportSidebar({
           <select
             value={branchId}
             onChange={(e) => setBranchId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
+            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
             <option value="">Tất cả</option>
             {(branches || []).map((b: any) => (
               <option key={b.id} value={b.id}>
@@ -737,7 +737,7 @@ export function CustomerReportSidebar({
                 setShowCustomerDrop(true);
               }}
               onFocus={() => setShowCustomerDrop(true)}
-              className={`w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${selectedCustomer ? "bg-blue-50 border-blue-300" : "bg-white"}`}
+              className={`w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand ${selectedCustomer ? "bg-brand-soft border-brand" : "bg-white"}`}
             />
             {selectedCustomer && (
               <button
@@ -765,7 +765,7 @@ export function CustomerReportSidebar({
                       setCustomerSearch("");
                       setShowCustomerDrop(false);
                     }}
-                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 ${String(c.id) === customerId ? "bg-blue-50 text-blue-700" : "text-gray-700"}`}>
+                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-brand-soft ${String(c.id) === customerId ? "bg-brand-soft text-brand-dark" : "text-gray-700"}`}>
                     <span className="font-medium">{c.name}</span>
                     {c.code && (
                       <span className="text-gray-400 ml-1">({c.code})</span>
@@ -785,7 +785,7 @@ export function CustomerReportSidebar({
           <select
             value={customerGroupId}
             onChange={(e) => setCustomerGroupId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
+            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
             <option value="">Tất cả</option>
             {groups.map((g: any) => (
               <option key={g.id} value={g.id}>
@@ -803,7 +803,7 @@ export function CustomerReportSidebar({
           <select
             value={soldById}
             onChange={(e) => setSoldById(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
+            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
             <option value="">Tất cả</option>
             {(users || []).map((u: any) => (
               <option key={u.id} value={u.id}>
@@ -822,7 +822,7 @@ export function CustomerReportSidebar({
             <select
               value={saleChannelId}
               onChange={(e) => setSaleChannelId(e.target.value)}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
               <option value="">Tất cả</option>
               {(saleChannels || []).map((s: any) => (
                 <option key={s.id} value={s.id}>

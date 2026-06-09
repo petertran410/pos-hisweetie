@@ -30,7 +30,9 @@ export default function ProductListPage() {
   return (
     <PagePermissionGuard resource="products" action="view">
       {/* ── Desktop (md+) — giữ nguyên 100% ── */}
-      <div className="hidden md:flex h-full border-t bg-gray-50">
+      <div
+        className="hidden md:flex h-full border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <ProductsSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}

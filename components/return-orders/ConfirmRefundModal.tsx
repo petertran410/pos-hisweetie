@@ -254,7 +254,7 @@ export function ConfirmRefundModal({
                       onClick={() => setShowMethodDropdown(!showMethodDropdown)}
                       className={`w-full border rounded-lg px-3 py-2 text-left flex items-center justify-between bg-white text-sm ${
                         showMethodDropdown
-                          ? "border-blue-500"
+                          ? "border-brand"
                           : "border-gray-300"
                       }`}>
                       <span>{selectedMethodLabel}</span>
@@ -274,9 +274,9 @@ export function ConfirmRefundModal({
                               if (opt.value === "cash")
                                 setSelectedAccountId(null);
                             }}
-                            className={`w-full px-3 py-2 text-left hover:bg-blue-50 text-sm flex items-center gap-2 ${
+                            className={`w-full px-3 py-2 text-left hover:bg-brand-soft text-sm flex items-center gap-2 ${
                               method === opt.value
-                                ? "bg-blue-100 text-blue-700"
+                                ? "bg-brand-soft text-brand-dark"
                                 : "text-gray-900"
                             }`}>
                             {opt.label}
@@ -298,7 +298,7 @@ export function ConfirmRefundModal({
                         }
                         className={`w-full border rounded-lg px-3 py-2 text-left flex items-center justify-between bg-white text-sm ${
                           showAccountDropdown
-                            ? "border-blue-500"
+                            ? "border-brand"
                             : "border-gray-300"
                         }`}>
                         <span
@@ -324,9 +324,9 @@ export function ConfirmRefundModal({
                                   setSelectedAccountId(account.id);
                                   setShowAccountDropdown(false);
                                 }}
-                                className={`w-full text-left px-3 py-2 hover:bg-blue-50 border-b last:border-b-0 ${
+                                className={`w-full text-left px-3 py-2 hover:bg-brand-soft border-b last:border-b-0 ${
                                   selectedAccountId === account.id
-                                    ? "bg-blue-100"
+                                    ? "bg-brand-soft"
                                     : ""
                                 }`}>
                                 <div className="font-medium text-sm">

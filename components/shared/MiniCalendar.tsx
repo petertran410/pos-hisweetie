@@ -111,12 +111,12 @@ export function MiniCalendar({
               className={[
                 "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
                 isSel
-                  ? "bg-blue-600 text-white font-bold"
+                  ? "bg-brand text-white font-bold"
                   : isToday
-                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
+                    ? "border border-brand text-brand font-semibold hover:bg-brand-soft"
                     : isDisabled
                       ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
+                      : "text-gray-700 hover:bg-brand-soft cursor-pointer",
               ].join(" ")}>
               {day}
             </button>
@@ -141,7 +141,7 @@ export function MiniCalendar({
             onChange(todayObj.toISOString().split("T")[0]);
             onClose();
           }}
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors">
+          className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft transition-colors">
           Hôm nay
         </button>
       </div>

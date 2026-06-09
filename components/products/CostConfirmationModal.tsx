@@ -138,7 +138,7 @@ export function CostConfirmationModal({
                             </span>
                             {selectedBranchIds.includes(branch.id) && (
                               <svg
-                                className="w-5 h-5 text-blue-600"
+                                className="w-5 h-5 text-brand"
                                 fill="currentColor"
                                 viewBox="0 0 20 20">
                                 <path
@@ -167,7 +167,7 @@ export function CostConfirmationModal({
           </button>
           <button
             onClick={handleConfirm}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark">
             Đồng ý
           </button>
         </div>

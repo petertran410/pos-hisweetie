@@ -870,7 +870,7 @@ export function PurchaseOrderForm({
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="VD: PN000123 (để trống = tự sinh)"
                 maxLength={50}
-                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-gray-100"
                 disabled={!!isFormDisabled}
               />
             </div>
@@ -999,7 +999,7 @@ export function PurchaseOrderForm({
                         value={supplierSearch}
                         onChange={(e) => setSupplierSearch(e.target.value)}
                         placeholder="Tìm nhà cung cấp..."
-                        className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand"
                       />
                     </div>
                   </div>
@@ -1146,7 +1146,7 @@ export function PurchaseOrderForm({
                 onClick={() => setShowPaymentModal(true)}
                 disabled={isFormDisabled ? true : false}
                 className="p-1.5 border rounded hover:bg-gray-50 disabled:opacity-50">
-                <CreditCard className="w-4 h-4 text-blue-600" />
+                <CreditCard className="w-4 h-4 text-brand" />
               </button>
             </div>
             {paymentAmount > 0 && (
@@ -1193,7 +1193,7 @@ export function PurchaseOrderForm({
           <button
             onClick={handleSubmit}
             disabled={isFormDisabled ? true : false}
-            className="w-full py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
+            className="w-full py-2.5 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50 font-medium">
             Lưu tạm
           </button>
         </div>

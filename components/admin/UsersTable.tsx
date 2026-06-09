@@ -50,7 +50,7 @@ export function UsersTable({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -91,7 +91,7 @@ export function UsersTable({
                       className="w-8 h-8 rounded-full"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                    <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium">
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -151,7 +151,7 @@ export function UsersTable({
                       onClick={() => setPermissionUserId(user.id)}
                       className="p-1 hover:bg-gray-200 rounded"
                       title="Phân quyền">
-                      <Shield className="w-4 h-4 text-blue-600" />
+                      <Shield className="w-4 h-4 text-brand" />
                     </button>
                   )}
                 </div>

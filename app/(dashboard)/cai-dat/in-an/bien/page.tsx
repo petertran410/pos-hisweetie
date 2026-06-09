@@ -91,7 +91,7 @@ export default function PrintTemplatesPage() {
             onClick={() => handleTabChange(t.key)}
             className={`px-4 py-3 text-sm whitespace-nowrap border-b-2 transition-colors ${
               activeTab === t.key
-                ? "border-blue-500 text-blue-600 font-medium"
+                ? "border-brand text-brand font-medium"
                 : "border-transparent text-gray-600 hover:text-gray-900"
             }`}>
             {t.label}

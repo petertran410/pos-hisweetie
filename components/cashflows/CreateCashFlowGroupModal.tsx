@@ -121,7 +121,7 @@ export function CreateCashFlowGroupModal({
           <button
             onClick={handleSubmit}
             disabled={createGroup.isPending}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50">
+            className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand disabled:opacity-50">
             {createGroup.isPending ? "Đang lưu..." : "Lưu"}
           </button>
         </div>

@@ -398,11 +398,11 @@ export function ProductImportModal({ onClose }: ProductImportModalProps) {
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+                className="border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:border-brand hover:bg-brand-soft transition-colors">
                 <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
                 <p className="text-sm text-gray-600 mb-1">
                   Kéo thả file Excel vào đây hoặc{" "}
-                  <span className="text-blue-600 font-medium">
+                  <span className="text-brand font-medium">
                     nhấn để chọn file
                   </span>
                 </p>
@@ -418,7 +418,7 @@ export function ProductImportModal({ onClose }: ProductImportModalProps) {
 
               <button
                 onClick={downloadTemplate}
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
+                className="flex items-center gap-2 text-sm text-brand hover:text-brand-dark font-medium">
                 <Download className="w-4 h-4" />
                 Tải file mẫu Import sản phẩm
               </button>
@@ -577,8 +577,8 @@ export function ProductImportModal({ onClose }: ProductImportModalProps) {
                   <p className="text-xs text-gray-500">Tạo mới</p>
                 </div>
                 <div className="border rounded-lg p-4 text-center">
-                  <CheckCircle2 className="w-6 h-6 text-blue-500 mx-auto mb-1" />
-                  <p className="text-2xl font-bold text-blue-700">
+                  <CheckCircle2 className="w-6 h-6 text-brand mx-auto mb-1" />
+                  <p className="text-2xl font-bold text-brand-dark">
                     {result.updated}
                   </p>
                   <p className="text-xs text-gray-500">Cập nhật</p>
@@ -649,7 +649,7 @@ export function ProductImportModal({ onClose }: ProductImportModalProps) {
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium">
                 Đóng
               </button>
             </>
@@ -664,7 +664,7 @@ export function ProductImportModal({ onClose }: ProductImportModalProps) {
                 <button
                   onClick={handleImport}
                   disabled={isImporting || validCount === 0}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 flex items-center gap-2">
+                  className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium disabled:opacity-50 flex items-center gap-2">
                   {isImporting && <Loader2 className="w-4 h-4 animate-spin" />}
                   {isImporting
                     ? "Đang import..."

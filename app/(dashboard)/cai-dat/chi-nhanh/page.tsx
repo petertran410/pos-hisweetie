@@ -41,7 +41,7 @@ export default function BranchesPage() {
           <PermissionGate resource="branches" action="create">
             <button
               onClick={handleCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark">
               <Plus className="w-5 h-5" />
               Thêm chi nhánh
             </button>

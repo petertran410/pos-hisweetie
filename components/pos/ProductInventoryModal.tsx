@@ -87,7 +87,7 @@ export function ProductInventoryModal({
         <div className="overflow-y-auto flex-1">
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-blue-600 text-white">
+              <tr className="bg-brand text-white">
                 <th className="text-left px-4 py-2 font-medium">Chi nhánh</th>
                 <th className="text-right px-3 py-2 font-medium">Tồn</th>
                 <th className="text-right px-3 py-2 font-medium">Đặt NCC</th>
@@ -146,16 +146,16 @@ export function ProductInventoryModal({
                     <tr
                       key={inv.id ?? inv.branchId}
                       className={`border-b transition-colors ${
-                        isCurrent ? "bg-blue-50" : "hover:bg-gray-50"
+                        isCurrent ? "bg-brand-soft" : "hover:bg-gray-50"
                       }`}>
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-1.5">
                           <span
-                            className={`${isCurrent ? "font-semibold text-blue-700" : "text-gray-700"}`}>
+                            className={`${isCurrent ? "font-semibold text-brand-dark" : "text-gray-700"}`}>
                             {inv.branchName}
                           </span>
                           {isCurrent && (
-                            <CheckCircle2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                            <CheckCircle2 className="w-4 h-4 text-brand flex-shrink-0" />
                           )}
                         </div>
                       </td>

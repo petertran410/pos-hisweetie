@@ -328,7 +328,7 @@ export function PackingLoadingForm({
                           setShowLoadingByDropdown(false);
                         }}
                         className={`px-4 py-2 hover:bg-gray-50 cursor-pointer ${
-                          user.id === loadingById ? "bg-blue-50" : ""
+                          user.id === loadingById ? "bg-brand-soft" : ""
                         }`}>
                         {user.name}
                       </div>
@@ -384,7 +384,7 @@ export function PackingLoadingForm({
                           setShowBranchDropdown(false);
                         }}
                         className={`px-4 py-2 hover:bg-gray-50 cursor-pointer ${
-                          branch.id === branchId ? "bg-blue-50" : ""
+                          branch.id === branchId ? "bg-brand-soft" : ""
                         }`}>
                         {branch.name}
                       </div>
@@ -404,7 +404,7 @@ export function PackingLoadingForm({
                 {selectedInvoices.map((invoice) => (
                   <span
                     key={invoice.id}
-                    className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                    className="inline-flex items-center gap-1 bg-brand-soft text-brand-dark px-2 py-1 rounded text-sm">
                     {invoice.code}
                     <button
                       type="button"
@@ -412,7 +412,7 @@ export function PackingLoadingForm({
                         e.stopPropagation();
                         toggleInvoice(invoice.id);
                       }}
-                      className="hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center">
+                      className="hover:bg-brand-soft rounded-full w-4 h-4 flex items-center justify-center">
                       ×
                     </button>
                   </span>
@@ -590,7 +590,7 @@ export function PackingLoadingForm({
             </button>
             <button
               type="submit"
-              className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-base sm:text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+              className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-base sm:text-sm bg-brand text-white rounded hover:bg-brand-dark">
               {packingLoading ? "Cập nhật" : "Tạo mới"}
             </button>
           </div>

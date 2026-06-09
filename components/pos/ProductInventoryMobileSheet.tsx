@@ -92,7 +92,7 @@ export function ProductInventoryMobileSheet({
         <div className="flex items-start justify-between px-4 pt-1 pb-3 border-b flex-shrink-0">
           <div className="flex-1 min-w-0 pr-3">
             <div className="flex items-center gap-1.5">
-              <Package className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <Package className="w-4 h-4 text-brand flex-shrink-0" />
               <span className="text-sm font-semibold text-gray-900 truncate">
                 {productLabel}
               </span>
@@ -128,7 +128,7 @@ export function ProductInventoryMobileSheet({
               <div key={col.label} className="text-center">
                 <p
                   className={`text-base font-bold ${
-                    col.highlight ? "text-blue-600" : "text-gray-800"
+                    col.highlight ? "text-brand" : "text-gray-800"
                   }`}>
                   {col.value}
                 </p>
@@ -162,20 +162,20 @@ export function ProductInventoryMobileSheet({
                 return (
                   <li
                     key={inv.id ?? inv.branchId}
-                    className={`px-4 py-3 ${isCurrent ? "bg-blue-50" : ""}`}>
+                    className={`px-4 py-3 ${isCurrent ? "bg-brand-soft" : ""}`}>
                     {/* Branch name */}
                     <div className="flex items-center gap-1.5 mb-2">
                       {isCurrent && (
-                        <CheckCircle2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-brand flex-shrink-0" />
                       )}
                       <span
                         className={`text-sm font-semibold ${
-                          isCurrent ? "text-blue-700" : "text-gray-800"
+                          isCurrent ? "text-brand-dark" : "text-gray-800"
                         }`}>
                         {inv.branchName}
                       </span>
                       {isCurrent && (
-                        <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-medium">
+                        <span className="text-[10px] bg-brand-soft text-brand px-1.5 py-0.5 rounded-full font-medium">
                           Hiện tại
                         </span>
                       )}
@@ -212,17 +212,17 @@ export function ProductInventoryMobileSheet({
                         className={`rounded-lg px-2 py-1.5 text-center border ${
                           canSell <= 0
                             ? "bg-red-50 border-red-100"
-                            : "bg-blue-50 border-blue-100"
+                            : "bg-brand-soft border-brand-soft"
                         }`}>
                         <p
                           className={`text-sm font-bold ${
-                            canSell <= 0 ? "text-red-500" : "text-blue-600"
+                            canSell <= 0 ? "text-red-500" : "text-brand"
                           }`}>
                           {canSell}
                         </p>
                         <p
                           className={`text-[10px] mt-0.5 ${
-                            canSell <= 0 ? "text-red-400" : "text-blue-400"
+                            canSell <= 0 ? "text-red-400" : "text-brand"
                           }`}>
                           Có thể bán
                         </p>

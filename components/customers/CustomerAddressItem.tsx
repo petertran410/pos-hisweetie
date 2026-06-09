@@ -157,7 +157,7 @@ export function CustomerAddressItem({
   return (
     <div
       className={`border rounded-lg p-4 space-y-4 ${
-        address.isDefault ? "border-blue-400 bg-blue-50/30" : "border-gray-200"
+        address.isDefault ? "border-brand bg-brand-soft" : "border-gray-200"
       }`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

@@ -1,11 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import type { TaskRow } from "@/lib/api/dashboard";
 import { INVOICE_STATUS, INVOICE_STATUS_LABELS } from "@/lib/types/invoice";
 import { money, vi, DT_COLORS } from "@/lib/dashboard/format";
-import { ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ChevronLeft,
+  Search,
+} from "lucide-react";
 
 export type TaskType = "orders" | "debt" | "cod" | "stock";
 
@@ -165,6 +172,35 @@ function rowHref(type: TaskType, code: string): string {
   return `/don-hang/hoa-don?Code=${code}`;
 }
 
+/** Nhãn tổng số bản ghi theo tab, dùng cho dòng "Hiển thị a–b trong tổng N …". */
+const COUNT_LABEL: Record<TaskType, string> = {
+  orders: "đơn cần xử lý",
+  debt: "công nợ đến hạn",
+  cod: "đơn cần giao",
+  stock: "mục cảnh báo",
+};
+
+/** Dòng tổng quan (bold) phía trên bảng, tính trên tập đã lọc theo search. */
+function summaryText(rows: TaskRow[], type: TaskType): string {
+  const total = rows.reduce((s, r) => s + (r.value ?? 0), 0);
+  if (type === "debt") {
+    const maxAge = rows.reduce((m, r) => Math.max(m, r.ageDays ?? 0), 0);
+    return `Tổng công nợ: ${money(total)} · Khách hàng: ${vi(
+      rows.length,
+    )} · Quá hạn lâu nhất: ${vi(maxAge)} ngày`;
+  }
+  if (type === "cod") {
+    return `Tổng COD: ${money(total)} · Số đơn: ${vi(rows.length)}`;
+  }
+  if (type === "stock") {
+    const neg = rows.filter((r) => (r.value ?? 0) < 0).length;
+    return `Mục cảnh báo: ${vi(rows.length)} · Âm kho: ${vi(neg)}`;
+  }
+  return `Tổng giá trị: ${money(total)} · Số đơn: ${vi(rows.length)}`;
+}
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50];
+
 export function TaskTabs({
   tabs,
   active,
@@ -177,10 +213,20 @@ export function TaskTabs({
 }: Props) {
   const heads = HEAD[active];
 
+  // Tìm kiếm + phân trang phía client (toàn bộ rows đã tải sẵn).
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   // Sort phía client trên các cột số (đã có sẵn toàn bộ rows).
   // key: "value" (cột tiền/tồn) | "time" (cột Lúc/Hạn/Dự kiến).
   const [sortBy, setSortBy] = useState<"value" | "time" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  // Reset trang khi đổi tab / search / số dòng / bộ lọc trạng thái.
+  useEffect(() => {
+    setPage(1);
+  }, [active, search, pageSize, statusFilter]);
 
   const sortValue = (r: TaskRow, key: "value" | "time"): number => {
     if (key === "value") return r.value ?? 0;
@@ -188,9 +234,20 @@ export function TaskTabs({
     return r.time ? new Date(r.time).getTime() : 0;
   };
 
+  // Lọc theo mã đơn + tên đối tác.
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        r.code.toLowerCase().includes(q) ||
+        r.partner.toLowerCase().includes(q),
+    );
+  }, [rows, search]);
+
   const sortedRows = useMemo(() => {
-    if (!sortBy) return rows;
-    const arr = [...rows];
+    if (!sortBy) return filteredRows;
+    const arr = [...filteredRows];
     arr.sort((a, b) => {
       const av = sortValue(a, sortBy);
       const bv = sortValue(b, sortBy);
@@ -198,7 +255,15 @@ export function TaskTabs({
     });
     return arr;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, sortBy, sortDir, active]);
+  }, [filteredRows, sortBy, sortDir, active]);
+
+  const totalRows = sortedRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = (safePage - 1) * pageSize;
+  const pagedRows = sortedRows.slice(pageStart, pageStart + pageSize);
+  const rangeFrom = totalRows === 0 ? 0 : pageStart + 1;
+  const rangeTo = Math.min(pageStart + pageSize, totalRows);
 
   // Cột nào sortable theo index header: 2 = tiền/tồn, 3 = thời gian/hạn.
   const SORT_COL: Record<number, "value" | "time"> = { 2: "value", 3: "time" };
@@ -260,6 +325,30 @@ export function TaskTabs({
         )}
       </div>
 
+      {/* Search + summary */}
+      <div
+        className="flex items-center gap-3 px-5 py-[10px] border-b flex-wrap"
+        style={{ borderColor: "var(--dt-border)" }}>
+        <div className="relative flex-none">
+          <Search
+            className="w-[15px] h-[15px] absolute left-[10px] top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: "var(--dt-text-muted)" }}
+          />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm mã đơn, tên khách hàng…"
+            className="dt-input dt-input-sm pl-[30px] w-[260px] max-w-full"
+          />
+        </div>
+        <div
+          className="text-[12.5px] font-bold ml-auto"
+          style={{ color: "var(--dt-text-secondary)" }}>
+          {summaryText(filteredRows, active)}
+        </div>
+      </div>
+
       <div className="overflow-auto">
         <table className="w-full border-collapse">
           <thead>
@@ -307,7 +396,7 @@ export function TaskTabs({
                   Đang tải…
                 </td>
               </tr>
-            ) : rows.length === 0 ? (
+            ) : totalRows === 0 ? (
               <tr>
                 <td
                   colSpan={6}
@@ -317,7 +406,7 @@ export function TaskTabs({
                 </td>
               </tr>
             ) : (
-              sortedRows.map((r, i) => (
+              pagedRows.map((r, i) => (
                 <tr
                   key={`${r.code}-${i}`}
                   className="border-b transition hover:bg-[var(--dt-cyan-bg)]"
@@ -372,6 +461,53 @@ export function TaskTabs({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination footer */}
+      {!loading && totalRows > 0 && (
+        <div
+          className="flex items-center gap-3 px-5 py-[11px] border-t flex-wrap text-[12.5px]"
+          style={{ borderColor: "var(--dt-border)", color: "var(--dt-text-secondary)" }}>
+          <span>
+            Hiển thị <b>{vi(rangeFrom)}</b>–<b>{vi(rangeTo)}</b> trong tổng{" "}
+            <b>{vi(totalRows)}</b> {COUNT_LABEL[active]}
+          </span>
+          <div className="ml-auto flex items-center gap-3 flex-wrap">
+            <select
+              className="dt-select dt-select-sm"
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}>
+              {PAGE_SIZE_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {n} dòng/trang
+                </option>
+              ))}
+            </select>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+                className="inline-flex items-center justify-center w-[30px] h-[30px] rounded-[7px] border disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--dt-bg-soft)]"
+                style={{ borderColor: "var(--dt-border)" }}
+                aria-label="Trang trước">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="px-2">
+                Trang <b>{vi(safePage)}</b> / {vi(totalPages)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                className="inline-flex items-center justify-center w-[30px] h-[30px] rounded-[7px] border disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--dt-bg-soft)]"
+                style={{ borderColor: "var(--dt-border)" }}
+                aria-label="Trang sau">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

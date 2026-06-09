@@ -184,7 +184,7 @@ export function BankAccountFormModal({
               onClick={() => setActiveTab("info")}
               className={`px-6 py-3 font-medium border-b-2 ${
                 activeTab === "info"
-                  ? "border-blue-600 text-blue-600"
+                  ? "border-brand text-brand"
                   : "border-transparent text-gray-600"
               }`}>
               Thông tin
@@ -193,7 +193,7 @@ export function BankAccountFormModal({
               onClick={() => setActiveTab("scope")}
               className={`px-6 py-3 font-medium border-b-2 ${
                 activeTab === "scope"
-                  ? "border-blue-600 text-blue-600"
+                  ? "border-brand text-brand"
                   : "border-transparent text-gray-600"
               }`}>
               Phạm vi áp dụng
@@ -362,7 +362,7 @@ export function BankAccountFormModal({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark">
               {bankAccount ? "Cập nhật" : "Tạo mới"}
             </button>
           </div>

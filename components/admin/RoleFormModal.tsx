@@ -99,7 +99,7 @@ export function RoleFormModal({ role, onClose }: RoleFormModalProps) {
             <button
               type="submit"
               disabled={createRole.isPending || updateRole.isPending}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50">
               {role ? "Cập nhật" : "Tạo mới"}
             </button>
           </div>

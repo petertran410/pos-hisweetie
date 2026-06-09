@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
+import "@/app/dashboard.css";
 
 export default function BaoDonLayout({
   children,
@@ -23,13 +24,13 @@ export default function BaoDonLayout({
   if (!_hasHydrated || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="dt-dash flex flex-col min-h-screen">
       <DashboardHeader />
       <main className="flex-1">{children}</main>
     </div>

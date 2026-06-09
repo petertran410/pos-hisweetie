@@ -32,7 +32,9 @@ export default function HoaDonVatPage() {
 
   return (
     <PagePermissionGuard resource="vat_invoices" action="view">
-      <div className="hidden md:flex h-full border-t bg-gray-50">
+      <div
+        className="hidden md:flex h-full border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <InvoicesSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}

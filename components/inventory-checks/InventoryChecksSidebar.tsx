@@ -68,7 +68,7 @@ function SearchableDropdown({
         }}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400"
         } bg-white`}>
         <span
@@ -105,7 +105,7 @@ function SearchableDropdown({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Tìm kiếm..."
-                className="w-full pl-7 pr-2 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full pl-7 pr-2 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
           </div>
@@ -128,12 +128,12 @@ function SearchableDropdown({
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
                     opt.value === value
-                      ? "bg-blue-50 text-blue-700 font-medium"
+                      ? "bg-brand-soft text-brand-dark font-medium"
                       : "hover:bg-gray-50 text-gray-700"
                   } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                   {opt.label}
                   {opt.value === value && (
-                    <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
                   )}
                 </button>
               ))
@@ -233,12 +233,12 @@ function MiniCalendar({
               className={[
                 "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
                 isSel
-                  ? "bg-blue-600 text-white font-bold"
+                  ? "bg-brand text-white font-bold"
                   : isToday
-                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
+                    ? "border border-brand text-brand font-semibold hover:bg-brand-soft"
                     : isDisabled
                       ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
+                      : "text-gray-700 hover:bg-brand-soft cursor-pointer",
               ].join(" ")}>
               {day}
             </button>
@@ -263,7 +263,7 @@ function MiniCalendar({
             onChange(todayStr);
             onClose();
           }}
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50">
+          className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft">
           Hôm nay
         </button>
       </div>
@@ -407,7 +407,7 @@ export function InventoryChecksSidebar({
         {activeFilterCount > 0 && (
           <button
             onClick={clearAll}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            className="text-sm text-brand hover:text-brand-dark font-medium">
             Xóa tất cả
           </button>
         )}
@@ -429,7 +429,7 @@ export function InventoryChecksSidebar({
               }
               className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
                 branchDropdownOpen
-                  ? "border-blue-400 ring-2 ring-blue-100"
+                  ? "border-brand ring-2 ring-brand-soft"
                   : "hover:border-gray-400"
               } bg-white`}>
               <span
@@ -479,7 +479,7 @@ export function InventoryChecksSidebar({
                           : []
                       );
                     }}
-                    className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer flex-shrink-0"
+                    className="w-3.5 h-3.5 rounded accent-brand cursor-pointer flex-shrink-0"
                   />
                   <span className="text-xs font-medium text-gray-600">
                     Tất cả chi nhánh
@@ -491,7 +491,7 @@ export function InventoryChecksSidebar({
                   {activeBranches.map((branch: any) => (
                     <label
                       key={branch.id}
-                      className="flex items-center gap-2.5 px-3 py-2 border-t border-gray-50 cursor-pointer hover:bg-blue-50 transition-colors select-none">
+                      className="flex items-center gap-2.5 px-3 py-2 border-t border-gray-50 cursor-pointer hover:bg-brand-soft transition-colors select-none">
                       <input
                         type="checkbox"
                         checked={selectedBranchIds.includes(branch.id)}
@@ -502,7 +502,7 @@ export function InventoryChecksSidebar({
                               : prev.filter((id) => id !== branch.id)
                           )
                         }
-                        className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer flex-shrink-0"
+                        className="w-3.5 h-3.5 rounded accent-brand cursor-pointer flex-shrink-0"
                       />
                       <span className="text-sm text-gray-700">
                         {branch.name}
@@ -545,7 +545,7 @@ export function InventoryChecksSidebar({
                 onClick={() => openCalendar("from")}
                 className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm text-left transition-colors ${
                   openCal === "from"
-                    ? "ring-1 ring-blue-500 border-blue-500"
+                    ? "ring-1 ring-brand border-brand"
                     : "hover:border-gray-400"
                 }`}>
                 <span className={fromDate ? "text-gray-900" : "text-gray-400"}>
@@ -563,7 +563,7 @@ export function InventoryChecksSidebar({
                 onClick={() => openCalendar("to")}
                 className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm text-left transition-colors ${
                   openCal === "to"
-                    ? "ring-1 ring-blue-500 border-blue-500"
+                    ? "ring-1 ring-brand border-brand"
                     : "hover:border-gray-400"
                 }`}>
                 <span className={toDate ? "text-gray-900" : "text-gray-400"}>

@@ -290,7 +290,7 @@ export function SupplierPaymentBulkModal({
                       }}
                       className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2">
                       {method === "cash" && (
-                        <span className="text-blue-600">✓</span>
+                        <span className="text-brand">✓</span>
                       )}
                       <span>Tiền mặt</span>
                     </button>
@@ -301,7 +301,7 @@ export function SupplierPaymentBulkModal({
                       }}
                       className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2">
                       {method === "transfer" && (
-                        <span className="text-blue-600">✓</span>
+                        <span className="text-brand">✓</span>
                       )}
                       <span>Chuyển khoản</span>
                     </button>
@@ -470,7 +470,7 @@ export function SupplierPaymentBulkModal({
                     paginatedPOs.map((po: any) => (
                       <tr key={po.id} className="border-b hover:bg-gray-50">
                         <td className="px-4 py-3">
-                          <span className="text-blue-600">{po.code}</span>
+                          <span className="text-brand">{po.code}</span>
                         </td>
                         <td className="px-4 py-3">
                           {new Date(po.purchaseDate).toLocaleString("vi-VN", {
@@ -546,7 +546,7 @@ export function SupplierPaymentBulkModal({
           <button
             onClick={handleSubmit}
             disabled={createPayment.isPending}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50">
+            className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50">
             {createPayment.isPending ? "Đang lưu..." : "Lưu"}
           </button>
         </div>

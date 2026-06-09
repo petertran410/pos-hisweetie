@@ -48,7 +48,7 @@ export default function UserBankAccountsPage() {
     if (!bank) return opt.label;
     return (
       <span className="flex items-center gap-2 w-full">
-        <span className="px-1.5 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded shrink-0">
+        <span className="px-1.5 py-0.5 text-xs font-bold bg-brand-soft text-brand-dark rounded shrink-0">
           {bank.bankCode}
         </span>
         <span className="flex flex-col min-w-0 flex-1 text-left">

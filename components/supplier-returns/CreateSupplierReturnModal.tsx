@@ -42,7 +42,7 @@ function ModalSimpleDropdown({
         onClick={() => setOpen((p) => !p)}
         className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm cursor-pointer bg-white transition-colors ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400 border-gray-300"
         }`}>
         <span className={selected ? "text-gray-800" : "text-gray-400"}>
@@ -73,7 +73,7 @@ function ModalSimpleDropdown({
               }}
               className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${
                 value === opt.value
-                  ? "bg-blue-50 text-blue-700 font-medium"
+                  ? "bg-brand-soft text-brand-dark font-medium"
                   : "hover:bg-gray-50 text-gray-700"
               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
               {opt.label}
@@ -135,7 +135,7 @@ function ModalSearchableDropdown({
         onClick={() => setOpen((p) => !p)}
         className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm cursor-pointer bg-white transition-colors ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400 border-gray-300"
         }`}>
         <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
@@ -176,7 +176,7 @@ function ModalSearchableDropdown({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={searchPlaceholder ?? "Tìm kiếm..."}
-              className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+              className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
@@ -197,7 +197,7 @@ function ModalSearchableDropdown({
                   }}
                   className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${
                     value === opt.value
-                      ? "bg-blue-50 text-blue-700 font-medium"
+                      ? "bg-brand-soft text-brand-dark font-medium"
                       : "hover:bg-gray-50 text-gray-700"
                   } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                   {opt.label}
@@ -524,7 +524,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
               onClick={() => setMode(m)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 mode === m
-                  ? "bg-blue-600 text-white"
+                  ? "bg-brand text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}>
               {m === "by_purchase_order" ? "Theo phiếu nhập" : "Sản phẩm lẻ"}
@@ -558,7 +558,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
               <label className="block text-xs text-gray-500 mb-1">
                 Nhà cung cấp
                 {mode === "by_purchase_order" && selectedPO && (
-                  <span className="ml-1 text-blue-500 text-[10px]">
+                  <span className="ml-1 text-brand text-[10px]">
                     (từ phiếu nhập)
                   </span>
                 )}
@@ -611,7 +611,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
                       onClick={() => handleSelectPO(po)}
                       className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b last:border-0">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm text-blue-600">
+                        <span className="font-medium text-sm text-brand">
                           {po.code}
                         </span>
                         <span className="text-xs text-gray-400">
@@ -629,9 +629,9 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
               )}
 
               {selectedPO && (
-                <div className="mt-2 p-3 bg-blue-50 rounded-lg text-sm">
+                <div className="mt-2 p-3 bg-brand-soft rounded-lg text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-blue-700">
+                    <span className="font-medium text-brand-dark">
                       {selectedPO.code}
                     </span>
                     <button
@@ -852,7 +852,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
         <div className="p-5 border-t space-y-3">
           <div className="flex items-center justify-between text-sm font-semibold">
             <span>Tổng tiền trả</span>
-            <span className="text-blue-600">
+            <span className="text-brand">
               {formatCurrency(totalReturnAmount)}
             </span>
           </div>
@@ -871,7 +871,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
             <button
               disabled={!canSubmit}
               onClick={() => onSubmit(buildSubmitData(false))}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-40">
+              className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark disabled:opacity-40">
               Tạo phiếu
             </button>
           </div>

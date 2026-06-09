@@ -39,7 +39,7 @@ function BranchDropdown({
         onClick={() => setOpen((o) => !o)}
         className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-colors ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "border-gray-200 hover:border-gray-300"
         } bg-white`}>
         <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
@@ -61,12 +61,12 @@ function BranchDropdown({
               }}
               className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
                 opt.value === value
-                  ? "bg-blue-50 text-blue-700 font-medium"
+                  ? "bg-brand-soft text-brand-dark font-medium"
                   : "hover:bg-gray-50 text-gray-700"
               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
               <span className="truncate">{opt.label}</span>
               {opt.value === value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
               )}
             </button>
           ))}
@@ -143,7 +143,7 @@ export function SelectBranchModal({
         <div className="flex justify-end gap-2 p-4 border-t">
           <button
             onClick={handleConfirm}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark">
             Xác nhận
           </button>
         </div>

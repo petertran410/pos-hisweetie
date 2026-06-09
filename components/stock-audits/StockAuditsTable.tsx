@@ -76,14 +76,14 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
               placeholder="Tìm mã phiếu, người kiểm..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="pl-9 pr-4 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
         </div>
         {canCreate && (
           <button
             onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+            className="flex items-center gap-1.5 px-4 py-2 bg-brand text-white text-sm rounded-lg hover:bg-brand-dark">
             <Plus className="w-4 h-4" /> Tạo phiếu kiểm kho
           </button>
         )}
@@ -131,7 +131,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
               <tr>
                 <td colSpan={colSpan} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-2 text-gray-400">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
                     <span className="text-xs">Đang tải...</span>
                   </div>
                 </td>
@@ -148,7 +148,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
               audits.map((audit) => {
                 const isExpanded = expandedId === audit.id;
                 const borderCls = isExpanded
-                  ? "border-t-2 border-blue-500"
+                  ? "border-t-2 border-brand"
                   : "";
                 const st = STATUS_MAP[audit.status] || STATUS_MAP[1];
 
@@ -177,7 +177,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
                   <Fragment key={audit.id}>
                     <tr
                       className={`cursor-pointer transition-colors ${
-                        isExpanded ? "bg-blue-50" : "border-b hover:bg-gray-50"
+                        isExpanded ? "bg-brand-soft" : "border-b hover:bg-gray-50"
                       }`}
                       onClick={() => toggleExpand(audit.id)}>
                       <td
@@ -247,7 +247,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
               setLimit(Number(e.target.value));
               setPage(1);
             }}
-            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
             {[10, 15, 20, 50, 100].map((n) => (
               <option key={n} value={n}>
                 {n}
@@ -275,7 +275,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
                 onClick={() => setPage(p)}
                 className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
                   p === page
-                    ? "bg-blue-600 text-white border-blue-600"
+                    ? "bg-brand text-white border-brand"
                     : "hover:bg-gray-50 text-gray-600 border-gray-200"
                 }`}>
                 {p}

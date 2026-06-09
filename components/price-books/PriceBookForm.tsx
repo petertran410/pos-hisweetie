@@ -243,7 +243,7 @@ export function PriceBookForm({
             type="button"
             className={`py-3 px-4 ${
               activeTab === "info"
-                ? "border-b-2 border-blue-600 text-blue-600"
+                ? "border-b-2 border-brand text-brand"
                 : ""
             }`}
             onClick={() => setActiveTab("info")}>
@@ -253,7 +253,7 @@ export function PriceBookForm({
             type="button"
             className={`py-3 px-4 ${
               activeTab === "scope"
-                ? "border-b-2 border-blue-600 text-blue-600"
+                ? "border-b-2 border-brand text-brand"
                 : ""
             }`}
             onClick={() => setActiveTab("scope")}>
@@ -264,13 +264,13 @@ export function PriceBookForm({
               type="button"
               className={`py-3 px-4 ${
                 activeTab === "products"
-                  ? "border-b-2 border-blue-600 text-blue-600"
+                  ? "border-b-2 border-brand text-brand"
                   : ""
               }`}
               onClick={() => setActiveTab("products")}>
               Hàng hóa
               {priceBookProducts && priceBookProducts.length > 0 && (
-                <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs bg-brand-soft text-brand-dark rounded-full">
                   {priceBookProducts.length}
                 </span>
               )}
@@ -418,7 +418,7 @@ export function PriceBookForm({
                             <button
                               type="button"
                               onClick={() => setActiveTab("products")}
-                              className="text-blue-600 hover:underline">
+                              className="text-brand hover:underline">
                               Thêm sản phẩm ngay →
                             </button>
                           </p>
@@ -432,7 +432,7 @@ export function PriceBookForm({
                             <button
                               type="button"
                               onClick={() => setActiveTab("products")}
-                              className="text-blue-600 hover:underline">
+                              className="text-brand hover:underline">
                               Quản lý hàng hóa →
                             </button>
                           </p>
@@ -567,7 +567,7 @@ export function PriceBookForm({
                           return (
                             <span
                               key={cid}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-200">
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-soft text-brand-dark text-xs rounded-full border border-brand-border">
                               {info ? (
                                 <>
                                   {info.code && (
@@ -591,7 +591,7 @@ export function PriceBookForm({
                                     shouldDirty: true,
                                   });
                                 }}
-                                className="text-blue-400 hover:text-blue-700 ml-0.5">
+                                className="text-brand hover:text-brand-dark ml-0.5">
                                 <XIcon className="w-3 h-3" />
                               </button>
                             </span>
@@ -755,7 +755,7 @@ export function PriceBookForm({
                 <button
                   type="button"
                   onClick={() => setShowProductSelector(true)}
-                  className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm flex items-center gap-1.5">
+                  className="px-3 py-2 bg-brand text-white rounded hover:bg-brand-dark text-sm flex items-center gap-1.5">
                   <Plus className="w-4 h-4" />
                   Thêm sản phẩm
                 </button>
@@ -880,7 +880,7 @@ export function PriceBookForm({
                                   </button>
                                 </div>
                               ) : (
-                                <span className="font-medium text-blue-600">
+                                <span className="font-medium text-brand">
                                   {Number(row.price).toLocaleString()}
                                 </span>
                               )}
@@ -898,7 +898,7 @@ export function PriceBookForm({
                                         Number(row.price).toString()
                                       );
                                     }}
-                                    className="p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 rounded"
+                                    className="p-1.5 text-gray-500 hover:bg-brand-soft hover:text-brand rounded"
                                     title="Sửa giá">
                                     <Pencil className="w-3.5 h-3.5" />
                                   </button>
@@ -953,7 +953,7 @@ export function PriceBookForm({
             <button
               type="submit"
               disabled={isSubmitting || !!dateRangeError}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed">
               {isSubmitting ? "Đang lưu..." : "Lưu"}
             </button>
           </div>

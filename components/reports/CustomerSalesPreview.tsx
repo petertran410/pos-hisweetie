@@ -97,7 +97,7 @@ export function CustomerSalesPreview({ filters }: Props) {
           </div>
           <div>
             <span className="text-gray-500">Doanh thu thuần:</span>{" "}
-            <span className="font-semibold text-blue-700">
+            <span className="font-semibold text-brand-dark">
               {formatCurrency(summary.netRevenue)}
             </span>
           </div>
@@ -108,7 +108,7 @@ export function CustomerSalesPreview({ filters }: Props) {
       <div className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-40">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+            <Loader2 className="h-6 w-6 animate-spin text-brand" />
           </div>
         ) : rows.length === 0 ? (
           <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
@@ -159,7 +159,7 @@ export function CustomerSalesPreview({ filters }: Props) {
                   <td className="px-3 py-2 text-gray-500">
                     {(page - 1) * limit + idx + 1}
                   </td>
-                  <td className="px-3 py-2 font-medium text-blue-700">
+                  <td className="px-3 py-2 font-medium text-brand-dark">
                     <CodeLink entity="invoice" code={row.code} />
                   </td>
                   <td className="px-3 py-2 text-gray-600">
@@ -174,7 +174,7 @@ export function CustomerSalesPreview({ filters }: Props) {
                         <CodeLink
                           entity="customer"
                           code={row.customer.code}
-                          className="text-blue-600 hover:underline"
+                          className="text-brand hover:underline"
                         />
                       </div>
                     )}

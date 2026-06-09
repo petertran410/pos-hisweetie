@@ -292,7 +292,7 @@ function StatusDropdown({
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400"
         } bg-white`}>
         <div className="flex items-center gap-2 min-w-0">
@@ -338,7 +338,7 @@ function StatusDropdown({
                 setOpen(false);
               }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
-                value === opt.value ? "bg-blue-50" : "hover:bg-gray-50"
+                value === opt.value ? "bg-brand-soft" : "hover:bg-gray-50"
               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
               <span
                 className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dot}`}
@@ -348,7 +348,7 @@ function StatusDropdown({
                 {opt.label}
               </span>
               {value === opt.value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
               )}
             </button>
           ))}
@@ -390,7 +390,7 @@ function MultiStatusDropdown({
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400"
         } bg-white`}>
         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
@@ -439,7 +439,7 @@ function MultiStatusDropdown({
                   );
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
-                  isSelected ? "bg-blue-50" : "hover:bg-gray-50"
+                  isSelected ? "bg-brand-soft" : "hover:bg-gray-50"
                 } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                 <span
                   className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dot}`}
@@ -449,7 +449,7 @@ function MultiStatusDropdown({
                   {opt.label}
                 </span>
                 {isSelected && (
-                  <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
                 )}
               </button>
             );
@@ -517,7 +517,7 @@ function SearchableMultiDropdown({
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400"
         } bg-white`}>
         <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
@@ -549,7 +549,7 @@ function SearchableMultiDropdown({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={searchPlaceholder ?? "Tìm theo tên..."}
-              className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
           <div className="max-h-52 overflow-y-auto">
@@ -573,12 +573,12 @@ function SearchableMultiDropdown({
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
                       isSelected
-                        ? "bg-blue-50 text-blue-700 font-medium"
+                        ? "bg-brand-soft text-brand-dark font-medium"
                         : "hover:bg-gray-50 text-gray-700"
                     } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                     <span className="truncate">{opt.label}</span>
                     {isSelected && (
-                      <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+                      <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
                     )}
                   </button>
                 );
@@ -627,7 +627,7 @@ function SimpleDropdown({
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "hover:border-gray-400"
         } bg-white`}>
         <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
@@ -662,12 +662,12 @@ function SimpleDropdown({
               }}
               className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
                 opt.value === value
-                  ? "bg-blue-50 text-blue-700 font-medium"
+                  ? "bg-brand-soft text-brand-dark font-medium"
                   : "hover:bg-gray-50 text-gray-700"
               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
               <span className="truncate">{opt.label}</span>
               {opt.value === value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
               )}
             </button>
           ))}
@@ -730,8 +730,8 @@ function PresetPanel({
               }}
               className={`px-3 py-1.5 rounded-full text-sm border transition-all whitespace-nowrap text-left ${
                 selected === opt.value
-                  ? "bg-blue-600 text-white border-blue-600 font-medium shadow-sm"
-                  : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                  ? "bg-brand text-white border-brand font-medium shadow-sm"
+                  : "border-gray-200 text-gray-700 hover:border-brand hover:bg-brand-soft"
               }`}>
               {opt.label}
             </button>
@@ -824,12 +824,12 @@ function MiniCalendar({
               className={[
                 "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
                 isSel
-                  ? "bg-blue-600 text-white font-bold"
+                  ? "bg-brand text-white font-bold"
                   : isToday
-                    ? "border border-blue-400 text-blue-600 font-semibold hover:bg-blue-50"
+                    ? "border border-brand text-brand font-semibold hover:bg-brand-soft"
                     : isDisabled
                       ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-700 hover:bg-blue-50 cursor-pointer",
+                      : "text-gray-700 hover:bg-brand-soft cursor-pointer",
               ].join(" ")}>
               {day}
             </button>
@@ -852,7 +852,7 @@ function MiniCalendar({
             onChange(todayObj.toISOString().split("T")[0]);
             onClose();
           }}
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50">
+          className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft">
           Hôm nay
         </button>
       </div>
@@ -920,15 +920,15 @@ function TimeRangeFilter({
           }}
           className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
             dateMode === "preset"
-              ? "border-blue-400 bg-blue-50"
+              ? "border-brand bg-brand-soft"
               : "border-gray-200 hover:border-gray-300"
           }`}>
           <div
             className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-              dateMode === "preset" ? "border-blue-600" : "border-gray-300"
+              dateMode === "preset" ? "border-brand" : "border-gray-300"
             }`}>
             {dateMode === "preset" && (
-              <div className="w-1 h-1 rounded-full bg-blue-600" />
+              <div className="w-1 h-1 rounded-full bg-brand" />
             )}
           </div>
           <span className="text-sm text-gray-700 flex-1 font-medium">
@@ -936,7 +936,7 @@ function TimeRangeFilter({
           </span>
           <ChevronRight
             className={`w-4 h-4 transition-colors flex-shrink-0 ${
-              showPresetPanel ? "text-blue-500" : "text-gray-400"
+              showPresetPanel ? "text-brand" : "text-gray-400"
             }`}
           />
         </div>
@@ -949,15 +949,15 @@ function TimeRangeFilter({
           }}
           className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all ${
             dateMode === "custom"
-              ? "border-blue-400 bg-blue-50"
+              ? "border-brand bg-brand-soft"
               : "border-gray-200 hover:border-gray-300"
           }`}>
           <div
             className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-              dateMode === "custom" ? "border-blue-600" : "border-gray-300"
+              dateMode === "custom" ? "border-brand" : "border-gray-300"
             }`}>
             {dateMode === "custom" && (
-              <div className="w-1 h-1 rounded-full bg-blue-600" />
+              <div className="w-1 h-1 rounded-full bg-brand" />
             )}
           </div>
           <span className="text-sm text-gray-700 flex-1">Tùy chỉnh</span>
@@ -985,9 +985,9 @@ function TimeRangeFilter({
                     onClick={() => setOpenCal(isOpen ? null : field)}
                     className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
                       val
-                        ? "border-blue-300 bg-blue-50 text-gray-800"
+                        ? "border-brand bg-brand-soft text-gray-800"
                         : "border-gray-200 text-gray-400"
-                    } ${isOpen ? "ring-2 ring-blue-100 border-blue-400" : "hover:border-gray-300"}`}>
+                    } ${isOpen ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
                     <span>
                       {val
                         ? new Date(val + "T00:00:00").toLocaleDateString(
@@ -1404,7 +1404,7 @@ export function InvoicesSidebar({
           onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
           className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
             open
-              ? "border-blue-400 ring-2 ring-blue-100"
+              ? "border-brand ring-2 ring-brand-soft"
               : "hover:border-gray-400"
           }`}>
           <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
@@ -1436,13 +1436,13 @@ export function InvoicesSidebar({
                 type="button"
                 onClick={() => toggle(b.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
-                  selectedIds.includes(b.id) ? "bg-blue-50" : "hover:bg-gray-50"
+                  selectedIds.includes(b.id) ? "bg-brand-soft" : "hover:bg-gray-50"
                 } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                 <input
                   type="checkbox"
                   checked={selectedIds.includes(b.id)}
                   onChange={() => {}}
-                  className="w-3.5 h-3.5 accent-blue-600 flex-shrink-0"
+                  className="w-3.5 h-3.5 accent-brand flex-shrink-0"
                 />
                 <span className="text-gray-700">{b.name}</span>
               </button>
@@ -1463,7 +1463,7 @@ export function InvoicesSidebar({
         {activeFilterCount > 0 && (
           <button
             onClick={clearAll}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            className="text-sm text-brand hover:text-brand-dark font-medium">
             Xóa tất cả
           </button>
         )}
@@ -1650,7 +1650,7 @@ export function InvoicesSidebar({
                       e.target.checked ? bankAccounts.map((a: any) => a.id) : []
                     );
                   }}
-                  className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer flex-shrink-0"
+                  className="w-3.5 h-3.5 rounded accent-brand cursor-pointer flex-shrink-0"
                 />
                 <span className="text-xs font-medium text-gray-600">
                   Tất cả tài khoản
@@ -1678,7 +1678,7 @@ export function InvoicesSidebar({
                               : prev.filter((id) => id !== acc.id)
                           );
                         }}
-                        className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer flex-shrink-0"
+                        className="w-3.5 h-3.5 rounded accent-brand cursor-pointer flex-shrink-0"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="text-xs font-medium text-gray-800 truncate">
@@ -1704,8 +1704,8 @@ export function InvoicesSidebar({
             Khách hàng
           </label>
           {selectedCustomer ? (
-            <div className="flex items-center gap-2 border rounded-lg px-2 py-1 bg-blue-50 border-blue-200">
-              <span className="text-sm text-blue-700 font-medium flex-1 truncate">
+            <div className="flex items-center gap-2 border rounded-lg px-2 py-1 bg-brand-soft border-brand-border">
+              <span className="text-sm text-brand-dark font-medium flex-1 truncate">
                 {selectedCustomer.name}
               </span>
               <button
@@ -1713,7 +1713,7 @@ export function InvoicesSidebar({
                   setCustomerId("");
                   setCustomerSearch("");
                 }}
-                className="text-blue-400 hover:text-blue-600 flex-shrink-0">
+                className="text-brand hover:text-brand-dark flex-shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1729,7 +1729,7 @@ export function InvoicesSidebar({
                 onFocus={() => setShowCustomerDrop(true)}
                 onBlur={() => setTimeout(() => setShowCustomerDrop(false), 150)}
                 placeholder="Tìm theo tên, SĐT, mã KH..."
-                className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
               />
               {showCustomerDrop && filteredCustomers.length > 0 && (
                 <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
@@ -1741,7 +1741,7 @@ export function InvoicesSidebar({
                         setCustomerSearch("");
                         setShowCustomerDrop(false);
                       }}
-                      className={`w-full text-left px-2 py-1.5 hover:bg-blue-50 transition-colors ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                      className={`w-full text-left px-2 py-1.5 hover:bg-brand-soft transition-colors ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                       <div className="text-sm font-medium text-gray-800">
                         {c.name}
                       </div>

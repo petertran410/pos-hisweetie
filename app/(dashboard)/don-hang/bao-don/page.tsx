@@ -259,7 +259,9 @@ export default function BaoDonPage() {
   return (
     <PagePermissionGuard resource="packing_slips" action="view">
       {/* ── Desktop (md+) ── */}
-      <div className="hidden md:flex md:flex-col h-full border-t bg-gray-50 overflow-y-auto">
+      <div
+        className="hidden md:flex md:flex-col h-full border-t overflow-y-auto"
+        style={{ borderColor: "var(--dt-border)" }}>
         {/* Tổng quan giao hàng hôm nay */}
         {/* <div className="px-4 pt-4">
           <DeliveryOverview />

@@ -133,7 +133,9 @@ export default function TraHangPage() {
 
   return (
     <PagePermissionGuard resource="return_orders" action="view">
-      <div className="flex h-full border-t bg-gray-50">
+      <div
+        className="flex h-full border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <ReturnOrdersSidebar onFiltersChange={handleFiltersChange} />
         <ReturnOrdersTable
           filters={filters}

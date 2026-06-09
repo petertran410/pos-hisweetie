@@ -40,7 +40,7 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-brand" />
       </div>
     );
   }
@@ -77,7 +77,7 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
                 <Link
                   href={`/don-hang/dat-hang?Code=${order.code}`}
                   target="_blank"
-                  className="text-blue-600 hover:underline">
+                  className="text-brand hover:underline">
                   {order.code}
                 </Link>
               </td>

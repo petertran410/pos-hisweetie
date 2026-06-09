@@ -80,14 +80,14 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
               placeholder="Tìm mã phiếu, người kiểm..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 pr-3 py-1.5 border rounded text-sm w-64 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="pl-8 pr-3 py-1.5 border rounded text-sm w-64 focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
         </div>
         {canCreate && (
           <button
             onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white rounded text-sm hover:bg-brand-dark">
             <Plus className="w-4 h-4" />
             Tạo phiếu kiểm
           </button>
@@ -128,7 +128,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
               <tr>
                 <td colSpan={colSpan} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-2 text-gray-400">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
                     <span className="text-xs">Đang tải...</span>
                   </div>
                 </td>
@@ -147,14 +147,14 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                   <tr
                     className={`cursor-pointer transition-colors ${
                       expandedId === check.id
-                        ? "bg-blue-50"
+                        ? "bg-brand-soft"
                         : "border-b hover:bg-gray-50"
                     }`}
                     onClick={() => toggleExpand(check.id)}>
                     <td
                       className={`px-4 py-2.5 text-sm ${
                         expandedId === check.id
-                          ? "border-t-2 border-l-2 border-blue-500"
+                          ? "border-t-2 border-l-2 border-brand"
                           : ""
                       }`}>
                       <CodeLink entity="inventory-check" code={check.code} />
@@ -162,7 +162,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                     <td
                       className={`px-4 py-2.5 text-sm ${
                         expandedId === check.id
-                          ? "border-t-2 border-blue-500"
+                          ? "border-t-2 border-brand"
                           : ""
                       }`}>
                       {check.branchName}
@@ -170,7 +170,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                     <td
                       className={`px-4 py-2.5 text-sm ${
                         expandedId === check.id
-                          ? "border-t-2 border-blue-500"
+                          ? "border-t-2 border-brand"
                           : ""
                       }`}>
                       {check.createdByName}
@@ -178,7 +178,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                     <td
                       className={`px-4 py-2.5 text-sm ${
                         expandedId === check.id
-                          ? "border-t-2 border-blue-500"
+                          ? "border-t-2 border-brand"
                           : ""
                       }`}>
                       {formatDateTime(check.checkDate)}
@@ -186,7 +186,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                     <td
                       className={`px-4 py-2.5 text-sm text-right ${
                         expandedId === check.id
-                          ? "border-t-2 border-blue-500"
+                          ? "border-t-2 border-brand"
                           : ""
                       }`}>
                       {check.details?.length || 0}
@@ -194,13 +194,13 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                     <td
                       className={`px-4 py-2.5 text-sm text-gray-500 truncate max-w-[200px] ${
                         expandedId === check.id
-                          ? "border-t-2 border-blue-500"
+                          ? "border-t-2 border-brand"
                           : ""
                       }`}>
                       {check.note || "-"}
                     </td>
                     <td
-                      className={`px-4 py-2.5 text-sm text-center ${expandedId === check.id ? "border-t-2 border-blue-500" : ""}`}>
+                      className={`px-4 py-2.5 text-sm text-center ${expandedId === check.id ? "border-t-2 border-brand" : ""}`}>
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           check.status === 2
@@ -213,7 +213,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                     {/* <td
                       className={`px-4 py-2.5 ${
                         expandedId === check.id
-                          ? "border-t-2 border-r-2 border-blue-500"
+                          ? "border-t-2 border-r-2 border-brand"
                           : ""
                       }`}>
                       <ChevronDown
@@ -246,7 +246,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
               setLimit(Number(e.target.value));
               setPage(1);
             }}
-            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
             {[10, 15, 20, 50].map((n) => (
               <option key={n} value={n}>
                 {n}
@@ -274,7 +274,7 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
                 onClick={() => setPage(p)}
                 className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
                   p === page
-                    ? "bg-blue-600 text-white border-blue-600"
+                    ? "bg-brand text-white border-brand"
                     : "hover:bg-gray-50 text-gray-600 border-gray-200"
                 }`}>
                 {p}

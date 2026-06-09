@@ -152,10 +152,10 @@ export function DestructionDetailRow({
 
   if (isLoading) {
     return (
-      <tr className="bg-blue-50">
+      <tr className="bg-brand-soft">
         <td colSpan={colSpan} className="px-6 py-8">
           <div className="flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
             <span className="text-gray-600">
               Đang tải thông tin phiếu xuất hủy...
             </span>
@@ -182,7 +182,7 @@ export function DestructionDetailRow({
     <tr>
       <td
         colSpan={colSpan}
-        className="border-b-2 border-l-2 border-r-2 border-blue-500 bg-gray-50">
+        className="border-b-2 border-l-2 border-r-2 border-brand bg-gray-50">
         <div
           ref={wrapperRef}
           className="sticky left-0 bg-gray-50"
@@ -196,7 +196,7 @@ export function DestructionDetailRow({
                     <CodeLink
                       entity="destruction"
                       code={destruction.code}
-                      className="text-lg font-bold text-blue-600 hover:underline"
+                      className="text-lg font-bold text-brand hover:underline"
                     />
                   </span>
                   <span
@@ -220,7 +220,7 @@ export function DestructionDetailRow({
                   <select
                     value={createdById}
                     onChange={(e) => setCreatedById(Number(e.target.value))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400">
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand">
                     {users?.map((user) => (
                       <option key={user.id} value={user.id}>
                         {user.name}
@@ -237,7 +237,7 @@ export function DestructionDetailRow({
                     type="datetime-local"
                     value={destructionDate}
                     onChange={(e) => setDestructionDate(e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand"
                   />
                 </div>
 
@@ -262,7 +262,7 @@ export function DestructionDetailRow({
                     placeholder="Tìm theo mã"
                     value={searchCode}
                     onChange={(e) => setSearchCode(e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand"
                   />
                 </div>
                 <div>
@@ -274,7 +274,7 @@ export function DestructionDetailRow({
                     placeholder="Tìm theo tên"
                     value={searchName}
                     onChange={(e) => setSearchName(e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand"
                   />
                 </div>
               </div>
@@ -327,7 +327,7 @@ export function DestructionDetailRow({
                                   href={`/san-pham/danh-sach?Code=${detail.productCode}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-sm font-medium text-blue-600 hover:underline inline-flex items-center gap-1"
+                                  className="text-sm font-medium text-brand hover:underline inline-flex items-center gap-1"
                                   onClick={(e) => e.stopPropagation()}>
                                   {detail.productCode}
                                   <ExternalLink className="w-3 h-3" />
@@ -345,7 +345,7 @@ export function DestructionDetailRow({
                             <td className="px-[10px] py-2 text-right text-sm text-gray-900">
                               {formatCurrency(Number(detail.price))}
                             </td>
-                            <td className="px-[10px] py-2 text-right text-sm font-semibold text-blue-600">
+                            <td className="px-[10px] py-2 text-right text-sm font-semibold text-brand">
                               {formatCurrency(Number(detail.totalValue))}
                             </td>
                           </tr>
@@ -366,7 +366,7 @@ export function DestructionDetailRow({
                   onChange={(e) => setNote(e.target.value.slice(0, 1000))}
                   maxLength={1000}
                   rows={3}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white resize-none focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white resize-none focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand"
                   placeholder="Nhập ghi chú..."
                 />
               </div>
@@ -386,7 +386,7 @@ export function DestructionDetailRow({
                   {showOpenButton && (
                     <button
                       onClick={handleOpenEdit}
-                      className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors">
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-dark transition-colors">
                       Mở phiếu
                     </button>
                   )}

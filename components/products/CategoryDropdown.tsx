@@ -150,7 +150,7 @@ export function CategoryDropdown({
             <button
               type="button"
               onClick={handleCreate}
-              className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded">
+              className="w-full text-left px-3 py-2 text-sm text-brand hover:bg-brand-soft rounded">
               + Tạo mới
             </button>
           </div>
@@ -161,13 +161,13 @@ export function CategoryDropdown({
                 <div
                   key={cat.id}
                   className={`flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-50 group ${
-                    value === cat.name ? "bg-blue-50" : ""
+                    value === cat.name ? "bg-brand-soft" : ""
                   }`}>
                   <button
                     type="button"
                     onClick={() => handleSelect(cat.name)}
                     className={`flex-1 text-left ${
-                      value === cat.name ? "text-blue-700 font-medium" : ""
+                      value === cat.name ? "text-brand-dark font-medium" : ""
                     }`}>
                     {cat.name}
                   </button>

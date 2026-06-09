@@ -290,7 +290,7 @@ export function DashboardHeader() {
                 className="relative"
                 onMouseEnter={() => setHoveredMenu("pos")}
                 onMouseLeave={() => setHoveredMenu(null)}>
-                <button className="px-4 py-2 bg-white text-blue-600 rounded hover:bg-gray-400 transition-colors font-medium">
+                <button className="px-4 py-2 bg-white text-brand rounded hover:bg-gray-400 transition-colors font-medium">
                   🛒 Bán hàng
                 </button>
                 {hoveredMenu === "pos" && (
@@ -317,7 +317,7 @@ export function DashboardHeader() {
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 px-3 py-2 hover:bg-gray-400 rounded transition-colors">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-brand rounded-full flex items-center justify-center">
                   {user?.avatar ? (
                     <img
                       src={user.avatar}
@@ -370,7 +370,7 @@ export function DashboardHeader() {
             {posActions.length > 0 && (
               <Link
                 href={posActions[0]?.href ?? "/ban-hang"}
-                className="p-2 hover:bg-blue-700 rounded transition-colors"
+                className="p-2 hover:bg-brand-dark rounded transition-colors"
                 aria-label="Bán hàng">
                 <ShoppingCart className="w-5 h-5" />
               </Link>
@@ -397,9 +397,9 @@ export function DashboardHeader() {
           />
 
           {/* Drawer — blue theme */}
-          <div className="fixed top-0 left-0 h-full w-72 bg-blue-700 z-50 flex flex-col lg:hidden shadow-xl">
+          <div className="fixed top-0 left-0 h-full w-72 bg-brand-dark z-50 flex flex-col lg:hidden shadow-xl">
             {/* Drawer header */}
-            <div className="flex items-center justify-between px-4 h-14 border-b border-blue-600 flex-shrink-0">
+            <div className="flex items-center justify-between px-4 h-14 border-b border-brand-dark flex-shrink-0">
               <Link
                 href="/"
                 onClick={closeMobileMenu}
@@ -408,7 +408,7 @@ export function DashboardHeader() {
               </Link>
               <button
                 onClick={closeMobileMenu}
-                className="p-2 hover:bg-blue-600 rounded transition-colors">
+                className="p-2 hover:bg-brand-dark rounded transition-colors">
                 <X className="w-5 h-5 text-white" />
               </button>
             </div>
@@ -418,7 +418,7 @@ export function DashboardHeader() {
               <Link
                 href="/"
                 onClick={closeMobileMenu}
-                className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
+                className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-brand-dark transition-colors">
                 Tổng quan
               </Link>
 
@@ -427,17 +427,17 @@ export function DashboardHeader() {
                 <div>
                   <button
                     onClick={() => toggleMobileSection("products")}
-                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
+                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-brand-dark transition-colors">
                     <span>Hàng hóa</span>
                     <ChevronDown
                       className={`w-4 h-4 text-white transition-transform duration-200 ${expandedMobileSection === "products" ? "rotate-180" : ""}`}
                     />
                   </button>
                   {expandedMobileSection === "products" && (
-                    <div className="bg-blue-800/40">
+                    <div className="bg-brand-overlay">
                       {filteredProductSubmenu.map((section) => (
                         <div key={section.title}>
-                          <p className="px-6 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase tracking-wider">
+                          <p className="px-6 pt-3 pb-1 text-xs font-semibold text-cyan-soft uppercase tracking-wider">
                             {section.title}
                           </p>
                           {section.items.map((item) => (
@@ -445,7 +445,7 @@ export function DashboardHeader() {
                               key={item.href}
                               href={item.href}
                               onClick={closeMobileMenu}
-                              className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-blue-600 transition-colors">
+                              className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-brand-dark transition-colors">
                               {item.label}
                             </Link>
                           ))}
@@ -461,20 +461,20 @@ export function DashboardHeader() {
                 <div>
                   <button
                     onClick={() => toggleMobileSection("orders")}
-                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
+                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-brand-dark transition-colors">
                     <span>Đơn hàng</span>
                     <ChevronDown
                       className={`w-4 h-4 text-white transition-transform duration-200 ${expandedMobileSection === "orders" ? "rotate-180" : ""}`}
                     />
                   </button>
                   {expandedMobileSection === "orders" && (
-                    <div className="bg-blue-800/40">
+                    <div className="bg-brand-overlay">
                       {filteredOrderSubmenu.map((item) => (
                         <Link
                           key={item.href}
                           href={item.href}
                           onClick={closeMobileMenu}
-                          className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-blue-600 transition-colors">
+                          className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-brand-dark transition-colors">
                           {item.label}
                         </Link>
                       ))}
@@ -488,20 +488,20 @@ export function DashboardHeader() {
                 <div>
                   <button
                     onClick={() => toggleMobileSection("customers")}
-                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
+                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-brand-dark transition-colors">
                     <span>Khách hàng</span>
                     <ChevronDown
                       className={`w-4 h-4 text-white transition-transform duration-200 ${expandedMobileSection === "customers" ? "rotate-180" : ""}`}
                     />
                   </button>
                   {expandedMobileSection === "customers" && (
-                    <div className="bg-blue-800/40">
+                    <div className="bg-brand-overlay">
                       {filteredCustomerSubmenu.map((item) => (
                         <Link
                           key={item.href}
                           href={item.href}
                           onClick={closeMobileMenu}
-                          className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-blue-600 transition-colors">
+                          className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-brand-dark transition-colors">
                           {item.label}
                         </Link>
                       ))}
@@ -515,20 +515,20 @@ export function DashboardHeader() {
                 <div>
                   <button
                     onClick={() => toggleMobileSection("finance")}
-                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
+                    className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white hover:bg-brand-dark transition-colors">
                     <span>Tài chính</span>
                     <ChevronDown
                       className={`w-4 h-4 text-white transition-transform duration-200 ${expandedMobileSection === "finance" ? "rotate-180" : ""}`}
                     />
                   </button>
                   {expandedMobileSection === "finance" && (
-                    <div className="bg-blue-800/40">
+                    <div className="bg-brand-overlay">
                       {filteredFinanceSubmenu.map((item) => (
                         <Link
                           key={item.href}
                           href={item.href}
                           onClick={closeMobileMenu}
-                          className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-blue-600 transition-colors">
+                          className="flex items-center px-8 py-2.5 text-sm text-white hover:bg-brand-dark transition-colors">
                           {item.label}
                         </Link>
                       ))}
@@ -540,20 +540,20 @@ export function DashboardHeader() {
               <Link
                 href="/bao-cao/khach-hang"
                 onClick={closeMobileMenu}
-                className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
+                className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-brand-dark transition-colors">
                 Báo cáo
               </Link>
 
               {/* Bán hàng shortcut */}
               {posActions.length > 0 && (
                 <div className="px-4 mt-3">
-                  <div className="border border-blue-500 rounded-lg overflow-hidden">
+                  <div className="border border-brand-dark rounded-lg overflow-hidden">
                     {posActions.map((item) => (
                       <Link
                         key={item.key}
                         href={item.href}
                         onClick={closeMobileMenu}
-                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors border-b border-blue-500 last:border-b-0">
+                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-white hover:bg-brand-dark transition-colors border-b border-brand-dark last:border-b-0">
                         <ShoppingCart className="w-4 h-4" />
                         {item.label}
                       </Link>
@@ -564,15 +564,15 @@ export function DashboardHeader() {
             </nav>
 
             {/* Drawer footer — User info + Cài đặt + Logout */}
-            <div className="flex-shrink-0 border-t border-blue-600">
-              <div className="px-4 py-3 border-b border-blue-600">
+            <div className="flex-shrink-0 border-t border-brand-dark">
+              <div className="px-4 py-3 border-b border-brand-dark">
                 <BranchSelector dropUp />
               </div>
 
               {/* User info + buttons — giữ nguyên */}
               <div className="px-4 py-3">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-brand rounded-full flex items-center justify-center flex-shrink-0">
                     {user?.avatar ? (
                       <img
                         src={user.avatar}
@@ -589,7 +589,7 @@ export function DashboardHeader() {
                     <p className="text-sm font-medium text-white truncate">
                       {user?.name}
                     </p>
-                    <p className="text-xs text-blue-300 truncate">
+                    <p className="text-xs text-cyan-soft truncate">
                       {user?.email}
                     </p>
                   </div>
@@ -599,7 +599,7 @@ export function DashboardHeader() {
                   <Link
                     href="/cai-dat"
                     onClick={closeMobileMenu}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-white border border-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-white border border-brand-dark rounded-lg hover:bg-brand-dark transition-colors">
                     <Settings className="w-4 h-4" />
                     Cài đặt
                   </Link>
@@ -608,7 +608,7 @@ export function DashboardHeader() {
                       closeMobileMenu();
                       handleLogout();
                     }}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-red-300 border border-red-400/50 rounded-lg hover:bg-blue-600 transition-colors">
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-red-300 border border-red-400/50 rounded-lg hover:bg-brand-dark transition-colors">
                     <LogOut className="w-4 h-4" />
                     Đăng xuất
                   </button>

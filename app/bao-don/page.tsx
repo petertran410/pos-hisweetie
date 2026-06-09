@@ -6,7 +6,7 @@ import { DeliveryOverview } from "@/components/packing-slips/DeliveryOverview";
 
 export default function BaoDonPage() {
   return (
-    <div className="min-h-screen bg-gray-50 p-4 space-y-4">
+    <div className="min-h-screen p-4 space-y-4">
       {/* Tổng quan giao hàng hôm nay */}
       <DeliveryOverview />
 
@@ -16,21 +16,21 @@ export default function BaoDonPage() {
         <div className="grid grid-cols-3 gap-2">
           <Link
             href="/bao-don/dong-hang"
-            className="flex flex-col items-center gap-1 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium"
+            className="flex flex-col items-center gap-1 px-2 py-2.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-xs font-medium"
           >
             <Package className="w-5 h-5" />
             Đóng hàng
           </Link>
           <Link
             href="/bao-don/loading"
-            className="flex flex-col items-center gap-1 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium"
+            className="flex flex-col items-center gap-1 px-2 py-2.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-xs font-medium"
           >
             <Container className="w-5 h-5" />
             Loading
           </Link>
           <Link
             href="/bao-don/giao-hang"
-            className="flex flex-col items-center gap-1 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium"
+            className="flex flex-col items-center gap-1 px-2 py-2.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-xs font-medium"
           >
             <Truck className="w-5 h-5" />
             Giao hàng

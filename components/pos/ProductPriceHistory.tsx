@@ -134,14 +134,14 @@ export function ProductPriceHistory({
                             <Link
                               href={`/don-hang/dat-hang?Code=${item.code}`}
                               target="_blank"
-                              className="text-blue-600 hover:underline">
+                              className="text-brand hover:underline">
                               {item.code}
                             </Link>
                           ) : (
                             <Link
                               href={`/don-hang/hoa-don?Code=${item.code}`}
                               target="_blank"
-                              className="text-blue-600 hover:underline">
+                              className="text-brand hover:underline">
                               {item.code}
                             </Link>
                           )}

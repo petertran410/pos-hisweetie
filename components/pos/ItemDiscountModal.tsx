@@ -193,14 +193,14 @@ export function ItemDiscountModal({
                 value={inputValue}
                 onChange={handleInputChange}
                 placeholder={discountType === "amount" ? "0" : "0"}
-                className="flex-1 border border-gray-300 rounded px-3 py-2 text-md text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 border border-gray-300 rounded px-3 py-2 text-md text-right focus:outline-none focus:ring-2 focus:ring-brand"
               />
               <div className="flex gap-1">
                 <button
                   onClick={() => handleTypeChange("amount")}
                   className={`px-3 py-2 text-sm rounded transition-colors ${
                     discountType === "amount"
-                      ? "bg-blue-600 text-white"
+                      ? "bg-brand text-white"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                   }`}>
                   VNĐ
@@ -209,7 +209,7 @@ export function ItemDiscountModal({
                   onClick={() => handleTypeChange("ratio")}
                   className={`px-3 py-2 text-sm rounded transition-colors ${
                     discountType === "ratio"
-                      ? "bg-blue-600 text-white"
+                      ? "bg-brand text-white"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                   }`}>
                   %
@@ -220,7 +220,7 @@ export function ItemDiscountModal({
 
           <div className="flex justify-between items-center pt-2 border-t">
             <span className="text-sm text-gray-600">Giá bán</span>
-            <span className="text-md font-semibold text-blue-600">
+            <span className="text-md font-semibold text-brand">
               {formatCurrency(finalPrice)}
             </span>
           </div>
@@ -234,7 +234,7 @@ export function ItemDiscountModal({
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700">
+            className="px-4 py-2 text-sm text-white bg-brand rounded hover:bg-brand-dark">
             Lưu
           </button>
         </div>

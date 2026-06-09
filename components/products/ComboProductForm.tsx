@@ -342,7 +342,7 @@ export function ComboProductForm({
         </div>
 
         <div className="border-b px-4">
-          <button className="py-3 border-b-2 border-blue-600 text-blue-600">
+          <button className="py-3 border-b-2 border-brand text-brand">
             Thông tin
           </button>
         </div>
@@ -731,7 +731,7 @@ export function ComboProductForm({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+              className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
               {isSubmitting ? "Đang lưu..." : product ? "Lưu" : "Tạo mới"}
             </button>
           </div>

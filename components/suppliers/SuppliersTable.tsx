@@ -161,14 +161,14 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
             placeholder="Theo mã, tên, số điện thoại"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <PermissionGate resource="suppliers" action="create">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
+              className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
               <Plus className="w-4 h-4" />
               Tạo nhà cung cấp
             </button>
@@ -217,7 +217,7 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
               <tr>
                 <td colSpan={colSpan} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-2 text-gray-400">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
                     <span className="text-xs">Đang tải...</span>
                   </div>
                 </td>
@@ -236,14 +236,14 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
                   <tr
                     className={`cursor-pointer transition-colors ${
                       expandedId === supplier.id
-                        ? "bg-blue-50"
+                        ? "bg-brand-soft"
                         : "border-b hover:bg-gray-50"
                     }`}
                     onClick={() => toggleExpand(supplier.id)}>
                     <td
                       className={`px-4 py-2.5 sticky left-0 z-10 ${
                         expandedId === supplier.id
-                          ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
+                          ? "bg-brand-soft border-t-2 border-l-2 border-brand"
                           : "bg-white"
                       }`}
                       onClick={(e) => e.stopPropagation()}>
@@ -259,7 +259,7 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
                         key={col.key}
                         className={`px-4 py-2.5 text-gray-700 ${
                           expandedId === supplier.id
-                            ? "border-t-2 border-blue-500"
+                            ? "border-t-2 border-brand"
                             : ""
                         }`}
                         style={{
@@ -275,7 +275,7 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
                     <td
                       className={`px-4 py-2.5 ${
                         expandedId === supplier.id
-                          ? "border-t-2 border-r-2 border-blue-500"
+                          ? "border-t-2 border-r-2 border-brand"
                           : ""
                       }`}>
                       <ChevronDown
@@ -308,7 +308,7 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
               setLimit(Number(e.target.value));
               setPage(1);
             }}
-            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
             {[10, 15, 20, 50, 100].map((n) => (
               <option key={n} value={n}>
                 {n}
@@ -337,7 +337,7 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
                 onClick={() => setPage(p)}
                 className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
                   p === page
-                    ? "bg-blue-600 text-white border-blue-600"
+                    ? "bg-brand text-white border-brand"
                     : "hover:bg-gray-50 text-gray-600 border-gray-200"
                 }`}>
                 {p}

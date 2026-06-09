@@ -84,7 +84,7 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-brand" />
       </div>
     );
   }
@@ -147,7 +147,7 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
                     code={log.refCode}
                   />
                 ) : (
-                  <span className="font-medium text-blue-600">
+                  <span className="font-medium text-brand">
                     {log.refCode || "-"}
                   </span>
                 )}
@@ -214,7 +214,7 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
                 onClick={() => setCurrentPage(page)}
                 className={`w-7 h-7 rounded text-xs font-medium transition-colors ${
                   page === currentPage
-                    ? "bg-blue-600 text-white"
+                    ? "bg-brand text-white"
                     : "hover:bg-gray-200 text-gray-700"
                 }`}>
                 {page}

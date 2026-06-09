@@ -184,7 +184,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-brand" />
       </div>
     );
   }
@@ -250,7 +250,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
                         href={`/don-hang/hoa-don?Code=${item.code}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs lg:text-sm font-medium text-blue-600 hover:underline"
+                        className="text-xs lg:text-sm font-medium text-brand hover:underline"
                         onClick={(e) => e.stopPropagation()}>
                         {item.code}
                       </Link>
@@ -261,7 +261,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
                         href={`/don-hang/tra-hang?Code=${item.code}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs lg:text-sm font-medium text-blue-600 hover:underline"
+                        className="text-xs lg:text-sm font-medium text-brand hover:underline"
                         onClick={(e) => e.stopPropagation()}>
                         {item.code}
                       </Link>

@@ -148,7 +148,7 @@ export function TrademarkDropdown({
             <button
               type="button"
               onClick={handleCreate}
-              className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded">
+              className="w-full text-left px-3 py-2 text-sm text-brand hover:bg-brand-soft rounded">
               + Tạo mới
             </button>
           </div>
@@ -159,13 +159,13 @@ export function TrademarkDropdown({
                 <div
                   key={tm.id}
                   className={`flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-50 group ${
-                    value === tm.id ? "bg-blue-50" : ""
+                    value === tm.id ? "bg-brand-soft" : ""
                   }`}>
                   <button
                     type="button"
                     onClick={() => handleSelect(tm.id)}
                     className={`flex-1 text-left ${
-                      value === tm.id ? "text-blue-700 font-medium" : ""
+                      value === tm.id ? "text-brand-dark font-medium" : ""
                     }`}>
                     {tm.name}
                   </button>

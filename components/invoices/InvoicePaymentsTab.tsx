@@ -19,7 +19,7 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-brand" />
       </div>
     );
   }
@@ -112,8 +112,8 @@ export function InvoicePaymentsTab({ invoiceId }: InvoicePaymentsTabProps) {
                   <Link
                     className={
                       row.isTTTUHD
-                        ? "text-blue-600 hover:underline cursor-pointer"
-                        : "text-blue-600 hover:underline cursor-pointer"
+                        ? "text-brand hover:underline cursor-pointer"
+                        : "text-brand hover:underline cursor-pointer"
                     }
                     href={`/tai-chinh/so-quy?Code=${row.code}`}
                     target="_blank"

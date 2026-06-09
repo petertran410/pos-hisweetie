@@ -126,9 +126,9 @@ function MiniCalendar({
               }}
               className={`aspect-square flex items-center justify-center text-xs rounded-lg transition-colors ${
                 isSel
-                  ? "bg-blue-600 text-white font-semibold"
+                  ? "bg-brand text-white font-semibold"
                   : isToday
-                    ? "border border-blue-400 text-blue-600 font-medium hover:bg-blue-50"
+                    ? "border border-brand text-brand font-medium hover:bg-brand-soft"
                     : "text-gray-700 hover:bg-gray-100"
               }`}>
               {day}
@@ -171,7 +171,7 @@ function TimePicker({
                 onClick={() => onChange(h, minute)}
                 className={`w-full text-center py-0.5 text-sm rounded transition-colors ${
                   hour === h
-                    ? "bg-blue-600 text-white font-medium"
+                    ? "bg-brand text-white font-medium"
                     : "hover:bg-gray-100 text-gray-700"
                 }`}>
                 {String(h).padStart(2, "0")}
@@ -192,7 +192,7 @@ function TimePicker({
                 }}
                 className={`w-full text-center py-0.5 text-sm rounded transition-colors ${
                   minute === m
-                    ? "bg-blue-600 text-white font-medium"
+                    ? "bg-brand text-white font-medium"
                     : "hover:bg-gray-100 text-gray-700"
                 }`}>
                 {String(m).padStart(2, "0")}
@@ -238,7 +238,7 @@ function BranchDropdown({
         onClick={() => !disabled && setOpen((o) => !o)}
         className={`w-full flex items-center justify-between px-2 py-1 border rounded text-sm transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed ${
           open
-            ? "border-blue-400 ring-2 ring-blue-100"
+            ? "border-brand ring-2 ring-brand-soft"
             : "border-gray-200 hover:border-gray-300"
         }`}>
         <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
@@ -260,12 +260,12 @@ function BranchDropdown({
               }}
               className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
                 opt.value === value
-                  ? "bg-blue-50 text-blue-700 font-medium"
+                  ? "bg-brand-soft text-brand-dark font-medium"
                   : "hover:bg-gray-50 text-gray-700"
               } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
               <span className="truncate">{opt.label}</span>
               {opt.value === value && (
-                <Check className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 ml-2" />
+                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
               )}
             </button>
           ))}
@@ -650,7 +650,7 @@ export function ProductionForm({
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="Mã phiếu tự động"
-                  className="text-sm w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="text-sm w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
                   disabled={isFormDisabled}
                 />
               </div>
@@ -674,7 +674,7 @@ export function ProductionForm({
                     }}
                     onFocus={() => setShowProductSearch(true)}
                     placeholder="Tìm sản phẩm..."
-                    className="text-sm w-full px-2 py-1 pr-8 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="text-sm w-full px-2 py-1 pr-8 border rounded focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
                     disabled={isFormDisabled}
                   />
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -726,7 +726,7 @@ export function ProductionForm({
                       disabled={isFormDisabled}
                       className={`w-full flex items-center justify-between px-2 py-1 border rounded text-sm transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed ${
                         showCal
-                          ? "border-blue-400 ring-2 ring-blue-100"
+                          ? "border-brand ring-2 ring-brand-soft"
                           : "border-gray-200 hover:border-gray-300"
                       }`}>
                       <span className="text-gray-800">
@@ -761,7 +761,7 @@ export function ProductionForm({
                       disabled={isFormDisabled}
                       className={`w-full flex items-center justify-between px-2 py-1 border rounded text-sm transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed ${
                         showTimePicker
-                          ? "border-blue-400 ring-2 ring-blue-100"
+                          ? "border-brand ring-2 ring-brand-soft"
                           : "border-gray-200 hover:border-gray-300"
                       }`}>
                       <span className="text-gray-800">
@@ -794,7 +794,7 @@ export function ProductionForm({
                   value={quantity}
                   onChange={(e) => setQuantity(Number(e.target.value))}
                   min="0"
-                  className="text-sm w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="text-sm w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
                   disabled={isFormDisabled}
                 />
               </div>
@@ -973,7 +973,7 @@ export function ProductionForm({
                                   });
                                 }}
                                 disabled={isFormDisabled}
-                                className="w-20 border rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                className="w-20 border rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
                               />
 
                               {/* <span className="text-xs text-gray-400 w-6 text-left">
@@ -1055,7 +1055,7 @@ export function ProductionForm({
                 maxLength={1000}
                 rows={3}
                 placeholder="Ghi chú..."
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
+                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
                 disabled={isFormDisabled}
               />
             </div>
@@ -1105,13 +1105,13 @@ export function ProductionForm({
               <>
                 <button
                   onClick={handleSaveDraft}
-                  className="px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-50 disabled:opacity-50"
+                  className="px-4 py-2 border border-brand text-brand rounded hover:bg-brand-soft disabled:opacity-50"
                   disabled={isSubmitting}>
                   {isSubmitting ? "Đang xử lý..." : "Lưu tạm"}
                 </button>
                 <button
                   onClick={handleComplete}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50"
                   disabled={isSubmitting}>
                   {isSubmitting ? "Đang xử lý..." : "Hoàn thành"}
                 </button>

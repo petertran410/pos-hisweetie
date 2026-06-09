@@ -89,10 +89,10 @@ export function SupplierDetailRow({
 
   if (isLoading) {
     return (
-      <tr className="bg-blue-50">
+      <tr className="bg-brand-soft">
         <td colSpan={colSpan} className="px-6 py-8">
           <div className="flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
             <span className="text-gray-600">
               Đang tải thông tin nhà cung cấp...
             </span>
@@ -113,7 +113,7 @@ export function SupplierDetailRow({
     <tr>
       <td
         colSpan={colSpan}
-        className="border-b-2 border-l-2 border-r-2 border-blue-500 p-0 bg-gray-50">
+        className="border-b-2 border-l-2 border-r-2 border-brand p-0 bg-gray-50">
         <div
           ref={wrapperRef}
           className="sticky left-0 bg-gray-50"
@@ -128,7 +128,7 @@ export function SupplierDetailRow({
                       <CodeLink
                         entity="supplier"
                         code={supplier.code}
-                        className="text-lg font-bold text-blue-600 hover:underline"
+                        className="text-lg font-bold text-brand hover:underline"
                       />
                     </span>
                     <span className="text-gray-400">-</span>
@@ -157,7 +157,7 @@ export function SupplierDetailRow({
                       onClick={() => setActiveTab(tab.key)}
                       className={`px-4 py-2 text-md font-medium border-b-2 transition-colors ${
                         activeTab === tab.key
-                          ? "border-blue-600 text-blue-600"
+                          ? "border-brand text-brand"
                           : "border-transparent text-gray-500 hover:text-gray-700"
                       }`}>
                       {tab.label}
@@ -257,7 +257,7 @@ export function SupplierDetailRow({
                     {canUpdateSupplier && (
                       <button
                         onClick={() => setShowEditModal(true)}
-                        className="px-4 py-2 text-md font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm">
+                        className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors shadow-sm">
                         <Pencil className="w-4 h-4 inline mr-1" />
                         Chỉnh sửa
                       </button>

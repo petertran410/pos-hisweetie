@@ -189,7 +189,7 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
                 <button
                   onClick={handleSave}
                   disabled={assignRoleBranchPerms.isPending}
-                  className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium">
+                  className="flex items-center gap-2 px-4 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50 text-sm font-medium">
                   <Save className="w-4 h-4" />
                   {assignRoleBranchPerms.isPending
                     ? "Đang lưu..."
@@ -207,7 +207,7 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
                 onClick={() => handleBranchChange(branch.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-colors ${
                   selectedBranchId === branch.id
-                    ? "bg-blue-50 border-blue-500 text-blue-700 font-medium"
+                    ? "bg-brand-soft border-brand text-brand-dark font-medium"
                     : "border-gray-200 hover:bg-gray-50 text-gray-600"
                 }`}>
                 <Building2 className="w-3.5 h-3.5" />
@@ -227,7 +227,7 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
                 placeholder="Tìm quyền..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-1.5 border rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-9 pr-4 py-1.5 border rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
             <div className="flex items-center gap-1 flex-wrap">
@@ -235,7 +235,7 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
                 onClick={() => setSelectedCategory("all")}
                 className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
                   selectedCategory === "all"
-                    ? "bg-blue-600 text-white border-blue-600"
+                    ? "bg-brand text-white border-brand"
                     : "border-gray-200 hover:bg-gray-50"
                 }`}>
                 Tất cả
@@ -246,7 +246,7 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
                     selectedCategory === cat
-                      ? "bg-blue-600 text-white border-blue-600"
+                      ? "bg-brand text-white border-brand"
                       : "border-gray-200 hover:bg-gray-50"
                   }`}>
                   {cat}
@@ -264,7 +264,7 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
         </div>
       ) : isLoading ? (
         <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">

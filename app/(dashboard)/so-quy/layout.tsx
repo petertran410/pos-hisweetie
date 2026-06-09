@@ -1,6 +1,6 @@
 import "@/app/dashboard.css";
 
-export default function ProductLayout({
+export default function SoQuyLayout({
   children,
 }: {
   children: React.ReactNode;

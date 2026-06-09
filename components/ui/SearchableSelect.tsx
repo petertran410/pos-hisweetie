@@ -118,7 +118,7 @@ export function SearchableSelect({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={searchPlaceholder}
-                className={`w-full pl-9 pr-3 ${size === "sm" ? "py-1.5 text-xs" : "py-2 text-sm"} border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                className={`w-full pl-9 pr-3 ${size === "sm" ? "py-1.5 text-xs" : "py-2 text-sm"} border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand`}
               />
             </div>
           </div>
@@ -131,13 +131,13 @@ export function SearchableSelect({
                   type="button"
                   onClick={() => handleSelect(option.value)}
                   className={`w-full px-3 py-2.5 text-left hover:bg-gray-50 flex items-center justify-between transition-colors ${
-                    option.value === value ? "bg-blue-50" : ""
+                    option.value === value ? "bg-brand-soft" : ""
                   } `}>
                   <span className="text-sm">
                     {renderOption ? renderOption(option) : option.label}
                   </span>
                   {option.value === value && (
-                    <Check className="w-4 h-4 text-blue-600" />
+                    <Check className="w-4 h-4 text-brand" />
                   )}
                 </button>
               ))

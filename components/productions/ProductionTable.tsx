@@ -257,7 +257,7 @@ export function ProductionTable({ filters }: ProductionTableProps) {
                 placeholder="Tìm mã, tên sản phẩm..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand"
               />
             </div>
           </div>
@@ -266,7 +266,7 @@ export function ProductionTable({ filters }: ProductionTableProps) {
             <PermissionGate resource="productions" action="create">
               <button
                 onClick={handleCreateProduction}
-                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+                className="flex items-center gap-2 px-3 py-1.5 bg-brand text-white text-sm rounded-lg hover:bg-brand-dark transition-colors">
                 <Plus className="w-4 h-4" />
                 Sản xuất
               </button>
@@ -285,7 +285,7 @@ export function ProductionTable({ filters }: ProductionTableProps) {
               onClick={() => setActiveStatusTab(tab.value)}
               className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 activeStatusTab === tab.value
-                  ? "border-blue-600 text-blue-600"
+                  ? "border-brand text-brand"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}>
               {tab.label}
@@ -327,7 +327,7 @@ export function ProductionTable({ filters }: ProductionTableProps) {
                 <tr>
                   <td colSpan={colSpan} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-400">
-                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent" />
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
                       <span className="text-xs">Đang tải...</span>
                     </div>
                   </td>
@@ -346,14 +346,14 @@ export function ProductionTable({ filters }: ProductionTableProps) {
                     <tr
                       className={`cursor-pointer transition-colors ${
                         expandedId === production.id
-                          ? "bg-blue-50"
+                          ? "bg-brand-soft"
                           : "border-b hover:bg-gray-50"
                       }`}
                       onClick={() => toggleExpand(production.id)}>
                       <td
                         className={`px-4 py-2.5 sticky left-0 z-10 ${
                           expandedId === production.id
-                            ? "bg-blue-50 border-t-2 border-l-2 border-blue-500"
+                            ? "bg-brand-soft border-t-2 border-l-2 border-brand"
                             : "bg-white"
                         }`}
                         onClick={(e) => e.stopPropagation()}>
@@ -369,7 +369,7 @@ export function ProductionTable({ filters }: ProductionTableProps) {
                           key={col.key}
                           className={`px-4 py-2.5 text-sm ${
                             expandedId === production.id
-                              ? "border-t-2 border-blue-500"
+                              ? "border-t-2 border-brand"
                               : ""
                           }`}
                           style={{
