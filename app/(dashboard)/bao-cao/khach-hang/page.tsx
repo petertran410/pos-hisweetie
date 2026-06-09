@@ -9,6 +9,7 @@ import { CustomerSalesPreview } from "@/components/reports/CustomerSalesPreview"
 import { ProductByCustomerPreview } from "@/components/reports/ProductByCustomerPreview";
 import { CustomerDebtPreview } from "@/components/reports/CustomerDebtPreview";
 import { ReportFilters } from "@/lib/api/reports";
+import "@/app/dashboard.css";
 
 export default function CustomerReportPage() {
   const [reportType, setReportType] = useState<ReportType>("customer-sales");
@@ -19,7 +20,9 @@ export default function CustomerReportPage() {
   }, []);
 
   return (
-    <div className="flex h-full border-t bg-gray-50 w-screen">
+    <div
+      className="dt-dash flex h-full border-t w-screen"
+      style={{ borderColor: "var(--dt-border)" }}>
       <CustomerReportSidebar
         onFiltersChange={handleFiltersChange}
         reportType={reportType}

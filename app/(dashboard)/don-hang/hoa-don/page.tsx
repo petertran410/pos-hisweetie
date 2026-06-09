@@ -128,7 +128,9 @@ export default function HoaDonPage() {
 
   return (
     <PagePermissionGuard resource="invoices" action="view">
-      <div className="hidden md:flex h-full border-t bg-gray-50">
+      <div
+        className="hidden md:flex h-full border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <InvoicesSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}

@@ -28,7 +28,9 @@ export default function OrderSuppliersPage() {
 
   return (
     <PagePermissionGuard resource="order_suppliers" action="view">
-      <div className="flex h-full border-t bg-gray-50">
+      <div
+        className="flex h-full border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <OrderSupplierSidebar
           filters={filters}
           setFilters={handleFiltersChange}

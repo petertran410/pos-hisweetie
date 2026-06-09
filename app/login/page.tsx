@@ -7,6 +7,7 @@ import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
 import { EyeOff, Eye } from "lucide-react";
+import "@/app/dashboard.css";
 
 interface LoginForm {
   email: string;
@@ -73,14 +74,14 @@ export default function LoginPage() {
 
   if (!_hasHydrated) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="dt-dash flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="dt-dash min-h-screen flex items-center justify-center">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
         <div>
           <h2 className="text-center text-3xl font-bold text-gray-900">

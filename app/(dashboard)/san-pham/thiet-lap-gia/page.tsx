@@ -96,7 +96,9 @@ export default function PriceBooksPage() {
 
   return (
     <PagePermissionGuard resource="price_books" action="view">
-      <div className="flex h-full border-t bg-gray-50">
+      <div
+        className="flex h-full border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <PriceBookSidebar
           priceBooks={priceBooksData?.data}
           selectedIds={selectedPriceBookIds}

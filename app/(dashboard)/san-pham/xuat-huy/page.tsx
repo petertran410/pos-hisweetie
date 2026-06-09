@@ -57,7 +57,9 @@ export default function DestructionsPage() {
 
   return (
     <PagePermissionGuard resource="destructions" action="view">
-      <div className="flex h-full border-t bg-gray-50">
+      <div
+        className="flex h-full border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <DestructionsSidebar onFiltersChange={handleFiltersChange} />
 
         <DestructionsTable

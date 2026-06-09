@@ -25,7 +25,9 @@ export default function ProductionsPage() {
 
   return (
     <PagePermissionGuard resource="productions" action="view">
-      <div className="flex h-full border-t bg-gray-50">
+      <div
+        className="flex h-full border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <ProductionSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}

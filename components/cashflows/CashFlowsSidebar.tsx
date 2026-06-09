@@ -188,7 +188,7 @@ function SimpleDropdown({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="dt-input dt-input-sm w-full flex items-center justify-between text-left">
+        className="dt-input dt-input-sm !rounded-lg w-full flex items-center justify-between text-left">
         <span style={{ color: selected ? "var(--dt-text)" : "var(--dt-text-muted)" }}>
           {selected?.label || placeholder}
         </span>
@@ -196,7 +196,7 @@ function SimpleDropdown({
       </button>
       {open && (
         <div
-          className="absolute z-30 mt-1 w-full bg-white border rounded-[8px] shadow-lg max-h-48 overflow-y-auto"
+          className="absolute z-30 mt-1 w-full bg-white border rounded-xl shadow-lg max-h-48 overflow-y-auto"
           style={{ borderColor: "var(--dt-border)" }}>
           <button
             onClick={() => {
@@ -275,7 +275,7 @@ function PresetPanel({
         zIndex: 50,
         borderColor: "var(--dt-border)",
       }}
-      className="bg-white border rounded-[8px] shadow-lg p-2 space-y-2">
+      className="bg-white border rounded-xl shadow-lg p-2 space-y-2">
       {groups.map((g) => (
         <div key={g.label}>
           <div
@@ -338,7 +338,7 @@ function MiniCalendar({
 
   return (
     <div
-      className="mt-2 bg-white border rounded-[8px] p-3 shadow-sm select-none"
+      className="mt-2 bg-white border rounded-xl p-3 shadow-sm select-none"
       style={{ borderColor: "var(--dt-border)" }}>
       <div className="flex items-center justify-between mb-2">
         <button
@@ -475,7 +475,7 @@ function BranchMultiSelectDropdown({
         tabIndex={0}
         onClick={() => setOpen((p) => !p)}
         onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className="dt-input dt-input-sm w-full flex items-center justify-between gap-2 cursor-pointer select-none"
+        className="dt-input dt-input-sm !rounded-lg w-full flex items-center justify-between gap-2 cursor-pointer select-none"
         style={
           open
             ? { borderColor: "var(--dt-primary)", boxShadow: "0 0 0 3px rgba(0,183,204,.1)" }
@@ -490,7 +490,7 @@ function BranchMultiSelectDropdown({
       </div>
       {open && (
         <div
-          className="absolute z-30 mt-1 w-full bg-white border rounded-[8px] shadow-lg max-h-48 overflow-y-auto"
+          className="absolute z-30 mt-1 w-full bg-white border rounded-xl shadow-lg max-h-48 overflow-y-auto"
           style={{ borderColor: "var(--dt-border)" }}>
           {branches.map((b, idx) => (
             <button
@@ -648,10 +648,10 @@ export function CashFlowsSidebar({
   };
 
   return (
-    <aside className="dt-panel w-64 m-4 custom-sidebar-scroll flex flex-col">
+    <aside className="dt-panel !rounded-xl w-64 m-4 custom-sidebar-scroll flex flex-col">
       {/* Header */}
       <div
-        className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-[8px]"
+        className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-xl"
         style={{ borderColor: "var(--dt-border)" }}>
         <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold" style={{ color: "var(--dt-text)" }}>Bộ lọc</h2>
@@ -691,7 +691,7 @@ export function CashFlowsSidebar({
                   setShowPresetPanel(true);
                 }
               }}
-              className="dt-radio-row flex items-center gap-2.5 px-2 py-1 rounded-[4px] border cursor-pointer select-none"
+              className="dt-radio-row flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer select-none"
               data-on={dateMode === "preset"}>
               <div
                 className="w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
@@ -715,7 +715,7 @@ export function CashFlowsSidebar({
                 setDateMode("custom");
                 setShowPresetPanel(false);
               }}
-              className="dt-radio-row flex items-center gap-2.5 px-2 py-1 rounded-[4px] border cursor-pointer"
+              className="dt-radio-row flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer"
               data-on={dateMode === "custom"}>
               <div
                 className="w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
@@ -745,7 +745,7 @@ export function CashFlowsSidebar({
                       <button
                         type="button"
                         onClick={() => setOpenCal(isOpen ? null : field)}
-                        className="dt-input dt-input-sm w-full flex items-center justify-between"
+                        className="dt-input dt-input-sm !rounded-lg w-full flex items-center justify-between"
                         style={{
                           ...(val ? { background: "var(--dt-cyan-bg)" } : { color: "var(--dt-text-muted)" }),
                           ...(isOpen
@@ -899,7 +899,7 @@ export function CashFlowsSidebar({
             value={partnerName}
             onChange={(e) => setPartnerName(e.target.value)}
             placeholder="Tìm theo tên..."
-            className="dt-input dt-input-sm w-full"
+            className="dt-input dt-input-sm !rounded-lg w-full"
           />
         </div>
       </div>

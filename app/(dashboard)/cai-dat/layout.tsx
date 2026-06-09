@@ -13,6 +13,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
+import "@/app/dashboard.css";
 
 export default function SettingsLayout({
   children,
@@ -73,11 +74,15 @@ export default function SettingsLayout({
   ];
 
   return (
-    <div className="flex h-full">
-      <div className="w-64 border-r bg-white">
-        <div className="p-4 border-b">
+    <div className="dt-dash flex h-full">
+      <div
+        className="w-64 border-r bg-white"
+        style={{ borderColor: "var(--dt-border)" }}>
+        <div className="p-4 border-b" style={{ borderColor: "var(--dt-border)" }}>
           <h2 className="text-xl font-bold">Cài đặt</h2>
-          <p className="text-sm text-gray-600 mt-1">Quản lý hệ thống</p>
+          <p className="text-sm mt-1" style={{ color: "var(--dt-text-secondary)" }}>
+            Quản lý hệ thống
+          </p>
         </div>
         <nav className="p-2">
           {menuItems.map((item) => (
@@ -87,10 +92,10 @@ export default function SettingsLayout({
               action={item.permission.action}>
               <Link
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
+                className={`dt-menu-item flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
                   pathname === item.href
                     ? "bg-brand-soft text-brand font-medium"
-                    : "text-gray-700 hover:bg-gray-50"
+                    : ""
                 }`}>
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>
@@ -99,7 +104,7 @@ export default function SettingsLayout({
           ))}
         </nav>
       </div>
-      <div className="flex-1 overflow-auto bg-gray-50">{children}</div>
+      <div className="flex-1 overflow-auto">{children}</div>
     </div>
   );
 }

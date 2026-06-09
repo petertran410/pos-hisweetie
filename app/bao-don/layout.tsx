@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
+import "@/app/dashboard.css";
 
 export default function BaoDonLayout({
   children,
@@ -27,5 +28,5 @@ export default function BaoDonLayout({
     );
   }
 
-  return <>{children}</>;
+  return <div className="dt-dash min-h-screen">{children}</div>;
 }

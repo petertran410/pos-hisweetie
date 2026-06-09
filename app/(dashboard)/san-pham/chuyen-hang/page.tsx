@@ -34,7 +34,9 @@ export default function TransferPage() {
 
   return (
     <PagePermissionGuard resource="transfers" action="view">
-      <div className="flex h-full border-t bg-gray-50 w-screen">
+      <div
+        className="flex h-full border-t w-screen"
+        style={{ borderColor: "var(--dt-border)" }}>
         <TransferSidebar
           filters={filters}
           onFiltersChange={handleFiltersChange}

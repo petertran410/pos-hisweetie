@@ -1,6 +1,6 @@
 import "@/app/dashboard.css";
 
-export default function ProductLayout({
+export default function KhachHangLayout({
   children,
 }: {
   children: React.ReactNode;

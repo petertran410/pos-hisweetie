@@ -41,12 +41,16 @@ export default function CanTruCongNoPage() {
 
   return (
     <PagePermissionGuard resource="return_orders" action="view">
-      <div className="flex h-full border-t bg-gray-50">
+      <div
+        className="flex h-full border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <DebtOffsetsSidebar onFiltersChange={handleSidebarFiltersChange} />
 
         <div className="flex-1 flex flex-col overflow-hidden mt-4 mr-4 mb-4">
           {/* Tab bar */}
-          <div className="flex gap-1 border-b bg-white rounded-t-xl px-4 pt-2">
+          <div
+            className="flex gap-1 border-b bg-white rounded-t-[8px] px-4 pt-2"
+            style={{ borderColor: "var(--dt-border)" }}>
             {TABS.map((tab) => (
               <button
                 key={tab.value}
@@ -54,8 +58,13 @@ export default function CanTruCongNoPage() {
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab.value
                     ? "border-brand text-brand"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}>
+                    : "border-transparent"
+                }`}
+                style={
+                  activeTab === tab.value
+                    ? undefined
+                    : { color: "var(--dt-text-secondary)" }
+                }>
                 {tab.label}
               </button>
             ))}

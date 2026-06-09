@@ -5,7 +5,7 @@ import { Package, Truck, Container } from "lucide-react";
 
 export default function BaoDonPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow p-6 w-full max-w-sm space-y-3">
         <h2 className="text-lg font-semibold text-center mb-4">Tạo báo đơn</h2>
         <Link

@@ -43,7 +43,9 @@ export default function SuppliersPage() {
 
   return (
     <PagePermissionGuard resource="suppliers" action="view">
-      <div className="flex h-full border-t bg-gray-50 w-screen">
+      <div
+        className="flex h-full border-t w-screen"
+        style={{ borderColor: "var(--dt-border)" }}>
         <SuppliersSidebar
           filters={filters}
           onFiltersChange={handleSidebarFiltersChange}

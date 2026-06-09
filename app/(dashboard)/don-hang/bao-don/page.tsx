@@ -252,7 +252,9 @@ export default function BaoDonPage() {
   return (
     <PagePermissionGuard resource="packing_slips" action="view">
       {/* ── Desktop (md+) — giữ nguyên ── */}
-      <div className="hidden md:flex h-full border-t bg-gray-50">
+      <div
+        className="hidden md:flex h-full border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <PackingSlipsSidebar onFiltersChange={handleFiltersChange} />
         <PackingSlipsTable
           packingSlips={data?.data || []}

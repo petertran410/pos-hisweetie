@@ -98,7 +98,9 @@ export default function TraHangNhapPage() {
 
   return (
     <PagePermissionGuard resource="supplier_returns" action="view">
-      <div className="flex h-full border-t bg-gray-50">
+      <div
+        className="flex h-full border-t"
+        style={{ borderColor: "var(--dt-border)" }}>
         <SupplierReturnsSidebar onFiltersChange={handleFiltersChange} />
         <SupplierReturnsTable
           filters={filters}
