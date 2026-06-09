@@ -187,14 +187,16 @@ export function CustomerForm({
     setAddrModal({ open: false, mode: "create" });
   };
 
-  const customerType = watch("type", "0");
+  const customerType = watch("type", "");
 
   // ── Tra cứu mã số thuế qua VietQR ──
   const taxLookup = useTaxCodeLookup();
   const lastLookedUpTaxCode = useRef<string>("");
 
   const handleTaxLookup = async () => {
-    const taxCode = (watch("taxCode") || "").trim();
+    const isOrg = watch("type", "0") === "1";
+    const taxField = isOrg ? "orgTaxCode" : "taxCode";
+    const taxCode = (watch(taxField) || "").trim();
     if (!taxCode) {
       toast.error("Vui lòng nhập mã số thuế");
       return;
@@ -202,18 +204,14 @@ export function CustomerForm({
     lastLookedUpTaxCode.current = taxCode;
     try {
       const data = await taxLookup.mutateAsync(taxCode);
-      const currentType = watch("type", "0");
 
-      // Tên: tổ chức → Tên công ty (organization), cá nhân → Tên người mua (invoiceBuyerName)
-      if (currentType === "1") {
+      // Tên: tổ chức → Tên công ty (organization), cá nhân → Tên người mua
+      if (isOrg) {
         setValue("organization", data.name || "");
+        if (data.address) setValue("orgInvoiceAddress", data.address);
       } else {
         setValue("invoiceBuyerName", data.name || "");
-      }
-
-      // Địa chỉ: điền toàn bộ chuỗi vào ô Địa chỉ, bỏ qua Phường/Xã & Tỉnh/Thành phố
-      if (data.address) {
-        setValue("invoiceAddress", data.address);
+        if (data.address) setValue("invoiceAddress", data.address);
       }
 
       // Điền tên khách hàng (tab cơ bản) nếu đang trống
@@ -322,10 +320,28 @@ export function CustomerForm({
       setValue("contactNumber", customer.contactNumber || "");
       setValue("phone", customer.phone || "");
       setValue("email", customer.email || "");
-      setValue("type", String(customer.type || 0));
+      setValue("type", String(customer.type ?? 0));
       setValue("organization", customer.organization || "");
-      setValue("taxCode", customer.taxCode || "");
       setValue("comments", customer.comments || "");
+
+      // Thông tin xuất hóa đơn — nạp vào đúng nhóm field theo loại khách hàng.
+      // Hai tab dùng field tách biệt để không ghi đè lẫn nhau.
+      if (Number(customer.type) === 1) {
+        setValue("orgTaxCode", customer.taxCode || "");
+        setValue("orgInvoiceAddress", customer.invoiceAddress || "");
+        setValue("orgInvoiceBuyerName", customer.invoiceBuyerName || "");
+        setValue("orgInvoiceEmail", customer.invoiceEmail || "");
+        setValue("orgInvoicePhone", customer.invoicePhone || "");
+        setValue("invoiceDvqhnsCode", customer.invoiceDvqhnsCode || "");
+      } else {
+        setValue("taxCode", customer.taxCode || "");
+        setValue("invoiceBuyerName", customer.invoiceBuyerName || "");
+        setValue("invoiceAddress", customer.invoiceAddress || "");
+        setValue("invoiceEmail", customer.invoiceEmail || "");
+        setValue("invoicePhone", customer.invoicePhone || "");
+        setValue("invoiceCccdCmnd", customer.invoiceCccdCmnd || "");
+        setValue("invoiceBankAccount", customer.invoiceBankAccount || "");
+      }
       setValue(
         "gender",
         customer.gender === null || customer.gender === undefined
@@ -354,6 +370,9 @@ export function CustomerForm({
       } else {
         setAddresses([createEmptyAddress(true)]);
       }
+    } else {
+      // Tạo mới: chưa chọn loại khách hàng — buộc người dùng tự chọn
+      setValue("type", "");
     }
   }, [customer, setValue]);
 
@@ -467,31 +486,78 @@ export function CustomerForm({
   };
 
   const onSubmit = async (data: any) => {
+    // Bắt buộc chọn loại khách hàng
+    if (data.type !== "0" && data.type !== "1") {
+      toast.error("Vui lòng chọn loại khách hàng");
+      setActiveFormTab("basic");
+      return;
+    }
+
     const validationError = validateAddresses();
     if (validationError) {
       toast.error(validationError);
       return;
     }
 
-    // Thông tin xuất hóa đơn: nếu đã điền 1 trong 3 trường (Tên người mua,
-    // Mã số thuế, Địa chỉ) thì bắt buộc phải điền đủ cả 3 + Email.
-    const invoiceBuyerName = (data.invoiceBuyerName || "").trim();
-    const invoiceTaxCode = (data.taxCode || "").trim();
-    const invoiceAddress = (data.invoiceAddress || "").trim();
-    const invoiceEmail = (data.invoiceEmail || "").trim();
+    // Thông tin xuất hóa đơn — ràng buộc khác nhau theo loại khách hàng.
+    // Hai tab dùng field tách biệt: cá nhân → invoice*, tổ chức → orgInvoice*/orgTaxCode.
+    const isOrganization = String(data.type) === "1";
 
-    if (invoiceBuyerName || invoiceTaxCode || invoiceAddress) {
-      const missing: string[] = [];
-      if (!invoiceBuyerName) missing.push("Tên người mua");
-      if (!invoiceTaxCode) missing.push("Mã số thuế");
-      if (!invoiceAddress) missing.push("Địa chỉ");
-      if (!invoiceEmail) missing.push("Email");
-      if (missing.length > 0) {
-        toast.error(
-          `Thông tin xuất hóa đơn: vui lòng điền đầy đủ ${missing.join(", ")}`
-        );
-        setActiveFormTab("invoice");
-        return;
+    // Gom thông tin hóa đơn theo loại đang chọn (bên còn lại bỏ qua hoàn toàn)
+    const invoice = isOrganization
+      ? {
+          taxCode: (data.orgTaxCode || "").trim(),
+          buyerName: (data.orgInvoiceBuyerName || "").trim(),
+          address: (data.orgInvoiceAddress || "").trim(),
+          email: (data.orgInvoiceEmail || "").trim(),
+          phone: (data.orgInvoicePhone || "").trim(),
+          cccdCmnd: "",
+          bankAccount: "",
+          dvqhnsCode: (data.invoiceDvqhnsCode || "").trim(),
+        }
+      : {
+          taxCode: (data.taxCode || "").trim(),
+          buyerName: (data.invoiceBuyerName || "").trim(),
+          address: (data.invoiceAddress || "").trim(),
+          email: (data.invoiceEmail || "").trim(),
+          phone: (data.invoicePhone || "").trim(),
+          cccdCmnd: (data.invoiceCccdCmnd || "").trim(),
+          bankAccount: (data.invoiceBankAccount || "").trim(),
+          dvqhnsCode: "",
+        };
+
+    if (isOrganization) {
+      // Tổ chức/Hộ kinh doanh: bắt buộc Mã số thuế, Địa chỉ, Email.
+      // Tên người mua KHÔNG ràng buộc.
+      if (invoice.taxCode || invoice.address || invoice.email) {
+        const missing: string[] = [];
+        if (!invoice.taxCode) missing.push("Mã số thuế");
+        if (!invoice.address) missing.push("Địa chỉ");
+        if (!invoice.email) missing.push("Email");
+        if (missing.length > 0) {
+          toast.error(
+            `Thông tin xuất hóa đơn: vui lòng điền đầy đủ ${missing.join(", ")}`
+          );
+          setActiveFormTab("invoice");
+          return;
+        }
+      }
+    } else {
+      // Cá nhân: nếu đã điền 1 trong 3 trường (Tên người mua, Mã số thuế,
+      // Địa chỉ) thì bắt buộc phải điền đủ cả 3 + Email.
+      if (invoice.buyerName || invoice.taxCode || invoice.address) {
+        const missing: string[] = [];
+        if (!invoice.buyerName) missing.push("Tên người mua");
+        if (!invoice.taxCode) missing.push("Mã số thuế");
+        if (!invoice.address) missing.push("Địa chỉ");
+        if (!invoice.email) missing.push("Email");
+        if (missing.length > 0) {
+          toast.error(
+            `Thông tin xuất hóa đơn: vui lòng điền đầy đủ ${missing.join(", ")}`
+          );
+          setActiveFormTab("invoice");
+          return;
+        }
       }
     }
 
@@ -508,8 +574,8 @@ export function CustomerForm({
       email: data.email || undefined,
       phone: data.phone || undefined,
       comments: data.comments || undefined,
-      organization: data.organization || undefined,
-      taxCode: data.taxCode || undefined,
+      organization: isOrganization ? data.organization || undefined : undefined,
+      taxCode: invoice.taxCode || undefined,
       type: parseInt(data.type),
       birthDate: birthDate ? birthDate.toISOString() : undefined,
       gender: data.gender === "" ? undefined : data.gender === "true",
@@ -518,13 +584,13 @@ export function CustomerForm({
       invoiceCityName: data.invoiceCityName || undefined,
       invoiceWardCode: data.invoiceWardCode || undefined,
       invoiceWardName: data.invoiceWardName || undefined,
-      invoiceBuyerName: data.invoiceBuyerName || undefined,
-      invoiceAddress: data.invoiceAddress || undefined,
-      invoiceCccdCmnd: data.invoiceCccdCmnd || undefined,
-      invoiceBankAccount: data.invoiceBankAccount || undefined,
-      invoiceEmail: data.invoiceEmail || undefined,
-      invoicePhone: data.invoicePhone || undefined,
-      invoiceDvqhnsCode: data.invoiceDvqhnsCode || undefined,
+      invoiceBuyerName: invoice.buyerName || undefined,
+      invoiceAddress: invoice.address || undefined,
+      invoiceCccdCmnd: invoice.cccdCmnd || undefined,
+      invoiceBankAccount: invoice.bankAccount || undefined,
+      invoiceEmail: invoice.email || undefined,
+      invoicePhone: invoice.phone || undefined,
+      invoiceDvqhnsCode: invoice.dvqhnsCode || undefined,
     };
 
     Object.keys(formattedData).forEach((key) => {
@@ -681,6 +747,20 @@ export function CustomerForm({
             )}
             {/* Section 1: Thông tin cá nhân (grid 2 cột, tất cả 7 field trong cùng 1 grid) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1 sm:mb-2">
+                  Loại khách hàng <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={customerType}
+                  onChange={(e) => setValue("type", e.target.value)}
+                  className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm bg-white">
+                  <option value="">-- Chọn loại khách hàng --</option>
+                  <option value="0">Cá nhân</option>
+                  <option value="1">Tổ chức/Hộ kinh doanh</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1 sm:mb-2">
                   Tên khách hàng <span className="text-red-500">*</span>
@@ -938,13 +1018,18 @@ export function CustomerForm({
                 <input
                   type="radio"
                   value="0"
-                  {...register("type")}
-                  defaultChecked
+                  checked={customerType === "0"}
+                  onChange={() => setValue("type", "0")}
                 />
                 <span>Cá nhân</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" value="1" {...register("type")} />
+                <input
+                  type="radio"
+                  value="1"
+                  checked={customerType === "1"}
+                  onChange={() => setValue("type", "1")}
+                />
                 <span>Tổ chức/Hộ kinh doanh</span>
               </label>
             </div>
@@ -954,7 +1039,7 @@ export function CustomerForm({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1.5">
-                    Tên người mua
+                    Tên người mua <span className="text-red-500">*</span>
                   </label>
                   <input
                     {...register("invoiceBuyerName")}
@@ -964,7 +1049,7 @@ export function CustomerForm({
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5">
-                    Mã số thuế
+                    Mã số thuế <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -991,7 +1076,7 @@ export function CustomerForm({
 
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-medium mb-1.5">
-                    Địa chỉ
+                    Địa chỉ <span className="text-red-500">*</span>
                   </label>
                   <input
                     {...register("invoiceAddress")}
@@ -1002,7 +1087,7 @@ export function CustomerForm({
 
                 <div>
                   <label className="block text-sm font-medium mb-1.5">
-                    Email
+                    Email <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
@@ -1054,7 +1139,7 @@ export function CustomerForm({
                   </label>
                   <div className="flex gap-2">
                     <input
-                      {...register("taxCode")}
+                      {...register("orgTaxCode")}
                       onBlur={handleTaxCodeBlur}
                       placeholder="Bắt buộc"
                       className="flex-1 border rounded px-3 py-1.5 sm:py-2 text-sm"
@@ -1087,10 +1172,10 @@ export function CustomerForm({
 
                 <div className="col-span-2">
                   <label className="block text-sm font-medium mb-1.5">
-                    Địa chỉ
+                    Địa chỉ <span className="text-red-500">*</span>
                   </label>
                   <input
-                    {...register("invoiceAddress")}
+                    {...register("orgInvoiceAddress")}
                     placeholder="Nhập địa chỉ"
                     className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
@@ -1101,7 +1186,7 @@ export function CustomerForm({
                     Tên người mua
                   </label>
                   <input
-                    {...register("invoiceBuyerName")}
+                    {...register("orgInvoiceBuyerName")}
                     placeholder="Nhập tên người mua"
                     className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
@@ -1119,11 +1204,11 @@ export function CustomerForm({
 
                 <div>
                   <label className="block text-sm font-medium mb-1.5">
-                    Email
+                    Email <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
-                    {...register("invoiceEmail")}
+                    {...register("orgInvoiceEmail")}
                     placeholder="email@gmail.com"
                     className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
@@ -1133,7 +1218,7 @@ export function CustomerForm({
                     Số điện thoại
                   </label>
                   <input
-                    {...register("invoicePhone")}
+                    {...register("orgInvoicePhone")}
                     placeholder="Nhập số điện thoại"
                     className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                   />
