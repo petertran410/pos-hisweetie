@@ -6,8 +6,9 @@ import {
   QueryCache,
 } from "@tanstack/react-query";
 import { Toaster, toast } from "sonner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/store/auth";
+import { initBranchCrossTabSync } from "@/lib/store/branch";
 
 // Nhớ các thông báo "không có quyền" (403) đã hiển thị để chỉ toast 1 lần,
 // tránh lặp lại mỗi khi người dùng chuyển trang trong cùng phiên app.
@@ -57,6 +58,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   const { _hasHydrated } = useAuthStore();
+
+  // Đồng bộ chi nhánh giữa các tab: khi 1 tab đổi chi nhánh, các tab còn lại
+  // cập nhật selectedBranch (qua sự kiện `storage`) rồi invalidate toàn bộ
+  // query để dữ liệu tự refetch theo chi nhánh mới (header X-Branch-Id).
+  // RouteGuard reactive theo selectedBranch?.id nên permissions cũng tự đồng bộ.
+  useEffect(() => {
+    const cleanup = initBranchCrossTabSync(() => {
+      queryClient.invalidateQueries();
+    });
+    return cleanup;
+  }, [queryClient]);
 
   if (!_hasHydrated) {
     return (

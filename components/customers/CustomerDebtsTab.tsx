@@ -142,11 +142,13 @@ export function CustomerDebtsTab({
               Công nợ
             </button>
 
-            <button
-              onClick={() => setShowPaymentModal(true)}
-              className="px-2.5 py-1.5 lg:px-4 lg:py-2 bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
-              💵 Thanh toán
-            </button>
+            {!hidePaymentButton && (
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                className="px-2.5 py-1.5 lg:px-4 lg:py-2 bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
+                💵 Thanh toán
+              </button>
+            )}
           </div>
         </div>
 

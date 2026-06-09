@@ -182,6 +182,12 @@ export function CustomerDebtPreview({ filters }: Props) {
           </span>
           <div className="flex gap-1">
             <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50">
+              «
+            </button>
+            <button
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
               className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50">
@@ -192,6 +198,12 @@ export function CustomerDebtPreview({ filters }: Props) {
               disabled={page === totalPages}
               className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50">
               ›
+            </button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page === totalPages}
+              className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50">
+              »
             </button>
           </div>
         </div>

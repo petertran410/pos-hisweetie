@@ -13,6 +13,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Download,
   Loader2,
 } from "lucide-react";
@@ -667,6 +669,12 @@ export function CashFlowsTable({
           </div>
           <div className="flex items-center gap-1">
             <button
+              onClick={() => setPage(1)}
+              disabled={page <= 1}
+              className="dt-icon-btn p-1 rounded disabled:opacity-40">
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+            <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
               className="dt-icon-btn p-1 rounded disabled:opacity-40">
@@ -682,6 +690,12 @@ export function CashFlowsTable({
               disabled={page >= totalPages}
               className="dt-icon-btn p-1 rounded disabled:opacity-40">
               <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page >= totalPages}
+              className="dt-icon-btn p-1 rounded disabled:opacity-40">
+              <ChevronsRight className="w-4 h-4" />
             </button>
           </div>
         </div>
