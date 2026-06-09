@@ -10,15 +10,12 @@ import {
 import { useBranchStore } from "@/lib/store/branch";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "@/components/shared/CodeLink";
-import type { SepayTransaction } from "@/lib/api/sepay";
+import type { SepayTransaction, SepayMatchCustomer } from "@/lib/api/sepay";
 import { Search, Loader2, X, Check, UserPlus } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import Swal from "sweetalert2";
 
-const STATUS_BADGE: Record<
-  string,
-  { label: string; cls: string }
-> = {
+const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   processing: { label: "Đang xử lý", cls: "bg-amber-100 text-amber-700" },
   assigned: { label: "Đã xác nhận KH", cls: "bg-blue-100 text-blue-700" },
   completed: { label: "Hoàn thành", cls: "bg-green-100 text-green-700" },
@@ -34,42 +31,58 @@ export function SepayStatusBadge({ status }: { status?: string | null }) {
   );
 }
 
-/** Ô hiển thị khách hàng (link nếu có code) */
+/** Ô hiển thị (nhiều) khách hàng */
 export function SepayCustomerCell({ tx }: { tx: SepayTransaction }) {
-  const cust = tx.match?.customer;
-  if (!cust) return <span className="text-gray-400">-</span>;
-  if (cust.code) {
-    return (
-      <div className="flex flex-col">
-        <CodeLink entity="customer" code={cust.code} />
-        <span className="text-xs text-gray-500 break-words">
-          {cust.name}
-        </span>
-      </div>
-    );
-  }
-  return <span className="break-words">{cust.name}</span>;
+  const customers = tx.match?.customers || [];
+  if (customers.length === 0) return <span className="text-gray-400">-</span>;
+  return (
+    <div className="flex flex-col gap-1">
+      {customers.map((c, i) => (
+        <div key={`${c.id}-${i}`} className="flex flex-col">
+          {c.code ? (
+            <CodeLink entity="customer" code={c.code} />
+          ) : (
+            <span className="text-sm break-words">{c.name}</span>
+          )}
+          <span className="text-xs text-gray-500 break-words">
+            {c.code ? c.name : ""}
+            {typeof c.amount === "number" && c.amount > 0
+              ? `${c.code ? " — " : ""}${formatCurrency(c.amount)}`
+              : ""}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-/** Modal tìm + chọn khách hàng (căn giữa màn hình, rộng rãi) */
+interface PickedCustomer {
+  id: number;
+  code: string;
+  name: string;
+}
+
+/** Modal tìm + chọn NHIỀU khách hàng (multi-select) */
 function CustomerPickerModal({
   tx,
-  onSelect,
+  initial,
+  onConfirm,
   onClose,
 }: {
   tx: SepayTransaction;
-  onSelect: (c: { id: number; code: string; name: string }) => void;
+  initial: PickedCustomer[];
+  onConfirm: (customers: PickedCustomer[]) => void;
   onClose: () => void;
 }) {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [picked, setPicked] = useState<PickedCustomer[]>(initial);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 300);
     return () => clearTimeout(t);
   }, [search]);
 
-  // Đóng bằng phím ESC
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -81,20 +94,28 @@ function CustomerPickerModal({
   const { data, isFetching } = useSearchCustomers(debounced || undefined);
   const customers = data?.data || [];
 
+  const toggle = (c: PickedCustomer) => {
+    setPicked((prev) =>
+      prev.some((p) => p.id === c.id)
+        ? prev.filter((p) => p.id !== c.id)
+        : [...prev, c]
+    );
+  };
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 p-4 pt-24"
       onMouseDown={onClose}>
       <div
-        className="w-full max-w-lg bg-white rounded-xl shadow-2xl flex flex-col max-h-[70vh]"
+        className="w-full max-w-lg bg-white rounded-xl shadow-2xl flex flex-col max-h-[75vh]"
         onMouseDown={(e) => e.stopPropagation()}>
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b">
-          <div>
+          <div className="min-w-0">
             <h3 className="text-base font-semibold text-gray-800">
               Gán khách hàng cho giao dịch
             </h3>
             <p className="text-xs text-gray-500 mt-0.5 max-w-md truncate">
+              {formatCurrency(Number(tx.amountIn))} •{" "}
               {tx.transactionContent || "-"}
             </p>
           </div>
@@ -105,7 +126,24 @@ function CustomerPickerModal({
           </button>
         </div>
 
-        {/* Search */}
+        {/* Đã chọn */}
+        {picked.length > 0 && (
+          <div className="px-5 py-2 border-b flex flex-wrap gap-1.5">
+            {picked.map((c) => (
+              <span
+                key={c.id}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs">
+                {c.name}
+                <button
+                  onClick={() => toggle(c)}
+                  className="hover:text-emerald-900">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="px-5 py-3 border-b">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -119,7 +157,6 @@ function CustomerPickerModal({
           </div>
         </div>
 
-        {/* Results */}
         <div className="flex-1 overflow-auto">
           {isFetching ? (
             <div className="px-4 py-8 text-center text-gray-400 text-sm">
@@ -140,31 +177,253 @@ function CustomerPickerModal({
                 name: string;
                 contactNumber?: string | null;
                 totalDebt?: number;
-              }) => (
-                <button
-                  key={c.id}
-                  onClick={() =>
-                    onSelect({ id: c.id, code: c.code, name: c.name })
-                  }
-                  className="w-full text-left px-5 py-3 hover:bg-emerald-50 transition-colors border-b last:border-0 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-medium text-sm text-gray-800 truncate">
-                      {c.name}
+              }) => {
+                const isPicked = picked.some((p) => p.id === c.id);
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() =>
+                      toggle({ id: c.id, code: c.code, name: c.name })
+                    }
+                    className={`w-full text-left px-5 py-3 transition-colors border-b last:border-0 flex items-center justify-between gap-3 ${
+                      isPicked ? "bg-emerald-50" : "hover:bg-gray-50"
+                    }`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                          isPicked
+                            ? "bg-emerald-600 border-emerald-600"
+                            : "border-gray-300"
+                        }`}>
+                        {isPicked && <Check className="w-3 h-3 text-white" />}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm text-gray-800 truncate">
+                          {c.name}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {c.code}
+                          {c.contactNumber ? ` - ${c.contactNumber}` : ""}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {c.code}
-                      {c.contactNumber ? ` - ${c.contactNumber}` : ""}
-                    </div>
-                  </div>
-                  {typeof c.totalDebt === "number" && c.totalDebt > 0 && (
-                    <span className="text-xs text-red-600 whitespace-nowrap shrink-0">
-                      Nợ: {formatCurrency(c.totalDebt)}
-                    </span>
-                  )}
-                </button>
-              )
+                    {typeof c.totalDebt === "number" && c.totalDebt > 0 && (
+                      <span className="text-xs text-red-600 whitespace-nowrap shrink-0">
+                        Nợ: {formatCurrency(c.totalDebt)}
+                      </span>
+                    )}
+                  </button>
+                );
+              }
             )
           )}
+        </div>
+
+        <div className="px-5 py-3 border-t flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+            Hủy
+          </button>
+          <button
+            onClick={() => onConfirm(picked)}
+            disabled={picked.length === 0}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
+            Gán {picked.length > 0 ? `(${picked.length})` : ""}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface AllocRow {
+  customerId: number;
+  name: string;
+  amount: string; // chuỗi để dễ nhập
+  note: string;
+}
+
+/** Modal phân bổ tiền + ghi chú cho từng khách → tạo phiếu thu */
+function AllocationModal({
+  tx,
+  branchName,
+  onConfirm,
+  onClose,
+  isPending,
+}: {
+  tx: SepayTransaction;
+  branchName: string;
+  onConfirm: (
+    allocations: { customerId: number; amount: number; note: string }[]
+  ) => void;
+  onClose: () => void;
+  isPending: boolean;
+}) {
+  const amountIn = Number(tx.amountIn);
+  const customers = tx.match?.customers || [];
+
+  const [rows, setRows] = useState<AllocRow[]>(() =>
+    customers.map((c, i) => ({
+      customerId: c.id,
+      name: c.name,
+      // 1 khách: prefill toàn bộ tiền. Nhiều khách: prefill khách đầu, còn lại 0.
+      amount:
+        customers.length === 1 || i === 0
+          ? customers.length === 1
+            ? String(amountIn)
+            : ""
+          : "",
+      note: c.note || "",
+    }))
+  );
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const setRow = (idx: number, patch: Partial<AllocRow>) =>
+    setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+
+  /** Nhập tiền: chỉ lấy chữ số, kẹp tối đa = phần còn lại (tổng không vượt tiền giao dịch). */
+  const setAmount = (idx: number, raw: string) => {
+    const digits = raw.replace(/[^\d]/g, "");
+    if (digits === "") {
+      setRow(idx, { amount: "" });
+      return;
+    }
+    let val = Number(digits);
+    if (!Number.isFinite(val) || val < 0) val = 0;
+    const otherSum = rows.reduce(
+      (s, r, i) => (i === idx ? s : s + (Number(r.amount) || 0)),
+      0
+    );
+    const remaining = Math.max(0, amountIn - otherSum);
+    if (val > remaining) val = remaining;
+    setRow(idx, { amount: String(val) });
+  };
+
+  // Hiển thị có tách dấu phẩy ngàn (en-US).
+  const displayAmount = (v: string) =>
+    v === "" ? "" : Number(v).toLocaleString("en-US");
+
+  const sum = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+  const diff = Math.round((amountIn - sum) * 100) / 100;
+  const balanced = diff === 0;
+  const allPositive = rows.every((r) => Number(r.amount) > 0);
+
+  const handleSubmit = () => {
+    if (!balanced || !allPositive) return;
+    onConfirm(
+      rows.map((r) => ({
+        customerId: r.customerId,
+        amount: Number(r.amount),
+        note: r.note.trim(),
+      }))
+    );
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 p-4 pt-16"
+      onMouseDown={onClose}>
+      <div
+        className="w-full max-w-xl bg-white rounded-xl shadow-2xl flex flex-col max-h-[85vh]"
+        onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div>
+            <h3 className="text-base font-semibold text-gray-800">
+              {customers.length > 1
+                ? "Phân bổ & tạo phiếu thu"
+                : "Tạo phiếu thu"}
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Số tiền giao dịch: <b>{formatCurrency(amountIn)}</b> • Chi nhánh:{" "}
+              <b>{branchName}</b>
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-auto px-5 py-4 space-y-4">
+          {rows.map((r, idx) => (
+            <div key={r.customerId} className="border rounded-lg p-3 space-y-2">
+              <div className="font-medium text-sm text-gray-800">{r.name}</div>
+              <div className="flex flex-col gap-2">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">
+                    Số tiền thu
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={displayAmount(r.amount)}
+                    onChange={(e) => setAmount(idx, e.target.value)}
+                    placeholder="0"
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">
+                    Ghi chú phiếu thu
+                  </label>
+                  <input
+                    value={r.note}
+                    onChange={(e) => setRow(idx, { note: e.target.value })}
+                    placeholder="Ghi chú cho phiếu thu của khách này..."
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="px-5 py-3 border-t">
+          <div className="flex items-center justify-between text-sm mb-3">
+            <span className="text-gray-600">
+              Tổng phân bổ:{" "}
+              <b className={balanced ? "text-emerald-600" : "text-red-600"}>
+                {formatCurrency(sum)}
+              </b>{" "}
+              / {formatCurrency(amountIn)}
+            </span>
+            {!balanced && (
+              <span className="text-red-600 text-xs">
+                {diff > 0
+                  ? `Còn thiếu ${formatCurrency(diff)}`
+                  : `Vượt ${formatCurrency(-diff)}`}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+              Hủy
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!balanced || !allPositive || isPending}
+              className="inline-flex items-center gap-1 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+              {customers.length > 1
+                ? `Tạo ${customers.length} phiếu thu`
+                : "Tạo phiếu thu"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -174,6 +433,7 @@ function CustomerPickerModal({
 /** Cụm thao tác đối soát của 1 dòng giao dịch */
 export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [allocOpen, setAllocOpen] = useState(false);
   const { selectedBranch } = useBranchStore();
   const canAssign = usePermission("sepay", "assign");
   const canConfirm = usePermission("sepay", "confirm");
@@ -183,27 +443,29 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
   const confirmMut = useConfirmSepayReceipt();
 
   const status = tx.match?.status || "processing";
-  const amountIn = Number(tx.amountIn);
+  const customers: SepayMatchCustomer[] = tx.match?.customers || [];
 
-  // Hoàn thành → không còn thao tác (ẩn)
   if (status === "completed") {
+    const cfCodes = customers
+      .map((c) => c.cashFlow?.code)
+      .filter(Boolean) as string[];
     return (
       <span className="text-xs text-gray-400">
         {tx.match?.completedSource === "webhook"
           ? "Tự động (webhook)"
-          : tx.match?.cashFlow?.code
-            ? `Phiếu ${tx.match.cashFlow.code}`
+          : cfCodes.length > 0
+            ? `Phiếu ${cfCodes.join(", ")}`
             : "Đã tạo phiếu thu"}
       </span>
     );
   }
 
-  const handleAssign = (c: { id: number; code: string; name: string }) => {
+  const handleAssign = (picked: PickedCustomer[]) => {
     setPickerOpen(false);
-    assignMut.mutate({ id: tx.id, customerId: c.id });
+    assignMut.mutate({ id: tx.id, customerIds: picked.map((c) => c.id) });
   };
 
-  const handleConfirm = async () => {
+  const openAlloc = () => {
     if (!selectedBranch?.id) {
       Swal.fire({
         icon: "warning",
@@ -212,23 +474,27 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
       });
       return;
     }
-    const res = await Swal.fire({
-      title: "Tạo phiếu thu trừ công nợ?",
-      html: `Khách: <b>${tx.match?.customer?.name || ""}</b><br/>Số tiền: <b>${formatCurrency(amountIn)}</b><br/>Chi nhánh: <b>${selectedBranch.name}</b><br/><br/>Phiếu thu sẽ trừ vào công nợ khách hàng (không gắn hóa đơn).`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Tạo phiếu thu",
-      cancelButtonText: "Hủy",
-      confirmButtonColor: "#059669",
-    });
-    if (res.isConfirmed) {
-      confirmMut.mutate({ id: tx.id, branchId: selectedBranch.id });
-    }
+    setAllocOpen(true);
   };
+
+  const handleConfirm = (
+    allocations: { customerId: number; amount: number; note: string }[]
+  ) => {
+    if (!selectedBranch?.id) return;
+    confirmMut.mutate(
+      { id: tx.id, branchId: selectedBranch.id, allocations },
+      { onSuccess: () => setAllocOpen(false) }
+    );
+  };
+
+  const initialPicked: PickedCustomer[] = customers.map((c) => ({
+    id: c.id,
+    code: c.code || "",
+    name: c.name,
+  }));
 
   return (
     <div className="flex items-center gap-2 justify-end">
-      {/* Bước 1: gán / đổi khách (sale) — mở modal */}
       {canAssign && (
         <button
           onClick={() => setPickerOpen(true)}
@@ -240,19 +506,19 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
           ) : (
             <UserPlus className="w-3.5 h-3.5" />
           )}
-          {status === "assigned" ? "Đổi KH" : "Gán KH"}
+          {status === "assigned" ? "Sửa KH" : "Gán KH"}
         </button>
       )}
 
       {pickerOpen && (
         <CustomerPickerModal
           tx={tx}
-          onSelect={handleAssign}
+          initial={initialPicked}
+          onConfirm={handleAssign}
           onClose={() => setPickerOpen(false)}
         />
       )}
 
-      {/* Bỏ gán (khi đã gán, chưa tạo phiếu) */}
       {canAssign && status === "assigned" && (
         <button
           onClick={() => unassignMut.mutate(tx.id)}
@@ -263,10 +529,9 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
         </button>
       )}
 
-      {/* Bước 2: kế toán xác nhận tạo phiếu thu (chỉ khi đã gán khách) */}
       {canConfirm && status === "assigned" && (
         <button
-          onClick={handleConfirm}
+          onClick={openAlloc}
           disabled={confirmMut.isPending}
           className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 whitespace-nowrap">
           {confirmMut.isPending ? (
@@ -276,6 +541,16 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
           )}
           Tạo phiếu thu
         </button>
+      )}
+
+      {allocOpen && (
+        <AllocationModal
+          tx={tx}
+          branchName={selectedBranch?.name || ""}
+          onConfirm={handleConfirm}
+          onClose={() => setAllocOpen(false)}
+          isPending={confirmMut.isPending}
+        />
       )}
     </div>
   );

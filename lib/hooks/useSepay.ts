@@ -36,12 +36,12 @@ export function useSepayTransactions(params?: SepayTransactionsParams) {
   });
 }
 
-/** Sale gán khách hàng cho 1 giao dịch Sepay */
+/** Sale gán (nhiều) khách hàng cho 1 giao dịch Sepay */
 export function useAssignSepayCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { id: number; customerId: number }) =>
-      sepayApi.assignCustomer(vars.id, vars.customerId),
+    mutationFn: (vars: { id: number; customerIds: number[] }) =>
+      sepayApi.assignCustomers(vars.id, vars.customerIds),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sepay-transactions"] });
       toast.success("Đã gán khách hàng cho giao dịch");
@@ -71,7 +71,7 @@ export function useUnassignSepayCustomer() {
   });
 }
 
-/** Kế toán xác nhận & tạo phiếu thu từ giao dịch Sepay */
+/** Kế toán xác nhận & tạo phiếu thu theo phân bổ (mỗi khách 1 phiếu) */
 export function useConfirmSepayReceipt() {
   const qc = useQueryClient();
   return useMutation({
@@ -79,18 +79,23 @@ export function useConfirmSepayReceipt() {
       id: number;
       branchId: number;
       collectorUserId?: number;
-      description?: string;
+      allocations: { customerId: number; amount: number; note?: string }[];
     }) =>
       sepayApi.confirmReceipt(vars.id, {
         branchId: vars.branchId,
         collectorUserId: vars.collectorUserId,
-        description: vars.description,
+        allocations: vars.allocations,
       }),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["sepay-transactions"] });
       qc.invalidateQueries({ queryKey: ["cashflows"] });
       qc.invalidateQueries({ queryKey: ["customers"] });
-      toast.success("Đã tạo phiếu thu trừ công nợ khách hàng");
+      const n = res?.cashFlows?.length ?? 0;
+      toast.success(
+        n > 1
+          ? `Đã tạo ${n} phiếu thu trừ công nợ khách hàng`
+          : "Đã tạo phiếu thu trừ công nợ khách hàng"
+      );
     },
     onError: (error: unknown) => {
       toast.error(

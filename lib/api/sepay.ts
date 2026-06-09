@@ -13,11 +13,19 @@ export interface SepaySyncResponse {
   timestamp: string;
 }
 
+export interface SepayMatchCustomer {
+  id: number;
+  code: string | null;
+  name: string;
+  amount?: number;
+  note?: string | null;
+  cashFlow?: { id: number; code: string } | null;
+}
+
 export interface SepayMatchInfo {
   status: "processing" | "assigned" | "completed";
   completedSource: "webhook" | "manual" | null;
-  customer: { id: number; code: string | null; name: string } | null;
-  cashFlow: { id: number; code: string } | null;
+  customers: SepayMatchCustomer[];
   refCode: string | null;
 }
 
@@ -73,25 +81,29 @@ export const sepayApi = {
   ): Promise<SepayTransactionsResponse> => {
     return apiClient.get(`/sepay/transactions`, params);
   },
-  /** Sale gán khách hàng cho 1 giao dịch */
-  assignCustomer: (
+  /** Sale gán (nhiều) khách hàng cho 1 giao dịch */
+  assignCustomers: (
     id: number,
-    customerId: number
+    customerIds: number[]
   ): Promise<{
     success: boolean;
-    customer: { id: number; code: string; name: string };
+    customers: { id: number; code: string; name: string }[];
   }> => {
-    return apiClient.put(`/sepay/transactions/${id}/assign`, { customerId });
+    return apiClient.put(`/sepay/transactions/${id}/assign`, { customerIds });
   },
   /** Bỏ gán khách hàng (chỉ khi chưa tạo phiếu thu) */
   unassignCustomer: (id: number): Promise<{ success: boolean }> => {
     return apiClient.delete(`/sepay/transactions/${id}/assign`);
   },
-  /** Kế toán xác nhận & tạo phiếu thu từ giao dịch */
+  /** Kế toán xác nhận & tạo phiếu thu theo phân bổ (mỗi khách 1 phiếu) */
   confirmReceipt: (
     id: number,
-    data: { branchId: number; collectorUserId?: number; description?: string }
-  ): Promise<{ success: boolean; cashFlow: { id: number; code: string } | null }> => {
+    data: {
+      branchId: number;
+      collectorUserId?: number;
+      allocations: { customerId: number; amount: number; note?: string }[];
+    }
+  ): Promise<{ success: boolean; cashFlows: { id: number; code: string }[] }> => {
     return apiClient.post(`/sepay/transactions/${id}/confirm`, data);
   },
   /** Tổng hợp giao dịch cần xử lý (cho thông báo sale) */

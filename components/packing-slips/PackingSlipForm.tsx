@@ -364,6 +364,11 @@ export function PackingSlipForm({
       return;
     }
 
+    if (hasAnyFee && !expensePayerId) {
+      toast.error("Vui lòng chọn người chi khi có chi phí");
+      return;
+    }
+
     const data = {
       branchId,
       invoiceIds: selectedInvoiceIds,
@@ -671,6 +676,7 @@ export function PackingSlipForm({
               <div ref={payerDropdownRef} className="relative mb-3">
                 <label className="block text-xs text-gray-600 mb-1">
                   Người chi
+                  {hasAnyFee && <span className="text-red-500"> *</span>}
                 </label>
                 <div
                   className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex items-center gap-2"

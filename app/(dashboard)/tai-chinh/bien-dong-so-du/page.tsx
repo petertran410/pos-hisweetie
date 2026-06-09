@@ -10,6 +10,7 @@ import {
   SepayCustomerCell,
   SepayMatchActions,
 } from "@/components/sepay/SepayMatchControls";
+import { CustomerLookup } from "@/components/sepay/CustomerLookup";
 import { formatCurrency } from "@/lib/utils";
 import {
   ChevronLeft,
@@ -31,6 +32,7 @@ const formatDateLabel = (d: string) =>
     : "dd/mm/yyyy";
 
 const PAGE_SIZE = 20;
+const STORAGE_KEY = "sepay-bien-dong-filters";
 
 const formatDateParts = (d?: string | null) => {
   if (!d) return { time: "-", date: "" };
@@ -41,10 +43,88 @@ const formatDateParts = (d?: string | null) => {
   };
 };
 
+// Các preset thời gian (giống trang Đơn hàng)
+const DATE_PRESETS: { label: string; value: string }[] = [
+  { label: "Toàn thời gian", value: "all_time" },
+  { label: "Hôm nay", value: "today" },
+  { label: "Hôm qua", value: "yesterday" },
+  { label: "Tuần này", value: "this_week" },
+  { label: "Tuần trước", value: "last_week" },
+  { label: "7 ngày qua", value: "last_7_days" },
+  { label: "Tháng này", value: "this_month" },
+  { label: "Tháng trước", value: "last_month" },
+  { label: "30 ngày qua", value: "last_30_days" },
+  { label: "Quý này", value: "this_quarter" },
+  { label: "Năm nay", value: "this_year" },
+  { label: "Tùy chọn", value: "custom" },
+];
+
+// yyyy-mm-dd (local) — khớp định dạng MiniCalendar + backend parseFilterDate.
+const toYmd = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+
+/** Trả { dateFrom, dateTo } (yyyy-mm-dd) từ preset. all_time/custom → rỗng/giữ nguyên. */
+const getPresetRange = (preset: string): { dateFrom: string; dateTo: string } => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = 86400000;
+  switch (preset) {
+    case "today":
+      return { dateFrom: toYmd(today), dateTo: toYmd(today) };
+    case "yesterday": {
+      const y = new Date(today.getTime() - day);
+      return { dateFrom: toYmd(y), dateTo: toYmd(y) };
+    }
+    case "this_week": {
+      const s = new Date(today);
+      s.setDate(today.getDate() - today.getDay());
+      return { dateFrom: toYmd(s), dateTo: toYmd(today) };
+    }
+    case "last_week": {
+      const s = new Date(today);
+      s.setDate(today.getDate() - today.getDay() - 7);
+      const e = new Date(s);
+      e.setDate(s.getDate() + 6);
+      return { dateFrom: toYmd(s), dateTo: toYmd(e) };
+    }
+    case "last_7_days":
+      return { dateFrom: toYmd(new Date(today.getTime() - 7 * day)), dateTo: toYmd(today) };
+    case "this_month":
+      return {
+        dateFrom: toYmd(new Date(now.getFullYear(), now.getMonth(), 1)),
+        dateTo: toYmd(today),
+      };
+    case "last_month":
+      return {
+        dateFrom: toYmd(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
+        dateTo: toYmd(new Date(now.getFullYear(), now.getMonth(), 0)),
+      };
+    case "last_30_days":
+      return { dateFrom: toYmd(new Date(today.getTime() - 30 * day)), dateTo: toYmd(today) };
+    case "this_quarter": {
+      const q = Math.floor(now.getMonth() / 3);
+      return {
+        dateFrom: toYmd(new Date(now.getFullYear(), q * 3, 1)),
+        dateTo: toYmd(today),
+      };
+    }
+    case "this_year":
+      return {
+        dateFrom: toYmd(new Date(now.getFullYear(), 0, 1)),
+        dateTo: toYmd(today),
+      };
+    default:
+      return { dateFrom: "", dateTo: "" };
+  }
+};
+
 interface Filters {
   search: string;
   accountNumber: string;
   transferType: "" | "in" | "out";
+  datePreset: string;
   dateFrom: string;
   dateTo: string;
   status: "" | "processing" | "assigned" | "completed";
@@ -54,6 +134,7 @@ const EMPTY_FILTERS: Filters = {
   search: "",
   accountNumber: "",
   transferType: "",
+  datePreset: "all_time",
   dateFrom: "",
   dateTo: "",
   status: "",
@@ -61,14 +142,27 @@ const EMPTY_FILTERS: Filters = {
 
 export default function BienDongSoDuPage() {
   const [page, setPage] = useState(1);
-  // Mặc định khi vào trang: lọc "Đang xử lý" (processing).
-  // Vẫn ưu tiên query param ?status= nếu có (vd điều hướng từ toast thông báo).
+  // Khởi tạo filter:
+  //   1. Ưu tiên query param ?status= (vd điều hướng từ toast thông báo).
+  //   2. Kế đến localStorage (filter người dùng đã lưu lần trước).
+  //   3. Mặc định: trạng thái "Đang xử lý".
   const initialFilters: Filters = (() => {
     const defaults: Filters = { ...EMPTY_FILTERS, status: "processing" };
     if (typeof window === "undefined") return defaults;
+
     const st = new URLSearchParams(window.location.search).get("status");
     if (st === "processing" || st === "assigned" || st === "completed") {
       return { ...EMPTY_FILTERS, status: st };
+    }
+
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        return { ...EMPTY_FILTERS, ...saved };
+      }
+    } catch {
+      // ignore
     }
     return defaults;
   })();
@@ -79,6 +173,15 @@ export default function BienDongSoDuPage() {
   // Lịch đang mở: "from" | "to" | null
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
   const dateBoxRef = useRef<HTMLDivElement>(null);
+
+  // Lưu filter đã áp dụng vào localStorage để lần sau khôi phục.
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(applied));
+    } catch {
+      // ignore
+    }
+  }, [applied]);
 
   // Danh sách tài khoản ngân hàng cho dropdown filter
   const { data: bankAccountsData } = useBankAccountsForPayment();
@@ -127,22 +230,36 @@ export default function BienDongSoDuPage() {
     setPage(1);
   };
 
+  // Chọn preset thời gian → cập nhật dateFrom/dateTo tương ứng.
+  const handlePresetChange = (preset: string) => {
+    if (preset === "custom") {
+      setDraft((p) => ({ ...p, datePreset: "custom" }));
+      return;
+    }
+    const range = getPresetRange(preset);
+    setDraft((p) => ({ ...p, datePreset: preset, ...range }));
+  };
+
   const hasFilters =
     applied.search ||
     applied.accountNumber ||
     applied.transferType ||
     applied.dateFrom ||
     applied.dateTo ||
-    applied.status;
+    applied.status ||
+    (applied.datePreset && applied.datePreset !== "all_time");
 
   return (
     <PagePermissionGuard resource="sepay" action="view">
       <div className="flex flex-col h-full">
-        <div className="p-4 border-b bg-white">
-          <h1 className="text-xl font-bold">Biến động số dư</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Lịch sử giao dịch ngân hàng đồng bộ từ Sepay
-          </p>
+        <div className="p-4 border-b bg-white flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold">Biến động số dư</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Lịch sử giao dịch ngân hàng đồng bộ từ Sepay
+            </p>
+          </div>
+          <CustomerLookup />
         </div>
 
         {/* Filter bar */}
@@ -215,64 +332,80 @@ export default function BienDongSoDuPage() {
             </select>
           </div>
 
-          <div ref={dateBoxRef} className="flex items-end gap-3">
-            <div className="flex flex-col">
-              <label className="text-xs text-gray-500 mb-1">Từ ngày</label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenCal((c) => (c === "from" ? null : "from"))
-                  }
-                  className={`w-40 flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
-                    draft.dateFrom
-                      ? "border-emerald-300 bg-emerald-50 text-gray-800"
-                      : "border-gray-300 text-gray-400"
-                  } ${openCal === "from" ? "ring-2 ring-emerald-100 border-emerald-400" : "hover:border-gray-400"}`}>
-                  <span>{formatDateLabel(draft.dateFrom)}</span>
-                  <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                </button>
-                {openCal === "from" && (
-                  <div className="absolute z-50 top-full left-0 mt-1 w-72">
-                    <MiniCalendar
-                      value={draft.dateFrom}
-                      onChange={(d) =>
-                        setDraft((p) => ({ ...p, dateFrom: d }))
-                      }
-                      onClose={() => setOpenCal(null)}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs text-gray-500 mb-1">Đến ngày</label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setOpenCal((c) => (c === "to" ? null : "to"))}
-                  className={`w-40 flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
-                    draft.dateTo
-                      ? "border-emerald-300 bg-emerald-50 text-gray-800"
-                      : "border-gray-300 text-gray-400"
-                  } ${openCal === "to" ? "ring-2 ring-emerald-100 border-emerald-400" : "hover:border-gray-400"}`}>
-                  <span>{formatDateLabel(draft.dateTo)}</span>
-                  <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                </button>
-                {openCal === "to" && (
-                  <div className="absolute z-50 top-full left-0 mt-1 w-72">
-                    <MiniCalendar
-                      value={draft.dateTo}
-                      onChange={(d) => setDraft((p) => ({ ...p, dateTo: d }))}
-                      onClose={() => setOpenCal(null)}
-                      minDate={draft.dateFrom || undefined}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-500 mb-1">Khoảng thời gian</label>
+            <select
+              value={draft.datePreset}
+              onChange={(e) => handlePresetChange(e.target.value)}
+              className="px-3 py-2 border rounded-lg text-sm w-40 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              {DATE_PRESETS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
           </div>
+
+          {draft.datePreset === "custom" && (
+            <div ref={dateBoxRef} className="flex items-end gap-3">
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-1">Từ ngày</label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenCal((c) => (c === "from" ? null : "from"))
+                    }
+                    className={`w-40 flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                      draft.dateFrom
+                        ? "border-emerald-300 bg-emerald-50 text-gray-800"
+                        : "border-gray-300 text-gray-400"
+                    } ${openCal === "from" ? "ring-2 ring-emerald-100 border-emerald-400" : "hover:border-gray-400"}`}>
+                    <span>{formatDateLabel(draft.dateFrom)}</span>
+                    <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </button>
+                  {openCal === "from" && (
+                    <div className="absolute z-50 top-full left-0 mt-1 w-72">
+                      <MiniCalendar
+                        value={draft.dateFrom}
+                        onChange={(d) =>
+                          setDraft((p) => ({ ...p, dateFrom: d }))
+                        }
+                        onClose={() => setOpenCal(null)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-1">Đến ngày</label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setOpenCal((c) => (c === "to" ? null : "to"))}
+                    className={`w-40 flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                      draft.dateTo
+                        ? "border-emerald-300 bg-emerald-50 text-gray-800"
+                        : "border-gray-300 text-gray-400"
+                    } ${openCal === "to" ? "ring-2 ring-emerald-100 border-emerald-400" : "hover:border-gray-400"}`}>
+                    <span>{formatDateLabel(draft.dateTo)}</span>
+                    <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </button>
+                  {openCal === "to" && (
+                    <div className="absolute z-50 top-full left-0 mt-1 w-72">
+                      <MiniCalendar
+                        value={draft.dateTo}
+                        onChange={(d) => setDraft((p) => ({ ...p, dateTo: d }))}
+                        onClose={() => setOpenCal(null)}
+                        minDate={draft.dateFrom || undefined}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={applyFilters}
