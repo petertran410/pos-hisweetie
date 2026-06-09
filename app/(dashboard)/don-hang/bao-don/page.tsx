@@ -14,6 +14,7 @@ import {
   useUpdatePackingSlip,
   useDeletePackingSlip,
   useResendPackingSlipNotification,
+  useResendPackingSlipLark,
 } from "@/lib/hooks/usePackingSlips";
 import {
   useCreatePackingHang,
@@ -91,6 +92,7 @@ export default function BaoDonPage() {
   const updatePackingSlip = useUpdatePackingSlip();
   const deletePackingSlip = useDeletePackingSlip();
   const resendPackingSlipNotification = useResendPackingSlipNotification();
+  const resendPackingSlipLark = useResendPackingSlipLark();
 
   const createPackingHang = useCreatePackingHang();
   const updatePackingHang = useUpdatePackingHang();
@@ -210,21 +212,29 @@ export default function BaoDonPage() {
       } else {
         await deletePackingSlip.mutateAsync(item.id);
       }
-      toast.success("Xóa báo đơn thành công");
+      toast.success("Hủy phiếu thành công");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Xóa báo đơn thất bại"
+        error instanceof Error ? error.message : "Hủy phiếu thất bại"
       );
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (slip: any) => {
+    // Gọi đúng endpoint theo type (giao-hang / dong-hang / loading)
+    // → tránh xóa nhầm sang packing-slips khi id trùng giữa các bảng.
     try {
-      await deletePackingSlip.mutateAsync(id);
-      toast.success("Xóa báo đơn thành công");
+      if (slip?.type === "dong-hang") {
+        await deletePackingHang.mutateAsync(slip.id);
+      } else if (slip?.type === "loading") {
+        await deletePackingLoading.mutateAsync(slip.id);
+      } else {
+        await deletePackingSlip.mutateAsync(slip.id);
+      }
+      toast.success("Hủy phiếu thành công");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Xóa báo đơn thất bại"
+        error instanceof Error ? error.message : "Hủy phiếu thất bại"
       );
     }
   };
@@ -238,6 +248,19 @@ export default function BaoDonPage() {
         error instanceof Error
           ? error.message
           : "Gửi lại thông báo Zalo thất bại"
+      );
+    }
+  };
+
+  const handleResendLark = async (id: number) => {
+    try {
+      await resendPackingSlipLark.mutateAsync(id);
+      toast.success("Đã đồng bộ phiếu chi lên Lark");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Đồng bộ phiếu chi lên Lark thất bại"
       );
     }
   };
@@ -280,6 +303,7 @@ export default function BaoDonPage() {
             onEditClick={handleEditClick}
             onDeleteClick={handleDelete}
             onResendClick={handleResend}
+            onResendLarkClick={handleResendLark}
             search={tableSearch}
             onSearchChange={setTableSearch}
           />
@@ -320,13 +344,12 @@ export default function BaoDonPage() {
           onCreateDongHangClick={handleCreateDongHangClick}
           onCreateLoadingClick={handleCreateLoadingClick}
           onEditClick={handleEditClick}
-          onDeleteClick={(id) => {
-            // mobile chỉ truyền id, nhưng cần biết type → tìm trong data
-            const item = (data?.data || []).find((x: any) => x.id === id);
-            if (item) handleMobileDelete(item);
-            else handleDelete(id);
+          onDeleteClick={(item) => {
+            // mobile truyền nguyên item → biết type để gọi đúng endpoint
+            handleMobileDelete(item);
           }}
           onResendClick={handleResend}
+          onResendLarkClick={handleResendLark}
         />
 
         {formType === "giao-hang" && (
