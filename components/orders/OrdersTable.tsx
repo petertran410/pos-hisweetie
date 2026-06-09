@@ -8,6 +8,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
@@ -626,6 +628,12 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
 
           <div className="flex items-center gap-1">
             <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+            <button
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
               className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
@@ -657,6 +665,12 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
               disabled={page >= totalPages}
               className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
               <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page >= totalPages}
+              className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronsRight className="w-4 h-4" />
             </button>
           </div>
 

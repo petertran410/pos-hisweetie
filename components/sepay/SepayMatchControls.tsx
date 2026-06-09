@@ -34,7 +34,9 @@ export function SepayStatusBadge({ status }: { status?: string | null }) {
 /** Ô hiển thị (nhiều) khách hàng */
 export function SepayCustomerCell({ tx }: { tx: SepayTransaction }) {
   const customers = tx.match?.customers || [];
-  if (customers.length === 0) return <span className="text-gray-400">-</span>;
+  const unassigned = tx.match?.unassignedAmount || 0;
+  if (customers.length === 0 && unassigned <= 0)
+    return <span className="text-gray-400">-</span>;
   return (
     <div className="flex flex-col gap-1">
       {customers.map((c, i) => (
@@ -52,6 +54,11 @@ export function SepayCustomerCell({ tx }: { tx: SepayTransaction }) {
           </span>
         </div>
       ))}
+      {unassigned > 0 && (
+        <div className="text-xs text-amber-600">
+          Chưa gắn: {formatCurrency(unassigned)}
+        </div>
+      )}
     </div>
   );
 }
@@ -94,6 +101,10 @@ function CustomerPickerModal({
   const { data, isFetching } = useSearchCustomers(debounced || undefined);
   const customers = data?.data || [];
 
+  // Khách đã có phiếu thu còn hiệu lực (giữ nguyên, không gán lại).
+  const lockedCustomers = (tx.match?.customers || []).filter((c) => c.cashFlow);
+  const unassigned = tx.match?.unassignedAmount ?? Number(tx.amountIn);
+
   const toggle = (c: PickedCustomer) => {
     setPicked((prev) =>
       prev.some((p) => p.id === c.id)
@@ -115,7 +126,7 @@ function CustomerPickerModal({
               Gán khách hàng cho giao dịch
             </h3>
             <p className="text-xs text-gray-500 mt-0.5 max-w-md truncate">
-              {formatCurrency(Number(tx.amountIn))} •{" "}
+              Cần gán: <b>{formatCurrency(unassigned)}</b> •{" "}
               {tx.transactionContent || "-"}
             </p>
           </div>
@@ -125,6 +136,27 @@ function CustomerPickerModal({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Khách đã có phiếu thu — giữ nguyên, không gán lại */}
+        {lockedCustomers.length > 0 && (
+          <div className="px-5 py-2 border-b bg-gray-50">
+            <div className="text-xs text-gray-500 mb-1">
+              Đã có phiếu thu (giữ nguyên):
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {lockedCustomers.map((c) => (
+                <span
+                  key={c.id}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                  {c.name}
+                  {typeof c.amount === "number"
+                    ? ` — ${formatCurrency(c.amount)}`
+                    : ""}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Đã chọn */}
         {picked.length > 0 && (
@@ -241,7 +273,6 @@ interface AllocRow {
   customerId: number;
   name: string;
   amount: string; // chuỗi để dễ nhập
-  note: string;
 }
 
 /** Modal phân bổ tiền + ghi chú cho từng khách → tạo phiếu thu */
@@ -261,20 +292,25 @@ function AllocationModal({
   isPending: boolean;
 }) {
   const amountIn = Number(tx.amountIn);
-  const customers = tx.match?.customers || [];
+  const allCustomers = tx.match?.customers || [];
+  // Khách đã có phiếu thu còn hiệu lực → giữ nguyên, KHÔNG phân bổ lại.
+  // Chỉ phân bổ cho khách chưa có phiếu, theo phần tiền chưa gắn.
+  const pendingCustomers = allCustomers.filter((c) => !c.cashFlow);
+  const targetAmount = Math.round(
+    (tx.match?.unassignedAmount ?? amountIn) * 100
+  ) / 100;
 
   const [rows, setRows] = useState<AllocRow[]>(() =>
-    customers.map((c, i) => ({
+    pendingCustomers.map((c, i) => ({
       customerId: c.id,
       name: c.name,
-      // 1 khách: prefill toàn bộ tiền. Nhiều khách: prefill khách đầu, còn lại 0.
+      // 1 khách chờ: prefill toàn bộ phần tiền chưa gắn. Nhiều khách: khách đầu, còn lại 0.
       amount:
-        customers.length === 1 || i === 0
-          ? customers.length === 1
-            ? String(amountIn)
+        pendingCustomers.length === 1 || i === 0
+          ? pendingCustomers.length === 1
+            ? String(targetAmount)
             : ""
           : "",
-      note: c.note || "",
     }))
   );
 
@@ -289,7 +325,7 @@ function AllocationModal({
   const setRow = (idx: number, patch: Partial<AllocRow>) =>
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
 
-  /** Nhập tiền: chỉ lấy chữ số, kẹp tối đa = phần còn lại (tổng không vượt tiền giao dịch). */
+  /** Nhập tiền: chỉ lấy chữ số, kẹp tối đa = phần còn lại (tổng không vượt phần chưa gắn). */
   const setAmount = (idx: number, raw: string) => {
     const digits = raw.replace(/[^\d]/g, "");
     if (digits === "") {
@@ -302,7 +338,7 @@ function AllocationModal({
       (s, r, i) => (i === idx ? s : s + (Number(r.amount) || 0)),
       0
     );
-    const remaining = Math.max(0, amountIn - otherSum);
+    const remaining = Math.max(0, targetAmount - otherSum);
     if (val > remaining) val = remaining;
     setRow(idx, { amount: String(val) });
   };
@@ -312,9 +348,12 @@ function AllocationModal({
     v === "" ? "" : Number(v).toLocaleString("en-US");
 
   const sum = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
-  const diff = Math.round((amountIn - sum) * 100) / 100;
+  const diff = Math.round((targetAmount - sum) * 100) / 100;
   const balanced = diff === 0;
   const allPositive = rows.every((r) => Number(r.amount) > 0);
+
+  // Ghi chú tự điền theo mã tham chiếu của giao dịch (không cho nhập tay).
+  const autoNote = tx.referenceNumber || tx.transactionContent || "";
 
   const handleSubmit = () => {
     if (!balanced || !allPositive) return;
@@ -322,7 +361,7 @@ function AllocationModal({
       rows.map((r) => ({
         customerId: r.customerId,
         amount: Number(r.amount),
-        note: r.note.trim(),
+        note: autoNote,
       }))
     );
   };
@@ -337,13 +376,22 @@ function AllocationModal({
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div>
             <h3 className="text-base font-semibold text-gray-800">
-              {customers.length > 1
+              {pendingCustomers.length > 1
                 ? "Phân bổ & tạo phiếu thu"
                 : "Tạo phiếu thu"}
             </h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              Số tiền giao dịch: <b>{formatCurrency(amountIn)}</b> • Chi nhánh:{" "}
-              <b>{branchName}</b>
+              {targetAmount !== amountIn ? (
+                <>
+                  Cần phân bổ: <b>{formatCurrency(targetAmount)}</b> (giao dịch{" "}
+                  {formatCurrency(amountIn)})
+                </>
+              ) : (
+                <>
+                  Số tiền giao dịch: <b>{formatCurrency(amountIn)}</b>
+                </>
+              )}{" "}
+              • Chi nhánh: <b>{branchName}</b>
             </p>
           </div>
           <button
@@ -371,17 +419,6 @@ function AllocationModal({
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">
-                    Ghi chú phiếu thu
-                  </label>
-                  <input
-                    value={r.note}
-                    onChange={(e) => setRow(idx, { note: e.target.value })}
-                    placeholder="Ghi chú cho phiếu thu của khách này..."
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
               </div>
             </div>
           ))}
@@ -394,7 +431,7 @@ function AllocationModal({
               <b className={balanced ? "text-emerald-600" : "text-red-600"}>
                 {formatCurrency(sum)}
               </b>{" "}
-              / {formatCurrency(amountIn)}
+              / {formatCurrency(targetAmount)}
             </span>
             {!balanced && (
               <span className="text-red-600 text-xs">
@@ -419,8 +456,8 @@ function AllocationModal({
               ) : (
                 <Check className="w-4 h-4" />
               )}
-              {customers.length > 1
-                ? `Tạo ${customers.length} phiếu thu`
+              {pendingCustomers.length > 1
+                ? `Tạo ${pendingCustomers.length} phiếu thu`
                 : "Tạo phiếu thu"}
             </button>
           </div>
@@ -487,11 +524,14 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
     );
   };
 
-  const initialPicked: PickedCustomer[] = customers.map((c) => ({
-    id: c.id,
-    code: c.code || "",
-    name: c.name,
-  }));
+  // Chỉ cho gán/sửa khách CHƯA có phiếu thu (khách đã có phiếu giữ nguyên).
+  const initialPicked: PickedCustomer[] = customers
+    .filter((c) => !c.cashFlow)
+    .map((c) => ({
+      id: c.id,
+      code: c.code || "",
+      name: c.name,
+    }));
 
   return (
     <div className="flex items-center gap-2 justify-end">

@@ -20,6 +20,8 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   AlertTriangle,
 } from "lucide-react";
 import { InvoicesMobileDetailSheet } from "./InvoicesMobileDetailSheet";
@@ -845,6 +847,12 @@ export function InvoicesMobileView({
               <div className="flex items-center justify-center gap-3 py-4">
                 <button
                   disabled={page <= 1}
+                  onClick={() => setPage(1)}
+                  className="flex items-center gap-1 px-3 py-2 text-sm rounded-xl bg-white border border-gray-200 disabled:opacity-40 active:scale-95 transition-all">
+                  <ChevronsLeft className="w-4 h-4" />
+                </button>
+                <button
+                  disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
                   className="flex items-center gap-1 px-4 py-2 text-sm rounded-xl bg-white border border-gray-200 disabled:opacity-40 active:scale-95 transition-all">
                   <ChevronLeft className="w-4 h-4" />
@@ -859,6 +867,12 @@ export function InvoicesMobileView({
                   className="flex items-center gap-1 px-4 py-2 text-sm rounded-xl bg-white border border-gray-200 disabled:opacity-40 active:scale-95 transition-all">
                   Sau
                   <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(totalPages)}
+                  className="flex items-center gap-1 px-3 py-2 text-sm rounded-xl bg-white border border-gray-200 disabled:opacity-40 active:scale-95 transition-all">
+                  <ChevronsRight className="w-4 h-4" />
                 </button>
               </div>
             )}

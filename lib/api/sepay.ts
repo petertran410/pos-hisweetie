@@ -27,6 +27,7 @@ export interface SepayMatchInfo {
   completedSource: "webhook" | "manual" | null;
   customers: SepayMatchCustomer[];
   refCode: string | null;
+  unassignedAmount?: number;
 }
 
 export interface SepayTransaction {
@@ -114,6 +115,9 @@ export const sepayApi = {
       amountIn: string;
       accountNumber: string | null;
       bankBrandName: string | null;
+      referenceNumber: string | null;
+      transactionContent: string | null;
+      transactionDate: string | null;
     } | null;
   }> => {
     return apiClient.get(`/sepay/transactions/pending`);

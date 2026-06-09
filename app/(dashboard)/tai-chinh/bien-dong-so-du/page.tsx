@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useSepayTransactions } from "@/lib/hooks/useSepay";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
@@ -15,6 +16,8 @@ import { formatCurrency } from "@/lib/utils";
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Search,
   Loader2,
   X,
@@ -139,6 +142,7 @@ const EMPTY_FILTERS: Filters = {
 };
 
 export default function BienDongSoDuPage() {
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   // Khởi tạo filter:
   //   1. Ưu tiên query param ?status= (vd điều hướng từ toast thông báo).
@@ -148,7 +152,16 @@ export default function BienDongSoDuPage() {
     const defaults: Filters = { ...EMPTY_FILTERS, status: "processing" };
     if (typeof window === "undefined") return defaults;
 
-    const st = new URLSearchParams(window.location.search).get("status");
+    const params = new URLSearchParams(window.location.search);
+
+    // Deep-link từ thông báo: ?search=<mã tham chiếu / nội dung CK> → tìm đúng
+    // giao dịch, bỏ filter status để không che mất giao dịch đã xử lý.
+    const search = params.get("search");
+    if (search) {
+      return { ...EMPTY_FILTERS, search };
+    }
+
+    const st = params.get("status");
     if (st === "processing" || st === "assigned" || st === "completed") {
       return { ...EMPTY_FILTERS, status: st };
     }
@@ -180,6 +193,20 @@ export default function BienDongSoDuPage() {
       // ignore
     }
   }, [applied]);
+
+  // Deep-link reactive: khi đang ở sẵn trang này và bấm 1 thông báo khác,
+  // URL ?search= đổi → cập nhật filter để nhảy tới đúng giao dịch.
+  // Dùng pattern "điều chỉnh state khi giá trị ngoài đổi" của React (so sánh
+  // với giá trị trước, set ngay trong render) thay vì useEffect.
+  const searchParam = searchParams.get("search");
+  const [prevSearchParam, setPrevSearchParam] = useState<string | null>(null);
+  if (searchParam && searchParam !== prevSearchParam) {
+    setPrevSearchParam(searchParam);
+    const next: Filters = { ...EMPTY_FILTERS, search: searchParam };
+    setDraft(next);
+    setApplied(next);
+    setPage(1);
+  }
 
   // Danh sách tài khoản ngân hàng cho dropdown filter
   const { data: bankAccountsData } = useBankAccountsForPayment();
@@ -498,6 +525,12 @@ export default function BienDongSoDuPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setPage(1)}
+              disabled={page <= 1}
+              className="p-1.5 border rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50">
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+            <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
               className="p-1.5 border rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50">
@@ -511,6 +544,12 @@ export default function BienDongSoDuPage() {
               disabled={page >= totalPages}
               className="p-1.5 border rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50">
               <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page >= totalPages}
+              className="p-1.5 border rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50">
+              <ChevronsRight className="w-4 h-4" />
             </button>
           </div>
         </div>

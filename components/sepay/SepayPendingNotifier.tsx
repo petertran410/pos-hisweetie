@@ -1,28 +1,32 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { sepayApi } from "@/lib/api/sepay";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
+import { buildSepayTxHref } from "@/lib/sepay/notification";
 
 const POLL_INTERVAL = 10000; // 10s
 
 /**
- * Thông báo toàn cục giao dịch Sepay cần xử lý (chưa gán khách).
- * Mount 1 lần ở dashboard layout → hiện ở mọi trang.
- * Poll định kỳ; khi xuất hiện giao dịch mới (latestId tăng so với lần thấy
- * trước) thì bắn toast.
+ * Bắn TOAST tức thời khi có giao dịch Sepay mới (kênh cảnh báo nhanh).
+ * Mount 1 lần ở dashboard layout → chạy ở mọi trang.
  *
- * Mốc "đã thấy" lưu RIÊNG trong từng tab (useRef, không dùng localStorage)
- * → khi có giao dịch mới, MỌI tab đang mở đều pop toast.
+ * Nguồn thông báo "xem lại" (chuông) đã do backend lưu (model Notification);
+ * component này KHÔNG còn ghi localStorage. Khi phát hiện giao dịch mới, ngoài
+ * toast còn invalidate badge "unread-count" để chuông cập nhật ngay (không phải
+ * chờ vòng poll 5s kế tiếp).
+ *
+ * Mốc "đã thấy" lưu RIÊNG từng tab (useRef) → mọi tab đều pop toast.
  * Lần đầu mount mỗi tab chỉ ghi nhận mốc, không pop lại giao dịch cũ.
  */
 export function SepayPendingNotifier() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const canView = usePermission("sepay", "view");
   const { isAuthenticated, isProfileSynced } = useAuthStore();
   const enabled = canView && isAuthenticated && isProfileSynced;
@@ -42,20 +46,16 @@ export function SepayPendingNotifier() {
     if (!data) return;
     const { count, latestId, latest } = data;
 
-    if (!latestId || count === 0) return;
+    if (!latestId || count === 0 || !latest) return;
 
     // Mô tả giao dịch mới nhất: số tiền + tài khoản + ngân hàng.
-    const amount = latest ? formatCurrency(Number(latest.amountIn)) : "";
-    const bankInfo = latest
-      ? [latest.bankBrandName, latest.accountNumber].filter(Boolean).join(" - ")
-      : "";
-    const detail = [amount && `+${amount}`, bankInfo]
+    const amount = formatCurrency(Number(latest.amountIn));
+    const bankInfo = [latest.bankBrandName, latest.accountNumber]
       .filter(Boolean)
-      .join(" • ");
-    const moreText = count > 1 ? ` (và ${count - 1} giao dịch khác)` : "";
+      .join(" - ");
+    const detail = [amount && `+${amount}`, bankInfo].filter(Boolean).join(" • ");
 
-    const goToPage = () =>
-      router.push("/tai-chinh/bien-dong-so-du?status=processing");
+    const goToTx = () => router.push(buildSepayTxHref(latest));
 
     // Lần đầu mount trong tab này: chỉ ghi nhận mốc, không bắn toast cũ.
     if (lastSeenIdRef.current === null) {
@@ -63,17 +63,20 @@ export function SepayPendingNotifier() {
       return;
     }
 
-    // Có giao dịch mới hơn mốc đã thấy trong tab → báo.
+    // Có giao dịch mới hơn mốc đã thấy trong tab → toast + làm mới badge chuông.
     if (latestId > lastSeenIdRef.current) {
       toast.success("Khách vừa chuyển khoản cần xử lý", {
         id: "sepay-pending",
-        description: detail ? `${detail}${moreText}` : undefined,
+        description: detail || undefined,
         duration: 10000,
-        action: { label: "Xem ngay", onClick: goToPage },
+        action: { label: "Xem ngay", onClick: goToTx },
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications-unread-count"],
       });
       lastSeenIdRef.current = latestId;
     }
-  }, [data, router]);
+  }, [data, router, queryClient]);
 
   return null;
 }

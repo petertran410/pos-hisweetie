@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { toast } from "sonner";
 import { BranchSelector } from "./BranchSelector";
+import { SepayNotificationBell } from "../sepay/SepayNotificationBell";
 import {
   useFilteredPosActions,
   useFilteredSections,
@@ -313,6 +314,8 @@ export function DashboardHeader() {
 
             <BranchSelector />
 
+            <SepayNotificationBell />
+
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
@@ -367,6 +370,7 @@ export function DashboardHeader() {
             Hisweetie
           </Link>
           <div className="flex items-center gap-1">
+            <SepayNotificationBell />
             {posActions.length > 0 && (
               <Link
                 href={posActions[0]?.href ?? "/ban-hang"}
