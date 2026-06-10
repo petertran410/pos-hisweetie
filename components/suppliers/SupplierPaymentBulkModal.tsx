@@ -24,8 +24,8 @@ import { createPortal } from "react-dom";
  *   - allocateToInvoices → allocateToPurchaseOrders
  *   - method gửi BE: createSupplierPayment
  *
- * Wave 3 simplified: KHÔNG có debtOffsets (cấn trừ credit) như phía bán —
- * sẽ implement nếu nghiệp vụ cần.
+ * debtOffsets (cấn trừ tiền trả thừa NCC) đã được hỗ trợ — đối xứng phía bán:
+ * khi đã trả NCC dư, phần dư cấn trừ vào các PN còn nợ qua cột "Cấn trừ".
  */
 interface SupplierPaymentBulkModalProps {
   supplierId: number;
@@ -61,6 +61,11 @@ export function SupplierPaymentBulkModal({
   const [purchaseOrderPayments, setPurchaseOrderPayments] = useState<
     Record<number, string>
   >({});
+  // Cấn trừ tiền trả thừa NCC vào PN còn nợ — đối xứng invoiceDebtOffsets bên KH.
+  const [purchaseOrderDebtOffsets, setPurchaseOrderDebtOffsets] = useState<
+    Record<number, string>
+  >({});
+  const debtOffsetsInitialized = useRef(false);
 
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
     null
@@ -140,6 +145,51 @@ export function SupplierPaymentBulkModal({
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
+
+  // Credit = phần chênh giữa tổng debtAmount các PN và supplierDebt thực tế.
+  // Xảy ra khi đã trả thừa NCC / trả hàng nhập làm giảm supplierDebt nhưng PN
+  // chưa được phân bổ. Đối xứng `availableCredit` của CustomerPaymentModal.
+  const availableCredit = useMemo(() => {
+    const totalUnpaid = unpaidPurchaseOrders.reduce(
+      (sum: number, po: any) => sum + Number(po.debtAmount),
+      0
+    );
+    return Math.max(0, totalUnpaid - supplierDebt);
+  }, [unpaidPurchaseOrders, supplierDebt]);
+
+  useEffect(() => {
+    if (debtOffsetsInitialized.current || unpaidPurchaseOrders.length === 0)
+      return;
+    debtOffsetsInitialized.current = true;
+
+    if (availableCredit <= 0) return;
+
+    const oldestPO = unpaidPurchaseOrders[0];
+    const defaultOffset = Math.min(
+      availableCredit,
+      Number(oldestPO.debtAmount)
+    );
+    if (defaultOffset > 0) {
+      setPurchaseOrderDebtOffsets({
+        [oldestPO.id]: formatNumberInput(defaultOffset.toString()),
+      });
+    }
+  }, [unpaidPurchaseOrders, availableCredit]);
+
+  const handlePODebtOffsetChange = (poId: number, value: string) => {
+    const po = unpaidPurchaseOrders.find((p: any) => p.id === poId);
+    if (!po) return;
+
+    const maxAmount = Number(po.debtAmount);
+    const numericValue = parseNumberInput(value);
+    const limitedValue = Math.min(numericValue, maxAmount);
+
+    const formatted = formatNumberInput(limitedValue.toString());
+    setPurchaseOrderDebtOffsets((prev) => ({
+      ...prev,
+      [poId]: formatted,
+    }));
+  };
 
   const handleTotalAmountChange = (value: string) => {
     const formatted = formatNumberInput(value);
@@ -229,6 +279,14 @@ export function SupplierPaymentBulkModal({
       }
     }
 
+    // Cấn trừ tiền trả thừa NCC: gom các PN có nhập số tiền cấn trừ > 0.
+    const debtOffsetsToApply = Object.entries(purchaseOrderDebtOffsets)
+      .filter(([_, amount]) => parseNumberInput(amount) > 0)
+      .map(([poId, amount]) => ({
+        purchaseOrderId: Number(poId),
+        amount: parseNumberInput(amount),
+      }));
+
     await createPayment.mutateAsync({
       supplierId,
       totalAmount: finalTotalAmount,
@@ -238,6 +296,7 @@ export function SupplierPaymentBulkModal({
       allocateToPurchaseOrders,
       purchaseOrders:
         purchaseOrdersToPay.length > 0 ? purchaseOrdersToPay : undefined,
+      debtOffsets: debtOffsetsToApply.length > 0 ? debtOffsetsToApply : undefined,
       accountId: selectedAccountId || undefined,
     });
   };
@@ -409,6 +468,15 @@ export function SupplierPaymentBulkModal({
 
           {allocateToPurchaseOrders && (
             <div className="border rounded-lg overflow-hidden">
+              {availableCredit > 0 && (
+                <div className="px-4 py-2 bg-brand-soft border-b text-xs text-brand-dark">
+                  Có thể cấn trừ tối đa{" "}
+                  <span className="font-semibold">
+                    {formatCurrency(availableCredit)}
+                  </span>{" "}
+                  từ credit hiện có của nhà cung cấp
+                </div>
+              )}
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
@@ -427,6 +495,11 @@ export function SupplierPaymentBulkModal({
                     <th className="px-4 py-3 text-right text-xs font-medium">
                       Còn cần trả
                     </th>
+                    {availableCredit > 0 && (
+                      <th className="px-4 py-3 text-left text-xs font-medium">
+                        Cấn trừ nợ
+                      </th>
+                    )}
                     <th className="px-4 py-3 text-left text-xs font-medium">
                       Tiền trả
                     </th>
@@ -449,19 +522,22 @@ export function SupplierPaymentBulkModal({
                           )
                         )}
                       </td>
+                      {availableCredit > 0 && <td />}
                       <td />
                     </tr>
                   )}
                   {isLoading ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center">
+                      <td
+                        colSpan={availableCredit > 0 ? 7 : 6}
+                        className="px-4 py-8 text-center">
                         Đang tải...
                       </td>
                     </tr>
                   ) : unpaidPurchaseOrders.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={availableCredit > 0 ? 7 : 6}
                         className="px-4 py-8 text-center text-gray-500">
                         Không có phiếu nhập nào cần thanh toán
                       </td>
@@ -490,6 +566,19 @@ export function SupplierPaymentBulkModal({
                         <td className="px-4 py-3 text-right font-medium">
                           {formatCurrency(po.debtAmount)}
                         </td>
+                        {availableCredit > 0 && (
+                          <td className="px-4 py-3">
+                            <input
+                              type="text"
+                              value={purchaseOrderDebtOffsets[po.id] || ""}
+                              onChange={(e) =>
+                                handlePODebtOffsetChange(po.id, e.target.value)
+                              }
+                              placeholder="0"
+                              className="w-full px-2 py-1 border rounded text-right"
+                            />
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           <input
                             type="text"

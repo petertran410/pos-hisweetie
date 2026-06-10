@@ -1,12 +1,20 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useSupplierDebtTimeline } from "@/lib/hooks/useSuppliers";
+import {
+  useSupplierDebtTimeline,
+  useExportSupplierDebtTimeline,
+  useExportSupplierDebt,
+} from "@/lib/hooks/useSuppliers";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { SupplierPaymentBulkModal } from "./SupplierPaymentBulkModal";
 import { CodeLink } from "../shared/CodeLink";
+import {
+  ExportDebtModal,
+  ExportDebtOptions,
+} from "../customers/ExportDebtModal";
 
 interface SupplierDebtsTabProps {
   supplierId: number;
@@ -20,11 +28,65 @@ export function SupplierDebtsTab({
   const [page, setPage] = useState(1);
   const limit = 10;
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showExportDebtModal, setShowExportDebtModal] = useState(false);
 
   const { data, isLoading } = useSupplierDebtTimeline(supplierId);
+  const { exportToFile: exportTimeline, isExporting: exportingTimeline } =
+    useExportSupplierDebtTimeline();
+  const { exportToFile: exportDebt, isExporting: exportingDebt } =
+    useExportSupplierDebt();
+
   const timeline = data?.data || [];
   const totalPages = Math.ceil(timeline.length / limit);
   const paginatedTimeline = timeline.slice((page - 1) * limit, page * limit);
+
+  const handleExportDebt = async (opts: ExportDebtOptions) => {
+    const { preset, fromDate, toDate, ...rest } = opts;
+
+    let from: string | undefined;
+    let to: string | undefined;
+
+    if (preset === "custom") {
+      from = fromDate;
+      to = toDate;
+    } else if (preset !== "all_time") {
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const toStr = (d: Date) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+      if (preset === "today") {
+        from = to = toStr(now);
+      } else if (preset === "this_week") {
+        const day = now.getDay() || 7;
+        const mon = new Date(now);
+        mon.setDate(now.getDate() - day + 1);
+        from = toStr(mon);
+        to = toStr(now);
+      } else if (preset === "last_7_days") {
+        const d = new Date(now);
+        d.setDate(now.getDate() - 6);
+        from = toStr(d);
+        to = toStr(now);
+      } else if (preset === "last_30_days") {
+        const d = new Date(now);
+        d.setDate(now.getDate() - 29);
+        from = toStr(d);
+        to = toStr(now);
+      } else if (preset === "this_month") {
+        from = toStr(new Date(now.getFullYear(), now.getMonth(), 1));
+        to = toStr(now);
+      } else if (preset === "last_month") {
+        const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const last = new Date(now.getFullYear(), now.getMonth(), 0);
+        from = toStr(first);
+        to = toStr(last);
+      }
+    }
+
+    await exportDebt(supplierId, { fromDate: from, toDate: to, ...rest });
+    setShowExportDebtModal(false);
+  };
 
   if (isLoading) {
     return (
@@ -36,18 +98,44 @@ export function SupplierDebtsTab({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="text-md text-gray-600">
           Nợ cần trả hiện tại:{" "}
           <span className="font-semibold text-red-600">
             {formatCurrency(supplierDebt)}
           </span>
         </div>
-        <button
-          onClick={() => setShowPaymentModal(true)}
-          className="px-4 py-2 text-sm font-medium text-white bg-brand rounded-lg hover:bg-brand-dark">
-          💵 Trả tiền NCC
-        </button>
+        <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
+          <button
+            onClick={() => exportTimeline(supplierId)}
+            disabled={exportingTimeline}
+            className="px-2 py-1.5 lg:px-3 lg:py-2 border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-1.5 text-xs lg:text-sm text-gray-700 disabled:opacity-50">
+            {exportingTimeline ? (
+              <Loader2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+            )}
+            Lịch sử TT
+          </button>
+
+          <button
+            onClick={() => setShowExportDebtModal(true)}
+            disabled={exportingDebt}
+            className="px-2 py-1.5 lg:px-3 lg:py-2 border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-1.5 text-xs lg:text-sm text-gray-700 disabled:opacity-50">
+            {exportingDebt ? (
+              <Loader2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+            )}
+            Công nợ
+          </button>
+
+          <button
+            onClick={() => setShowPaymentModal(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-brand rounded-lg hover:bg-brand-dark">
+            💵 Trả tiền NCC
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -161,6 +249,12 @@ export function SupplierDebtsTab({
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-4">
           <button
+            onClick={() => setPage(1)}
+            disabled={page === 1}
+            className="px-3 py-1 border rounded text-md disabled:opacity-50">
+            «
+          </button>
+          <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
             className="px-3 py-1 border rounded text-md disabled:opacity-50">
@@ -175,6 +269,12 @@ export function SupplierDebtsTab({
             className="px-3 py-1 border rounded text-md disabled:opacity-50">
             ›
           </button>
+          <button
+            onClick={() => setPage(totalPages)}
+            disabled={page === totalPages}
+            className="px-3 py-1 border rounded text-md disabled:opacity-50">
+            »
+          </button>
         </div>
       )}
 
@@ -183,6 +283,14 @@ export function SupplierDebtsTab({
           supplierId={supplierId}
           supplierDebt={supplierDebt}
           onClose={() => setShowPaymentModal(false)}
+        />
+      )}
+
+      {showExportDebtModal && (
+        <ExportDebtModal
+          isExporting={exportingDebt}
+          onClose={() => setShowExportDebtModal(false)}
+          onConfirm={handleExportDebt}
         />
       )}
     </div>
