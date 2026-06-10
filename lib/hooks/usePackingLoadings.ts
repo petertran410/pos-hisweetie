@@ -102,6 +102,31 @@ export function useDeletePackingLoading() {
   });
 }
 
+export function useResendPackingLoadingLark() {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(
+        `${API_URL}/packing-loadings/${id}/resend-lark`,
+        {
+          method: "POST",
+          headers: getAuthHeaders(),
+        }
+      );
+      if (!res.ok) {
+        let message = "Gửi lại thông báo loading lên Lark thất bại";
+        try {
+          const body = await res.json();
+          if (body?.message) message = body.message;
+        } catch {
+          // ignore parse error
+        }
+        throw new Error(message);
+      }
+      return res.json();
+    },
+  });
+}
+
 export async function uploadPackingLoadingImage(file: File): Promise<string> {
   const token = useAuthStore.getState().token;
   const formData = new FormData();

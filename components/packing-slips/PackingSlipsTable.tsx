@@ -26,6 +26,7 @@ interface PackingSlipsTableProps {
   onDeleteClick: (slip: PackingSlip & { type?: string }) => void;
   onResendClick?: (id: number) => void;
   onResendLarkClick?: (id: number) => void;
+  onResendLoadingLarkClick?: (id: number) => void;
   /** Search server-side: do parent điều khiển. Nếu không truyền sẽ dùng search nội bộ (client-side). */
   search?: string;
   onSearchChange?: (value: string) => void;
@@ -51,6 +52,7 @@ export function PackingSlipsTable({
   onDeleteClick,
   onResendClick,
   onResendLarkClick,
+  onResendLoadingLarkClick,
   search: searchProp,
   onSearchChange,
 }: PackingSlipsTableProps) {
@@ -450,6 +452,22 @@ export function PackingSlipsTable({
                             Gửi Lark
                           </button>
                         )}
+                        {onResendLoadingLarkClick &&
+                          slip.type === "loading" && (
+                            <button
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    "Gửi lại thông báo loading của phiếu này lên Lark?"
+                                  )
+                                ) {
+                                  onResendLoadingLarkClick(slip.id);
+                                }
+                              }}
+                              className="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded">
+                              Gửi Lark
+                            </button>
+                          )}
                         <button
                           onClick={() => {
                             if (

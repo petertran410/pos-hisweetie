@@ -25,6 +25,7 @@ import {
   useCreatePackingLoading,
   useUpdatePackingLoading,
   useDeletePackingLoading,
+  useResendPackingLoadingLark,
 } from "@/lib/hooks/usePackingLoadings";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import type { PackingHang } from "@/lib/types/packing-hang";
@@ -101,6 +102,7 @@ export default function BaoDonPage() {
   const createPackingLoading = useCreatePackingLoading();
   const updatePackingLoading = useUpdatePackingLoading();
   const deletePackingLoading = useDeletePackingLoading();
+  const resendPackingLoadingLark = useResendPackingLoadingLark();
 
   const handleCreateGiaoHangClick = () => {
     setEditingPackingSlip(null);
@@ -265,6 +267,19 @@ export default function BaoDonPage() {
     }
   };
 
+  const handleResendLoadingLark = async (id: number) => {
+    try {
+      await resendPackingLoadingLark.mutateAsync(id);
+      toast.success("Đã gửi lại thông báo loading lên Lark");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Gửi lại thông báo loading lên Lark thất bại"
+      );
+    }
+  };
+
   const handleCloseForm = () => {
     setFormType(null);
     setEditingPackingSlip(null);
@@ -306,6 +321,7 @@ export default function BaoDonPage() {
             onDeleteClick={handleDelete}
             onResendClick={handleResend}
             onResendLarkClick={handleResendLark}
+            onResendLoadingLarkClick={handleResendLoadingLark}
             search={tableSearch}
             onSearchChange={setTableSearch}
           />
@@ -352,6 +368,7 @@ export default function BaoDonPage() {
           }}
           onResendClick={handleResend}
           onResendLarkClick={handleResendLark}
+          onResendLoadingLarkClick={handleResendLoadingLark}
         />
 
         {formType === "giao-hang" && (

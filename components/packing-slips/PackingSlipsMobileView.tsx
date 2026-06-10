@@ -357,6 +357,7 @@ function PackingMobileDetailSheet({
   onDelete,
   onResend,
   onResendLark,
+  onResendLoadingLark,
 }: {
   item: any;
   onClose: () => void;
@@ -364,6 +365,7 @@ function PackingMobileDetailSheet({
   onDelete: () => void;
   onResend?: () => void;
   onResendLark?: () => void;
+  onResendLoadingLark?: () => void;
 }) {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
 
@@ -569,6 +571,22 @@ function PackingMobileDetailSheet({
                     Gửi Lark
                   </button>
                 )}
+                {onResendLoadingLark && typeKey === "loading" && (
+                  <button
+                    onClick={() => {
+                      if (
+                        confirm(
+                          "Gửi lại thông báo loading của phiếu này lên Lark?"
+                        )
+                      ) {
+                        onResendLoadingLark();
+                      }
+                    }}
+                    className="w-full py-3 border border-indigo-200 text-indigo-700 bg-indigo-50 rounded-2xl font-semibold text-sm hover:bg-indigo-100 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
+                    <Send className="w-4 h-4" />
+                    Gửi Lark
+                  </button>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
@@ -738,6 +756,7 @@ interface PackingSlipsMobileViewProps {
   onDeleteClick: (item: any) => void;
   onResendClick?: (id: number) => void;
   onResendLarkClick?: (id: number) => void;
+  onResendLoadingLarkClick?: (id: number) => void;
 }
 
 export function PackingSlipsMobileView({
@@ -748,6 +767,7 @@ export function PackingSlipsMobileView({
   onDeleteClick,
   onResendClick,
   onResendLarkClick,
+  onResendLoadingLarkClick,
 }: PackingSlipsMobileViewProps) {
   const { selectedBranch } = useBranchStore();
   const { data: branches } = useBranches();
@@ -844,6 +864,14 @@ export function PackingSlipsMobileView({
       const id = selectedItem.id;
       setSelectedItem(null);
       onResendLarkClick(id);
+    }
+  };
+
+  const handleResendLoadingLark = () => {
+    if (selectedItem && onResendLoadingLarkClick) {
+      const id = selectedItem.id;
+      setSelectedItem(null);
+      onResendLoadingLarkClick(id);
     }
   };
 
@@ -997,6 +1025,9 @@ export function PackingSlipsMobileView({
           onDelete={handleDelete}
           onResend={onResendClick ? handleResend : undefined}
           onResendLark={onResendLarkClick ? handleResendLark : undefined}
+          onResendLoadingLark={
+            onResendLoadingLarkClick ? handleResendLoadingLark : undefined
+          }
         />
       )}
     </div>
