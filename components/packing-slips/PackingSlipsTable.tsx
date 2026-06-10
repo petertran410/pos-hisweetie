@@ -424,13 +424,15 @@ export function PackingSlipsTable({
                           <button
                             onClick={() => {
                               if (
-                                confirm("Gửi lại tin nhắn Zalo cho báo đơn này?")
+                                confirm(
+                                  "Gửi lại tin nhắn Zalo cho báo đơn này?"
+                                )
                               ) {
                                 onResendClick(slip.id);
                               }
                             }}
                             className="px-3 py-1 text-sm text-emerald-600 hover:bg-emerald-50 rounded">
-                            Gửi lại
+                            Gửi Zalo
                           </button>
                         )}
                         {onResendLarkClick && slip.type === "giao-hang" && (

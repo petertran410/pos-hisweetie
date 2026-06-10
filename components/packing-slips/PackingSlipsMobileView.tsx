@@ -550,14 +550,16 @@ function PackingMobileDetailSheet({
                     }}
                     className="w-full py-3 border border-emerald-200 text-emerald-700 bg-emerald-50 rounded-2xl font-semibold text-sm hover:bg-emerald-100 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
                     <Send className="w-4 h-4" />
-                    Gửi lại Zalo
+                    Gửi Zalo
                   </button>
                 )}
                 {onResendLark && typeKey === "giao-hang" && (
                   <button
                     onClick={() => {
                       if (
-                        confirm("Đồng bộ lại phiếu chi của báo đơn này lên Lark?")
+                        confirm(
+                          "Đồng bộ lại phiếu chi của báo đơn này lên Lark?"
+                        )
                       ) {
                         onResendLark();
                       }
