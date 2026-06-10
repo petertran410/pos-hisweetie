@@ -546,6 +546,165 @@ function BranchMultiSelectDropdown({
   );
 }
 
+// ─── SearchableMultiDropdown (multi-select + ô tìm theo tên) ─────────────────
+function SearchableMultiDropdown({
+  options,
+  values,
+  placeholder,
+  searchPlaceholder,
+  onChange,
+}: {
+  options: { value: string; label: string }[];
+  values: string[];
+  placeholder: string;
+  searchPlaceholder?: string;
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  const selectedOptions = options.filter((o) => values.includes(o.value));
+  const label =
+    selectedOptions.length === 0
+      ? null
+      : selectedOptions.length === 1
+        ? selectedOptions[0].label
+        : `${selectedOptions.length} đã chọn`;
+
+  const filteredOptions = useMemo(() => {
+    if (!search.trim()) return options;
+    const q = search.trim().toLowerCase();
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, search]);
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((p) => !p)}
+        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
+        className="dt-input dt-input-sm !rounded-lg w-full flex items-center justify-between gap-2 cursor-pointer select-none"
+        style={
+          open
+            ? {
+                borderColor: "var(--dt-primary)",
+                boxShadow: "0 0 0 3px rgba(0,183,204,.1)",
+              }
+            : undefined
+        }>
+        <span
+          className="truncate"
+          style={{ color: label ? "var(--dt-text)" : "var(--dt-text-muted)" }}>
+          {label ?? placeholder}
+        </span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {selectedOptions.length > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange([]);
+              }}
+              className="dt-icon-btn p-0.5 rounded">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <ChevronDown
+            className="w-3.5 h-3.5"
+            style={{ color: "var(--dt-text-muted)" }}
+          />
+        </div>
+      </div>
+      {open && (
+        <div
+          className="absolute z-30 mt-1 w-full bg-white border rounded-xl shadow-lg overflow-hidden"
+          style={{ borderColor: "var(--dt-border)" }}>
+          <div
+            className="p-2 border-b"
+            style={{ borderColor: "var(--dt-border)" }}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholder ?? "Tìm theo tên..."}
+              className="dt-input dt-input-sm !rounded-lg w-full"
+            />
+          </div>
+          <div className="max-h-52 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div
+                className="px-3 py-2.5 text-sm text-center"
+                style={{ color: "var(--dt-text-muted)" }}>
+                Không tìm thấy
+              </div>
+            ) : (
+              filteredOptions.map((opt, idx) => {
+                const isSelected = values.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(
+                        isSelected
+                          ? values.filter((v) => v !== opt.value)
+                          : [...values, opt.value]
+                      );
+                    }}
+                    className="dt-menu-item w-full flex items-center justify-between px-3 py-2 text-sm text-left"
+                    style={{
+                      ...(isSelected
+                        ? { background: "var(--dt-cyan-bg)" }
+                        : {}),
+                      ...(idx > 0
+                        ? { borderTop: "1px solid var(--dt-border)" }
+                        : {}),
+                    }}>
+                    <span
+                      className="truncate"
+                      style={{
+                        color: isSelected
+                          ? "var(--dt-primary)"
+                          : "var(--dt-text-secondary)",
+                      }}>
+                      {opt.label}
+                    </span>
+                    {isSelected && (
+                      <Check
+                        className="w-3.5 h-3.5 flex-shrink-0 ml-2"
+                        style={{ color: "var(--dt-primary)" }}
+                      />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CashFlowsSidebar({
   filters,
   onFiltersChange,
@@ -571,7 +730,7 @@ export function CashFlowsSidebar({
   const [selectedBankAccountIds, setSelectedBankAccountIds] = useState<
     number[]
   >([]);
-  const [creatorId, setCreatorId] = useState("");
+  const [creatorIds, setCreatorIds] = useState<string[]>([]);
   const [partnerName, setPartnerName] = useState("");
 
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
@@ -592,7 +751,7 @@ export function CashFlowsSidebar({
     if (selectedStatus) n++;
     if (selectedMethod) n++;
     if (selectedBankAccountIds.length > 0) n++;
-    if (creatorId) n++;
+    if (creatorIds.length > 0) n++;
     if (partnerName) n++;
     if (selectedPreset !== "all_time" || dateMode === "custom") n++;
     return n;
@@ -602,7 +761,7 @@ export function CashFlowsSidebar({
     selectedStatus,
     selectedMethod,
     selectedBankAccountIds,
-    creatorId,
+    creatorIds,
     partnerName,
     selectedPreset,
     dateMode,
@@ -658,7 +817,7 @@ export function CashFlowsSidebar({
       if (selectedMethod) f.method = [selectedMethod];
       if (selectedMethod === "transfer" && selectedBankAccountIds.length > 0)
         f.accountIds = selectedBankAccountIds;
-      if (creatorId) f.userId = parseInt(creatorId);
+      if (creatorIds.length > 0) f.userIds = creatorIds.map(Number);
       if (partnerName) f.partnerName = partnerName;
 
       if (selectedPreset !== "all_time" || dateMode === "custom") {
@@ -685,7 +844,7 @@ export function CashFlowsSidebar({
     selectedStatus,
     selectedMethod,
     selectedBankAccountIds,
-    creatorId,
+    creatorIds,
     partnerName,
     dateMode,
     selectedPreset,
@@ -699,7 +858,7 @@ export function CashFlowsSidebar({
     setSelectedStatus("");
     setSelectedMethod("");
     setSelectedBankAccountIds([]);
-    setCreatorId("");
+    setCreatorIds([]);
     setPartnerName("");
     setDateMode("preset");
     setSelectedPreset("all_time");
@@ -1063,16 +1222,17 @@ export function CashFlowsSidebar({
             style={{ color: "var(--dt-text-secondary)" }}>
             Người tạo
           </label>
-          <SimpleDropdown
+          <SearchableMultiDropdown
             options={
               users?.map((u: any) => ({
                 value: String(u.id),
                 label: u.name,
               })) ?? []
             }
-            value={creatorId}
+            values={creatorIds}
             placeholder="Tất cả"
-            onChange={setCreatorId}
+            searchPlaceholder="Tìm theo tên người tạo..."
+            onChange={setCreatorIds}
           />
         </div>
 
