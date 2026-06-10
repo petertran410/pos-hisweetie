@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { useSepayTransactions } from "@/lib/hooks/useSepay";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
@@ -129,6 +130,8 @@ interface Filters {
   dateFrom: string;
   dateTo: string;
   status: "" | "processing" | "assigned" | "completed";
+  amountMin: string;
+  amountMax: string;
 }
 
 const EMPTY_FILTERS: Filters = {
@@ -138,7 +141,14 @@ const EMPTY_FILTERS: Filters = {
   dateFrom: "",
   dateTo: "",
   status: "",
+  amountMin: "",
+  amountMax: "",
 };
+
+// Chỉ giữ chữ số (state lưu raw digits, hiển thị có phân tách hàng nghìn).
+const onlyDigits = (v: string) => v.replace(/\D/g, "");
+const formatAmountInput = (v: string) =>
+  v ? Number(v).toLocaleString("vi-VN") : "";
 
 export default function BienDongSoDuPage() {
   const searchParams = useSearchParams();
@@ -236,6 +246,8 @@ export default function BienDongSoDuPage() {
     dateFrom: applied.dateFrom || undefined,
     dateTo: applied.dateTo || undefined,
     status: applied.status || undefined,
+    amountMin: applied.amountMin || undefined,
+    amountMax: applied.amountMax || undefined,
   });
 
   const transactions = data?.data ?? [];
@@ -243,6 +255,15 @@ export default function BienDongSoDuPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const applyFilters = () => {
+    // Ràng buộc: khi nhập cả hai, Từ phải <= Đến.
+    if (
+      draft.amountMin &&
+      draft.amountMax &&
+      Number(draft.amountMin) > Number(draft.amountMax)
+    ) {
+      toast.error("Số tiền 'Từ' phải nhỏ hơn hoặc bằng 'Đến'");
+      return;
+    }
     setApplied(draft);
     setPage(1);
   };
@@ -269,6 +290,8 @@ export default function BienDongSoDuPage() {
     applied.dateFrom ||
     applied.dateTo ||
     applied.status ||
+    applied.amountMin ||
+    applied.amountMax ||
     (applied.datePreset && applied.datePreset !== "all_time");
 
   return (
@@ -317,6 +340,39 @@ export default function BienDongSoDuPage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-500 mb-1">Số tiền</label>
+            <div className="flex items-center gap-1.5">
+              <input
+                value={formatAmountInput(draft.amountMin)}
+                onChange={(e) =>
+                  setDraft((p) => ({
+                    ...p,
+                    amountMin: onlyDigits(e.target.value),
+                  }))
+                }
+                onKeyDown={(e) => e.key === "Enter" && applyFilters()}
+                inputMode="numeric"
+                placeholder="Từ"
+                className="dt-input dt-input-sm !rounded-lg w-28 text-right"
+              />
+              <span className="text-gray-400">–</span>
+              <input
+                value={formatAmountInput(draft.amountMax)}
+                onChange={(e) =>
+                  setDraft((p) => ({
+                    ...p,
+                    amountMax: onlyDigits(e.target.value),
+                  }))
+                }
+                onKeyDown={(e) => e.key === "Enter" && applyFilters()}
+                inputMode="numeric"
+                placeholder="Đến"
+                className="dt-input dt-input-sm !rounded-lg w-28 text-right"
+              />
+            </div>
           </div>
 
           <div className="flex flex-col">
