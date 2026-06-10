@@ -1954,15 +1954,34 @@ export default function BanHangPage() {
         paidAmount: actualPayment,
         discountAmount: Number(activeTab.discount) || 0,
         discountRatio: Number(activeTab.discountRatio) || 0,
-        items: activeTab.cartItems.map((item) => ({
-          productId: Number(item.product.id),
-          quantity: Number(item.quantity),
-          unitPrice: Number(item.price),
-          discount: Number(item.discount) || 0,
-          discountRatio: 0,
-          note: item.note || "",
-          conditionType: item.conditionType || "normal",
-        })),
+        items: activeTab.cartItems.map((item) => {
+          const isGift = item.isPromoGift && item.promoLineType === "gift";
+          const isDiscountedBuy =
+            item.isPromoGift && item.promoLineType === "discounted_buy";
+          return {
+            productId: Number(item.product.id),
+            quantity: Number(item.quantity),
+            unitPrice: isGift ? 0 : Number(item.price),
+            discount: item.isPromoGift ? 0 : Number(item.discount) || 0,
+            discountRatio: 0,
+            note: item.note || "",
+            conditionType: item.conditionType || "normal",
+            ...(isGift
+              ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
+              : {}),
+            ...(isDiscountedBuy
+              ? { lineType: "discounted_buy", promotionId: item.promotionId }
+              : {}),
+          };
+        }),
+        skipPromotions: false,
+        appliedPromotions: activeTab.cartItems
+          .filter((it) => it.isPromoGift && it.promotionId)
+          .map((it) => ({
+            promotionId: it.promotionId!,
+            giftProductId: Number(it.product.id),
+            giftQuantity: Number(it.quantity),
+          })),
         delivery: {
           receiver: activeTab.deliveryInfo.receiver,
           contactNumber: activeTab.deliveryInfo.contactNumber,
@@ -2075,9 +2094,12 @@ export default function BanHangPage() {
       discountAmount: Number(activeTab.discount) || 0,
       discountRatio: Number(activeTab.discountRatio) || 0,
       items: activeTab.cartItems.map((item) => {
-        const price = Number(item.price);
+        const isGift = item.isPromoGift && item.promoLineType === "gift";
+        const isDiscountedBuy =
+          item.isPromoGift && item.promoLineType === "discounted_buy";
+        const price = isGift ? 0 : Number(item.price);
         const quantity = Number(item.quantity);
-        const discount = Number(item.discount) || 0;
+        const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
         return {
           productId: Number(item.product.id),
           productCode: item.product.code,
@@ -2089,6 +2111,12 @@ export default function BanHangPage() {
           totalPrice: (price - discount) * quantity,
           note: item.note || "",
           conditionType: item.conditionType || "normal",
+          ...(isGift
+            ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
+            : {}),
+          ...(isDiscountedBuy
+            ? { lineType: "discounted_buy", promotionId: item.promotionId }
+            : {}),
         };
       }),
       delivery: {
