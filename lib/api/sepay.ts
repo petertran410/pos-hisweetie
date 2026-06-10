@@ -59,6 +59,10 @@ export interface SepayTransactionsParams {
   search?: string;
   accountNumber?: string;
   transferType?: "in" | "out";
+  /** Lọc số tiền vào tối thiểu (>=). Bằng amountMax → lọc chính xác. */
+  amountMin?: string;
+  /** Lọc số tiền vào tối đa (<=). */
+  amountMax?: string;
   dateFrom?: string;
   dateTo?: string;
   status?: "processing" | "assigned" | "completed";
