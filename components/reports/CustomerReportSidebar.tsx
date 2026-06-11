@@ -14,6 +14,7 @@ import { useCustomerGroups } from "@/lib/hooks/useCustomers";
 import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 
 // ─── Types ───
 export type ReportType =
@@ -398,6 +399,29 @@ export function CustomerReportSidebar({
 
   const groups = useMemo(() => groupsData?.data || [], [groupsData]);
 
+  const branchOptions = useMemo(
+    () =>
+      (branches || []).map((b: any) => ({ value: String(b.id), label: b.name })),
+    [branches]
+  );
+  const groupOptions = useMemo(
+    () => groups.map((g: any) => ({ value: String(g.id), label: g.name })),
+    [groups]
+  );
+  const userOptions = useMemo(
+    () =>
+      (users || []).map((u: any) => ({ value: String(u.id), label: u.name })),
+    [users]
+  );
+  const saleChannelOptions = useMemo(
+    () =>
+      (saleChannels || []).map((s: any) => ({
+        value: String(s.id),
+        label: s.name,
+      })),
+    [saleChannels]
+  );
+
   const activeFilterCount = useMemo(() => {
     let n = 0;
     if (branchId) n++;
@@ -707,17 +731,13 @@ export function CustomerReportSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Chi nhánh
           </label>
-          <select
+          <FilterSearchableSelect
+            options={branchOptions}
             value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-            <option value="">Tất cả</option>
-            {(branches || []).map((b: any) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm chi nhánh..."
+            onChange={setBranchId}
+          />
         </div>
 
         {/* ── Khách hàng (search dropdown) ── */}
@@ -782,17 +802,13 @@ export function CustomerReportSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Nhóm khách hàng
           </label>
-          <select
+          <FilterSearchableSelect
+            options={groupOptions}
             value={customerGroupId}
-            onChange={(e) => setCustomerGroupId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-            <option value="">Tất cả</option>
-            {groups.map((g: any) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm nhóm khách hàng..."
+            onChange={setCustomerGroupId}
+          />
         </div>
 
         {/* ── NV bán hàng ── */}
@@ -800,17 +816,13 @@ export function CustomerReportSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             NV bán hàng
           </label>
-          <select
+          <FilterSearchableSelect
+            options={userOptions}
             value={soldById}
-            onChange={(e) => setSoldById(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-            <option value="">Tất cả</option>
-            {(users || []).map((u: any) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm nhân viên..."
+            onChange={setSoldById}
+          />
         </div>
 
         {/* ── Kênh bán hàng ── */}
@@ -819,17 +831,13 @@ export function CustomerReportSidebar({
             <label className="text-sm font-medium text-gray-700 mb-1.5 block">
               Kênh bán hàng
             </label>
-            <select
+            <FilterSearchableSelect
+              options={saleChannelOptions}
               value={saleChannelId}
-              onChange={(e) => setSaleChannelId(e.target.value)}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-              <option value="">Tất cả</option>
-              {(saleChannels || []).map((s: any) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              placeholder="Tất cả"
+              searchPlaceholder="Tìm kênh bán hàng..."
+              onChange={setSaleChannelId}
+            />
           </div>
         )}
       </div>

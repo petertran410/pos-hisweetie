@@ -64,7 +64,7 @@ const DEFAULT_COLUMNS: ColumnConfig<VehicleShipment>[] = [
   },
   {
     key: "vehicleInfo",
-    label: "Biển số / Tài xế",
+    label: "Số hợp đồng",
     visible: true,
     width: "180px",
     render: (vs) => vs.vehicleInfo || "-",

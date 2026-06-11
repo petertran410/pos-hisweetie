@@ -99,6 +99,7 @@ export interface PurchaseOrderFilters {
   branchId?: number;
   branchIds?: number[];
   supplierId?: number;
+  supplierIds?: number[];
   status?: number;
   createdById?: number;
   purchaseById?: number;

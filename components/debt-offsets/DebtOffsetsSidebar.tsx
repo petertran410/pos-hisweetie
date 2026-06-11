@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranchStore } from "@/lib/store/branch";
 import { ChevronDown } from "lucide-react";
+import { FilterMultiSelect } from "@/components/ui/filters";
 
 interface DebtOffsetsSidebarProps {
   onFiltersChange: (filters: any) => void;
@@ -46,27 +47,52 @@ export function DebtOffsetsSidebar({
 }: DebtOffsetsSidebarProps) {
   const { selectedBranch } = useBranchStore();
   const { data: branches } = useBranches();
-  const [branchId, setBranchId] = useState("");
+  const [branchIds, setBranchIds] = useState<number[]>(() =>
+    selectedBranch ? [selectedBranch.id] : []
+  );
   const [enableDate, setEnableDate] = useState(true);
   const [selectedPreset, setSelectedPreset] = useState("this_month");
   const [showPresetDropdown, setShowPresetDropdown] = useState(false);
 
-  useEffect(() => {
-    if (selectedBranch) setBranchId(selectedBranch.id.toString());
-  }, [selectedBranch]);
+  const branchOptions = (branches || []).map((b: any) => ({
+    value: String(b.id),
+    label: b.name,
+  }));
 
+  // Sync chi nhánh từ header (chỉ khi đang bám đúng 1 chi nhánh hoặc rỗng)
+  const isFirstBranchSyncRef = useRef(true);
+  const lastSyncedBranchIdRef = useRef<number | null>(
+    selectedBranch?.id ?? null
+  );
   useEffect(() => {
-    // Chỉ emit filter chi nhánh và thời gian, KHÔNG hardcode refundType/status
-    // Page sẽ tự thêm type-specific filters dựa theo tab active
-    const filters: any = {};
-    if (branchId) filters.branchId = parseInt(branchId);
-    if (enableDate) {
-      const range = getDateRangeFromPreset(selectedPreset);
-      filters.fromDate = range.from.toISOString();
-      filters.toDate = range.to.toISOString();
+    const cur = selectedBranch?.id ?? null;
+    if (isFirstBranchSyncRef.current) {
+      isFirstBranchSyncRef.current = false;
+      lastSyncedBranchIdRef.current = cur;
+      return;
     }
-    onFiltersChange(filters);
-  }, [branchId, enableDate, selectedPreset]);
+    if (cur !== lastSyncedBranchIdRef.current) {
+      lastSyncedBranchIdRef.current = cur;
+      setBranchIds((prev) => (prev.length <= 1 ? (cur ? [cur] : []) : prev));
+    }
+  }, [selectedBranch?.id]);
+
+  // Debounce 300ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Chỉ emit filter chi nhánh và thời gian, KHÔNG hardcode refundType/status
+      // Page sẽ tự thêm type-specific filters dựa theo tab active
+      const filters: any = {};
+      if (branchIds.length > 0) filters.branchIds = branchIds;
+      if (enableDate) {
+        const range = getDateRangeFromPreset(selectedPreset);
+        filters.fromDate = range.from.toISOString();
+        filters.toDate = range.to.toISOString();
+      }
+      onFiltersChange(filters);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [branchIds, enableDate, selectedPreset]);
 
   return (
     <div className="w-72 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll p-4 space-y-6 bg-white shadow-xl">
@@ -74,7 +100,7 @@ export function DebtOffsetsSidebar({
         <h3 className="font-semibold">Bộ lọc</h3>
         <button
           onClick={() => {
-            setBranchId("");
+            setBranchIds(selectedBranch ? [selectedBranch.id] : []);
             setEnableDate(true);
             setSelectedPreset("this_month");
           }}
@@ -85,17 +111,14 @@ export function DebtOffsetsSidebar({
 
       <div>
         <label className="block text-sm font-medium mb-2">Chi nhánh</label>
-        <select
-          value={branchId}
-          onChange={(e) => setBranchId(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg text-sm text-gray-500">
-          <option value="">Tất cả chi nhánh</option>
-          {(branches || []).map((b: any) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
+        <FilterMultiSelect
+          options={branchOptions}
+          values={branchIds.map(String)}
+          onChange={(vals) => setBranchIds(vals.map(Number))}
+          placeholder="Tất cả chi nhánh"
+          searchPlaceholder="Tìm chi nhánh..."
+          multiLabel={(n) => `${n} chi nhánh`}
+        />
       </div>
 
       <div>

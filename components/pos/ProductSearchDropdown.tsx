@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
+import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
+import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useBranchStore } from "@/lib/store/branch";
 import { Search, Barcode } from "lucide-react";
 import { usePriceBook } from "@/lib/hooks/usePriceBooks";
@@ -54,19 +56,39 @@ export function ProductSearchDropdown({
     activePriceBook.allowNonListedProducts &&
     activePriceBook.warnNonListedProducts;
 
-  const { data: productsData } = useProducts({
-    search: searchDebounced,
-    limit: 100,
-    branchId: selectedBranch?.id,
-    priceBookId: activePriceBookId ?? undefined,
-    onlyInPriceBook: isStrictPriceBook ? true : undefined,
-    // Chỉ cho phép bán những sản phẩm được đánh dấu bán trực tiếp.
-    isDirectSale: true,
-    // Loại bỏ sản phẩm đã ngừng hoạt động.
-    isActive: true,
-  });
+  const { data: productsData } = useProducts(
+    {
+      search: searchDebounced,
+      limit: 500,
+      branchId: selectedBranch?.id,
+      priceBookId: activePriceBookId ?? undefined,
+      onlyInPriceBook: isStrictPriceBook ? true : undefined,
+      // Chỉ cho phép bán những sản phẩm được đánh dấu bán trực tiếp.
+      isDirectSale: true,
+      // Loại bỏ sản phẩm đã ngừng hoạt động.
+      isActive: true,
+    },
+    // Không fetch khi chưa gõ gì để tránh kéo toàn bộ bảng sản phẩm.
+    { enabled: !!searchDebounced }
+  );
 
   const products = productsData?.data || [];
+
+  // Gom id sản phẩm đang hiển thị để lấy số "Khách đặt" / "Đặt NCC" tính động
+  // (giống trang /san-pham/danh-sach), thay cho field tồn kho denormalized.
+  const productIds = useMemo(() => products.map((p) => p.id), [products]);
+
+  const { data: pendingSummary } = useOrdersPendingSummary(
+    productIds,
+    selectedBranch?.id
+  );
+  const pendingMap = pendingSummary || {};
+
+  const { data: supplierSummary } = useOrderSuppliersConfirmedSummary(
+    productIds,
+    selectedBranch?.id
+  );
+  const supplierMap = supplierSummary || {};
 
   const isProductInPriceBook = (productId: number) => {
     if (!activePriceBook?.priceBookDetails) return true;
@@ -129,22 +151,6 @@ export function ProductSearchDropdown({
       (inv: any) => inv.branchId === selectedBranch.id
     );
     return inventory ? Number(inventory.onHand) : 0;
-  };
-
-  const getInventoryReserved = (product: any) => {
-    if (!selectedBranch) return 0;
-    const inventory = product.inventories?.find(
-      (inv: any) => inv.branchId === selectedBranch.id
-    );
-    return inventory ? Number(inventory.reserved) : 0;
-  };
-
-  const getInventoryOnOrder = (product: any) => {
-    if (!selectedBranch) return 0;
-    const inventory = product.inventories?.find(
-      (inv: any) => inv.branchId === selectedBranch.id
-    );
-    return inventory ? Number(inventory.onOrder) : 0;
   };
 
   const getInventoryCondition = (product: any) => {
@@ -364,9 +370,13 @@ export function ProductSearchDropdown({
                       <div className="flex items-center gap-2 mt-1 text-xs text-gray-600 flex-wrap">
                         <span>Tồn: {getInventoryQuantity(product)}</span>
                         <span className="text-gray-300">|</span>
-                        <span>Đặt NCC: {getInventoryOnOrder(product)}</span>
+                        <span>
+                          Đặt NCC: {(supplierMap[product.id] ?? 0).toLocaleString()}
+                        </span>
                         <span className="text-gray-300">|</span>
-                        <span>Khách đặt: {getInventoryReserved(product)}</span>
+                        <span>
+                          Khách đặt: {(pendingMap[product.id] ?? 0).toLocaleString()}
+                        </span>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">

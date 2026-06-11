@@ -93,13 +93,23 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     if (!scrollEl) return;
 
     const update = () => {
-      el.style.width = `${scrollEl!.clientWidth}px`;
+      const next = `${scrollEl!.clientWidth}px`;
+      if (el.style.width !== next) el.style.width = next;
     };
     update();
 
-    const ro = new ResizeObserver(update);
-    ro.observe(scrollEl);
-    return () => ro.disconnect();
+    let rafId = 0;
+    const onResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(update);
+    };
+    // KHÔNG dùng ResizeObserver trên scrollEl: ghi width làm reflow (bật/tắt
+    // scrollbar dọc) → clientWidth dao động → observer chạy lại → lắc khi zoom.
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", onResize);
+    };
   }, [order]);
 
   const canCancelOrder =

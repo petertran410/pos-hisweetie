@@ -14,6 +14,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { FilterMultiSelect } from "@/components/ui/filters";
 
 interface CashFlowsSidebarProps {
   filters: any;
@@ -450,260 +451,6 @@ function MiniCalendar({
   );
 }
 
-function BranchMultiSelectDropdown({
-  branches,
-  selectedIds,
-  onChange,
-}: {
-  branches: { id: number; name: string }[];
-  selectedIds: number[];
-  onChange: (ids: number[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  const toggle = (id: number) => {
-    onChange(
-      selectedIds.includes(id)
-        ? selectedIds.filter((x) => x !== id)
-        : [...selectedIds, id]
-    );
-  };
-
-  const label =
-    selectedIds.length === 0
-      ? null
-      : selectedIds.length === 1
-        ? (branches.find((b) => b.id === selectedIds[0])?.name ?? "")
-        : `${selectedIds.length} chi nhánh`;
-
-  return (
-    <div ref={ref} className="relative">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((p) => !p)}
-        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className="dt-input dt-input-sm !rounded-lg w-full flex items-center justify-between gap-2 cursor-pointer select-none"
-        style={
-          open
-            ? {
-                borderColor: "var(--dt-primary)",
-                boxShadow: "0 0 0 3px rgba(0,183,204,.1)",
-              }
-            : undefined
-        }>
-        <span
-          className="truncate"
-          style={{ color: label ? "var(--dt-text)" : "var(--dt-text-muted)" }}>
-          {label ?? "Tất cả chi nhánh"}
-        </span>
-        <ChevronDown
-          className="w-3.5 h-3.5 flex-shrink-0"
-          style={{ color: "var(--dt-text-muted)" }}
-        />
-      </div>
-      {open && (
-        <div
-          className="absolute z-30 mt-1 w-full bg-white border rounded-xl shadow-lg max-h-48 overflow-y-auto"
-          style={{ borderColor: "var(--dt-border)" }}>
-          {branches.map((b, idx) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => toggle(b.id)}
-              className="dt-menu-item w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left"
-              style={{
-                ...(selectedIds.includes(b.id)
-                  ? { background: "var(--dt-cyan-bg)" }
-                  : {}),
-                ...(idx > 0 ? { borderTop: "1px solid var(--dt-border)" } : {}),
-              }}>
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(b.id)}
-                onChange={() => {}}
-                className="w-3.5 h-3.5 flex-shrink-0"
-                style={{ accentColor: "var(--dt-primary)" }}
-              />
-              <span style={{ color: "var(--dt-text-secondary)" }}>
-                {b.name}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── SearchableMultiDropdown (multi-select + ô tìm theo tên) ─────────────────
-function SearchableMultiDropdown({
-  options,
-  values,
-  placeholder,
-  searchPlaceholder,
-  onChange,
-}: {
-  options: { value: string; label: string }[];
-  values: string[];
-  placeholder: string;
-  searchPlaceholder?: string;
-  onChange: (v: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setSearch("");
-      }
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
-
-  const selectedOptions = options.filter((o) => values.includes(o.value));
-  const label =
-    selectedOptions.length === 0
-      ? null
-      : selectedOptions.length === 1
-        ? selectedOptions[0].label
-        : `${selectedOptions.length} đã chọn`;
-
-  const filteredOptions = useMemo(() => {
-    if (!search.trim()) return options;
-    const q = search.trim().toLowerCase();
-    return options.filter((o) => o.label.toLowerCase().includes(q));
-  }, [options, search]);
-
-  return (
-    <div ref={ref} className="relative">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((p) => !p)}
-        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className="dt-input dt-input-sm !rounded-lg w-full flex items-center justify-between gap-2 cursor-pointer select-none"
-        style={
-          open
-            ? {
-                borderColor: "var(--dt-primary)",
-                boxShadow: "0 0 0 3px rgba(0,183,204,.1)",
-              }
-            : undefined
-        }>
-        <span
-          className="truncate"
-          style={{ color: label ? "var(--dt-text)" : "var(--dt-text-muted)" }}>
-          {label ?? placeholder}
-        </span>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {selectedOptions.length > 0 && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange([]);
-              }}
-              className="dt-icon-btn p-0.5 rounded">
-              <X className="w-3 h-3" />
-            </button>
-          )}
-          <ChevronDown
-            className="w-3.5 h-3.5"
-            style={{ color: "var(--dt-text-muted)" }}
-          />
-        </div>
-      </div>
-      {open && (
-        <div
-          className="absolute z-30 mt-1 w-full bg-white border rounded-xl shadow-lg overflow-hidden"
-          style={{ borderColor: "var(--dt-border)" }}>
-          <div
-            className="p-2 border-b"
-            style={{ borderColor: "var(--dt-border)" }}>
-            <input
-              ref={inputRef}
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={searchPlaceholder ?? "Tìm theo tên..."}
-              className="dt-input dt-input-sm !rounded-lg w-full"
-            />
-          </div>
-          <div className="max-h-52 overflow-y-auto">
-            {filteredOptions.length === 0 ? (
-              <div
-                className="px-3 py-2.5 text-sm text-center"
-                style={{ color: "var(--dt-text-muted)" }}>
-                Không tìm thấy
-              </div>
-            ) : (
-              filteredOptions.map((opt, idx) => {
-                const isSelected = values.includes(opt.value);
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      onChange(
-                        isSelected
-                          ? values.filter((v) => v !== opt.value)
-                          : [...values, opt.value]
-                      );
-                    }}
-                    className="dt-menu-item w-full flex items-center justify-between px-3 py-2 text-sm text-left"
-                    style={{
-                      ...(isSelected
-                        ? { background: "var(--dt-cyan-bg)" }
-                        : {}),
-                      ...(idx > 0
-                        ? { borderTop: "1px solid var(--dt-border)" }
-                        : {}),
-                    }}>
-                    <span
-                      className="truncate"
-                      style={{
-                        color: isSelected
-                          ? "var(--dt-primary)"
-                          : "var(--dt-text-secondary)",
-                      }}>
-                      {opt.label}
-                    </span>
-                    {isSelected && (
-                      <Check
-                        className="w-3.5 h-3.5 flex-shrink-0 ml-2"
-                        style={{ color: "var(--dt-primary)" }}
-                      />
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function CashFlowsSidebar({
   filters,
@@ -714,8 +461,11 @@ export function CashFlowsSidebar({
   const { data: bankAccounts } = useBankAccountsForPayment();
   const { selectedBranch } = useBranchStore();
 
-  const activeBranches = useMemo(
-    () => (branches ?? []).filter((b) => b.isActive),
+  const branchOptions = useMemo(
+    () =>
+      (branches ?? [])
+        .filter((b) => b.isActive)
+        .map((b: any) => ({ value: String(b.id), label: b.name })),
     [branches]
   );
 
@@ -1208,10 +958,13 @@ export function CashFlowsSidebar({
             style={{ color: "var(--dt-text-secondary)" }}>
             Chi nhánh
           </label>
-          <BranchMultiSelectDropdown
-            branches={activeBranches}
-            selectedIds={selectedBranchIds}
-            onChange={setSelectedBranchIds}
+          <FilterMultiSelect
+            options={branchOptions}
+            values={selectedBranchIds.map(String)}
+            onChange={(vals) => setSelectedBranchIds(vals.map(Number))}
+            placeholder="Tất cả chi nhánh"
+            searchPlaceholder="Tìm chi nhánh..."
+            multiLabel={(n) => `${n} chi nhánh`}
           />
         </div>
 
@@ -1222,7 +975,7 @@ export function CashFlowsSidebar({
             style={{ color: "var(--dt-text-secondary)" }}>
             Người tạo
           </label>
-          <SearchableMultiDropdown
+          <FilterMultiSelect
             options={
               users?.map((u: any) => ({
                 value: String(u.id),

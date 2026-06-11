@@ -3,7 +3,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranchStore } from "@/lib/store/branch";
-import { ChevronDown, X, Check, Search } from "lucide-react";
+import { X, Search } from "lucide-react";
+import {
+  FilterMultiSelect,
+  FilterSearchableSelect,
+} from "@/components/ui/filters";
 
 interface PackingSlipsSidebarProps {
   onFiltersChange: (filters: any) => void;
@@ -21,8 +25,11 @@ export function PackingSlipsSidebar({
 }: PackingSlipsSidebarProps) {
   const { selectedBranch } = useBranchStore();
   const { data: branches } = useBranches();
-  const activeBranches = useMemo(
-    () => (branches || []).filter((b: any) => b.isActive),
+  const branchOptions = useMemo(
+    () =>
+      (branches || [])
+        .filter((b: any) => b.isActive)
+        .map((b: any) => ({ value: String(b.id), label: b.name })),
     [branches]
   );
 
@@ -33,8 +40,6 @@ export function PackingSlipsSidebar({
   const [search, setSearch] = useState("");
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
-  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-  const typeDropdownRef = useRef<HTMLDivElement>(null);
 
   // Sync branch khi user đổi chi nhánh ở header — skip lần mount đầu
   const isFirstRenderRef = useRef(true);
@@ -68,19 +73,6 @@ export function PackingSlipsSidebar({
     return () => clearTimeout(timer);
   }, [selectedBranchIds, type, search, invoiceSearch, customerSearch]);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        typeDropdownRef.current &&
-        !typeDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowTypeDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   const clearAllFilters = () => {
     setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setType("all");
@@ -99,104 +91,6 @@ export function PackingSlipsSidebar({
     if (customerSearch) n++;
     return n;
   }, [selectedBranchIds, type, search, invoiceSearch, customerSearch]);
-
-  const selectedTypeLabel =
-    TYPE_OPTIONS.find((opt) => opt.value === type)?.label || "Tất cả";
-
-  // ─── BranchMultiSelectDropdown ─────────────────────────────────────────────
-  function BranchMultiSelectDropdown({
-    branches,
-    selectedIds,
-    onChange,
-  }: {
-    branches: { id: number; name: string }[];
-    selectedIds: number[];
-    onChange: (ids: number[]) => void;
-  }) {
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-      const h = (e: MouseEvent) => {
-        if (ref.current && !ref.current.contains(e.target as Node))
-          setOpen(false);
-      };
-      document.addEventListener("mousedown", h);
-      return () => document.removeEventListener("mousedown", h);
-    }, []);
-
-    const toggle = (id: number) => {
-      onChange(
-        selectedIds.includes(id)
-          ? selectedIds.filter((x) => x !== id)
-          : [...selectedIds, id]
-      );
-    };
-
-    const label =
-      selectedIds.length === 0
-        ? null
-        : selectedIds.length === 1
-          ? (branches.find((b) => b.id === selectedIds[0])?.name ?? "")
-          : `${selectedIds.length} chi nhánh`;
-
-    return (
-      <div ref={ref} className="relative">
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => setOpen((p) => !p)}
-          onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-          className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
-            open
-              ? "border-brand ring-2 ring-brand-soft"
-              : "hover:border-gray-400"
-          }`}>
-          <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
-            {label ?? "Tất cả chi nhánh"}
-          </span>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {selectedIds.length > 0 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onChange([]);
-                }}
-                className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
-                <X className="w-3 h-3" />
-              </button>
-            )}
-            <ChevronDown
-              className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-            />
-          </div>
-        </div>
-
-        {open && (
-          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-            {branches.map((b, idx) => (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => toggle(b.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
-                  selectedIds.includes(b.id) ? "bg-brand-soft" : "hover:bg-gray-50"
-                } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(b.id)}
-                  onChange={() => {}}
-                  className="w-3.5 h-3.5 accent-brand flex-shrink-0"
-                />
-                <span className="text-gray-700">{b.name}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
@@ -290,64 +184,18 @@ export function PackingSlipsSidebar({
         <div className="border-t border-gray-100" />
 
         {/* ── Loại ── */}
-        <div ref={typeDropdownRef} className="relative">
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Loại
           </label>
-          <div
-            onClick={() => setShowTypeDropdown(!showTypeDropdown)}
-            className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
-              showTypeDropdown
-                ? "border-brand ring-2 ring-brand-soft"
-                : "hover:border-gray-400"
-            }`}>
-            <span
-              className={
-                type !== "all" ? "text-gray-800" : "text-gray-400"
-              }>
-              {selectedTypeLabel}
-            </span>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              {type !== "all" && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setType("all");
-                  }}
-                  className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-              <ChevronDown
-                className={`w-4 h-4 text-gray-400 transition-transform ${showTypeDropdown ? "rotate-180" : ""}`}
-              />
-            </div>
-          </div>
-
-          {showTypeDropdown && (
-            <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-              {TYPE_OPTIONS.map((option, idx) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    setType(option.value);
-                    setShowTypeDropdown(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
-                    option.value === type
-                      ? "bg-brand-soft text-brand-dark font-medium"
-                      : "hover:bg-gray-50 text-gray-700"
-                  } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-                  <span>{option.label}</span>
-                  {option.value === type && (
-                    <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
+          <FilterSearchableSelect
+            options={TYPE_OPTIONS.filter((o) => o.value !== "all")}
+            value={type === "all" ? "" : type}
+            placeholder="Tất cả"
+            searchable={false}
+            showClearOption={false}
+            onChange={(v) => setType(v || "all")}
+          />
         </div>
 
         <div className="border-t border-gray-100" />
@@ -357,10 +205,13 @@ export function PackingSlipsSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Chi nhánh
           </label>
-          <BranchMultiSelectDropdown
-            branches={activeBranches}
-            selectedIds={selectedBranchIds}
-            onChange={setSelectedBranchIds}
+          <FilterMultiSelect
+            options={branchOptions}
+            values={selectedBranchIds.map(String)}
+            onChange={(vals) => setSelectedBranchIds(vals.map(Number))}
+            placeholder="Tất cả chi nhánh"
+            searchPlaceholder="Tìm chi nhánh..."
+            multiLabel={(n) => `${n} chi nhánh`}
           />
         </div>
       </div>

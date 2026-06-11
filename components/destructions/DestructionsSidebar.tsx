@@ -13,6 +13,10 @@ import {
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import {
+  FilterMultiSelect,
+  FilterSearchableSelect,
+} from "@/components/ui/filters";
 
 interface DestructionsSidebarProps {
   onFiltersChange: (filters: any) => void;
@@ -287,71 +291,6 @@ function MiniCalendar({
   );
 }
 
-// ─── SimpleDropdown (single select) ─────────────────────────────────────────
-function SimpleDropdown({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  const selected = options.find((o) => o.value === value);
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
-          value
-            ? "border-brand bg-brand-soft text-gray-800"
-            : "border-gray-200 text-gray-400"
-        } ${open ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
-        <span className="truncate">{selected?.label || label}</span>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      {open && (
-        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-52 overflow-y-auto">
-          {options.map((opt, idx) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onChange(opt.value === value ? "" : opt.value);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
-                opt.value === value
-                  ? "bg-brand-soft text-brand-dark font-medium"
-                  : "hover:bg-gray-50 text-gray-700"
-              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-              <span className="truncate">{opt.label}</span>
-              {opt.value === value && (
-                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Main ────────────────────────────────────────────────────────────────────
 export function DestructionsSidebar({
   onFiltersChange,
@@ -361,6 +300,15 @@ export function DestructionsSidebar({
   const branches = (branchesData || []).filter((b) => b.isActive);
   const users = usersData || [];
   const { selectedBranch } = useBranchStore();
+
+  const branchOptions = useMemo(
+    () => branches.map((b: any) => ({ value: String(b.id), label: b.name })),
+    [branches]
+  );
+  const creatorOptions = useMemo(
+    () => users.map((u: any) => ({ value: String(u.id), label: u.name })),
+    [users]
+  );
 
   const [branchIds, setBranchIds] = useState<number[]>(() =>
     selectedBranch ? [selectedBranch.id] : []
@@ -372,24 +320,17 @@ export function DestructionsSidebar({
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showPresetPanel, setShowPresetPanel] = useState(false);
   const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
 
   const presetRowRef = useRef<HTMLDivElement>(null);
-  const branchDropRef = useRef<HTMLDivElement>(null);
   const statusDropRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (
-        branchDropRef.current &&
-        !branchDropRef.current.contains(e.target as Node)
-      )
-        setShowBranchDropdown(false);
       if (
         statusDropRef.current &&
         !statusDropRef.current.contains(e.target as Node)
@@ -470,11 +411,6 @@ export function DestructionsSidebar({
     setToDate("");
   };
 
-  const toggleBranch = (id: number) =>
-    setBranchIds((prev) =>
-      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
-    );
-
   const toggleStatus = (s: number) =>
     setStatusList((prev) =>
       prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
@@ -505,61 +441,14 @@ export function DestructionsSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Chi nhánh
           </label>
-          <div ref={branchDropRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setShowBranchDropdown((o) => !o)}
-              className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
-                branchIds.length > 0
-                  ? "border-brand bg-brand-soft text-gray-800"
-                  : "border-gray-200 text-gray-400"
-              } ${showBranchDropdown ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
-              <span className="truncate">
-                {branchIds.length > 0
-                  ? `${branchIds.length} chi nhánh`
-                  : "Tất cả chi nhánh"}
-              </span>
-              <ChevronDown
-                className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${showBranchDropdown ? "rotate-180" : ""}`}
-              />
-            </button>
-            {showBranchDropdown && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
-                {(branches || []).map((branch: any) => (
-                  <button
-                    key={branch.id}
-                    type="button"
-                    onClick={() => toggleBranch(branch.id)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 text-left">
-                    <input
-                      type="checkbox"
-                      checked={branchIds.includes(branch.id)}
-                      readOnly
-                      className="rounded"
-                    />
-                    <span className="truncate">{branch.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {branchIds.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {branchIds.map((id) => {
-                const b = (branches || []).find((x: any) => x.id === id);
-                return b ? (
-                  <span
-                    key={id}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-soft text-brand-dark rounded-full text-xs">
-                    {b.name}
-                    <button onClick={() => toggleBranch(id)}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ) : null;
-              })}
-            </div>
-          )}
+          <FilterMultiSelect
+            options={branchOptions}
+            values={branchIds.map(String)}
+            onChange={(vals) => setBranchIds(vals.map(Number))}
+            placeholder="Tất cả chi nhánh"
+            searchPlaceholder="Tìm chi nhánh..."
+            multiLabel={(n) => `${n} chi nhánh`}
+          />
         </div>
 
         {/* ── Trạng thái ── */}
@@ -617,13 +506,11 @@ export function DestructionsSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Người tạo
           </label>
-          <SimpleDropdown
-            label="Tất cả người tạo"
+          <FilterSearchableSelect
+            options={creatorOptions}
             value={creatorId}
-            options={users.map((u: any) => ({
-              value: String(u.id),
-              label: u.name,
-            }))}
+            placeholder="Tất cả người tạo"
+            searchPlaceholder="Tìm người tạo..."
             onChange={setCreatorId}
           />
         </div>

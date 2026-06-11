@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
+  X,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { OrderSupplierFilters } from "@/lib/types/order-supplier";
@@ -17,6 +18,11 @@ import {
   ORDER_SUPPLIER_STATUS,
   getStatusLabel,
 } from "@/lib/types/order-supplier";
+import {
+  FilterMultiSelect,
+  FilterSearchableSelect,
+  type FilterOption,
+} from "@/components/ui/filters";
 
 interface OrderSupplierSidebarProps {
   filters: OrderSupplierFilters;
@@ -465,97 +471,8 @@ function StatusMultiDropdown({
   );
 }
 
-// ─── SimpleDropdown ───────────────────────────────────────────────────────────
-interface SimpleOption {
-  value: string;
-  label: string;
-}
-
-function SimpleDropdown({
-  options,
-  value,
-  placeholder,
-  onChange,
-}: {
-  options: SimpleOption[];
-  value: string;
-  placeholder: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  const selected = options.find((o) => o.value === value);
-
-  return (
-    <div ref={ref} className="relative">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((p) => !p)}
-        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
-        } bg-white`}>
-        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
-        />
-      </div>
-
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => {
-              onChange("");
-              setOpen(false);
-            }}
-            className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${
-              !value
-                ? "bg-brand-soft text-brand-dark font-medium"
-                : "hover:bg-gray-50 text-gray-500"
-            }`}>
-            <span>{placeholder}</span>
-            {!value && <Check className="w-3.5 h-3.5 text-brand" />}
-          </button>
-          {options.map((opt, idx) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onChange(value === opt.value ? "" : opt.value);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
-                value === opt.value
-                  ? "bg-brand-soft text-brand-dark font-medium"
-                  : "hover:bg-gray-50 text-gray-700"
-              } ${idx >= 0 ? "border-t border-gray-50" : ""}`}>
-              <span className="truncate">{opt.label}</span>
-              {value === opt.value && (
-                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// ─── SimpleOption type ────────────────────────────────────────────────────────
+type SimpleOption = FilterOption;
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function OrderSupplierSidebar({
@@ -574,15 +491,15 @@ export function OrderSupplierSidebar({
   const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
 
-  // Local string state cho các SimpleDropdown.
-  // Mặc định bám theo chi nhánh đang chọn ở DashboardHeader.
-  const [branchValue, setBranchValue] = useState(
-    filters.branchId
-      ? String(filters.branchId)
-      : selectedBranch
-        ? String(selectedBranch.id)
-        : ""
-  );
+  // Mặc định bám theo chi nhánh đang chọn ở DashboardHeader. Nếu filter đã có
+  // branchIds (vd restore từ chỗ khác) thì ưu tiên, fallback branchId đơn lẻ.
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>(() => {
+    if (filters.branchIds && filters.branchIds.length > 0)
+      return filters.branchIds;
+    if (filters.branchId) return [filters.branchId];
+    if (selectedBranch) return [selectedBranch.id];
+    return [];
+  });
   const [statusValues, setStatusValues] = useState<string[]>(
     filters.status?.map(String) ?? []
   );
@@ -610,17 +527,20 @@ export function OrderSupplierSidebar({
     return () => document.removeEventListener("mousedown", h);
   }, [openCal]);
 
-  // Đẩy chi nhánh mặc định (theo header) lên filters ngay khi mount, để danh
-  // sách lọc đúng chi nhánh đang chọn mà không cần user thao tác.
+  // Đẩy chi nhánh đã chọn lên filters (dạng branchIds[]). Mảng rỗng = "Tất cả
+  // chi nhánh" → xem chéo mọi chi nhánh.
   useEffect(() => {
-    if (selectedBranch && filters.branchId === undefined && branchValue) {
-      setFilters({ branchId: Number(branchValue) });
-    }
+    setFilters({
+      branchIds: selectedBranchIds.length > 0 ? selectedBranchIds : undefined,
+      branchId: undefined,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedBranchIds]);
 
-  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh ở header
-  // thì cập nhật bộ lọc theo chi nhánh đó. Skip lần mount đầu.
+  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại
+  // chi nhánh đó. Skip lần mount đầu. Chỉ ghi đè khi đang ở chế độ "bám theo
+  // header" (đúng 1 chi nhánh); nếu user đang lọc nhiều chi nhánh (>=2) hoặc
+  // "Tất cả chi nhánh" (rỗng) thì giữ nguyên.
   const isFirstBranchSyncRef = useRef(true);
   const lastSyncedBranchIdRef = useRef<number | null>(
     selectedBranch?.id ?? null
@@ -634,8 +554,9 @@ export function OrderSupplierSidebar({
     }
     if (cur !== lastSyncedBranchIdRef.current) {
       lastSyncedBranchIdRef.current = cur;
-      setBranchValue(cur ? String(cur) : "");
-      setFilters({ branchId: cur ?? undefined });
+      setSelectedBranchIds((prev) =>
+        prev.length === 1 ? (cur ? [cur] : []) : prev
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBranch?.id]);
@@ -653,7 +574,7 @@ export function OrderSupplierSidebar({
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
-    if (branchValue) n++;
+    if (selectedBranchIds.length > 0) n++;
     if (statusValues.length > 0) n++;
     if (createdByValue) n++;
     if (userValue) n++;
@@ -661,7 +582,7 @@ export function OrderSupplierSidebar({
     if (dateMode === "preset" && selectedPreset !== "all_time") n++;
     return n;
   }, [
-    branchValue,
+    selectedBranchIds,
     statusValues,
     createdByValue,
     userValue,
@@ -672,8 +593,7 @@ export function OrderSupplierSidebar({
   ]);
 
   const resetFilters = () => {
-    const headerBranchId = selectedBranch?.id;
-    setBranchValue(headerBranchId ? String(headerBranchId) : "");
+    setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setStatusValues([]);
     setCreatedByValue("");
     setUserValue("");
@@ -682,7 +602,6 @@ export function OrderSupplierSidebar({
     setFromDate("");
     setToDate("");
     setFilters({
-      branchId: headerBranchId ?? undefined,
       status: undefined,
       createdById: undefined,
       userId: undefined,
@@ -883,14 +802,13 @@ export function OrderSupplierSidebar({
           <label className="text-sm font-medium text-gray-700 mb-2 block">
             Chi nhánh
           </label>
-          <SimpleDropdown
+          <FilterMultiSelect
             options={branchOptions}
-            value={branchValue}
+            values={selectedBranchIds.map(String)}
+            onChange={(vals) => setSelectedBranchIds(vals.map(Number))}
             placeholder="Tất cả chi nhánh"
-            onChange={(v) => {
-              setBranchValue(v);
-              setFilters({ branchId: v ? Number(v) : undefined });
-            }}
+            searchPlaceholder="Tìm chi nhánh..."
+            multiLabel={(n) => `${n} chi nhánh`}
           />
         </div>
 
@@ -899,10 +817,11 @@ export function OrderSupplierSidebar({
           <label className="text-sm font-medium text-gray-700 mb-2 block">
             Người tạo
           </label>
-          <SimpleDropdown
+          <FilterSearchableSelect
             options={userOptions}
             value={createdByValue}
             placeholder="Tất cả"
+            searchPlaceholder="Tìm người tạo..."
             onChange={(v) => {
               setCreatedByValue(v);
               setFilters({ createdById: v ? Number(v) : undefined });
@@ -915,10 +834,11 @@ export function OrderSupplierSidebar({
           <label className="text-sm font-medium text-gray-700 mb-2 block">
             Người nhận đặt
           </label>
-          <SimpleDropdown
+          <FilterSearchableSelect
             options={userOptions}
             value={userValue}
             placeholder="Tất cả"
+            searchPlaceholder="Tìm người nhận đặt..."
             onChange={(v) => {
               setUserValue(v);
               setFilters({ userId: v ? Number(v) : undefined });

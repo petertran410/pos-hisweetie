@@ -116,6 +116,10 @@ const UI_ONLY_FILTER_KEYS = [
   "_dateMode",
   "_fromDate",
   "_toDate",
+  "_updatedPreset",
+  "_updatedDateMode",
+  "_updatedFromDate",
+  "_updatedToDate",
   "_customerLabel",
 ];
 
@@ -141,6 +145,7 @@ const countActiveFilters = (f: any): number => {
   if (Array.isArray(f.soldByIds) && f.soldByIds.length > 0) n++;
   if (f.paymentMethod) n++;
   if (f._preset || f.fromCreatedDate || f.toCreatedDate) n++;
+  if (f._updatedPreset || f.fromUpdatedDate || f.toUpdatedDate) n++;
   return n;
 };
 
@@ -304,6 +309,20 @@ function HoaDonVatMobileFilterSheet({
     filters._toDate || isoToDateInput(filters.toCreatedDate)
   );
 
+  // Thời gian cập nhật (updatedAt)
+  const [updatedDateMode, setUpdatedDateMode] = useState<"preset" | "custom">(
+    filters._updatedDateMode || "preset"
+  );
+  const [updatedPreset, setUpdatedPreset] = useState<string>(
+    filters._updatedPreset || "all_time"
+  );
+  const [updatedFromDate, setUpdatedFromDate] = useState<string>(
+    filters._updatedFromDate || isoToDateInput(filters.fromUpdatedDate)
+  );
+  const [updatedToDate, setUpdatedToDate] = useState<string>(
+    filters._updatedToDate || isoToDateInput(filters.toUpdatedDate)
+  );
+
   const handleApply = () => {
     const f: any = {
       pageSize: 15,
@@ -342,6 +361,27 @@ function HoaDonVatMobileFilterSheet({
       if (toDate) f.toCreatedDate = dateInputToIsoEnd(toDate);
     }
 
+    if (
+      updatedDateMode === "preset" &&
+      updatedPreset &&
+      updatedPreset !== "all_time"
+    ) {
+      const range = getDateRangeFromPreset(updatedPreset);
+      f._updatedPreset = updatedPreset;
+      f.fromUpdatedDate = range.from.toISOString();
+      f.toUpdatedDate = range.to.toISOString();
+    } else if (
+      updatedDateMode === "custom" &&
+      (updatedFromDate || updatedToDate)
+    ) {
+      f._updatedDateMode = "custom";
+      f._updatedFromDate = updatedFromDate;
+      f._updatedToDate = updatedToDate;
+      if (updatedFromDate)
+        f.fromUpdatedDate = dateInputToIsoStart(updatedFromDate);
+      if (updatedToDate) f.toUpdatedDate = dateInputToIsoEnd(updatedToDate);
+    }
+
     onApply(f);
   };
 
@@ -362,6 +402,10 @@ function HoaDonVatMobileFilterSheet({
     setPreset("all_time");
     setFromDate("");
     setToDate("");
+    setUpdatedDateMode("preset");
+    setUpdatedPreset("all_time");
+    setUpdatedFromDate("");
+    setUpdatedToDate("");
   };
 
   const dateSummary =
@@ -369,6 +413,13 @@ function HoaDonVatMobileFilterSheet({
       ? `${fromDate || "…"} → ${toDate || "…"}`
       : preset !== "all_time"
         ? DATE_PRESETS.find((p) => p.value === preset)?.label
+        : undefined;
+
+  const updatedDateSummary =
+    updatedDateMode === "custom" && (updatedFromDate || updatedToDate)
+      ? `${updatedFromDate || "…"} → ${updatedToDate || "…"}`
+      : updatedPreset !== "all_time"
+        ? DATE_PRESETS.find((p) => p.value === updatedPreset)?.label
         : undefined;
 
   const userOptions: ChipOption[] = (users ?? []).map((u: any) => ({
@@ -395,6 +446,9 @@ function HoaDonVatMobileFilterSheet({
     soldByIds.length > 0,
     !!paymentMethod,
     dateMode === "custom" ? !!(fromDate || toDate) : preset !== "all_time",
+    updatedDateMode === "custom"
+      ? !!(updatedFromDate || updatedToDate)
+      : updatedPreset !== "all_time",
   ].filter(Boolean).length;
 
   return (
@@ -433,6 +487,23 @@ function HoaDonVatMobileFilterSheet({
             setPreset(next.preset);
             setFromDate(next.fromDate);
             setToDate(next.toDate);
+          }}
+        />
+      </FilterSection>
+
+      {/* Thời gian cập nhật */}
+      <FilterSection label="Thời gian cập nhật" summary={updatedDateSummary}>
+        <DateRangeFilter
+          presets={DATE_PRESETS}
+          mode={updatedDateMode}
+          preset={updatedPreset}
+          fromDate={updatedFromDate}
+          toDate={updatedToDate}
+          onChange={(next) => {
+            setUpdatedDateMode(next.mode);
+            setUpdatedPreset(next.preset);
+            setUpdatedFromDate(next.fromDate);
+            setUpdatedToDate(next.toDate);
           }}
         />
       </FilterSection>

@@ -59,12 +59,20 @@ export function ProductionDetailRow({
     }
     if (!scrollEl) return;
     const setWidth = () => {
-      el.style.width = `${scrollEl!.clientWidth}px`;
+      const next = `${scrollEl!.clientWidth}px`;
+      if (el.style.width !== next) el.style.width = next;
     };
     setWidth();
-    const ro = new ResizeObserver(setWidth);
-    ro.observe(scrollEl);
-    return () => ro.disconnect();
+    let rafId = 0;
+    const onResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(setWidth);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", onResize);
+    };
   }, [production]);
 
   if (isLoading) {

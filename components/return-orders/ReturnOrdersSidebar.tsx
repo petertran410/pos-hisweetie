@@ -14,6 +14,10 @@ import {
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import {
+  FilterMultiSelect,
+  FilterSearchableSelect,
+} from "@/components/ui/filters";
 
 interface ReturnOrdersSidebarProps {
   onFiltersChange: (filters: any) => void;
@@ -297,89 +301,6 @@ interface SimpleOption {
   label: string;
 }
 
-function SimpleDropdown({
-  options,
-  value,
-  placeholder,
-  onChange,
-}: {
-  options: SimpleOption[];
-  value: string;
-  placeholder: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const selected = options.find((o) => o.value === value);
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((p) => !p)}
-        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
-        }`}>
-        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {selected && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange("");
-              }}
-              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
-              <X className="w-3 h-3" />
-            </button>
-          )}
-          <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </div>
-      </div>
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
-          {options.map((opt, idx) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onChange(value === opt.value ? "" : opt.value);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
-                opt.value === value
-                  ? "bg-brand-soft text-brand-dark font-medium"
-                  : "hover:bg-gray-50 text-gray-700"
-              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-              {opt.label}
-              {opt.value === value && (
-                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── PresetPanel (portal) ──────────────────────────────────────────────────────
 function PresetPanel({
   groups,
@@ -552,7 +473,7 @@ export function ReturnOrdersSidebar({
   const { data: branches } = useBranches();
   const { data: users } = useUsersForFilter();
 
-  const [branchId, setBranchId] = useState<string>("");
+  const [branchIds, setBranchIds] = useState<number[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [creatorId, setCreatorId] = useState<string>("");
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
@@ -567,9 +488,23 @@ export function ReturnOrdersSidebar({
   const customDateRef = useRef<HTMLDivElement>(null);
 
   // Sync chi nhánh từ global store
+  const isFirstBranchSyncRef = useRef(true);
+  const lastSyncedBranchIdRef = useRef<number | null>(
+    selectedBranch?.id ?? null
+  );
   useEffect(() => {
-    if (selectedBranch) setBranchId(selectedBranch.id.toString());
-  }, [selectedBranch]);
+    const cur = selectedBranch?.id ?? null;
+    if (isFirstBranchSyncRef.current) {
+      isFirstBranchSyncRef.current = false;
+      lastSyncedBranchIdRef.current = cur;
+      if (cur) setBranchIds([cur]);
+      return;
+    }
+    if (cur !== lastSyncedBranchIdRef.current) {
+      lastSyncedBranchIdRef.current = cur;
+      setBranchIds((prev) => (prev.length <= 1 ? (cur ? [cur] : []) : prev));
+    }
+  }, [selectedBranch?.id]);
 
   // Đóng calendar khi click ngoài
   useEffect(() => {
@@ -589,7 +524,7 @@ export function ReturnOrdersSidebar({
   useEffect(() => {
     const timer = setTimeout(() => {
       const f: any = {};
-      if (branchId) f.branchId = parseInt(branchId);
+      if (branchIds.length > 0) f.branchIds = branchIds;
       if (selectedStatus) f.status = parseInt(selectedStatus);
       if (creatorId) f.createdBy = parseInt(creatorId);
 
@@ -612,7 +547,7 @@ export function ReturnOrdersSidebar({
     }, 300);
     return () => clearTimeout(timer);
   }, [
-    branchId,
+    branchIds,
     selectedStatus,
     creatorId,
     dateMode,
@@ -623,14 +558,14 @@ export function ReturnOrdersSidebar({
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
-    if (branchId) n++;
+    if (branchIds.length > 0) n++;
     if (selectedStatus) n++;
     if (creatorId) n++;
     return n;
-  }, [branchId, selectedStatus, creatorId]);
+  }, [branchIds, selectedStatus, creatorId]);
 
   const clearAll = () => {
-    setBranchId("");
+    setBranchIds([]);
     setSelectedStatus("");
     setCreatorId("");
     setDateMode("preset");
@@ -660,14 +595,16 @@ export function ReturnOrdersSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Chi nhánh xử lý
           </label>
-          <SimpleDropdown
+          <FilterMultiSelect
             options={
               branches?.map((b) => ({ value: String(b.id), label: b.name })) ??
               []
             }
-            value={branchId}
+            values={branchIds.map(String)}
+            onChange={(vals) => setBranchIds(vals.map(Number))}
             placeholder="Tất cả chi nhánh"
-            onChange={setBranchId}
+            searchPlaceholder="Tìm chi nhánh..."
+            multiLabel={(n) => `${n} chi nhánh`}
           />
         </div>
 
@@ -829,7 +766,7 @@ export function ReturnOrdersSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Người tạo
           </label>
-          <SimpleDropdown
+          <FilterSearchableSelect
             options={
               users?.map((u: any) => ({
                 value: String(u.id),
@@ -838,6 +775,7 @@ export function ReturnOrdersSidebar({
             }
             value={creatorId}
             placeholder="Tất cả"
+            searchPlaceholder="Tìm người tạo..."
             onChange={setCreatorId}
           />
         </div>

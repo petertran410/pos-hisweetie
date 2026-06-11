@@ -19,6 +19,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { FilterMultiSelect } from "@/components/ui/filters";
 
 interface InvoicesSidebarProps {
   filters: any;
@@ -34,6 +35,8 @@ interface InvoicesSidebarProps {
   splitTimeFilters?: boolean;
   /** Hiện toggle "Chỉ HĐ cảnh báo lệch giá" — chỉ dùng cho trang hóa đơn thường */
   showPriceWarningFilter?: boolean;
+  /** Hiện filter "Thời gian cập nhật" (updatedAt) — chỉ dùng cho trang hóa đơn VAT */
+  showUpdatedTimeFilter?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -454,137 +457,6 @@ function MultiStatusDropdown({
               </button>
             );
           })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── SearchableMultiDropdown (multi-select + ô tìm theo tên) ─────────────────
-function SearchableMultiDropdown({
-  options,
-  values,
-  placeholder,
-  searchPlaceholder,
-  onChange,
-}: {
-  options: SimpleOption[];
-  values: string[];
-  placeholder: string;
-  searchPlaceholder?: string;
-  onChange: (v: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setSearch("");
-      }
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
-
-  const selectedOptions = options.filter((o) => values.includes(o.value));
-  const label =
-    selectedOptions.length === 0
-      ? null
-      : selectedOptions.length === 1
-        ? selectedOptions[0].label
-        : `${selectedOptions.length} đã chọn`;
-
-  const filteredOptions = useMemo(() => {
-    if (!search.trim()) return options;
-    const q = search.trim().toLowerCase();
-    return options.filter((o) => o.label.toLowerCase().includes(q));
-  }, [options, search]);
-
-  return (
-    <div ref={ref} className="relative">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((p) => !p)}
-        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
-        } bg-white`}>
-        <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
-          {label ?? placeholder}
-        </span>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {selectedOptions.length > 0 && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange([]);
-              }}
-              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
-              <X className="w-3 h-3" />
-            </button>
-          )}
-          <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </div>
-      </div>
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-gray-100">
-            <input
-              ref={inputRef}
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={searchPlaceholder ?? "Tìm theo tên..."}
-              className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-            />
-          </div>
-          <div className="max-h-52 overflow-y-auto">
-            {filteredOptions.length === 0 ? (
-              <div className="px-3 py-2.5 text-sm text-gray-400 text-center">
-                Không tìm thấy
-              </div>
-            ) : (
-              filteredOptions.map((opt, idx) => {
-                const isSelected = values.includes(opt.value);
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      onChange(
-                        isSelected
-                          ? values.filter((v) => v !== opt.value)
-                          : [...values, opt.value]
-                      );
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
-                      isSelected
-                        ? "bg-brand-soft text-brand-dark font-medium"
-                        : "hover:bg-gray-50 text-gray-700"
-                    } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-                    <span className="truncate">{opt.label}</span>
-                    {isSelected && (
-                      <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
         </div>
       )}
     </div>
@@ -1039,11 +911,16 @@ export function InvoicesSidebar({
   showMisaEmployeeFilter = false,
   splitTimeFilters = false,
   showPriceWarningFilter = false,
+  showUpdatedTimeFilter = false,
 }: InvoicesSidebarProps) {
   const { data: branches } = useBranches();
   const activeBranches = useMemo(
     () => (branches ?? []).filter((b: any) => b.isActive),
     [branches]
+  );
+  const branchOptions = useMemo(
+    () => activeBranches.map((b: any) => ({ value: String(b.id), label: b.name })),
+    [activeBranches]
   );
   const { data: customersData } = useCustomers({ pageSize: 1000 });
   const { data: users } = useUsersForFilter();
@@ -1115,6 +992,13 @@ export function InvoicesSidebar({
     fromDate: saved.current?.purchaseRange?.fromDate ?? "",
     toDate: saved.current?.purchaseRange?.toDate ?? "",
   }));
+  // Thời gian cập nhật (updatedAt) — chỉ dùng khi showUpdatedTimeFilter bật.
+  const [updatedRange, setUpdatedRange] = useState<TimeRangeState>(() => ({
+    dateMode: saved.current?.updatedRange?.dateMode ?? "preset",
+    selectedPreset: saved.current?.updatedRange?.selectedPreset ?? "all_time",
+    fromDate: saved.current?.updatedRange?.fromDate ?? "",
+    toDate: saved.current?.updatedRange?.toDate ?? "",
+  }));
   const [creatorIds, setCreatorIds] = useState<string[]>(
     saved.current?.creatorIds || []
   );
@@ -1152,6 +1036,7 @@ export function InvoicesSidebar({
       selectedDeliveryStatus,
       createdRange,
       purchaseRange,
+      updatedRange,
       creatorIds,
       soldByIds,
       saleChannelId,
@@ -1169,6 +1054,7 @@ export function InvoicesSidebar({
     selectedDeliveryStatus,
     createdRange,
     purchaseRange,
+    updatedRange,
     creatorIds,
     soldByIds,
     saleChannelId,
@@ -1239,6 +1125,12 @@ export function InvoicesSidebar({
         purchaseRange.dateMode === "custom")
     )
       n++;
+    if (
+      showUpdatedTimeFilter &&
+      (updatedRange.selectedPreset !== "all_time" ||
+        updatedRange.dateMode === "custom")
+    )
+      n++;
     if (creatorIds.length > 0) n++;
     if (soldByIds.length > 0) n++;
     if (saleChannelId) n++;
@@ -1255,6 +1147,8 @@ export function InvoicesSidebar({
     createdRange,
     purchaseRange,
     splitTimeFilters,
+    updatedRange,
+    showUpdatedTimeFilter,
     creatorIds,
     soldByIds,
     saleChannelId,
@@ -1293,6 +1187,16 @@ export function InvoicesSidebar({
           f.toPurchaseDate = purchaseIso.to;
         }
       }
+      // Thời gian cập nhật → updatedAt (chỉ khi bật — trang hóa đơn VAT).
+      // Gate bằng flag để không rò filter sang trang hóa đơn thường vì hai
+      // trang share localStorage.
+      if (showUpdatedTimeFilter) {
+        const updatedIso = rangeToIso(updatedRange);
+        if (updatedIso) {
+          f.fromUpdatedDate = updatedIso.from;
+          f.toUpdatedDate = updatedIso.to;
+        }
+      }
 
       if (paymentMethod) f.paymentMethod = paymentMethod;
       if (paymentMethod === "transfer" && selectedBankAccountIds.length > 0)
@@ -1317,6 +1221,8 @@ export function InvoicesSidebar({
     createdRange,
     purchaseRange,
     splitTimeFilters,
+    updatedRange,
+    showUpdatedTimeFilter,
     creatorIds,
     soldByIds,
     saleChannelId,
@@ -1347,6 +1253,12 @@ export function InvoicesSidebar({
       fromDate: "",
       toDate: "",
     });
+    setUpdatedRange({
+      dateMode: "preset",
+      selectedPreset: "all_time",
+      fromDate: "",
+      toDate: "",
+    });
     setCreatorIds([]);
     setSoldByIds([]);
     setSaleChannelId("");
@@ -1358,100 +1270,6 @@ export function InvoicesSidebar({
     onFiltersChange({});
     localStorage.removeItem(STORAGE_KEY);
   };
-
-  function BranchMultiSelectDropdown({
-    branches,
-    selectedIds,
-    onChange,
-  }: {
-    branches: { id: number; name: string }[];
-    selectedIds: number[];
-    onChange: (ids: number[]) => void;
-  }) {
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-      const h = (e: MouseEvent) => {
-        if (ref.current && !ref.current.contains(e.target as Node))
-          setOpen(false);
-      };
-      document.addEventListener("mousedown", h);
-      return () => document.removeEventListener("mousedown", h);
-    }, []);
-
-    const toggle = (id: number) => {
-      onChange(
-        selectedIds.includes(id)
-          ? selectedIds.filter((x) => x !== id)
-          : [...selectedIds, id]
-      );
-    };
-
-    const label =
-      selectedIds.length === 0
-        ? null
-        : selectedIds.length === 1
-          ? (branches.find((b) => b.id === selectedIds[0])?.name ?? "")
-          : `${selectedIds.length} chi nhánh`;
-
-    return (
-      <div ref={ref} className="relative">
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => setOpen((p) => !p)}
-          onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-          className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
-            open
-              ? "border-brand ring-2 ring-brand-soft"
-              : "hover:border-gray-400"
-          }`}>
-          <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
-            {label ?? "Tất cả chi nhánh"}
-          </span>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {selectedIds.length > 0 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onChange([]);
-                }}
-                className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
-                <X className="w-3 h-3" />
-              </button>
-            )}
-            <ChevronDown
-              className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-            />
-          </div>
-        </div>
-
-        {open && (
-          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-            {branches.map((b, idx) => (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => toggle(b.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
-                  selectedIds.includes(b.id) ? "bg-brand-soft" : "hover:bg-gray-50"
-                } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(b.id)}
-                  onChange={() => {}}
-                  className="w-3.5 h-3.5 accent-brand flex-shrink-0"
-                />
-                <span className="text-gray-700">{b.name}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
@@ -1531,6 +1349,17 @@ export function InvoicesSidebar({
           />
         )}
 
+        {showUpdatedTimeFilter && (
+          <>
+            <div className="border-t border-gray-100" />
+            <TimeRangeFilter
+              label="Thời gian cập nhật"
+              value={updatedRange}
+              onChange={setUpdatedRange}
+            />
+          </>
+        )}
+
         <div className="border-t border-gray-100" />
 
         {/* ── Chi nhánh ── */}
@@ -1538,10 +1367,13 @@ export function InvoicesSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Chi nhánh
           </label>
-          <BranchMultiSelectDropdown
-            branches={activeBranches}
-            selectedIds={selectedBranchIds}
-            onChange={setSelectedBranchIds}
+          <FilterMultiSelect
+            options={branchOptions}
+            values={selectedBranchIds.map(String)}
+            onChange={(vals) => setSelectedBranchIds(vals.map(Number))}
+            placeholder="Tất cả chi nhánh"
+            searchPlaceholder="Tìm chi nhánh..."
+            multiLabel={(n) => `${n} chi nhánh`}
           />
         </div>
 
@@ -1566,7 +1398,7 @@ export function InvoicesSidebar({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Nhân viên phụ trách
             </label>
-            <SearchableMultiDropdown
+            <FilterMultiSelect
               options={
                 misaEmployees?.map((e) => ({
                   value: e.code,
@@ -1763,7 +1595,7 @@ export function InvoicesSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Người tạo
           </label>
-          <SearchableMultiDropdown
+          <FilterMultiSelect
             options={
               users?.map((u: any) => ({
                 value: String(u.id),
@@ -1782,7 +1614,7 @@ export function InvoicesSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Người bán
           </label>
-          <SearchableMultiDropdown
+          <FilterMultiSelect
             options={
               users?.map((u: any) => ({
                 value: String(u.id),

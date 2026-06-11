@@ -6,10 +6,14 @@ import { API_URL } from "@/lib/config/api";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 
-export function useProducts(params?: ProductQueryParams) {
+export function useProducts(
+  params?: ProductQueryParams,
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: ["products", params],
     queryFn: () => productsApi.getAll(params),
+    ...(options?.enabled !== undefined ? { enabled: options.enabled } : {}),
   });
 }
 

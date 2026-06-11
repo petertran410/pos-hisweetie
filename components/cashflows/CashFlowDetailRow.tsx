@@ -163,17 +163,23 @@ export function CashFlowDetailRow({
     }
     if (!scrollEl) return;
     const setWidth = () => {
-      el.style.width = `${scrollEl!.clientWidth}px`;
+      const next = `${scrollEl!.clientWidth}px`;
+      if (el.style.width !== next) el.style.width = next;
     };
     setWidth();
-    const ro = new ResizeObserver(setWidth);
-    ro.observe(scrollEl);
+    let rafId = 0;
+    const onResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(setWidth);
+    };
+    window.addEventListener("resize", onResize);
     const onScroll = () => {
       el.style.transform = `translateX(${scrollEl!.scrollLeft}px)`;
     };
     scrollEl.addEventListener("scroll", onScroll);
     return () => {
-      ro.disconnect();
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", onResize);
       scrollEl?.removeEventListener("scroll", onScroll);
     };
   }, [cashFlow]);

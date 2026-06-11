@@ -12,6 +12,7 @@ import {
   Search,
 } from "lucide-react";
 import type { PriceBook } from "@/lib/api/price-books";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 
 interface PriceBookSidebarProps {
   priceBooks?: PriceBook[];
@@ -49,92 +50,6 @@ const STOCK_OPTIONS: StockOption[] = [
     dot: "bg-red-400",
   },
 ];
-
-// ─── SimpleDropdown (style OrdersSidebar) ──────────────────────────────────
-function SimpleDropdown({
-  options,
-  value,
-  placeholder,
-  onChange,
-}: {
-  options: { value: string; label: string }[];
-  value: string;
-  placeholder: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const selected = options.find((o) => o.value === value);
-
-  return (
-    <div ref={ref} className="relative">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((p) => !p)}
-        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
-        } bg-white`}>
-        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {selected && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange("");
-              }}
-              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
-              <X className="w-3 h-3" />
-            </button>
-          )}
-          <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </div>
-      </div>
-
-      {open && options.length > 0 && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
-          {options.map((opt, idx) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onChange(opt.value === value ? "" : opt.value);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
-                opt.value === value
-                  ? "bg-brand-soft text-brand-dark font-medium"
-                  : "hover:bg-gray-50 text-gray-700"
-              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-              <span className="truncate">{opt.label}</span>
-              {opt.value === value && (
-                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── StockDropdown (status style với dot màu) ──────────────────────────────
 function StockDropdown({
@@ -662,10 +577,11 @@ export function PriceBookSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Loại Hàng
           </label>
-          <SimpleDropdown
+          <FilterSearchableSelect
             options={parentOptions}
             value={parentName}
             placeholder="Tất cả"
+            searchPlaceholder="Tìm loại hàng..."
             onChange={setParentName}
           />
         </div>
@@ -675,10 +591,11 @@ export function PriceBookSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Nguồn Gốc
           </label>
-          <SimpleDropdown
+          <FilterSearchableSelect
             options={middleOptions}
             value={middleName}
             placeholder="Tất cả"
+            searchPlaceholder="Tìm nguồn gốc..."
             onChange={setMiddleName}
           />
         </div>
@@ -688,10 +605,11 @@ export function PriceBookSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Danh Mục
           </label>
-          <SimpleDropdown
+          <FilterSearchableSelect
             options={childOptions}
             value={childName}
             placeholder="Tất cả"
+            searchPlaceholder="Tìm danh mục..."
             onChange={setChildName}
           />
         </div>

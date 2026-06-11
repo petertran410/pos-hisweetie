@@ -1,8 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, Trash2, Save, Send, Search } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Save,
+  Send,
+  Search,
+  Upload,
+  X,
+  FileText,
+  Calendar,
+  ChevronDown,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranchStore } from "@/lib/store/branch";
@@ -12,9 +24,13 @@ import {
   useUpdateVehicleShipment,
   useVehicleShipment,
 } from "@/lib/hooks/useVehicleShipments";
+import { vehicleShipmentsApi } from "@/lib/api/vehicle-shipments";
+import { MiniCalendar } from "@/components/ui/MiniCalendar";
+import { BorderGateSelect } from "./BorderGateSelect";
 import {
   VEHICLE_SHIPMENT_STATUS,
   type AvailableOrderSupplier,
+  type VehicleFile,
 } from "@/lib/types/vehicle-shipment";
 
 interface Props {
@@ -31,7 +47,24 @@ interface PickedItem {
   productName: string;
   remaining: number; // còn lại để ghép (chỉ tham chiếu khi thêm mới)
   quantity: number; // SL ghép
+  weight: number; // trọng lượng đơn vị
+  weightUnit: string; // 'g' | 'kg'
 }
+
+/** Quy đổi trọng lượng đơn vị về kg. */
+const toKg = (weight: number, unit: string) =>
+  (unit || "kg").toLowerCase() === "g" ? weight / 1000 : weight;
+
+/** Quy đổi trọng lượng đơn vị về gram. */
+const toGram = (weight: number, unit: string) =>
+  (unit || "kg").toLowerCase() === "g" ? weight : weight * 1000;
+
+/** Badge trạng thái PĐN (chỉ 1=Đã xác nhận NCC, 2=Nhập một phần xuất hiện ở ghép xe). */
+const OS_STATUS_BADGE: Record<number, { label: string; cls: string }> = {
+  1: { label: "Đã xác nhận NCC", cls: "bg-blue-100 text-blue-700" },
+  2: { label: "Nhập một phần", cls: "bg-orange-100 text-orange-700" },
+};
+
 
 export function VehicleShipmentForm({ shipmentId }: Props) {
   const router = useRouter();
@@ -48,10 +81,28 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
     selectedBranch?.id
   );
   const [vehicleInfo, setVehicleInfo] = useState("");
+  const [borderGateId, setBorderGateId] = useState<number | undefined>(
+    undefined
+  );
   const [description, setDescription] = useState("");
+  const [expectedArrivalDate, setExpectedArrivalDate] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const dateRef = useRef<HTMLDivElement>(null);
+  const [files, setFiles] = useState<VehicleFile[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [picked, setPicked] = useState<PickedItem[]>([]);
   const [search, setSearch] = useState("");
   const [initialized, setInitialized] = useState(false);
+  // PDN nào đang mở (hiển thị sản phẩm) ở panel phải. Mặc định đóng hết.
+  const [expandedOs, setExpandedOs] = useState<Set<number>>(new Set());
+
+  const toggleOsExpand = (osId: number) =>
+    setExpandedOs((prev) => {
+      const next = new Set(prev);
+      if (next.has(osId)) next.delete(osId);
+      else next.add(osId);
+      return next;
+    });
 
   const { data: available, isLoading: loadingAvailable } =
     useVehicleAvailableItems(branchId);
@@ -59,12 +110,31 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
   const createMutation = useCreateVehicleShipment();
   const updateMutation = useUpdateVehicleShipment();
 
+  // Đóng lịch khi click ra ngoài.
+  useEffect(() => {
+    if (!showDatePicker) return;
+    const h = (e: MouseEvent) => {
+      if (dateRef.current && !dateRef.current.contains(e.target as Node)) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showDatePicker]);
+
   // Nạp dữ liệu khi sửa (1 lần).
   if (isEdit && existing && !initialized) {
     setCode(existing.code);
     setBranchId(existing.branchId ?? undefined);
     setVehicleInfo(existing.vehicleInfo || "");
+    setBorderGateId(existing.borderGateId ?? undefined);
     setDescription(existing.description || "");
+    setExpectedArrivalDate(
+      existing.expectedArrivalDate
+        ? existing.expectedArrivalDate.slice(0, 10)
+        : ""
+    );
+    setFiles(existing.files || []);
     setPicked(
       (existing.items || []).map((it) => ({
         orderSupplierId: it.orderSupplierId,
@@ -75,6 +145,8 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
         productName: it.productName,
         remaining: Number(it.quantity),
         quantity: Number(it.quantity),
+        weight: it.unitWeight ?? 0,
+        weightUnit: it.weightUnit ?? "kg",
       }))
     );
     setInitialized(true);
@@ -118,9 +190,35 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
         productName: item.productName,
         remaining: item.remaining,
         quantity: item.remaining,
+        weight: item.weight ?? 0,
+        weightUnit: item.weightUnit ?? "kg",
       },
     ]);
   };
+
+  const handleUploadFiles = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    setUploading(true);
+    try {
+      const { items, errors } = await vehicleShipmentsApi.uploadFiles(
+        Array.from(fileList)
+      );
+      if (items.length > 0) {
+        setFiles((prev) => [...prev, ...items]);
+        toast.success(`Đã tải lên ${items.length} file`);
+      }
+      if (errors.length > 0) {
+        toast.error(`${errors.length} file lỗi: ${errors[0].reason}`);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Tải file thất bại");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeFile = (url: string) =>
+    setFiles((prev) => prev.filter((f) => f.url !== url));
 
   const removeItem = (osId: number, productId: number) =>
     setPicked((prev) =>
@@ -141,8 +239,11 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
   const buildPayload = (status: number) => ({
     code: code.trim() || undefined,
     branchId,
+    borderGateId: borderGateId ?? undefined,
     vehicleInfo: vehicleInfo.trim() || undefined,
     description: description.trim() || undefined,
+    expectedArrivalDate: expectedArrivalDate || undefined,
+    files,
     status,
     items: picked.map((p) => ({
       orderSupplierId: p.orderSupplierId,
@@ -150,6 +251,17 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
       quantity: Number(p.quantity),
     })),
   });
+
+  const totalWeightGram = useMemo(
+    () =>
+      picked.reduce(
+        (sum, p) =>
+          sum + toGram(p.weight, p.weightUnit) * Number(p.quantity || 0),
+        0
+      ),
+    [picked]
+  );
+  const totalWeightKg = totalWeightGram / 1000;
 
   const validate = () => {
     if (!branchId) {
@@ -294,14 +406,56 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">
-                Biển số / Tài xế
+                Cửa khẩu
+              </label>
+              <BorderGateSelect value={borderGateId} onChange={setBorderGateId} />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Số hợp đồng
               </label>
               <input
                 value={vehicleInfo}
                 onChange={(e) => setVehicleInfo(e.target.value)}
-                placeholder="VD: 51C-123.45 / Anh Tài"
+                placeholder="VD: HD-2026-001"
                 className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
               />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Ngày dự kiến về kho
+              </label>
+              <div ref={dateRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowDatePicker((v) => !v)}
+                  className={`w-full flex items-center justify-between border rounded-lg px-3 py-2 text-sm bg-white transition-colors ${
+                    showDatePicker
+                      ? "border-brand ring-2 ring-brand-soft"
+                      : "hover:border-gray-400"
+                  }`}>
+                  <span
+                    className={
+                      expectedArrivalDate ? "text-gray-800" : "text-gray-400"
+                    }>
+                    {expectedArrivalDate
+                      ? new Date(
+                          expectedArrivalDate + "T00:00:00"
+                        ).toLocaleDateString("vi-VN")
+                      : "Chọn ngày"}
+                  </span>
+                  <Calendar className="w-4 h-4 text-gray-400" />
+                </button>
+                {showDatePicker && (
+                  <div className="absolute z-50 left-0 top-full w-64">
+                    <MiniCalendar
+                      value={expectedArrivalDate}
+                      onChange={(d) => setExpectedArrivalDate(d)}
+                      onClose={() => setShowDatePicker(false)}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -313,6 +467,57 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
                 className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
+          </div>
+
+          {/* Upload file hợp đồng/chứng từ */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">
+              File đính kèm (hợp đồng, chứng từ)
+            </label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <label className="px-3 py-2 border border-dashed rounded-lg text-sm text-gray-600 hover:bg-gray-50 cursor-pointer flex items-center gap-1.5">
+                {uploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                Tải file lên
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    handleUploadFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            {files.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {files.map((f) => (
+                  <div
+                    key={f.url}
+                    className="flex items-center gap-2 text-sm bg-gray-50 border rounded-lg px-2 py-1.5">
+                    <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                    <a
+                      href={f.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand hover:underline truncate flex-1">
+                      {f.originalname || f.filename}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(f.url)}
+                      className="p-0.5 text-red-500 hover:bg-red-50 rounded shrink-0">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -344,6 +549,9 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
                           </th>
                           <th className="px-3 py-2 text-right font-medium w-32">
                             SL ghép
+                          </th>
+                          <th className="px-3 py-2 text-right font-medium">
+                            Trọng lượng (gram)
                           </th>
                           <th className="px-3 py-2 w-10" />
                         </tr>
@@ -377,6 +585,12 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
                                 className="w-24 border rounded-lg px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                               />
                             </td>
+                            <td className="px-3 py-2 text-right text-gray-700">
+                              {toGram(it.weight, it.weightUnit).toLocaleString(
+                                "vi-VN",
+                                { maximumFractionDigits: 2 }
+                              )}
+                            </td>
                             <td className="px-3 py-2 text-center">
                               <button
                                 onClick={() =>
@@ -392,13 +606,30 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
                     </table>
                   </div>
                 ))}
+                {/* Tổng cân nặng toàn phiếu */}
+                <div className="flex justify-end items-center gap-2 px-3 py-2 bg-gray-50 border rounded-lg text-sm">
+                  <span className="text-gray-600">Tổng cân nặng:</span>
+                  <span className="font-semibold text-gray-900">
+                    {totalWeightGram.toLocaleString("vi-VN", {
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    gram
+                  </span>
+                  <span className="text-gray-400">·</span>
+                  <span className="font-semibold text-gray-900">
+                    {totalWeightKg.toLocaleString("vi-VN", {
+                      maximumFractionDigits: 3,
+                    })}{" "}
+                    kg
+                  </span>
+                </div>
               </div>
             )}
           </div>
         </div>
 
         {/* Right: chọn hàng từ PĐN */}
-        <div className="w-[400px] shrink-0 overflow-y-auto p-4 bg-gray-50">
+        <div className="w-[460px] shrink-0 overflow-y-auto p-4 bg-gray-50">
           <div className="relative mb-3">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -425,47 +656,78 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredAvailable.map((os) => (
-                <div
-                  key={os.orderSupplierId}
-                  className="border rounded-lg bg-white">
-                  <div className="px-3 py-2 border-b text-sm font-medium">
-                    {os.code}{" "}
-                    <span className="text-gray-400 font-normal">
-                      · {os.supplier?.name || "-"}
-                    </span>
-                  </div>
-                  <div className="divide-y">
-                    {os.items.map((it) => {
-                      const isPicked = pickedSet.has(
-                        pickedKey(os.orderSupplierId, it.productId)
-                      );
-                      return (
-                        <div
-                          key={it.productId}
-                          className="px-3 py-2 flex items-center gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-800 truncate">
-                              {it.productName}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              {it.productCode} · còn ghép:{" "}
-                              {it.remaining.toLocaleString("vi-VN")}
-                            </div>
-                          </div>
-                          <button
-                            disabled={isPicked}
-                            onClick={() => addItem(os, it.productId)}
-                            className="px-2 py-1 text-xs rounded-lg border flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-brand-soft hover:border-brand text-brand border-brand/40">
-                            <Plus className="w-3.5 h-3.5" />
-                            {isPicked ? "Đã thêm" : "Thêm"}
-                          </button>
+              {filteredAvailable.map((os) => {
+                // Mở khi user bấm, hoặc khi đang tìm kiếm (để thấy kết quả).
+                const isOpen =
+                  expandedOs.has(os.orderSupplierId) || !!search.trim();
+                const badge = os.status
+                  ? OS_STATUS_BADGE[os.status]
+                  : undefined;
+                return (
+                  <div
+                    key={os.orderSupplierId}
+                    className="border rounded-lg bg-white">
+                    <button
+                      type="button"
+                      onClick={() => toggleOsExpand(os.orderSupplierId)}
+                      className="w-full px-3 py-2 border-b flex items-center gap-2 text-left hover:bg-gray-50">
+                      <ChevronDown
+                        className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {os.code}{" "}
+                          <span className="text-gray-400 font-normal">
+                            · {os.supplier?.name || "-"}
+                          </span>
                         </div>
-                      );
-                    })}
+                        <div className="text-xs text-gray-400">
+                          {os.items.length} sản phẩm
+                        </div>
+                      </div>
+                      {badge && (
+                        <span
+                          className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}`}>
+                          {badge.label}
+                        </span>
+                      )}
+                    </button>
+                    {isOpen && (
+                      <div className="divide-y">
+                        {os.items.map((it) => {
+                          const isPicked = pickedSet.has(
+                            pickedKey(os.orderSupplierId, it.productId)
+                          );
+                          return (
+                            <div
+                              key={it.productId}
+                              className="px-3 py-2 flex items-center gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-800 truncate">
+                                  {it.productName}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  {it.productCode} · còn ghép:{" "}
+                                  {it.remaining.toLocaleString("vi-VN")}
+                                </div>
+                              </div>
+                              <button
+                                disabled={isPicked}
+                                onClick={() => addItem(os, it.productId)}
+                                className="px-2 py-1 text-xs rounded-lg border flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-brand-soft hover:border-brand text-brand border-brand/40">
+                                <Plus className="w-3.5 h-3.5" />
+                                {isPicked ? "Đã thêm" : "Thêm"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

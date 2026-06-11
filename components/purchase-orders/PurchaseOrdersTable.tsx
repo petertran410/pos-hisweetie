@@ -272,7 +272,7 @@ export function PurchaseOrdersTable({
             </h2>
             <input
               type="text"
-              placeholder="Tìm mã nhập hàng..."
+              placeholder="Tìm mã phiếu, sản phẩm, nhà cung cấp..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"

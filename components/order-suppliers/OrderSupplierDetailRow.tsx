@@ -115,7 +115,10 @@ export function OrderSupplierDetailRow({
   const canUpdateOS = useCan("order_suppliers", "update");
   const canCreatePO = useCan("purchase_orders", "create");
 
-  // Sticky width — giống OrderDetailRow
+  // Sticky width: đo chiều rộng vùng cuộn rồi set cho wrapper. KHÔNG dùng
+  // ResizeObserver trên scrollEl vì việc ghi width làm reflow (bật/tắt
+  // scrollbar dọc) → clientWidth dao động → observer chạy lại → lắc liên tục
+  // (rõ khi zoom). Lắng nghe window.resize (zoom cũng bắn) là đủ.
   useLayoutEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -126,13 +129,20 @@ export function OrderSupplierDetailRow({
       scrollEl = scrollEl.parentElement;
     }
     if (!scrollEl) return;
-    const update = () => {
-      el.style.width = `${scrollEl!.clientWidth}px`;
+    let rafId = 0;
+    const setWidth = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const next = `${scrollEl!.clientWidth}px`;
+        if (el.style.width !== next) el.style.width = next;
+      });
     };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(scrollEl);
-    return () => ro.disconnect();
+    setWidth();
+    window.addEventListener("resize", setWidth);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", setWidth);
+    };
   }, [orderSupplier]);
 
   // Sync notes khi data load

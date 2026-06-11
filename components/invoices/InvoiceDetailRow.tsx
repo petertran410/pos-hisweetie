@@ -81,12 +81,20 @@ export function InvoiceDetailRow({
     }
     if (!scrollEl) return;
     const setWidth = () => {
-      el.style.width = `${scrollEl!.clientWidth}px`;
+      const next = `${scrollEl!.clientWidth}px`;
+      if (el.style.width !== next) el.style.width = next;
     };
     setWidth();
-    const ro = new ResizeObserver(setWidth);
-    ro.observe(scrollEl);
-    return () => ro.disconnect();
+    let rafId = 0;
+    const onResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(setWidth);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", onResize);
+    };
   }, [invoice]);
 
   useEffect(() => {
@@ -465,6 +473,9 @@ export function InvoiceDetailRow({
                               Giảm giá
                             </th>
                             <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700  tracking-wider">
+                              Giá bán
+                            </th>
+                            <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700  tracking-wider">
                               Thành tiền
                             </th>
                           </tr>
@@ -532,6 +543,14 @@ export function InvoiceDetailRow({
                                       {item.discount
                                         ? formatCurrency(Number(item.discount))
                                         : "-"}
+                                    </span>
+                                  </td>
+                                  <td className="px-[10px] py-2 text-right">
+                                    <span className="text-md text-gray-900">
+                                      {formatCurrency(
+                                        Number(item.price) -
+                                          Number(item.discount || 0)
+                                      )}
                                     </span>
                                   </td>
                                   <td className="px-[10px] py-2 text-right">

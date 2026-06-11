@@ -29,6 +29,9 @@ export interface VehicleShipmentItem {
   shipped?: number;
   received?: number;
   diff?: number; // >0 thiếu, <0 dư
+  unitWeight?: number; // trọng lượng đơn vị (theo weightUnit)
+  weightUnit?: string; // 'g' | 'kg'
+  lineWeightKg?: number; // trọng lượng dòng đã quy đổi sang kg (× SL ghép)
   product?: { id: number; code: string; name: string };
   orderSupplier?: {
     id: number;
@@ -37,18 +40,32 @@ export interface VehicleShipmentItem {
   };
 }
 
+export interface VehicleFile {
+  filename: string;
+  url: string;
+  size?: number;
+  mimetype?: string;
+  originalname?: string;
+}
+
 export interface VehicleShipment {
   id: number;
   code: string;
   status: number;
   statusValue?: string;
   branchId?: number;
-  vehicleInfo?: string;
+  borderGateId?: number;
+  vehicleInfo?: string; // số hợp đồng
+  files?: VehicleFile[];
+  expectedArrivalDate?: string;
+  actualArrivalDate?: string;
   description?: string;
   createdBy: number;
   createdAt: string;
   updatedAt: string;
+  totalWeightKg?: number;
   branch?: { id: number; name: string };
+  borderGate?: { id: number; name: string };
   creator?: { id: number; name: string };
   items?: VehicleShipmentItem[];
   purchaseOrders?: Array<{
@@ -61,6 +78,9 @@ export interface VehicleShipment {
 
 export interface VehicleShipmentFilters {
   branchId?: number;
+  branchIds?: number[];
+  borderGateId?: number;
+  createdById?: number;
   status?: number;
   search?: string;
   createdDateFrom?: string;
@@ -82,6 +102,8 @@ export interface AvailableItem {
   productCode: string;
   productName: string;
   price: number;
+  weight?: number;
+  weightUnit?: string;
   ordered: number;
   received: number;
   shipped: number;
@@ -93,6 +115,8 @@ export interface AvailableOrderSupplier {
   code: string;
   orderDate: string;
   branchId?: number;
+  status?: number;
+  statusValue?: string;
   supplier?: { id: number; code?: string | null; name: string } | null;
   items: AvailableItem[];
 }

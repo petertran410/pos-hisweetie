@@ -23,6 +23,10 @@ export interface ProductQueryParams {
   parentName?: string;
   middleName?: string;
   childName?: string;
+  parentNames?: string[];
+  middleNames?: string[];
+  childNames?: string[];
+  tradeMarkIds?: number[];
   stockStatus?: string;
   priceBookId?: number;
   onlyInPriceBook?: boolean;

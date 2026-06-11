@@ -14,6 +14,10 @@ import { useBranchStore } from "@/lib/store/branch";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import {
+  FilterMultiSelect,
+  FilterSearchableSelect,
+} from "@/components/ui/filters";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -503,212 +507,6 @@ interface SimpleOption {
   value: string;
   label: string;
 }
-
-function SimpleDropdown({
-  options,
-  value,
-  placeholder,
-  onChange,
-}: {
-  options: SimpleOption[];
-  value: string;
-  placeholder: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const selected = options.find((o) => o.value === value);
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((p) => !p)}
-        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
-        }`}>
-        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {selected && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange("");
-              }}
-              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
-              <X className="w-3 h-3" />
-            </button>
-          )}
-          <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </div>
-      </div>
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
-          {options.map((opt, idx) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onChange(value === opt.value ? "" : opt.value);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
-                value === opt.value
-                  ? "bg-brand-soft text-brand-dark"
-                  : "hover:bg-gray-50 text-gray-700"
-              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-              <span>{opt.label}</span>
-              {value === opt.value && (
-                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SearchableDropdown({
-  options,
-  value,
-  placeholder,
-  searchPlaceholder,
-  onChange,
-}: {
-  options: SimpleOption[];
-  value: string;
-  placeholder: string;
-  searchPlaceholder?: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const selected = options.find((o) => o.value === value);
-
-  const filtered = useMemo(
-    () =>
-      options.filter((o) =>
-        o.label.toLowerCase().includes(search.toLowerCase())
-      ),
-    [options, search]
-  );
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setSearch("");
-      }
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((p) => !p)}
-        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
-        }`}>
-        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {selected && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange("");
-              }}
-              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
-              <X className="w-3 h-3" />
-            </button>
-          )}
-          <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </div>
-      </div>
-
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-gray-100">
-            <input
-              ref={inputRef}
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={searchPlaceholder ?? "Tìm kiếm..."}
-              className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-          <div className="max-h-48 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-gray-400 text-center">
-                Không tìm thấy
-              </div>
-            ) : (
-              filtered.map((opt, idx) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(value === opt.value ? "" : opt.value);
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
-                    value === opt.value
-                      ? "bg-brand-soft text-brand-dark"
-                      : "hover:bg-gray-50 text-gray-700"
-                  } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-                  <span>{opt.label}</span>
-                  {value === opt.value && (
-                    <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
-                  )}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface SupplierReturnsSidebarProps {
@@ -726,8 +524,8 @@ export function SupplierReturnsSidebar({
     pageSize: 200,
   });
 
-  const [branchId, setBranchId] = useState("");
-  const [supplierId, setSupplierId] = useState("");
+  const [branchIds, setBranchIds] = useState<number[]>([]);
+  const [supplierIds, setSupplierIds] = useState<number[]>([]);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedMode, setSelectedMode] = useState("");
   const [creatorId, setCreatorId] = useState("");
@@ -742,10 +540,26 @@ export function SupplierReturnsSidebar({
   const presetRowRef = useRef<HTMLDivElement>(null);
   const customDateRef = useRef<HTMLDivElement>(null);
 
-  // Sync chi nhánh từ global store
+  // Sync chi nhánh từ global store (chỉ khi đang bám đúng 1 chi nhánh hoặc rỗng)
+  const isFirstBranchSyncRef = useRef(true);
+  const lastSyncedBranchIdRef = useRef<number | null>(
+    selectedBranch?.id ?? null
+  );
   useEffect(() => {
-    if (selectedBranch) setBranchId(selectedBranch.id.toString());
-  }, [selectedBranch]);
+    const cur = selectedBranch?.id ?? null;
+    if (isFirstBranchSyncRef.current) {
+      isFirstBranchSyncRef.current = false;
+      lastSyncedBranchIdRef.current = cur;
+      if (cur) setBranchIds([cur]);
+      return;
+    }
+    if (cur !== lastSyncedBranchIdRef.current) {
+      lastSyncedBranchIdRef.current = cur;
+      setBranchIds((prev) =>
+        prev.length <= 1 ? (cur ? [cur] : []) : prev
+      );
+    }
+  }, [selectedBranch?.id]);
 
   // Đóng calendar khi click ngoài
   useEffect(() => {
@@ -765,8 +579,8 @@ export function SupplierReturnsSidebar({
   useEffect(() => {
     const timer = setTimeout(() => {
       const f: any = {};
-      if (branchId) f.branchId = parseInt(branchId);
-      if (supplierId) f.supplierId = parseInt(supplierId);
+      if (branchIds.length > 0) f.branchIds = branchIds;
+      if (supplierIds.length > 0) f.supplierIds = supplierIds;
       if (selectedStatus) f.status = parseInt(selectedStatus);
       if (selectedMode) f.mode = selectedMode;
       if (creatorId) f.createdBy = parseInt(creatorId);
@@ -787,8 +601,8 @@ export function SupplierReturnsSidebar({
     }, 300);
     return () => clearTimeout(timer);
   }, [
-    branchId,
-    supplierId,
+    branchIds,
+    supplierIds,
     selectedStatus,
     selectedMode,
     creatorId,
@@ -800,7 +614,8 @@ export function SupplierReturnsSidebar({
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
-    if (supplierId) n++;
+    if (branchIds.length > 0) n++;
+    if (supplierIds.length > 0) n++;
     if (selectedStatus) n++;
     if (selectedMode) n++;
     if (creatorId) n++;
@@ -808,7 +623,8 @@ export function SupplierReturnsSidebar({
     if (fromDate || toDate) n++;
     return n;
   }, [
-    supplierId,
+    branchIds,
+    supplierIds,
     selectedStatus,
     selectedMode,
     creatorId,
@@ -818,7 +634,7 @@ export function SupplierReturnsSidebar({
   ]);
 
   const resetFilters = () => {
-    setSupplierId("");
+    setSupplierIds([]);
     setSelectedStatus("");
     setSelectedMode("");
     setCreatorId("");
@@ -999,11 +815,13 @@ export function SupplierReturnsSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Chi nhánh
           </label>
-          <SimpleDropdown
+          <FilterMultiSelect
             options={branchOptions}
-            value={branchId}
+            values={branchIds.map(String)}
+            onChange={(vals) => setBranchIds(vals.map(Number))}
             placeholder="Tất cả chi nhánh"
-            onChange={setBranchId}
+            searchPlaceholder="Tìm chi nhánh..."
+            multiLabel={(n) => `${n} chi nhánh`}
           />
         </div>
 
@@ -1014,12 +832,13 @@ export function SupplierReturnsSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Nhà cung cấp
           </label>
-          <SearchableDropdown
+          <FilterMultiSelect
             options={supplierOptions}
-            value={supplierId}
+            values={supplierIds.map(String)}
+            onChange={(vals) => setSupplierIds(vals.map(Number))}
             placeholder="Tất cả NCC"
             searchPlaceholder="Tìm tên nhà cung cấp..."
-            onChange={setSupplierId}
+            multiLabel={(n) => `${n} nhà cung cấp`}
           />
         </div>
 
@@ -1060,10 +879,11 @@ export function SupplierReturnsSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Người tạo
           </label>
-          <SimpleDropdown
+          <FilterSearchableSelect
             options={userOptions}
             value={creatorId}
             placeholder="Tất cả"
+            searchPlaceholder="Tìm người tạo..."
             onChange={setCreatorId}
           />
         </div>

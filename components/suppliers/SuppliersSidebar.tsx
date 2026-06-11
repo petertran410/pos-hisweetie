@@ -12,6 +12,7 @@ import {
 import { useSupplierGroups } from "@/lib/hooks/useSuppliers";
 import { SupplierFilters, SupplierGroup } from "@/lib/types/supplier";
 import { SupplierGroupModal } from "./SupplierGroupModal";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
@@ -255,84 +256,6 @@ function StatusButtons({
 interface SimpleOption {
   value: string;
   label: string;
-}
-
-function SimpleDropdown({
-  options,
-  value,
-  placeholder,
-  onChange,
-}: {
-  options: SimpleOption[];
-  value: string;
-  placeholder: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const selected = options.find((o) => o.value === value);
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all bg-white ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
-        }`}>
-        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => {
-              onChange("");
-              setOpen(false);
-            }}
-            className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${!value ? "bg-brand-soft text-brand-dark font-medium" : "hover:bg-gray-50 text-gray-500"}`}>
-            <span>{placeholder}</span>
-            {!value && <Check className="w-3.5 h-3.5 text-brand" />}
-          </button>
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onChange(value === opt.value ? "" : opt.value);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors border-t border-gray-50 ${
-                value === opt.value
-                  ? "bg-brand-soft text-brand-dark font-medium"
-                  : "hover:bg-gray-50 text-gray-700"
-              }`}>
-              <span className="truncate">{opt.label}</span>
-              {value === opt.value && (
-                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ─── PresetPanel (portal) ─────────────────────────────────────────────────────
@@ -848,10 +771,11 @@ export function SuppliersSidebar({
               Quản lý
             </button>
           </div>
-          <SimpleDropdown
+          <FilterSearchableSelect
             options={groupOptions}
             value={filters.groupId ? String(filters.groupId) : ""}
             placeholder="Tất cả nhóm"
+            searchPlaceholder="Tìm nhóm nhà cung cấp..."
             onChange={(v) =>
               onFiltersChange({
                 ...filters,

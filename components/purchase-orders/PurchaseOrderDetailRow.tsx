@@ -105,7 +105,10 @@ export function PurchaseOrderDetailRow({
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const purchaseByDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Sticky width — giống OrderSupplierDetailRow
+  // Sticky width: đo chiều rộng vùng cuộn rồi set cho wrapper. KHÔNG dùng
+  // ResizeObserver trên scrollEl vì việc ghi width làm reflow (bật/tắt
+  // scrollbar dọc) → clientWidth dao động → observer chạy lại → lắc liên tục
+  // (rõ khi zoom). Lắng nghe window.resize (zoom cũng bắn) là đủ.
   useLayoutEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -116,13 +119,20 @@ export function PurchaseOrderDetailRow({
       scrollEl = scrollEl.parentElement;
     }
     if (!scrollEl) return;
-    const update = () => {
-      el.style.width = `${scrollEl!.clientWidth}px`;
+    let rafId = 0;
+    const setWidth = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const next = `${scrollEl!.clientWidth}px`;
+        if (el.style.width !== next) el.style.width = next;
+      });
     };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(scrollEl);
-    return () => ro.disconnect();
+    setWidth();
+    window.addEventListener("resize", setWidth);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", setWidth);
+    };
   }, [purchaseOrder]);
 
   // Sync edited fields khi data load

@@ -11,6 +11,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { FilterMultiSelect } from "@/components/ui/filters";
 
 interface TransferSidebarProps {
   filters: TransferQueryParams;
@@ -438,78 +439,10 @@ function StatusDropdown({
   );
 }
 
-// ─── SimpleDropdown ───────────────────────────────────────────────────────────
+// ─── SimpleOption ─────────────────────────────────────────────────────────────
 interface SimpleOption {
   value: string;
   label: string;
-}
-function SimpleDropdown({
-  options,
-  value,
-  placeholder,
-  onChange,
-}: {
-  options: SimpleOption[];
-  value: string;
-  placeholder: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  const selected = options.find((o) => o.value === value);
-  return (
-    <div ref={ref} className="relative">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"} bg-white`}>
-        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
-        />
-      </div>
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => {
-              onChange("");
-              setOpen(false);
-            }}
-            className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${!value ? "bg-brand-soft text-brand-dark font-medium" : "hover:bg-gray-50 text-gray-500"}`}>
-            <span>{placeholder}</span>
-            {!value && <Check className="w-3.5 h-3.5 text-brand" />}
-          </button>
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onChange(value === opt.value ? "" : opt.value);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors border-t border-gray-50 ${value === opt.value ? "bg-brand-soft text-brand-dark font-medium" : "hover:bg-gray-50 text-gray-700"}`}>
-              <span className="truncate">{opt.label}</span>
-              {value === opt.value && (
-                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -519,8 +452,8 @@ export function TransferSidebar({
 }: TransferSidebarProps) {
   const { data: branches } = useBranches();
 
-  const [fromBranchId, setFromBranchId] = useState("");
-  const [toBranchId, setToBranchId] = useState("");
+  const [fromBranchIds, setFromBranchIds] = useState<number[]>([]);
+  const [toBranchIds, setToBranchIds] = useState<number[]>([]);
   const [selectedStatus, setSelectedStatus] = useState("");
 
   const [transferDateMode, setTransferDateMode] = useState<"preset" | "custom">(
@@ -560,11 +493,11 @@ export function TransferSidebar({
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
-    if (fromBranchId) n++;
-    if (toBranchId) n++;
+    if (fromBranchIds.length > 0) n++;
+    if (toBranchIds.length > 0) n++;
     if (selectedStatus) n++;
     return n;
-  }, [fromBranchId, toBranchId, selectedStatus]);
+  }, [fromBranchIds, toBranchIds, selectedStatus]);
 
   // Đóng MiniCalendar khi click ngoài
   useEffect(() => {
@@ -584,8 +517,8 @@ export function TransferSidebar({
   useEffect(() => {
     const timer = setTimeout(() => {
       const f: TransferQueryParams = {};
-      if (fromBranchId) f.fromBranchIds = [parseInt(fromBranchId)];
-      if (toBranchId) f.toBranchIds = [parseInt(toBranchId)];
+      if (fromBranchIds.length > 0) f.fromBranchIds = fromBranchIds;
+      if (toBranchIds.length > 0) f.toBranchIds = toBranchIds;
       if (selectedStatus) f.status = [parseInt(selectedStatus)];
 
       const transferRange =
@@ -620,8 +553,8 @@ export function TransferSidebar({
     }, 300);
     return () => clearTimeout(timer);
   }, [
-    fromBranchId,
-    toBranchId,
+    fromBranchIds,
+    toBranchIds,
     selectedStatus,
     transferDateMode,
     transferPreset,
@@ -634,8 +567,8 @@ export function TransferSidebar({
   ]);
 
   const resetFilters = () => {
-    setFromBranchId("");
-    setToBranchId("");
+    setFromBranchIds([]);
+    setToBranchIds([]);
     setSelectedStatus("");
     setTransferDateMode("preset");
     setTransferPreset("all_time");
@@ -974,11 +907,13 @@ export function TransferSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Chuyển đi
           </label>
-          <SimpleDropdown
+          <FilterMultiSelect
             options={activeBranchOptions}
-            value={fromBranchId}
+            values={fromBranchIds.map(String)}
+            onChange={(vals) => setFromBranchIds(vals.map(Number))}
             placeholder="Tất cả chi nhánh"
-            onChange={setFromBranchId}
+            searchPlaceholder="Tìm chi nhánh..."
+            multiLabel={(n) => `${n} chi nhánh`}
           />
         </div>
 
@@ -989,11 +924,13 @@ export function TransferSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Nhận về
           </label>
-          <SimpleDropdown
+          <FilterMultiSelect
             options={activeBranchOptions}
-            value={toBranchId}
+            values={toBranchIds.map(String)}
+            onChange={(vals) => setToBranchIds(vals.map(Number))}
             placeholder="Tất cả chi nhánh"
-            onChange={setToBranchId}
+            searchPlaceholder="Tìm chi nhánh..."
+            multiLabel={(n) => `${n} chi nhánh`}
           />
         </div>
       </div>

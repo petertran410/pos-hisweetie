@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { PurchaseOrderFilters } from "@/lib/types/purchase-order";
+import {
+  FilterMultiSelect,
+  FilterSearchableSelect,
+  type FilterOption,
+} from "@/components/ui/filters";
 
 interface PurchaseOrderSidebarProps {
   filters: PurchaseOrderFilters;
@@ -432,174 +437,8 @@ function StatusDropdown({
   );
 }
 
-// ─── SimpleDropdown ───────────────────────────────────────────────────────────
-interface SimpleOption {
-  value: string;
-  label: string;
-}
-function SimpleDropdown({
-  options,
-  value,
-  placeholder,
-  onChange,
-}: {
-  options: SimpleOption[];
-  value: string;
-  placeholder: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  const selected = options.find((o) => o.value === value);
-  return (
-    <div ref={ref} className="relative">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"} bg-white`}>
-        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
-        />
-      </div>
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => {
-              onChange("");
-              setOpen(false);
-            }}
-            className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${!value ? "bg-brand-soft text-brand-dark font-medium" : "hover:bg-gray-50 text-gray-500"}`}>
-            <span>{placeholder}</span>
-            {!value && <Check className="w-3.5 h-3.5 text-brand" />}
-          </button>
-          {options.map((opt, idx) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onChange(value === opt.value ? "" : opt.value);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors border-t border-gray-50 ${value === opt.value ? "bg-brand-soft text-brand-dark font-medium" : "hover:bg-gray-50 text-gray-700"}`}>
-              <span className="truncate">{opt.label}</span>
-              {value === opt.value && (
-                <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── BranchMultiSelectDropdown ────────────────────────────────────────────────
-function BranchMultiSelectDropdown({
-  branches,
-  selectedIds,
-  onChange,
-}: {
-  branches: { id: number; name: string }[];
-  selectedIds: number[];
-  onChange: (ids: number[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  const toggle = (id: number) => {
-    onChange(
-      selectedIds.includes(id)
-        ? selectedIds.filter((x) => x !== id)
-        : [...selectedIds, id]
-    );
-  };
-
-  const label =
-    selectedIds.length === 0
-      ? null
-      : selectedIds.length === 1
-        ? (branches.find((b) => b.id === selectedIds[0])?.name ?? "")
-        : `${selectedIds.length} chi nhánh`;
-
-  return (
-    <div ref={ref} className="relative">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((p) => !p)}
-        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
-        }`}>
-        <span className={label ? "text-gray-800 truncate" : "text-gray-400"}>
-          {label ?? "Tất cả chi nhánh"}
-        </span>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {selectedIds.length > 0 && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange([]);
-              }}
-              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
-              <X className="w-3 h-3" />
-            </button>
-          )}
-          <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </div>
-      </div>
-
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-          {branches.map((b, idx) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => toggle(b.id)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
-                selectedIds.includes(b.id) ? "bg-brand-soft" : "hover:bg-gray-50"
-              } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(b.id)}
-                onChange={() => {}}
-                className="w-3.5 h-3.5 accent-brand flex-shrink-0"
-              />
-              <span className="text-gray-700">{b.name}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// ─── SimpleOption type ────────────────────────────────────────────────────────
+type SimpleOption = FilterOption;
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function PurchaseOrderSidebar({
@@ -631,9 +470,12 @@ export function PurchaseOrderSidebar({
   const [statusValue, setStatusValue] = useState(
     filters.status !== undefined ? String(filters.status) : ""
   );
-  const [supplierValue, setSupplierValue] = useState(
-    filters.supplierId ? String(filters.supplierId) : ""
-  );
+  const [supplierIdsValue, setSupplierIdsValue] = useState<number[]>(() => {
+    if (filters.supplierIds && filters.supplierIds.length > 0)
+      return filters.supplierIds;
+    if (filters.supplierId) return [filters.supplierId];
+    return [];
+  });
   const [createdByValue, setCreatedByValue] = useState(
     filters.createdById ? String(filters.createdById) : ""
   );
@@ -707,7 +549,7 @@ export function PurchaseOrderSidebar({
     let n = 0;
     if (selectedBranchIds.length > 0) n++;
     if (statusValue) n++;
-    if (supplierValue) n++;
+    if (supplierIdsValue.length > 0) n++;
     if (createdByValue) n++;
     if (purchaseByValue) n++;
     if (dateMode === "custom" && fromDate && toDate) n++;
@@ -716,7 +558,7 @@ export function PurchaseOrderSidebar({
   }, [
     selectedBranchIds,
     statusValue,
-    supplierValue,
+    supplierIdsValue,
     createdByValue,
     purchaseByValue,
     dateMode,
@@ -728,7 +570,7 @@ export function PurchaseOrderSidebar({
   const resetFilters = () => {
     setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setStatusValue("");
-    setSupplierValue("");
+    setSupplierIdsValue([]);
     setCreatedByValue("");
     setPurchaseByValue("");
     setDateMode("preset");
@@ -738,6 +580,7 @@ export function PurchaseOrderSidebar({
     setFilters({
       status: undefined,
       supplierId: undefined,
+      supplierIds: undefined,
       createdById: undefined,
       purchaseById: undefined,
       createdDateFrom: undefined,
@@ -745,11 +588,11 @@ export function PurchaseOrderSidebar({
     });
   };
 
-  const activeBranches = useMemo(
+  const branchOptions = useMemo<SimpleOption[]>(
     () =>
       branches
         ?.filter((b) => b.isActive)
-        .map((b) => ({ id: b.id, name: b.name })) ?? [],
+        .map((b) => ({ value: String(b.id), label: b.name })) ?? [],
     [branches]
   );
   const supplierOptions = useMemo<SimpleOption[]>(
@@ -920,10 +763,13 @@ export function PurchaseOrderSidebar({
           <label className="text-sm font-medium text-gray-700 mb-2 block">
             Chi nhánh
           </label>
-          <BranchMultiSelectDropdown
-            branches={activeBranches}
-            selectedIds={selectedBranchIds}
-            onChange={setSelectedBranchIds}
+          <FilterMultiSelect
+            options={branchOptions}
+            values={selectedBranchIds.map(String)}
+            onChange={(vals) => setSelectedBranchIds(vals.map(Number))}
+            placeholder="Tất cả chi nhánh"
+            searchPlaceholder="Tìm chi nhánh..."
+            multiLabel={(n) => `${n} chi nhánh`}
           />
         </div>
 
@@ -932,14 +778,20 @@ export function PurchaseOrderSidebar({
           <label className="text-sm font-medium text-gray-700 mb-2 block">
             Nhà cung cấp
           </label>
-          <SimpleDropdown
+          <FilterMultiSelect
             options={supplierOptions}
-            value={supplierValue}
-            placeholder="Tất cả NCC"
-            onChange={(v) => {
-              setSupplierValue(v);
-              setFilters({ supplierId: v ? Number(v) : undefined });
+            values={supplierIdsValue.map(String)}
+            onChange={(vals) => {
+              const ids = vals.map(Number);
+              setSupplierIdsValue(ids);
+              setFilters({
+                supplierIds: ids.length > 0 ? ids : undefined,
+                supplierId: undefined,
+              });
             }}
+            placeholder="Tất cả NCC"
+            searchPlaceholder="Tìm nhà cung cấp..."
+            multiLabel={(n) => `${n} nhà cung cấp`}
           />
         </div>
 
@@ -948,10 +800,11 @@ export function PurchaseOrderSidebar({
           <label className="text-sm font-medium text-gray-700 mb-2 block">
             Người tạo
           </label>
-          <SimpleDropdown
+          <FilterSearchableSelect
             options={userOptions}
             value={createdByValue}
             placeholder="Tất cả"
+            searchPlaceholder="Tìm người tạo..."
             onChange={(v) => {
               setCreatedByValue(v);
               setFilters({ createdById: v ? Number(v) : undefined });
@@ -964,10 +817,11 @@ export function PurchaseOrderSidebar({
           <label className="text-sm font-medium text-gray-700 mb-2 block">
             Người nhập hàng
           </label>
-          <SimpleDropdown
+          <FilterSearchableSelect
             options={userOptions}
             value={purchaseByValue}
             placeholder="Tất cả"
+            searchPlaceholder="Tìm người nhập hàng..."
             onChange={(v) => {
               setPurchaseByValue(v);
               setFilters({ purchaseById: v ? Number(v) : undefined });
