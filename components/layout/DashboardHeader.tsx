@@ -79,6 +79,7 @@ export function DashboardHeader() {
           { label: "Nhà cung cấp", href: "/san-pham/nha-cung-cap" },
           { label: "Đặt hàng nhập", href: "/san-pham/dat-hang-nhap" },
           { label: "Nhập hàng", href: "/san-pham/nhap-hang" },
+          { label: "Ghép xe", href: "/san-pham/ghep-xe" },
           { label: "Trả hàng nhập", href: "/san-pham/tra-hang-nhap" },
         ],
       },

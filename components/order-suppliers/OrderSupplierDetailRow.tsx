@@ -7,8 +7,10 @@ import {
   useUpdateOrderSupplier,
   useOrderSupplierPayments,
   useCancelOrderSupplier,
+  useCompleteOrderSupplier,
 } from "@/lib/hooks/useOrderSuppliers";
-import { ExternalLink, FileText, Loader2, Save } from "lucide-react";
+import { ExternalLink, FileText, Loader2, Save, CheckCircle } from "lucide-react";
+import Swal from "sweetalert2";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { useCan } from "@/lib/hooks/useCan";
@@ -98,6 +100,7 @@ export function OrderSupplierDetailRow({
   const { data: orderSupplier, isLoading } = useOrderSupplier(orderSupplierId);
   const updateOrderSupplier = useUpdateOrderSupplier();
   const cancelOrderSupplier = useCancelOrderSupplier();
+  const completeOrderSupplier = useCompleteOrderSupplier();
   const { data: payments } = useOrderSupplierPayments(orderSupplierId);
 
   const [activeTab, setActiveTab] = useState("info");
@@ -239,6 +242,31 @@ export function OrderSupplierDetailRow({
         (receivedQuantities[item.productId] || 0) + Number(item.quantity);
     });
   });
+
+  // SL đã ghép xe (các xe chưa hủy) theo từng sản phẩm.
+  const shippedQuantities: Record<number, number> = {};
+  orderSupplier.vehicleShipmentItems?.forEach((vi: any) => {
+    shippedQuantities[vi.productId] =
+      (shippedQuantities[vi.productId] || 0) + Number(vi.quantity);
+  });
+
+  // PDN "Nhập một phần" mới cho phép chốt hoàn thành thủ công.
+  const canForceComplete = orderSupplier.status === 2;
+
+  const handleComplete = async () => {
+    const res = await Swal.fire({
+      title: "Chốt hoàn thành phiếu đặt hàng nhập?",
+      text: "Dùng khi NCC không giao nốt phần còn thiếu. Phiếu sẽ chuyển sang Hoàn thành và không tự hạ cấp về Nhập một phần nữa.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Hoàn thành",
+      cancelButtonText: "Đóng",
+      confirmButtonColor: "#16a34a",
+    });
+    if (res.isConfirmed) {
+      completeOrderSupplier.mutate(orderSupplierId);
+    }
+  };
 
   const TABS = [
     { value: "info", label: "Thông tin" },
@@ -436,7 +464,13 @@ export function OrderSupplierDetailRow({
                                 SL đặt
                               </th>
                               <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Ghép xe
+                              </th>
+                              <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
                                 Đã nhập
+                              </th>
+                              <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Còn lại
                               </th>
                               <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
                                 Đơn giá
@@ -453,8 +487,17 @@ export function OrderSupplierDetailRow({
                             {filteredItems?.length ? (
                               filteredItems.map((item: any, idx: number) => {
                                 const received =
-                                  receivedQuantities[item.productId] ?? 0;
+                                  item.receivedQty ??
+                                  receivedQuantities[item.productId] ??
+                                  0;
                                 const ordered = Number(item.quantity);
+                                const shipped =
+                                  item.shippedQty ??
+                                  shippedQuantities[item.productId] ??
+                                  0;
+                                const remaining =
+                                  item.remainingQty ??
+                                  Math.max(ordered - received, 0);
                                 const isFullyReceived = received >= ordered;
                                 return (
                                   <tr
@@ -476,11 +519,24 @@ export function OrderSupplierDetailRow({
                                     <td className="px-3 py-2 text-center text-sm text-gray-700">
                                       {ordered}
                                     </td>
+                                    <td className="px-3 py-2 text-center text-sm">
+                                      <span
+                                        className={
+                                          shipped
+                                            ? "text-blue-600 font-medium"
+                                            : "text-gray-400"
+                                        }>
+                                        {shipped}
+                                      </span>
+                                    </td>
                                     <td className="px-3 py-2 text-center">
                                       <span
                                         className={`text-sm font-medium ${isFullyReceived ? "text-green-600" : received > 0 ? "text-yellow-600" : "text-gray-400"}`}>
                                         {received}
                                       </span>
+                                    </td>
+                                    <td className="px-3 py-2 text-center text-sm font-medium text-gray-700">
+                                      {remaining}
                                     </td>
                                     <td className="px-3 py-2 text-right text-sm text-gray-700">
                                       {formatCurrency(item.price)}
@@ -497,7 +553,7 @@ export function OrderSupplierDetailRow({
                             ) : (
                               <tr>
                                 <td
-                                  colSpan={7}
+                                  colSpan={9}
                                   className="px-3 py-6 text-center text-sm text-gray-400">
                                   Không có sản phẩm
                                 </td>
@@ -537,6 +593,15 @@ export function OrderSupplierDetailRow({
                             Tạo phiếu nhập hàng
                           </button>
                         )}
+                      {canUpdateOS && canForceComplete && (
+                        <button
+                          onClick={handleComplete}
+                          disabled={completeOrderSupplier.isPending}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50">
+                          <CheckCircle className="w-4 h-4" />
+                          Hoàn thành
+                        </button>
+                      )}
                       {canUpdateOS && canCancel && (
                         <button
                           onClick={handleCancelClick}

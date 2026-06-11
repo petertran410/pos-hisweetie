@@ -35,10 +35,14 @@ export default function HoaDonPage() {
 
   const handleFiltersChange = useCallback(
     (newFilters: any) => {
-      setFilters({
-        ...newFilters,
-        ...(codeParam ? { search: codeParam } : {}),
-      });
+      // Khi có ?Code= trên URL → chỉ tìm theo mã hóa đơn, bỏ qua toàn bộ
+      // filter từ sidebar (chi nhánh, trạng thái, thời gian...). Trang thường
+      // (không có Code) thì filter hoạt động bình thường.
+      if (codeParam) {
+        setFilters({ search: codeParam });
+        return;
+      }
+      setFilters(newFilters);
     },
     [codeParam]
   );

@@ -71,8 +71,6 @@ export function useDeleteOrderSupplier() {
  * Hủy mềm PDN. Đối xứng `useCancelOrder` của phía bán.
  *   - cancelPayments=true → soft cancel toàn bộ payment + cashflow PCPDN
  *   - cancelPayments=false → throw nếu PDN còn payment active
- *
- * Backend block khi đã có PN active (chưa CANCELLED) — UX hiển thị toast lỗi.
  */
 export function useCancelOrderSupplier() {
   const queryClient = useQueryClient();
@@ -93,6 +91,24 @@ export function useCancelOrderSupplier() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Không thể hủy phiếu đặt hàng nhập");
+    },
+  });
+}
+
+/**
+ * Chốt hoàn thành PDN thủ công khi NCC không giao nốt phần còn thiếu.
+ * Set status=3 + toComplete=true. Backend chặn nếu đã hủy/đã hoàn thành.
+ */
+export function useCompleteOrderSupplier() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => orderSuppliersApi.complete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["order-suppliers"] });
+      toast.success("Đã chốt hoàn thành phiếu đặt hàng nhập");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Không thể hoàn thành phiếu đặt hàng nhập");
     },
   });
 }

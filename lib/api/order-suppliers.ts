@@ -52,6 +52,14 @@ export const orderSuppliersApi = {
     return response;
   },
 
+  complete: async (id: number) => {
+    const response = await apiClient.put<OrderSupplier>(
+      `/order-suppliers/${id}/complete`,
+      {}
+    );
+    return response;
+  },
+
   getPayments: async (orderSupplierId: number) => {
     const response = await apiClient.get<OrderSupplierPayment[]>(
       `/order-suppliers/${orderSupplierId}/payments`

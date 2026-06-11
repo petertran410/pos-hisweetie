@@ -15,6 +15,7 @@ export type CodeEntity =
   | "product"
   | "purchase-order"
   | "order-supplier"
+  | "vehicle-shipment"
   | "supplier"
   | "cashflow"
   | "supplier-return"
@@ -34,6 +35,7 @@ const ROUTES: Record<CodeEntity, string> = {
   product: "/san-pham/danh-sach",
   "purchase-order": "/san-pham/nhap-hang",
   "order-supplier": "/san-pham/dat-hang-nhap",
+  "vehicle-shipment": "/san-pham/ghep-xe",
   supplier: "/san-pham/nha-cung-cap",
   cashflow: "/tai-chinh/so-quy",
   "supplier-return": "/san-pham/tra-hang-nhap",

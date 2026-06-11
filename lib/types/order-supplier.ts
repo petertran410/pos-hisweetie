@@ -61,6 +61,11 @@ export interface OrderSupplier {
     }>;
   }>;
   payments?: OrderSupplierPayment[];
+  vehicleShipmentItems?: Array<{
+    productId: number;
+    quantity: number;
+    vehicleShipmentId: number;
+  }>;
 }
 
 export interface OrderSupplierItem {
