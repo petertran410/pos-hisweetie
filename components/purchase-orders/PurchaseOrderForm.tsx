@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { X, Search, ChevronDown, Minus, Plus } from "lucide-react";
+import { X, Search, ChevronDown, Minus, Plus, Calendar } from "lucide-react";
+import { MiniCalendar } from "@/components/ui/MiniCalendar";
 import { useSuppliers, useSupplier } from "@/lib/hooks/useSuppliers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
@@ -170,6 +171,13 @@ export function PurchaseOrderForm({
       0
   );
   const [code, setCode] = useState<string>(purchaseOrder?.code || "");
+  const [purchaseDate, setPurchaseDate] = useState<Date | null>(
+    purchaseOrder?.purchaseDate
+      ? new Date(purchaseOrder.purchaseDate)
+      : copyFrom?.purchaseDate
+        ? new Date(copyFrom.purchaseDate)
+        : null
+  );
   const [supplierId, setSupplierId] = useState<number>(
     purchaseOrder?.supplierId ||
       orderSupplier?.supplierId ||
@@ -216,11 +224,14 @@ export function PurchaseOrderForm({
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [showDiscountDropdown, setShowDiscountDropdown] = useState(false);
+  const [showPurchaseDateCalendar, setShowPurchaseDateCalendar] =
+    useState(false);
 
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const branchDropdownRef = useRef<HTMLDivElement>(null);
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const discountDropdownRef = useRef<HTMLDivElement>(null);
+  const purchaseDateRef = useRef<HTMLDivElement>(null);
 
   // Cho phép sửa PN ở mọi trạng thái trừ "Đã hủy" (status=2). Trước đây
   // form bị khoá khi `!isDraft` (= "Đã nhập hàng") nên user không thể chỉnh
@@ -390,8 +401,13 @@ export function PurchaseOrderForm({
       ) {
         setShowUserDropdown(false);
       }
+      if (
+        purchaseDateRef.current &&
+        !purchaseDateRef.current.contains(event.target as Node)
+      ) {
+        setShowPurchaseDateCalendar(false);
+      }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -623,6 +639,9 @@ export function PurchaseOrderForm({
       if (code.trim()) {
         fromOSPayload.code = code.trim();
       }
+      if (purchaseDate) {
+        fromOSPayload.purchaseDate = purchaseDate.toISOString();
+      }
       return { kind: "from-os" as const, payload: fromOSPayload };
     }
 
@@ -648,6 +667,9 @@ export function PurchaseOrderForm({
     };
     if (code.trim()) {
       standardPayload.code = code.trim();
+    }
+    if (purchaseDate) {
+      standardPayload.purchaseDate = purchaseDate.toISOString();
     }
     return { kind: "standard" as const, payload: standardPayload };
   };
@@ -1026,6 +1048,65 @@ export function PurchaseOrderForm({
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          <div ref={purchaseDateRef} className="flex flex-col gap-1">
+            <label className="text-md text-gray-600">Ngày nhập hàng:</label>
+            <div className="relative">
+              {(() => {
+                const purchaseDateStr = purchaseDate
+                  ? `${purchaseDate.getFullYear()}-${String(
+                      purchaseDate.getMonth() + 1
+                    ).padStart(2, "0")}-${String(
+                      purchaseDate.getDate()
+                    ).padStart(2, "0")}`
+                  : "";
+                const displayLabel = purchaseDate
+                  ? purchaseDate.toLocaleDateString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })
+                  : "Mặc định (ngày tạo)";
+
+                return (
+                  <>
+                    <button
+                      type="button"
+                      disabled={isFormDisabled ? true : false}
+                      onClick={() =>
+                        !isFormDisabled &&
+                        setShowPurchaseDateCalendar((v) => !v)
+                      }
+                      className={`w-full flex items-center justify-between px-2 py-1.5 border rounded-lg text-sm transition-all disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                        purchaseDate
+                          ? "border-brand bg-brand-soft text-gray-800"
+                          : "border-gray-200 text-gray-400"
+                      } ${
+                        showPurchaseDateCalendar
+                          ? "ring-2 ring-brand-soft border-brand"
+                          : "hover:border-gray-300"
+                      }`}>
+                      <span>{displayLabel}</span>
+                      <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    </button>
+                    {showPurchaseDateCalendar && (
+                      <div className="absolute z-20 left-0 right-0">
+                        <MiniCalendar
+                          value={purchaseDateStr}
+                          onChange={(d) =>
+                            setPurchaseDate(
+                              d ? new Date(d + "T00:00:00") : null
+                            )
+                          }
+                          onClose={() => setShowPurchaseDateCalendar(false)}
+                        />
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 

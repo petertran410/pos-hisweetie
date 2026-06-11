@@ -124,6 +124,21 @@ export const orderSuppliersApi = {
       pageSize: number;
       currentItem: number;
     }>("/order-suppliers/detail-items", params),
+
+  /**
+   * Cập nhật inline giá nhà máy / thành tiền nhà máy của 1 dòng sản phẩm
+   * (xác định bằng cặp orderSupplierId + productId). Hai trường độc lập:
+   * sửa đơn giá NM không tự tính lại thành tiền NM. Truyền null để xóa.
+   */
+  updateItemFactoryPrice: (
+    orderSupplierId: number,
+    productId: number,
+    data: { factoryPrice?: number | null; factorySubTotal?: number | null }
+  ) =>
+    apiClient.patch(
+      `/order-suppliers/items/${orderSupplierId}/${productId}/factory-price`,
+      data
+    ),
 };
 
 export interface OrderSupplierDetailItem {
@@ -144,4 +159,22 @@ export interface OrderSupplierDetailItem {
   price: number;
   discount: number;
   subTotal: number;
+  factoryPrice: number | null;
+  factorySubTotal: number | null;
+  // Phân bổ (item)
+  allocation: number;
+  allocationSuppliers: number;
+  allocationThirdParty: number;
+  description?: string | null;
+  // Từ product
+  kiotVietId?: string | null;
+  unitWeightGram: number;
+  totalWeightKg: number;
+  tradeMarkName?: string | null;
+  productGroup?: string | null;
+  // Từ phiếu ghép xe mới nhất
+  borderGateName?: string | null;
+  contractNo?: string | null;
+  expectedArrivalDate?: string | null;
+  actualArrivalDate?: string | null;
 }

@@ -494,6 +494,12 @@ export function OrderSupplierDetailRow({
                               <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
                                 Thành tiền
                               </th>
+                              <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Đơn giá NM
+                              </th>
+                              <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Thành tiền NM
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-100">
@@ -563,13 +569,23 @@ export function OrderSupplierDetailRow({
                                     <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
                                       {formatCurrency(item.subTotal)}
                                     </td>
+                                    <td className="px-3 py-2 text-right text-sm text-gray-700">
+                                      {item.factoryPrice == null
+                                        ? "-"
+                                        : formatCurrency(item.factoryPrice)}
+                                    </td>
+                                    <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
+                                      {item.factorySubTotal == null
+                                        ? "-"
+                                        : formatCurrency(item.factorySubTotal)}
+                                    </td>
                                   </tr>
                                 );
                               })
                             ) : (
                               <tr>
                                 <td
-                                  colSpan={10}
+                                  colSpan={12}
                                   className="px-3 py-6 text-center text-sm text-gray-400">
                                   Không có sản phẩm
                                 </td>

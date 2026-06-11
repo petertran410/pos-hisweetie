@@ -82,6 +82,8 @@ export interface OrderSupplierItem {
   allocationThirdParty: number;
   orderQuantity: number;
   subTotal: number;
+  factoryPrice?: number | null;
+  factorySubTotal?: number | null;
   description?: string;
   orderByNumber?: number;
 }

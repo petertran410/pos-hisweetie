@@ -37,8 +37,9 @@ export function ProductPickerDropdown({
 
   const { data: productsData } = useProducts({
     search: searchDebounced,
-    limit: 50,
+    limit: 500,
     branchId,
+    isActive: true,
   });
   const products = productsData?.data || [];
 

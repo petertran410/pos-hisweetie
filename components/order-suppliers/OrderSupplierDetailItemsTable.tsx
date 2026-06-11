@@ -2,15 +2,25 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useOrderSupplierDetailItems } from "@/lib/hooks/useOrderSuppliers";
+import {
+  useOrderSupplierDetailItems,
+  useUpdateOrderSupplierItemFactoryPrice,
+} from "@/lib/hooks/useOrderSuppliers";
+import type { OrderSupplierDetailItem } from "@/lib/api/order-suppliers";
 import type { OrderSupplierFilters } from "@/lib/types/order-supplier";
 import {
   getStatusLabel,
   ORDER_SUPPLIER_STATUS,
 } from "@/lib/types/order-supplier";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumberInput } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "../shared/CodeLink";
+import { ColumnToggle } from "../shared/ColumnToggle";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 
 interface Props {
   filters: OrderSupplierFilters;
@@ -34,13 +44,267 @@ const STATUS_COLOR: Record<number, string> = {
   [ORDER_SUPPLIER_STATUS.CANCELLED]: "bg-red-100 text-red-700",
 };
 
-const formatDateTime = (date?: string) =>
-  date ? new Date(date).toLocaleString("vi-VN") : "-";
+const fmtDateTime = (d?: string) =>
+  d ? new Date(d).toLocaleString("vi-VN") : "-";
+const fmtNum = (n?: number) =>
+  n == null ? "-" : Number(n).toLocaleString("vi-VN", { maximumFractionDigits: 2 });
 
-export function OrderSupplierDetailItemsTable({
-  filters,
-  onFiltersChange,
-}: Props) {
+type FactoryField = "factoryPrice" | "factorySubTotal";
+
+interface EditCtx {
+  canUpdate: boolean;
+  editing: {
+    orderSupplierId: number;
+    productId: number;
+    field: FactoryField;
+    value: string;
+  } | null;
+  startEdit: (r: OrderSupplierDetailItem, field: FactoryField) => void;
+  changeValue: (value: string) => void;
+  commit: () => void;
+  cancel: () => void;
+}
+
+/** Ô inline-edit cho giá nhà máy / thành tiền nhà máy. */
+function FactoryCell({
+  r,
+  field,
+  ctx,
+}: {
+  r: OrderSupplierDetailItem;
+  field: FactoryField;
+  ctx?: EditCtx;
+}) {
+  const value = field === "factoryPrice" ? r.factoryPrice : r.factorySubTotal;
+  const isEditing =
+    ctx?.editing != null &&
+    ctx.editing.orderSupplierId === r.orderSupplierId &&
+    ctx.editing.productId === r.productId &&
+    ctx.editing.field === field;
+
+  if (isEditing && ctx) {
+    return (
+      <input
+        type="text"
+        inputMode="numeric"
+        autoFocus
+        value={formatNumberInput(ctx.editing!.value)}
+        onChange={(e) => ctx.changeValue(e.target.value)}
+        onBlur={ctx.commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") ctx.commit();
+          else if (e.key === "Escape") ctx.cancel();
+        }}
+        className="w-full border rounded px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-brand"
+      />
+    );
+  }
+
+  if (!ctx?.canUpdate) {
+    return <span>{value == null ? "-" : formatCurrency(value)}</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => ctx.startEdit(r, field)}
+      className="w-full text-right px-2 py-1 -mx-2 -my-1 rounded border border-transparent hover:border-gray-300 hover:bg-brand-soft transition-colors cursor-pointer">
+      {value == null ? (
+        <span className="text-gray-400">Nhập...</span>
+      ) : (
+        formatCurrency(value)
+      )}
+    </button>
+  );
+}
+
+const DEFAULT_COLUMNS: ColumnConfig<OrderSupplierDetailItem, EditCtx>[] = [
+  {
+    key: "orderSupplierCode",
+    label: "Mã PĐN",
+    visible: true,
+    width: "150px",
+    render: (r) => (
+      <CodeLink entity="order-supplier" code={r.orderSupplierCode} />
+    ),
+  },
+  {
+    key: "productCode",
+    label: "Mã hàng",
+    visible: true,
+    width: "120px",
+    render: (r) => <CodeLink entity="product" code={r.productCode} />,
+  },
+  {
+    key: "productName",
+    label: "Tên sản phẩm",
+    visible: true,
+    width: "240px",
+    render: (r) => r.productName,
+  },
+  {
+    key: "orderedQty",
+    label: "SL đặt",
+    visible: true,
+    width: "90px",
+    render: (r) => r.orderedQty,
+  },
+  {
+    key: "price",
+    label: "Đơn giá",
+    visible: true,
+    width: "120px",
+    render: (r) => formatCurrency(r.price),
+  },
+  {
+    key: "factoryPrice",
+    label: "Đơn giá NM",
+    visible: true,
+    width: "120px",
+    render: (r, ctx) => <FactoryCell r={r} field="factoryPrice" ctx={ctx} />,
+  },
+  {
+    key: "factorySubTotal",
+    label: "Thành tiền NM",
+    visible: true,
+    width: "140px",
+    render: (r, ctx) => (
+      <span className="font-medium text-gray-900">
+        <FactoryCell r={r} field="factorySubTotal" ctx={ctx} />
+      </span>
+    ),
+  },
+  {
+    key: "subTotal",
+    label: "Thành tiền",
+    visible: true,
+    width: "140px",
+    render: (r) => (
+      <span className="font-medium text-gray-900">
+        {formatCurrency(r.subTotal)}
+      </span>
+    ),
+  },
+  {
+    key: "supplier",
+    label: "Nhà cung cấp",
+    visible: true,
+    width: "170px",
+    render: (r) => r.supplier?.name || "-",
+  },
+  {
+    key: "orderDate",
+    label: "Ngày tạo",
+    visible: true,
+    width: "160px",
+    render: (r) => fmtDateTime(r.orderDate),
+  },
+  {
+    key: "borderGate",
+    label: "Cửa khẩu",
+    visible: true,
+    width: "130px",
+    render: (r) => r.borderGateName || "-",
+  },
+  {
+    key: "receivedQty",
+    label: "Đã nhập",
+    visible: true,
+    width: "90px",
+    render: (r) => (
+      <span
+        className={
+          r.receivedQty >= r.orderedQty
+            ? "text-green-600 font-medium"
+            : r.receivedQty > 0
+              ? "text-yellow-600 font-medium"
+              : "text-gray-400"
+        }>
+        {r.receivedQty}
+      </span>
+    ),
+  },
+  {
+    key: "remainingQty",
+    label: "Còn lại",
+    visible: true,
+    width: "90px",
+    render: (r) => (
+      <span className="font-medium text-gray-700">{r.remainingQty}</span>
+    ),
+  },
+  {
+    key: "status",
+    label: "Trạng thái",
+    visible: true,
+    width: "150px",
+    render: (r) => (
+      <span
+        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+          STATUS_COLOR[r.status] ?? "bg-gray-100 text-gray-700"
+        }`}>
+        {getStatusLabel(r.status)}
+      </span>
+    ),
+  },
+  // ── Cột phụ (mặc định ẩn) ──
+  {
+    key: "branch",
+    label: "Chi nhánh",
+    visible: false,
+    width: "140px",
+    render: (r) => r.branch?.name || "-",
+  },
+  {
+    key: "tradeMarkName",
+    label: "Thương hiệu",
+    visible: false,
+    width: "140px",
+    render: (r) => r.tradeMarkName || "-",
+  },
+  {
+    key: "productGroup",
+    label: "Nhóm hàng",
+    visible: false,
+    width: "200px",
+    render: (r) => r.productGroup || "-",
+  },
+  {
+    key: "unitWeightGram",
+    label: "TL gói (gram)",
+    visible: false,
+    width: "120px",
+    render: (r) => fmtNum(r.unitWeightGram),
+  },
+  {
+    key: "totalWeightKg",
+    label: "Tổng KL (kg)",
+    visible: false,
+    width: "120px",
+    render: (r) => fmtNum(r.totalWeightKg),
+  },
+  {
+    key: "creator",
+    label: "Người tạo",
+    visible: false,
+    width: "140px",
+    render: (r) => r.creator?.name || "-",
+  },
+];
+
+const RIGHT_ALIGN = new Set<string>([
+  "orderedQty",
+  "receivedQty",
+  "remainingQty",
+  "price",
+  "subTotal",
+  "factoryPrice",
+  "factorySubTotal",
+  "unitWeightGram",
+  "totalWeightKg",
+]);
+
+export function OrderSupplierDetailItemsTable({ filters }: Props) {
   const [search, setSearch] = useState(filters.search || "");
   const [debouncedSearch, setDebouncedSearch] = useState(filters.search || "");
   const [page, setPage] = useState(1);
@@ -66,11 +330,15 @@ export function OrderSupplierDetailItemsTable({
 
   const effectiveFilters = useMemo(() => {
     const f = { ...filters };
-    if (activeStatusTab !== "all") {
-      f.status = [Number(activeStatusTab)];
-    }
+    if (activeStatusTab !== "all") f.status = [Number(activeStatusTab)];
     return f;
   }, [filters, activeStatusTab]);
+
+  const { columns, visibleColumns, toggleColumn } =
+    useColumnVisibility<OrderSupplierDetailItem, EditCtx>(
+      "orderSupplierDetailItemColumns",
+      DEFAULT_COLUMNS
+    );
 
   const { data, isLoading } = useOrderSupplierDetailItems({
     ...effectiveFilters,
@@ -79,10 +347,66 @@ export function OrderSupplierDetailItemsTable({
     currentItem: (page - 1) * limit,
   });
 
+  // ── Inline edit giá nhà máy / thành tiền nhà máy ──
+  const canUpdate = usePermission("order_suppliers", "update");
+  const updateFactoryPrice = useUpdateOrderSupplierItemFactoryPrice();
+  const [editing, setEditing] = useState<EditCtx["editing"]>(null);
+
+  const editCtx: EditCtx = {
+    canUpdate,
+    editing,
+    startEdit: (r, field) => {
+      if (!canUpdate) return;
+      const current =
+        field === "factoryPrice" ? r.factoryPrice : r.factorySubTotal;
+      setEditing({
+        orderSupplierId: r.orderSupplierId,
+        productId: r.productId,
+        field,
+        value: current == null ? "" : String(current),
+      });
+    },
+    changeValue: (value) =>
+      setEditing((prev) =>
+        prev ? { ...prev, value: value.replace(/[^0-9]/g, "") } : prev
+      ),
+    cancel: () => setEditing(null),
+    commit: () => {
+      if (!editing) return;
+      const raw = editing.value.trim();
+      const newValue = raw === "" ? null : Number(raw);
+      if (newValue != null && (isNaN(newValue) || newValue < 0)) {
+        setEditing(null);
+        return;
+      }
+      const original = rows.find(
+        (r) =>
+          r.orderSupplierId === editing.orderSupplierId &&
+          r.productId === editing.productId
+      );
+      const prevValue = original
+        ? editing.field === "factoryPrice"
+          ? original.factoryPrice
+          : original.factorySubTotal
+        : null;
+      // Không gọi API nếu giá trị không đổi.
+      if ((prevValue ?? null) === (newValue ?? null)) {
+        setEditing(null);
+        return;
+      }
+      updateFactoryPrice.mutate({
+        orderSupplierId: editing.orderSupplierId,
+        productId: editing.productId,
+        data: { [editing.field]: newValue },
+      });
+      setEditing(null);
+    },
+  };
+
   const rows = data?.data || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / limit) || 1;
-  const colSpan = 12;
+  const colSpan = visibleColumns.length;
 
   return (
     <PermissionGate resource="order_suppliers" action="view">
@@ -101,6 +425,7 @@ export function OrderSupplierDetailItemsTable({
               className="w-72 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
+          <ColumnToggle columns={columns} onToggle={toggleColumn} />
         </div>
 
         {/* Status tabs */}
@@ -124,26 +449,14 @@ export function OrderSupplierDetailItemsTable({
           <table className="w-full text-sm">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                {[
-                  "Mã PĐN",
-                  "Ngày đặt",
-                  "Nhà cung cấp",
-                  "Chi nhánh",
-                  "Mã hàng",
-                  "Tên sản phẩm",
-                  "SL đặt",
-                  "Đã nhập",
-                  "Còn lại",
-                  "Đơn giá",
-                  "Thành tiền",
-                  "Trạng thái",
-                ].map((h, i) => (
+                {visibleColumns.map((col) => (
                   <th
-                    key={h}
+                    key={col.key}
                     className={`px-3 py-2.5 font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide ${
-                      [6, 7, 8, 9, 10].includes(i) ? "text-right" : "text-left"
-                    }`}>
-                    {h}
+                      RIGHT_ALIGN.has(col.key) ? "text-right" : "text-left"
+                    }`}
+                    style={{ width: col.width, minWidth: col.width }}>
+                    {col.label}
                   </th>
                 ))}
               </tr>
@@ -171,51 +484,16 @@ export function OrderSupplierDetailItemsTable({
                   <tr
                     key={`${r.orderSupplierId}-${r.productId}-${idx}`}
                     className="border-b hover:bg-gray-50">
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <CodeLink
-                        entity="order-supplier"
-                        code={r.orderSupplierCode}
-                      />
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-gray-600">
-                      {formatDateTime(r.orderDate)}
-                    </td>
-                    <td className="px-3 py-2">{r.supplier?.name || "-"}</td>
-                    <td className="px-3 py-2">{r.branch?.name || "-"}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <CodeLink entity="product" code={r.productCode} />
-                    </td>
-                    <td className="px-3 py-2">{r.productName}</td>
-                    <td className="px-3 py-2 text-right">{r.orderedQty}</td>
-                    <td className="px-3 py-2 text-right">
-                      <span
-                        className={
-                          r.receivedQty >= r.orderedQty
-                            ? "text-green-600 font-medium"
-                            : r.receivedQty > 0
-                              ? "text-yellow-600 font-medium"
-                              : "text-gray-400"
-                        }>
-                        {r.receivedQty}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right font-medium text-gray-700">
-                      {r.remainingQty}
-                    </td>
-                    <td className="px-3 py-2 text-right text-gray-600">
-                      {formatCurrency(r.price)}
-                    </td>
-                    <td className="px-3 py-2 text-right font-medium text-gray-900">
-                      {formatCurrency(r.subTotal)}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          STATUS_COLOR[r.status] ?? "bg-gray-100 text-gray-700"
-                        }`}>
-                        {getStatusLabel(r.status)}
-                      </span>
-                    </td>
+                    {visibleColumns.map((col) => (
+                      <td
+                        key={col.key}
+                        className={`px-3 py-2 ${
+                          RIGHT_ALIGN.has(col.key) ? "text-right" : "text-left"
+                        }`}
+                        style={{ width: col.width, minWidth: col.width }}>
+                        {col.render(r, editCtx)}
+                      </td>
+                    ))}
                   </tr>
                 ))
               )}

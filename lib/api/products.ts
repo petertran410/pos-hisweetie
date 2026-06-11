@@ -71,6 +71,9 @@ export interface Product {
   basePrice: number;
   weight?: number;
   weightUnit?: string;
+  vat?: number;
+  shippingWeight?: number;
+  shippingWeightUnit?: string;
   unit?: string;
   conversionValue?: number;
   masterProductId?: number;

@@ -75,6 +75,8 @@ export function ComboProductForm({
       maxStockAlert: 0,
       weight: product?.weight || undefined,
       weightUnit: product?.weightUnit || "kg",
+      shippingWeight: product?.shippingWeight || undefined,
+      shippingWeightUnit: product?.shippingWeightUnit || "g",
       unit: product?.unit || "",
       isDirectSale: product?.isDirectSale || false,
       isActive: product?.isActive ?? true,
@@ -285,6 +287,10 @@ export function ComboProductForm({
         maxStockAlert: Number(data.maxStockAlert) || 0,
         weight: data.weight ? Number(data.weight) : undefined,
         weightUnit: data.weightUnit || "kg",
+        shippingWeight: data.shippingWeight
+          ? Number(data.shippingWeight)
+          : undefined,
+        shippingWeightUnit: data.shippingWeightUnit || "g",
         unit: data.unit || undefined,
         isDirectSale: data.isDirectSale || false,
         isActive: data.isActive ?? true,
@@ -640,7 +646,7 @@ export function ComboProductForm({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Trọng lượng đơn vị
+                    Khối lượng tịnh
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -651,6 +657,25 @@ export function ComboProductForm({
                     />
                     <select
                       {...register("weightUnit")}
+                      className="border rounded px-3 py-2">
+                      <option value="g">g</option>
+                      <option value="kg">kg</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Trọng lượng vận chuyển
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      {...register("shippingWeight", { valueAsNumber: true })}
+                      type="number"
+                      className="flex-1 border rounded px-3 py-2"
+                      placeholder="0"
+                    />
+                    <select
+                      {...register("shippingWeightUnit")}
                       className="border rounded px-3 py-2">
                       <option value="g">g</option>
                       <option value="kg">kg</option>

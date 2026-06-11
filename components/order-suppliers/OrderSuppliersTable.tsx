@@ -11,12 +11,7 @@ import {
   ORDER_SUPPLIER_STATUS,
 } from "@/lib/types/order-supplier";
 import { OrderSupplierDetailRow } from "./OrderSupplierDetailRow";
-import {
-  Plus,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Plus, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
@@ -64,7 +59,7 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplier>[] = [
     key: "purchaseOrderCode",
     label: "Mã nhập hàng",
     visible: true,
-    width: "250px",
+    width: "180px",
     render: (os) =>
       os.purchaseOrders?.length
         ? os.purchaseOrders.map((po, idx) => (
@@ -77,7 +72,7 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplier>[] = [
   },
   {
     key: "orderDate",
-    label: "Ngày đặt",
+    label: "Ngày dự kiến nhập hàng",
     visible: true,
     width: "170px",
     render: (os) => formatDateTime(os.orderDate),

@@ -75,6 +75,22 @@ export function ProductForm({
     setWeightValue(isNaN(num) ? 0 : num);
   };
 
+  const [shippingWeightValue, setShippingWeightValue] = useState<number>(
+    product?.shippingWeight ?? 0
+  );
+  const [shippingWeightDisplay, setShippingWeightDisplay] = useState<string>(
+    product?.shippingWeight != null ? String(product.shippingWeight) : ""
+  );
+
+  const handleShippingWeightChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const raw = e.target.value.replace(/[^\d.]/g, "");
+    setShippingWeightDisplay(raw);
+    const num = parseFloat(raw);
+    setShippingWeightValue(isNaN(num) ? 0 : num);
+  };
+
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
       code: product?.code || "",
@@ -100,6 +116,7 @@ export function ProductForm({
         : 0,
       weight: product?.weight || undefined,
       weightUnit: product?.weightUnit || "kg",
+      shippingWeightUnit: product?.shippingWeightUnit || "g",
       unit: product?.unit || "",
       isDirectSale: product?.isDirectSale || false,
       isPieceUnit: product?.isPieceUnit ?? false,
@@ -232,6 +249,8 @@ export function ProductForm({
         maxStockAlert: Number(data.maxStockAlert) || 0,
         weight: data.isPieceUnit ? undefined : weightValue || undefined,
         weightUnit: data.weightUnit,
+        shippingWeight: shippingWeightValue || undefined,
+        shippingWeightUnit: data.shippingWeightUnit || "g",
         unit: data.unit || undefined,
         conversionValue: data.conversionValue
           ? Number(data.conversionValue)
@@ -474,7 +493,7 @@ export function ProductForm({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Trọng lượng đơn vị
+                  Khối lượng tịnh
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -513,6 +532,28 @@ export function ProductForm({
                 </label>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Trọng lượng vận chuyển
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={shippingWeightDisplay}
+                    onChange={handleShippingWeightChange}
+                    className="flex-1 border rounded px-3 py-2"
+                    placeholder="0"
+                  />
+                  <select
+                    {...register("shippingWeightUnit")}
+                    className="border rounded px-3 py-2 w-24">
+                    <option value="g">g</option>
+                    <option value="kg">kg</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
               {/* Đơn vị tính — input thẳng, không cần modal */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -526,7 +567,6 @@ export function ProductForm({
                   />
                 </div>
               </div>
-            </div>
 
             {/* Thuộc tính — inline, không cần modal */}
             <div>

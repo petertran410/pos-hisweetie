@@ -35,6 +35,9 @@ interface ProductItem {
   price: number;
   discount: number;
   subTotal: number;
+  factoryPrice: number;
+  factorySubTotal: number;
+  factorySubTotalManual?: boolean;
   inventory: number;
   note?: string;
 }
@@ -291,17 +294,28 @@ export function OrderSupplierForm({
 
   useEffect(() => {
     if (orderSupplier?.items) {
-      const loadedProducts: ProductItem[] = orderSupplier.items.map((item) => ({
-        productId: item.productId,
-        productCode: item.productCode,
-        productName: item.productName,
-        quantity: Number(item.quantity),
-        price: Number(item.price),
-        discount: Number(item.discount),
-        subTotal: Number(item.subTotal),
-        inventory: 0,
-        note: item.description,
-      }));
+      const loadedProducts: ProductItem[] = orderSupplier.items.map((item) => {
+        const qty = Number(item.quantity);
+        const factoryPrice = Number(item.factoryPrice ?? 0);
+        const factorySubTotal = Number(item.factorySubTotal ?? 0);
+        return {
+          productId: item.productId,
+          productCode: item.productCode,
+          productName: item.productName,
+          quantity: qty,
+          price: Number(item.price),
+          discount: Number(item.discount),
+          subTotal: Number(item.subTotal),
+          factoryPrice,
+          factorySubTotal,
+          // Coi như nhập tay nếu giá trị lưu khác công thức auto (giá NM × SL).
+          factorySubTotalManual:
+            item.factorySubTotal != null &&
+            factorySubTotal !== factoryPrice * qty,
+          inventory: 0,
+          note: item.description,
+        };
+      });
       setProducts(loadedProducts);
 
       const previousPaid = Number(orderSupplier.paidAmount || 0);
@@ -380,6 +394,9 @@ export function OrderSupplierForm({
       price: cost,
       discount: 0,
       subTotal: cost * qty,
+      factoryPrice: 0,
+      factorySubTotal: 0,
+      factorySubTotalManual: false,
       inventory: Number(inventory?.onHand || 0),
     };
 
@@ -405,6 +422,9 @@ export function OrderSupplierForm({
       updated[index].quantity = quantity;
       updated[index].subTotal =
         (updated[index].price - updated[index].discount) * quantity;
+      if (!updated[index].factorySubTotalManual) {
+        updated[index].factorySubTotal = updated[index].factoryPrice * quantity;
+      }
       return updated;
     });
   };
@@ -441,6 +461,44 @@ export function OrderSupplierForm({
       updated[index].discount = discount;
       updated[index].subTotal =
         (updated[index].price - discount) * updated[index].quantity;
+      return updated;
+    });
+  };
+
+  const handleFactoryPriceChange = (index: number, value: string) => {
+    if (isFormDisabled) return;
+    const factoryPrice = parseFloat(value) || 0;
+
+    if (factoryPrice < 0) {
+      toast.error("Đơn giá nhà máy không được nhỏ hơn 0");
+      return;
+    }
+
+    setProducts((prev) => {
+      const updated = [...prev];
+      updated[index].factoryPrice = factoryPrice;
+      // Chỉ tự tính lại thành tiền NM khi người dùng chưa nhập tay.
+      if (!updated[index].factorySubTotalManual) {
+        updated[index].factorySubTotal =
+          factoryPrice * updated[index].quantity;
+      }
+      return updated;
+    });
+  };
+
+  const handleFactorySubTotalChange = (index: number, value: string) => {
+    if (isFormDisabled) return;
+    const factorySubTotal = parseFloat(value) || 0;
+
+    if (factorySubTotal < 0) {
+      toast.error("Thành tiền nhà máy không được nhỏ hơn 0");
+      return;
+    }
+
+    setProducts((prev) => {
+      const updated = [...prev];
+      updated[index].factorySubTotal = factorySubTotal;
+      updated[index].factorySubTotalManual = true;
       return updated;
     });
   };
@@ -487,6 +545,8 @@ export function OrderSupplierForm({
         quantity: Number(p.quantity),
         price: Number(p.price),
         discount: Number(p.discount) || 0,
+        factoryPrice: Number(p.factoryPrice) || null,
+        factorySubTotal: Number(p.factorySubTotal) || null,
         description: p.note,
       })),
       paymentAmount: paymentAmount > 0 ? paymentAmount : undefined,
@@ -565,6 +625,12 @@ export function OrderSupplierForm({
                   </th>
                   <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
                     Thành tiền
+                  </th>
+                  <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
+                    Đơn giá NM
+                  </th>
+                  <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
+                    Thành tiền NM
                   </th>
                   <th className="px-3 py-2 text-center text-md font-medium text-gray-700">
                     Xóa
@@ -646,6 +712,36 @@ export function OrderSupplierForm({
                     </td>
                     <td className="px-3 py-2 text-sm text-right font-medium">
                       {formatCurrency(item.subTotal)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="text"
+                        value={formatCurrency(item.factoryPrice)}
+                        onChange={(e) => {
+                          const numericValue = parseNumberInput(e.target.value);
+                          handleFactoryPriceChange(
+                            index,
+                            numericValue.toString()
+                          );
+                        }}
+                        disabled={isFormDisabled ? true : false}
+                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="text"
+                        value={formatCurrency(item.factorySubTotal)}
+                        onChange={(e) => {
+                          const numericValue = parseNumberInput(e.target.value);
+                          handleFactorySubTotalChange(
+                            index,
+                            numericValue.toString()
+                          );
+                        }}
+                        disabled={isFormDisabled ? true : false}
+                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                      />
                     </td>
                     <td className="px-3 py-2 text-center">
                       <button
@@ -959,7 +1055,7 @@ export function OrderSupplierForm({
 
           <div>
             <label className="text-md text-gray-600">
-              Dự kiến ngày nhập hàng
+              Ngày đặt hàng nhập
             </label>
             <div ref={orderDateRef} className="relative">
               {(() => {
@@ -977,7 +1073,7 @@ export function OrderSupplierForm({
                       month: "2-digit",
                       year: "numeric",
                     })
-                  : "Chọn ngày";
+                  : "Mặc định (ngày tạo)";
 
                 return (
                   <>

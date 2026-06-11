@@ -131,6 +131,7 @@ export function ManufacturingProductForm({
 
   const basePrice = useFormattedNumber(product?.basePrice || 0);
   const weight = useFormattedNumber(product?.weight || 0);
+  const shippingWeight = useFormattedNumber(product?.shippingWeight || 0);
   const stockQuantity = useFormattedNumber(
     currentBranchInventory ? Number(currentBranchInventory.onHand) : 0
   );
@@ -158,6 +159,7 @@ export function ManufacturingProductForm({
       childName: product?.childName || undefined,
       tradeMarkId: product?.tradeMarkId || undefined,
       weightUnit: product?.weightUnit || "kg",
+      shippingWeightUnit: product?.shippingWeightUnit || "g",
       unit: product?.unit || "",
       isDirectSale: product?.isDirectSale || false,
       isActive: product?.isActive ?? true,
@@ -444,6 +446,8 @@ export function ManufacturingProductForm({
         maxStockAlert: maxStockAlert.value,
         weight: weight.value || undefined,
         weightUnit: data.weightUnit || "kg",
+        shippingWeight: shippingWeight.value || undefined,
+        shippingWeightUnit: data.shippingWeightUnit || "g",
         unit: data.unit || undefined,
         isDirectSale: data.isDirectSale || false,
         isActive: data.isActive ?? true,
@@ -953,7 +957,7 @@ export function ManufacturingProductForm({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Trọng lượng đơn vị
+                  Khối lượng tịnh
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -969,6 +973,28 @@ export function ManufacturingProductForm({
                     className="border rounded px-3 py-2 w-24">
                     <option value="kg">kg</option>
                     <option value="g">g</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Trọng lượng vận chuyển
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={shippingWeight.displayValue}
+                    onChange={shippingWeight.handleChange}
+                    onBlur={shippingWeight.handleBlur}
+                    className="flex-1 border rounded px-3 py-2"
+                    placeholder="0"
+                  />
+                  <select
+                    {...register("shippingWeightUnit")}
+                    className="border rounded px-3 py-2 w-24">
+                    <option value="g">g</option>
+                    <option value="kg">kg</option>
                   </select>
                 </div>
               </div>
