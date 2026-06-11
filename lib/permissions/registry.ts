@@ -39,6 +39,10 @@ export const ROUTE_PERMISSIONS: Record<
   "/san-pham/xuat-huy": { resource: "destructions", action: "view" },
   "/san-pham/nha-cung-cap": { resource: "suppliers", action: "view" },
   "/san-pham/dat-hang-nhap": { resource: "order_suppliers", action: "view" },
+  "/san-pham/dat-hang-nhap-chi-tiet": {
+    resource: "order_suppliers",
+    action: "view",
+  },
   "/san-pham/nhap-hang": { resource: "purchase_orders", action: "view" },
   "/san-pham/ghep-xe": { resource: "vehicle_shipments", action: "view" },
   "/san-pham/tra-hang-nhap": { resource: "supplier_returns", action: "view" },
@@ -116,6 +120,12 @@ export const NAV_CONFIG: NavSection[] = [
         key: "order-suppliers",
         label: "Đặt hàng nhập",
         href: "/san-pham/dat-hang-nhap",
+        permission: { resource: "order_suppliers", action: "view" },
+      },
+      {
+        key: "order-suppliers-detail",
+        label: "Đặt hàng nhập chi tiết",
+        href: "/san-pham/dat-hang-nhap-chi-tiet",
         permission: { resource: "order_suppliers", action: "view" },
       },
       {

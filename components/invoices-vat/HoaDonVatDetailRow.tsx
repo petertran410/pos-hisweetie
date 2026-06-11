@@ -343,6 +343,9 @@ export function HoaDonVatDetailRow({
                       <table className="w-full min-w-[1100px]">
                         <thead>
                           <tr className="bg-gray-100 border-b border-gray-200">
+                            <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
+                              STT
+                            </th>
                             <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider">
                               Mã hàng (Misa)
                             </th>
@@ -389,6 +392,11 @@ export function HoaDonVatDetailRow({
                                 <tr
                                   key={index}
                                   className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-[10px] py-2 text-center">
+                                    <span className="text-sm text-gray-900">
+                                      {index + 1}
+                                    </span>
+                                  </td>
                                   <td className="px-[10px] py-2">
                                     {hasMisa ? (
                                       <span className="text-sm font-medium text-gray-900">

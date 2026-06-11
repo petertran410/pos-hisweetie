@@ -578,6 +578,9 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         <table className="w-full">
                           <thead>
                             <tr className="bg-gray-100 border-b border-gray-200">
+                              <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700  tracking-wider">
+                                STT
+                              </th>
                               <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700  tracking-wider">
                                 Mã hàng
                               </th>
@@ -608,6 +611,11 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                 <tr
                                   key={index}
                                   className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-[10px] py-2 text-center">
+                                    <span className="text-sm text-gray-900">
+                                      {index + 1}
+                                    </span>
+                                  </td>
                                   <td className="px-[10px] py-2">
                                     {item.product?.code || item.productCode ? (
                                       <>

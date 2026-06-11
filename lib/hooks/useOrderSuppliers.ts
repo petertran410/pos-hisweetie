@@ -10,6 +10,14 @@ export function useOrderSuppliers(params?: OrderSupplierFilters) {
   });
 }
 
+/** Bảng phẳng dòng sản phẩm của PĐN — trang "Đặt hàng nhập chi tiết". */
+export function useOrderSupplierDetailItems(params?: OrderSupplierFilters) {
+  return useQuery({
+    queryKey: ["order-supplier-detail-items", params],
+    queryFn: () => orderSuppliersApi.getDetailItems(params),
+  });
+}
+
 export function useOrderSupplier(id: number) {
   return useQuery({
     queryKey: ["order-suppliers", id],

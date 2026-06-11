@@ -112,4 +112,36 @@ export const orderSuppliersApi = {
     if (branchId) params.branchId = branchId;
     return apiClient.get(`/order-suppliers/confirmed-by-product`, params);
   },
+
+  /**
+   * Bảng phẳng toàn bộ dòng sản phẩm của các PĐN khớp filter — trang
+   * "Đặt hàng nhập chi tiết".
+   */
+  getDetailItems: (params?: OrderSupplierFilters) =>
+    apiClient.get<{
+      data: OrderSupplierDetailItem[];
+      total: number;
+      pageSize: number;
+      currentItem: number;
+    }>("/order-suppliers/detail-items", params),
 };
+
+export interface OrderSupplierDetailItem {
+  orderSupplierId: number;
+  orderSupplierCode: string;
+  orderDate: string;
+  status: number;
+  statusValue: string;
+  supplier?: { id: number; code?: string | null; name: string } | null;
+  branch?: { id: number; name: string } | null;
+  creator?: { id: number; name: string | null } | null;
+  productId: number;
+  productCode: string;
+  productName: string;
+  orderedQty: number;
+  receivedQty: number;
+  remainingQty: number;
+  price: number;
+  discount: number;
+  subTotal: number;
+}

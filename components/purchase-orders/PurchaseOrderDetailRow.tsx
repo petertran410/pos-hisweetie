@@ -468,6 +468,9 @@ export function PurchaseOrderDetailRow({
                         <table className="w-full">
                           <thead>
                             <tr className="bg-gray-100 border-b border-gray-200">
+                              <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                STT
+                              </th>
                               <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
                                 Mã hàng
                               </th>
@@ -498,6 +501,9 @@ export function PurchaseOrderDetailRow({
                                 <tr
                                   key={idx}
                                   className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-3 py-2 text-center text-sm text-gray-700">
+                                    {idx + 1}
+                                  </td>
                                   <td className="px-3 py-2">
                                     <Link
                                       href={`/san-pham/danh-sach?Code=${item.productCode}`}
@@ -532,7 +538,7 @@ export function PurchaseOrderDetailRow({
                             ) : (
                               <tr>
                                 <td
-                                  colSpan={canViewPrice ? 6 : 3}
+                                  colSpan={canViewPrice ? 7 : 4}
                                   className="px-3 py-6 text-center text-sm text-gray-400">
                                   Không có sản phẩm
                                 </td>
