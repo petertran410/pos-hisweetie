@@ -12,6 +12,10 @@ import { Save, Search, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getPermissionLabel,
+  getPermGroupKey,
+  getPermGroupLabel,
+  getPermLeafLabel,
+  orderReportEntries,
   CATEGORY_ICONS,
 } from "@/lib/constants/permissions";
 
@@ -60,9 +64,12 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
     if (!permissions) return {};
     return permissions.reduce((acc: any, perm: any) => {
       const category = perm.category || "Khác";
+      // Quy về groupKey: report tách thành nhóm con; legacy report → ẩn.
+      const groupKey = getPermGroupKey(perm.resource, perm.action);
+      if (groupKey === null) return acc;
       if (!acc[category]) acc[category] = {};
-      if (!acc[category][perm.resource]) acc[category][perm.resource] = [];
-      acc[category][perm.resource].push(perm);
+      if (!acc[category][groupKey]) acc[category][groupKey] = [];
+      acc[category][groupKey].push(perm);
       return acc;
     }, {});
   }, [permissions]);
@@ -297,7 +304,7 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
                   </div>
 
                   <div className="divide-y">
-                    {Object.entries(resources).map(
+                    {orderReportEntries(Object.entries(resources)).map(
                       ([resource, perms]: [string, any]) => {
                         const resPermIds = (perms as any[]).map((p) => p.id);
                         const allResSelected = resPermIds.every((id) =>
@@ -309,7 +316,7 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
                               <span
                                 className="text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                                 onClick={() => handleToggleResource(resource)}>
-                                {resource}
+                                {getPermGroupLabel(resource)}
                               </span>
                               <input
                                 type="checkbox"
@@ -334,7 +341,7 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
                                     className="w-4 h-4"
                                   />
                                   <span className="text-sm text-gray-700 group-hover:text-gray-900">
-                                    {getPermissionLabel(
+                                    {getPermLeafLabel(
                                       perm.resource,
                                       perm.action
                                     )}
