@@ -8,6 +8,8 @@ import {
   ChevronRight,
   Calendar,
   ChevronLeft,
+  BarChart2,
+  Table2,
 } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useCustomerGroups } from "@/lib/hooks/useCustomers";
@@ -15,6 +17,10 @@ import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 import { FilterSearchableSelect } from "@/components/ui/filters";
+import {
+  useReportAccess,
+  REPORT_VIEWTYPE_PERMISSION,
+} from "@/lib/permissions/reportPermissions";
 
 // ─── Types ───
 export type ReportType =
@@ -22,11 +28,21 @@ export type ReportType =
   | "product-by-customer"
   | "customer-debt";
 
+export type CustomerMode = "chart" | "data";
+
 interface CustomerReportSidebarProps {
   onFiltersChange: (filters: any) => void;
   reportType: ReportType;
   onReportTypeChange: (type: ReportType) => void;
+  mode: CustomerMode;
+  onModeChange: (m: CustomerMode) => void;
 }
+
+const REPORT_TYPES: { value: ReportType; label: string }[] = [
+  { value: "customer-sales", label: "Bán hàng" },
+  { value: "product-by-customer", label: "Hàng bán theo khách" },
+  { value: "customer-debt", label: "Công nợ" },
+];
 
 // ─── Preset helpers (clone từ OrdersSidebar) ───
 const PRESET_GROUPS = [
@@ -341,11 +357,31 @@ export function CustomerReportSidebar({
   onFiltersChange,
   reportType,
   onReportTypeChange,
+  mode,
+  onModeChange,
 }: CustomerReportSidebarProps) {
   const { data: branches } = useBranches();
   const { data: groupsData } = useCustomerGroups();
   const { data: users } = useUsersForFilter();
   const { data: saleChannels } = useSaleChannels();
+  const { has } = useReportAccess();
+
+  const visibleReportTypes = useMemo(
+    () =>
+      REPORT_TYPES.filter((v) =>
+        has(REPORT_VIEWTYPE_PERMISSION["khach-hang"][v.value])
+      ),
+    [has]
+  );
+
+  useEffect(() => {
+    if (
+      visibleReportTypes.length > 0 &&
+      !visibleReportTypes.some((v) => v.value === reportType)
+    ) {
+      onReportTypeChange(visibleReportTypes[0].value);
+    }
+  }, [visibleReportTypes, reportType, onReportTypeChange]);
 
   const [branchId, setBranchId] = useState("");
   const [customerId, setCustomerId] = useState("");
@@ -553,14 +589,50 @@ export function CustomerReportSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Loại báo cáo
           </label>
-          <select
-            value={reportType}
-            onChange={(e) => onReportTypeChange(e.target.value as ReportType)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-            <option value="customer-sales">Bán hàng</option>
-            <option value="product-by-customer">Hàng bán theo khách</option>
-            <option value="customer-debt">Công nợ</option>
-          </select>
+          <div className="space-y-1">
+            {visibleReportTypes.map((v) => (
+              <button
+                key={v.value}
+                type="button"
+                onClick={() => onReportTypeChange(v.value)}
+                className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  reportType === v.value
+                    ? "bg-brand text-white font-medium shadow-sm"
+                    : "text-gray-700 hover:bg-brand-soft border border-gray-200"
+                }`}>
+                {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Chế độ hiển thị ── */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Hiển thị
+          </label>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => onModeChange("chart")}
+              className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-sm border transition-colors ${
+                mode === "chart"
+                  ? "border-brand bg-brand-soft text-brand-dark font-medium"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300"
+              }`}>
+              <BarChart2 className="w-4 h-4" /> Biểu đồ
+            </button>
+            <button
+              type="button"
+              onClick={() => onModeChange("data")}
+              className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-sm border transition-colors ${
+                mode === "data"
+                  ? "border-brand bg-brand-soft text-brand-dark font-medium"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300"
+              }`}>
+              <Table2 className="w-4 h-4" /> Dữ liệu
+            </button>
+          </div>
         </div>
 
         {/* ── Thời gian ── */}

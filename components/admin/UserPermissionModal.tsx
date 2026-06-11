@@ -18,7 +18,13 @@ import {
   useRoleBranchPermissions,
 } from "@/lib/hooks/useRoles";
 import { X, Check, ChevronDown, ChevronUp, Search, Save } from "lucide-react";
-import { ACTION_LABELS, getPermissionLabel } from "@/lib/constants/permissions";
+import {
+  getPermissionLabel,
+  getPermGroupKey,
+  getPermGroupLabel,
+  getPermLeafLabel,
+  orderReportEntries,
+} from "@/lib/constants/permissions";
 import { toast } from "sonner";
 
 interface UserPermissionModalProps {
@@ -234,9 +240,11 @@ export function UserPermissionModal({
     if (!allPermissions) return {};
     return allPermissions.reduce((acc: any, perm: any) => {
       const category = perm.category || "Khác";
+      const groupKey = getPermGroupKey(perm.resource, perm.action);
+      if (groupKey === null) return acc;
       if (!acc[category]) acc[category] = {};
-      if (!acc[category][perm.resource]) acc[category][perm.resource] = [];
-      acc[category][perm.resource].push(perm);
+      if (!acc[category][groupKey]) acc[category][groupKey] = [];
+      acc[category][groupKey].push(perm);
       return acc;
     }, {});
   }, [allPermissions]);
@@ -555,7 +563,7 @@ export function UserPermissionModal({
                             {category}
                           </h3>
 
-                          {Object.entries(resources).map(
+                          {orderReportEntries(Object.entries(resources)).map(
                             ([resource, perms]: [string, any]) => {
                               const resourcePermIds = perms.map(
                                 (p: any) => p.id
@@ -569,20 +577,30 @@ export function UserPermissionModal({
                               const isExpanded =
                                 expandedResources.has(resource);
 
-                              const mainActions = perms.filter((p: any) =>
-                                ["view", "create", "update", "delete"].includes(
-                                  p.action
-                                )
-                              );
-                              const otherActions = perms.filter(
-                                (p: any) =>
-                                  ![
-                                    "view",
-                                    "create",
-                                    "update",
-                                    "delete",
-                                  ].includes(p.action)
-                              );
+                              const isReport = resource.startsWith("reports_");
+                              // Report subgroup: gộp tất cả lá vào mainActions
+                              // (không tách "Khác"). Resource khác giữ logic cũ.
+                              const mainActions = isReport
+                                ? perms
+                                : perms.filter((p: any) =>
+                                    [
+                                      "view",
+                                      "create",
+                                      "update",
+                                      "delete",
+                                    ].includes(p.action)
+                                  );
+                              const otherActions = isReport
+                                ? []
+                                : perms.filter(
+                                    (p: any) =>
+                                      ![
+                                        "view",
+                                        "create",
+                                        "update",
+                                        "delete",
+                                      ].includes(p.action)
+                                  );
 
                               return (
                                 <div
@@ -606,7 +624,7 @@ export function UserPermissionModal({
                                       )}
                                     </button>
                                     <span className="text-sm font-medium flex-1">
-                                      {resource}
+                                      {getPermGroupLabel(resource)}
                                     </span>
                                     <button
                                       type="button"
@@ -654,8 +672,10 @@ export function UserPermissionModal({
                                                   )}
                                                 </div>
                                                 <span className="text-sm">
-                                                  {ACTION_LABELS[perm.action] ||
-                                                    perm.action}
+                                                  {getPermLeafLabel(
+                                                    perm.resource,
+                                                    perm.action
+                                                  )}
                                                 </span>
                                               </label>
                                             );
@@ -699,9 +719,10 @@ export function UserPermissionModal({
                                                     )}
                                                   </div>
                                                   <span className="text-sm">
-                                                    {ACTION_LABELS[
+                                                    {getPermLeafLabel(
+                                                      perm.resource,
                                                       perm.action
-                                                    ] || perm.action}
+                                                    )}
                                                   </span>
                                                 </label>
                                               );

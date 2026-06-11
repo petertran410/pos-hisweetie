@@ -13,6 +13,7 @@ import {
   useFilteredMenuItems,
 } from "@/lib/hooks/useCan";
 import { ROUTE_PERMISSIONS } from "@/lib/permissions/registry";
+import { useReportAccess } from "@/lib/permissions/reportPermissions";
 import { PermissionGate } from "../permissions/PermissionGate";
 import {
   Menu,
@@ -36,6 +37,7 @@ export function DashboardHeader() {
 
   const { user, clearAuth } = useAuthStore();
   const posActions = useFilteredPosActions();
+  const { anyReport } = useReportAccess();
 
   const handleLogout = () => {
     clearAuth();
@@ -282,11 +284,13 @@ export function DashboardHeader() {
                 </div>
               )}
 
-              <Link
-                href="/bao-cao/khach-hang"
-                className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
-                Báo cáo
-              </Link>
+              {anyReport && (
+                <Link
+                  href="/bao-cao"
+                  className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
+                  Báo cáo
+                </Link>
+              )}
             </nav>
           </div>
 
@@ -546,12 +550,15 @@ export function DashboardHeader() {
                 </div>
               )}
 
-              <Link
-                href="/bao-cao/khach-hang"
-                onClick={closeMobileMenu}
-                className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-brand-dark transition-colors">
-                Báo cáo
-              </Link>
+              {/* Báo cáo */}
+              {anyReport && (
+                <Link
+                  href="/bao-cao"
+                  onClick={closeMobileMenu}
+                  className="flex items-center px-4 py-3 text-sm font-medium text-white hover:bg-brand-dark transition-colors">
+                  Báo cáo
+                </Link>
+              )}
 
               {/* Bán hàng shortcut */}
               {posActions.length > 0 && (

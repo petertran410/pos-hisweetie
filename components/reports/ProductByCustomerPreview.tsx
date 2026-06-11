@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { CodeLink } from "@/components/shared/CodeLink";
+import { useReportAccess } from "@/lib/permissions/reportPermissions";
 
 const CONDITION_LABELS: Record<string, string> = {
   normal: "Bình thường",
@@ -22,6 +23,7 @@ export function ProductByCustomerPreview({ filters }: Props) {
   const [page, setPage] = useState(1);
   const limit = 20;
   const [exporting, setExporting] = useState(false);
+  const { canExport } = useReportAccess();
 
   const { data, isLoading } = useProductByCustomerReport({
     ...filters,
@@ -57,17 +59,19 @@ export function ProductByCustomerPreview({ filters }: Props) {
           </h2>
           <span className="text-sm text-gray-500">• {total} dòng</span>
         </div>
-        <button
-          onClick={handleExport}
-          disabled={exporting || total === 0}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-          {exporting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4" />
-          )}
-          Xuất Excel
-        </button>
+        {canExport("khach-hang") && (
+          <button
+            onClick={handleExport}
+            disabled={exporting || total === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            {exporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            Xuất Excel
+          </button>
+        )}
       </div>
 
       {/* Summary */}
