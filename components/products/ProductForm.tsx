@@ -11,9 +11,11 @@ import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
 import { CategoryDropdown } from "./CategoryDropdown";
 import { TrademarkDropdown } from "./TrademarkDropdown";
+import { FormSection } from "./FormSection";
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 import { API_URL } from "@/lib/config/api";
 import { toast } from "sonner";
+import { X } from "lucide-react";
 
 interface ProductFormProps {
   product?: Product;
@@ -35,6 +37,8 @@ export function ProductForm({
   onSuccess,
 }: ProductFormProps) {
   const [images, setImages] = useState<ImageItem[]>([]);
+  const [activeTab, setActiveTab] = useState<"info" | "description">("info");
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showCostConfirmation, setShowCostConfirmation] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<any>(null);
   const [attributes, setAttributes] = useState<
@@ -117,6 +121,7 @@ export function ProductForm({
       weight: product?.weight || undefined,
       weightUnit: product?.weightUnit || "kg",
       shippingWeightUnit: product?.shippingWeightUnit || "g",
+      vat: product?.vat ?? 8,
       unit: product?.unit || "",
       isDirectSale: product?.isDirectSale || false,
       isPieceUnit: product?.isPieceUnit ?? false,
@@ -141,7 +146,7 @@ export function ProductForm({
     formData.append("file", file);
 
     const token = useAuthStore.getState().token;
-    const res = await fetch(`${API_URL}/upload/image`, {
+    const res = await fetch(`${API_URL}/upload/image?subfolder=products`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -251,6 +256,7 @@ export function ProductForm({
         weightUnit: data.weightUnit,
         shippingWeight: shippingWeightValue || undefined,
         shippingWeightUnit: data.shippingWeightUnit || "g",
+        vat: data.vat != null && !isNaN(Number(data.vat)) ? Number(data.vat) : 8,
         unit: data.unit || undefined,
         conversionValue: data.conversionValue
           ? Number(data.conversionValue)
@@ -336,7 +342,7 @@ export function ProductForm({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-white w-full max-w-4xl h-[90vh] flex flex-col rounded-lg">
+      <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col rounded-lg">
         <div className="border-b p-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">
             {product
@@ -346,232 +352,329 @@ export function ProductForm({
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600">
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="border-b px-4">
-          <button className="py-3 border-b-2 border-brand text-brand">
+        <div className="border-b px-4 flex gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("info")}
+            className={`py-3 px-3 border-b-2 ${
+              activeTab === "info"
+                ? "border-brand text-brand font-medium"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
             Thông tin
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("description")}
+            className={`py-3 px-3 border-b-2 ${
+              activeTab === "description"
+                ? "border-brand text-brand font-medium"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
+            Mô tả
           </button>
         </div>
 
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Mã hàng
-                </label>
-                <input
-                  {...register("code")}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="Tự động"
-                />
-              </div>
+          className="flex-1 overflow-y-auto bg-gray-50">
+          <div className={activeTab === "info" ? "p-6 space-y-5" : "hidden"}>
+            {/* Khối trên: thông tin cơ bản (trái) + ảnh (phải) */}
+            <FormSection title="Thông tin chung" collapsible={false}>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2 grid grid-cols-2 gap-4 content-start">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Mã hàng
+                    </label>
+                    <input
+                      {...register("code")}
+                      className="w-full border rounded px-3 py-2 bg-white"
+                      placeholder="Tự động"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Tên hàng <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      {...register("name", { required: true })}
+                      className="w-full border rounded px-3 py-2 bg-white"
+                      placeholder="Nhập tên hàng"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Tên hàng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...register("name", { required: true })}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="Nhập tên hàng"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <CategoryDropdown
-                type="parent"
-                label="Loại Hàng"
-                placeholder="Chọn loại hàng"
-                value={watch("parentName")}
-                onChange={(value) => setValue("parentName", value)}
-              />
-
-              <CategoryDropdown
-                type="middle"
-                label="Nguồn Gốc"
-                placeholder="Chọn nguồn gốc"
-                value={watch("middleName")}
-                onChange={(value) => setValue("middleName", value)}
-              />
-
-              <CategoryDropdown
-                type="child"
-                label="Danh Mục"
-                placeholder="Chọn danh mục"
-                value={watch("childName")}
-                onChange={(value) => setValue("childName", value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <TrademarkDropdown
-                label="Thương hiệu"
-                placeholder="Chọn thương hiệu"
-                value={watch("tradeMarkId")}
-                onChange={(value) => setValue("tradeMarkId", value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Giá vốn
-                </label>
-                <input
-                  type="text"
-                  value={purchasePrice.displayValue}
-                  onChange={purchasePrice.handleChange}
-                  onBlur={purchasePrice.handleBlur}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Giá bán
-                </label>
-                <input
-                  type="text"
-                  value={basePrice.displayValue}
-                  onChange={basePrice.handleChange}
-                  onBlur={basePrice.handleBlur}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Tồn kho
-                </label>
-                <input
-                  {...register("stockQuantity")}
-                  type="text"
-                  min="0"
-                  step="1"
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Định mức tồn thấp nhất
-                </label>
-                <input
-                  {...register("minStockAlert")}
-                  type="text"
-                  min="0"
-                  step="1"
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Định mức tồn cao nhất
-                </label>
-                <input
-                  {...register("maxStockAlert")}
-                  type="text"
-                  min="0"
-                  step="1"
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Khối lượng tịnh
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={weightDisplay}
-                    onChange={handleWeightChange}
-                    disabled={!!watch("isPieceUnit")}
-                    className={`flex-1 border rounded px-3 py-2 ${
-                      watch("isPieceUnit")
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : ""
-                    }`}
-                    placeholder="0"
+                  <CategoryDropdown
+                    type="parent"
+                    label="Loại Hàng"
+                    placeholder="Chọn loại hàng"
+                    value={watch("parentName")}
+                    onChange={(value) => setValue("parentName", value)}
                   />
-                  <select
-                    {...register("weightUnit")}
-                    disabled={!!watch("isPieceUnit")}
-                    className={`border rounded px-3 py-2 w-24 ${
-                      watch("isPieceUnit")
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : ""
-                    }`}>
-                    <option value="kg">kg</option>
-                    <option value="g">g</option>
-                  </select>
+                  <CategoryDropdown
+                    type="middle"
+                    label="Nguồn Gốc"
+                    placeholder="Chọn nguồn gốc"
+                    value={watch("middleName")}
+                    onChange={(value) => setValue("middleName", value)}
+                  />
+                  <CategoryDropdown
+                    type="child"
+                    label="Danh Mục"
+                    placeholder="Chọn danh mục"
+                    value={watch("childName")}
+                    onChange={(value) => setValue("childName", value)}
+                  />
+                  <TrademarkDropdown
+                    label="Thương hiệu"
+                    placeholder="Chọn thương hiệu"
+                    value={watch("tradeMarkId")}
+                    onChange={(value) => setValue("tradeMarkId", value)}
+                  />
                 </div>
-                <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    {...register("isPieceUnit")}
-                    className="w-4 h-4 accent-orange-500"
-                  />
-                  <span className="text-xs text-orange-600">
-                    Tính theo chiếc (không dùng gram/kg trong sản xuất)
-                  </span>
-                </label>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Trọng lượng vận chuyển
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={shippingWeightDisplay}
-                    onChange={handleShippingWeightChange}
-                    className="flex-1 border rounded px-3 py-2"
-                    placeholder="0"
-                  />
-                  <select
-                    {...register("shippingWeightUnit")}
-                    className="border rounded px-3 py-2 w-24">
-                    <option value="g">g</option>
-                    <option value="kg">kg</option>
-                  </select>
+                {/* Khối ảnh bên phải */}
+                <div className="flex flex-col">
+                  <label className="block text-sm font-medium mb-1">
+                    Hình ảnh
+                  </label>
+                  <div className="flex gap-3">
+                    {/* Ô vuông: bấm để thêm ảnh */}
+                    <label className="w-28 h-28 shrink-0 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 bg-white">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="hidden"
+                      />
+                      <span className="text-3xl text-gray-400 leading-none">
+                        +
+                      </span>
+                      <span className="text-xs text-gray-400 mt-1">
+                        Thêm ảnh
+                      </span>
+                    </label>
+
+                    {/* Cột các ô vuông: nơi ảnh đã upload hiển thị */}
+                    <div className="flex flex-col gap-2">
+                      {Array.from({ length: 4 }).map((_, index) => {
+                        const img = images[index];
+                        return (
+                          <div
+                            key={index}
+                            className="relative w-16 h-16 border rounded bg-gray-50 overflow-hidden">
+                            {img ? (
+                              <>
+                                <img
+                                  src={img.preview}
+                                  alt=""
+                                  onClick={() => setPreviewImage(img.preview)}
+                                  className="w-full h-full object-cover cursor-pointer"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeImage(index)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                  ×
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-2">
+                    Mỗi ảnh không quá 2 MB
+                  </p>
                 </div>
               </div>
-            </div>
+            </FormSection>
 
-              {/* Đơn vị tính — input thẳng, không cần modal */}
+            {/* Section: Giá vốn, giá bán */}
+            <FormSection title="Giá vốn, giá bán">
               <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Giá vốn
+                  </label>
+                  <input
+                    type="text"
+                    value={purchasePrice.displayValue}
+                    onChange={purchasePrice.handleChange}
+                    onBlur={purchasePrice.handleBlur}
+                    className="w-full border rounded px-3 py-2 bg-white"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Giá bán
+                  </label>
+                  <input
+                    type="text"
+                    value={basePrice.displayValue}
+                    onChange={basePrice.handleChange}
+                    onBlur={basePrice.handleBlur}
+                    className="w-full border rounded px-3 py-2 bg-white"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </FormSection>
+
+            {/* Section: Tồn kho */}
+            <FormSection
+              title="Tồn kho"
+              description="Quản lý số lượng tồn kho và định mức tồn. Khi tồn kho chạm đến định mức, bạn sẽ nhận được cảnh báo.">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Tồn kho
+                  </label>
+                  <input
+                    {...register("stockQuantity")}
+                    type="text"
+                    min="0"
+                    step="1"
+                    className="w-full border rounded px-3 py-2 bg-white"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Định mức tồn thấp nhất
+                  </label>
+                  <input
+                    {...register("minStockAlert")}
+                    type="text"
+                    min="0"
+                    step="1"
+                    className="w-full border rounded px-3 py-2 bg-white"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Định mức tồn cao nhất
+                  </label>
+                  <input
+                    {...register("maxStockAlert")}
+                    type="text"
+                    min="0"
+                    step="1"
+                    className="w-full border rounded px-3 py-2 bg-white"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </FormSection>
+
+            {/* Section: Vị trí, trọng lượng */}
+            <FormSection
+              title="Vị trí, trọng lượng"
+              description="Quản lý đơn vị tính, thuế và trọng lượng hàng hóa.">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Khối lượng tịnh
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={weightDisplay}
+                      onChange={handleWeightChange}
+                      disabled={!!watch("isPieceUnit")}
+                      className={`flex-1 border rounded px-3 py-2 ${
+                        watch("isPieceUnit")
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-white"
+                      }`}
+                      placeholder="0"
+                    />
+                    <select
+                      {...register("weightUnit")}
+                      disabled={!!watch("isPieceUnit")}
+                      className={`border rounded px-3 py-2 w-24 ${
+                        watch("isPieceUnit")
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-white"
+                      }`}>
+                      <option value="kg">kg</option>
+                      <option value="g">g</option>
+                    </select>
+                  </div>
+                  <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      {...register("isPieceUnit")}
+                      className="w-4 h-4 accent-orange-500"
+                    />
+                    <span className="text-xs text-orange-600">
+                      Tính theo chiếc (không dùng gram/kg trong sản xuất)
+                    </span>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Trọng lượng vận chuyển
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={shippingWeightDisplay}
+                      onChange={handleShippingWeightChange}
+                      className="flex-1 border rounded px-3 py-2 bg-white"
+                      placeholder="0"
+                    />
+                    <select
+                      {...register("shippingWeightUnit")}
+                      className="border rounded px-3 py-2 w-24 bg-white">
+                      <option value="g">g</option>
+                      <option value="kg">kg</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Đơn vị tính
                   </label>
                   <input
                     {...register("unit")}
-                    className="w-full border rounded px-3 py-2"
+                    className="w-full border rounded px-3 py-2 bg-white"
                     placeholder="cái, hộp, thùng..."
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    VAT (%)
+                  </label>
+                  <input
+                    {...register("vat", { valueAsNumber: true })}
+                    type="number"
+                    step="any"
+                    min={0}
+                    className="w-full border rounded px-3 py-2 bg-white"
+                    placeholder="8"
+                  />
+                </div>
               </div>
+            </FormSection>
 
-            {/* Thuộc tính — inline, không cần modal */}
-            <div>
+            {/* Section: Quản lý theo đơn vị tính và thuộc tính */}
+            <FormSection
+              title="Quản lý theo đơn vị tính và thuộc tính"
+              description="Thêm đặc điểm như hương vị, dung tích, màu sắc.">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold">Thuộc tính</h3>
+                <h4 className="text-sm font-medium text-gray-700">Thuộc tính</h4>
                 <div className="flex gap-2">
                   {["Vị", "Loại", "Màu sắc", "Kích cỡ"].map((preset) => (
                     <button
@@ -590,10 +693,7 @@ export function ProductForm({
                   <button
                     type="button"
                     onClick={() =>
-                      setAttributes((prev) => [
-                        ...prev,
-                        { name: "", value: "" },
-                      ])
+                      setAttributes((prev) => [...prev, { name: "", value: "" }])
                     }
                     className="px-2 py-1 text-xs border rounded hover:bg-gray-50">
                     + Tùy chỉnh
@@ -614,7 +714,7 @@ export function ProductForm({
                             )
                           )
                         }
-                        className="w-32 border rounded px-2 py-1.5 text-sm"
+                        className="w-32 border rounded px-2 py-1.5 text-sm bg-white"
                         placeholder="Tên thuộc tính"
                       />
                       <span className="text-gray-400">:</span>
@@ -627,7 +727,7 @@ export function ProductForm({
                             )
                           )
                         }
-                        className="flex-1 border rounded px-2 py-1.5 text-sm"
+                        className="flex-1 border rounded px-2 py-1.5 text-sm bg-white"
                         placeholder="Giá trị"
                       />
                       <button
@@ -644,69 +744,43 @@ export function ProductForm({
                   ))}
                 </div>
               )}
-            </div>
+            </FormSection>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Hình ảnh</label>
-              <div className="flex gap-2 flex-wrap">
-                {images.map((img, index) => (
-                  <div key={index} className="relative w-20 h-20">
-                    <img
-                      src={img.preview}
-                      alt=""
-                      className="w-full h-full object-cover rounded border"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                      ×
-                    </button>
-                  </div>
-                ))}
-                <label className="w-20 h-20 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                  />
-                  <span className="text-3xl text-gray-400">+</span>
-                </label>
-              </div>
-            </div>
+            {/* Bán trực tiếp */}
+            <label className="flex items-center gap-2">
+              <input {...register("isDirectSale")} type="checkbox" />
+              <span className="text-sm font-medium">Bán trực tiếp</span>
+            </label>
+          </div>
 
+          {/* Tab Mô tả */}
+          <div
+            className={
+              activeTab === "description" ? "p-6 space-y-5" : "hidden"
+            }>
             <div>
               <label className="block text-sm font-medium mb-1">Mô tả</label>
               <textarea
                 {...register("description")}
                 maxLength={1000}
-                className="w-full border rounded px-3 py-2 h-24"
+                className="w-full border rounded px-3 py-2 h-40 bg-white"
                 placeholder="Nhập mô tả sản phẩm"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">
-                Ghi chú đơn hàng
+                Mẫu ghi chú (hóa đơn, đặt hàng)
               </label>
               <textarea
                 {...register("orderTemplate")}
                 maxLength={1000}
-                className="w-full border rounded px-3 py-2 h-24"
+                className="w-full border rounded px-3 py-2 h-40 bg-white"
                 placeholder="Nhập ghi chú đơn hàng"
               />
             </div>
-
-            <div>
-              <label className="flex items-center gap-2">
-                <input {...register("isDirectSale")} type="checkbox" />
-                <span className="text-sm font-medium">Bán trực tiếp</span>
-              </label>
-            </div>
           </div>
 
-          <div className="border-t p-4 flex justify-end gap-2">
+          <div className="border-t p-4 flex justify-end gap-2 bg-white sticky bottom-0">
             <button
               type="button"
               onClick={onClose}
@@ -733,6 +807,25 @@ export function ProductForm({
             setIsSubmitting(false);
           }}
         />
+      )}
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-8"
+          onClick={() => setPreviewImage(null)}>
+          <img
+            src={previewImage}
+            alt=""
+            className="max-w-full max-h-full object-contain rounded"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-4 right-4 bg-white/90 text-gray-700 rounded-full w-9 h-9 flex items-center justify-center hover:bg-white">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       )}
     </div>
   );

@@ -16,6 +16,11 @@ export interface VatLineInput {
   quantity: number | string;
   price: number | string;
   discount?: number | string | null;
+  /**
+   * % VAT riêng của dòng (vd lấy từ product.vat). Nếu không set thì dùng
+   * tham số vatRate của computeInvoiceVat (mặc định MISA_VAT_RATE = 8).
+   */
+  vatRate?: number | null;
 }
 
 export interface VatLineResult {
@@ -79,7 +84,7 @@ export function computeInvoiceVat(
   lines: VatLineInput[],
   vatRate: number = MISA_VAT_RATE
 ): InvoiceVatResult {
-  const lineResults = lines.map((l) => computeLineVat(l, vatRate));
+  const lineResults = lines.map((l) => computeLineVat(l, l.vatRate ?? vatRate));
   let totalPreTax = 0;
   let totalVat = 0;
   let totalAfterTax = 0;

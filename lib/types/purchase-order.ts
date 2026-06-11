@@ -66,6 +66,7 @@ export interface PurchaseOrderItem {
     id: number;
     code: string;
     name: string;
+    vat?: number;
   };
 }
 

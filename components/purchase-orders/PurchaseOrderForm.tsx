@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import type { PurchaseOrder } from "@/lib/types/purchase-order";
 import { formatCurrency } from "@/lib/utils";
+import { computeLineVat, computeInvoiceVat } from "@/lib/utils/vat";
 import { useBranchStore } from "@/lib/store/branch";
 import type { OrderSupplier } from "@/lib/types/order-supplier";
 import { CreditCard } from "lucide-react";
@@ -106,6 +107,9 @@ interface ProductItem {
   discount: number;
   subTotal: number;
   inventory: number;
+  // % VAT của dòng (lấy từ product.vat ?? 8). Chỉ dùng để hiển thị/tách thuế,
+  // không tác động giá nhập (price/subTotal vẫn là số ĐÃ GỒM thuế).
+  vatRate: number;
   note?: string;
   // Đánh dấu user đã nhập trực tiếp ô "Thành tiền". Khi true, ô Thành tiền là
   // nguồn chính: đổi SL/giảm giá sẽ suy ra Đơn giá (= thành tiền / SL + giảm
@@ -279,8 +283,10 @@ export function PurchaseOrderForm({
           subTotal,
           // Giữ đúng thành tiền đã lưu: nếu khác công thức (do đơn giá lẻ thập
           // phân) thì coi như thành tiền là nguồn chính.
-          manualSubTotal: subTotal !== Math.round((price - discount) * quantity),
+          manualSubTotal:
+            subTotal !== Math.round((price - discount) * quantity),
           inventory: 0,
+          vatRate: Number((item.product as any)?.vat ?? 8),
           note: item.description,
         };
       });
@@ -306,8 +312,10 @@ export function PurchaseOrderForm({
           price,
           discount,
           subTotal,
-          manualSubTotal: subTotal !== Math.round((price - discount) * quantity),
+          manualSubTotal:
+            subTotal !== Math.round((price - discount) * quantity),
           inventory: 0,
+          vatRate: Number((item.product as any)?.vat ?? 8),
           note: item.description,
         };
       });
@@ -338,6 +346,7 @@ export function PurchaseOrderForm({
             discount,
             subTotal: Math.round((price - discount) * remaining),
             inventory: 0,
+            vatRate: Number((item as any).product?.vat ?? 8),
             note: item.description,
           };
         })
@@ -438,6 +447,7 @@ export function PurchaseOrderForm({
       discount: 0,
       subTotal: Math.round(price * qty),
       inventory: Number(inventory?.onHand || 0),
+      vatRate: Number(product.vat ?? 8),
     };
 
     setProducts((prev) => [...prev, newProduct]);
@@ -517,9 +527,7 @@ export function PurchaseOrderForm({
             ? roundTo(item.subTotal / item.quantity + discount, 3)
             : 0;
       } else {
-        item.subTotal = Math.round(
-          (item.price - discount) * item.quantity
-        );
+        item.subTotal = Math.round((item.price - discount) * item.quantity);
       }
 
       updated[index] = item;
@@ -747,122 +755,157 @@ export function PurchaseOrderForm({
             />
           </div>
 
-          <div className="border rounded-lg overflow-hidden bg-white">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-3 py-3 text-left text-md font-medium text-gray-700">
+          <div className="border border-gray-200 rounded-lg overflow-x-auto bg-white">
+            <table className="w-full min-w-[1100px]">
+              <thead>
+                <tr className="bg-gray-100 border-b border-gray-200">
+                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-12">
                     STT
                   </th>
-                  <th className="px-3 py-3 text-left text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider">
                     Mã hàng
                   </th>
-                  <th className="px-3 py-3 text-left text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider min-w-[220px]">
                     Tên hàng
                   </th>
-                  <th className="px-3 py-3 text-center text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
                     SL
                   </th>
-                  <th className="px-3 py-3 text-right text-md font-medium text-gray-700">
-                    Đơn giá
+                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider whitespace-nowrap">
+                    ĐG trước thuế
                   </th>
-                  <th className="px-3 py-3 text-right text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
+                    ĐG sau thuế
+                  </th>
+                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider whitespace-nowrap">
+                    % VAT
+                  </th>
+                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[110px]">
                     Giảm giá
                   </th>
-                  <th className="px-3 py-3 text-right text-md font-medium text-gray-700">
-                    Thành tiền
+                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider whitespace-nowrap">
+                    TT trước thuế
                   </th>
-                  <th className="px-3 py-3 text-center text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
+                    TT sau thuế
+                  </th>
+                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-12">
                     Xóa
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((item, index) => (
-                  <tr key={index}>
-                    <td className="px-3 py-2 text-md text-center">
-                      {index + 1}
-                    </td>
-                    <td className="px-3 py-2 text-md">{item.productCode}</td>
-                    <td className="px-3 py-2 text-md">{item.productName}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() =>
-                            handleQuantityChange(
-                              index,
-                              String(item.quantity - 1)
-                            )
-                          }
+                {products.map((item, index) => {
+                  // Bóc thuế cho dòng (giá là số ĐÃ GỒM thuế) — khớp hoa-don-vat.
+                  const lineVat = computeLineVat(
+                    {
+                      quantity: item.quantity,
+                      price: item.price,
+                      discount: item.discount,
+                    },
+                    item.vatRate
+                  );
+                  return (
+                    <tr
+                      key={index}
+                      className="hover:bg-gray-50 transition-colors">
+                      <td className="px-[10px] py-2 align-middle text-center text-sm text-gray-900">
+                        {index + 1}
+                      </td>
+                      <td className="px-[10px] py-2 align-middle text-sm font-medium text-gray-900">
+                        {item.productCode}
+                      </td>
+                      <td className="px-[10px] py-2 align-middle text-sm text-gray-900">
+                        {item.productName}
+                      </td>
+                      <td className="px-[10px] py-2 align-middle whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() =>
+                              handleQuantityChange(
+                                index,
+                                String(item.quantity - 1)
+                              )
+                            }
+                            disabled={isFormDisabled ? true : false}
+                            className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <input
+                            type="text"
+                            value={formatCurrency(item.quantity)}
+                            onChange={(e) => {
+                              const numericValue = parseFormattedNumber(
+                                e.target.value
+                              );
+                              handleQuantityChange(
+                                index,
+                                numericValue.toString()
+                              );
+                            }}
+                            disabled={isFormDisabled ? true : false}
+                            className="w-16 text-center border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                          />
+                          <button
+                            onClick={() =>
+                              handleQuantityChange(
+                                index,
+                                String(item.quantity + 1)
+                              )
+                            }
+                            disabled={isFormDisabled ? true : false}
+                            className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-[10px] py-2 align-middle text-right text-sm text-gray-600 whitespace-nowrap">
+                        {formatCurrency(lineVat.unitPriceBeforeTax)}
+                      </td>
+                      <td className="px-[10px] py-2 align-middle">
+                        <NumericInput
+                          value={item.price}
+                          onValueChange={(v) => handlePriceChange(index, v)}
+                          maxFractionDigits={3}
                           disabled={isFormDisabled ? true : false}
-                          className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <input
-                          type="text"
-                          value={formatCurrency(item.quantity)}
-                          onChange={(e) => {
-                            const numericValue = parseFormattedNumber(
-                              e.target.value
-                            );
-                            handleQuantityChange(
-                              index,
-                              numericValue.toString()
-                            );
-                          }}
-                          disabled={isFormDisabled ? true : false}
-                          className="w-20 text-center border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                          className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                         />
-                        <button
-                          onClick={() =>
-                            handleQuantityChange(
-                              index,
-                              String(item.quantity + 1)
-                            )
-                          }
+                      </td>
+                      <td className="px-[10px] py-2 align-middle text-center text-sm text-gray-900 whitespace-nowrap">
+                        {item.vatRate ?? 8}%
+                      </td>
+                      <td className="px-[10px] py-2 align-middle">
+                        <NumericInput
+                          value={item.discount}
+                          onValueChange={(v) => handleDiscountChange(index, v)}
+                          maxFractionDigits={0}
                           disabled={isFormDisabled ? true : false}
-                          className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
-                          <Plus className="w-4 h-4" />
+                          className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                        />
+                      </td>
+                      <td className="px-[10px] py-2 align-middle text-right text-sm text-gray-600 whitespace-nowrap">
+                        {formatCurrency(lineVat.amountBeforeTax)}
+                      </td>
+                      <td className="px-[10px] py-2 align-middle">
+                        <NumericInput
+                          value={item.subTotal}
+                          onValueChange={(v) => handleSubTotalChange(index, v)}
+                          maxFractionDigits={0}
+                          disabled={isFormDisabled ? true : false}
+                          className="w-full text-right border rounded px-2 py-1 text-sm font-medium disabled:bg-gray-100"
+                        />
+                      </td>
+                      <td className="px-[10px] py-2 align-middle text-center">
+                        <button
+                          onClick={() => handleRemoveProduct(index)}
+                          disabled={isFormDisabled ? true : false}
+                          className="text-red-600 hover:text-red-800 disabled:opacity-50">
+                          <X className="w-4 h-4" />
                         </button>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <NumericInput
-                        value={item.price}
-                        onValueChange={(v) => handlePriceChange(index, v)}
-                        maxFractionDigits={3}
-                        disabled={isFormDisabled ? true : false}
-                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <NumericInput
-                        value={item.discount}
-                        onValueChange={(v) => handleDiscountChange(index, v)}
-                        maxFractionDigits={0}
-                        disabled={isFormDisabled ? true : false}
-                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <NumericInput
-                        value={item.subTotal}
-                        onValueChange={(v) => handleSubTotalChange(index, v)}
-                        maxFractionDigits={0}
-                        disabled={isFormDisabled ? true : false}
-                        className="w-full text-right border rounded px-2 py-1 text-sm font-medium disabled:bg-gray-100"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <button
-                        onClick={() => handleRemoveProduct(index)}
-                        disabled={isFormDisabled ? true : false}
-                        className="text-red-600 hover:text-red-800 disabled:opacity-50">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
@@ -1121,6 +1164,42 @@ export function PurchaseOrderForm({
                 )}
               </div>
             </div>
+            {(() => {
+              // Tách thuế giống trang Hóa đơn VAT: cộng dồn từng dòng qua
+              // computeInvoiceVat (giá nhập là số ĐÃ GỒM thuế, %VAT theo dòng).
+              const vatSummary = computeInvoiceVat(
+                products.map((p) => ({
+                  quantity: p.quantity,
+                  price: p.price,
+                  discount: p.discount,
+                  vatRate: p.vatRate,
+                }))
+              );
+              return (
+                <>
+                  <div className="flex gap-2">
+                    <div className="text-md text-gray-600">
+                      Tiền trước thuế:
+                    </div>
+                    <div className="text-md">
+                      {formatCurrency(vatSummary.totalPreTax)}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="text-md text-gray-600">Thuế VAT:</div>
+                    <div className="text-md">
+                      {formatCurrency(vatSummary.totalVat)}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="text-md text-gray-600">Tổng sau thuế:</div>
+                    <div className="text-md font-semibold">
+                      {formatCurrency(vatSummary.totalAfterTax)}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
             <div ref={discountDropdownRef} className="flex gap-2 items-center">
               <div className="text-md text-gray-600">Giảm giá:</div>
               <div className="flex gap-1">

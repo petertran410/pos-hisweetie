@@ -212,7 +212,7 @@ function InvoiceVatMobileCard({
           </div>
           <div>
             <p className="text-xs text-gray-400 leading-none mb-0.5">
-              Thuế VAT 8%
+              Thuế VAT
             </p>
             <p className="text-sm font-semibold text-brand leading-none">
               {formatCurrency(vat)}

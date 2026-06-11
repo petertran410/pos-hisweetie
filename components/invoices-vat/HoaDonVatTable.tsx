@@ -172,7 +172,7 @@ const DEFAULT_COLUMNS: ColumnConfig<InvoiceVat>[] = [
   },
   {
     key: "vat",
-    label: "Thuế VAT 8%",
+    label: "Thuế VAT",
     visible: true,
     width: "140px",
     render: (inv) => (
