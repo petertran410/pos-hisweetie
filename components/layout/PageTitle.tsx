@@ -29,6 +29,7 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/san-pham/chuyen-hang", title: "Chuyển hàng" },
   { prefix: "/san-pham/san-xuat", title: "Sản xuất" },
   { prefix: "/san-pham/xuat-huy", title: "Xuất hủy" },
+  { prefix: "/san-pham/xuat-dung-noi-bo", title: "Xuất dùng nội bộ" },
   { prefix: "/san-pham/nha-cung-cap", title: "Nhà cung cấp" },
   { prefix: "/san-pham/dat-hang-nhap-chi-tiet", title: "Đặt hàng nhập chi tiết" },
   { prefix: "/san-pham/dat-hang-nhap", title: "Đặt hàng nhập" },
