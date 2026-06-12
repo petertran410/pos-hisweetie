@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   useOrderSupplierDetailItems,
   useUpdateOrderSupplierItemFactoryPrice,
+  useUpdateOrderSupplierItemStageFactory,
 } from "@/lib/hooks/useOrderSuppliers";
 import type { OrderSupplierDetailItem } from "@/lib/api/order-suppliers";
 import type { OrderSupplierFilters } from "@/lib/types/order-supplier";
@@ -17,6 +18,12 @@ import { PermissionGate } from "../permissions/PermissionGate";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "../shared/CodeLink";
 import { ColumnToggle } from "../shared/ColumnToggle";
+import { InlineMasterSelect } from "./InlineMasterSelect";
+import {
+  useProductionStages,
+  useCreateProductionStage,
+} from "@/lib/hooks/useProductionStages";
+import { useFactories, useCreateFactory } from "@/lib/hooks/useFactories";
 import {
   useColumnVisibility,
   type ColumnConfig,
@@ -63,6 +70,15 @@ interface EditCtx {
   changeValue: (value: string) => void;
   commit: () => void;
   cancel: () => void;
+  // Giai đoạn hiện tại / nhà máy
+  productionStages: { id: number; name: string }[];
+  factories: { id: number; name: string }[];
+  createProductionStage: (name: string) => Promise<{ id: number; name: string } | undefined>;
+  createFactory: (name: string) => Promise<{ id: number; name: string } | undefined>;
+  setStageFactory: (
+    r: OrderSupplierDetailItem,
+    data: { productionStageId?: number | null; factoryId?: number | null }
+  ) => void;
 }
 
 /** Ô inline-edit cho giá nhà máy / thành tiền nhà máy. */
@@ -191,6 +207,48 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplierDetailItem, EditCtx>[] = [
     visible: true,
     width: "170px",
     render: (r) => r.supplier?.name || "-",
+  },
+  {
+    key: "productionStage",
+    label: "Giai đoạn hiện tại",
+    visible: true,
+    width: "180px",
+    render: (r, ctx) =>
+      ctx ? (
+        <InlineMasterSelect
+          value={r.productionStageId ?? null}
+          options={ctx.productionStages}
+          placeholder="Chọn giai đoạn"
+          addLabel="Thêm giai đoạn"
+          newPlaceholder="Tên giai đoạn mới"
+          canEdit={ctx.canUpdate}
+          onChange={(id) => ctx.setStageFactory(r, { productionStageId: id })}
+          onCreate={ctx.createProductionStage}
+        />
+      ) : (
+        r.productionStageName || "-"
+      ),
+  },
+  {
+    key: "factory",
+    label: "Tên nhà máy",
+    visible: true,
+    width: "180px",
+    render: (r, ctx) =>
+      ctx ? (
+        <InlineMasterSelect
+          value={r.factoryId ?? null}
+          options={ctx.factories}
+          placeholder="Chọn nhà máy"
+          addLabel="Thêm nhà máy"
+          newPlaceholder="Tên nhà máy mới"
+          canEdit={ctx.canUpdate}
+          onChange={(id) => ctx.setStageFactory(r, { factoryId: id })}
+          onCreate={ctx.createFactory}
+        />
+      ) : (
+        r.factoryName || "-"
+      ),
   },
   {
     key: "orderDate",
@@ -352,6 +410,13 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
   const updateFactoryPrice = useUpdateOrderSupplierItemFactoryPrice();
   const [editing, setEditing] = useState<EditCtx["editing"]>(null);
 
+  // ── Master data giai đoạn / nhà máy ──
+  const { data: productionStages } = useProductionStages();
+  const { data: factories } = useFactories();
+  const createProductionStageMut = useCreateProductionStage();
+  const createFactoryMut = useCreateFactory();
+  const updateStageFactory = useUpdateOrderSupplierItemStageFactory();
+
   const editCtx: EditCtx = {
     canUpdate,
     editing,
@@ -400,6 +465,35 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
         data: { [editing.field]: newValue },
       });
       setEditing(null);
+    },
+    productionStages: productionStages || [],
+    factories: factories || [],
+    createProductionStage: async (name) => {
+      try {
+        return await createProductionStageMut.mutateAsync({ name });
+      } catch {
+        return undefined;
+      }
+    },
+    createFactory: async (name) => {
+      try {
+        return await createFactoryMut.mutateAsync({ name });
+      } catch {
+        return undefined;
+      }
+    },
+    setStageFactory: (r, data) => {
+      if (!canUpdate) return;
+      // Gửi kèm cả 2 giá trị hiện tại để tránh trường không sửa bị ghi null.
+      updateStageFactory.mutate({
+        orderSupplierId: r.orderSupplierId,
+        productId: r.productId,
+        data: {
+          productionStageId: r.productionStageId ?? null,
+          factoryId: r.factoryId ?? null,
+          ...data,
+        },
+      });
     },
   };
 
