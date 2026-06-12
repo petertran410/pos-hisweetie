@@ -37,6 +37,7 @@ export const ROUTE_PERMISSIONS: Record<
   },
   "/san-pham/san-xuat": { resource: "productions", action: "view" },
   "/san-pham/xuat-huy": { resource: "destructions", action: "view" },
+  "/san-pham/xuat-dung-noi-bo": { resource: "internal-use", action: "view" },
   "/san-pham/nha-cung-cap": { resource: "suppliers", action: "view" },
   "/san-pham/dat-hang-nhap": { resource: "order_suppliers", action: "view" },
   "/san-pham/dat-hang-nhap-chi-tiet": {
@@ -109,6 +110,12 @@ export const NAV_CONFIG: NavSection[] = [
         label: "Xuất hủy",
         href: "/san-pham/xuat-huy",
         permission: { resource: "destructions", action: "view" },
+      },
+      {
+        key: "internal-use",
+        label: "Xuất dùng nội bộ",
+        href: "/san-pham/xuat-dung-noi-bo",
+        permission: { resource: "internal-use", action: "view" },
       },
       {
         key: "suppliers",

@@ -71,8 +71,12 @@ export function DashboardHeader() {
         title: "Kho hàng",
         items: [
           { label: "Chuyển hàng", href: "/san-pham/chuyen-hang" },
-          { label: "Sản xuất", href: "/san-pham/san-xuat" },
-          { label: "Xuất hủy", href: "/san-pham/xuat-huy" },
+            { label: "Sản xuất", href: "/san-pham/san-xuat" },
+            { label: "Xuất hủy", href: "/san-pham/xuat-huy" },
+            {
+              label: "Xuất dùng nội bộ",
+              href: "/san-pham/xuat-dung-noi-bo",
+            },
         ],
       },
       {
