@@ -1008,37 +1008,14 @@ export function OrderSupplierForm({
             )}
           </div>
 
-          {/* Card thông tin nhà cung cấp + công nợ */}
+          {/* Nợ hiện tại NCC — 1 dòng text nhỏ in nghiêng */}
           {selectedSupplier && (
-            <div className="border border-brand/40 bg-brand-soft rounded-lg p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-medium text-gray-900 truncate">
-                    {selectedSupplier.name}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {selectedSupplier.code}
-                    {selectedSupplier.contactNumber
-                      ? ` · ${selectedSupplier.contactNumber}`
-                      : ""}
-                  </div>
-                </div>
-                {!isFormDisabled && (
-                  <button
-                    type="button"
-                    onClick={() => setSupplierId(0)}
-                    className="text-gray-400 hover:text-red-500 shrink-0">
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              <div className="flex justify-between items-center mt-2 pt-2 border-t border-brand/20">
-                <span className="text-xs text-gray-600">Nợ hiện tại:</span>
-                <span className="text-sm font-semibold text-red-600">
-                  {formatCurrency(Number(selectedSupplier.debt) || 0)}
-                </span>
-              </div>
-            </div>
+            <p className="text-xs italic text-gray-500 -mt-1">
+              Nợ hiện tại:{" "}
+              <span className="text-red-600 font-medium not-italic">
+                {formatCurrency(Number(selectedSupplier.debt) || 0)}
+              </span>
+            </p>
           )}
 
           <div className="flex flex-col gap-1">

@@ -2,9 +2,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import { X, ChevronDown } from "lucide-react";
-import { useReturnOrder } from "@/lib/hooks/useReturnOrders";
+import {
+  useReturnOrder,
+  useCancelReturnOrder,
+} from "@/lib/hooks/useReturnOrders";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
+import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
 import { formatCurrency } from "@/lib/utils";
+import Swal from "sweetalert2";
 
 interface ConfirmRefundModalProps {
   returnOrderId: number;
@@ -24,6 +29,9 @@ export function ConfirmRefundModal({
 }: ConfirmRefundModalProps) {
   const { data: returnOrder, isLoading } = useReturnOrder(returnOrderId);
   const { data: bankAccounts } = useBankAccountsForPayment();
+  const cancelReturnOrder = useCancelReturnOrder();
+  const canCancel = useCan("return_orders", "cancel");
+  const isAdmin = useIsAdmin();
 
   const [note, setNote] = useState("");
   const [method, setMethod] = useState("cash");
@@ -44,6 +52,15 @@ export function ConfirmRefundModal({
   // Chỉ phiếu ở trạng thái "Nhập hàng trả" (STOCK_RECEIVED = 2) mới được
   // xác nhận hoàn tiền. Các trạng thái khác (3/4/5) mở ở chế độ chỉ-xem.
   const isActionable = returnOrder?.status === 2;
+
+  // Nút Hủy: phiếu đã hoàn thành (status 4) chỉ Admin/Super Admin mới được hủy;
+  // các trạng thái còn lại (1/2/6/7) cho hủy bình thường. Phiếu đã hủy (5) thì ẩn.
+  const status = returnOrder?.status;
+  const canShowCancel =
+    canCancel &&
+    status !== undefined &&
+    status !== 5 &&
+    (status === 4 ? isAdmin : true);
 
   // ── Tính effectiveRefundAmount: phần dư vượt quá nợ còn lại
   const invoiceGrandTotal = Number(returnOrder?.invoice?.grandTotal || 0);
@@ -94,6 +111,29 @@ export function ConfirmRefundModal({
           : undefined,
       refundType,
     });
+  };
+
+  const handleCancel = async () => {
+    const isCompleted = returnOrder?.status === 4;
+    const res = await Swal.fire({
+      title: "Hủy phiếu trả hàng?",
+      text: isCompleted
+        ? "Phiếu đã hoàn thành. Hủy sẽ hoàn tác tồn kho, khôi phục công nợ và hủy phiếu chi hoàn tiền liên quan (nếu có). Thao tác này không thể hoàn lại."
+        : "Phiếu trả hàng sẽ chuyển sang trạng thái Đã hủy và hoàn tác các tác động liên quan.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Hủy phiếu",
+      cancelButtonText: "Đóng",
+      confirmButtonColor: "#dc2626",
+    });
+    if (res.isConfirmed) {
+      try {
+        await cancelReturnOrder.mutateAsync(returnOrderId);
+        onClose();
+      } catch {
+        // error handled by hook
+      }
+    }
   };
 
   if (isLoading) {
@@ -406,23 +446,35 @@ export function ConfirmRefundModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 p-4 border-t bg-gray-50 shrink-0 rounded-b-xl">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">
-            {isActionable ? "Hủy" : "Đóng"}
-          </button>
-          {isActionable && (
+        <div className="flex items-center justify-between gap-2 p-4 border-t bg-gray-50 shrink-0 rounded-b-xl">
+          <div>
+            {canShowCancel && (
+              <button
+                onClick={handleCancel}
+                disabled={cancelReturnOrder.isPending}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-50">
+                {cancelReturnOrder.isPending ? "Đang hủy..." : "Hủy phiếu"}
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleSubmit}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
-              {hasExcessRefund
-                ? refundType === "cash_refund"
-                  ? "Xác nhận & Tạo phiếu chi"
-                  : "Xác nhận & Cấn trừ nợ"
-                : "Xác nhận hoàn thành"}
+              onClick={onClose}
+              className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">
+              {isActionable ? "Hủy" : "Đóng"}
             </button>
-          )}
+            {isActionable && (
+              <button
+                onClick={handleSubmit}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+                {hasExcessRefund
+                  ? refundType === "cash_refund"
+                    ? "Xác nhận & Tạo phiếu chi"
+                    : "Xác nhận & Cấn trừ nợ"
+                  : "Xác nhận hoàn thành"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

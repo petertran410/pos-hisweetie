@@ -88,6 +88,13 @@ export interface Product {
   tradeMark?: { id: number; name: string };
   variant?: { id: number; name: string };
   images?: { id: number; image: string }[];
+  documents?: {
+    id: number;
+    url: string;
+    originalName?: string;
+    mimetype?: string;
+    size?: number;
+  }[];
   comboComponents?: ProductComponent[];
   inventories?: Inventory[];
 }

@@ -30,6 +30,14 @@ interface ImageItem {
   preview: string;
 }
 
+interface DocItem {
+  url?: string;
+  file?: File;
+  name: string;
+  size?: number;
+  mimetype?: string;
+}
+
 export function ProductForm({
   product,
   productType,
@@ -37,7 +45,10 @@ export function ProductForm({
   onSuccess,
 }: ProductFormProps) {
   const [images, setImages] = useState<ImageItem[]>([]);
-  const [activeTab, setActiveTab] = useState<"info" | "description">("info");
+  const [documents, setDocuments] = useState<DocItem[]>([]);
+  const [activeTab, setActiveTab] = useState<
+    "info" | "description" | "publication"
+  >("info");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showCostConfirmation, setShowCostConfirmation] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<any>(null);
@@ -162,6 +173,46 @@ export function ProductForm({
     return result.url;
   };
 
+  const uploadDocuments = async (
+    files: File[]
+  ): Promise<
+    { url: string; originalName: string; mimetype: string; size: number }[]
+  > => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+
+    const token = useAuthStore.getState().token;
+    const res = await fetch(
+      `${API_URL}/upload/files?subfolder=products/cong-bo`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Upload tài liệu thất bại");
+    }
+
+    const result = await res.json();
+    if (result.errors && result.errors.length > 0) {
+      toast.error(
+        `Một số tệp không upload được: ${result.errors
+          .map((e: any) => e.originalname)
+          .join(", ")}`
+      );
+    }
+    return (result.items || []).map((it: any) => ({
+      url: it.url,
+      originalName: it.originalname,
+      mimetype: it.mimetype,
+      size: it.size,
+    }));
+  };
+
   const getProductTypeLabel = (type: number) => {
     switch (type) {
       case 1:
@@ -236,6 +287,34 @@ export function ProductForm({
         }
       }
 
+      // Upload tài liệu công bố (cho phép nhiều file)
+      const documentsPayload: {
+        url: string;
+        originalName?: string;
+        mimetype?: string;
+        size?: number;
+      }[] = [];
+
+      const newDocFiles = documents
+        .filter((d) => d.file)
+        .map((d) => d.file as File);
+      const uploadedDocs =
+        newDocFiles.length > 0 ? await uploadDocuments(newDocFiles) : [];
+      let uploadedDocIndex = 0;
+      for (const doc of documents) {
+        if (doc.file) {
+          const uploaded = uploadedDocs[uploadedDocIndex++];
+          if (uploaded) documentsPayload.push(uploaded);
+        } else if (doc.url) {
+          documentsPayload.push({
+            url: doc.url,
+            originalName: doc.name,
+            mimetype: doc.mimetype,
+            size: doc.size,
+          });
+        }
+      }
+
       const formData = {
         code: data.code,
         name: data.name,
@@ -266,6 +345,7 @@ export function ProductForm({
             ? attributes.map((a) => `${a.name}:${a.value}`).join("|")
             : undefined,
         imageUrls: uploadedUrls,
+        documents: documentsPayload,
         isDirectSale: Boolean(data.isDirectSale),
         isPieceUnit: Boolean(data.isPieceUnit),
         isActive: Boolean(data.isActive),
@@ -327,6 +407,43 @@ export function ProductForm({
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10MB
+
+  const handleDocumentSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const accepted: DocItem[] = [];
+    Array.from(files).forEach((file) => {
+      if (file.size > MAX_DOC_SIZE) {
+        toast.error(`"${file.name}" vượt quá 10MB`);
+        return;
+      }
+      accepted.push({
+        file,
+        name: file.name,
+        size: file.size,
+        mimetype: file.type,
+      });
+    });
+
+    if (accepted.length > 0) {
+      setDocuments((prev) => [...prev, ...accepted]);
+    }
+    e.target.value = "";
+  };
+
+  const removeDocument = (index: number) => {
+    setDocuments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes || bytes <= 0) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   useEffect(() => {
     if (product?.images) {
       setImages(
@@ -337,6 +454,19 @@ export function ProductForm({
       );
     } else {
       setImages([]);
+    }
+
+    if (product?.documents) {
+      setDocuments(
+        product.documents.map((doc) => ({
+          url: doc.url,
+          name: doc.originalName || doc.url.split("/").pop() || "Tài liệu",
+          size: doc.size,
+          mimetype: doc.mimetype,
+        }))
+      );
+    } else {
+      setDocuments([]);
     }
   }, [product?.id]);
 
@@ -376,6 +506,16 @@ export function ProductForm({
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}>
             Mô tả
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("publication")}
+            className={`py-3 px-3 border-b-2 ${
+              activeTab === "publication"
+                ? "border-brand text-brand font-medium"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
+            Công bố
           </button>
         </div>
 
@@ -778,6 +918,82 @@ export function ProductForm({
                 placeholder="Nhập ghi chú đơn hàng"
               />
             </div>
+          </div>
+
+          {/* Tab Công bố */}
+          <div
+            className={
+              activeTab === "publication" ? "p-6 space-y-5" : "hidden"
+            }>
+            <FormSection
+              title="Tài liệu công bố"
+              description="Tải lên các tệp công bố sản phẩm (PDF, ảnh, Word, Excel...). Cho phép tải nhiều tệp, mỗi tệp tối đa 10MB.">
+              <label className="flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-gray-50 bg-white">
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,image/*"
+                  onChange={handleDocumentSelect}
+                  className="hidden"
+                />
+                <span className="text-3xl text-gray-400 leading-none">+</span>
+                <span className="text-sm text-gray-500 mt-2">
+                  Bấm để chọn tệp (có thể chọn nhiều)
+                </span>
+                <span className="text-xs text-gray-400 mt-1">
+                  PDF, Word, Excel, ảnh, zip... — tối đa 10MB/tệp
+                </span>
+              </label>
+
+              {documents.length > 0 && (
+                <ul className="mt-4 space-y-2">
+                  {documents.map((doc, index) => (
+                    <li
+                      key={index}
+                      className="flex items-center justify-between gap-3 border rounded px-3 py-2 bg-white">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600 uppercase">
+                          {(doc.name.split(".").pop() || "file").slice(0, 4)}
+                        </span>
+                        {doc.url ? (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="truncate text-sm text-brand hover:underline"
+                            title={doc.name}>
+                            {doc.name}
+                          </a>
+                        ) : (
+                          <span
+                            className="truncate text-sm text-gray-700"
+                            title={doc.name}>
+                            {doc.name}
+                          </span>
+                        )}
+                        {doc.size ? (
+                          <span className="shrink-0 text-xs text-gray-400">
+                            {formatFileSize(doc.size)}
+                          </span>
+                        ) : null}
+                        {!doc.url && (
+                          <span className="shrink-0 text-xs text-orange-500">
+                            (chưa lưu)
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeDocument(index)}
+                        className="shrink-0 text-red-500 hover:text-red-700"
+                        title="Xóa tệp">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </FormSection>
           </div>
 
           <div className="border-t p-4 flex justify-end gap-2 bg-white sticky bottom-0">

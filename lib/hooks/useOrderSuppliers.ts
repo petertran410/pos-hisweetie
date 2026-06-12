@@ -51,6 +51,39 @@ export function useUpdateOrderSupplierItemFactoryPrice() {
   });
 }
 
+/**
+ * Cập nhật inline giai đoạn hiện tại / nhà máy của 1 dòng sản phẩm
+ * trên trang "Đặt hàng nhập chi tiết".
+ */
+export function useUpdateOrderSupplierItemStageFactory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      orderSupplierId,
+      productId,
+      data,
+    }: {
+      orderSupplierId: number;
+      productId: number;
+      data: { productionStageId?: number | null; factoryId?: number | null };
+    }) =>
+      orderSuppliersApi.updateItemStageFactory(
+        orderSupplierId,
+        productId,
+        data
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["order-supplier-detail-items"],
+      });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Cập nhật giai đoạn / nhà máy thất bại");
+    },
+  });
+}
+
 export function useOrderSupplier(id: number) {
   return useQuery({
     queryKey: ["order-suppliers", id],
