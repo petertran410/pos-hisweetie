@@ -160,6 +160,7 @@ export function ManufacturingProductForm({
       tradeMarkId: product?.tradeMarkId || undefined,
       weightUnit: product?.weightUnit || "kg",
       shippingWeightUnit: product?.shippingWeightUnit || "g",
+      vat: product?.vat ?? 8,
       unit: product?.unit || "",
       isDirectSale: product?.isDirectSale || false,
       isActive: product?.isActive ?? true,
@@ -448,6 +449,7 @@ export function ManufacturingProductForm({
         weightUnit: data.weightUnit || "kg",
         shippingWeight: shippingWeight.value || undefined,
         shippingWeightUnit: data.shippingWeightUnit || "g",
+        vat: data.vat != null && !isNaN(Number(data.vat)) ? Number(data.vat) : 8,
         unit: data.unit || undefined,
         isDirectSale: data.isDirectSale || false,
         isActive: data.isActive ?? true,
@@ -1007,6 +1009,20 @@ export function ManufacturingProductForm({
                   {...register("unit")}
                   className="w-full border rounded px-3 py-2"
                   placeholder="cái, chiếc, hộp..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  VAT (%)
+                </label>
+                <input
+                  {...register("vat", { valueAsNumber: true })}
+                  type="number"
+                  step="any"
+                  min={0}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="8"
                 />
               </div>
             </div>

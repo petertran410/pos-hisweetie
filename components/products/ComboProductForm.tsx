@@ -77,6 +77,7 @@ export function ComboProductForm({
       weightUnit: product?.weightUnit || "kg",
       shippingWeight: product?.shippingWeight || undefined,
       shippingWeightUnit: product?.shippingWeightUnit || "g",
+      vat: product?.vat ?? 8,
       unit: product?.unit || "",
       isDirectSale: product?.isDirectSale || false,
       isActive: product?.isActive ?? true,
@@ -291,6 +292,7 @@ export function ComboProductForm({
           ? Number(data.shippingWeight)
           : undefined,
         shippingWeightUnit: data.shippingWeightUnit || "g",
+        vat: data.vat != null && !isNaN(Number(data.vat)) ? Number(data.vat) : 8,
         unit: data.unit || undefined,
         isDirectSale: data.isDirectSale || false,
         isActive: data.isActive ?? true,
@@ -681,6 +683,21 @@ export function ComboProductForm({
                       <option value="kg">kg</option>
                     </select>
                   </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    VAT (%)
+                  </label>
+                  <input
+                    {...register("vat", { valueAsNumber: true })}
+                    type="number"
+                    step="any"
+                    min={0}
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="8"
+                  />
                 </div>
               </div>
             </div>

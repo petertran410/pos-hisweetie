@@ -139,6 +139,20 @@ export const orderSuppliersApi = {
       `/order-suppliers/items/${orderSupplierId}/${productId}/factory-price`,
       data
     ),
+
+  /**
+   * Cập nhật inline giai đoạn hiện tại / nhà máy của 1 dòng sản phẩm
+   * (xác định bằng cặp orderSupplierId + productId). Truyền null để bỏ chọn.
+   */
+  updateItemStageFactory: (
+    orderSupplierId: number,
+    productId: number,
+    data: { productionStageId?: number | null; factoryId?: number | null }
+  ) =>
+    apiClient.patch(
+      `/order-suppliers/items/${orderSupplierId}/${productId}/stage-factory`,
+      data
+    ),
 };
 
 export interface OrderSupplierDetailItem {
@@ -172,6 +186,11 @@ export interface OrderSupplierDetailItem {
   totalWeightKg: number;
   tradeMarkName?: string | null;
   productGroup?: string | null;
+  // Giai đoạn hiện tại / nhà máy (gán per dòng)
+  productionStageId?: number | null;
+  productionStageName?: string | null;
+  factoryId?: number | null;
+  factoryName?: string | null;
   // Từ phiếu ghép xe mới nhất
   borderGateName?: string | null;
   contractNo?: string | null;

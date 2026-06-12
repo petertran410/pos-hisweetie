@@ -378,11 +378,14 @@ export function HoaDonVatDetailRow({
                         <tbody className="bg-white divide-y divide-gray-200">
                           {invoice.details?.map(
                             (item: InvoiceDetail, index: number) => {
-                              const vat = computeLineVat({
-                                quantity: item.quantity,
-                                price: item.price,
-                                discount: item.discount,
-                              });
+                              const vat = computeLineVat(
+                                {
+                                  quantity: item.quantity,
+                                  price: item.price,
+                                  discount: item.discount,
+                                },
+                                Number((item.product as any)?.vat ?? 8)
+                              );
                               const misaCode =
                                 (item.product as any)?.misa_code?.trim() || "";
                               const misaName =
@@ -508,6 +511,7 @@ export function HoaDonVatDetailRow({
                               quantity: d.quantity,
                               price: d.price,
                               discount: d.discount,
+                              vatRate: Number((d.product as any)?.vat ?? 8),
                             }))
                           );
                           return (
@@ -537,7 +541,7 @@ export function HoaDonVatDetailRow({
                               </div>
                               <div className="flex justify-between items-center text-md">
                                 <span className="text-gray-600">
-                                  Thuế VAT (8%):
+                                  Thuế VAT:
                                 </span>
                                 <span className="font-semibold text-brand-dark">
                                   {formatCurrency(vatSummary.totalVat)}

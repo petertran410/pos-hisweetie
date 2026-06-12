@@ -77,16 +77,26 @@ function MiniCalendar({
   onChange,
   onClose,
   minDate,
+  withTime = false,
 }: {
   value: string;
   onChange: (d: string) => void;
   onClose: () => void;
   minDate?: string;
+  withTime?: boolean;
 }) {
+  const pad2 = (n: number) => String(n).padStart(2, "0");
   const todayObj = new Date();
-  const init = value ? new Date(value + "T00:00:00") : todayObj;
+  const init = value
+    ? new Date(value.includes("T") ? value : value + "T00:00:00")
+    : todayObj;
   const [vy, setVy] = useState(init.getFullYear());
   const [vm, setVm] = useState(init.getMonth());
+  const [hh, setHh] = useState<string>(pad2(init.getHours()));
+  const [mm, setMm] = useState<string>(pad2(init.getMinutes()));
+
+  // Phần ngày đang chọn (YYYY-MM-DD) tách từ value
+  const selDatePart = value ? value.slice(0, 10) : "";
 
   const daysInMonth = new Date(vy, vm + 1, 0).getDate();
   // Mon = 0 offset
@@ -100,6 +110,31 @@ function MiniCalendar({
 
   const fmt = (d: number) =>
     `${vy}-${String(vm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+  // Phát giá trị ra ngoài: kèm giờ nếu withTime
+  const emit = (dateStr: string) => {
+    if (!dateStr) {
+      onChange("");
+      return;
+    }
+    onChange(withTime ? `${dateStr}T${hh}:${mm}` : dateStr);
+  };
+
+  const handleTimeChange = (nextHh: string, nextMm: string) => {
+    setHh(nextHh);
+    setMm(nextMm);
+    const base = selDatePart || fmt(todayObj.getDate());
+    onChange(`${base}T${nextHh}:${nextMm}`);
+  };
+
+  const clampHour = (v: string) => {
+    const n = Math.max(0, Math.min(23, parseInt(v || "0", 10) || 0));
+    return pad2(n);
+  };
+  const clampMinute = (v: string) => {
+    const n = Math.max(0, Math.min(59, parseInt(v || "0", 10) || 0));
+    return pad2(n);
+  };
 
   const prev = () =>
     vm === 0 ? (setVm(11), setVy((y) => y - 1)) : setVm((m) => m - 1);
@@ -143,7 +178,7 @@ function MiniCalendar({
         {cells.map((day, i) => {
           if (!day) return <div key={i} className="aspect-square" />;
           const ds = fmt(day);
-          const isSel = value === ds;
+          const isSel = selDatePart === ds;
           const isToday =
             todayObj.getFullYear() === vy &&
             todayObj.getMonth() === vm &&
@@ -156,8 +191,8 @@ function MiniCalendar({
               type="button"
               disabled={isDisabled}
               onClick={() => {
-                onChange(ds);
-                onClose();
+                emit(ds);
+                if (!withTime) onClose();
               }}
               className={[
                 "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
@@ -175,6 +210,32 @@ function MiniCalendar({
         })}
       </div>
 
+      {/* Time picker */}
+      {withTime && (
+        <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-gray-100">
+          <span className="text-xs text-gray-500">Giờ:</span>
+          <input
+            type="number"
+            min={0}
+            max={23}
+            value={hh}
+            onChange={(e) => setHh(e.target.value)}
+            onBlur={(e) => handleTimeChange(clampHour(e.target.value), mm)}
+            className="w-14 text-center border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+          <span className="text-gray-400 font-semibold">:</span>
+          <input
+            type="number"
+            min={0}
+            max={59}
+            value={mm}
+            onChange={(e) => setMm(e.target.value)}
+            onBlur={(e) => handleTimeChange(hh, clampMinute(e.target.value))}
+            className="w-14 text-center border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+        </div>
+      )}
+
       {/* Footer */}
       <div className="flex justify-between mt-2 pt-2 border-t border-gray-100">
         <button
@@ -186,15 +247,37 @@ function MiniCalendar({
           className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100 transition-colors">
           Xóa
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            onChange(todayObj.toISOString().split("T")[0]);
-            onClose();
-          }}
-          className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft transition-colors">
-          Hôm nay
-        </button>
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              const now = new Date();
+              const ds = `${now.getFullYear()}-${pad2(
+                now.getMonth() + 1
+              )}-${pad2(now.getDate())}`;
+              if (withTime) {
+                const nh = pad2(now.getHours());
+                const nm = pad2(now.getMinutes());
+                setHh(nh);
+                setMm(nm);
+                onChange(`${ds}T${nh}:${nm}`);
+              } else {
+                onChange(ds);
+              }
+              onClose();
+            }}
+            className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft transition-colors">
+            {withTime ? "Bây giờ" : "Hôm nay"}
+          </button>
+          {withTime && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-xs text-white bg-brand hover:bg-brand-dark font-medium px-3 py-1 rounded transition-colors">
+              Xong
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -479,8 +562,7 @@ export function OrderSupplierForm({
       updated[index].factoryPrice = factoryPrice;
       // Chỉ tự tính lại thành tiền NM khi người dùng chưa nhập tay.
       if (!updated[index].factorySubTotalManual) {
-        updated[index].factorySubTotal =
-          factoryPrice * updated[index].quantity;
+        updated[index].factorySubTotal = factoryPrice * updated[index].quantity;
       }
       return updated;
     });
@@ -579,74 +661,77 @@ export function OrderSupplierForm({
   return (
     <div className="flex h-full border-t bg-gray-50 overflow-hidden">
       <div className="flex-1 flex flex-col overflow-hidden m-4 border rounded-xl">
-        <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push("/san-pham/dat-hang-nhap")}
-              className="p-2 hover:bg-gray-100 rounded-lg">
-              <X className="w-5 h-5" />
-            </button>
-            <h2 className="text-xl font-semibold">
-              {orderSupplier ? "Cập nhật đặt hàng nhập" : "Tạo đặt hàng nhập"}
-            </h2>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="mb-4">
+        <div className="bg-white border-b px-6 py-4 flex items-center gap-4">
+          <button
+            onClick={() => router.push("/san-pham/dat-hang-nhap")}
+            className="p-2 hover:bg-gray-100 rounded-lg shrink-0">
+            <X className="w-5 h-5" />
+          </button>
+          <h2 className="text-xl font-semibold shrink-0">
+            {orderSupplier ? "Cập nhật đặt hàng nhập" : "Tạo đặt hàng nhập"}
+          </h2>
+          <div className="flex-1 max-w-xl">
             <ProductPickerDropdown
               branchId={branchId}
               disabled={!!isFormDisabled}
               onAddProduct={handleAddProduct}
             />
           </div>
+        </div>
 
-          <div className="border rounded-lg overflow-hidden bg-white">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="border border-gray-200 rounded-lg overflow-x-auto bg-white">
+            <table className="w-full min-w-[1100px]">
+              <thead className="bg-gray-100 border-b border-gray-200">
                 <tr>
-                  <th className="px-3 py-2 text-left text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-12">
                     STT
                   </th>
-                  <th className="px-3 py-2 text-left text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider">
                     Mã hàng
                   </th>
-                  <th className="px-3 py-2 text-left text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider min-w-[220px]">
                     Tên hàng
                   </th>
-                  <th className="px-3 py-2 text-center text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
                     SL đặt
                   </th>
-                  <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
                     Giá nhập
                   </th>
-                  <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[110px]">
                     Giảm giá
                   </th>
-                  <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
                     Thành tiền
                   </th>
-                  <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
                     Đơn giá NM
                   </th>
-                  <th className="px-3 py-2 text-right text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
                     Thành tiền NM
                   </th>
-                  <th className="px-3 py-2 text-center text-md font-medium text-gray-700">
+                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-12">
                     Xóa
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {products.map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 text-sm">{index + 1}</td>
-                    <td className="px-3 py-2 text-sm text-brand">
+                  <tr
+                    key={index}
+                    className="hover:bg-gray-50 transition-colors">
+                    <td className="px-[10px] py-2 align-middle text-center text-sm text-gray-900">
+                      {index + 1}
+                    </td>
+                    <td className="px-[10px] py-2 align-middle text-sm font-medium text-gray-900">
                       {item.productCode}
                     </td>
-                    <td className="px-3 py-2 text-sm">{item.productName}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center justify-center gap-1">
+                    <td className="px-[10px] py-2 align-middle text-sm text-gray-900">
+                      {item.productName}
+                    </td>
+                    <td className="px-[10px] py-2 align-middle whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() =>
                             handleQuantityChange(
@@ -656,7 +741,7 @@ export function OrderSupplierForm({
                           }
                           disabled={isFormDisabled ? true : false}
                           className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
-                          <Minus className="w-3 h-3" />
+                          <Minus className="w-4 h-4" />
                         </button>
                         <input
                           type="text"
@@ -671,7 +756,7 @@ export function OrderSupplierForm({
                             );
                           }}
                           disabled={isFormDisabled ? true : false}
-                          className="w-16 text-center border rounded px-1 py-1 text-sm disabled:bg-gray-100"
+                          className="w-16 text-center border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                         />
                         <button
                           onClick={() =>
@@ -682,11 +767,11 @@ export function OrderSupplierForm({
                           }
                           disabled={isFormDisabled ? true : false}
                           className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
-                          <Plus className="w-3 h-3" />
+                          <Plus className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-[10px] py-2 align-middle">
                       <input
                         type="text"
                         value={formatCurrency(item.price)}
@@ -698,7 +783,7 @@ export function OrderSupplierForm({
                         className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-[10px] py-2 align-middle">
                       <input
                         type="text"
                         value={formatCurrency(item.discount)}
@@ -710,10 +795,10 @@ export function OrderSupplierForm({
                         className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />
                     </td>
-                    <td className="px-3 py-2 text-sm text-right font-medium">
+                    <td className="px-[10px] py-2 align-middle text-sm text-right font-medium text-gray-900 whitespace-nowrap">
                       {formatCurrency(item.subTotal)}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-[10px] py-2 align-middle">
                       <input
                         type="text"
                         value={formatCurrency(item.factoryPrice)}
@@ -728,7 +813,7 @@ export function OrderSupplierForm({
                         className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-[10px] py-2 align-middle">
                       <input
                         type="text"
                         value={formatCurrency(item.factorySubTotal)}
@@ -743,7 +828,7 @@ export function OrderSupplierForm({
                         className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                       />
                     </td>
-                    <td className="px-3 py-2 text-center">
+                    <td className="px-[10px] py-2 align-middle text-center">
                       <button
                         onClick={() => handleRemoveProduct(index)}
                         disabled={isFormDisabled ? true : false}
@@ -771,40 +856,21 @@ export function OrderSupplierForm({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <div className="flex flex-col gap-1">
-            <div className="flex gap-2 items-center">
-              <label className="text-md text-gray-600 whitespace-nowrap">
-                Mã đặt hàng nhập:
-              </label>
-              <input
-                type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="VD: PDN000123 (để trống = tự sinh)"
-                maxLength={50}
-                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-gray-100"
-                disabled={!!isFormDisabled}
-              />
-            </div>
-            <p className="text-xs text-gray-500">
-              Bạn có thể tự nhập mã. Để trống, hệ thống sẽ tự sinh mã PDN######.
-            </p>
-          </div>
-
-          <div ref={userDropdownRef} className="flex gap-2 items-center">
-            <div className="text-md text-gray-600">Người đặt hàng:</div>
-            <div className="relative w-40">
+          {/* Hàng trên cùng: Người đặt + Ngày — giống KiotViet */}
+          <div className="flex gap-2">
+            <div ref={userDropdownRef} className="relative flex-1">
               <button
                 type="button"
                 onClick={() =>
                   !isFormDisabled && setShowUserDropdown(!showUserDropdown)
                 }
                 disabled={isFormDisabled ? true : false}
-                className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100">
-                <span className={!selectedUser ? "text-gray-400" : ""}>
-                  {selectedUser ? selectedUser.name : "Chọn người nhập"}
+                className="w-full px-3 py-2 text-sm border rounded-lg flex items-center justify-between disabled:bg-gray-100">
+                <span
+                  className={`truncate ${!selectedUser ? "text-gray-400" : ""}`}>
+                  {selectedUser ? selectedUser.name : "Người đặt hàng"}
                 </span>
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDown className="w-4 h-4 flex-shrink-0 text-gray-400" />
               </button>
               {showUserDropdown && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
@@ -830,6 +896,146 @@ export function OrderSupplierForm({
                 </div>
               )}
             </div>
+
+            <div ref={orderDateRef} className="relative flex-1">
+              {(() => {
+                const pad2 = (n: number) => String(n).padStart(2, "0");
+                const orderDateStr = orderDate
+                  ? `${orderDate.getFullYear()}-${pad2(
+                      orderDate.getMonth() + 1
+                    )}-${pad2(orderDate.getDate())}T${pad2(
+                      orderDate.getHours()
+                    )}:${pad2(orderDate.getMinutes())}`
+                  : "";
+                const displayLabel = orderDate
+                  ? orderDate.toLocaleString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "Ngày đặt hàng";
+
+                return (
+                  <>
+                    <button
+                      type="button"
+                      disabled={isFormDisabled ? true : false}
+                      onClick={() =>
+                        !isFormDisabled && setShowOrderDateCalendar((v) => !v)
+                      }
+                      className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                        orderDate
+                          ? "border-brand bg-brand-soft text-gray-800"
+                          : "border-gray-200 text-gray-500"
+                      } ${
+                        showOrderDateCalendar
+                          ? "ring-2 ring-brand-soft border-brand"
+                          : "hover:border-gray-300"
+                      }`}>
+                      <span className="truncate">{displayLabel}</span>
+                      <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    </button>
+                    {showOrderDateCalendar && (
+                      <MiniCalendar
+                        withTime
+                        value={orderDateStr}
+                        onChange={(d) =>
+                          setOrderDate(d ? new Date(d) : null)
+                        }
+                        onClose={() => setShowOrderDateCalendar(false)}
+                      />
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Nhà cung cấp — đưa lên đầu giống KiotViet */}
+          <div ref={supplierDropdownRef} className="relative">
+            <button
+              type="button"
+              onClick={() =>
+                !isFormDisabled &&
+                setShowSupplierDropdown(!showSupplierDropdown)
+              }
+              disabled={isFormDisabled ? true : false}
+              className="w-full px-3 py-2 text-sm border rounded-lg flex items-center justify-between disabled:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-brand">
+              <span
+                className={`truncate ${!selectedSupplier ? "text-gray-400" : ""}`}>
+                {selectedSupplier ? selectedSupplier.name : "Tìm nhà cung cấp"}
+              </span>
+              <ChevronDown className="w-4 h-4 flex-shrink-0 text-gray-400" />
+            </button>
+            {showSupplierDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-72 overflow-hidden flex flex-col">
+                <div className="p-2 border-b sticky top-0 bg-white">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      autoFocus
+                      value={supplierSearch}
+                      onChange={(e) => setSupplierSearch(e.target.value)}
+                      placeholder="Tìm nhà cung cấp..."
+                      className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand"
+                    />
+                  </div>
+                </div>
+                <div className="overflow-y-auto max-h-56">
+                  {suppliersData?.data?.length ? (
+                    suppliersData.data.map((supplier) => (
+                      <div
+                        key={supplier.id}
+                        onClick={() => {
+                          setSupplierId(supplier.id);
+                          setShowSupplierDropdown(false);
+                          setSupplierSearch("");
+                        }}
+                        className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                        {supplier.name}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2 text-sm text-gray-500">
+                      Không tìm thấy nhà cung cấp
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Nợ hiện tại NCC — 1 dòng text nhỏ in nghiêng */}
+          {selectedSupplier && (
+            <p className="text-xs italic text-gray-500 -mt-1">
+              Nợ hiện tại:{" "}
+              <span className="text-red-600 font-medium not-italic">
+                {formatCurrency(Number(selectedSupplier.debt) || 0)}
+              </span>
+            </p>
+          )}
+
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-2 items-center">
+              <label className="text-md text-gray-600 whitespace-nowrap">
+                Mã đặt hàng nhập:
+              </label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder=""
+                maxLength={50}
+                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-gray-100"
+                disabled={!!isFormDisabled}
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              Bạn có thể tự nhập mã. Để trống, hệ thống sẽ tự sinh mã PDN######.
+            </p>
           </div>
 
           <div ref={statusDropdownRef} className="flex gap-2 items-center">
@@ -891,65 +1097,6 @@ export function OrderSupplierForm({
                       {branch.name}
                     </div>
                   ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div ref={supplierDropdownRef} className="flex gap-2 items-center">
-            <div className="text-md text-gray-600">Nhà cung cấp:</div>
-            <div className="relative w-64">
-              <button
-                type="button"
-                onClick={() =>
-                  !isFormDisabled &&
-                  setShowSupplierDropdown(!showSupplierDropdown)
-                }
-                disabled={isFormDisabled ? true : false}
-                className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100">
-                <span
-                  className={`truncate ${!selectedSupplier ? "text-gray-400" : ""}`}>
-                  {selectedSupplier
-                    ? selectedSupplier.name
-                    : "Chọn nhà cung cấp"}
-                </span>
-                <ChevronDown className="w-4 h-4 flex-shrink-0" />
-              </button>
-              {showSupplierDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-72 overflow-hidden flex flex-col">
-                  <div className="p-2 border-b sticky top-0 bg-white">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        autoFocus
-                        value={supplierSearch}
-                        onChange={(e) => setSupplierSearch(e.target.value)}
-                        placeholder="Tìm nhà cung cấp..."
-                        className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand"
-                      />
-                    </div>
-                  </div>
-                  <div className="overflow-y-auto max-h-56">
-                    {suppliersData?.data?.length ? (
-                      suppliersData.data.map((supplier) => (
-                        <div
-                          key={supplier.id}
-                          onClick={() => {
-                            setSupplierId(supplier.id);
-                            setShowSupplierDropdown(false);
-                            setSupplierSearch("");
-                          }}
-                          className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
-                          {supplier.name}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-sm text-gray-500">
-                        Không tìm thấy nhà cung cấp
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
             </div>
@@ -1054,64 +1201,6 @@ export function OrderSupplierForm({
           </div>
 
           <div>
-            <label className="text-md text-gray-600">
-              Ngày đặt hàng nhập
-            </label>
-            <div ref={orderDateRef} className="relative">
-              {(() => {
-                const orderDateStr = orderDate
-                  ? `${orderDate.getFullYear()}-${String(
-                      orderDate.getMonth() + 1
-                    ).padStart(2, "0")}-${String(orderDate.getDate()).padStart(
-                      2,
-                      "0"
-                    )}`
-                  : "";
-                const displayLabel = orderDate
-                  ? orderDate.toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })
-                  : "Mặc định (ngày tạo)";
-
-                return (
-                  <>
-                    <button
-                      type="button"
-                      disabled={isFormDisabled ? true : false}
-                      onClick={() =>
-                        !isFormDisabled &&
-                        setShowOrderDateCalendar((v) => !v)
-                      }
-                      className={`w-full flex items-center justify-between px-2 py-1.5 border rounded-lg text-sm transition-all disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                        orderDate
-                          ? "border-brand bg-brand-soft text-gray-800"
-                          : "border-gray-200 text-gray-400"
-                      } ${
-                        showOrderDateCalendar
-                          ? "ring-2 ring-brand-soft border-brand"
-                          : "hover:border-gray-300"
-                      }`}>
-                      <span>{displayLabel}</span>
-                      <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    </button>
-                    {showOrderDateCalendar && (
-                      <MiniCalendar
-                        value={orderDateStr}
-                        onChange={(d) =>
-                          setOrderDate(d ? new Date(d + "T00:00:00") : null)
-                        }
-                        onClose={() => setShowOrderDateCalendar(false)}
-                      />
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-
-          <div>
             <label className="block text-md text-gray-600 mb-1">Ghi chú</label>
             <textarea
               value={note}
@@ -1130,7 +1219,7 @@ export function OrderSupplierForm({
           <button
             onClick={handleSubmit}
             disabled={isFormDisabled ? true : false}
-            className="w-full bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm flex items-center justify-center gap-2">
+            className="w-full bg-brand text-white py-2.5 rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm flex items-center justify-center gap-2">
             <Plus className="w-4 h-4" />
             {orderSupplier ? "Cập nhật" : "Đặt hàng nhập"}
           </button>

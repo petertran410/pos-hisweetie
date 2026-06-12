@@ -548,36 +548,38 @@ export function OrderItemsList({
                       </button>
                       {item.eligiblePromos && item.eligiblePromos.length > 0 && (
                         (() => {
-                          const disabled = item.promoDisabledIds || [];
-                          const allOn = item.eligiblePromos.every(
-                            (p) => !disabled.includes(p.promotionId)
+                          const enabled = item.promoEnabledIds || [];
+                          const applied = item.eligiblePromos.some(
+                            (p) => enabled.includes(p.promotionId)
                           );
+                          const colorCls = applied
+                            ? "text-pink-600 group-hover:text-gray-400"
+                            : "text-gray-400 group-hover:text-pink-600";
                           return (
                             <button
                               onClick={() => {
                                 onUpdateItem(item.rowId, {
-                                  promoDisabledIds: allOn
-                                    ? item.eligiblePromos!.map(
+                                  promoEnabledIds: applied
+                                    ? []
+                                    : item.eligiblePromos!.map(
                                         (p) => p.promotionId
-                                      )
-                                    : [],
+                                      ),
                                 });
                               }}
-                              className={`p-1 rounded transition-colors ${
-                                allOn
-                                  ? "bg-pink-100 hover:bg-pink-200"
-                                  : "hover:bg-pink-50"
+                              className={`group flex items-center gap-1 px-1.5 py-1 rounded transition-colors ${
+                                applied
+                                  ? "bg-pink-100 hover:bg-gray-100"
+                                  : "bg-gray-100 hover:bg-pink-100"
                               }`}
                               title={
-                                allOn
+                                applied
                                   ? "Bỏ áp dụng khuyến mãi cho dòng này"
-                                  : "Áp dụng khuyến mãi cho dòng này"
+                                  : "Đủ điều kiện khuyến mãi — bấm để tặng quà"
                               }>
-                              <Gift
-                                className={`w-4 h-4 ${
-                                  allOn ? "text-pink-600" : "text-gray-400"
-                                }`}
-                              />
+                              <Gift className={`w-4 h-4 ${colorCls}`} />
+                              <span className={`text-xs font-medium ${colorCls}`}>
+                                Khuyến Mãi
+                              </span>
                             </button>
                           );
                         })()
