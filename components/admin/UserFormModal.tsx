@@ -6,6 +6,7 @@ import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useAuthStore } from "@/lib/store/auth";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 interface UserFormModalProps {
   userId: number | null;
@@ -43,6 +44,15 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
   const suppliers = useMemo(
     () => suppliersResp?.data || [],
     [suppliersResp]
+  );
+  const supplierOptions = useMemo(
+    () =>
+      suppliers.map((s: any) => ({
+        value: s.id,
+        label: s.name,
+        sublabel: s.code || undefined,
+      })),
+    [suppliers]
   );
   const activeBranches = useMemo(
     () => (branches || []).filter((b: any) => b.isActive),
@@ -238,23 +248,16 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                   Để trống = nhân viên nội bộ (thấy mọi NCC). Chọn một NCC = tài
                   khoản chỉ thấy dữ liệu đặt hàng nhập / ghép xe của NCC đó.
                 </p>
-                <select
+                <SearchableSelect
                   value={formData.supplierId}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      supplierId: Number(e.target.value),
-                    })
+                  options={supplierOptions}
+                  onChange={(v) =>
+                    setFormData({ ...formData, supplierId: v })
                   }
-                  className="w-full px-3 py-2 border rounded-lg">
-                  <option value={0}>Nhân viên nội bộ (không giới hạn)</option>
-                  {suppliers.map((s: any) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                      {s.code ? ` (${s.code})` : ""}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Nhân viên nội bộ (không giới hạn)"
+                  emptyLabel="Nhân viên nội bộ (không giới hạn)"
+                  searchPlaceholder="Tìm nhà cung cấp theo tên / mã..."
+                />
               </div>
             )}
 

@@ -1,10 +1,18 @@
 "use client";
 
 import { useState, useEffect, useMemo, Fragment } from "react";
-import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import { useSuppliers, useExportSuppliers } from "@/lib/hooks/useSuppliers";
 import { SupplierFilters, Supplier } from "@/lib/types/supplier";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Upload, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  Download,
+  Loader2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { SupplierDetailRow } from "./SupplierDetailRow";
 import { SupplierForm } from "./SupplierForm";
 import { SupplierImportBalanceModal } from "./SupplierImportBalanceModal";
@@ -123,6 +131,8 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
     DEFAULT_COLUMNS
   );
 
+  const { exportToFile, isExporting } = useExportSuppliers();
+
   const { data, isLoading } = useSuppliers({
     ...effectiveFilters,
     currentItem: (page - 1) * limit,
@@ -179,6 +189,24 @@ export function SuppliersTable({ filters }: SuppliersTableProps) {
               className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600">
               <Upload className="w-4 h-4" />
               Import cân bằng nợ
+            </button>
+          </PermissionGate>
+          <PermissionGate resource="suppliers" action="export">
+            <button
+              onClick={() =>
+                exportToFile({
+                  ...effectiveFilters,
+                  name: debouncedSearch || undefined,
+                })
+              }
+              disabled={isExporting}
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
+              {isExporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              {isExporting ? "Đang xuất..." : "Xuất file"}
             </button>
           </PermissionGate>
           <ColumnToggle columns={columns} onToggle={toggleColumn} />

@@ -259,3 +259,34 @@ export function useExportSupplierDebt() {
 
   return { exportToFile, isExporting };
 }
+
+/**
+ * Xuất toàn bộ danh sách nhà cung cấp (theo bộ lọc hiện tại) ra file Excel.
+ * Đối xứng với useExportCustomers ở useCustomers.ts.
+ */
+export function useExportSuppliers() {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportToFile = async (filters: SupplierFilters) => {
+    setIsExporting(true);
+    try {
+      const { pageSize: _ps, currentItem: _ci, ...exportFilters } = filters;
+
+      const url = new URL(`${API_URL}/suppliers/export`);
+      Object.entries(exportFilters).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) {
+          url.searchParams.append(k, String(v));
+        }
+      });
+
+      await downloadExcelFromUrl(url, `DanhSachNhaCungCap_${Date.now()}.xlsx`);
+      toast.success("Xuất file thành công");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return { exportToFile, isExporting };
+}
