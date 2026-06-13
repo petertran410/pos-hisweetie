@@ -161,6 +161,7 @@ export function PackingHangForm({
       setSelectedInvoiceIds(
         selectedInvoiceIds.filter((id) => id !== invoiceId)
       );
+      setInvoiceSearch("");
     } else {
       const invoice = availableInvoices.find((inv) => inv.id === invoiceId);
       if (invoice) {
@@ -179,6 +180,7 @@ export function PackingHangForm({
             [invoiceId]: cached,
           }));
           setSelectedInvoiceIds([...selectedInvoiceIds, invoiceId]);
+          setInvoiceSearch("");
         } else {
           const firstInvoice = selectedInvoiceCache[selectedInvoiceIds[0]];
           if (firstInvoice?.branchId !== invoice.branchId) {
@@ -190,6 +192,7 @@ export function PackingHangForm({
             [invoiceId]: cached,
           }));
           setSelectedInvoiceIds([...selectedInvoiceIds, invoiceId]);
+          setInvoiceSearch("");
         }
       }
     }

@@ -339,6 +339,7 @@ export function PackingSlipForm({
       }
       setSelectedInvoiceIds([...selectedInvoiceIds, invoiceId]);
     }
+    setInvoiceSearch("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
