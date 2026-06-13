@@ -451,12 +451,20 @@ export function InvoicesTable({
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerQueryDebounced, setCustomerQueryDebounced] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
+  const [customerHighlight, setCustomerHighlight] = useState(0);
   const customerDropRef = useRef<HTMLDivElement>(null);
+  const customerItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { data: customerSearchData } = useSearchCustomers(
     customerQueryDebounced || undefined
   );
   const customerResults: CustomerSearchResult[] =
     customerSearchData?.data || [];
+
+  const selectCustomer = (c: CustomerSearchResult) => {
+    setSelectedCustomer(c);
+    setCustomerQuery("");
+    setShowCustomerDrop(false);
+  };
 
   const SORTABLE_COLUMNS = new Set([
     "purchaseDate",
@@ -518,6 +526,20 @@ export function InvoicesTable({
     const t = setTimeout(() => setCustomerQueryDebounced(customerQuery), 300);
     return () => clearTimeout(t);
   }, [customerQuery]);
+
+  // Reset highlight về dòng đầu khi kết quả search đổi
+  useEffect(() => {
+    setCustomerHighlight(0);
+  }, [customerQueryDebounced, customerResults.length]);
+
+  // Cuộn dòng đang highlight vào tầm nhìn
+  useEffect(() => {
+    if (showCustomerDrop && customerItemRefs.current[customerHighlight]) {
+      customerItemRefs.current[customerHighlight]?.scrollIntoView({
+        block: "nearest",
+      });
+    }
+  }, [customerHighlight, showCustomerDrop]);
 
   // Đóng dropdown khách hàng khi click ra ngoài
   useEffect(() => {
@@ -927,6 +949,26 @@ export function InvoicesTable({
                             setShowCustomerDrop(true);
                           }}
                           onFocus={() => customerQuery && setShowCustomerDrop(true)}
+                          onKeyDown={(e) => {
+                            if (!showCustomerDrop || customerResults.length === 0)
+                              return;
+                            if (e.key === "ArrowDown") {
+                              e.preventDefault();
+                              setCustomerHighlight((i) =>
+                                Math.min(i + 1, customerResults.length - 1)
+                              );
+                            } else if (e.key === "ArrowUp") {
+                              e.preventDefault();
+                              setCustomerHighlight((i) => Math.max(i - 1, 0));
+                            } else if (e.key === "Enter") {
+                              e.preventDefault();
+                              if (customerResults[customerHighlight]) {
+                                selectCustomer(customerResults[customerHighlight]);
+                              }
+                            } else if (e.key === "Escape") {
+                              setShowCustomerDrop(false);
+                            }
+                          }}
                           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                         />
                       )}
@@ -938,14 +980,16 @@ export function InvoicesTable({
                               <button
                                 key={c.id}
                                 type="button"
-                                onClick={() => {
-                                  setSelectedCustomer(c);
-                                  setCustomerQuery("");
-                                  setShowCustomerDrop(false);
+                                ref={(el) => {
+                                  customerItemRefs.current[idx] = el;
                                 }}
-                                className={`w-full text-left px-3 py-2 hover:bg-brand-soft transition-colors ${
-                                  idx > 0 ? "border-t border-gray-50" : ""
-                                }`}>
+                                onClick={() => selectCustomer(c)}
+                                onMouseEnter={() => setCustomerHighlight(idx)}
+                                className={`w-full text-left px-3 py-2 transition-colors ${
+                                  idx === customerHighlight
+                                    ? "bg-brand-soft"
+                                    : "hover:bg-brand-soft"
+                                } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
                                 <div className="text-sm font-medium text-gray-800">
                                   {c.name}
                                 </div>
