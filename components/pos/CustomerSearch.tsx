@@ -33,8 +33,10 @@ export function CustomerSearch({
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [modalCustomerId, setModalCustomerId] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const { data: customersData } = useSearchCustomers(
     searchDebounced || undefined
@@ -51,6 +53,16 @@ export function CustomerSearch({
 
     return () => clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [searchDebounced, customers.length]);
+
+  useEffect(() => {
+    if (showDropdown && itemRefs.current[highlightedIndex]) {
+      itemRefs.current[highlightedIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedIndex, showDropdown]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -102,6 +114,25 @@ export function CustomerSearch({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onFocus={() => search && setShowDropdown(true)}
+                onKeyDown={(e) => {
+                  if (!showDropdown || customers.length === 0) return;
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setHighlightedIndex((i) =>
+                      Math.min(i + 1, customers.length - 1)
+                    );
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setHighlightedIndex((i) => Math.max(i - 1, 0));
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (customers[highlightedIndex]) {
+                      handleSelect(customers[highlightedIndex]);
+                    }
+                  } else if (e.key === "Escape") {
+                    setShowDropdown(false);
+                  }
+                }}
                 className="w-full border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-sm lg:text-base"
               />
             ) : (
@@ -145,11 +176,17 @@ export function CustomerSearch({
 
             {showDropdown && customers.length > 0 && !selectedCustomer && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg max-h-80 overflow-y-auto z-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                {customers.map((customer) => (
+                {customers.map((customer, index) => (
                   <button
                     key={customer.id}
+                    ref={(el) => {
+                      itemRefs.current[index] = el;
+                    }}
                     onClick={() => handleSelect(customer)}
-                    className="w-full px-4 py-3 hover:bg-gray-50 text-left border-b last:border-b-0">
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    className={`w-full px-4 py-3 text-left border-b last:border-b-0 ${
+                      index === highlightedIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                    }`}>
                     <div className="font-medium text-sm">{customer.name}</div>
                     <div className="text-xs text-gray-600">
                       Mã: {customer.code || "Chưa có mã"}
