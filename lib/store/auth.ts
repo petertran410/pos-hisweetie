@@ -9,6 +9,7 @@ export interface User {
   avatar?: string;
   branchId?: number;
   branchIds?: number[];
+  supplierId?: number | null;
   roles: string[];
   permissions: string[];
   canViewOtherStaffData?: boolean;

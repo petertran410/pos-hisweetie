@@ -55,6 +55,21 @@ export interface Inventory {
   branch?: { id: number; name: string; isActive: boolean };
 }
 
+export interface ProductPublicationLocation {
+  publisher?: string;
+  address?: string;
+  cityCode?: string;
+  cityName?: string;
+  districtCode?: string;
+  districtName?: string;
+  wardCode?: string;
+  wardName?: string;
+  newCityCode?: string;
+  newCityName?: string;
+  newWardCode?: string;
+  newWardName?: string;
+}
+
 export interface Product {
   id: number;
   code: string;
@@ -97,6 +112,9 @@ export interface Product {
   }[];
   comboComponents?: ProductComponent[];
   inventories?: Inventory[];
+  publicationLocation?: ProductPublicationLocation;
+  publicationDate?: string;
+  publicationLink?: string;
 }
 
 export interface ProductsResponse {

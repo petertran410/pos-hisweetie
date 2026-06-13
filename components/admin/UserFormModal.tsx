@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
 import { useCreateUser, useUpdateUser, useUser } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useAuthStore } from "@/lib/store/auth";
 
 interface UserFormModalProps {
@@ -18,6 +19,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
     password: "",
     phone: "",
     branchId: 0,
+    supplierId: 0,
     roleIds: [] as number[],
     permissionIds: [] as number[],
     denyPermissionIds: [] as number[],
@@ -33,6 +35,15 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const { data: branches } = useBranches();
+  const { data: suppliersResp } = useSuppliers({
+    pageSize: 1000,
+    orderBy: "name",
+    orderDirection: "asc",
+  });
+  const suppliers = useMemo(
+    () => suppliersResp?.data || [],
+    [suppliersResp]
+  );
   const activeBranches = useMemo(
     () => (branches || []).filter((b: any) => b.isActive),
     [branches]
@@ -46,6 +57,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
         password: "",
         phone: user.phone || "",
         branchId: user.branchId || 0,
+        supplierId: (user as any).supplierId || 0,
         roleIds: user.roles?.map((r: any) => r.id) || [],
         permissionIds: user.individualPermissions?.map((p: any) => p.id) || [],
         denyPermissionIds: user.denyPermissions?.map((p: any) => p.id) || [],
@@ -71,13 +83,17 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
           updateData.permissionIds = formData.permissionIds;
           updateData.denyPermissionIds = formData.denyPermissionIds;
           updateData.branchIds = formData.branchIds;
+          updateData.supplierId = formData.supplierId || null;
         }
         if (formData.password) {
           updateData.password = formData.password;
         }
         await updateUser.mutateAsync({ id: userId, data: updateData });
       } else {
-        await createUser.mutateAsync(formData);
+        await createUser.mutateAsync({
+          ...formData,
+          supplierId: formData.supplierId || null,
+        });
       }
       onClose();
     } catch (error) {
@@ -212,6 +228,35 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 ))}
               </select>
             </div>
+
+            {!isSelfEdit && (
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Nhà cung cấp (tài khoản nhân viên NCC)
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Để trống = nhân viên nội bộ (thấy mọi NCC). Chọn một NCC = tài
+                  khoản chỉ thấy dữ liệu đặt hàng nhập / ghép xe của NCC đó.
+                </p>
+                <select
+                  value={formData.supplierId}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      supplierId: Number(e.target.value),
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg">
+                  <option value={0}>Nhân viên nội bộ (không giới hạn)</option>
+                  {suppliers.map((s: any) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                      {s.code ? ` (${s.code})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium mb-2">
