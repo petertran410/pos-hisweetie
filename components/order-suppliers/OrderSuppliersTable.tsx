@@ -15,6 +15,7 @@ import { Plus, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
+import { useAuthStore } from "@/lib/store/auth";
 import { CodeLink } from "../shared/CodeLink";
 import { ColumnToggle } from "../shared/ColumnToggle";
 import {
@@ -182,6 +183,7 @@ export function OrderSuppliersTable({
   onFiltersChange,
 }: OrderSuppliersTableProps) {
   const router = useRouter();
+  const isSupplierStaff = useAuthStore((s) => s.user?.supplierId != null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [search, setSearch] = useState(filters.search || "");
@@ -274,12 +276,14 @@ export function OrderSuppliersTable({
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <PermissionGate resource="order_suppliers" action="create">
-              <button
-                onClick={() => router.push("/san-pham/dat-hang-nhap/new")}
-                className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
-                <Plus className="w-4 h-4" />
-                Tạo phiếu
-              </button>
+              {!isSupplierStaff && (
+                <button
+                  onClick={() => router.push("/san-pham/dat-hang-nhap/new")}
+                  className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
+                  <Plus className="w-4 h-4" />
+                  Tạo phiếu
+                </button>
+              )}
             </PermissionGate>
             <ColumnToggle columns={columns} onToggle={toggleColumn} />
           </div>

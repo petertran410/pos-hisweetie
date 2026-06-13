@@ -365,6 +365,7 @@ export function ProductsTable({
 
   const canCreate = usePermission("products", "create");
   const canViewCostPrice = usePermission("products", "view_cost_price");
+  const canViewSalePrice = usePermission("products", "view_sale_price");
   const canExport = usePermission("products", "export");
 
   // Debounce search
@@ -404,10 +405,12 @@ export function ProductsTable({
 
   const displayColumns = useMemo(
     () =>
-      canViewCostPrice
-        ? columns
-        : columns.filter((c) => c.key !== "inventory.cost"),
-    [columns, canViewCostPrice]
+      columns.filter((c) => {
+        if (c.key === "inventory.cost" && !canViewCostPrice) return false;
+        if (c.key === "basePrice" && !canViewSalePrice) return false;
+        return true;
+      }),
+    [columns, canViewCostPrice, canViewSalePrice]
   );
 
   const { data, isLoading } = useProducts({

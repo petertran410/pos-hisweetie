@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import type { Product } from "@/lib/api/products";
 import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/useProducts";
@@ -13,9 +13,47 @@ import { CategoryDropdown } from "./CategoryDropdown";
 import { TrademarkDropdown } from "./TrademarkDropdown";
 import { FormSection } from "./FormSection";
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import { API_URL } from "@/lib/config/api";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, ChevronDown, ChevronUp, Calendar } from "lucide-react";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { MiniCalendar } from "@/components/ui/MiniCalendar";
+import { AddressAutocompleteInput } from "@/components/pos/AddressAutocompleteInput";
+import {
+  extractAddressParts,
+  TrackAsiaPrediction,
+} from "@/lib/api/trackasia";
+
+function normalizeAdminName(name: string): string {
+  return (name || "")
+    .toLowerCase()
+    .replace(
+      /^(tỉnh|thành phố|tp\.?|phường|xã|thị trấn|quận|huyện|thị xã)\s+/,
+      ""
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+interface City {
+  name: string;
+  code: number;
+  districts: Array<{
+    name: string;
+    code: number;
+    wards: Array<{ name: string; code: number }>;
+  }>;
+}
+interface Province {
+  code: string;
+  name: string;
+}
+interface Commune {
+  code: string;
+  name: string;
+  provinceCode: string;
+}
 
 interface ProductFormProps {
   product?: Product;
@@ -49,6 +87,34 @@ export function ProductForm({
   const [activeTab, setActiveTab] = useState<
     "info" | "description" | "publication"
   >("info");
+
+  // ── Dữ liệu địa giới hành chính cho "Vị trí công bố" ──
+  const [cities, setCities] = useState<City[]>([]);
+  const [pubProvinces, setPubProvinces] = useState<Province[]>([]);
+  const [pubCommunes, setPubCommunes] = useState<Commune[]>([]);
+  const [showOldPubAddress, setShowOldPubAddress] = useState(false);
+  const [pubLocation, setPubLocation] = useState<any>({
+    address: undefined,
+    cityCode: undefined,
+    cityName: undefined,
+    districtCode: undefined,
+    districtName: undefined,
+    wardCode: undefined,
+    wardName: undefined,
+    newCityCode: undefined,
+    newCityName: undefined,
+    newWardCode: undefined,
+    newWardName: undefined,
+    publisher: undefined,
+  });
+  const [publicationDate, setPublicationDate] = useState<string>(
+    product?.publicationDate ? product.publicationDate.slice(0, 10) : ""
+  );
+  const [showPubDatePicker, setShowPubDatePicker] = useState(false);
+  const pubDatePickerRef = useRef<HTMLDivElement>(null);
+  const [publicationLink, setPublicationLink] = useState<string>(
+    product?.publicationLink || ""
+  );
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showCostConfirmation, setShowCostConfirmation] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<any>(null);
@@ -64,6 +130,9 @@ export function ProductForm({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { selectedBranch } = useBranchStore();
+  const canViewCostPrice = usePermission("products", "view_cost_price");
+  const canViewSalePrice = usePermission("products", "view_sale_price");
+  const canViewPublication = usePermission("products", "view_publication");
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const currentBranchInventory = product?.inventories?.find(
@@ -326,7 +395,9 @@ export function ProductForm({
         childName: data.childName,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
         variantId: data.variantId ? Number(data.variantId) : undefined,
-        purchasePrice: purchasePrice.value,
+        // Chỉ gửi giá vốn khi user có quyền xem — tránh ghi đè 0 lên giá vốn
+        // thật khi backend đã strip cost khỏi response.
+        ...(canViewCostPrice ? { purchasePrice: purchasePrice.value } : {}),
         basePrice: basePrice.value,
         stockQuantity: Number(data.stockQuantity) || 0,
         minStockAlert: Number(data.minStockAlert) || 0,
@@ -345,14 +416,30 @@ export function ProductForm({
             ? attributes.map((a) => `${a.name}:${a.value}`).join("|")
             : undefined,
         imageUrls: uploadedUrls,
-        documents: documentsPayload,
+        // Chỉ gửi dữ liệu công bố khi user có quyền — tránh xóa trắng khi
+        // backend đã strip phần công bố khỏi response.
+        ...(canViewPublication
+          ? {
+              documents: documentsPayload,
+              publicationLocation: (() => {
+                const hasAny = Object.entries(pubLocation).some(
+                  ([, v]) => v !== undefined && v !== null && v !== ""
+                );
+                return hasAny ? pubLocation : undefined;
+              })(),
+              publicationDate: publicationDate
+                ? new Date(publicationDate).toISOString()
+                : undefined,
+              publicationLink: publicationLink || undefined,
+            }
+          : {}),
         isDirectSale: Boolean(data.isDirectSale),
         isPieceUnit: Boolean(data.isPieceUnit),
         isActive: Boolean(data.isActive),
         branchId: selectedBranch?.id,
       };
 
-      if (hasCostChanged(purchasePrice.value)) {
+      if (canViewCostPrice && hasCostChanged(purchasePrice.value)) {
         setPendingFormData(formData);
         setShowCostConfirmation(true);
         setIsSubmitting(false);
@@ -468,7 +555,208 @@ export function ProductForm({
     } else {
       setDocuments([]);
     }
+
+    // Vị trí công bố
+    if (product?.publicationLocation) {
+      setPubLocation({
+        address: undefined,
+        cityCode: undefined,
+        cityName: undefined,
+        districtCode: undefined,
+        districtName: undefined,
+        wardCode: undefined,
+        wardName: undefined,
+        newCityCode: undefined,
+        newCityName: undefined,
+        newWardCode: undefined,
+        newWardName: undefined,
+        ...product.publicationLocation,
+      });
+      setShowOldPubAddress(
+        !!(
+          product.publicationLocation.cityCode ||
+          product.publicationLocation.districtCode ||
+          product.publicationLocation.wardCode
+        )
+      );
+    } else {
+      setPubLocation({
+        address: undefined,
+        cityCode: undefined,
+        cityName: undefined,
+        districtCode: undefined,
+        districtName: undefined,
+        wardCode: undefined,
+        wardName: undefined,
+        newCityCode: undefined,
+        newCityName: undefined,
+        newWardCode: undefined,
+        newWardName: undefined,
+      });
+      setShowOldPubAddress(false);
+    }
+    setPublicationDate(
+      product?.publicationDate ? product.publicationDate.slice(0, 10) : ""
+    );
+    setPublicationLink(product?.publicationLink || "");
   }, [product?.id]);
+
+  // Load dữ liệu địa giới (giống form khách hàng)
+  useEffect(() => {
+    fetch("/data/old-location.json")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setCities(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/data/new-province-location.json")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setPubProvinces(data);
+        else if (data?.provinces) setPubProvinces(data.provinces);
+      })
+      .catch(() => setPubProvinces([]));
+  }, []);
+
+  useEffect(() => {
+    fetch("/data/new-commune-location.json")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setPubCommunes(data);
+        else if (data?.communes) setPubCommunes(data.communes);
+      })
+      .catch(() => setPubCommunes([]));
+  }, []);
+
+  // Đóng popover ngày công bố khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        pubDatePickerRef.current &&
+        !pubDatePickerRef.current.contains(event.target as Node)
+      ) {
+        setShowPubDatePicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // ── Derive cho picker vị trí công bố ──
+  const pubDistricts = useMemo(() => {
+    if (!pubLocation.cityCode) return [];
+    const c = cities.find(
+      (x) => String(x.code) === String(pubLocation.cityCode)
+    );
+    return c?.districts || [];
+  }, [pubLocation.cityCode, cities]);
+
+  const pubWards = useMemo(() => {
+    if (!pubLocation.districtCode) return [];
+    const d = pubDistricts.find(
+      (x) => String(x.code) === String(pubLocation.districtCode)
+    );
+    return d?.wards || [];
+  }, [pubLocation.districtCode, pubDistricts]);
+
+  const pubFilteredCommunes = useMemo(() => {
+    if (!pubLocation.newCityCode) return [];
+    return pubCommunes.filter(
+      (x) => String(x.provinceCode) === String(pubLocation.newCityCode)
+    );
+  }, [pubLocation.newCityCode, pubCommunes]);
+
+  const setPub = (field: string, value: any) =>
+    setPubLocation((p: any) => ({ ...p, [field]: value }));
+
+  const handlePubCityChange = (v: string) => {
+    const c = cities.find((x) => String(x.code) === String(v));
+    setPubLocation((p: any) => ({
+      ...p,
+      cityCode: v || undefined,
+      cityName: c?.name,
+      districtCode: undefined,
+      districtName: undefined,
+      wardCode: undefined,
+      wardName: undefined,
+    }));
+  };
+
+  const handlePubDistrictChange = (v: string) => {
+    const d = pubDistricts.find((x) => String(x.code) === String(v));
+    setPubLocation((p: any) => ({
+      ...p,
+      districtCode: v || undefined,
+      districtName: d?.name,
+      wardCode: undefined,
+      wardName: undefined,
+    }));
+  };
+
+  const handlePubWardChange = (v: string) => {
+    const w = pubWards.find((x) => String(x.code) === String(v));
+    setPubLocation((p: any) => ({
+      ...p,
+      wardCode: v || undefined,
+      wardName: w?.name,
+    }));
+  };
+
+  const handlePubNewCityChange = (v: string) => {
+    const p = pubProvinces.find((x) => x.code === v);
+    setPubLocation((prev: any) => ({
+      ...prev,
+      newCityCode: v || undefined,
+      newCityName: p?.name,
+      newWardCode: undefined,
+      newWardName: undefined,
+    }));
+  };
+
+  const handlePubNewWardChange = (v: string) => {
+    const c = pubFilteredCommunes.find((x) => x.code === v);
+    setPubLocation((p: any) => ({
+      ...p,
+      newWardCode: v || undefined,
+      newWardName: c?.name,
+    }));
+  };
+
+  const handlePubSelectSuggestion = (prediction: TrackAsiaPrediction) => {
+    const { streetAddress, provinceName, wardName } =
+      extractAddressParts(prediction);
+
+    const province = provinceName
+      ? pubProvinces.find(
+          (p) => normalizeAdminName(p.name) === normalizeAdminName(provinceName)
+        )
+      : undefined;
+
+    const ward =
+      province && wardName
+        ? pubCommunes.find(
+            (c) =>
+              String(c.provinceCode) === String(province.code) &&
+              normalizeAdminName(c.name) === normalizeAdminName(wardName)
+          )
+        : undefined;
+
+    setPubLocation((p: any) => ({
+      ...p,
+      address: streetAddress || p.address,
+      ...(province
+        ? {
+            newCityCode: province.code,
+            newCityName: province.name,
+            newWardCode: ward?.code,
+            newWardName: ward?.name,
+          }
+        : {}),
+    }));
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -507,16 +795,18 @@ export function ProductForm({
             }`}>
             Mô tả
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("publication")}
-            className={`py-3 px-3 border-b-2 ${
-              activeTab === "publication"
-                ? "border-brand text-brand font-medium"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}>
-            Công bố
-          </button>
+          {canViewPublication && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("publication")}
+              className={`py-3 px-3 border-b-2 ${
+                activeTab === "publication"
+                  ? "border-brand text-brand font-medium"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              Công bố
+            </button>
+          )}
         </div>
 
         <form
@@ -636,37 +926,42 @@ export function ProductForm({
             </FormSection>
 
             {/* Section: Giá vốn, giá bán */}
-            <FormSection title="Giá vốn, giá bán">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Giá vốn
-                  </label>
-                  <input
-                    type="text"
-                    value={purchasePrice.displayValue}
-                    onChange={purchasePrice.handleChange}
-                    onBlur={purchasePrice.handleBlur}
-                    className="w-full border rounded px-3 py-2 bg-white"
-                    placeholder="0"
-                  />
+            {(canViewCostPrice || canViewSalePrice) && (
+              <FormSection title="Giá vốn, giá bán">
+                <div className="grid grid-cols-2 gap-4">
+                  {canViewCostPrice && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Giá vốn
+                      </label>
+                      <input
+                        type="text"
+                        value={purchasePrice.displayValue}
+                        onChange={purchasePrice.handleChange}
+                        onBlur={purchasePrice.handleBlur}
+                        className="w-full border rounded px-3 py-2 bg-white"
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                  {canViewSalePrice && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Giá bán
+                      </label>
+                      <input
+                        type="text"
+                        value={basePrice.displayValue}
+                        onChange={basePrice.handleChange}
+                        onBlur={basePrice.handleBlur}
+                        className="w-full border rounded px-3 py-2 bg-white"
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Giá bán
-                  </label>
-                  <input
-                    type="text"
-                    value={basePrice.displayValue}
-                    onChange={basePrice.handleChange}
-                    onBlur={basePrice.handleBlur}
-                    className="w-full border rounded px-3 py-2 bg-white"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-            </FormSection>
-
+              </FormSection>
+            )}
             {/* Section: Tồn kho */}
             <FormSection
               title="Tồn kho"
@@ -923,7 +1218,9 @@ export function ProductForm({
           {/* Tab Công bố */}
           <div
             className={
-              activeTab === "publication" ? "p-6 space-y-5" : "hidden"
+              canViewPublication && activeTab === "publication"
+                ? "p-6 space-y-5"
+                : "hidden"
             }>
             <FormSection
               title="Tài liệu công bố"
@@ -993,6 +1290,201 @@ export function ProductForm({
                   ))}
                 </ul>
               )}
+            </FormSection>
+
+            {/* Vị trí công bố / Ngày công bố / Link công bố */}
+            <FormSection
+              title="Thông tin công bố"
+              description="Vị trí, ngày và đường dẫn công bố sản phẩm.">
+              {/* Vị trí công bố */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5">
+                  Vị trí công bố
+                </label>
+
+                {/* Nhà công bố + Địa chỉ chi tiết + autocomplete */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Nhà công bố
+                    </label>
+                    <input
+                      type="text"
+                      value={pubLocation.publisher || ""}
+                      onChange={(e) =>
+                        setPub("publisher", e.target.value || undefined)
+                      }
+                      placeholder="Nhập nhà công bố"
+                      className="w-full border rounded px-3 py-2 text-sm bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Địa chỉ chi tiết
+                    </label>
+                    <AddressAutocompleteInput
+                      value={pubLocation.address || ""}
+                      onChange={(text) => setPub("address", text || undefined)}
+                      onSelect={handlePubSelectSuggestion}
+                      placeholder="VD: 123 Nguyễn Trãi"
+                      className="w-full border rounded px-3 py-2 text-sm bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Địa chỉ mới (sau sáp nhập) */}
+                <div className="border-t mt-3 pt-3">
+                  <p className="text-sm font-medium mb-2 text-gray-700">
+                    Địa chỉ mới (Tỉnh / Phường — sau sáp nhập)
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Tỉnh/Thành phố
+                      </label>
+                      <SearchableSelect
+                        options={(pubProvinces || []).map((p) => ({
+                          value: p.code,
+                          label: p.name,
+                        }))}
+                        value={pubLocation.newCityCode || ""}
+                        onChange={handlePubNewCityChange}
+                        placeholder="Tìm Tỉnh/Thành phố"
+                        size="sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Phường/Xã
+                      </label>
+                      <SearchableSelect
+                        options={pubFilteredCommunes.map((c) => ({
+                          value: c.code,
+                          label: c.name,
+                        }))}
+                        value={pubLocation.newWardCode || ""}
+                        onChange={handlePubNewWardChange}
+                        placeholder="Tìm Phường/Xã"
+                        disabled={!pubLocation.newCityCode}
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Địa chỉ cũ — toggle */}
+                <div className="border-t mt-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowOldPubAddress((v) => !v)}
+                    className="flex items-center gap-1.5 text-sm text-brand hover:text-brand-dark font-medium">
+                    {showOldPubAddress ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                    Địa chỉ cũ (Tỉnh / Quận / Phường — trước sáp nhập)
+                  </button>
+
+                  {showOldPubAddress && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Tỉnh/Thành phố
+                        </label>
+                        <SearchableSelect
+                          options={cities.map((c) => ({
+                            value: String(c.code),
+                            label: c.name,
+                          }))}
+                          value={pubLocation.cityCode || ""}
+                          onChange={handlePubCityChange}
+                          placeholder="Chọn Tỉnh/Thành phố"
+                          size="sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Quận/Huyện
+                        </label>
+                        <SearchableSelect
+                          options={pubDistricts.map((d) => ({
+                            value: String(d.code),
+                            label: d.name,
+                          }))}
+                          value={pubLocation.districtCode || ""}
+                          onChange={handlePubDistrictChange}
+                          placeholder="Chọn Quận/Huyện"
+                          disabled={!pubLocation.cityCode}
+                          size="sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Phường/Xã
+                        </label>
+                        <SearchableSelect
+                          options={pubWards.map((w) => ({
+                            value: String(w.code),
+                            label: w.name,
+                          }))}
+                          value={pubLocation.wardCode || ""}
+                          onChange={handlePubWardChange}
+                          placeholder="Chọn Phường/Xã"
+                          disabled={!pubLocation.districtCode}
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Ngày công bố + Link công bố */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Ngày công bố
+                  </label>
+                  <div className="relative" ref={pubDatePickerRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPubDatePicker((v) => !v)}
+                      className="w-full border rounded px-3 py-2 bg-white text-left flex items-center justify-between">
+                      <span
+                        className={
+                          publicationDate ? "text-gray-900" : "text-gray-400"
+                        }>
+                        {publicationDate
+                          ? publicationDate.split("-").reverse().join("/")
+                          : "Chọn ngày"}
+                      </span>
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                    </button>
+                    {showPubDatePicker && (
+                      <div className="absolute z-50 left-0 top-full w-72">
+                        <MiniCalendar
+                          value={publicationDate}
+                          onChange={(d) => setPublicationDate(d)}
+                          onClose={() => setShowPubDatePicker(false)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Link công bố
+                  </label>
+                  <input
+                    type="url"
+                    value={publicationLink}
+                    onChange={(e) => setPublicationLink(e.target.value)}
+                    className="w-full border rounded px-3 py-2 bg-white"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
             </FormSection>
           </div>
 

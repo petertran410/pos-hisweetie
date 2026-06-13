@@ -42,6 +42,7 @@ export const usersApi = {
     password: string;
     phone?: string;
     branchId?: number;
+    supplierId?: number | null;
     roleIds?: number[];
     permissionIds?: number[];
     denyPermissionIds?: number[];
@@ -59,6 +60,7 @@ export const usersApi = {
       password?: string;
       phone?: string;
       branchId?: number;
+      supplierId?: number | null;
       isActive?: boolean;
       roleIds?: number[];
       permissionIds?: number[];

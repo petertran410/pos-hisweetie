@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { X, ChevronDown, Printer } from "lucide-react";
 import {
   useReturnOrder,
   useCancelReturnOrder,
@@ -9,6 +9,7 @@ import {
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
 import { formatCurrency } from "@/lib/utils";
+import { printEntity } from "@/lib/utils/print";
 import Swal from "sweetalert2";
 
 interface ConfirmRefundModalProps {
@@ -31,7 +32,10 @@ export function ConfirmRefundModal({
   const { data: bankAccounts } = useBankAccountsForPayment();
   const cancelReturnOrder = useCancelReturnOrder();
   const canCancel = useCan("return_orders", "cancel");
+  const canPrint = useCan("print_templates", "view");
   const isAdmin = useIsAdmin();
+
+  const [printing, setPrinting] = useState(false);
 
   const [note, setNote] = useState("");
   const [method, setMethod] = useState("cash");
@@ -133,6 +137,22 @@ export function ConfirmRefundModal({
       } catch {
         // error handled by hook
       }
+    }
+  };
+
+  const handlePrint = async () => {
+    if (!returnOrder) return;
+    setPrinting(true);
+    try {
+      await printEntity("return_order", returnOrder.id);
+    } catch (e: any) {
+      await Swal.fire({
+        title: "In thất bại",
+        text: e?.message || "Không in được phiếu trả hàng",
+        icon: "error",
+      });
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -458,6 +478,16 @@ export function ConfirmRefundModal({
             )}
           </div>
           <div className="flex items-center gap-2">
+            {canPrint && (
+              <button
+                onClick={handlePrint}
+                disabled={printing}
+                title="In phiếu trả hàng"
+                className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100 disabled:opacity-50 flex items-center gap-1.5">
+                <Printer className="w-4 h-4" />
+                {printing ? "Đang in..." : "In"}
+              </button>
+            )}
             <button
               onClick={onClose}
               className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">

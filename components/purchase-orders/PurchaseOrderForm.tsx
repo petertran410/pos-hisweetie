@@ -733,13 +733,13 @@ export function PurchaseOrderForm({
   return (
     <div className="flex h-full border-t bg-gray-50 overflow-hidden">
       <div className="flex-1 flex flex-col overflow-hidden m-4 border rounded-xl">
-        <div className="bg-white border-b px-6 py-4 flex items-center gap-4">
+        <div className="bg-white border-b px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => router.push("/san-pham/nhap-hang")}
-            className="p-2 hover:bg-gray-100 rounded-lg shrink-0">
+            className="p-1.5 hover:bg-gray-100 rounded-lg shrink-0">
             <X className="w-5 h-5" />
           </button>
-          <h2 className="text-xl font-semibold shrink-0">
+          <h2 className="text-lg font-semibold shrink-0">
             {purchaseOrder ? "Cập nhật nhập hàng" : "Tạo nhập hàng"}
           </h2>
           <div className="flex-1 max-w-xl">
@@ -751,10 +751,10 @@ export function PurchaseOrderForm({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 py-3">
 
           <div className="border border-gray-200 rounded-lg overflow-x-auto bg-white">
-            <table className="w-full min-w-[1100px]">
+            <table className="w-full min-w-[1180px]">
               <thead>
                 <tr className="bg-gray-100 border-b border-gray-200">
                   <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-12">
@@ -916,12 +916,14 @@ export function PurchaseOrderForm({
         </div>
       </div>
 
-      <div className="w-[420px] border mr-4 mt-4 mb-4 rounded-xl overflow-y-auto bg-white border-l flex flex-col custom-sidebar-scroll">
-        <div className="px-4 py-3 border-b bg-gray-50">
-          <h3 className="font-semibold text-gray-900">Thông tin nhập hàng</h3>
+      <div className="w-[360px] border mr-4 mt-4 mb-4 rounded-xl overflow-y-auto bg-white border-l flex flex-col custom-sidebar-scroll">
+        <div className="px-4 py-2.5 border-b bg-gray-50">
+          <h3 className="font-semibold text-gray-900 text-sm">
+            Thông tin nhập hàng
+          </h3>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
           {/* Hàng trên cùng: Người nhập + Ngày — giống KiotViet */}
           <div className="flex gap-2">
             <div ref={userDropdownRef} className="relative flex-1">
@@ -1091,7 +1093,7 @@ export function PurchaseOrderForm({
 
           <div className="flex flex-col gap-1">
             <div className="flex gap-2 items-center">
-              <div className="text-md text-gray-600 whitespace-nowrap">
+              <div className="text-sm text-gray-600 whitespace-nowrap">
                 Mã phiếu nhập:
               </div>
               <input
@@ -1111,7 +1113,7 @@ export function PurchaseOrderForm({
 
           {purchaseOrder?.orderSupplier?.code && (
             <div className="flex gap-2">
-              <div className="block text-md text-gray-600">
+              <div className="block text-sm text-gray-600">
                 Mã đặt hàng nhập:
               </div>
               <span>{purchaseOrder?.orderSupplier?.code}</span>
@@ -1119,12 +1121,12 @@ export function PurchaseOrderForm({
           )}
 
           <div ref={statusDropdownRef} className="flex gap-2">
-            <div className="text-md text-gray-600">Trạng thái:</div>
+            <div className="text-sm text-gray-600">Trạng thái:</div>
             <span>{selectedStatus ? selectedStatus.label : "Phiếu tạm"}</span>
           </div>
 
           <div ref={branchDropdownRef} className="flex gap-2 items-center">
-            <div className="text-md text-gray-600">Kho: </div>
+            <div className="text-sm text-gray-600">Kho: </div>
             <div className="relative w-40">
               <button
                 type="button"
@@ -1162,8 +1164,8 @@ export function PurchaseOrderForm({
 
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
-              <div className="text-md text-gray-600">Tổng tiền hàng:</div>
-              <div className="text-md">
+              <div className="text-sm text-gray-600">Tổng tiền hàng:</div>
+              <div className="text-sm">
                 {formatCurrency(
                   products.reduce((sum, p) => sum + p.subTotal, 0)
                 )}
@@ -1183,22 +1185,22 @@ export function PurchaseOrderForm({
               return (
                 <>
                   <div className="flex gap-2">
-                    <div className="text-md text-gray-600">
+                    <div className="text-sm text-gray-600">
                       Tiền trước thuế:
                     </div>
-                    <div className="text-md">
+                    <div className="text-sm">
                       {formatCurrency(vatSummary.totalPreTax)}
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <div className="text-md text-gray-600">Thuế VAT:</div>
-                    <div className="text-md">
+                    <div className="text-sm text-gray-600">Thuế VAT:</div>
+                    <div className="text-sm">
                       {formatCurrency(vatSummary.totalVat)}
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <div className="text-md text-gray-600">Tổng sau thuế:</div>
-                    <div className="text-md font-semibold">
+                    <div className="text-sm text-gray-600">Tổng sau thuế:</div>
+                    <div className="text-sm font-semibold">
                       {formatCurrency(vatSummary.totalAfterTax)}
                     </div>
                   </div>
@@ -1206,7 +1208,7 @@ export function PurchaseOrderForm({
               );
             })()}
             <div ref={discountDropdownRef} className="flex gap-2 items-center">
-              <div className="text-md text-gray-600">Giảm giá:</div>
+              <div className="text-sm text-gray-600">Giảm giá:</div>
               <div className="flex gap-1">
                 <input
                   type="text"
@@ -1268,29 +1270,29 @@ export function PurchaseOrderForm({
           </div>
 
           <div className="flex gap-2">
-            <div className="block text-md text-gray-600 mb-1">
+            <div className="block text-sm text-gray-600 mb-1">
               Cần trả nhà cung cấp:
             </div>
-            <div className="text-md">{formatCurrency(calculateTotal())}</div>
+            <div className="text-sm">{formatCurrency(calculateTotal())}</div>
           </div>
 
           {previouslyPaid > 0 && (
             <>
               <div className="flex gap-2">
-                <div className="block text-md text-gray-600">
+                <div className="block text-sm text-gray-600">
                   {purchaseOrder
                     ? "Đã thanh toán:"
                     : "Đã thanh toán ở phiếu đặt hàng:"}
                 </div>
-                <div className="text-md font-medium text-green-600">
+                <div className="text-sm font-medium text-green-600">
                   {formatCurrency(previouslyPaid)}
                 </div>
               </div>
               <div className="flex gap-2">
-                <div className="block text-md text-gray-600">
+                <div className="block text-sm text-gray-600">
                   Còn cần trả thêm:
                 </div>
-                <div className="text-md font-semibold">
+                <div className="text-sm font-semibold">
                   {formatCurrency(
                     Math.max(0, calculateTotal() - previouslyPaid)
                   )}
@@ -1300,7 +1302,7 @@ export function PurchaseOrderForm({
           )}
 
           <div className="flex gap-2 items-center">
-            <div className="text-md text-gray-600">
+            <div className="text-sm text-gray-600">
               {previouslyPaid > 0
                 ? "Trả thêm nhà cung cấp:"
                 : "Tiền trả nhà cung cấp:"}
@@ -1324,7 +1326,7 @@ export function PurchaseOrderForm({
           </div>
 
           <div className="flex gap-2">
-            <label className="text-md text-gray-600">
+            <label className="text-sm text-gray-600">
               Tiền nhà cung cấp trả lại:
             </label>
             <div className="">
@@ -1335,7 +1337,7 @@ export function PurchaseOrderForm({
           </div>
 
           <div>
-            <label className="block text-md text-gray-600 mb-1">Ghi chú:</label>
+            <label className="block text-sm text-gray-600 mb-1">Ghi chú:</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 1000))}
@@ -1348,17 +1350,17 @@ export function PurchaseOrderForm({
           </div>
         </div>
 
-        <div className="p-4 border-t bg-gray-50 space-y-2">
+        <div className="p-3 border-t bg-gray-50 space-y-2">
           <button
             onClick={handleComplete}
             disabled={isFormDisabled ? true : false}
-            className="w-full py-2.5 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50 font-medium">
+            className="w-full py-2 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50 font-medium text-sm">
             Hoàn thành
           </button>
           <button
             onClick={handleSubmit}
             disabled={isFormDisabled ? true : false}
-            className="w-full py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium">
+            className="w-full py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium text-sm">
             Lưu tạm
           </button>
         </div>
