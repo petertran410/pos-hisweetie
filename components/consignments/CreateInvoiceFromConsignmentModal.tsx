@@ -3,9 +3,13 @@
 import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import type { Consignment } from "@/lib/types/consignment";
+import {
+  type Consignment,
+  CONSIGNMENT_RETURN_STATUS,
+} from "@/lib/types/consignment";
 import { useCreateInvoiceFromConsignment } from "@/lib/hooks/useConsignments";
 import { formatCurrency } from "@/lib/utils";
+import { printEntity } from "@/lib/utils/print";
 import { toast } from "sonner";
 
 interface CreateInvoiceFromConsignmentModalProps {
@@ -17,7 +21,7 @@ interface CreateInvoiceFromConsignmentModalProps {
 
 /**
  * B3 — xuất hóa đơn từ phiếu ký gửi. Cho phép xuất từng phần:
- * số còn lại = SL ký gửi − SL đã xuất hóa đơn (derive từ invoices con).
+ * số còn lại = SL ký gửi − SL đã xuất hóa đơn − SL đã hoàn nhận kho.
  */
 export function CreateInvoiceFromConsignmentModal({
   isOpen,
@@ -39,18 +43,32 @@ export function CreateInvoiceFromConsignmentModal({
     return map;
   }, [consignment.invoices]);
 
+  // Số đã hoàn & nhận về kho theo product (returns STOCK_RECEIVED).
+  const receivedMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    (consignment.returns || []).forEach((r) => {
+      if (r.status !== CONSIGNMENT_RETURN_STATUS.STOCK_RECEIVED) return;
+      (r.details || []).forEach((d) => {
+        map[d.productId] =
+          (map[d.productId] || 0) + Number(d.returnQuantity || 0);
+      });
+    });
+    return map;
+  }, [consignment.returns]);
+
   const remainingItems = useMemo(
     () =>
       (consignment.items || [])
         .map((item) => {
           const invoiced = invoicedMap[item.productId] || 0;
+          const received = receivedMap[item.productId] || 0;
           return {
             ...item,
-            remainingQuantity: Number(item.quantity) - invoiced,
+            remainingQuantity: Number(item.quantity) - invoiced - received,
           };
         })
         .filter((item) => item.remainingQuantity > 0),
-    [consignment.items, invoicedMap]
+    [consignment.items, invoicedMap, receivedMap]
   );
 
   // Số lượng muốn xuất cho từng product (mặc định = toàn bộ phần còn lại).
@@ -102,12 +120,21 @@ export function CreateInvoiceFromConsignmentModal({
     }
 
     try {
-      await createInvoice.mutateAsync({
+      const invoice = await createInvoice.mutateAsync({
         consignmentId: consignment.id,
         data: { items },
       });
       onSuccess?.();
       onClose();
+      // Bung bản in hóa đơn ký gửi (HDKG...) vừa tạo — dùng mẫu HĐ mặc định.
+      // Tách lỗi in khỏi lỗi tạo HĐ: HĐ đã tạo thành công, in lỗi báo riêng.
+      if ((invoice as any)?.id) {
+        try {
+          await printEntity("invoice", (invoice as any).id);
+        } catch (printError: any) {
+          toast.error(printError?.message || "Không in được hóa đơn");
+        }
+      }
     } catch (error: any) {
       toast.error(error?.message || "Xuất hóa đơn thất bại");
     }

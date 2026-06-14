@@ -10,11 +10,14 @@ import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuar
 import { usePendingPrint } from "@/lib/hooks/usePendingPrint";
 import { useBranchStore } from "@/lib/store/branch";
 
-// Trạng thái mặc định: Phiếu tạm + Đã xác nhận + Ký gửi một phần.
+// Trạng thái mặc định: Phiếu tạm + Đã xác nhận + Ký gửi một phần
+// + Đang giao + Đã giao (đang ký gửi).
 const DEFAULT_STATUS = [
   CONSIGNMENT_STATUS.PENDING,
   CONSIGNMENT_STATUS.CONFIRMED,
   CONSIGNMENT_STATUS.PARTIALLY_INVOICED,
+  CONSIGNMENT_STATUS.LOADING,
+  CONSIGNMENT_STATUS.DELIVERED,
 ];
 
 export default function ConsignmentsPage() {

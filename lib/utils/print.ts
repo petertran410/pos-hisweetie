@@ -206,3 +206,67 @@ export async function printDeliverySlip(
     cleanup();
   };
 }
+
+/**
+ * In phiếu hoàn hàng ký gửi (template code KG_RETURN, templateFor 'consignment').
+ * entityType 'consignment_return' để backend dùng đúng loader.
+ */
+export async function printConsignmentReturn(returnId: number): Promise<void> {
+  const template: any = await printTemplatesApi.getByCode("KG_RETURN");
+  if (!template?.id) {
+    throw new Error("Chưa có mẫu in phiếu hoàn hàng ký gửi");
+  }
+
+  const preview = await printTemplatesApi.renderPreview(
+    template.id,
+    returnId,
+    "consignment_return"
+  );
+
+  if (!preview?.content) {
+    throw new Error("Không render được nội dung in");
+  }
+
+  const paperSize = template.paperSize || "A5";
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText =
+    "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument;
+  if (!doc) {
+    document.body.removeChild(iframe);
+    throw new Error("Không tạo được iframe in");
+  }
+
+  doc.open();
+  doc.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @page { size: ${paperSize}; margin: 0; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 0 5mm; }
+    table { width: 100%; border-collapse: collapse; }
+    td, th { padding: 4px 8px; }
+    * { box-sizing: border-box; }
+  </style>
+</head>
+<body>${preview.content}</body>
+</html>`);
+  doc.close();
+
+  const cleanup = () =>
+    setTimeout(() => iframe.parentNode?.removeChild(iframe), 100);
+  iframe.onload = () => {
+    const win = iframe.contentWindow;
+    if (!win) {
+      cleanup();
+      return;
+    }
+    win.focus();
+    win.print();
+    cleanup();
+  };
+}
