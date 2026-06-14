@@ -17,6 +17,7 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/don-hang/dat-hang", title: "Đặt hàng" },
   { prefix: "/don-hang/hoa-don-vat", title: "Hóa đơn VAT" },
   { prefix: "/don-hang/hoa-don", title: "Hóa đơn" },
+  { prefix: "/don-hang/ky-gui", title: "Ký gửi" },
   { prefix: "/don-hang/tra-hang", title: "Trả hàng" },
   { prefix: "/don-hang/can-tru-cong-no", title: "Cấn trừ công nợ" },
   { prefix: "/don-hang/bao-don", title: "Báo đơn" },

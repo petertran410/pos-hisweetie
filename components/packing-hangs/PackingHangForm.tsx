@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { X, Camera, Upload, ChevronDown, QrCode } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useInvoicesForPacking } from "@/lib/hooks/useInvoices";
+import { useConsignmentsForPacking } from "@/lib/hooks/useConsignments";
 import { uploadPackingHangImages } from "@/lib/hooks/usePackingHangs";
 import { QrUploadModal } from "@/components/shared/QrUploadModal";
 import { formatCurrency } from "@/lib/utils";
@@ -31,6 +32,13 @@ export function PackingHangForm({
   );
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>(
     packingHang?.invoices?.map((i) => i.invoiceId) || preselectedInvoiceIds
+  );
+
+  // Loại chứng từ để đóng hàng: hóa đơn hoặc phiếu ký gửi.
+  const [docType, setDocType] = useState<"invoice" | "consignment">(
+    packingHang?.invoices?.some((i: any) => i.consignmentId)
+      ? "consignment"
+      : "invoice"
   );
 
   type InvoiceLite = {
@@ -99,7 +107,16 @@ export function PackingHangForm({
     search: debouncedInvoiceSearch || undefined,
   });
 
-  const availableInvoices = invoicesData?.data || [];
+  const { data: consignmentsData } = useConsignmentsForPacking({
+    branchId: branchId || undefined,
+    pageSize: 100,
+    search: debouncedInvoiceSearch || undefined,
+  });
+
+  const availableInvoices =
+    docType === "consignment"
+      ? (consignmentsData?.data as any[]) || []
+      : invoicesData?.data || [];
   const selectedBranch = branches?.find((b) => b.id === branchId);
   const activeBranches = useMemo(
     () => (branches || []).filter((b) => b.isActive),
@@ -207,7 +224,11 @@ export function PackingHangForm({
     }
 
     if (selectedInvoiceIds.length === 0) {
-      toast.error("Vui lòng chọn ít nhất 1 hóa đơn");
+      toast.error(
+        docType === "consignment"
+          ? "Vui lòng chọn ít nhất 1 phiếu ký gửi"
+          : "Vui lòng chọn ít nhất 1 hóa đơn"
+      );
       return;
     }
 
@@ -218,7 +239,9 @@ export function PackingHangForm({
 
     const data = {
       branchId,
-      invoiceIds: selectedInvoiceIds,
+      ...(docType === "consignment"
+        ? { consignmentIds: selectedInvoiceIds }
+        : { invoiceIds: selectedInvoiceIds }),
       numberOfPackages,
       note,
       imageUrls: images,
@@ -267,6 +290,27 @@ export function PackingHangForm({
           onSubmit={handleSubmit}
           className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-4">
+            <div className="flex gap-2">
+              {(["invoice", "consignment"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    if (t === docType) return;
+                    setDocType(t);
+                    setSelectedInvoiceIds([]);
+                    setSelectedInvoiceCache({});
+                    setInvoiceSearch("");
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
+                    docType === t
+                      ? "bg-brand text-white border-brand"
+                      : "bg-white text-gray-600 hover:bg-gray-50"
+                  }`}>
+                  {t === "invoice" ? "Hóa đơn" : "Phiếu ký gửi"}
+                </button>
+              ))}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
@@ -321,7 +365,8 @@ export function PackingHangForm({
 
             <div ref={invoiceDropdownRef} className="relative">
               <label className="block text-sm font-medium mb-2">
-                Hóa đơn <span className="text-red-500">*</span>
+                {docType === "consignment" ? "Phiếu ký gửi" : "Hóa đơn"}{" "}
+                <span className="text-red-500">*</span>
               </label>
               <div
                 className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"

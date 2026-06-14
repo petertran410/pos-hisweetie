@@ -46,6 +46,7 @@ interface CartItemsListProps {
   canEditDiscount?: boolean;
   canViewInventory?: boolean;
   priceWarnings?: Record<string, PriceWarning | null>;
+  documentType?: "order" | "invoice" | "consignment";
   className?: string;
 }
 
@@ -65,6 +66,7 @@ export function OrderItemsList({
   canEditDiscount = true,
   canViewInventory = true,
   priceWarnings,
+  documentType,
   className,
 }: CartItemsListProps) {
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
@@ -519,6 +521,22 @@ export function OrderItemsList({
                     onCreateTemplate={handleCreateTemplate}
                     onEditTemplate={handleEditTemplate}
                   />
+
+                  {documentType === "consignment" && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="text-xs text-gray-500">NSX</span>
+                      <input
+                        type="date"
+                        value={item.manufactureDate || ""}
+                        onChange={(e) =>
+                          onUpdateItem(item.rowId, {
+                            manufactureDate: e.target.value || undefined,
+                          })
+                        }
+                        className="border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex-shrink-0 flex items-center gap-1">

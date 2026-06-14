@@ -48,6 +48,7 @@ export const ROUTE_PERMISSIONS: Record<
   "/san-pham/ghep-xe": { resource: "vehicle_shipments", action: "view" },
   "/san-pham/tra-hang-nhap": { resource: "supplier_returns", action: "view" },
   "/don-hang/dat-hang": { resource: "orders", action: "view" },
+  "/don-hang/ky-gui": { resource: "consignments", action: "view" },
   "/don-hang/hoa-don": { resource: "invoices", action: "view" },
   "/don-hang/hoa-don-vat": { resource: "vat_invoices", action: "view" },
   "/don-hang/tra-hang": { resource: "invoices", action: "view" },
@@ -164,6 +165,12 @@ export const NAV_CONFIG: NavSection[] = [
         label: "Đặt hàng",
         href: "/don-hang/dat-hang",
         permission: { resource: "orders", action: "view" },
+      },
+      {
+        key: "ky-gui",
+        label: "Ký gửi",
+        href: "/don-hang/ky-gui",
+        permission: { resource: "consignments", action: "view" },
       },
       {
         key: "hoa-don",

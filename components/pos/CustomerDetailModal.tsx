@@ -5,6 +5,7 @@ import { X, Loader2 } from "lucide-react";
 import { useCustomer } from "@/lib/hooks/useCustomers";
 import { CustomerInvoicesTab } from "../customers/CustomerInvoicesTab";
 import { CustomerOrdersTab } from "../customers/CustomerOrdersTab";
+import { CustomerConsignmentsTab } from "../customers/CustomerConsignmentsTab";
 import { CustomerDebtsTab } from "../customers/CustomerDebtsTab";
 import { CustomerInfoTab } from "./CustomerInfoTab";
 import { CustomerInvoiceInfoTab } from "./CustomerInvoiceInfoTab";
@@ -27,6 +28,7 @@ type TabType =
   | "addresses"
   | "invoices"
   | "orders"
+  | "consignments"
   | "debts"
   | "debts_total"
   | "debts_own";
@@ -75,6 +77,7 @@ export function CustomerDetailModal({
     { key: "addresses", label: "Địa chỉ" },
     { key: "invoices", label: "Lịch sử bán/trả" },
     { key: "orders", label: "Lịch sử đặt hàng" },
+    { key: "consignments", label: "Theo dõi ký gửi" },
     ...(canViewDebt
       ? isParent
         ? [
@@ -182,6 +185,9 @@ export function CustomerDetailModal({
               )}
               {activeTab === "orders" && (
                 <CustomerOrdersTab customerId={customer.id} />
+              )}
+              {activeTab === "consignments" && (
+                <CustomerConsignmentsTab customerId={customer.id} />
               )}
               {activeTab === "debts" && canViewDebt && (
                 <CustomerDebtsTab

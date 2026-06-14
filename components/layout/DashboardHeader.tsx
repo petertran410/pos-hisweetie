@@ -102,6 +102,7 @@ export function DashboardHeader() {
       { label: "Đặt hàng", href: "/don-hang/dat-hang" },
       { label: "Hóa đơn", href: "/don-hang/hoa-don" },
       { label: "Hóa đơn VAT", href: "/don-hang/hoa-don-vat" },
+      { label: "Ký gửi", href: "/don-hang/ky-gui" },
       { label: "Trả hàng", href: "/don-hang/tra-hang" },
       { label: "Cấn trừ công nợ", href: "/don-hang/can-tru-cong-no" },
       { label: "Báo đơn", href: "/don-hang/bao-don" },

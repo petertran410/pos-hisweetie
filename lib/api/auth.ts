@@ -51,7 +51,15 @@ export const authApi = {
     });
 
     if (!res.ok) {
-      throw new Error("Không thể lấy thông tin người dùng");
+      const body = await res.json().catch(() => ({}));
+      // 401/403 → token cũ hoặc permissionVersion lệch → đính "unauthorized"
+      // để RouteGuard phân biệt với lỗi mạng/5xx.
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(
+          body.message || "Phiên đăng nhập đã hết hạn (unauthorized)"
+        );
+      }
+      throw new Error(body.message || "Không thể lấy thông tin người dùng");
     }
 
     return res.json();
