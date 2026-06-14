@@ -537,7 +537,7 @@ export default function BienDongSoDuPage() {
                   return (
                     <tr
                       key={tx.id}
-                      className="border-b dt-row transition-colors">
+                      className="border-b dt-row transition-colors hover:bg-brand-soft hover:shadow-[inset_3px_0_0_0_var(--dt-primary)] cursor-pointer">
                       <td className="px-4 py-2.5 leading-tight">
                         <div>{formatDateParts(tx.transactionDate).time}</div>
                         <div className="text-xs text-gray-500">

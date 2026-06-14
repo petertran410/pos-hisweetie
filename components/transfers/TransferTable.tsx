@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Fragment, useMemo } from "react";
 import { useTransfers } from "@/lib/hooks/useTransfers";
+import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
   ChevronDown,
@@ -152,6 +153,7 @@ const DEFAULT_COLUMNS: ColumnConfig<Transfer>[] = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function TransferTable({ filters }: TransferTableProps) {
+  const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -204,6 +206,7 @@ export function TransferTable({ filters }: TransferTableProps) {
 
   const { data, isLoading } = useTransfers({
     ...effectiveFilters,
+    currentBranchId: selectedBranch?.id,
     search: effectiveSearch,
     pageSize: limit,
     currentItem: (page - 1) * limit,
