@@ -120,7 +120,7 @@ export function PackingSlipsTable({
     },
     {
       key: "invoices",
-      label: "Hóa đơn",
+      label: "Hóa đơn / Ký gửi",
       visible: true,
       width: "200px",
       render: (slip) => {
@@ -128,9 +128,13 @@ export function PackingSlipsTable({
         if (invoices.length === 0) return "-";
 
         const renderCode = (inv: any, idx: number) => (
-          <span key={inv.invoice?.code ?? idx}>
+          <span key={inv.invoice?.code ?? inv.consignment?.code ?? idx}>
             {idx > 0 && <span className="text-gray-400">, </span>}
-            <CodeLink entity="invoice" code={inv.invoice?.code} />
+            {inv.consignment ? (
+              <CodeLink entity="consignment" code={inv.consignment?.code} />
+            ) : (
+              <CodeLink entity="invoice" code={inv.invoice?.code} />
+            )}
           </span>
         );
 
@@ -557,17 +561,21 @@ export function PackingSlipsTable({
                   className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
                   <div>
                     <div className="font-medium">
-                      <CodeLink entity="invoice" code={inv.invoice?.code} />
+                      {inv.consignment ? (
+                        <CodeLink
+                          entity="consignment"
+                          code={inv.consignment?.code}
+                        />
+                      ) : (
+                        <CodeLink entity="invoice" code={inv.invoice?.code} />
+                      )}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {inv.invoice?.customer?.name || "-"}
+                      {inv.invoice?.customer?.name ||
+                        inv.consignment?.customer?.name ||
+                        "-"}
                     </div>
                   </div>
-                  {/* <div className="text-right">
-                    <div className="font-medium">
-                      {formatCurrency(inv.invoice?.grandTotal || 0)}
-                    </div>
-                  </div> */}
                 </div>
               ))}
             </div>

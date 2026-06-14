@@ -2,7 +2,8 @@ import { printTemplatesApi } from "@/lib/api/print-templates";
 
 export async function printEntity(
   templateFor: string,
-  entityId: number
+  entityId: number,
+  templateId?: number
 ): Promise<void> {
   const templates = await printTemplatesApi.getAll({
     templateFor,
@@ -13,7 +14,11 @@ export async function printEntity(
     throw new Error(`Chưa có mẫu in cho loại "${templateFor}"`);
   }
 
-  const template = templates.find((t: any) => t.isDefault) || templates[0];
+  // Ưu tiên mẫu được chỉ định; fallback mẫu mặc định / mẫu đầu tiên.
+  const template =
+    (templateId && templates.find((t: any) => t.id === templateId)) ||
+    templates.find((t: any) => t.isDefault) ||
+    templates[0];
 
   const preview = await printTemplatesApi.renderPreview(template.id, entityId);
 

@@ -10,6 +10,7 @@ import { ExternalLink } from "lucide-react";
 export type CodeEntity =
   | "invoice"
   | "order"
+  | "consignment"
   | "return-order"
   | "customer"
   | "product"
@@ -31,6 +32,7 @@ export type CodeEntity =
 const ROUTES: Record<CodeEntity, string> = {
   invoice: "/don-hang/hoa-don",
   order: "/don-hang/dat-hang",
+  consignment: "/don-hang/ky-gui",
   "return-order": "/don-hang/tra-hang",
   customer: "/khach-hang",
   product: "/san-pham/danh-sach",

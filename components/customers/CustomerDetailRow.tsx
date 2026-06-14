@@ -8,6 +8,7 @@ import { Pencil, Trash2, Loader2, ExternalLink, MapPin } from "lucide-react";
 import { useDeleteCustomer, useUpdateCustomer } from "@/lib/hooks/useCustomers";
 import { CustomerInvoicesTab } from "./CustomerInvoicesTab";
 import { CustomerOrdersTab } from "./CustomerOrdersTab";
+import { CustomerConsignmentsTab } from "./CustomerConsignmentsTab";
 import { CustomerDebtsTab } from "./CustomerDebtsTab";
 import { CustomerAddressesTab } from "../pos/CustomerAddressesTab";
 import { useCan } from "@/lib/hooks/useCan";
@@ -33,6 +34,7 @@ export function CustomerDetailRow({
     | "children"
     | "invoices"
     | "orders"
+    | "consignments"
     | "debts"
     | "debts_total"
     | "debts_own"
@@ -151,6 +153,7 @@ export function CustomerDetailRow({
       : []),
     { key: "invoices", label: "Lịch sử hóa đơn/trả hàng" },
     { key: "orders", label: "Lịch sử đơn hàng" },
+    { key: "consignments", label: "Theo dõi ký gửi" },
     ...(canViewDebt
       ? isParent
         ? [
@@ -414,6 +417,9 @@ export function CustomerDetailRow({
               )}
               {activeTab === "orders" && (
                 <CustomerOrdersTab customerId={customer.id} />
+              )}
+              {activeTab === "consignments" && (
+                <CustomerConsignmentsTab customerId={customer.id} />
               )}
               {activeTab === "debts" && (
                 <CustomerDebtsTab

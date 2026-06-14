@@ -4,6 +4,7 @@ import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
+import { useConsignmentSummary } from "@/lib/hooks/useConsignments";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -22,6 +23,7 @@ import { ComboProductForm } from "./ComboProductForm";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { ProductCustomerOrdersModal } from "./ProductCustomerOrdersModal";
 import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
+import { ProductConsignmentsModal } from "./ProductConsignmentsModal";
 import { ProductExportModal } from "./ProductExportModal";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "../shared/CodeLink";
@@ -80,6 +82,8 @@ interface ProductColumnCtx {
   onOpenPending: (product: Product) => void;
   supplierMap: Record<string | number, number>;
   onOpenSupplier: (product: Product) => void;
+  consignmentMap: Record<string | number, number>;
+  onOpenConsignment: (product: Product) => void;
 }
 
 const DEFAULT_COLUMNS: ColumnConfig<Product, ProductColumnCtx>[] = [
@@ -242,6 +246,30 @@ const DEFAULT_COLUMNS: ColumnConfig<Product, ProductColumnCtx>[] = [
           onClick={(e) => {
             e.stopPropagation();
             ctx?.onOpenSupplier(product);
+          }}
+          className="text-brand hover:underline font-medium">
+          {display}
+        </button>
+      );
+    },
+  },
+  {
+    key: "consignment",
+    label: "Ký gửi",
+    visible: false,
+    width: "100px",
+    render: (product, ctx) => {
+      const total = ctx?.consignmentMap?.[product.id] ?? 0;
+      const display = total.toLocaleString();
+      if (total <= 0) {
+        return <span className="text-gray-500">{display}</span>;
+      }
+      return (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            ctx?.onOpenConsignment(product);
           }}
           className="text-brand hover:underline font-medium">
           {display}
@@ -483,10 +511,30 @@ export function ProductsTable({
   );
   const supplierMap = supplierSummary || {};
 
+  // Chỉ fetch summary "Ký gửi" khi cột đang hiển thị, gom theo trang hiện tại.
+  const isConsignmentColumnVisible = useMemo(
+    () => visibleColumns.some((c) => c.key === "consignment"),
+    [visibleColumns]
+  );
+
+  const productIdsForConsignment = useMemo(
+    () => (isConsignmentColumnVisible ? products.map((p) => p.id) : []),
+    [isConsignmentColumnVisible, products]
+  );
+
+  const { data: consignmentSummary } = useConsignmentSummary(
+    productIdsForConsignment,
+    selectedBranch?.id
+  );
+  const consignmentMap = consignmentSummary || {};
+
   const [pendingModalProduct, setPendingModalProduct] =
     useState<Product | null>(null);
 
   const [supplierModalProduct, setSupplierModalProduct] =
+    useState<Product | null>(null);
+
+  const [consignmentModalProduct, setConsignmentModalProduct] =
     useState<Product | null>(null);
 
   const colSpan = visibleColumns.length + 2; // +checkbox +chevron
@@ -702,6 +750,9 @@ export function ProductsTable({
                           onOpenPending: (p) => setPendingModalProduct(p),
                           supplierMap,
                           onOpenSupplier: (p) => setSupplierModalProduct(p),
+                          consignmentMap,
+                          onOpenConsignment: (p) =>
+                            setConsignmentModalProduct(p),
                         })}
                       </td>
                     ))}
@@ -835,6 +886,17 @@ export function ProductsTable({
           branchId={selectedBranch?.id}
           branchName={selectedBranch?.name}
           onClose={() => setSupplierModalProduct(null)}
+        />
+      )}
+
+      {consignmentModalProduct && (
+        <ProductConsignmentsModal
+          productId={consignmentModalProduct.id}
+          productName={consignmentModalProduct.name}
+          productCode={consignmentModalProduct.code}
+          branchId={selectedBranch?.id}
+          branchName={selectedBranch?.name}
+          onClose={() => setConsignmentModalProduct(null)}
         />
       )}
 

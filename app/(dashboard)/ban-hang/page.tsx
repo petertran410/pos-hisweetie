@@ -23,6 +23,7 @@ import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
 import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
+import { useCreateConsignment } from "@/lib/hooks/useConsignments";
 import { priceBooksApi } from "@/lib/api";
 import { promotionsApi } from "@/lib/api/promotions";
 import {
@@ -50,6 +51,7 @@ export interface CartItem {
   discount: number;
   note?: string;
   conditionType?: string; // "normal" | "damaged" | "near_expiry"
+  manufactureDate?: string; // Ngày sản xuất (YYYY-MM-DD) — dùng cho ký gửi
   // ── Khuyến mãi tự động (inline, KiotViet-style) ──
   // Dòng quà/mua kèm do KM sinh ra
   isPromoGift?: boolean;
@@ -80,7 +82,7 @@ export interface DeliveryInfo {
   noteForDriver: string;
 }
 
-type TabType = "order" | "invoice";
+type TabType = "order" | "invoice" | "consignment";
 
 export interface Tab {
   id: string;
@@ -104,6 +106,7 @@ export interface Tab {
   isEditMode?: boolean;
   selectedAddressId?: number | null;
   soldById: number | null;
+  consignStatus?: string;
   // fromPage = "dat-hang" | "hoa-don" → khi tạo xong sẽ redirect về trang này (dùng cho copy)
   fromPage?: string;
 }
@@ -123,14 +126,19 @@ const collectEnabledPromoIds = (items: any[]): number[] => {
 const getPriceBookStorageKey = (userId?: number) =>
   `pos-selected-price-book-${userId || "default"}`;
 
-const getEditStorageKey = (id: number, type: "order" | "invoice"): string => {
+const getEditStorageKey = (id: number, type: TabType): string => {
   return `${EDIT_STORAGE_KEY}-${type}-${id}`;
 };
 
 const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   id: forceId || `tab-${Date.now()}`,
   type,
-  label: type === "order" ? "Đơn hàng 1" : "Hóa đơn 1",
+  label:
+    type === "order"
+      ? "Đơn hàng 1"
+      : type === "consignment"
+        ? "Ký gửi 1"
+        : "Hóa đơn 1",
   cartItems: [],
   selectedCustomer: null,
   selectedPriceBookId: null,
@@ -143,6 +151,7 @@ const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   paymentMethods: [],
   selectedAddressId: null,
   soldById: null,
+  consignStatus: "pending",
   deliveryInfo: {
     receiver: "",
     contactNumber: "",
@@ -186,6 +195,7 @@ export default function BanHangPage() {
   const createOrderPayment = useCreateOrderPayment();
   const createInvoicePayment = useCreateInvoicePayment();
   const createInvoiceFromOrder = useCreateInvoiceFromOrder();
+  const createConsignment = useCreateConsignment();
 
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState("tab-1");
@@ -825,7 +835,9 @@ export default function BanHangPage() {
         label:
           tabType === "order"
             ? `Đơn hàng ${newTabNumber}`
-            : `Hóa đơn ${newTabNumber}`,
+            : tabType === "consignment"
+              ? `Ký gửi ${newTabNumber}`
+              : `Hóa đơn ${newTabNumber}`,
       };
 
       const allTabs = [...savedTabs, ...editTabs, newTab];
@@ -2310,6 +2322,33 @@ export default function BanHangPage() {
         }));
       documentData.skipPromotions = false;
       documentData.appliedPromotions = orderAppliedPromotions;
+    } else if (activeTab.type === "consignment") {
+      // Phiếu ký gửi (B1): tạo ở Phiếu tạm; không khuyến mãi, không thanh toán.
+      documentData.consignDate = new Date().toISOString();
+      documentData.consignStatus = activeTab.consignStatus || "pending";
+      documentData.description = activeTab.orderNote;
+      documentData.items = activeTab.cartItems.map((item) => ({
+        productId: Number(item.product.id),
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.price),
+        discount: Number(item.discount) || 0,
+        note: item.note || "",
+        conditionType: item.conditionType || "normal",
+        manufactureDate: item.manufactureDate || null,
+      }));
+      documentData.delivery = {
+        receiver: activeTab.deliveryInfo.receiver,
+        contactNumber: activeTab.deliveryInfo.contactNumber,
+        address: activeTab.deliveryInfo.detailAddress,
+        locationName: activeTab.deliveryInfo.locationName,
+        wardName: activeTab.deliveryInfo.wardName,
+        weight: Number(activeTab.deliveryInfo.weight) || 0,
+        weightUnit: activeTab.deliveryInfo.weightUnit || "g",
+        length: Number(activeTab.deliveryInfo.length) || 10,
+        width: Number(activeTab.deliveryInfo.width) || 10,
+        height: Number(activeTab.deliveryInfo.height) || 10,
+        noteForDriver: activeTab.deliveryInfo.noteForDriver,
+      };
     } else {
       documentData.purchaseDate = new Date().toISOString();
       documentData.description = activeTab.orderNote;
@@ -2400,6 +2439,9 @@ export default function BanHangPage() {
           }
 
           docId = result?.order?.id;
+        } else if (activeTab.type === "consignment") {
+          const result = await createConsignment.mutateAsync(documentData);
+          docId = (result as any)?.id;
         } else {
           const result = await createInvoice.mutateAsync(documentData);
 
@@ -2419,12 +2461,20 @@ export default function BanHangPage() {
               ? "/don-hang/dat-hang"
               : tabFromPage === "hoa-don"
                 ? "/don-hang/hoa-don"
-                : activeTab.type === "order"
-                  ? "/don-hang/dat-hang"
-                  : "/don-hang/hoa-don";
+                : tabFromPage === "ky-gui"
+                  ? "/don-hang/ky-gui"
+                  : activeTab.type === "order"
+                    ? "/don-hang/dat-hang"
+                    : activeTab.type === "consignment"
+                      ? "/don-hang/ky-gui"
+                      : "/don-hang/hoa-don";
 
           handlePostCreate(
-            activeTab.type === "order" ? "order" : "invoice",
+            activeTab.type === "order"
+              ? "order"
+              : activeTab.type === "consignment"
+                ? "consignment"
+                : "invoice",
             docId,
             targetUrl,
             { shouldRedirect: !!tabFromPage }
@@ -2542,7 +2592,7 @@ export default function BanHangPage() {
           BODY
       ══════════════════════════════════════════ */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        {activeTab.type === "order" ? (
+        {activeTab.type !== "invoice" ? (
           <>
             {/* Items panel */}
             <div
@@ -2569,6 +2619,7 @@ export default function BanHangPage() {
                 canEditDiscount={canEditDiscount}
                 canViewInventory={canViewInventory}
                 priceWarnings={priceWarnings}
+                documentType={activeTab.type}
                 className="w-full flex-1 bg-white flex flex-col min-h-0"
               />
               {/* Mobile action buttons */}
@@ -2634,6 +2685,10 @@ export default function BanHangPage() {
                 isEditMode={!!activeTab.isEditMode}
                 existingOrder={activeTab.sourceOrder || existingOrder}
                 documentType={activeTab.type}
+                consignStatus={activeTab.consignStatus}
+                onConsignStatusChange={(consignStatus) =>
+                  updateActiveTab({ consignStatus })
+                }
                 onSelectAddress={handleSelectAddress}
                 selectedAddressId={activeTab.selectedAddressId}
                 soldById={activeTab.soldById}

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { X, Camera, Upload, ChevronDown, QrCode } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useInvoicesForPacking } from "@/lib/hooks/useInvoices";
+import { useConsignmentsForPacking } from "@/lib/hooks/useConsignments";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { uploadPackingLoadingImages } from "@/lib/hooks/usePackingLoadings";
 import { QrUploadModal } from "@/components/shared/QrUploadModal";
@@ -36,6 +37,13 @@ export function PackingLoadingForm({
   );
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>(
     packingLoading?.invoices?.map((i) => i.invoiceId) || preselectedInvoiceIds
+  );
+
+  // Loại chứng từ để loading: hóa đơn hoặc phiếu ký gửi.
+  const [docType, setDocType] = useState<"invoice" | "consignment">(
+    packingLoading?.invoices?.some((i: any) => i.consignmentId)
+      ? "consignment"
+      : "invoice"
   );
 
   type InvoiceLite = {
@@ -108,7 +116,16 @@ export function PackingLoadingForm({
     search: debouncedInvoiceSearch || undefined,
   });
 
-  const availableInvoices = invoicesData?.data || [];
+  const { data: consignmentsData } = useConsignmentsForPacking({
+    branchId: branchId || undefined,
+    pageSize: 100,
+    search: debouncedInvoiceSearch || undefined,
+  });
+
+  const availableInvoices =
+    docType === "consignment"
+      ? (consignmentsData?.data as any[]) || []
+      : invoicesData?.data || [];
   const selectedBranch = branches?.find((b) => b.id === branchId);
   const selectedLoadingBy = users?.find((u) => u.id === loadingById);
   const activeBranches = useMemo(
@@ -235,7 +252,11 @@ export function PackingLoadingForm({
     }
 
     if (selectedInvoiceIds.length === 0) {
-      toast.error("Vui lòng chọn ít nhất 1 hóa đơn");
+      toast.error(
+        docType === "consignment"
+          ? "Vui lòng chọn ít nhất 1 phiếu ký gửi"
+          : "Vui lòng chọn ít nhất 1 hóa đơn"
+      );
       return;
     }
 
@@ -246,8 +267,10 @@ export function PackingLoadingForm({
 
     const data = {
       branchId,
+      ...(docType === "consignment"
+        ? { consignmentIds: selectedInvoiceIds }
+        : { invoiceIds: selectedInvoiceIds }),
       loadingById,
-      invoiceIds: selectedInvoiceIds,
       numberOfPackages,
       note,
       imageUrls: images,
@@ -296,6 +319,27 @@ export function PackingLoadingForm({
           onSubmit={handleSubmit}
           className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-4">
+            <div className="flex gap-2">
+              {(["invoice", "consignment"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    if (t === docType) return;
+                    setDocType(t);
+                    setSelectedInvoiceIds([]);
+                    setSelectedInvoiceCache({});
+                    setInvoiceSearch("");
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
+                    docType === t
+                      ? "bg-brand text-white border-brand"
+                      : "bg-white text-gray-600 hover:bg-gray-50"
+                  }`}>
+                  {t === "invoice" ? "Hóa đơn" : "Phiếu ký gửi"}
+                </button>
+              ))}
+            </div>
             <div ref={loadingByDropdownRef} className="relative">
               <label className="block text-sm font-medium mb-2">
                 Người loading <span className="text-red-500">*</span>
@@ -399,7 +443,8 @@ export function PackingLoadingForm({
 
             <div ref={invoiceDropdownRef} className="relative">
               <label className="block text-sm font-medium mb-2">
-                Hóa đơn <span className="text-red-500">*</span>
+                {docType === "consignment" ? "Phiếu ký gửi" : "Hóa đơn"}{" "}
+                <span className="text-red-500">*</span>
               </label>
               <div
                 className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"

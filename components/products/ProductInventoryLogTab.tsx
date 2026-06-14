@@ -26,6 +26,10 @@ const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   RETURN: "Trả hàng",
   STOCK_AUDIT: "Kiểm hàng",
   STOCK_AUDIT_CANCEL: "Hủy kiểm hàng",
+  CONSIGNMENT_OUT: "Ký gửi",
+  CONSIGNMENT_OUT_CANCEL: "Hủy ký gửi",
+  CONSIGNMENT_RETURN: "Hoàn ký gửi",
+  CONSIGNMENT_RETURN_CANCEL: "Hủy hoàn ký gửi",
 };
 
 // Map loại giao dịch → trang đích cho mã liên quan
@@ -42,6 +46,8 @@ const TRANSACTION_TYPE_ENTITY: Record<string, CodeEntity> = {
   RETURN: "return-order",
   STOCK_AUDIT: "stock-audit",
   STOCK_AUDIT_CANCEL: "stock-audit",
+  CONSIGNMENT_OUT: "consignment",
+  CONSIGNMENT_OUT_CANCEL: "consignment",
 };
 
 const formatMoney = (v: number | null | undefined) => {
