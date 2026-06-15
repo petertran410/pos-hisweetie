@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Camera, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Camera, ChevronDown, ChevronUp, Printer } from "lucide-react";
 import { useReturnOrder } from "@/lib/hooks/useReturnOrders";
 import { formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store/auth";
 import { API_URL } from "@/lib/config/api";
+import { useCan } from "@/lib/hooks/useCan";
+import { printEntity } from "@/lib/utils/print";
+import Swal from "sweetalert2";
 
 interface ConfirmStockModalProps {
   returnOrderId: number;
@@ -33,6 +36,8 @@ export function ConfirmStockModal({
   onSubmit,
 }: ConfirmStockModalProps) {
   const { data: returnOrder, isLoading } = useReturnOrder(returnOrderId);
+  const canPrint = useCan("print_templates", "view");
+  const [isPrinting, setIsPrinting] = useState(false);
   const [confirmItems, setConfirmItems] = useState<ConfirmItem[]>([]);
   const [note, setNote] = useState("");
   const [stockImages, setStockImages] = useState<
@@ -237,6 +242,18 @@ export function ConfirmStockModal({
   const handleComplete = async () => {
     const data = await buildSubmitData(false);
     onSubmit(data);
+  };
+
+  const handlePrint = async () => {
+    if (!returnOrder) return;
+    setIsPrinting(true);
+    try {
+      await printEntity("return_order", returnOrder.id);
+    } catch (e: any) {
+      Swal.fire("Lỗi", e?.message || "In thất bại", "error");
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   if (isLoading) {
@@ -511,6 +528,16 @@ export function ConfirmStockModal({
             </span>
           </div>
           <div className="flex gap-2">
+            {canPrint && (
+              <button
+                onClick={handlePrint}
+                disabled={isPrinting}
+                title="In phiếu trả hàng"
+                className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100 flex items-center gap-1.5 disabled:opacity-50">
+                <Printer className="w-4 h-4" />
+                {isPrinting ? "Đang in..." : "In"}
+              </button>
+            )}
             <button
               onClick={onClose}
               className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">
