@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Product } from "@/lib/api/products";
 import {
-  useDeleteProduct,
+  useUpdateProduct,
   useUpdateProductCondition,
 } from "@/lib/hooks/useProducts";
 import { ProductForm } from "./ProductForm";
@@ -22,11 +22,11 @@ interface ProductDetailProps {
 export function ProductDetail({ product, onClose }: ProductDetailProps) {
   const [activeTab, setActiveTab] = useState("info");
   const [isEditing, setIsEditing] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showToggleConfirm, setShowToggleConfirm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const deleteProduct = useDeleteProduct();
+  const updateProduct = useUpdateProduct();
   const { selectedBranch } = useBranchStore();
   const updateCondition = useUpdateProductCondition();
   const [editingCondition, setEditingCondition] = useState<number | null>(null);
@@ -39,13 +39,16 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
     throw new Error("Error");
   }
 
-  const handleDelete = () => {
-    deleteProduct.mutate(product.id, {
-      onSuccess: () => {
-        setShowDeleteConfirm(false);
-        onClose();
-      },
-    });
+  const handleToggleActive = () => {
+    updateProduct.mutate(
+      { id: product.id, data: { isActive: !product.isActive } },
+      {
+        onSuccess: () => {
+          setShowToggleConfirm(false);
+          onClose();
+        },
+      }
+    );
   };
 
   const handleStartEditCondition = (inv: any) => {
@@ -924,9 +927,14 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
             itemData={product}
             actionType="delete">
             <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2 text-red-600 border border-red-600 rounded hover:bg-red-50">
-              Xóa
+              onClick={() => setShowToggleConfirm(true)}
+              disabled={updateProduct.isPending}
+              className={`px-4 py-2 border rounded disabled:opacity-60 ${
+                product.isActive
+                  ? "text-red-600 border-red-600 hover:bg-red-50"
+                  : "text-green-600 border-green-600 hover:bg-green-50"
+              }`}>
+              {product.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
             </button>
           </ActionGuard>
 
@@ -951,24 +959,32 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
         </div>
       </div>
 
-      {showDeleteConfirm && (
+      {showToggleConfirm && (
         <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center">
           <div className="bg-white rounded-lg p-6 max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Xác nhận xóa</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              {product.isActive ? "Ngừng hoạt động" : "Kích hoạt sản phẩm"}
+            </h3>
             <p className="text-gray-600 mb-6">
-              Bạn có chắc chắn muốn xóa sản phẩm này? Hành động này không thể
-              hoàn tác.
+              {product.isActive
+                ? "Bạn có chắc chắn muốn ngừng hoạt động sản phẩm này?"
+                : "Bạn có chắc chắn muốn kích hoạt lại sản phẩm này?"}
             </p>
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setShowDeleteConfirm(false)}
+                onClick={() => setShowToggleConfirm(false)}
                 className="px-4 py-2 border rounded hover:bg-gray-50">
                 Hủy
               </button>
               <button
-                onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
-                Xóa
+                onClick={handleToggleActive}
+                disabled={updateProduct.isPending}
+                className={`px-4 py-2 text-white rounded disabled:opacity-60 ${
+                  product.isActive
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}>
+                {product.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
               </button>
             </div>
           </div>

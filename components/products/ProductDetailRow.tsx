@@ -4,7 +4,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import {
   useProduct,
-  useDeleteProduct,
+  useUpdateProduct,
   useUpdateProductCondition,
 } from "@/lib/hooks/useProducts";
 import { useBranchStore } from "@/lib/store/branch";
@@ -124,7 +124,7 @@ export function ProductDetailRow({
   colSpan,
 }: ProductDetailRowProps) {
   const { data: product, isLoading } = useProduct(productId);
-  const deleteProduct = useDeleteProduct();
+  const updateProduct = useUpdateProduct();
   const { selectedBranch } = useBranchStore();
   const updateCondition = useUpdateProductCondition();
 
@@ -291,18 +291,24 @@ export function ProductDetailRow({
     .filter(Boolean)
     .join(" >> ");
 
-  const handleDelete = async () => {
+  const handleToggleActive = async () => {
+    const willDeactivate = product.isActive;
     const result = await Swal.fire({
-      title: "Xác nhận xóa",
-      text: `Bạn có chắc chắn muốn xóa sản phẩm "${product.name}"?`,
+      title: willDeactivate ? "Ngừng hoạt động" : "Kích hoạt sản phẩm",
+      text: willDeactivate
+        ? `Bạn có chắc chắn muốn ngừng hoạt động sản phẩm "${product.name}"?`
+        : `Bạn có chắc chắn muốn kích hoạt lại sản phẩm "${product.name}"?`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#ef4444",
+      confirmButtonColor: willDeactivate ? "#ef4444" : "#16a34a",
       cancelButtonText: "Hủy",
-      confirmButtonText: "Xóa",
+      confirmButtonText: willDeactivate ? "Ngừng hoạt động" : "Kích hoạt",
     });
     if (result.isConfirmed) {
-      deleteProduct.mutate(product.id);
+      updateProduct.mutate({
+        id: product.id,
+        data: { isActive: !product.isActive },
+      });
     }
   };
 
@@ -818,9 +824,17 @@ export function ProductDetailRow({
               <div className="flex gap-2">
                 {canDelete && (
                   <button
-                    onClick={handleDelete}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-1.5">
-                    Xóa
+                    onClick={handleToggleActive}
+                    disabled={updateProduct.isPending}
+                    className={`px-4 py-2 text-sm font-medium text-white rounded transition-colors flex items-center gap-1.5 disabled:opacity-60 ${
+                      product.isActive
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-green-600 hover:bg-green-700"
+                    }`}>
+                    {updateProduct.isPending && (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    )}
+                    {product.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
                   </button>
                 )}
               </div>
