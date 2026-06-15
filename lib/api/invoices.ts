@@ -113,12 +113,14 @@ export const invoicesApi = {
     additionalPayment?: number,
     items?: any[],
     payments?: Array<{ method: string; amount: number }>,
-    soldById?: number
+    soldById?: number,
+    forceComplete?: boolean
   ): Promise<Invoice> => {
     return apiClient.post(`/invoices/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
       items: items || [],
       payments: payments || [],
+      forceComplete: forceComplete ?? false,
       ...(soldById ? { soldById } : {}),
     });
   },

@@ -39,18 +39,33 @@ export function CreateInvoiceFromConsignmentModal({
     return map;
   }, [consignment.invoices]);
 
+  // Số đã hoàn về kho theo product (consignmentReturn đã nhận hàng = status 2).
+  // Phần này cũng làm giảm "ký gửi còn lại" giống xuất hóa đơn.
+  const returnedMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    (consignment.returns || []).forEach((ro) => {
+      if (ro.status !== 2) return; // chỉ tính hàng đã nhận về kho
+      (ro.details || []).forEach((d) => {
+        map[d.productId] =
+          (map[d.productId] || 0) + Number(d.returnQuantity || 0);
+      });
+    });
+    return map;
+  }, [consignment.returns]);
+
   const remainingItems = useMemo(
     () =>
       (consignment.items || [])
         .map((item) => {
           const invoiced = invoicedMap[item.productId] || 0;
+          const returned = returnedMap[item.productId] || 0;
           return {
             ...item,
-            remainingQuantity: Number(item.quantity) - invoiced,
+            remainingQuantity: Number(item.quantity) - invoiced - returned,
           };
         })
         .filter((item) => item.remainingQuantity > 0),
-    [consignment.items, invoicedMap]
+    [consignment.items, invoicedMap, returnedMap]
   );
 
   // Số lượng muốn xuất cho từng product (mặc định = toàn bộ phần còn lại).

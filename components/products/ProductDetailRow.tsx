@@ -132,6 +132,8 @@ export function ProductDetailRow({
 
   const canUpdate = usePermission("products", "update");
   const canDelete = usePermission("products", "delete");
+  const canViewCostPrice = usePermission("products", "view_cost_price");
+  const canViewSalePrice = usePermission("products", "view_sale_price");
 
   const [activeTab, setActiveTab] = useState<
     "info" | "description" | "inventoryLog" | "inventory"
@@ -441,13 +443,14 @@ export function ProductDetailRow({
                         : "0 - 0"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1 py-2 border-b">
-                    <span className="text-xs text-gray-500">Thương hiệu</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {product.tradeMark?.name || "-"}
-                    </span>
-                  </div>
+                <div className="flex flex-col gap-1 py-2 border-b">
+                  <span className="text-xs text-gray-500">Thương hiệu</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {product.tradeMark?.name || "-"}
+                  </span>
+                </div>
 
+                {canViewCostPrice && (
                   <div className="flex flex-col gap-1 py-2 border-b">
                     <span className="text-xs text-gray-500">Giá vốn</span>
                     <span className="text-sm font-medium text-gray-900">
@@ -456,12 +459,15 @@ export function ProductDetailRow({
                         : "0"}
                     </span>
                   </div>
+                )}
+                {canViewSalePrice && (
                   <div className="flex flex-col gap-1 py-2 border-b">
                     <span className="text-xs text-gray-500">Giá bán</span>
                     <span className="text-sm font-medium text-gray-900">
                       {Number(product.basePrice).toLocaleString()}
                     </span>
                   </div>
+                )}
                   <div className="flex flex-col gap-1 py-2 border-b">
                     <span className="text-xs text-gray-500">Trọng lượng</span>
                     <span className="text-sm font-medium text-gray-900">
@@ -501,12 +507,16 @@ export function ProductDetailRow({
                               <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">
                                 Số lượng / Gram
                               </th>
-                              <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
-                                Giá vốn
-                              </th>
-                              <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
-                                Tổng giá vốn
-                              </th>
+                              {canViewCostPrice && (
+                                <>
+                                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
+                                    Giá vốn
+                                  </th>
+                                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
+                                    Tổng giá vốn
+                                  </th>
+                                </>
+                              )}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
@@ -565,12 +575,16 @@ export function ProductDetailRow({
                                       return `${qty} gram`;
                                     })()}
                                   </td>
-                                  <td className="px-4 py-2 text-sm text-right">
-                                    {cost.toLocaleString()}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm text-right font-medium">
-                                    {totalCost.toLocaleString()}
-                                  </td>
+                                  {canViewCostPrice && (
+                                    <>
+                                      <td className="px-4 py-2 text-sm text-right">
+                                        {cost.toLocaleString()}
+                                      </td>
+                                      <td className="px-4 py-2 text-sm text-right font-medium">
+                                        {totalCost.toLocaleString()}
+                                      </td>
+                                    </>
+                                  )}
                                 </tr>
                               );
                             })}
@@ -683,9 +697,11 @@ export function ProductDetailRow({
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
                             Đặt NCC
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
-                            Giá vốn
-                          </th>
+                          {canViewCostPrice && (
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                              Giá vốn
+                            </th>
+                          )}
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
                             Định mức tồn
                           </th>
@@ -797,9 +813,11 @@ export function ProductDetailRow({
                                 />
                               </td>
 
-                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
-                                {Number(inv.cost).toLocaleString()}
-                              </td>
+                              {canViewCostPrice && (
+                                <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
+                                  {Number(inv.cost).toLocaleString()}
+                                </td>
+                              )}
 
                               <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
                                 {Number(inv.minQuality).toLocaleString()} -{" "}
