@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Copy, Gift, Minus, Plus, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  Calendar,
+  Copy,
+  Gift,
+  Minus,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { MiniCalendar } from "@/components/ui/MiniCalendar";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 import { NoteTemplate } from "@/lib/api/note-templates";
 import {
@@ -89,6 +98,23 @@ export function OrderItemsList({
   const [selectedItemForInventory, setSelectedItemForInventory] =
     useState<CartItem | null>(null);
   const { selectedBranch } = useBranchStore();
+
+  const [openNsxRowId, setOpenNsxRowId] = useState<string | null>(null);
+  const nsxPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!openNsxRowId) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        nsxPickerRef.current &&
+        !nsxPickerRef.current.contains(e.target as Node)
+      ) {
+        setOpenNsxRowId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openNsxRowId]);
 
   const isMobile = useIsMobile();
 
@@ -525,16 +551,48 @@ export function OrderItemsList({
                   {documentType === "consignment" && (
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="text-xs text-gray-500">NSX</span>
-                      <input
-                        type="date"
-                        value={item.manufactureDate || ""}
-                        onChange={(e) =>
-                          onUpdateItem(item.rowId, {
-                            manufactureDate: e.target.value || undefined,
-                          })
-                        }
-                        className="border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand"
-                      />
+                      <div
+                        className="relative"
+                        ref={
+                          openNsxRowId === item.rowId ? nsxPickerRef : undefined
+                        }>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenNsxRowId((prev) =>
+                              prev === item.rowId ? null : item.rowId
+                            )
+                          }
+                          className="border rounded-lg px-2 py-1 text-xs flex items-center gap-1.5 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand">
+                          <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                          <span
+                            className={
+                              item.manufactureDate
+                                ? "text-gray-900"
+                                : "text-gray-400"
+                            }>
+                            {item.manufactureDate
+                              ? item.manufactureDate
+                                  .split("-")
+                                  .reverse()
+                                  .join("/")
+                              : "Chọn ngày"}
+                          </span>
+                        </button>
+                        {openNsxRowId === item.rowId && (
+                          <div className="absolute z-50 left-0 top-full w-72">
+                            <MiniCalendar
+                              value={item.manufactureDate || ""}
+                              onChange={(d) =>
+                                onUpdateItem(item.rowId, {
+                                  manufactureDate: d || undefined,
+                                })
+                              }
+                              onClose={() => setOpenNsxRowId(null)}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

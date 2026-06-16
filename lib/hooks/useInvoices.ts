@@ -128,17 +128,21 @@ export function useCreateInvoiceFromOrder() {
       additionalPayment,
       items,
       payments,
+      forceComplete,
     }: {
       orderId: number;
       additionalPayment?: number;
       items?: any[];
       payments?: Array<{ method: string; amount: number }>;
+      forceComplete?: boolean;
     }) =>
       invoicesApi.createInvoiceFromOrder(
         orderId,
         additionalPayment,
         items,
-        payments
+        payments,
+        undefined,
+        forceComplete
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });

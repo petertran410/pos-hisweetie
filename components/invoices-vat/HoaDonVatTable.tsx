@@ -118,6 +118,13 @@ const DEFAULT_COLUMNS: ColumnConfig<InvoiceVat>[] = [
     render: (inv) => formatDateTime(inv.createdAt),
   },
   {
+    key: "updateTime",
+    label: "Ngày cập nhật",
+    visible: false,
+    width: "160px",
+    render: (inv) => formatDateTime(inv.updatedAt),
+  },
+  {
     key: "customerCode",
     label: "Mã KH",
     visible: true,

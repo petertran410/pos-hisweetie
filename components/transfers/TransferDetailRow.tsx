@@ -293,7 +293,9 @@ export function TransferDetailRow({
                             {Number(detail.sendQuantity).toLocaleString()}
                           </td>
                           <td className="px-3 py-2 text-sm text-right text-gray-900">
-                            {Number(detail.receivedQuantity).toLocaleString()}
+                            {transfer.status === 3
+                              ? Number(detail.receivedQuantity).toLocaleString()
+                              : 0}
                           </td>
                           <td className="px-3 py-2 text-sm text-right text-gray-900">
                             {formatMoney(detail.sendPrice)}

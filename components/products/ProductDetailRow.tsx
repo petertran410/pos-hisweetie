@@ -4,7 +4,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import {
   useProduct,
-  useDeleteProduct,
+  useUpdateProduct,
   useUpdateProductCondition,
 } from "@/lib/hooks/useProducts";
 import { useBranchStore } from "@/lib/store/branch";
@@ -124,7 +124,7 @@ export function ProductDetailRow({
   colSpan,
 }: ProductDetailRowProps) {
   const { data: product, isLoading } = useProduct(productId);
-  const deleteProduct = useDeleteProduct();
+  const updateProduct = useUpdateProduct();
   const { selectedBranch } = useBranchStore();
   const updateCondition = useUpdateProductCondition();
 
@@ -132,6 +132,8 @@ export function ProductDetailRow({
 
   const canUpdate = usePermission("products", "update");
   const canDelete = usePermission("products", "delete");
+  const canViewCostPrice = usePermission("products", "view_cost_price");
+  const canViewSalePrice = usePermission("products", "view_sale_price");
 
   const [activeTab, setActiveTab] = useState<
     "info" | "description" | "inventoryLog" | "inventory"
@@ -291,18 +293,24 @@ export function ProductDetailRow({
     .filter(Boolean)
     .join(" >> ");
 
-  const handleDelete = async () => {
+  const handleToggleActive = async () => {
+    const willDeactivate = product.isActive;
     const result = await Swal.fire({
-      title: "Xác nhận xóa",
-      text: `Bạn có chắc chắn muốn xóa sản phẩm "${product.name}"?`,
+      title: willDeactivate ? "Ngừng hoạt động" : "Kích hoạt sản phẩm",
+      text: willDeactivate
+        ? `Bạn có chắc chắn muốn ngừng hoạt động sản phẩm "${product.name}"?`
+        : `Bạn có chắc chắn muốn kích hoạt lại sản phẩm "${product.name}"?`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#ef4444",
+      confirmButtonColor: willDeactivate ? "#ef4444" : "#16a34a",
       cancelButtonText: "Hủy",
-      confirmButtonText: "Xóa",
+      confirmButtonText: willDeactivate ? "Ngừng hoạt động" : "Kích hoạt",
     });
     if (result.isConfirmed) {
-      deleteProduct.mutate(product.id);
+      updateProduct.mutate({
+        id: product.id,
+        data: { isActive: !product.isActive },
+      });
     }
   };
 
@@ -435,13 +443,14 @@ export function ProductDetailRow({
                         : "0 - 0"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1 py-2 border-b">
-                    <span className="text-xs text-gray-500">Thương hiệu</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {product.tradeMark?.name || "-"}
-                    </span>
-                  </div>
+                <div className="flex flex-col gap-1 py-2 border-b">
+                  <span className="text-xs text-gray-500">Thương hiệu</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {product.tradeMark?.name || "-"}
+                  </span>
+                </div>
 
+                {canViewCostPrice && (
                   <div className="flex flex-col gap-1 py-2 border-b">
                     <span className="text-xs text-gray-500">Giá vốn</span>
                     <span className="text-sm font-medium text-gray-900">
@@ -450,12 +459,15 @@ export function ProductDetailRow({
                         : "0"}
                     </span>
                   </div>
+                )}
+                {canViewSalePrice && (
                   <div className="flex flex-col gap-1 py-2 border-b">
                     <span className="text-xs text-gray-500">Giá bán</span>
                     <span className="text-sm font-medium text-gray-900">
                       {Number(product.basePrice).toLocaleString()}
                     </span>
                   </div>
+                )}
                   <div className="flex flex-col gap-1 py-2 border-b">
                     <span className="text-xs text-gray-500">Trọng lượng</span>
                     <span className="text-sm font-medium text-gray-900">
@@ -495,12 +507,16 @@ export function ProductDetailRow({
                               <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">
                                 Số lượng / Gram
                               </th>
-                              <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
-                                Giá vốn
-                              </th>
-                              <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
-                                Tổng giá vốn
-                              </th>
+                              {canViewCostPrice && (
+                                <>
+                                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
+                                    Giá vốn
+                                  </th>
+                                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-600">
+                                    Tổng giá vốn
+                                  </th>
+                                </>
+                              )}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
@@ -559,12 +575,16 @@ export function ProductDetailRow({
                                       return `${qty} gram`;
                                     })()}
                                   </td>
-                                  <td className="px-4 py-2 text-sm text-right">
-                                    {cost.toLocaleString()}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm text-right font-medium">
-                                    {totalCost.toLocaleString()}
-                                  </td>
+                                  {canViewCostPrice && (
+                                    <>
+                                      <td className="px-4 py-2 text-sm text-right">
+                                        {cost.toLocaleString()}
+                                      </td>
+                                      <td className="px-4 py-2 text-sm text-right font-medium">
+                                        {totalCost.toLocaleString()}
+                                      </td>
+                                    </>
+                                  )}
                                 </tr>
                               );
                             })}
@@ -677,9 +697,11 @@ export function ProductDetailRow({
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
                             Đặt NCC
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
-                            Giá vốn
-                          </th>
+                          {canViewCostPrice && (
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                              Giá vốn
+                            </th>
+                          )}
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
                             Định mức tồn
                           </th>
@@ -791,9 +813,11 @@ export function ProductDetailRow({
                                 />
                               </td>
 
-                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
-                                {Number(inv.cost).toLocaleString()}
-                              </td>
+                              {canViewCostPrice && (
+                                <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
+                                  {Number(inv.cost).toLocaleString()}
+                                </td>
+                              )}
 
                               <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
                                 {Number(inv.minQuality).toLocaleString()} -{" "}
@@ -818,9 +842,17 @@ export function ProductDetailRow({
               <div className="flex gap-2">
                 {canDelete && (
                   <button
-                    onClick={handleDelete}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-1.5">
-                    Xóa
+                    onClick={handleToggleActive}
+                    disabled={updateProduct.isPending}
+                    className={`px-4 py-2 text-sm font-medium text-white rounded transition-colors flex items-center gap-1.5 disabled:opacity-60 ${
+                      product.isActive
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-green-600 hover:bg-green-700"
+                    }`}>
+                    {updateProduct.isPending && (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    )}
+                    {product.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
                   </button>
                 )}
               </div>

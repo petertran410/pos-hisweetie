@@ -1559,6 +1559,64 @@ export default function BanHangPage() {
     const proceed = await confirmPriceMismatch("hóa đơn");
     if (!proceed) return;
 
+    // Phát hiện có mã xuất thiếu so với số lượng đặt (gộp theo productId, khớp với backend).
+    const sourceOrder = activeTab.sourceOrder;
+    let hasShortfall = false;
+    if (sourceOrder) {
+      const orderedQty: Record<number, number> = {};
+      (sourceOrder.items || []).forEach((item: any) => {
+        const pid = Number(item.product?.id ?? item.productId);
+        if (!pid) return;
+        orderedQty[pid] = (orderedQty[pid] || 0) + Number(item.quantity || 0);
+      });
+
+      const invoicedQty: Record<number, number> = {};
+      (sourceOrder.invoices || []).forEach((inv: any) => {
+        if (inv.status !== 2 && inv.status !== 5) {
+          (inv.details || []).forEach((d: any) => {
+            const pid = Number(d.productId);
+            if (!pid) return;
+            invoicedQty[pid] = (invoicedQty[pid] || 0) + Number(d.quantity || 0);
+          });
+        }
+      });
+
+      activeTab.cartItems.forEach((item) => {
+        const pid = Number(item.product.id);
+        if (!pid) return;
+        invoicedQty[pid] = (invoicedQty[pid] || 0) + Number(item.quantity || 0);
+      });
+
+      hasShortfall = Object.keys(orderedQty).some(
+        (pid) => (invoicedQty[Number(pid)] || 0) < orderedQty[Number(pid)]
+      );
+    }
+
+    let forceComplete = false;
+    if (hasShortfall) {
+      const choice = await Swal.fire({
+        icon: "question",
+        title: "Đơn hàng chưa xuất đủ số lượng",
+        html: `
+          <p>Có ít nhất một sản phẩm xuất thiếu so với số lượng đặt.</p>
+          <p style="margin-top:8px">Bạn có muốn <strong>kết thúc đơn hàng</strong> (hoàn thành) hay giữ trạng thái <strong>Ra 1 phần HĐ</strong>?</p>
+        `,
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: "Kết thúc đơn hàng",
+        denyButtonText: "Giữ Ra 1 phần HĐ",
+        cancelButtonText: "Hủy",
+        confirmButtonColor: "#2563eb",
+        denyButtonColor: "#0d9488",
+        cancelButtonColor: "#6b7280",
+      });
+
+      // Bấm "Hủy", X, ESC hoặc click ra ngoài → hủy tạo hóa đơn, giữ nguyên tab để chỉnh sửa.
+      if (!choice.isConfirmed && !choice.isDenied) return;
+
+      forceComplete = choice.isConfirmed;
+    }
+
     const actualPayment = activeTab.paymentAmount || 0;
 
     try {
@@ -1573,6 +1631,7 @@ export default function BanHangPage() {
         orderId: activeTab.sourceOrderId,
         additionalPayment: actualPayment,
         payments: payments,
+        forceComplete,
         items: activeTab.cartItems.map((item) => {
           const isGift = item.isPromoGift && item.promoLineType === "gift";
           const isDiscountedBuy =

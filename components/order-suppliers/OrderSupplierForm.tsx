@@ -26,6 +26,7 @@ import { useBranchStore } from "@/lib/store/branch";
 import { CreditCard, Calendar } from "lucide-react";
 import { SupplierPaymentModal } from "./SupplierPaymentModal";
 import { ProductPickerDropdown } from "@/components/products/ProductPickerDropdown";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface ProductItem {
   productId: number;
@@ -314,6 +315,7 @@ export function OrderSupplierForm({
   );
   const [previouslyPaid, setPreviouslyPaid] = useState<number>(0);
   const { user: currentUser } = useAuthStore();
+  const canViewSalePrice = useCan("products", "view_sale_price");
 
   const handlePaymentConfirm = (
     amount: number,
@@ -696,15 +698,19 @@ export function OrderSupplierForm({
                   <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
                     SL đặt
                   </th>
-                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
-                    Giá nhập
-                  </th>
-                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[110px]">
-                    Giảm giá
-                  </th>
-                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
-                    Thành tiền
-                  </th>
+                  {canViewSalePrice && (
+                    <>
+                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
+                        Giá nhập
+                      </th>
+                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[110px]">
+                        Giảm giá
+                      </th>
+                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
+                        Thành tiền
+                      </th>
+                    </>
+                  )}
                   <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
                     Đơn giá NM
                   </th>
@@ -771,33 +777,44 @@ export function OrderSupplierForm({
                         </button>
                       </div>
                     </td>
-                    <td className="px-[10px] py-2 align-middle">
-                      <input
-                        type="text"
-                        value={formatCurrency(item.price)}
-                        onChange={(e) => {
-                          const numericValue = parseNumberInput(e.target.value);
-                          handlePriceChange(index, numericValue.toString());
-                        }}
-                        disabled={isFormDisabled ? true : false}
-                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
-                      />
-                    </td>
-                    <td className="px-[10px] py-2 align-middle">
-                      <input
-                        type="text"
-                        value={formatCurrency(item.discount)}
-                        onChange={(e) => {
-                          const numericValue = parseNumberInput(e.target.value);
-                          handleDiscountChange(index, numericValue.toString());
-                        }}
-                        disabled={isFormDisabled ? true : false}
-                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
-                      />
-                    </td>
-                    <td className="px-[10px] py-2 align-middle text-sm text-right font-medium text-gray-900 whitespace-nowrap">
-                      {formatCurrency(item.subTotal)}
-                    </td>
+                    {canViewSalePrice && (
+                      <>
+                        <td className="px-[10px] py-2 align-middle">
+                          <input
+                            type="text"
+                            value={formatCurrency(item.price)}
+                            onChange={(e) => {
+                              const numericValue = parseNumberInput(
+                                e.target.value
+                              );
+                              handlePriceChange(index, numericValue.toString());
+                            }}
+                            disabled={isFormDisabled ? true : false}
+                            className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                          />
+                        </td>
+                        <td className="px-[10px] py-2 align-middle">
+                          <input
+                            type="text"
+                            value={formatCurrency(item.discount)}
+                            onChange={(e) => {
+                              const numericValue = parseNumberInput(
+                                e.target.value
+                              );
+                              handleDiscountChange(
+                                index,
+                                numericValue.toString()
+                              );
+                            }}
+                            disabled={isFormDisabled ? true : false}
+                            className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                          />
+                        </td>
+                        <td className="px-[10px] py-2 align-middle text-sm text-right font-medium text-gray-900 whitespace-nowrap">
+                          {formatCurrency(item.subTotal)}
+                        </td>
+                      </>
+                    )}
                     <td className="px-[10px] py-2 align-middle">
                       <input
                         type="text"
@@ -1102,6 +1119,8 @@ export function OrderSupplierForm({
             </div>
           </div>
 
+          {canViewSalePrice && (
+            <>
           <div className="border-t my-3"></div>
 
           <div className="flex flex-col gap-2">
@@ -1199,6 +1218,8 @@ export function OrderSupplierForm({
               )}
             </div>
           </div>
+            </>
+          )}
 
           <div>
             <label className="block text-md text-gray-600 mb-1">Ghi chú</label>
