@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { InternalUsesSidebar } from "@/components/internal-uses/InternalUsesSidebar";
 import { InternalUsesTable } from "@/components/internal-uses/InternalUsesTable";
 import { useInternalUses } from "@/lib/hooks/useInternalUses";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { InternalUsesMobileView } from "@/components/internal-uses/InternalUsesMobileView";
 
 export default function InternalUsesPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("Code");
 
@@ -43,8 +45,9 @@ export default function InternalUsesPage() {
 
   return (
     <PagePermissionGuard resource="internal-use" action="view">
+      {/* ── Desktop (md+) ── */}
       <div
-        className="flex h-full border-t"
+        className="hidden md:flex h-full border-t"
         style={{ borderColor: "var(--dt-border)" }}>
         <InternalUsesSidebar onFiltersChange={handleFiltersChange} />
 
@@ -58,6 +61,16 @@ export default function InternalUsesPage() {
           onLimitChange={setLimit}
           searchValue={search}
           onSearchChange={setSearch}
+        />
+      </div>
+
+      {/* ── Mobile (dưới md) ── */}
+      <div className="md:hidden h-full">
+        <InternalUsesMobileView
+          codeParam={codeParam}
+          onCreateClick={() =>
+            router.push("/san-pham/xuat-dung-noi-bo/new")
+          }
         />
       </div>
     </PagePermissionGuard>

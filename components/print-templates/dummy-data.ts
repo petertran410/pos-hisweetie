@@ -296,6 +296,9 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
     Giam_Gia: "0",
     Tong_Can_Thanh_Toan: "3,200,000",
     Tong_Can_Thanh_Toan_Bang_Chu: "Ba triệu hai trăm nghìn đồng chẵn",
+    // Biến phiếu hoàn ký gửi (template KG_RETURN, in với entityType consignment_return).
+    Ma_Hoan_Ky_Gui: "HKG000045",
+    Tong_SL_Hoan: 5,
     items: [
       {
         Ma_Hang: "SP002",
@@ -305,6 +308,10 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
         So_Luong: 20,
         Don_Gia: "160,000",
         Thanh_Tien: "3,200,000",
+        SL_Hoan: 5,
+        Hang_Tot: 3,
+        Loai_B: 1,
+        Can_Date: 1,
       },
     ],
   },

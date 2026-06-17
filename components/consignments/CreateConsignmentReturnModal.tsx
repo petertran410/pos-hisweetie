@@ -9,6 +9,7 @@ import {
   useCreateConsignmentReturn,
 } from "@/lib/hooks/useConsignmentReturns";
 import { toast } from "sonner";
+import { printConsignmentReturn } from "@/lib/utils/print";
 
 interface CreateConsignmentReturnModalProps {
   isOpen: boolean;
@@ -107,13 +108,22 @@ export function CreateConsignmentReturnModal({
     }
 
     try {
-      await createReturn.mutateAsync({
+      const created = await createReturn.mutateAsync({
         consignmentId: consignment.id,
         note: note || undefined,
         details,
       });
       onSuccess?.();
       onClose();
+      // Bung bản in phiếu hoàn hàng ký gửi vừa tạo. Tách lỗi in khỏi lỗi tạo:
+      // phiếu đã tạo thành công, in lỗi báo riêng.
+      if ((created as any)?.id) {
+        try {
+          await printConsignmentReturn((created as any).id);
+        } catch (printError: any) {
+          toast.error(printError?.message || "Không in được phiếu hoàn");
+        }
+      }
     } catch (error: any) {
       toast.error(error?.message || "Tạo phiếu hoàn ký gửi thất bại");
     }

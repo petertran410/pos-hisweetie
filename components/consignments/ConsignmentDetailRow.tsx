@@ -24,7 +24,7 @@ import { Loader2, Pencil, Send, ChevronDown, Printer, Undo2 } from "lucide-react
 import { formatCurrency } from "@/lib/utils";
 import { useCan } from "@/lib/hooks/useCan";
 import { toast } from "sonner";
-import { printEntity } from "@/lib/utils/print";
+import { printEntity, printConsignmentReturn } from "@/lib/utils/print";
 import { printTemplatesApi } from "@/lib/api/print-templates";
 import { CodeLink } from "../shared/CodeLink";
 import { CancelConsignmentModal } from "./CancelConsignmentModal";
@@ -444,6 +444,19 @@ export function ConsignmentDetailRow({
                         </td>
                         <td className="px-3 py-2 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await printConsignmentReturn(ro.id);
+                                } catch (e: any) {
+                                  toast.error(
+                                    e?.message || "Không in được phiếu hoàn"
+                                  );
+                                }
+                              }}
+                              className="px-2.5 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">
+                              In
+                            </button>
                             {isRequest && canUpdateReturn && (
                               <button
                                 onClick={() =>
