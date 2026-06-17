@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { invoicesApi } from "@/lib/api/invoices";
 import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import {
   useAssignSepayCustomer,
@@ -11,7 +13,15 @@ import { useBranchStore } from "@/lib/store/branch";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "@/components/shared/CodeLink";
 import type { SepayTransaction, SepayMatchCustomer } from "@/lib/api/sepay";
-import { Search, Loader2, X, Check, UserPlus } from "lucide-react";
+import {
+  Search,
+  Loader2,
+  X,
+  Check,
+  UserPlus,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import Swal from "sweetalert2";
 
@@ -223,9 +233,7 @@ function CustomerPickerModal({
                     <div className="flex items-center gap-2 min-w-0">
                       <span
                         className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                          isPicked
-                            ? "bg-brand border-brand"
-                            : "border-gray-300"
+                          isPicked ? "bg-brand border-brand" : "border-gray-300"
                         }`}>
                         {isPicked && <Check className="w-3 h-3 text-white" />}
                       </span>
@@ -269,13 +277,262 @@ function CustomerPickerModal({
   );
 }
 
+interface InvoiceAlloc {
+  invoiceId: number;
+  amount: number;
+}
+
 interface AllocRow {
   customerId: number;
   name: string;
   amount: string; // chuỗi để dễ nhập
+  invoices: Record<number, string>; // invoiceId -> tiền thu (chuỗi)
 }
 
-/** Modal phân bổ tiền + ghi chú cho từng khách → tạo phiếu thu */
+interface UnpaidInvoice {
+  id: number;
+  code: string;
+  purchaseDate: string;
+  grandTotal: number;
+  debtAmount: number;
+}
+
+const onlyDigitsStr = (raw: string) => raw.replace(/[^\d]/g, "");
+const displayAmount = (v: string) =>
+  v === "" ? "" : Number(v).toLocaleString("en-US");
+
+/** Lọc + sắp xếp hóa đơn còn nợ của 1 khách (đồng bộ logic CustomerPaymentModal). */
+function useUnpaidInvoices(customerId: number, enabled: boolean) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["invoices", "customer", [customerId], "unpaid-sepay"],
+    queryFn: () =>
+      invoicesApi.getInvoices({ customerIds: [customerId], limit: 1000 }),
+    enabled: enabled && customerId > 0,
+  });
+
+  const invoices = useMemo<UnpaidInvoice[]>(() => {
+    return (
+      (data?.data || [])
+        .filter((invoice: any) => {
+          const debtAmount = Number(invoice.debtAmount);
+          if (debtAmount <= 0) return false;
+          if (invoice.status === 2) return false;
+          const returnOrderAmount = Number(invoice.returnOrderAmount || 0);
+          if (returnOrderAmount >= debtAmount) return false;
+          return true;
+        })
+        .sort(
+          (a: any, b: any) =>
+            new Date(a.purchaseDate).getTime() -
+            new Date(b.purchaseDate).getTime()
+        )
+        .map((inv: any) => ({
+          id: inv.id,
+          code: inv.code,
+          purchaseDate: inv.purchaseDate,
+          grandTotal: Number(inv.grandTotal),
+          debtAmount: Number(inv.debtAmount),
+        })) || []
+    );
+  }, [data]);
+
+  return { invoices, isLoading };
+}
+
+/**
+ * Khối phân bổ tiền vào hóa đơn của 1 khách trong phiếu thu.
+ * - Hiển thị các hóa đơn còn nợ của khách.
+ * - Khi tổng tiền thu (allocated) đổi → tự rải vào hóa đơn cũ nhất trước.
+ * - Báo ngược lên cha mỗi khi danh sách hóa đơn / số tiền gắn thay đổi.
+ */
+function CustomerInvoiceAllocator({
+  row,
+  onAmountChange,
+  onInvoicesChange,
+}: {
+  row: AllocRow;
+  onAmountChange: (next: string) => void;
+  onInvoicesChange: (next: Record<number, string>) => void;
+}) {
+  const { invoices, isLoading } = useUnpaidInvoices(row.customerId, true);
+  const allocated = Number(row.amount) || 0;
+
+  // Phân trang hóa đơn: 10 dòng / trang.
+  const INV_PAGE_SIZE = 6;
+  const [invPage, setInvPage] = useState(1);
+  const invTotalPages = Math.max(1, Math.ceil(invoices.length / INV_PAGE_SIZE));
+  // Kẹp lại trang hiện tại khi danh sách hóa đơn thay đổi.
+  useEffect(() => {
+    setInvPage((p) => Math.min(p, invTotalPages));
+  }, [invTotalPages]);
+  const pagedInvoices = invoices.slice(
+    (invPage - 1) * INV_PAGE_SIZE,
+    invPage * INV_PAGE_SIZE
+  );
+
+  // Auto-rải tiền vào hóa đơn cũ nhất trước mỗi khi số tiền thu hoặc danh sách
+  // hóa đơn thay đổi, NHƯNG chỉ khi người dùng chưa chỉnh tay từng dòng.
+  const [touched, setTouched] = useState(false);
+
+  useEffect(() => {
+    if (touched) return;
+    if (invoices.length === 0) return;
+    let remaining = allocated;
+    const next: Record<number, string> = {};
+    for (const inv of invoices) {
+      if (remaining <= 0) break;
+      const pay = Math.min(remaining, inv.debtAmount);
+      if (pay > 0) next[inv.id] = String(pay);
+      remaining -= pay;
+    }
+    onInvoicesChange(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allocated, invoices, touched]);
+
+  const setInvoiceAmount = (inv: UnpaidInvoice, raw: string) => {
+    setTouched(true);
+    const digits = onlyDigitsStr(raw);
+    let val = digits === "" ? 0 : Number(digits);
+    if (val > inv.debtAmount) val = inv.debtAmount;
+    // Không cho tổng gắn vào hóa đơn vượt số tiền thu của khách.
+    const otherSum = Object.entries(row.invoices).reduce(
+      (s, [id, amt]) => (Number(id) === inv.id ? s : s + (Number(amt) || 0)),
+      0
+    );
+    const remainAllowed = Math.max(0, allocated - otherSum);
+    if (val > remainAllowed) val = remainAllowed;
+    const next = { ...row.invoices };
+    if (val > 0) next[inv.id] = String(val);
+    else delete next[inv.id];
+    onInvoicesChange(next);
+  };
+
+  const invoiceSum = Object.values(row.invoices).reduce(
+    (s, v) => s + (Number(v) || 0),
+    0
+  );
+  const credit = Math.max(0, allocated - invoiceSum);
+
+  return (
+    <div className="border rounded-lg p-3 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="font-medium text-sm text-gray-800">{row.name}</div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-gray-500">Số tiền thu</label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={displayAmount(row.amount)}
+            onChange={(e) => {
+              setTouched(false); // nhập tổng lại → cho auto-rải chạy lại
+              onAmountChange(onlyDigitsStr(e.target.value));
+            }}
+            placeholder="0"
+            className="w-36 px-3 py-2 border rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand"
+          />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="text-xs text-gray-400 py-2">
+          <Loader2 className="w-4 h-4 animate-spin inline mr-1" />
+          Đang tải hóa đơn còn nợ...
+        </div>
+      ) : invoices.length === 0 ? (
+        <div className="text-xs text-gray-400 py-2">
+          Khách không có hóa đơn còn nợ — toàn bộ tiền sẽ ghi nhận thành quỹ
+          (credit) trừ vào công nợ chung.
+        </div>
+      ) : (
+        <div className="border rounded-lg overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-2.5 py-2 text-left font-medium text-gray-500">
+                  Mã hóa đơn
+                </th>
+                <th className="px-2.5 py-2 text-left font-medium text-gray-500">
+                  Ngày
+                </th>
+                <th className="px-2.5 py-2 text-right font-medium text-gray-500">
+                  Còn cần thu
+                </th>
+                <th className="px-2.5 py-2 text-right font-medium text-gray-500">
+                  Tiền thu
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {pagedInvoices.map((inv) => (
+                <tr key={inv.id} className="border-t">
+                  <td className="px-2.5 py-1.5 text-brand font-medium">
+                    {inv.code}
+                  </td>
+                  <td className="px-2.5 py-1.5 text-gray-600">
+                    {new Date(inv.purchaseDate).toLocaleDateString("vi-VN")}
+                  </td>
+                  <td className="px-2.5 py-1.5 text-right text-red-600 dt-mono">
+                    {formatCurrency(inv.debtAmount)}
+                  </td>
+                  <td className="px-2.5 py-1.5 text-right">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={displayAmount(row.invoices[inv.id] || "")}
+                      onChange={(e) => setInvoiceAmount(inv, e.target.value)}
+                      placeholder="0"
+                      className="w-28 px-2 py-1 border rounded text-right focus:outline-none focus:ring-2 focus:ring-brand"
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {invTotalPages > 1 && (
+            <div className="flex items-center justify-between px-2.5 py-2 border-t bg-gray-50 text-xs">
+              <span className="text-gray-500">
+                {invoices.length} hóa đơn • Trang {invPage}/{invTotalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setInvPage((p) => Math.max(1, p - 1))}
+                  disabled={invPage <= 1}
+                  className="p-1 border rounded disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white">
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setInvPage((p) => Math.min(invTotalPages, p + 1))
+                  }
+                  disabled={invPage >= invTotalPages}
+                  className="p-1 border rounded disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white">
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-gray-500">
+          Đã gắn hóa đơn:{" "}
+          <b className="text-gray-700">{formatCurrency(invoiceSum)}</b> /{" "}
+          {formatCurrency(allocated)}
+        </span>
+        {credit > 0 && (
+          <span className="text-amber-600">
+            Dư {formatCurrency(credit)} → ghi nhận credit
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Modal phân bổ tiền vào hóa đơn theo từng khách → tạo phiếu thu */
 function AllocationModal({
   tx,
   branchName,
@@ -286,7 +543,12 @@ function AllocationModal({
   tx: SepayTransaction;
   branchName: string;
   onConfirm: (
-    allocations: { customerId: number; amount: number; note: string }[]
+    allocations: {
+      customerId: number;
+      amount: number;
+      note: string;
+      invoices: InvoiceAlloc[];
+    }[]
   ) => void;
   onClose: () => void;
   isPending: boolean;
@@ -294,23 +556,21 @@ function AllocationModal({
   const amountIn = Number(tx.amountIn);
   const allCustomers = tx.match?.customers || [];
   // Khách đã có phiếu thu còn hiệu lực → giữ nguyên, KHÔNG phân bổ lại.
-  // Chỉ phân bổ cho khách chưa có phiếu, theo phần tiền chưa gắn.
   const pendingCustomers = allCustomers.filter((c) => !c.cashFlow);
-  const targetAmount = Math.round(
-    (tx.match?.unassignedAmount ?? amountIn) * 100
-  ) / 100;
+  const targetAmount =
+    Math.round((tx.match?.unassignedAmount ?? amountIn) * 100) / 100;
 
   const [rows, setRows] = useState<AllocRow[]>(() =>
     pendingCustomers.map((c, i) => ({
       customerId: c.id,
       name: c.name,
-      // 1 khách chờ: prefill toàn bộ phần tiền chưa gắn. Nhiều khách: khách đầu, còn lại 0.
       amount:
-        pendingCustomers.length === 1 || i === 0
-          ? pendingCustomers.length === 1
-            ? String(targetAmount)
-            : ""
-          : "",
+        pendingCustomers.length === 1
+          ? String(targetAmount)
+          : i === 0
+            ? ""
+            : "",
+      invoices: {},
     }))
   );
 
@@ -325,9 +585,8 @@ function AllocationModal({
   const setRow = (idx: number, patch: Partial<AllocRow>) =>
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
 
-  /** Nhập tiền: chỉ lấy chữ số, kẹp tối đa = phần còn lại (tổng không vượt phần chưa gắn). */
-  const setAmount = (idx: number, raw: string) => {
-    const digits = raw.replace(/[^\d]/g, "");
+  /** Nhập tiền thu của khách: kẹp tối đa = phần còn lại của giao dịch. */
+  const setAmount = (idx: number, digits: string) => {
     if (digits === "") {
       setRow(idx, { amount: "" });
       return;
@@ -343,16 +602,12 @@ function AllocationModal({
     setRow(idx, { amount: String(val) });
   };
 
-  // Hiển thị có tách dấu phẩy ngàn (en-US).
-  const displayAmount = (v: string) =>
-    v === "" ? "" : Number(v).toLocaleString("en-US");
-
   const sum = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
   const diff = Math.round((targetAmount - sum) * 100) / 100;
   const balanced = diff === 0;
   const allPositive = rows.every((r) => Number(r.amount) > 0);
 
-  // Ghi chú tự điền theo mã tham chiếu của giao dịch (không cho nhập tay).
+  // Ghi chú tự điền theo mã tham chiếu của giao dịch.
   const autoNote = tx.referenceNumber || tx.transactionContent || "";
 
   const handleSubmit = () => {
@@ -362,6 +617,12 @@ function AllocationModal({
         customerId: r.customerId,
         amount: Number(r.amount),
         note: autoNote,
+        invoices: Object.entries(r.invoices)
+          .map(([invoiceId, amt]) => ({
+            invoiceId: Number(invoiceId),
+            amount: Number(amt) || 0,
+          }))
+          .filter((inv) => inv.amount > 0),
       }))
     );
   };
@@ -371,7 +632,7 @@ function AllocationModal({
       className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 p-4 pt-16"
       onMouseDown={onClose}>
       <div
-        className="w-full max-w-xl bg-white rounded-xl shadow-2xl flex flex-col max-h-[85vh]"
+        className="w-full max-w-2xl bg-white rounded-xl shadow-2xl flex flex-col max-h-[85vh]"
         onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div>
@@ -403,24 +664,12 @@ function AllocationModal({
 
         <div className="flex-1 overflow-auto px-5 py-4 space-y-4">
           {rows.map((r, idx) => (
-            <div key={r.customerId} className="border rounded-lg p-3 space-y-2">
-              <div className="font-medium text-sm text-gray-800">{r.name}</div>
-              <div className="flex flex-col gap-2">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">
-                    Số tiền thu
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={displayAmount(r.amount)}
-                    onChange={(e) => setAmount(idx, e.target.value)}
-                    placeholder="0"
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                  />
-                </div>
-              </div>
-            </div>
+            <CustomerInvoiceAllocator
+              key={r.customerId}
+              row={r}
+              onAmountChange={(next) => setAmount(idx, next)}
+              onInvoicesChange={(next) => setRow(idx, { invoices: next })}
+            />
           ))}
         </div>
 
@@ -515,7 +764,12 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
   };
 
   const handleConfirm = (
-    allocations: { customerId: number; amount: number; note: string }[]
+    allocations: {
+      customerId: number;
+      amount: number;
+      note: string;
+      invoices: { invoiceId: number; amount: number }[];
+    }[]
   ) => {
     if (!selectedBranch?.id) return;
     confirmMut.mutate(

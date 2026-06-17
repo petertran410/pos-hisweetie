@@ -79,7 +79,12 @@ export function useConfirmSepayReceipt() {
       id: number;
       branchId: number;
       collectorUserId?: number;
-      allocations: { customerId: number; amount: number; note?: string }[];
+      allocations: {
+        customerId: number;
+        amount: number;
+        note?: string;
+        invoices?: { invoiceId: number; amount: number }[];
+      }[];
     }) =>
       sepayApi.confirmReceipt(vars.id, {
         branchId: vars.branchId,

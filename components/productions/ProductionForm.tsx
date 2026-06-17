@@ -424,8 +424,12 @@ export function ProductionForm({
     return selectedProduct.comboComponents.map((comp) => {
       const componentProduct = comp.componentProduct;
 
-      // ─── PIECE MODE ───────────────────────────────────────────────
-      if (comp.inputMode === "piece") {
+      // ─── PIECE / CARTON MODE ──────────────────────────────────────
+      // Cả hai trừ kho theo đơn vị trực tiếp (không quy đổi gram).
+      // CARTON: comp.quantity = 1/N → quantity × SX = số thùng tiêu hao
+      // (phân số, ví dụ SX 85 → 8.5 thùng). KHÔNG làm tròn.
+      if (comp.inputMode === "piece" || comp.inputMode === "carton") {
+        const isCarton = comp.inputMode === "carton";
         const requiredPiecesPerUnit = Number(comp.quantity);
         const totalRequiredPieces = requiredPiecesPerUnit * quantity;
         const actualG =
@@ -441,13 +445,13 @@ export function ProductionForm({
           componentProductId: comp.componentProductId,
           productCode: componentProduct?.code || "",
           productName: componentProduct?.name || "",
-          unit: componentProduct?.unit || "chiếc",
+          unit: isCarton ? "thùng" : componentProduct?.unit || "chiếc",
           requiredGramsPerUnit: requiredPiecesPerUnit,
           totalRequiredGrams: totalRequiredPieces,
           weightInGrams: 0,
-          unitsToDeduct: totalRequiredPieces, // công thức: pieces
-          actualG, // actual pieces
-          actualUnitsToDeduct: actualG, // trừ kho đúng số chiếc
+          unitsToDeduct: totalRequiredPieces, // công thức: số thùng/chiếc
+          actualG, // actual thùng/chiếc
+          actualUnitsToDeduct: actualG, // trừ kho đúng số thùng/chiếc
           availableStock,
           isInsufficient,
         };

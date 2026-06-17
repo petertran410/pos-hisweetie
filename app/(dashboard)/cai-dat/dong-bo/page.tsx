@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/config/api";
-import { RefreshCw, XCircle, Loader2, Database, ShieldCheck } from "lucide-react";
+import { RefreshCw, XCircle, Loader2, Database, ShieldCheck, Users } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { useSyncMisaDictionary } from "@/lib/hooks/useMisa";
@@ -81,6 +81,45 @@ export default function SyncSettingsPage() {
 
   const syncMisaDictionary = useSyncMisaDictionary();
   const syncSepayTransactions = useSyncSepayTransactions();
+
+  // Đồng bộ khách hàng đang hoạt động lên Lark
+  const syncCustomersToLark = useMutation({
+    mutationFn: () =>
+      apiClient.post<{ ok: boolean; success: number; failed: number }>(
+        "/lark-sync/customers/sync-now",
+      ),
+    onSuccess: (res) => {
+      Swal.fire({
+        title: "Đồng bộ hoàn tất",
+        text: `Thành công: ${res?.success ?? 0} — Thất bại: ${res?.failed ?? 0}`,
+        icon: "success",
+        confirmButtonColor: "#2563eb",
+      });
+    },
+    onError: () => {
+      Swal.fire({
+        title: "Đồng bộ thất bại",
+        text: "Không thể đồng bộ khách hàng lên Lark. Vui lòng thử lại.",
+        icon: "error",
+        confirmButtonColor: "#2563eb",
+      });
+    },
+  });
+
+  const handleSyncCustomersToLark = async () => {
+    const result = await Swal.fire({
+      title: "Đồng bộ khách hàng lên Lark?",
+      text: "Đẩy toàn bộ khách hàng đang hoạt động lên bảng Lark (tên, mã, công nợ, tổng bán, doanh thu, địa chỉ, nhóm...). Quá trình có thể mất vài phút.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Đồng bộ ngay",
+      cancelButtonText: "Hủy",
+      confirmButtonColor: "#2563eb",
+    });
+    if (result.isConfirmed) {
+      syncCustomersToLark.mutate();
+    }
+  };
 
   const handleSyncSepay = async () => {
     const result = await Swal.fire({
@@ -381,6 +420,80 @@ export default function SyncSettingsPage() {
               </div>
             )}
           </div>
+
+          {/* Đồng bộ khách hàng lên Lark */}
+          <PermissionGate resource="customers" action="view">
+            <div className="bg-white rounded-lg border p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-sky-100">
+                    <Users className="w-6 h-6 text-sky-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Đồng bộ khách hàng lên Lark
+                    </h2>
+                    <p className="text-sm text-gray-500 max-w-2xl">
+                      Đẩy toàn bộ khách hàng đang hoạt động lên bảng Lark: tên,
+                      mã, nợ hiện tại, tổng bán, tổng doanh thu, địa chỉ, khu
+                      vực, nhóm khách hàng... Chỉ đồng bộ khách hàng đang hoạt
+                      động.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSyncCustomersToLark}
+                  disabled={syncCustomersToLark.isPending}
+                  className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  {syncCustomersToLark.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Đang đồng bộ...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      Đồng bộ ngay
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {syncCustomersToLark.isSuccess && syncCustomersToLark.data && (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  {[
+                    {
+                      label: "Thành công",
+                      value: syncCustomersToLark.data.success ?? 0,
+                    },
+                    {
+                      label: "Thất bại",
+                      value: syncCustomersToLark.data.failed ?? 0,
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="p-3 bg-gray-50 border rounded-lg text-center">
+                      <p className="text-xs text-gray-500">{stat.label}</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {stat.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {syncCustomersToLark.isError && (
+                <div className="mt-4 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">
+                    Đồng bộ khách hàng lên Lark thất bại. Vui lòng thử lại.
+                  </p>
+                </div>
+              )}
+            </div>
+          </PermissionGate>
 
           {/* Sync Status Table — KiotViet (ĐÃ TẠM ẨN) */}
           {/*

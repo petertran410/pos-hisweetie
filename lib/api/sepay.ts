@@ -106,7 +106,12 @@ export const sepayApi = {
     data: {
       branchId: number;
       collectorUserId?: number;
-      allocations: { customerId: number; amount: number; note?: string }[];
+      allocations: {
+        customerId: number;
+        amount: number;
+        note?: string;
+        invoices?: { invoiceId: number; amount: number }[];
+      }[];
     }
   ): Promise<{ success: boolean; cashFlows: { id: number; code: string }[] }> => {
     return apiClient.post(`/sepay/transactions/${id}/confirm`, data);
