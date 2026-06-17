@@ -315,7 +315,8 @@ export function OrderSupplierForm({
   );
   const [previouslyPaid, setPreviouslyPaid] = useState<number>(0);
   const { user: currentUser } = useAuthStore();
-  const canViewSalePrice = useCan("products", "view_sale_price");
+  const canViewSalePrice = useCan("order_suppliers", "view_price");
+  const canViewFactoryPrice = useCan("order_suppliers", "view_factory_price");
 
   const handlePaymentConfirm = (
     amount: number,
@@ -624,15 +625,24 @@ export function OrderSupplierForm({
       description: note,
       discount: discountType === "amount" ? Number(discount) || 0 : 0,
       discountRatio: discountType === "ratio" ? Number(discountRatio) || 0 : 0,
-      items: products.map((p) => ({
-        productId: Number(p.productId),
-        quantity: Number(p.quantity),
-        price: Number(p.price),
-        discount: Number(p.discount) || 0,
-        factoryPrice: Number(p.factoryPrice) || null,
-        factorySubTotal: Number(p.factorySubTotal) || null,
-        description: p.note,
-      })),
+      items: products.map((p) => {
+        const priceNum = Number(p.price);
+        const item: any = {
+          productId: Number(p.productId),
+          quantity: Number(p.quantity),
+          discount: Number(p.discount) || 0,
+          factoryPrice: Number(p.factoryPrice) || null,
+          factorySubTotal: Number(p.factorySubTotal) || null,
+          description: p.note,
+        };
+        // Chỉ gửi price khi là số hợp lệ. Nếu user không có quyền xem giá vốn
+        // thì cost bị strip ở backend → price = NaN; bỏ qua để backend tự
+        // resolve giá vốn hiện tại của sản phẩm theo chi nhánh.
+        if (Number.isFinite(priceNum)) {
+          item.price = priceNum;
+        }
+        return item;
+      }),
       paymentAmount: paymentAmount > 0 ? paymentAmount : undefined,
       paymentMethod: paymentAmount > 0 ? paymentMethod : undefined,
       orderDate: orderDate?.toISOString(),
@@ -711,12 +721,16 @@ export function OrderSupplierForm({
                       </th>
                     </>
                   )}
-                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
-                    Đơn giá NM
-                  </th>
-                  <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
-                    Thành tiền NM
-                  </th>
+                  {canViewFactoryPrice && (
+                    <>
+                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
+                        Đơn giá NM
+                      </th>
+                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
+                        Thành tiền NM
+                      </th>
+                    </>
+                  )}
                   <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-12">
                     Xóa
                   </th>
@@ -815,36 +829,44 @@ export function OrderSupplierForm({
                         </td>
                       </>
                     )}
-                    <td className="px-[10px] py-2 align-middle">
-                      <input
-                        type="text"
-                        value={formatCurrency(item.factoryPrice)}
-                        onChange={(e) => {
-                          const numericValue = parseNumberInput(e.target.value);
-                          handleFactoryPriceChange(
-                            index,
-                            numericValue.toString()
-                          );
-                        }}
-                        disabled={isFormDisabled ? true : false}
-                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
-                      />
-                    </td>
-                    <td className="px-[10px] py-2 align-middle">
-                      <input
-                        type="text"
-                        value={formatCurrency(item.factorySubTotal)}
-                        onChange={(e) => {
-                          const numericValue = parseNumberInput(e.target.value);
-                          handleFactorySubTotalChange(
-                            index,
-                            numericValue.toString()
-                          );
-                        }}
-                        disabled={isFormDisabled ? true : false}
-                        className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
-                      />
-                    </td>
+                    {canViewFactoryPrice && (
+                      <>
+                        <td className="px-[10px] py-2 align-middle">
+                          <input
+                            type="text"
+                            value={formatCurrency(item.factoryPrice)}
+                            onChange={(e) => {
+                              const numericValue = parseNumberInput(
+                                e.target.value
+                              );
+                              handleFactoryPriceChange(
+                                index,
+                                numericValue.toString()
+                              );
+                            }}
+                            disabled={isFormDisabled ? true : false}
+                            className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                          />
+                        </td>
+                        <td className="px-[10px] py-2 align-middle">
+                          <input
+                            type="text"
+                            value={formatCurrency(item.factorySubTotal)}
+                            onChange={(e) => {
+                              const numericValue = parseNumberInput(
+                                e.target.value
+                              );
+                              handleFactorySubTotalChange(
+                                index,
+                                numericValue.toString()
+                              );
+                            }}
+                            disabled={isFormDisabled ? true : false}
+                            className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                          />
+                        </td>
+                      </>
+                    )}
                     <td className="px-[10px] py-2 align-middle text-center">
                       <button
                         onClick={() => handleRemoveProduct(index)}

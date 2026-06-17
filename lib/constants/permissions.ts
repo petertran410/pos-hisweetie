@@ -48,6 +48,9 @@ export const RESOURCE_LABELS: Record<string, string> = {
   view_balance: "Xem số dư",
   view_debt: "Xem công nợ",
   view_price: "Xem giá nhập",
+  view_factory_price: "Xem giá nhà máy",
+  view_stage_factory: "Xem giai đoạn & nhà máy",
+  edit_stage_factory: "Sửa giai đoạn & nhà máy",
 };
 
 export const ACTION_LABELS: Record<string, string> = {
@@ -103,6 +106,9 @@ export const ACTION_LABELS: Record<string, string> = {
   view_balance: "Xem số dư",
   view_debt: "Xem công nợ",
   view_price: "Xem giá nhập",
+  view_factory_price: "Xem giá nhà máy",
+  view_stage_factory: "Xem giai đoạn & nhà máy",
+  edit_stage_factory: "Sửa giai đoạn & nhà máy",
 };
 
 export const CATEGORY_ICONS: Record<string, string> = {

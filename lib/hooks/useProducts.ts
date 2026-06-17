@@ -8,12 +8,15 @@ import { useBranchStore } from "@/lib/store/branch";
 
 export function useProducts(
   params?: ProductQueryParams,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean; silentForbidden?: boolean }
 ) {
   return useQuery({
     queryKey: ["products", params],
     queryFn: () => productsApi.getAll(params),
     ...(options?.enabled !== undefined ? { enabled: options.enabled } : {}),
+    ...(options?.silentForbidden
+      ? { meta: { silentForbidden: true } }
+      : {}),
   });
 }
 

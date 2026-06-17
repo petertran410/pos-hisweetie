@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   useOrderSupplierDetailItems,
@@ -60,6 +60,7 @@ type FactoryField = "factoryPrice" | "factorySubTotal";
 
 interface EditCtx {
   canUpdate: boolean;
+  canEditStageFactory: boolean;
   editing: {
     orderSupplierId: number;
     productId: number;
@@ -221,7 +222,7 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplierDetailItem, EditCtx>[] = [
           placeholder="Chọn giai đoạn"
           addLabel="Thêm giai đoạn"
           newPlaceholder="Tên giai đoạn mới"
-          canEdit={ctx.canUpdate}
+          canEdit={ctx.canEditStageFactory}
           onChange={(id) => ctx.setStageFactory(r, { productionStageId: id })}
           onCreate={ctx.createProductionStage}
         />
@@ -242,7 +243,7 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplierDetailItem, EditCtx>[] = [
           placeholder="Chọn nhà máy"
           addLabel="Thêm nhà máy"
           newPlaceholder="Tên nhà máy mới"
-          canEdit={ctx.canUpdate}
+          canEdit={ctx.canEditStageFactory}
           onChange={(id) => ctx.setStageFactory(r, { factoryId: id })}
           onCreate={ctx.createFactory}
         />
@@ -407,6 +408,19 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
 
   // ── Inline edit giá nhà máy / thành tiền nhà máy ──
   const canUpdate = usePermission("order_suppliers", "update");
+  const canViewSalePrice = usePermission("order_suppliers", "view_price");
+  const canViewFactoryPrice = usePermission(
+    "order_suppliers",
+    "view_factory_price"
+  );
+  const canViewStageFactory = usePermission(
+    "order_suppliers",
+    "view_stage_factory"
+  );
+  const canEditStageFactory = usePermission(
+    "order_suppliers",
+    "edit_stage_factory"
+  );
   const updateFactoryPrice = useUpdateOrderSupplierItemFactoryPrice();
   const [editing, setEditing] = useState<EditCtx["editing"]>(null);
 
@@ -419,6 +433,7 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
 
   const editCtx: EditCtx = {
     canUpdate,
+    canEditStageFactory,
     editing,
     startEdit: (r, field) => {
       if (!canUpdate) return;
@@ -483,7 +498,7 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
       }
     },
     setStageFactory: (r, data) => {
-      if (!canUpdate) return;
+      if (!canEditStageFactory) return;
       // Gửi kèm cả 2 giá trị hiện tại để tránh trường không sửa bị ghi null.
       updateStageFactory.mutate({
         orderSupplierId: r.orderSupplierId,
@@ -500,7 +515,39 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
   const rows = data?.data || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / limit) || 1;
-  const colSpan = visibleColumns.length;
+
+  // Lọc cột theo quyền: ẩn hẳn (kể cả khỏi menu "Cột hiển thị") khi thiếu quyền.
+  // - view_price        → Đơn giá / Thành tiền
+  // - view_factory_price → Đơn giá NM / Thành tiền NM
+  // - view_stage_factory → Giai đoạn hiện tại / Tên nhà máy
+  const isColumnAllowed = useCallback(
+    (key: string) => {
+      if (!canViewSalePrice && (key === "price" || key === "subTotal"))
+        return false;
+      if (
+        !canViewFactoryPrice &&
+        (key === "factoryPrice" || key === "factorySubTotal")
+      )
+        return false;
+      if (
+        !canViewStageFactory &&
+        (key === "productionStage" || key === "factory")
+      )
+        return false;
+      return true;
+    },
+    [canViewSalePrice, canViewFactoryPrice, canViewStageFactory]
+  );
+
+  const toggleableColumns = useMemo(
+    () => columns.filter((c) => isColumnAllowed(c.key)),
+    [columns, isColumnAllowed]
+  );
+  const allowedVisibleColumns = useMemo(
+    () => visibleColumns.filter((c) => isColumnAllowed(c.key)),
+    [visibleColumns, isColumnAllowed]
+  );
+  const colSpan = allowedVisibleColumns.length;
 
   return (
     <PermissionGate resource="order_suppliers" action="view">
@@ -519,7 +566,7 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
               className="w-72 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
-          <ColumnToggle columns={columns} onToggle={toggleColumn} />
+          <ColumnToggle columns={toggleableColumns} onToggle={toggleColumn} />
         </div>
 
         {/* Status tabs */}
@@ -543,7 +590,7 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                {visibleColumns.map((col) => (
+                {allowedVisibleColumns.map((col) => (
                   <th
                     key={col.key}
                     className={`px-3 py-2.5 font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide ${
@@ -578,7 +625,7 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
                   <tr
                     key={`${r.orderSupplierId}-${r.productId}-${idx}`}
                     className="border-b hover:bg-gray-50">
-                    {visibleColumns.map((col) => (
+                    {allowedVisibleColumns.map((col) => (
                       <td
                         key={col.key}
                         className={`px-3 py-2 ${

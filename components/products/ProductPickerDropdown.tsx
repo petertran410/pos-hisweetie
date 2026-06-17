@@ -40,7 +40,7 @@ export function ProductPickerDropdown({
     limit: 500,
     branchId,
     isActive: true,
-  });
+  }, { silentForbidden: true });
   const products = productsData?.data || [];
 
   // Debounce search input

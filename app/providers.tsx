@@ -20,11 +20,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         queryCache: new QueryCache({
           // Xử lý lỗi tập trung cho tất cả useQuery (fires 1 lần sau khi hết retry)
-          onError: (error: any) => {
+          onError: (error: any, query) => {
             const status = error?.status;
 
             // 401: đã tự clear auth + redirect sang /login → không cần toast.
             if (status === 401) return;
+
+            // Query "tra cứu phụ" (vd: product picker trong form) có thể tự
+            // tắt toast lỗi toàn cục qua meta.silentForbidden — tránh popup
+            // "không có quyền" khi UI đã chủ động ẩn chức năng đó.
+            if (status === 403 && query?.meta?.silentForbidden) return;
 
             // 403 (không có quyền): chỉ hiển thị 1 lần cho mỗi nội dung,
             // không spam mỗi lần chuyển trang/refetch.

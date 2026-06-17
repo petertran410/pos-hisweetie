@@ -114,7 +114,8 @@ export function OrderSupplierDetailRow({
 
   const canUpdateOS = useCan("order_suppliers", "update");
   const canCreatePO = useCan("purchase_orders", "create");
-  const canViewSalePrice = useCan("products", "view_sale_price");
+  const canViewSalePrice = useCan("order_suppliers", "view_price");
+  const canViewFactoryPrice = useCan("order_suppliers", "view_factory_price");
 
   // Sticky width: đo chiều rộng vùng cuộn rồi set cho wrapper. KHÔNG dùng
   // ResizeObserver trên scrollEl vì việc ghi width làm reflow (bật/tắt
@@ -397,22 +398,26 @@ export function OrderSupplierDetailRow({
                           {formatDateTime(orderSupplier.createdAt)}
                         </span>
                       </div>
-                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                        <label className="text-sm text-gray-500">
-                          Tổng tiền hàng:
-                        </label>
-                        <span className="text-sm text-gray-900 font-medium">
-                          {formatCurrency(orderSupplier.total)}
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                        <label className="text-sm text-gray-500">
-                          Cần trả NCC:
-                        </label>
-                        <span className="text-sm text-gray-900 font-medium">
-                          {formatCurrency(orderSupplier.supplierDebt)}
-                        </span>
-                      </div>
+                      {canViewSalePrice && (
+                        <>
+                          <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                            <label className="text-sm text-gray-500">
+                              Tổng tiền hàng:
+                            </label>
+                            <span className="text-sm text-gray-900 font-medium">
+                              {formatCurrency(orderSupplier.total)}
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                            <label className="text-sm text-gray-500">
+                              Cần trả NCC:
+                            </label>
+                            <span className="text-sm text-gray-900 font-medium">
+                              {formatCurrency(orderSupplier.supplierDebt)}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Notes */}
@@ -499,12 +504,16 @@ export function OrderSupplierDetailRow({
                                   </th>
                                 </>
                               )}
-                              <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                                Đơn giá NM
-                              </th>
-                              <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                                Thành tiền NM
-                              </th>
+                              {canViewFactoryPrice && (
+                                <>
+                                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    Đơn giá NM
+                                  </th>
+                                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    Thành tiền NM
+                                  </th>
+                                </>
+                              )}
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-100">
@@ -578,23 +587,33 @@ export function OrderSupplierDetailRow({
                                         </td>
                                       </>
                                     )}
-                                    <td className="px-3 py-2 text-right text-sm text-gray-700">
-                                      {item.factoryPrice == null
-                                        ? "-"
-                                        : formatCurrency(item.factoryPrice)}
-                                    </td>
-                                    <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
-                                      {item.factorySubTotal == null
-                                        ? "-"
-                                        : formatCurrency(item.factorySubTotal)}
-                                    </td>
+                                    {canViewFactoryPrice && (
+                                      <>
+                                        <td className="px-3 py-2 text-right text-sm text-gray-700">
+                                          {item.factoryPrice == null
+                                            ? "-"
+                                            : formatCurrency(item.factoryPrice)}
+                                        </td>
+                                        <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
+                                          {item.factorySubTotal == null
+                                            ? "-"
+                                            : formatCurrency(
+                                                item.factorySubTotal
+                                              )}
+                                        </td>
+                                      </>
+                                    )}
                                   </tr>
                                 );
                               })
                             ) : (
                               <tr>
                                 <td
-                                  colSpan={canViewSalePrice ? 12 : 9}
+                                  colSpan={
+                                    7 +
+                                    (canViewSalePrice ? 3 : 0) +
+                                    (canViewFactoryPrice ? 2 : 0)
+                                  }
                                   className="px-3 py-6 text-center text-sm text-gray-400">
                                   Không có sản phẩm
                                 </td>
