@@ -495,7 +495,8 @@ export function ProductsTable({
 
   const { data: pendingSummary } = useOrdersPendingSummary(
     productIdsForPending,
-    selectedBranch?.id
+    selectedBranch?.id,
+    { silentForbidden: true }
   );
   const pendingMap = pendingSummary || {};
 
@@ -507,7 +508,8 @@ export function ProductsTable({
 
   const { data: supplierSummary } = useOrderSuppliersConfirmedSummary(
     productIdsForSupplier,
-    selectedBranch?.id
+    selectedBranch?.id,
+    { silentForbidden: true }
   );
   const supplierMap = supplierSummary || {};
 
@@ -524,7 +526,8 @@ export function ProductsTable({
 
   const { data: consignmentSummary } = useConsignmentSummary(
     productIdsForConsignment,
-    selectedBranch?.id
+    selectedBranch?.id,
+    { silentForbidden: true }
   );
   const consignmentMap = consignmentSummary || {};
 

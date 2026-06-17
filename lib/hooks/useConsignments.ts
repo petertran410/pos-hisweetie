@@ -104,13 +104,20 @@ export function useCreateInvoiceFromConsignment() {
 }
 
 /** Tổng số lượng đang ký gửi tại khách cho 1 batch productIds (cột "Ký gửi"). */
-export function useConsignmentSummary(productIds: number[], branchId?: number) {
+export function useConsignmentSummary(
+  productIds: number[],
+  branchId?: number,
+  options?: { silentForbidden?: boolean }
+) {
   const sortedKey = [...productIds].sort((a, b) => a - b).join(",");
   return useQuery({
     queryKey: ["consignment-summary", sortedKey, branchId ?? null],
     queryFn: () => consignmentsApi.getConsignmentSummary(productIds, branchId),
     enabled: productIds.length > 0,
     staleTime: 30_000,
+    ...(options?.silentForbidden
+      ? { meta: { silentForbidden: true } }
+      : {}),
   });
 }
 

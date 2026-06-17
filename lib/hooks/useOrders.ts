@@ -118,7 +118,8 @@ export function useCancelOrder() {
  */
 export function useOrdersPendingSummary(
   productIds: number[],
-  branchId?: number
+  branchId?: number,
+  options?: { silentForbidden?: boolean }
 ) {
   const sortedKey = [...productIds].sort((a, b) => a - b).join(",");
   return useQuery({
@@ -126,6 +127,9 @@ export function useOrdersPendingSummary(
     queryFn: () => ordersApi.getPendingSummary(productIds, branchId),
     enabled: productIds.length > 0,
     staleTime: 30_000,
+    ...(options?.silentForbidden
+      ? { meta: { silentForbidden: true } }
+      : {}),
   });
 }
 

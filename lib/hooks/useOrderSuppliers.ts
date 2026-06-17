@@ -204,7 +204,8 @@ export function useOrderSupplierPayments(orderSupplierId: number) {
  */
 export function useOrderSuppliersConfirmedSummary(
   productIds: number[],
-  branchId?: number
+  branchId?: number,
+  options?: { silentForbidden?: boolean }
 ) {
   const sortedKey = [...productIds].sort((a, b) => a - b).join(",");
   return useQuery({
@@ -217,6 +218,9 @@ export function useOrderSuppliersConfirmedSummary(
       orderSuppliersApi.getConfirmedSummary(productIds, branchId),
     enabled: productIds.length > 0,
     staleTime: 30_000,
+    ...(options?.silentForbidden
+      ? { meta: { silentForbidden: true } }
+      : {}),
   });
 }
 

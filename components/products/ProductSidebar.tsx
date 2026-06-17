@@ -382,10 +382,16 @@ function SimpleDropdown({
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
-  const { data: parentCategories } = useCategories("parent");
-  const { data: middleCategories } = useCategories("middle");
-  const { data: childCategories } = useCategories("child");
-  const { data: trademarks } = useTrademarks();
+  const { data: parentCategories } = useCategories("parent", {
+    silentForbidden: true,
+  });
+  const { data: middleCategories } = useCategories("middle", {
+    silentForbidden: true,
+  });
+  const { data: childCategories } = useCategories("child", {
+    silentForbidden: true,
+  });
+  const { data: trademarks } = useTrademarks({ silentForbidden: true });
 
   // Mặc định lọc "Hoạt động".
   const [selectedStatus, setSelectedStatus] = useState("active");

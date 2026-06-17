@@ -6,10 +6,16 @@ import {
 } from "@/lib/api/categories";
 import { toast } from "sonner";
 
-export function useCategories(type?: CategoryType) {
+export function useCategories(
+  type?: CategoryType,
+  options?: { silentForbidden?: boolean }
+) {
   return useQuery({
     queryKey: ["categories", type],
     queryFn: () => categoriesApi.getAll(type),
+    ...(options?.silentForbidden
+      ? { meta: { silentForbidden: true } }
+      : {}),
   });
 }
 

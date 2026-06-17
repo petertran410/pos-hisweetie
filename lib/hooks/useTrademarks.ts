@@ -2,10 +2,13 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { trademarksApi } from "@/lib/api/trademarks";
 
-export const useTrademarks = () => {
+export const useTrademarks = (options?: { silentForbidden?: boolean }) => {
   return useQuery({
     queryKey: ["trademarks"],
     queryFn: trademarksApi.getTrademarks,
+    ...(options?.silentForbidden
+      ? { meta: { silentForbidden: true } }
+      : {}),
   });
 };
 

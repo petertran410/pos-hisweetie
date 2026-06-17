@@ -203,10 +203,16 @@ function ProductsMobileFilterSheet({
   onApply: (f: any) => void;
   onClose: () => void;
 }) {
-  const { data: parentCategories } = useCategories("parent");
-  const { data: middleCategories } = useCategories("middle");
-  const { data: childCategories } = useCategories("child");
-  const { data: trademarks } = useTrademarks();
+  const { data: parentCategories } = useCategories("parent", {
+    silentForbidden: true,
+  });
+  const { data: middleCategories } = useCategories("middle", {
+    silentForbidden: true,
+  });
+  const { data: childCategories } = useCategories("child", {
+    silentForbidden: true,
+  });
+  const { data: trademarks } = useTrademarks({ silentForbidden: true });
 
   const [localParentName, setLocalParentName] = useState<string>(
     filters.parentName || ""
