@@ -271,12 +271,12 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
     createInternalUse.isPending || updateInternalUse.isPending;
 
   return (
-    <div className="flex h-full border-t bg-gray-50 overflow-hidden relative">
+    <div className="flex flex-col lg:flex-row h-full border-t bg-gray-50 overflow-y-auto lg:overflow-hidden relative">
       {/* Khu trái */}
-      <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] m-4 border rounded-xl">
-        <div className="border-b px-6 py-4 flex items-center justify-between bg-gray-50">
+      <div className="order-1 flex-1 flex flex-col lg:overflow-y-auto bg-white w-full lg:w-[60%] m-3 lg:m-4 mb-0 lg:mb-4 border rounded-xl">
+        <div className="border-b px-4 lg:px-6 py-3 lg:py-4 flex items-center justify-between bg-gray-50">
           <div>
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-lg lg:text-xl font-semibold">
               {internalUse
                 ? "Chi tiết phiếu xuất dùng nội bộ"
                 : "Tạo phiếu xuất dùng nội bộ"}
@@ -294,7 +294,7 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 lg:overflow-y-auto p-4 lg:p-6 space-y-5 lg:space-y-6">
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tìm hàng hóa theo mã hoặc tên (F3)
@@ -379,7 +379,7 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
           </div>
 
           {products.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
+            <div className="hidden lg:block border rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b">
@@ -477,11 +477,91 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
               </div>
             </div>
           )}
+
+          {/* Danh sách sản phẩm — card (mobile) */}
+          {products.length > 0 && (
+            <div className="lg:hidden space-y-2">
+              {products.map((item, index) => (
+                <div
+                  key={index}
+                  className="border rounded-lg p-3 bg-white">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0">
+                      <div className="text-sm text-brand font-medium">
+                        {item.productCode}
+                      </div>
+                      <div className="text-sm text-gray-900 leading-tight">
+                        {item.productName}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        ĐVT: {item.unit || "-"}
+                      </div>
+                    </div>
+                    {!isFormDisabled && (
+                      <button
+                        onClick={() => handleRemoveProduct(index)}
+                        className="p-1.5 hover:bg-gray-100 rounded flex-shrink-0"
+                        title="Xóa">
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-end gap-2 border-t border-dashed border-gray-200 pt-2.5">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-500 mb-1">
+                        SL xuất
+                      </label>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          handleQuantityChange(index, e.target.value)
+                        }
+                        disabled={isFormDisabled}
+                        className="w-full px-2 py-1.5 border rounded text-center focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100"
+                        min="0"
+                        step="1"
+                      />
+                    </div>
+                    {canViewCost && (
+                      <>
+                        <div className="flex-1">
+                          <label className="block text-xs text-gray-500 mb-1">
+                            Giá vốn
+                          </label>
+                          <input
+                            type="number"
+                            value={item.cost}
+                            onChange={(e) =>
+                              handleCostChange(index, e.target.value)
+                            }
+                            disabled={isFormDisabled}
+                            className="w-full px-2 py-1.5 border rounded text-right focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100"
+                            min="0"
+                            step="1"
+                          />
+                        </div>
+                        <div className="flex-1 text-right">
+                          <label className="block text-xs text-gray-500 mb-1">
+                            Giá trị
+                          </label>
+                          <div className="px-2 py-1.5 text-sm font-medium text-gray-900">
+                            {formatCurrency(item.value)}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Khu phải */}
-      <div className="w-96 border m-4 rounded-xl overflow-y-auto custom-sidebar-scroll bg-white shadow-xl">
+      <div className="order-2 lg:order-none w-full lg:w-96 border m-3 lg:m-4 rounded-xl overflow-y-auto custom-sidebar-scroll bg-white shadow-xl">
         <div className="p-6 space-y-5">
           <div>
             <label className="block text-sm text-gray-600 mb-1">Người tạo</label>
