@@ -466,6 +466,12 @@ function PackingMobileDetailSheet({
                     value={`${formatCurrency(item.cuocGuiHang)}đ`}
                   />
                 )}
+                {item.hasCuocNhanHang && (
+                  <Row
+                    label="Cước nhận hàng"
+                    value={`${formatCurrency(item.cuocNhanHang)}đ`}
+                  />
+                )}
               </div>
             )}
 

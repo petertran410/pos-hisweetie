@@ -576,14 +576,16 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
         : [...prev, value]
     );
 
-  const handlePush = async (invoice: InvoiceVat) => {
+  const handlePush = async (invoice: InvoiceVat, force = false) => {
     setOpenActionId(null);
     const result = await Swal.fire({
-      title: "Đẩy hóa đơn lên Misa?",
-      text: `Tạo chứng từ bán hàng Misa cho hóa đơn ${invoice.code}.`,
-      icon: "question",
+      title: force ? "Đẩy lại hóa đơn lên Misa?" : "Đẩy hóa đơn lên Misa?",
+      text: force
+        ? `Hóa đơn ${invoice.code} đã đồng bộ trước đó. Đẩy lại sẽ tạo/ghi đè chứng từ trên Misa với cùng mã chứng từ.`
+        : `Tạo chứng từ bán hàng Misa cho hóa đơn ${invoice.code}.`,
+      icon: force ? "warning" : "question",
       showCancelButton: true,
-      confirmButtonText: "Đẩy Misa",
+      confirmButtonText: force ? "Đẩy lại Misa" : "Đẩy Misa",
       cancelButtonText: "Hủy",
       confirmButtonColor: "#2563eb",
     });
@@ -591,6 +593,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
       createVoucher.mutate({
         invoiceCode: invoice.code,
         buyerOverride: buildBuyerOverride(getBuyerInfo(invoice)),
+        force,
       });
     }
   };
@@ -1064,13 +1067,23 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                                 <PermissionGate
                                   resource="vat_invoices"
                                   action="push">
-                                  <button
-                                    onClick={() => handlePush(invoice)}
-                                    disabled={createVoucher.isPending}
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50">
-                                    <UploadCloud className="w-4 h-4 text-brand" />
-                                    Đẩy Misa
-                                  </button>
+                                  {invoice.misaSyncStatus === "SYNCED" ? (
+                                    <button
+                                      onClick={() => handlePush(invoice, true)}
+                                      disabled={createVoucher.isPending}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50">
+                                      <RefreshCw className="w-4 h-4 text-amber-600" />
+                                      Đẩy lại Misa
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handlePush(invoice)}
+                                      disabled={createVoucher.isPending}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50">
+                                      <UploadCloud className="w-4 h-4 text-brand" />
+                                      Đẩy Misa
+                                    </button>
+                                  )}
                                 </PermissionGate>
                                 <PermissionGate
                                   resource="vat_invoices"

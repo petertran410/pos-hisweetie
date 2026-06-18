@@ -3,7 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { useSepayTransactions } from "@/lib/hooks/useSepay";
+import {
+  useSepayTransactions,
+  useHideSepayTransaction,
+  useUnhideSepayTransaction,
+} from "@/lib/hooks/useSepay";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { MiniCalendar } from "@/components/ui/MiniCalendar";
@@ -23,6 +27,8 @@ import {
   Loader2,
   X,
   Calendar,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 const formatDateLabel = (d: string) =>
@@ -132,6 +138,7 @@ interface Filters {
   status: "" | "processing" | "assigned" | "completed";
   amountMin: string;
   amountMax: string;
+  showHidden: boolean;
 }
 
 const EMPTY_FILTERS: Filters = {
@@ -143,12 +150,47 @@ const EMPTY_FILTERS: Filters = {
   status: "",
   amountMin: "",
   amountMax: "",
+  showHidden: false,
 };
 
 // Chỉ giữ chữ số (state lưu raw digits, hiển thị có phân tách hàng nghìn).
 const onlyDigits = (v: string) => v.replace(/\D/g, "");
 const formatAmountInput = (v: string) =>
   v ? Number(v).toLocaleString("vi-VN") : "";
+
+/** Nút ẩn / bỏ ẩn 1 giao dịch. */
+function HideToggleButton({
+  txId,
+  isHidden,
+}: {
+  txId: number;
+  isHidden: boolean;
+}) {
+  const hideMut = useHideSepayTransaction();
+  const unhideMut = useUnhideSepayTransaction();
+  const isPending = hideMut.isPending || unhideMut.isPending;
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        if (isHidden) unhideMut.mutate(txId);
+        else hideMut.mutate(txId);
+      }}
+      disabled={isPending}
+      title={isHidden ? "Bỏ ẩn giao dịch" : "Ẩn giao dịch"}
+      className="inline-flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap">
+      {isPending ? (
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+      ) : isHidden ? (
+        <Eye className="w-3.5 h-3.5" />
+      ) : (
+        <EyeOff className="w-3.5 h-3.5" />
+      )}
+      {isHidden ? "Bỏ ẩn" : "Ẩn"}
+    </button>
+  );
+}
 
 export default function BienDongSoDuPage() {
   const searchParams = useSearchParams();
@@ -248,6 +290,7 @@ export default function BienDongSoDuPage() {
     status: applied.status || undefined,
     amountMin: applied.amountMin || undefined,
     amountMax: applied.amountMax || undefined,
+    hidden: applied.showHidden ? "true" : undefined,
   });
 
   const transactions = data?.data ?? [];
@@ -271,6 +314,13 @@ export default function BienDongSoDuPage() {
   const resetFilters = () => {
     setDraft(EMPTY_FILTERS);
     setApplied(EMPTY_FILTERS);
+    setPage(1);
+  };
+
+  // Bật/tắt xem giao dịch đã ẩn — áp dụng ngay vào cả draft & applied.
+  const toggleShowHidden = () => {
+    setDraft((p) => ({ ...p, showHidden: !p.showHidden }));
+    setApplied((p) => ({ ...p, showHidden: !p.showHidden }));
     setPage(1);
   };
 
@@ -481,6 +531,27 @@ export default function BienDongSoDuPage() {
               Xóa lọc
             </button>
           )}
+
+          {/* Toggle xem giao dịch đã ẩn — áp dụng ngay, không cần bấm Lọc */}
+          <button
+            onClick={toggleShowHidden}
+            title={
+              applied.showHidden
+                ? "Đang xem giao dịch đã ẩn"
+                : "Xem các giao dịch đã ẩn"
+            }
+            className={`inline-flex items-center gap-1.5 px-3 py-2 border rounded-lg text-sm transition-colors ${
+              applied.showHidden
+                ? "border-brand bg-brand-soft text-brand"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}>
+            {applied.showHidden ? (
+              <Eye className="w-4 h-4" />
+            ) : (
+              <EyeOff className="w-4 h-4" />
+            )}
+            {applied.showHidden ? "Đang xem đã ẩn" : "Giao dịch đã ẩn"}
+          </button>
         </div>
 
         {/* Table */}
@@ -488,31 +559,31 @@ export default function BienDongSoDuPage() {
           <table className="w-full text-sm">
             <thead className="sticky top-0 border-b z-10 bg-[var(--dt-bg-soft)]">
               <tr>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
+                <th className="px-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Thời gian
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
+                <th className="px-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Ngân hàng
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
+                <th className="px-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Số tài khoản
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
+                <th className="px-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Số tiền
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--dt-text-muted)]">
+                <th className="px-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] w-full min-w-[240px]">
                   Nội dung
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
+                <th className="px-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Mã tham chiếu
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
+                <th className="pl-5 pr-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Khách hàng
                 </th>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
+                <th className="pl-5 pr-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Trạng thái
                 </th>
-                <th className="px-4 py-2.5 text-right font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
+                <th className="pl-5 pr-4 py-2.5 text-right font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Thao tác
                 </th>
               </tr>
@@ -538,29 +609,35 @@ export default function BienDongSoDuPage() {
                     <tr
                       key={tx.id}
                       className="border-b dt-row transition-colors hover:bg-brand-soft hover:shadow-[inset_3px_0_0_0_var(--dt-primary)] cursor-pointer">
-                      <td className="px-4 py-2.5 leading-tight">
+                      <td className="px-3 py-2.5 leading-tight">
                         <div>{formatDateParts(tx.transactionDate).time}</div>
                         <div className="text-xs text-gray-500">
                           {formatDateParts(tx.transactionDate).date}
                         </div>
                       </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">{tx.bankBrandName || "-"}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap dt-mono">{tx.accountNumber || "-"}</td>
-                      <td className="px-4 py-2.5 text-left font-medium text-green-600 whitespace-nowrap dt-mono">
+                      <td className="px-3 py-2.5 whitespace-nowrap">{tx.bankBrandName || "-"}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap dt-mono">{tx.accountNumber || "-"}</td>
+                      <td className="px-3 py-2.5 text-left font-medium text-green-600 whitespace-nowrap dt-mono">
                         +{formatCurrency(amountIn)}
                       </td>
-                      <td className="px-4 py-2.5 w-[220px] max-w-[220px] break-words whitespace-normal align-top">
+                      <td className="px-3 py-2.5 w-full min-w-[240px] break-words whitespace-normal align-top">
                         {tx.transactionContent || "-"}
                       </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">{tx.referenceNumber || "-"}</td>
-                      <td className="px-4 py-2.5 w-[150px] max-w-[150px] break-words whitespace-normal align-top">
+                      <td className="px-3 py-2.5 whitespace-nowrap">{tx.referenceNumber || "-"}</td>
+                      <td className="pl-5 pr-3 py-2.5 w-[150px] max-w-[150px] break-words whitespace-normal align-top">
                         <SepayCustomerCell tx={tx} />
                       </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="pl-5 pr-3 py-2.5 whitespace-nowrap">
                         <SepayStatusBadge status={tx.match?.status} />
                       </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <SepayMatchActions tx={tx} />
+                      <td className="pl-5 pr-4 py-2.5 whitespace-nowrap">
+                        <div className="flex items-center gap-2 justify-end">
+                          <SepayMatchActions tx={tx} />
+                          <HideToggleButton
+                            txId={tx.id}
+                            isHidden={applied.showHidden}
+                          />
+                        </div>
                       </td>
                     </tr>
                   );

@@ -331,6 +331,8 @@ function renderSnapshot(entityType: string, snapshot: any): string {
       lines.push(`Phí Grab: ${fmtCurrency(snapshot.feeGrab)}`);
     if (snapshot.cuocGuiHang)
       lines.push(`Cước gửi hàng: ${fmtCurrency(snapshot.cuocGuiHang)}`);
+    if (snapshot.cuocNhanHang)
+      lines.push(`Cước nhận hàng: ${fmtCurrency(snapshot.cuocNhanHang)}`);
     if (snapshot.loadingByName)
       lines.push(`Người xếp hàng: ${snapshot.loadingByName}`);
     if (snapshot.note) lines.push(`Ghi chú: ${snapshot.note}`);

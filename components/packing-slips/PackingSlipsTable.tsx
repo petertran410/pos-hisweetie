@@ -199,6 +199,14 @@ export function PackingSlipsTable({
         slip.hasCuocGuiHang ? formatCurrency(slip.cuocGuiHang) : "-",
     },
     {
+      key: "cuocNhanHang",
+      label: "Cước nhận hàng",
+      visible: true,
+      width: "180px",
+      render: (slip) =>
+        slip.hasCuocNhanHang ? formatCurrency(slip.cuocNhanHang) : "-",
+    },
+    {
       key: "expensePayer",
       label: "Người chi",
       visible: true,
@@ -356,7 +364,8 @@ export function PackingSlipsTable({
                       ? "text-center"
                       : col.key === "feeGuiBen" ||
                           col.key === "feeGrab" ||
-                          col.key === "cuocGuiHang"
+                          col.key === "cuocGuiHang" ||
+                          col.key === "cuocNhanHang"
                         ? "text-right"
                         : "text-left"
                   }`}>
@@ -400,7 +409,8 @@ export function PackingSlipsTable({
                           ? "text-center"
                           : col.key === "feeGuiBen" ||
                               col.key === "feeGrab" ||
-                              col.key === "cuocGuiHang"
+                              col.key === "cuocGuiHang" ||
+                              col.key === "cuocNhanHang"
                             ? "text-right"
                             : "text-left"
                       }`}

@@ -71,6 +71,40 @@ export function useUnassignSepayCustomer() {
   });
 }
 
+/** Ẩn giao dịch khỏi danh sách (ẩn chung toàn hệ thống) */
+export function useHideSepayTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => sepayApi.hide(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sepay-transactions"] });
+      toast.success("Đã ẩn giao dịch");
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        error instanceof Error ? error.message : "Ẩn giao dịch thất bại"
+      );
+    },
+  });
+}
+
+/** Bỏ ẩn giao dịch — hiển thị lại trong danh sách */
+export function useUnhideSepayTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => sepayApi.unhide(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sepay-transactions"] });
+      toast.success("Đã bỏ ẩn giao dịch");
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        error instanceof Error ? error.message : "Bỏ ẩn giao dịch thất bại"
+      );
+    },
+  });
+}
+
 /** Kế toán xác nhận & tạo phiếu thu theo phân bổ (mỗi khách 1 phiếu) */
 export function useConfirmSepayReceipt() {
   const qc = useQueryClient();

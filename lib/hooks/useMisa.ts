@@ -28,7 +28,8 @@ export function useCreateVoucher() {
     mutationFn: (vars: {
       invoiceCode: string;
       buyerOverride?: MisaBuyerOverride;
-    }) => misaApi.createVoucher(vars.invoiceCode, vars.buyerOverride),
+      force?: boolean;
+    }) => misaApi.createVoucher(vars.invoiceCode, vars.buyerOverride, vars.force),
     onSuccess: (res) => {
       if (res.success) {
         toast.success(res.message || "Đẩy hóa đơn lên Misa thành công");

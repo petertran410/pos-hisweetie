@@ -50,6 +50,7 @@ export interface SepayTransaction {
   syncedAt: string;
   createdAt: string;
   updatedAt: string;
+  hiddenAt: string | null;
   match: SepayMatchInfo | null;
 }
 
@@ -66,6 +67,8 @@ export interface SepayTransactionsParams {
   dateFrom?: string;
   dateTo?: string;
   status?: "processing" | "assigned" | "completed";
+  /** 'true' → chỉ giao dịch đã ẩn; không truyền → chỉ giao dịch chưa ẩn */
+  hidden?: "true" | "false";
 }
 
 export interface SepayTransactionsResponse {
@@ -99,6 +102,14 @@ export const sepayApi = {
   /** Bỏ gán khách hàng (chỉ khi chưa tạo phiếu thu) */
   unassignCustomer: (id: number): Promise<{ success: boolean }> => {
     return apiClient.delete(`/sepay/transactions/${id}/assign`);
+  },
+  /** Ẩn giao dịch khỏi danh sách */
+  hide: (id: number): Promise<{ success: boolean }> => {
+    return apiClient.patch(`/sepay/transactions/${id}/hide`);
+  },
+  /** Bỏ ẩn giao dịch */
+  unhide: (id: number): Promise<{ success: boolean }> => {
+    return apiClient.patch(`/sepay/transactions/${id}/unhide`);
   },
   /** Kế toán xác nhận & tạo phiếu thu theo phân bổ (mỗi khách 1 phiếu) */
   confirmReceipt: (

@@ -11,6 +11,8 @@ export interface PackingSlip {
   feeGrab: number;
   hasCuocGuiHang: boolean;
   cuocGuiHang: number;
+  hasCuocNhanHang: boolean;
+  cuocNhanHang: number;
   expensePayerId?: number | null;
   note?: string;
   createdBy: number;

@@ -82,23 +82,29 @@ export const misaApi = {
   /** Đẩy hàng loạt hóa đơn lên Misa theo danh sách mã */
   createVouchersBulk: (
     invoiceCodes: string[],
-    buyerOverrides?: Record<string, MisaBuyerOverride>
+    buyerOverrides?: Record<string, MisaBuyerOverride>,
+    force?: boolean
   ): Promise<MisaBulkVoucherResult> => {
     return apiClient.post(`/misa/voucher/bulk-create`, {
       invoiceCodes,
       ...(buyerOverrides && Object.keys(buyerOverrides).length > 0
         ? { buyerOverrides }
         : {}),
+      ...(force ? { force: true } : {}),
     });
   },
   /** Đẩy 1 hóa đơn lên Misa (sinh chứng từ bán hàng) */
   createVoucher: (
     invoiceCode: string,
-    buyerOverride?: MisaBuyerOverride
+    buyerOverride?: MisaBuyerOverride,
+    force?: boolean
   ): Promise<MisaVoucherResult> => {
+    const body: Record<string, unknown> = {};
+    if (buyerOverride) body.buyerOverride = buyerOverride;
+    if (force) body.force = true;
     return apiClient.post(
       `/misa/voucher/create/${encodeURIComponent(invoiceCode)}`,
-      buyerOverride ? { buyerOverride } : undefined
+      Object.keys(body).length > 0 ? body : undefined
     );
   },
   /** Retry các hóa đơn đẩy Misa bị FAILED */

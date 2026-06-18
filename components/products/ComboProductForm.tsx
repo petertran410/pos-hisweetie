@@ -13,6 +13,9 @@ import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
 import { CategoryDropdown } from "./CategoryDropdown";
+import { MisaItemDropdown } from "./MisaItemDropdown";
+import { MisaInventoryItem } from "@/lib/api/misa";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import { API_URL } from "@/lib/config/api";
 import { toast } from "sonner";
 
@@ -59,6 +62,26 @@ export function ComboProductForm({
 
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const canLinkMisa = usePermission("products", "link_misa");
+
+  // Liên kết với vật tư hàng hóa Misa (lưu mã + tên + đơn vị).
+  const [misaMapping, setMisaMapping] = useState<{
+    code: string;
+    name: string;
+    unit: string;
+  }>({
+    code: product?.misa_code || "",
+    name: product?.misa_name || "",
+    unit: product?.misa_unit || "",
+  });
+
+  useEffect(() => {
+    setMisaMapping({
+      code: product?.misa_code || "",
+      name: product?.misa_name || "",
+      unit: product?.misa_unit || "",
+    });
+  }, [product]);
 
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
@@ -294,6 +317,13 @@ export function ComboProductForm({
         shippingWeightUnit: data.shippingWeightUnit || "g",
         vat: data.vat != null && !isNaN(Number(data.vat)) ? Number(data.vat) : 8,
         unit: data.unit || undefined,
+        ...(canLinkMisa
+          ? {
+              misa_code: misaMapping.code,
+              misa_name: misaMapping.name,
+              misa_unit: misaMapping.unit,
+            }
+          : {}),
         isDirectSale: data.isDirectSale || false,
         isActive: data.isActive ?? true,
         imageUrls: uploadedUrls,
@@ -700,6 +730,32 @@ export function ComboProductForm({
                   />
                 </div>
               </div>
+              {canLinkMisa && (
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <MisaItemDropdown
+                      label="Liên kết Misa"
+                      placeholder="Chọn vật tư hàng hóa Misa"
+                      value={misaMapping.code || undefined}
+                      valueName={misaMapping.name || undefined}
+                      onChange={(item: MisaInventoryItem | null) =>
+                        setMisaMapping({
+                          code: item?.code || "",
+                          name: item?.name || "",
+                          unit: item?.unitName || "",
+                        })
+                      }
+                    />
+                    {misaMapping.code ? (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Đã liên kết: {misaMapping.code}
+                        {misaMapping.name ? ` - ${misaMapping.name}` : ""}
+                        {misaMapping.unit ? ` (${misaMapping.unit})` : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

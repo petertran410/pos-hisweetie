@@ -118,6 +118,12 @@ export function PackingSlipForm({
   const [cuocGuiHang, setCuocGuiHang] = useState(
     Number(packingSlip?.cuocGuiHang) || 0
   );
+  const [hasCuocNhanHang, setHasCuocNhanHang] = useState(
+    packingSlip?.hasCuocNhanHang || false
+  );
+  const [cuocNhanHang, setCuocNhanHang] = useState(
+    Number(packingSlip?.cuocNhanHang) || 0
+  );
 
   // Người chi tiền (optional, single-select, có search)
   const [expensePayerId, setExpensePayerId] = useState<number | null>(
@@ -161,7 +167,8 @@ export function PackingSlipForm({
     setExpenseFiles((prev) => [...prev, ...mapped]);
   };
 
-  const hasAnyFee = hasFeeGuiBen || hasFeeGrab || hasCuocGuiHang;
+  const hasAnyFee =
+    hasFeeGuiBen || hasFeeGrab || hasCuocGuiHang || hasCuocNhanHang;
 
   const isImageFile = (file: UploadedExpenseFile) => {
     if (file.fileType?.startsWith("image/")) return true;
@@ -405,6 +412,8 @@ export function PackingSlipForm({
       feeGrab: hasFeeGrab ? feeGrab : 0,
       hasCuocGuiHang,
       cuocGuiHang: hasCuocGuiHang ? cuocGuiHang : 0,
+      hasCuocNhanHang,
+      cuocNhanHang: hasCuocNhanHang ? cuocNhanHang : 0,
       expensePayerId: hasAnyFee ? expensePayerId : null,
       expenseFiles: hasAnyFee ? expenseFiles : [],
       note,
@@ -867,6 +876,29 @@ export function PackingSlipForm({
                     }}
                     className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm"
                     placeholder="Nhập cước gửi hàng"
+                    min="0"
+                  />
+                )}
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={hasCuocNhanHang}
+                    onChange={(e) => setHasCuocNhanHang(e.target.checked)}
+                    className="cursor-pointer"
+                  />
+                  <span>Cước nhận hàng</span>
+                </label>
+                {hasCuocNhanHang && (
+                  <input
+                    type="text"
+                    value={formatCurrency(cuocNhanHang)}
+                    onChange={(e) => {
+                      const value = parseFormattedNumber(e.target.value);
+                      setCuocNhanHang(value);
+                    }}
+                    className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm"
+                    placeholder="Nhập cước nhận hàng"
                     min="0"
                   />
                 )}
