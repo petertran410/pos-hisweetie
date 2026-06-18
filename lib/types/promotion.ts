@@ -128,6 +128,27 @@ export interface PromotionUsage {
   invoices: PromotionUsageDoc[];
 }
 
+export interface PromotionStatsItem {
+  productId: number;
+  code: string;
+  name: string;
+  soldQty: number;
+  promoQty: number;
+}
+
+export interface PromotionStats {
+  items: PromotionStatsItem[];
+  totals: { soldQty: number; promoQty: number };
+  limits: {
+    usageLimit: number | null;
+    usageCount: number;
+    usageRemaining: number | null;
+    maxRewardQuantity: number | null;
+    rewardIssued: number;
+    rewardRemaining: number | null;
+  };
+}
+
 export interface PromotionFilters {
   page?: number;
   pageSize?: number;

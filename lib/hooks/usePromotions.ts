@@ -48,6 +48,15 @@ export function usePromotionUsage(id?: number) {
   });
 }
 
+export function usePromotionStats(id?: number) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  return useQuery({
+    queryKey: ["promotion-stats", id],
+    queryFn: () => promotionsApi.stats(id!),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
 export function useCreatePromotion() {
   const queryClient = useQueryClient();
   return useMutation({
