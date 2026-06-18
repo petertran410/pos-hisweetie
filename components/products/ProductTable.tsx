@@ -352,6 +352,7 @@ export function ProductsTable({
   const [expandedProductId, setExpandedProductId] = useState<number | null>(
     null
   );
+  const [didAutoExpand, setDidAutoExpand] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -471,6 +472,16 @@ export function ProductsTable({
   const products = data?.data || [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
+
+  // Tự mở rộng chi tiết SP khớp codeFilter (deep-link ?Code=), chỉ 1 lần.
+  useEffect(() => {
+    if (didAutoExpand || !codeFilter || products.length === 0) return;
+    const match = products.find((p: any) => p.code === codeFilter);
+    if (match) {
+      setExpandedProductId(match.id);
+      setDidAutoExpand(true);
+    }
+  }, [codeFilter, products, didAutoExpand]);
 
   const visibleColumns = useMemo(
     () => displayColumns.filter((c) => c.visible),
