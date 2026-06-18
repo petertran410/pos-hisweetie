@@ -6,7 +6,7 @@ import { returnOrdersApi } from "@/lib/api/return-orders";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { DocumentPreviewModal } from "./DocumentPreviewModal";
 
 interface CustomerInvoicesTabProps {
   customerId: number;
@@ -128,6 +128,11 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
   const isLoading = invoicesLoading || returnsLoading;
   const [page, setPage] = useState(1);
   const limit = 5;
+  const [preview, setPreview] = useState<{
+    type: "invoice" | "return-order";
+    id: number;
+    code: string;
+  } | null>(null);
 
   const timeline = useMemo(() => {
     const items: TimelineItem[] = [];
@@ -245,27 +250,33 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
               <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                 {item.code ? (
                   item.type === "invoice" ? (
-                    <>
-                      <Link
-                        href={`/don-hang/hoa-don?Code=${item.code}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs lg:text-sm font-medium text-brand hover:underline"
-                        onClick={(e) => e.stopPropagation()}>
-                        {item.code}
-                      </Link>
-                    </>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreview({
+                          type: "invoice",
+                          id: item.id,
+                          code: item.code,
+                        });
+                      }}
+                      className="text-xs lg:text-sm font-medium text-brand hover:underline">
+                      {item.code}
+                    </button>
                   ) : (
-                    <>
-                      <Link
-                        href={`/don-hang/tra-hang?Code=${item.code}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs lg:text-sm font-medium text-brand hover:underline"
-                        onClick={(e) => e.stopPropagation()}>
-                        {item.code}
-                      </Link>
-                    </>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreview({
+                          type: "return-order",
+                          id: item.id,
+                          code: item.code,
+                        });
+                      }}
+                      className="text-xs lg:text-sm font-medium text-brand hover:underline">
+                      {item.code}
+                    </button>
                   )
                 ) : (
                   <span>-</span>
@@ -328,6 +339,15 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
             </button>
           </div>
         </div>
+      )}
+
+      {preview && (
+        <DocumentPreviewModal
+          type={preview.type}
+          id={preview.id}
+          code={preview.code}
+          onClose={() => setPreview(null)}
+        />
       )}
     </div>
   );

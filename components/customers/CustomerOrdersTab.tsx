@@ -5,7 +5,7 @@ import { ordersApi } from "@/lib/api/orders";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import Link from "next/link";
+import { DocumentPreviewModal } from "./DocumentPreviewModal";
 
 interface CustomerOrdersTabProps {
   customerId: number;
@@ -23,6 +23,10 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
 
   const [page, setPage] = useState(1);
   const limit = 5;
+  const [preview, setPreview] = useState<{
+    id: number;
+    code: string;
+  } | null>(null);
 
   const orders = data?.data || [];
 
@@ -74,12 +78,15 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
           {paginatedOrders.map((order) => (
             <tr key={order.id} className="border-b hover:bg-gray-50">
               <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
-                <Link
-                  href={`/don-hang/dat-hang?Code=${order.code}`}
-                  target="_blank"
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreview({ id: order.id, code: order.code });
+                  }}
                   className="text-brand hover:underline">
                   {order.code}
-                </Link>
+                </button>
               </td>
               <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                 {new Date(order.orderDate).toLocaleString("vi-VN")}
@@ -133,6 +140,15 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
             </button>
           </div>
         </div>
+      )}
+
+      {preview && (
+        <DocumentPreviewModal
+          type="order"
+          id={preview.id}
+          code={preview.code}
+          onClose={() => setPreview(null)}
+        />
       )}
     </div>
   );

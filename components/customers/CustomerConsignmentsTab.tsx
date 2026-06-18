@@ -9,7 +9,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import Link from "next/link";
+import { DocumentPreviewModal } from "./DocumentPreviewModal";
 
 interface CustomerConsignmentsTabProps {
   customerId: number;
@@ -29,6 +29,9 @@ export function CustomerConsignmentsTab({
 
   const [page, setPage] = useState(1);
   const limit = 5;
+  const [preview, setPreview] = useState<{ id: number; code: string } | null>(
+    null
+  );
 
   const consignments = data?.data || [];
 
@@ -80,12 +83,15 @@ export function CustomerConsignmentsTab({
           {paginated.map((c) => (
             <tr key={c.id} className="border-b hover:bg-gray-50">
               <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
-                <Link
-                  href={`/don-hang/ky-gui?Code=${c.code}`}
-                  target="_blank"
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreview({ id: c.id, code: c.code });
+                  }}
                   className="text-brand hover:underline">
                   {c.code}
-                </Link>
+                </button>
               </td>
               <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                 {new Date(c.consignDate).toLocaleString("vi-VN")}
@@ -131,6 +137,15 @@ export function CustomerConsignmentsTab({
             Sau
           </button>
         </div>
+      )}
+
+      {preview && (
+        <DocumentPreviewModal
+          type="consignment"
+          id={preview.id}
+          code={preview.code}
+          onClose={() => setPreview(null)}
+        />
       )}
     </div>
   );
