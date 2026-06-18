@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   Promotion,
   PROMOTION_TYPE_LABELS,
@@ -14,6 +14,8 @@ interface Props {
   promotions: Promotion[];
   loading?: boolean;
   onEdit: (p: Promotion) => void;
+  /** Mã KM cần tự mở rộng khi vào trang qua deep-link (?Code=). */
+  initialExpandCode?: string;
 }
 
 const statusColor: Record<string, string> = {
@@ -29,10 +31,21 @@ function fmtDate(d?: string | null) {
   return new Date(d).toLocaleDateString("vi-VN");
 }
 
-export function PromotionsTable({ promotions, loading, onEdit }: Props) {
+export function PromotionsTable({ promotions, loading, onEdit, initialExpandCode }: Props) {
   const toggleMut = useTogglePromotion();
   const stopMut = useStopPromotion();
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [didAutoExpand, setDidAutoExpand] = useState(false);
+
+  // Tự mở rộng KM khớp initialExpandCode (deep-link từ màn bán hàng), chỉ 1 lần.
+  useEffect(() => {
+    if (didAutoExpand || !initialExpandCode || promotions.length === 0) return;
+    const match = promotions.find((p) => p.code === initialExpandCode);
+    if (match) {
+      setExpandedId(match.id);
+      setDidAutoExpand(true);
+    }
+  }, [initialExpandCode, promotions, didAutoExpand]);
 
   const colSpan = 10;
 

@@ -4,6 +4,7 @@ import {
   PromotionFilters,
   PromotionLog,
   PromotionUsage,
+  PromotionStats,
   CreatePromotionPayload,
   EvaluateItem,
   EvaluateResult,
@@ -19,6 +20,9 @@ export const promotionsApi = {
 
   usage: (id: number): Promise<PromotionUsage> =>
     apiClient.get(`/promotions/${id}/usage`),
+
+  stats: (id: number): Promise<PromotionStats> =>
+    apiClient.get(`/promotions/${id}/stats`),
 
   create: (data: CreatePromotionPayload): Promise<Promotion> =>
     apiClient.post("/promotions", data),

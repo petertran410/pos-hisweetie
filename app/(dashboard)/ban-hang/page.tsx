@@ -61,6 +61,7 @@ export interface CartItem {
   isPromoGift?: boolean;
   promotionId?: number;
   promotionName?: string;
+  promotionCode?: string;
   promoLineType?: "gift" | "discounted_buy";
   triggerRowId?: string; // rowId dòng SP X kích hoạt CT (để chèn dưới + gỡ cùng)
   rewardOptions?: {
@@ -73,8 +74,8 @@ export interface CartItem {
   // Dòng SP thường: các promotionId được thu ngân bật áp dụng (opt-in).
   // KM chỉ sinh dòng quà khi promotionId nằm trong danh sách này.
   promoEnabledIds?: number[];
-  // Dòng SP thường: các CT (id+tên) đang khớp dòng này (để hiện icon 🎁)
-  eligiblePromos?: { promotionId: number; name: string }[];
+  // Dòng SP thường: các CT (id+tên+mã) đang khớp dòng này (để hiện icon 🎁 / badge mã KM)
+  eligiblePromos?: { promotionId: number; name: string; code: string }[];
 }
 
 export interface DeliveryInfo {
@@ -337,7 +338,7 @@ export default function BanHangPage() {
             // Gắn "CT đang khớp" cho từng dòng thường (để hiện icon 🎁)
             const eligibleByRow: Record<
               string,
-              { promotionId: number; name: string }[]
+              { promotionId: number; name: string; code: string }[]
             > = {};
             for (const n of normals) {
               const pid = Number(n.product?.id);
@@ -348,6 +349,7 @@ export default function BanHangPage() {
                 eligibleByRow[n.rowId] = matched.map((p) => ({
                   promotionId: p.promotionId,
                   name: p.name,
+                  code: p.code,
                 }));
               }
             }
@@ -414,6 +416,7 @@ export default function BanHangPage() {
                 isPromoGift: true,
                 promotionId: promo.promotionId,
                 promotionName: promo.name,
+                promotionCode: promo.code,
                 promoLineType: isBuyY ? "discounted_buy" : "gift",
                 triggerRowId: trigger.rowId,
                 rewardOptions: promo.rewardOptions,

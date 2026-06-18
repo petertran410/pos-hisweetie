@@ -24,6 +24,7 @@ import { NoteTemplateModal } from "./NoteTemplateModal";
 import { ItemDiscountModal } from "./ItemDiscountModal";
 import { ProductPriceHistory } from "./ProductPriceHistory";
 import { PriceMismatchNote } from "./PriceMismatchNote";
+import { CodeLink } from "../shared/CodeLink";
 import type { PriceWarning } from "@/lib/utils/price-warning";
 import { useBranchStore } from "@/lib/store/branch";
 import {
@@ -491,6 +492,24 @@ export function OrderItemsList({
                         KM
                       </span>
                     )}
+                    {/* Dòng X: badge mã KM đang áp (opt-in) → link chi tiết KM */}
+                    {!item.isPromoGift &&
+                      item.eligiblePromos
+                        ?.filter(
+                          (p) =>
+                            (item.promoEnabledIds || []).includes(
+                              p.promotionId
+                            ) && p.code
+                        )
+                        .map((p) => (
+                          <CodeLink
+                            key={p.promotionId}
+                            entity="promotion"
+                            code={p.code}
+                            label={p.code}
+                            className="px-1.5 py-0.5 text-xs rounded-full border border-pink-300 bg-pink-50 text-pink-700 font-medium hover:bg-pink-100"
+                          />
+                        ))}
                   </div>
                   {item.isPromoGift && item.promotionName && (
                     <div className="text-xs text-blue-600 font-medium">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Search } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { usePromotions } from "@/lib/hooks/usePromotions";
 import { Promotion, PROMOTION_TYPE_LABELS } from "@/lib/types/promotion";
@@ -9,7 +10,10 @@ import { PromotionsTable } from "@/components/promotions/PromotionsTable";
 import { PromotionForm } from "@/components/promotions/PromotionForm";
 
 export default function PromotionsPage() {
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code") || "";
+
+  const [search, setSearch] = useState(codeParam);
   const [type, setType] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
@@ -108,6 +112,7 @@ export default function PromotionsPage() {
             promotions={promotions}
             loading={isLoading}
             onEdit={openEdit}
+            initialExpandCode={codeParam || undefined}
           />
         </div>
 
