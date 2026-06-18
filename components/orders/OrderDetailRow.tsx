@@ -30,6 +30,7 @@ import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
+import { LineTypeBadge, PromotionLineName } from "../shared/LineTypeBadge";
 import Swal from "sweetalert2";
 
 const getOrderStatusBadgeColor = (status: number) => {
@@ -648,9 +649,14 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                   </td>
                                   <td className="px-[10px] py-2">
                                     <div>
-                                      <p className="text-sm font-medium text-gray-900">
-                                        {item.product?.name || item.productName}
-                                      </p>
+                                      <div className="flex items-center gap-1.5">
+                                        <p className="text-sm font-medium text-gray-900">
+                                          {item.product?.name ||
+                                            item.productName}
+                                        </p>
+                                        <LineTypeBadge item={item} />
+                                      </div>
+                                      <PromotionLineName item={item} />
                                       {item.note && (
                                         <p className="text-sm text-gray-500 mt-1 italic">
                                           {item.note}

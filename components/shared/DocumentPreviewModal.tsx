@@ -9,6 +9,7 @@ import { useReturnOrder } from "@/lib/hooks/useReturnOrders";
 import { useConsignment } from "@/lib/hooks/useConsignments";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { buildCodeHref, type CodeEntity } from "@/components/shared/CodeLink";
+import { LineTypeBadge, PromotionLineName } from "@/components/shared/LineTypeBadge";
 
 type DocType = "invoice" | "order" | "return-order" | "consignment";
 
@@ -180,9 +181,13 @@ function SaleContent({ type, doc }: { type: DocType; doc: any }) {
                   {item.product?.code || item.productCode || "-"}
                 </td>
                 <td className="px-2 py-2 text-sm">
-                  <p className="font-medium text-gray-900">
-                    {item.product?.name || item.productName}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-medium text-gray-900">
+                      {item.product?.name || item.productName}
+                    </p>
+                    <LineTypeBadge item={item} />
+                  </div>
+                  <PromotionLineName item={item} />
                   {item.note && (
                     <p className="text-xs text-gray-500 italic mt-0.5">
                       {item.note}
