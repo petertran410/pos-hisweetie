@@ -44,6 +44,7 @@ import {
 import { useLatestSalePrices } from "@/lib/hooks/useLatestSalePrices";
 import { getPriceWarning, type PriceWarning } from "@/lib/utils/price-warning";
 import { formatCurrency } from "@/lib/utils";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 import Swal from "sweetalert2";
 
 export interface CartItem {
@@ -204,6 +205,12 @@ export default function BanHangPage() {
   const [activeTabId, setActiveTabId] = useState("tab-1");
   const [isInitialized, setIsInitialized] = useState(false);
   const fromPageRef = useRef<string | null>(fromPage);
+
+  // ── Chống double-click tạo trùng (đơn/hóa đơn/thanh toán/lưu) ──
+  // Ref đồng bộ: chặn click thứ 2 ngay cả khi đang await confirm (chưa re-render).
+  // State: để disable nút + hiện spinner cho người dùng biết "đã ấn rồi".
+  const isSubmittingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
 
@@ -1571,6 +1578,8 @@ export default function BanHangPage() {
   };
 
   const handlePayment = async () => {
+    if (isSubmittingRef.current) return;
+
     if (!activeTab.sourceOrderId) {
       toast.error("Không tìm thấy thông tin đơn hàng gốc");
       return;
@@ -1591,137 +1600,150 @@ export default function BanHangPage() {
       return;
     }
 
-    const proceed = await confirmPriceMismatch("hóa đơn");
-    if (!proceed) return;
-
-    // Chặn race: đơn đã Hoàn thành/Hủy (đóng) thì không thể xuất thêm hóa đơn.
-    // Không chặn theo "có hóa đơn" vì luồng "Ra 1 phần HĐ" hợp lệ có HĐ trước đó.
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
     try {
-      const fresh = await ordersApi.getOrder(activeTab.sourceOrderId);
-      if (
-        fresh.status === ORDER_STATUS.COMPLETED ||
-        fresh.status === ORDER_STATUS.CANCELLED
-      ) {
-        toast.error(
-          "Đơn hàng đã kết thúc, không thể xuất thêm hóa đơn. Vui lòng tải lại để xem trạng thái mới nhất."
-        );
-        return;
+      const proceed = await confirmPriceMismatch("hóa đơn");
+      if (!proceed) return;
+
+      // Chặn race: đơn đã Hoàn thành/Hủy (đóng) thì không thể xuất thêm hóa đơn.
+      // Không chặn theo "có hóa đơn" vì luồng "Ra 1 phần HĐ" hợp lệ có HĐ trước đó.
+      try {
+        const fresh = await ordersApi.getOrder(activeTab.sourceOrderId);
+        if (
+          fresh.status === ORDER_STATUS.COMPLETED ||
+          fresh.status === ORDER_STATUS.CANCELLED
+        ) {
+          toast.error(
+            "Đơn hàng đã kết thúc, không thể xuất thêm hóa đơn. Vui lòng tải lại để xem trạng thái mới nhất."
+          );
+          return;
+        }
+      } catch (error) {
+        console.error("handlePayment status check error:", error);
+        // Lỗi mạng → chặn mềm, để BE xử lý tuyến cuối.
       }
-    } catch (error) {
-      console.error("handlePayment status check error:", error);
-      // Lỗi mạng → chặn mềm, để BE xử lý tuyến cuối.
-    }
 
-    // Phát hiện có mã xuất thiếu so với số lượng đặt (gộp theo productId, khớp với backend).
-    const sourceOrder = activeTab.sourceOrder;
-    let hasShortfall = false;
-    if (sourceOrder) {
-      const orderedQty: Record<number, number> = {};
-      (sourceOrder.items || []).forEach((item: any) => {
-        const pid = Number(item.product?.id ?? item.productId);
-        if (!pid) return;
-        orderedQty[pid] = (orderedQty[pid] || 0) + Number(item.quantity || 0);
-      });
+      // Phát hiện có mã xuất thiếu so với số lượng đặt (gộp theo productId, khớp với backend).
+      const sourceOrder = activeTab.sourceOrder;
+      let hasShortfall = false;
+      if (sourceOrder) {
+        const orderedQty: Record<number, number> = {};
+        (sourceOrder.items || []).forEach((item: any) => {
+          const pid = Number(item.product?.id ?? item.productId);
+          if (!pid) return;
+          orderedQty[pid] = (orderedQty[pid] || 0) + Number(item.quantity || 0);
+        });
 
-      const invoicedQty: Record<number, number> = {};
-      (sourceOrder.invoices || []).forEach((inv: any) => {
-        if (inv.status !== 2 && inv.status !== 5) {
-          (inv.details || []).forEach((d: any) => {
-            const pid = Number(d.productId);
-            if (!pid) return;
-            invoicedQty[pid] = (invoicedQty[pid] || 0) + Number(d.quantity || 0);
+        const invoicedQty: Record<number, number> = {};
+        (sourceOrder.invoices || []).forEach((inv: any) => {
+          if (inv.status !== 2 && inv.status !== 5) {
+            (inv.details || []).forEach((d: any) => {
+              const pid = Number(d.productId);
+              if (!pid) return;
+              invoicedQty[pid] =
+                (invoicedQty[pid] || 0) + Number(d.quantity || 0);
+            });
+          }
+        });
+
+        activeTab.cartItems.forEach((item) => {
+          const pid = Number(item.product.id);
+          if (!pid) return;
+          invoicedQty[pid] =
+            (invoicedQty[pid] || 0) + Number(item.quantity || 0);
+        });
+
+        hasShortfall = Object.keys(orderedQty).some(
+          (pid) => (invoicedQty[Number(pid)] || 0) < orderedQty[Number(pid)]
+        );
+      }
+
+      let forceComplete = false;
+      if (hasShortfall) {
+        const choice = await Swal.fire({
+          icon: "question",
+          title: "Đơn hàng chưa xuất đủ số lượng",
+          html: `
+            <p>Có ít nhất một sản phẩm xuất thiếu so với số lượng đặt.</p>
+            <p style="margin-top:8px">Bạn có muốn <strong>kết thúc đơn hàng</strong> (hoàn thành) hay giữ trạng thái <strong>Ra 1 phần HĐ</strong>?</p>
+          `,
+          showDenyButton: true,
+          showCancelButton: true,
+          confirmButtonText: "Kết thúc đơn hàng",
+          denyButtonText: "Giữ Ra 1 phần HĐ",
+          cancelButtonText: "Hủy",
+          confirmButtonColor: "#2563eb",
+          denyButtonColor: "#0d9488",
+          cancelButtonColor: "#6b7280",
+        });
+
+        // Bấm "Hủy", X, ESC hoặc click ra ngoài → hủy tạo hóa đơn, giữ nguyên tab để chỉnh sửa.
+        if (!choice.isConfirmed && !choice.isDenied) return;
+
+        forceComplete = choice.isConfirmed;
+      }
+
+      const actualPayment = activeTab.paymentAmount || 0;
+
+      try {
+        const payments =
+          activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+            ? activeTab.paymentMethods
+            : actualPayment > 0
+              ? [{ method: "cash", amount: actualPayment }]
+              : [];
+
+        const result = await createInvoiceFromOrder.mutateAsync({
+          orderId: activeTab.sourceOrderId,
+          additionalPayment: actualPayment,
+          payments: payments,
+          forceComplete,
+          items: activeTab.cartItems.map((item) => {
+            const isGift = item.isPromoGift && item.promoLineType === "gift";
+            const isDiscountedBuy =
+              item.isPromoGift && item.promoLineType === "discounted_buy";
+            const price = isGift ? 0 : Number(item.price);
+            const quantity = Number(item.quantity);
+            const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
+            return {
+              productId: Number(item.product.id),
+              productCode: item.product.code,
+              productName: item.product.name,
+              quantity,
+              price,
+              discount,
+              discountRatio: 0,
+              totalPrice: (price - discount) * quantity,
+              note: item.note || "",
+              conditionType: item.conditionType || "normal",
+              ...(isGift
+                ? {
+                    lineType: "gift",
+                    isGift: true,
+                    promotionId: item.promotionId,
+                  }
+                : {}),
+              ...(isDiscountedBuy
+                ? { lineType: "discounted_buy", promotionId: item.promotionId }
+                : {}),
+            };
+          }),
+        });
+
+        handleCloseTab(activeTabId);
+        toast.success("Tạo hóa đơn thành công");
+        if (result?.id) {
+          handlePostCreate("invoice", result.id, "/don-hang/dat-hang", {
+            shouldRedirect: true,
           });
         }
-      });
-
-      activeTab.cartItems.forEach((item) => {
-        const pid = Number(item.product.id);
-        if (!pid) return;
-        invoicedQty[pid] = (invoicedQty[pid] || 0) + Number(item.quantity || 0);
-      });
-
-      hasShortfall = Object.keys(orderedQty).some(
-        (pid) => (invoicedQty[Number(pid)] || 0) < orderedQty[Number(pid)]
-      );
-    }
-
-    let forceComplete = false;
-    if (hasShortfall) {
-      const choice = await Swal.fire({
-        icon: "question",
-        title: "Đơn hàng chưa xuất đủ số lượng",
-        html: `
-          <p>Có ít nhất một sản phẩm xuất thiếu so với số lượng đặt.</p>
-          <p style="margin-top:8px">Bạn có muốn <strong>kết thúc đơn hàng</strong> (hoàn thành) hay giữ trạng thái <strong>Ra 1 phần HĐ</strong>?</p>
-        `,
-        showDenyButton: true,
-        showCancelButton: true,
-        confirmButtonText: "Kết thúc đơn hàng",
-        denyButtonText: "Giữ Ra 1 phần HĐ",
-        cancelButtonText: "Hủy",
-        confirmButtonColor: "#2563eb",
-        denyButtonColor: "#0d9488",
-        cancelButtonColor: "#6b7280",
-      });
-
-      // Bấm "Hủy", X, ESC hoặc click ra ngoài → hủy tạo hóa đơn, giữ nguyên tab để chỉnh sửa.
-      if (!choice.isConfirmed && !choice.isDenied) return;
-
-      forceComplete = choice.isConfirmed;
-    }
-
-    const actualPayment = activeTab.paymentAmount || 0;
-
-    try {
-      const payments =
-        activeTab.paymentMethods && activeTab.paymentMethods.length > 0
-          ? activeTab.paymentMethods
-          : actualPayment > 0
-            ? [{ method: "cash", amount: actualPayment }]
-            : [];
-
-      const result = await createInvoiceFromOrder.mutateAsync({
-        orderId: activeTab.sourceOrderId,
-        additionalPayment: actualPayment,
-        payments: payments,
-        forceComplete,
-        items: activeTab.cartItems.map((item) => {
-          const isGift = item.isPromoGift && item.promoLineType === "gift";
-          const isDiscountedBuy =
-            item.isPromoGift && item.promoLineType === "discounted_buy";
-          const price = isGift ? 0 : Number(item.price);
-          const quantity = Number(item.quantity);
-          const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
-          return {
-            productId: Number(item.product.id),
-            productCode: item.product.code,
-            productName: item.product.name,
-            quantity,
-            price,
-            discount,
-            discountRatio: 0,
-            totalPrice: (price - discount) * quantity,
-            note: item.note || "",
-            conditionType: item.conditionType || "normal",
-            ...(isGift
-              ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
-              : {}),
-            ...(isDiscountedBuy
-              ? { lineType: "discounted_buy", promotionId: item.promotionId }
-              : {}),
-          };
-        }),
-      });
-
-      handleCloseTab(activeTabId);
-      toast.success("Tạo hóa đơn thành công");
-      if (result?.id) {
-        handlePostCreate("invoice", result.id, "/don-hang/dat-hang", {
-          shouldRedirect: true,
-        });
+      } catch (error: any) {
+        toast.error(error.message || "Không thể tạo hóa đơn");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Không thể tạo hóa đơn");
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -2066,6 +2088,8 @@ export default function BanHangPage() {
   };
 
   const handleSaveOrder = async () => {
+    if (isSubmittingRef.current) return;
+
     if (!selectedBranch) {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi lưu ${
@@ -2108,109 +2132,122 @@ export default function BanHangPage() {
         return;
       }
 
-      const proceed = await confirmPriceMismatch("đơn hàng");
-      if (!proceed) return;
-
-      // Chặn race: nếu đơn đã ra hóa đơn (kho xử lý trong lúc sale đang sửa),
-      // không cho lưu để tránh kéo ngược trạng thái đơn từ cache cũ.
-      if (!(await assertOrderNotInvoiced(activeTab.documentId))) return;
-
-      const actualPayment = activeTab.paymentAmount || 0;
-
-      const orderData = {
-        customerId: activeTab.selectedCustomer.id,
-        branchId: selectedBranch?.id,
-        soldById: activeTab.soldById ?? user?.id,
-        priceBookId: activeTab.selectedPriceBookId ?? 0,
-        orderDate: existingOrder.orderDate,
-        orderStatus: existingOrder.orderStatus,
-        description: activeTab.orderNote,
-        paidAmount: actualPayment,
-        discountAmount: Number(activeTab.discount) || 0,
-        discountRatio: Number(activeTab.discountRatio) || 0,
-        items: activeTab.cartItems.map((item) => {
-          const isGift = item.isPromoGift && item.promoLineType === "gift";
-          const isDiscountedBuy =
-            item.isPromoGift && item.promoLineType === "discounted_buy";
-          return {
-            productId: Number(item.product.id),
-            quantity: Number(item.quantity),
-            unitPrice: isGift ? 0 : Number(item.price),
-            discount: item.isPromoGift ? 0 : Number(item.discount) || 0,
-            discountRatio: 0,
-            note: item.note || "",
-            conditionType: item.conditionType || "normal",
-            ...(isGift
-              ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
-              : {}),
-            ...(isDiscountedBuy
-              ? { lineType: "discounted_buy", promotionId: item.promotionId }
-              : {}),
-          };
-        }),
-        skipPromotions: false,
-        appliedPromotions: activeTab.cartItems
-          .filter((it) => it.isPromoGift && it.promotionId)
-          .map((it) => ({
-            promotionId: it.promotionId!,
-            giftProductId: Number(it.product.id),
-            giftQuantity: Number(it.quantity),
-          })),
-        delivery: {
-          receiver: activeTab.deliveryInfo.receiver,
-          contactNumber: activeTab.deliveryInfo.contactNumber,
-          address: activeTab.deliveryInfo.detailAddress,
-          locationName: activeTab.deliveryInfo.locationName,
-          wardName: activeTab.deliveryInfo.wardName,
-          weight: Number(activeTab.deliveryInfo.weight) || 0,
-          weightUnit: activeTab.deliveryInfo.weightUnit || "g",
-          length: Number(activeTab.deliveryInfo.length) || 10,
-          width: Number(activeTab.deliveryInfo.width) || 10,
-          height: Number(activeTab.deliveryInfo.height) || 10,
-          noteForDriver: activeTab.deliveryInfo.noteForDriver,
-        },
-      };
-
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
       try {
-        if (actualPayment > 0) {
-          const payments =
-            activeTab.paymentMethods && activeTab.paymentMethods.length > 0
-              ? activeTab.paymentMethods
-              : [{ method: "cash", amount: actualPayment }];
+        const proceed = await confirmPriceMismatch("đơn hàng");
+        if (!proceed) return;
 
-          for (const payment of payments) {
-            await createOrderPayment.mutateAsync({
-              orderId: activeTab.documentId,
-              amount: payment.amount,
-              paymentMethod: payment.method,
-              accountId: payment.accountId,
-            });
+        // Chặn race: nếu đơn đã ra hóa đơn (kho xử lý trong lúc sale đang sửa),
+        // không cho lưu để tránh kéo ngược trạng thái đơn từ cache cũ.
+        if (!(await assertOrderNotInvoiced(activeTab.documentId))) return;
+
+        const actualPayment = activeTab.paymentAmount || 0;
+
+        const orderData = {
+          customerId: activeTab.selectedCustomer.id,
+          branchId: selectedBranch?.id,
+          soldById: activeTab.soldById ?? user?.id,
+          priceBookId: activeTab.selectedPriceBookId ?? 0,
+          orderDate: existingOrder.orderDate,
+          orderStatus: existingOrder.orderStatus,
+          description: activeTab.orderNote,
+          paidAmount: actualPayment,
+          discountAmount: Number(activeTab.discount) || 0,
+          discountRatio: Number(activeTab.discountRatio) || 0,
+          items: activeTab.cartItems.map((item) => {
+            const isGift = item.isPromoGift && item.promoLineType === "gift";
+            const isDiscountedBuy =
+              item.isPromoGift && item.promoLineType === "discounted_buy";
+            return {
+              productId: Number(item.product.id),
+              quantity: Number(item.quantity),
+              unitPrice: isGift ? 0 : Number(item.price),
+              discount: item.isPromoGift ? 0 : Number(item.discount) || 0,
+              discountRatio: 0,
+              note: item.note || "",
+              conditionType: item.conditionType || "normal",
+              ...(isGift
+                ? {
+                    lineType: "gift",
+                    isGift: true,
+                    promotionId: item.promotionId,
+                  }
+                : {}),
+              ...(isDiscountedBuy
+                ? { lineType: "discounted_buy", promotionId: item.promotionId }
+                : {}),
+            };
+          }),
+          skipPromotions: false,
+          appliedPromotions: activeTab.cartItems
+            .filter((it) => it.isPromoGift && it.promotionId)
+            .map((it) => ({
+              promotionId: it.promotionId!,
+              giftProductId: Number(it.product.id),
+              giftQuantity: Number(it.quantity),
+            })),
+          delivery: {
+            receiver: activeTab.deliveryInfo.receiver,
+            contactNumber: activeTab.deliveryInfo.contactNumber,
+            address: activeTab.deliveryInfo.detailAddress,
+            locationName: activeTab.deliveryInfo.locationName,
+            wardName: activeTab.deliveryInfo.wardName,
+            weight: Number(activeTab.deliveryInfo.weight) || 0,
+            weightUnit: activeTab.deliveryInfo.weightUnit || "g",
+            length: Number(activeTab.deliveryInfo.length) || 10,
+            width: Number(activeTab.deliveryInfo.width) || 10,
+            height: Number(activeTab.deliveryInfo.height) || 10,
+            noteForDriver: activeTab.deliveryInfo.noteForDriver,
+          },
+        };
+
+        try {
+          if (actualPayment > 0) {
+            const payments =
+              activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+                ? activeTab.paymentMethods
+                : [{ method: "cash", amount: actualPayment }];
+
+            for (const payment of payments) {
+              await createOrderPayment.mutateAsync({
+                orderId: activeTab.documentId,
+                amount: payment.amount,
+                paymentMethod: payment.method,
+                accountId: payment.accountId,
+              });
+            }
           }
+
+          await updateOrder.mutateAsync({
+            id: activeTab.documentId,
+            data: orderData,
+          });
+
+          const key = getEditStorageKey(activeTab.documentId, "order");
+          localStorage.removeItem(key);
+
+          setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
+
+          // QUEUE PRINT
+          toast.success("Lưu đơn hàng thành công");
+          handlePostCreate("order", activeTab.documentId, "/don-hang/dat-hang", {
+            shouldRedirect: true,
+          });
+        } catch (error: any) {
+          console.error("Save order error:", error);
+          toast.error(error.message || "Không thể lưu đơn hàng");
         }
-
-        await updateOrder.mutateAsync({
-          id: activeTab.documentId,
-          data: orderData,
-        });
-
-        const key = getEditStorageKey(activeTab.documentId, "order");
-        localStorage.removeItem(key);
-
-        setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
-
-        // QUEUE PRINT
-        toast.success("Lưu đơn hàng thành công");
-        handlePostCreate("order", activeTab.documentId, "/don-hang/dat-hang", {
-          shouldRedirect: true,
-        });
-      } catch (error: any) {
-        console.error("Save order error:", error);
-        toast.error(error.message || "Không thể lưu đơn hàng");
+      } finally {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
       }
     }
   };
 
   const handleSaveInvoice = async () => {
+    if (isSubmittingRef.current) return;
+
     if (!selectedBranch) {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi lưu ${
@@ -2252,103 +2289,112 @@ export default function BanHangPage() {
       return;
     }
 
-    const proceed = await confirmPriceMismatch("hóa đơn");
-    if (!proceed) return;
-
-    const actualPayment = activeTab.paymentAmount || 0;
-
-    const invoiceData = {
-      customerId: activeTab.selectedCustomer.id,
-      branchId: selectedBranch?.id,
-      soldById: activeTab.soldById ?? user?.id,
-      priceBookId: activeTab.selectedPriceBookId ?? 0,
-      purchaseDate: new Date().toISOString(),
-      description: activeTab.orderNote,
-      paidAmount: actualPayment,
-      discountAmount: Number(activeTab.discount) || 0,
-      discountRatio: Number(activeTab.discountRatio) || 0,
-      items: activeTab.cartItems.map((item) => {
-        const isGift = item.isPromoGift && item.promoLineType === "gift";
-        const isDiscountedBuy =
-          item.isPromoGift && item.promoLineType === "discounted_buy";
-        const price = isGift ? 0 : Number(item.price);
-        const quantity = Number(item.quantity);
-        const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
-        return {
-          productId: Number(item.product.id),
-          productCode: item.product.code,
-          productName: item.product.name,
-          quantity: quantity,
-          price: price,
-          discount: discount,
-          discountRatio: 0,
-          totalPrice: (price - discount) * quantity,
-          note: item.note || "",
-          conditionType: item.conditionType || "normal",
-          ...(isGift
-            ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
-            : {}),
-          ...(isDiscountedBuy
-            ? { lineType: "discounted_buy", promotionId: item.promotionId }
-            : {}),
-        };
-      }),
-      delivery: {
-        receiver: activeTab.deliveryInfo.receiver,
-        contactNumber: activeTab.deliveryInfo.contactNumber,
-        address: activeTab.deliveryInfo.detailAddress,
-        locationName: activeTab.deliveryInfo.locationName,
-        wardName: activeTab.deliveryInfo.wardName,
-        weight: Number(activeTab.deliveryInfo.weight) || 0,
-        weightUnit: activeTab.deliveryInfo.weightUnit || "g",
-        length: Number(activeTab.deliveryInfo.length) || 10,
-        width: Number(activeTab.deliveryInfo.width) || 10,
-        height: Number(activeTab.deliveryInfo.height) || 10,
-        noteForDriver: activeTab.deliveryInfo.noteForDriver,
-      },
-    };
-
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
     try {
-      if (actualPayment > 0) {
-        const payments =
-          activeTab.paymentMethods && activeTab.paymentMethods.length > 0
-            ? activeTab.paymentMethods
-            : [{ method: "cash", amount: actualPayment }];
+      const proceed = await confirmPriceMismatch("hóa đơn");
+      if (!proceed) return;
 
-        for (const payment of payments) {
-          await createInvoicePayment.mutateAsync({
-            invoiceId: activeTab.documentId,
-            amount: payment.amount,
-            paymentMethod: payment.method,
-            accountId: payment.accountId,
-          });
+      const actualPayment = activeTab.paymentAmount || 0;
+
+      const invoiceData = {
+        customerId: activeTab.selectedCustomer.id,
+        branchId: selectedBranch?.id,
+        soldById: activeTab.soldById ?? user?.id,
+        priceBookId: activeTab.selectedPriceBookId ?? 0,
+        purchaseDate: new Date().toISOString(),
+        description: activeTab.orderNote,
+        paidAmount: actualPayment,
+        discountAmount: Number(activeTab.discount) || 0,
+        discountRatio: Number(activeTab.discountRatio) || 0,
+        items: activeTab.cartItems.map((item) => {
+          const isGift = item.isPromoGift && item.promoLineType === "gift";
+          const isDiscountedBuy =
+            item.isPromoGift && item.promoLineType === "discounted_buy";
+          const price = isGift ? 0 : Number(item.price);
+          const quantity = Number(item.quantity);
+          const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
+          return {
+            productId: Number(item.product.id),
+            productCode: item.product.code,
+            productName: item.product.name,
+            quantity: quantity,
+            price: price,
+            discount: discount,
+            discountRatio: 0,
+            totalPrice: (price - discount) * quantity,
+            note: item.note || "",
+            conditionType: item.conditionType || "normal",
+            ...(isGift
+              ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
+              : {}),
+            ...(isDiscountedBuy
+              ? { lineType: "discounted_buy", promotionId: item.promotionId }
+              : {}),
+          };
+        }),
+        delivery: {
+          receiver: activeTab.deliveryInfo.receiver,
+          contactNumber: activeTab.deliveryInfo.contactNumber,
+          address: activeTab.deliveryInfo.detailAddress,
+          locationName: activeTab.deliveryInfo.locationName,
+          wardName: activeTab.deliveryInfo.wardName,
+          weight: Number(activeTab.deliveryInfo.weight) || 0,
+          weightUnit: activeTab.deliveryInfo.weightUnit || "g",
+          length: Number(activeTab.deliveryInfo.length) || 10,
+          width: Number(activeTab.deliveryInfo.width) || 10,
+          height: Number(activeTab.deliveryInfo.height) || 10,
+          noteForDriver: activeTab.deliveryInfo.noteForDriver,
+        },
+      };
+
+      try {
+        if (actualPayment > 0) {
+          const payments =
+            activeTab.paymentMethods && activeTab.paymentMethods.length > 0
+              ? activeTab.paymentMethods
+              : [{ method: "cash", amount: actualPayment }];
+
+          for (const payment of payments) {
+            await createInvoicePayment.mutateAsync({
+              invoiceId: activeTab.documentId,
+              amount: payment.amount,
+              paymentMethod: payment.method,
+              accountId: payment.accountId,
+            });
+          }
         }
+
+        const updatedInvoice = await updateInvoice.mutateAsync({
+          id: activeTab.documentId,
+          data: invoiceData,
+        });
+
+        const key = getEditStorageKey(activeTab.documentId, "invoice");
+        localStorage.removeItem(key);
+
+        setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
+
+        toast.success("Lưu hóa đơn thành công");
+        handlePostCreate(
+          "invoice",
+          updatedInvoice?.id ?? activeTab.documentId,
+          "/don-hang/hoa-don",
+          { shouldRedirect: true }
+        );
+      } catch (error: any) {
+        console.error("Save invoice error:", error);
+        toast.error(error.message || "Không thể lưu hóa đơn");
       }
-
-      const updatedInvoice = await updateInvoice.mutateAsync({
-        id: activeTab.documentId,
-        data: invoiceData,
-      });
-
-      const key = getEditStorageKey(activeTab.documentId, "invoice");
-      localStorage.removeItem(key);
-
-      setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
-
-      toast.success("Lưu hóa đơn thành công");
-      handlePostCreate(
-        "invoice",
-        updatedInvoice?.id ?? activeTab.documentId,
-        "/don-hang/hoa-don",
-        { shouldRedirect: true }
-      );
-    } catch (error: any) {
-      console.error("Save invoice error:", error);
-      toast.error(error.message || "Không thể lưu hóa đơn");
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
   const handleCreateDocument = async () => {
+    if (isSubmittingRef.current) return;
+
     if (!selectedBranch) {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi tạo ${
@@ -2387,10 +2433,17 @@ export default function BanHangPage() {
       return;
     }
 
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+
     const proceed = await confirmPriceMismatch(
       activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
     );
-    if (!proceed) return;
+    if (!proceed) {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+      return;
+    }
 
     const actualPayment = activeTab.paymentAmount || 0;
 
@@ -2622,6 +2675,9 @@ export default function BanHangPage() {
         error.message ||
           `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`
       );
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -2763,20 +2819,22 @@ export default function BanHangPage() {
                         TẠO HÓA ĐƠN
                       </button>
                     )}
-                    <button
+                    <LoadingButton
                       onClick={() => handleSaveOrder()}
+                      loading={isSubmitting}
                       disabled={activeTab.cartItems.length === 0}
                       className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                       LƯU
-                    </button>
+                    </LoadingButton>
                   </div>
                 ) : (
-                  <button
+                  <LoadingButton
                     onClick={() => handleCreateDocument()}
+                    loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
                     className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                     Tạo đơn hàng
-                  </button>
+                  </LoadingButton>
                 )}
               </div>
             </div>
@@ -2826,6 +2884,7 @@ export default function BanHangPage() {
                 canViewPayment={canViewPayment}
                 canEditPayment={canEditPayment}
                 canCreateInvoice={canCreateInvoice}
+                isSubmitting={isSubmitting}
                 className="w-full h-full bg-white flex flex-col"
               />
             </div>
@@ -2862,26 +2921,29 @@ export default function BanHangPage() {
               {/* Mobile action buttons */}
               <div className="lg:hidden flex-shrink-0 px-3 py-2 border-t bg-white">
                 {activeTab.sourceOrderId ? (
-                  <button
+                  <LoadingButton
                     onClick={handlePayment}
+                    loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
                     className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                     THANH TOÁN
-                  </button>
+                  </LoadingButton>
                 ) : activeTab.documentId ? (
-                  <button
+                  <LoadingButton
                     onClick={() => handleSaveInvoice()}
+                    loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
                     className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                     LƯU
-                  </button>
+                  </LoadingButton>
                 ) : (
-                  <button
+                  <LoadingButton
                     onClick={() => handleCreateDocument()}
+                    loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
                     className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                     Tạo hóa đơn
-                  </button>
+                  </LoadingButton>
                 )}
               </div>
             </div>
@@ -2927,6 +2989,7 @@ export default function BanHangPage() {
                 canEditSeller={canEditSeller}
                 canViewPayment={canViewPayment}
                 canEditPayment={canEditPayment}
+                isSubmitting={isSubmitting}
                 className="w-full h-full bg-white flex flex-col"
               />
             </div>

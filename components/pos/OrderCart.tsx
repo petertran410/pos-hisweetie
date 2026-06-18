@@ -20,6 +20,7 @@ import { MultiPaymentModal } from "./MultiPaymentModal";
 import { DeliveryAddressDropdown } from "./DeliveryAddressDropdown";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { UnitPicker } from "./UnitPicker";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 interface OrderCartProps {
   cartItems: CartItem[];
@@ -58,6 +59,7 @@ interface OrderCartProps {
   canViewPayment?: boolean;
   canEditPayment?: boolean;
   canCreateInvoice?: boolean;
+  isSubmitting?: boolean;
   className?: string;
 }
 
@@ -233,6 +235,7 @@ export function OrderCart({
   canViewPayment = true,
   canEditPayment = true,
   canCreateInvoice = true,
+  isSubmitting = false,
   className,
 }: OrderCartProps) {
   const { data: usersForFilter = [] } = useUsersForFilter();
@@ -583,16 +586,17 @@ export function OrderCart({
                 TẠO HÓA ĐƠN
               </button>
             )}
-            <button
+            <LoadingButton
               onClick={() =>
                 onSaveOrder(
                   paymentMethods.length > 0 ? paymentMethods : undefined
                 )
               }
+              loading={isSubmitting}
               disabled={cartItems.length === 0}
               className="w-full bg-orange-400 text-white py-2 lg:py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
               LƯU
-            </button>
+            </LoadingButton>
           </div>
         ) : documentType === "invoice" ? (
           <button
@@ -602,18 +606,19 @@ export function OrderCart({
             TẠO HÓA ĐƠN
           </button>
         ) : (
-          <button
+          <LoadingButton
             onClick={() =>
               onCreateOrder(
                 paymentMethods.length > 0 ? paymentMethods : undefined
               )
             }
+            loading={isSubmitting}
             disabled={cartItems.length === 0}
             className="w-full bg-brand text-white py-2 lg:py-3 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
             {documentType === "consignment"
               ? "Tạo phiếu ký gửi"
               : "Tạo đơn hàng"}
-          </button>
+          </LoadingButton>
         )}
       </div>
       {showMultiPaymentModal && canEditPayment && (

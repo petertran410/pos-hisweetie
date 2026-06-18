@@ -20,6 +20,7 @@ import { MultiPaymentModal } from "./MultiPaymentModal";
 import { DeliveryAddressDropdown } from "./DeliveryAddressDropdown";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { UnitPicker } from "./UnitPicker";
+import { LoadingButton } from "@/components/ui/LoadingButton";
 
 interface InvoiceCartProps {
   cartItems: CartItem[];
@@ -56,6 +57,7 @@ interface InvoiceCartProps {
   canEditSeller?: boolean;
   canViewPayment?: boolean;
   canEditPayment?: boolean;
+  isSubmitting?: boolean;
   className?: string;
 }
 
@@ -229,6 +231,7 @@ export function InvoiceCart({
   canEditSeller = true,
   canViewPayment = true,
   canEditPayment = true,
+  isSubmitting = false,
   className,
 }: InvoiceCartProps) {
   const { data: usersForFilter = [] } = useUsersForFilter();
@@ -611,34 +614,37 @@ export function InvoiceCart({
         </div>
 
         {isCreatingFromOrder ? (
-          <button
+          <LoadingButton
             onClick={onPayment}
+            loading={isSubmitting}
             disabled={cartItems.length === 0}
             className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
             THANH TOÁN
-          </button>
+          </LoadingButton>
         ) : isEditMode ? (
-          <button
+          <LoadingButton
             onClick={() => {
               onSaveOrder(
                 paymentMethods.length > 0 ? paymentMethods : undefined
               );
             }}
+            loading={isSubmitting}
             disabled={cartItems.length === 0}
             className="w-full bg-orange-400 text-white py-2 lg:py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
             LƯU
-          </button>
+          </LoadingButton>
         ) : (
-          <button
+          <LoadingButton
             onClick={() =>
               onCreateOrder(
                 paymentMethods.length > 0 ? paymentMethods : undefined
               )
             }
+            loading={isSubmitting}
             disabled={cartItems.length === 0}
             className="w-full bg-brand text-white py-2 lg:py-3 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
             {documentType === "invoice" ? "Tạo hóa đơn" : "Tạo đơn hàng"}
-          </button>
+          </LoadingButton>
         )}
       </div>
       {showMultiPaymentModal && canEditPayment && (
