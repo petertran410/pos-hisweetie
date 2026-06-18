@@ -29,6 +29,13 @@ export interface MisaEmployee {
   name: string;
 }
 
+export interface MisaInventoryItem {
+  id: string;
+  code: string;
+  name: string;
+  unitName: string | null;
+}
+
 export interface MisaBulkVoucherResult {
   success: boolean;
   message: string;
@@ -57,6 +64,16 @@ export const misaApi = {
   /** Danh sách nhân viên phụ trách (Misa account object, isEmployee = true) */
   getEmployees: (): Promise<MisaEmployee[]> => {
     return apiClient.get(`/misa/employees`);
+  },
+  /** Tìm kiếm vật tư hàng hóa Misa để liên kết với sản phẩm */
+  searchInventoryItems: (
+    search?: string,
+    limit = 50
+  ): Promise<MisaInventoryItem[]> => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    params.set("limit", String(limit));
+    return apiClient.get(`/misa/inventory-items?${params.toString()}`);
   },
   /** Đồng bộ toàn bộ danh mục Misa về database */
   syncDictionary: (): Promise<MisaDictionarySyncResult> => {

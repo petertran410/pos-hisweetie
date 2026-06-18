@@ -81,6 +81,9 @@ export interface Product {
   parentName?: string;
   middleName?: string;
   childName?: string;
+  misa_code?: string;
+  misa_name?: string;
+  misa_unit?: string;
   tradeMarkId?: number;
   variantId?: number;
   basePrice: number;

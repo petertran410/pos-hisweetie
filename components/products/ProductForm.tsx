@@ -11,6 +11,8 @@ import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
 import { CategoryDropdown } from "./CategoryDropdown";
 import { TrademarkDropdown } from "./TrademarkDropdown";
+import { MisaItemDropdown } from "./MisaItemDropdown";
+import { MisaInventoryItem } from "@/lib/api/misa";
 import { FormSection } from "./FormSection";
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 import { usePermission } from "@/lib/hooks/usePermissions";
@@ -129,10 +131,22 @@ export function ProductForm({
       : []
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Liên kết với vật tư hàng hóa Misa (lưu mã + tên + đơn vị).
+  const [misaMapping, setMisaMapping] = useState<{
+    code: string;
+    name: string;
+    unit: string;
+  }>({
+    code: product?.misa_code || "",
+    name: product?.misa_name || "",
+    unit: product?.misa_unit || "",
+  });
   const { selectedBranch } = useBranchStore();
   const canViewCostPrice = usePermission("products", "view_cost_price");
   const canViewSalePrice = usePermission("products", "view_sale_price");
   const canViewPublication = usePermission("products", "view_publication");
+  const canLinkMisa = usePermission("products", "link_misa");
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const currentBranchInventory = product?.inventories?.find(
@@ -219,6 +233,15 @@ export function ProductForm({
       }));
       setImages(loadedImages);
     }
+  }, [product]);
+
+  // Đồng bộ liên kết Misa khi đổi sản phẩm đang chỉnh sửa.
+  useEffect(() => {
+    setMisaMapping({
+      code: product?.misa_code || "",
+      name: product?.misa_name || "",
+      unit: product?.misa_unit || "",
+    });
   }, [product]);
 
   const uploadFile = async (file: File): Promise<string> => {
@@ -393,6 +416,13 @@ export function ProductForm({
         parentName: data.parentName,
         middleName: data.middleName,
         childName: data.childName,
+        ...(canLinkMisa
+          ? {
+              misa_code: misaMapping.code,
+              misa_name: misaMapping.name,
+              misa_unit: misaMapping.unit,
+            }
+          : {}),
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
         variantId: data.variantId ? Number(data.variantId) : undefined,
         // Chỉ gửi giá vốn khi user có quyền xem — tránh ghi đè 0 lên giá vốn
@@ -1102,6 +1132,34 @@ export function ProductForm({
                   />
                 </div>
               </div>
+
+              {/* Liên kết vật tư hàng hóa Misa */}
+              {canLinkMisa && (
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <MisaItemDropdown
+                      label="Liên kết Misa"
+                      placeholder="Chọn vật tư hàng hóa Misa"
+                      value={misaMapping.code || undefined}
+                      valueName={misaMapping.name || undefined}
+                      onChange={(item: MisaInventoryItem | null) =>
+                        setMisaMapping({
+                          code: item?.code || "",
+                          name: item?.name || "",
+                          unit: item?.unitName || "",
+                        })
+                      }
+                    />
+                    {misaMapping.code ? (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Đã liên kết: {misaMapping.code}
+                        {misaMapping.name ? ` - ${misaMapping.name}` : ""}
+                        {misaMapping.unit ? ` (${misaMapping.unit})` : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              )}
             </FormSection>
 
             {/* Section: Quản lý theo đơn vị tính và thuộc tính */}

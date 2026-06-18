@@ -34,6 +34,11 @@ export interface Customer {
   invoicePhone?: string;
   invoiceDvqhnsCode?: string;
 
+  // Misa: nhân viên phụ trách
+  misaEmployeeId?: string;
+  misaEmployeeCode?: string;
+  misaEmployeeName?: string;
+
   createdAt: string;
   updatedAt: string;
   customerType?: {

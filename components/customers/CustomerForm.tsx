@@ -16,6 +16,9 @@ import { useBranchStore } from "@/lib/store/branch";
 import { useTaxCodeLookup } from "@/lib/hooks/useVietQr";
 import { sanitizeAddresses } from "@/lib/utils/sanitize-address";
 import { CustomerAddressFormModal } from "../pos/CustomerAddressFormModal";
+import { MisaEmployeeDropdown } from "./MisaEmployeeDropdown";
+import { MisaEmployee } from "@/lib/api/misa";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -104,6 +107,18 @@ export function CustomerForm({
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
   const { selectedBranch } = useBranchStore();
+  const canLinkMisa = usePermission("customers", "link_misa");
+
+  // Misa: nhân viên phụ trách (lưu id + mã + tên)
+  const [misaEmployee, setMisaEmployee] = useState<{
+    id: string;
+    code: string;
+    name: string;
+  }>({
+    id: customer?.misaEmployeeId || "",
+    code: customer?.misaEmployeeCode || "",
+    name: customer?.misaEmployeeName || "",
+  });
 
   const [cities, setCities] = useState<City[]>([]);
   const [invoiceProvinces, setInvoiceProvinces] = useState<Province[]>([]);
@@ -365,6 +380,12 @@ export function CustomerForm({
         setSelectedParent(customer.parent);
       }
 
+      setMisaEmployee({
+        id: customer.misaEmployeeId || "",
+        code: customer.misaEmployeeCode || "",
+        name: customer.misaEmployeeName || "",
+      });
+
       if (customer.addresses && customer.addresses.length > 0) {
         setAddresses(customer.addresses);
       } else {
@@ -591,6 +612,13 @@ export function CustomerForm({
       invoiceEmail: invoice.email || undefined,
       invoicePhone: invoice.phone || undefined,
       invoiceDvqhnsCode: invoice.dvqhnsCode || undefined,
+      ...(canLinkMisa
+        ? {
+            misaEmployeeId: misaEmployee.id,
+            misaEmployeeCode: misaEmployee.code,
+            misaEmployeeName: misaEmployee.name,
+          }
+        : {}),
     };
 
     Object.keys(formattedData).forEach((key) => {
@@ -1000,6 +1028,30 @@ export function CustomerForm({
                     maxLength={1000}
                   />
                 </div>
+
+                {canLinkMisa && (
+                  <div className="mt-2">
+                    <MisaEmployeeDropdown
+                      label="Nhân viên phụ trách (Misa)"
+                      placeholder="Chọn nhân viên phụ trách"
+                      value={misaEmployee.code || undefined}
+                      valueName={misaEmployee.name || undefined}
+                      onChange={(emp: MisaEmployee | null) =>
+                        setMisaEmployee({
+                          id: emp?.id || "",
+                          code: emp?.code || "",
+                          name: emp?.name || "",
+                        })
+                      }
+                    />
+                    {misaEmployee.code ? (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Đã gắn: {misaEmployee.code}
+                        {misaEmployee.name ? ` - ${misaEmployee.name}` : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
           </div>
