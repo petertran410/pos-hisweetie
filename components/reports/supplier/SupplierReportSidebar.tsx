@@ -206,7 +206,7 @@ export function SupplierReportSidebar({
   onFiltersChange,
 }: Props) {
   const { data: branches } = useBranches();
-  const { data: suppliersData } = useSuppliers({ limit: 1000 } as never);
+  const { data: suppliersData } = useSuppliers({ pageSize: 1000 });
   const { has } = useReportAccess();
 
   const visibleViewTypes = useMemo(
