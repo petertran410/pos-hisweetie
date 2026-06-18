@@ -32,6 +32,7 @@ import { useAuthStore } from "@/lib/store/auth";
 import { useCan } from "@/lib/hooks/useCan";
 import { CancelOrderModal } from "./CancelOrderModal";
 import { CodeLink } from "../shared/CodeLink";
+import { LineTypeBadge, PromotionLineName } from "../shared/LineTypeBadge";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Swal from "sweetalert2";
 
@@ -537,9 +538,13 @@ export function OrdersMobileDetailSheet({
                           </div>
 
                           {/* Row 2: product name */}
-                          <p className="text-sm text-gray-900 leading-tight">
-                            {item.product?.name || item.productName}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm text-gray-900 leading-tight">
+                              {item.product?.name || item.productName}
+                            </p>
+                            <LineTypeBadge item={item} />
+                          </div>
+                          <PromotionLineName item={item} />
 
                           {/* Row 3: note — plain italic text */}
                           {item.note && (

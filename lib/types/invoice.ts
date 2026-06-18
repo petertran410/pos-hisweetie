@@ -48,6 +48,11 @@ export interface InvoiceDetail {
   serialNumbers?: string;
   product?: any;
   conditionType?: string;
+  // Khuyến mãi
+  lineType?: string;
+  isGift?: boolean;
+  promotionId?: number | null;
+  promotion?: { id: number; code: string; name: string } | null;
 }
 
 export const INVOICE_STATUS = {

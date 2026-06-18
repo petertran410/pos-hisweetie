@@ -22,6 +22,7 @@ import { useCan } from "@/lib/hooks/useCan";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Swal from "sweetalert2";
 import { CodeLink } from "../shared/CodeLink";
+import { LineTypeBadge, PromotionLineName } from "../shared/LineTypeBadge";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getInvoiceStatusBadgeColor = (status: number) => {
@@ -511,9 +512,13 @@ export function InvoicesMobileDetailSheet({
                           </div>
 
                           {/* Row 2: product name */}
-                          <p className="text-sm text-gray-900 leading-tight">
-                            {detail.productName || detail.product?.name}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm text-gray-900 leading-tight">
+                              {detail.productName || detail.product?.name}
+                            </p>
+                            <LineTypeBadge item={detail} />
+                          </div>
+                          <PromotionLineName item={detail} />
 
                           {/* Row 3: note */}
                           {detail.note && (
