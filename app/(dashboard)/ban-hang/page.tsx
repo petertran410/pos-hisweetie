@@ -63,7 +63,12 @@ export interface CartItem {
   promotionName?: string;
   promoLineType?: "gift" | "discounted_buy";
   triggerRowId?: string; // rowId dòng SP X kích hoạt CT (để chèn dưới + gỡ cùng)
-  rewardOptions?: { productId: number; productCode?: string; productName?: string; availableStock: number }[];
+  rewardOptions?: {
+    productId: number;
+    productCode?: string;
+    productName?: string;
+    availableStock: number;
+  }[];
   requiresChoice?: boolean; // dòng quà cần thu ngân chọn SP
   // Dòng SP thường: các promotionId được thu ngân bật áp dụng (opt-in).
   // KM chỉ sinh dòng quà khi promotionId nằm trong danh sách này.
@@ -122,7 +127,10 @@ const EDIT_STORAGE_KEY = "pos-edit-state";
 const collectEnabledPromoIds = (items: any[]): number[] => {
   const ids = new Set<number>();
   for (const it of items || []) {
-    const isGift = it?.isGift || it?.lineType === "gift" || it?.lineType === "discounted_buy";
+    const isGift =
+      it?.isGift ||
+      it?.lineType === "gift" ||
+      it?.lineType === "discounted_buy";
     if (isGift && it?.promotionId != null) ids.add(Number(it.promotionId));
   }
   return [...ids];
@@ -273,7 +281,11 @@ export default function BanHangPage() {
       // lựa chọn quà hiện tại
       choices: (activeTab.cartItems || [])
         .filter((it) => it.isPromoGift)
-        .map((it) => ({ t: it.triggerRowId, p: it.promotionId, g: it.product?.id })),
+        .map((it) => ({
+          t: it.triggerRowId,
+          p: it.promotionId,
+          g: it.product?.id,
+        })),
     });
 
     if (!branchId || normalItems.length === 0) {
@@ -323,8 +335,10 @@ export default function BanHangPage() {
             const oldGifts = t.cartItems.filter((it) => it.isPromoGift);
 
             // Gắn "CT đang khớp" cho từng dòng thường (để hiện icon 🎁)
-            const eligibleByRow: Record<string, { promotionId: number; name: string }[]> =
-              {};
+            const eligibleByRow: Record<
+              string,
+              { promotionId: number; name: string }[]
+            > = {};
             for (const n of normals) {
               const pid = Number(n.product?.id);
               const matched = giftPromos.filter((p) =>
@@ -1028,32 +1042,34 @@ export default function BanHangPage() {
           const enabledPromoIds = collectEnabledPromoIds(
             existingOrder.items || []
           );
-          return existingOrder.items?.map((item: any) => {
-            const promoLineType =
-              item.lineType === "discounted_buy"
-                ? "discounted_buy"
-                : item.isGift || item.lineType === "gift"
-                  ? "gift"
-                  : undefined;
-            return {
-              rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
-              product: item.product,
-              quantity: Number(item.quantity),
-              price: Number(item.price),
-              discount: Number(item.discount) || 0,
-              note: item.note || "",
-              conditionType: item.conditionType || "normal",
-              ...(promoLineType
-                ? {
-                    isPromoGift: true,
-                    promoLineType,
-                    promotionId: item.promotionId ?? undefined,
-                  }
-                : enabledPromoIds.length > 0
-                  ? { promoEnabledIds: enabledPromoIds }
-                  : {}),
-            };
-          }) || [];
+          return (
+            existingOrder.items?.map((item: any) => {
+              const promoLineType =
+                item.lineType === "discounted_buy"
+                  ? "discounted_buy"
+                  : item.isGift || item.lineType === "gift"
+                    ? "gift"
+                    : undefined;
+              return {
+                rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
+                product: item.product,
+                quantity: Number(item.quantity),
+                price: Number(item.price),
+                discount: Number(item.discount) || 0,
+                note: item.note || "",
+                conditionType: item.conditionType || "normal",
+                ...(promoLineType
+                  ? {
+                      isPromoGift: true,
+                      promoLineType,
+                      promotionId: item.promotionId ?? undefined,
+                    }
+                  : enabledPromoIds.length > 0
+                    ? { promoEnabledIds: enabledPromoIds }
+                    : {}),
+              };
+            }) || []
+          );
         })();
 
     const editTab: Tab = {
@@ -1191,32 +1207,34 @@ export default function BanHangPage() {
           const enabledPromoIds = collectEnabledPromoIds(
             existingInvoice.details || []
           );
-          return existingInvoice.details?.map((item: any) => {
-            const promoLineType =
-              item.lineType === "discounted_buy"
-                ? "discounted_buy"
-                : item.isGift || item.lineType === "gift"
-                  ? "gift"
-                  : undefined;
-            return {
-              rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
-              product: item.product,
-              quantity: Number(item.quantity),
-              price: Number(item.price),
-              discount: Number(item.discount) || 0,
-              note: item.note || "",
-              conditionType: item.conditionType || "normal",
-              ...(promoLineType
-                ? {
-                    isPromoGift: true,
-                    promoLineType,
-                    promotionId: item.promotionId ?? undefined,
-                  }
-                : enabledPromoIds.length > 0
-                  ? { promoEnabledIds: enabledPromoIds }
-                  : {}),
-            };
-          }) || [];
+          return (
+            existingInvoice.details?.map((item: any) => {
+              const promoLineType =
+                item.lineType === "discounted_buy"
+                  ? "discounted_buy"
+                  : item.isGift || item.lineType === "gift"
+                    ? "gift"
+                    : undefined;
+              return {
+                rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
+                product: item.product,
+                quantity: Number(item.quantity),
+                price: Number(item.price),
+                discount: Number(item.discount) || 0,
+                note: item.note || "",
+                conditionType: item.conditionType || "normal",
+                ...(promoLineType
+                  ? {
+                      isPromoGift: true,
+                      promoLineType,
+                      promotionId: item.promotionId ?? undefined,
+                    }
+                  : enabledPromoIds.length > 0
+                    ? { promoEnabledIds: enabledPromoIds }
+                    : {}),
+              };
+            }) || []
+          );
         })();
 
     const editTab: Tab = {
@@ -2231,9 +2249,14 @@ export default function BanHangPage() {
 
           // QUEUE PRINT
           toast.success("Lưu đơn hàng thành công");
-          handlePostCreate("order", activeTab.documentId, "/don-hang/dat-hang", {
-            shouldRedirect: true,
-          });
+          handlePostCreate(
+            "order",
+            activeTab.documentId,
+            "/don-hang/dat-hang",
+            {
+              shouldRedirect: true,
+            }
+          );
         } catch (error: any) {
           console.error("Save order error:", error);
           toast.error(error.message || "Không thể lưu đơn hàng");
@@ -2326,7 +2349,11 @@ export default function BanHangPage() {
             note: item.note || "",
             conditionType: item.conditionType || "normal",
             ...(isGift
-              ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
+              ? {
+                  lineType: "gift",
+                  isGift: true,
+                  promotionId: item.promotionId,
+                }
               : {}),
             ...(isDiscountedBuy
               ? { lineType: "discounted_buy", promotionId: item.promotionId }
@@ -2546,8 +2573,7 @@ export default function BanHangPage() {
             : [{ method: "cash", amount: actualPayment }];
       }
       documentData.items = activeTab.cartItems.map((item) => {
-        const isGift =
-          item.isPromoGift && item.promoLineType === "gift";
+        const isGift = item.isPromoGift && item.promoLineType === "gift";
         const isDiscountedBuy =
           item.isPromoGift && item.promoLineType === "discounted_buy";
         const price = isGift ? 0 : Number(item.price);
@@ -2812,12 +2838,12 @@ export default function BanHangPage() {
                 {activeTab.isEditMode ? (
                   <div className="flex gap-4">
                     {canCreateInvoice && (
-                      <button
+                      <LoadingButton
                         onClick={handleConvertToInvoice}
                         disabled={activeTab.cartItems.length === 0}
                         className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                         TẠO HÓA ĐƠN
-                      </button>
+                      </LoadingButton>
                     )}
                     <LoadingButton
                       onClick={() => handleSaveOrder()}
