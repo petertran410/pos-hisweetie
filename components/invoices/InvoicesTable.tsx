@@ -39,6 +39,8 @@ interface InvoicesTableProps {
   onCreateGiaoHang: (selectedIds: number[], branchId: number | null) => void;
   onCreateDongHang: (selectedIds: number[], branchId: number | null) => void;
   onCreateLoading: (selectedIds: number[], branchId: number | null) => void;
+  /** Mã HĐ cần tự mở rộng chi tiết khi vào trang qua deep-link (?Code=). */
+  autoExpandCode?: string;
 }
 
 const STATUS_COLOR: Record<number, string> = {
@@ -394,12 +396,14 @@ export function InvoicesTable({
   onCreateGiaoHang,
   onCreateDongHang,
   onCreateLoading,
+  autoExpandCode,
 }: InvoicesTableProps) {
   const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
     null
   );
+  const [didAutoExpand, setDidAutoExpand] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -682,6 +686,16 @@ export function InvoicesTable({
   const invoices = data?.data || [];
   const total = (data as any)?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
+
+  // Tự mở rộng chi tiết HĐ khớp autoExpandCode (deep-link ?Code=), chỉ 1 lần.
+  useEffect(() => {
+    if (didAutoExpand || !autoExpandCode || invoices.length === 0) return;
+    const match = invoices.find((i) => i.code === autoExpandCode);
+    if (match) {
+      setExpandedInvoiceId(match.id);
+      setDidAutoExpand(true);
+    }
+  }, [autoExpandCode, invoices, didAutoExpand]);
 
   // Hóa đơn nào (bảng giá 2/3) có giá thực bán thấp hơn giá niêm yết → cảnh báo.
   const priceWarningIds = useInvoicePriceBookWarnings(invoices);
