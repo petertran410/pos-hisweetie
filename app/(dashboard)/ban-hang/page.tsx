@@ -25,6 +25,9 @@ import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
 import { useCreateConsignment } from "@/lib/hooks/useConsignments";
 import { priceBooksApi } from "@/lib/api";
+import { ordersApi } from "@/lib/api/orders";
+import { INVOICE_STATUS } from "@/lib/types/invoice";
+import { ORDER_STATUS } from "@/lib/types/order";
 import { promotionsApi } from "@/lib/api/promotions";
 import {
   getDefaultAddress,
@@ -1447,11 +1450,43 @@ export default function BanHangPage() {
     );
   };
 
-  const handleConvertToInvoice = () => {
+  /**
+   * Kiểm tra (bằng dữ liệu TƯƠI từ server, bỏ qua cache) xem đơn hàng đã ra
+   * hóa đơn (chưa hủy) hay chưa. Dùng để chặn race condition: kho ra hóa đơn
+   * xong, sale lưu/chuyển đơn dựa trên cache cũ làm trạng thái bị kéo ngược.
+   *
+   * Trả về true nếu được phép tiếp tục:
+   * - Không có hóa đơn chưa hủy → true.
+   * - Có hóa đơn chưa hủy → false (đã toast cảnh báo).
+   * - Lỗi mạng/không đọc được → true (chặn mềm, tránh kẹt thao tác).
+   */
+  const assertOrderNotInvoiced = async (orderId: number): Promise<boolean> => {
+    try {
+      const fresh = await ordersApi.getOrder(orderId);
+      const hasActiveInvoice = (fresh.invoices || []).some(
+        (inv: any) => inv.status !== INVOICE_STATUS.CANCELLED
+      );
+      if (hasActiveInvoice) {
+        toast.error(
+          "Đơn hàng đã ra hóa đơn, không thể lưu thay đổi. Vui lòng tải lại để xem trạng thái mới nhất."
+        );
+        return false;
+      }
+      return true;
+    } catch (error) {
+      // Lỗi mạng → không chặn cứng (BE vẫn là tuyến phòng thủ cuối).
+      console.error("assertOrderNotInvoiced error:", error);
+      return true;
+    }
+  };
+
+  const handleConvertToInvoice = async () => {
     if (!activeTab.documentId || activeTab.type !== "order") {
       toast.error("Không tìm thấy thông tin đơn hàng");
       return;
     }
+
+    if (!(await assertOrderNotInvoiced(activeTab.documentId))) return;
 
     const order = existingOrder;
     if (!order) return;
@@ -1558,6 +1593,24 @@ export default function BanHangPage() {
 
     const proceed = await confirmPriceMismatch("hóa đơn");
     if (!proceed) return;
+
+    // Chặn race: đơn đã Hoàn thành/Hủy (đóng) thì không thể xuất thêm hóa đơn.
+    // Không chặn theo "có hóa đơn" vì luồng "Ra 1 phần HĐ" hợp lệ có HĐ trước đó.
+    try {
+      const fresh = await ordersApi.getOrder(activeTab.sourceOrderId);
+      if (
+        fresh.status === ORDER_STATUS.COMPLETED ||
+        fresh.status === ORDER_STATUS.CANCELLED
+      ) {
+        toast.error(
+          "Đơn hàng đã kết thúc, không thể xuất thêm hóa đơn. Vui lòng tải lại để xem trạng thái mới nhất."
+        );
+        return;
+      }
+    } catch (error) {
+      console.error("handlePayment status check error:", error);
+      // Lỗi mạng → chặn mềm, để BE xử lý tuyến cuối.
+    }
 
     // Phát hiện có mã xuất thiếu so với số lượng đặt (gộp theo productId, khớp với backend).
     const sourceOrder = activeTab.sourceOrder;
@@ -1705,6 +1758,19 @@ export default function BanHangPage() {
       const key = getEditStorageKey(closingTab.documentId, closingTab.type);
       localStorage.removeItem(key);
       delete initialEditDataRef.current[key];
+    }
+
+    // Dọn URL param nếu tab đang đóng chính là tab được mở từ ?orderId / ?invoiceId.
+    // Tránh việc reload lại dựng lại tab đã đóng từ param còn sót trên URL.
+    if (closingTab.documentId) {
+      const docIdStr = String(closingTab.documentId);
+      const matchesOrderParam =
+        closingTab.type === "order" && orderId === docIdStr;
+      const matchesInvoiceParam =
+        closingTab.type === "invoice" && invoiceId === docIdStr;
+      if (matchesOrderParam || matchesInvoiceParam) {
+        router.replace("/ban-hang", { scroll: false });
+      }
     }
 
     if (tabs.length === 1) {
@@ -2044,6 +2110,10 @@ export default function BanHangPage() {
 
       const proceed = await confirmPriceMismatch("đơn hàng");
       if (!proceed) return;
+
+      // Chặn race: nếu đơn đã ra hóa đơn (kho xử lý trong lúc sale đang sửa),
+      // không cho lưu để tránh kéo ngược trạng thái đơn từ cache cũ.
+      if (!(await assertOrderNotInvoiced(activeTab.documentId))) return;
 
       const actualPayment = activeTab.paymentAmount || 0;
 
