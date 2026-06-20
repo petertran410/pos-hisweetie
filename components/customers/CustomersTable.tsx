@@ -238,6 +238,7 @@ export function CustomersTable({
   const [expandedCustomerId, setExpandedCustomerId] = useState<number | null>(
     null
   );
+  const [didAutoExpand, setDidAutoExpand] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -318,6 +319,16 @@ export function CustomersTable({
   const customers: Customer[] = data?.data || [];
   const total = (data as any)?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
+
+  // Tự mở rộng chi tiết KH khớp filters.code (deep-link ?Code=), chỉ 1 lần.
+  useEffect(() => {
+    if (didAutoExpand || !filters.code || customers.length === 0) return;
+    const match = customers.find((c) => c.code === filters.code);
+    if (match) {
+      setExpandedCustomerId(match.id);
+      setDidAutoExpand(true);
+    }
+  }, [filters.code, customers, didAutoExpand]);
 
   const visibleColumns = useMemo(
     () => displayColumns.filter((c) => c.visible),

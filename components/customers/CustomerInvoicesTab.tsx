@@ -6,7 +6,7 @@ import { returnOrdersApi } from "@/lib/api/return-orders";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { DocumentPreviewModal } from "./DocumentPreviewModal";
+import { DocumentPreviewModal } from "../shared/DocumentPreviewModal";
 
 interface CustomerInvoicesTabProps {
   customerId: number;

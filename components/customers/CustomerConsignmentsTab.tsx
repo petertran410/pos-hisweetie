@@ -9,7 +9,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { DocumentPreviewModal } from "./DocumentPreviewModal";
+import { DocumentPreviewModal } from "../shared/DocumentPreviewModal";
 
 interface CustomerConsignmentsTabProps {
   customerId: number;

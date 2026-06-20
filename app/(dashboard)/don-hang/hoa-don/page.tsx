@@ -148,6 +148,7 @@ export default function HoaDonPage() {
           onCreateGiaoHang={handleCreateGiaoHang}
           onCreateDongHang={handleCreateDongHang}
           onCreateLoading={handleCreateLoading}
+          autoExpandCode={codeParam || undefined}
         />
 
         {formType === "giao-hang" && (

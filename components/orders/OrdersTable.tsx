@@ -29,6 +29,8 @@ interface OrdersTableProps {
   filters: any;
   onCreateClick: () => void;
   onEditClick: (order: Order) => void;
+  /** Mã đơn cần tự mở rộng chi tiết khi vào trang qua deep-link (?Code=). */
+  autoExpandCode?: string;
 }
 
 const STATUS_COLOR: Record<number, string> = {
@@ -255,10 +257,11 @@ const DEFAULT_COLUMNS: ColumnConfig<Order>[] = [
   },
 ];
 
-export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
+export function OrdersTable({ filters, onCreateClick, autoExpandCode }: OrdersTableProps) {
   const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+  const [didAutoExpand, setDidAutoExpand] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -355,6 +358,16 @@ export function OrdersTable({ filters, onCreateClick }: OrdersTableProps) {
   const orders = data?.data || [];
   const total = (data as any)?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
+
+  // Tự mở rộng chi tiết đơn khớp autoExpandCode (deep-link ?Code=), chỉ 1 lần.
+  useEffect(() => {
+    if (didAutoExpand || !autoExpandCode || orders.length === 0) return;
+    const match = orders.find((o: any) => o.code === autoExpandCode);
+    if (match) {
+      setExpandedOrderId(match.id);
+      setDidAutoExpand(true);
+    }
+  }, [autoExpandCode, orders, didAutoExpand]);
 
   const toggleSelectAll = () =>
     setSelectedIds(

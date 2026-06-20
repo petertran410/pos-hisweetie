@@ -55,6 +55,7 @@ export default function DatHangPage() {
           filters={filters}
           onCreateClick={handleCreateClick}
           onEditClick={handleEditClick}
+          autoExpandCode={codeParam || undefined}
         />
       </div>
 

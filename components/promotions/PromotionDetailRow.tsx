@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { usePromotion, usePromotionUsage } from "@/lib/hooks/usePromotions";
+import { usePromotion, usePromotionUsage, usePromotionStats } from "@/lib/hooks/usePromotions";
 import {
   Promotion,
   PromotionReward,
   PromotionUsageDoc,
+  PromotionStats,
   PROMOTION_TYPE_LABELS,
   PROMOTION_STATUS_LABELS,
 } from "@/lib/types/promotion";
 import { formatCurrency } from "@/lib/utils";
 import { CodeLink } from "../shared/CodeLink";
+import { DocumentPreviewModal } from "../shared/DocumentPreviewModal";
 
 interface Props {
   promotionId: number;
@@ -134,6 +136,8 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
   const { data: promotion, isLoading } = usePromotion(promotionId);
   const { data: usage, isLoading: isLoadingUsage } =
     usePromotionUsage(promotionId);
+  const { data: stats, isLoading: isLoadingStats } =
+    usePromotionStats(promotionId);
   const [activeTab, setActiveTab] = useState("info");
 
   if (isLoading) {
@@ -163,6 +167,7 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
     { value: "info", label: "Thông tin" },
     { value: "orders", label: "Đơn đặt hàng có khuyến mại" },
     { value: "invoices", label: "Hóa đơn có khuyến mại" },
+    { value: "stats", label: "Thống kê hàng khuyến mãi" },
   ];
 
   const effectiveText = `${fmtDateTime(promotion.startDate)} - ${fmtDateTime(
@@ -340,6 +345,11 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
               emptyText="Chưa có hóa đơn nào áp dụng chương trình này"
             />
           )}
+
+          {/* Tab: Thống kê hàng khuyến mãi */}
+          {activeTab === "stats" && (
+            <StatsPanel stats={stats} loading={isLoadingStats} />
+          )}
         </div>
       </td>
     </tr>
@@ -357,6 +367,10 @@ function UsageTable({
   loading?: boolean;
   emptyText: string;
 }) {
+  const [preview, setPreview] = useState<{ id: number; code: string } | null>(
+    null,
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-2 py-8">
@@ -389,7 +403,16 @@ function UsageTable({
           {docs.map((d) => (
             <tr key={d.id} className="hover:bg-gray-50">
               <td className="px-3 py-2 text-sm">
-                <CodeLink entity={entity} code={d.code} />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreview({ id: d.id, code: d.code });
+                  }}
+                  className="text-brand hover:underline font-medium"
+                >
+                  {d.code}
+                </button>
               </td>
               <td className="px-3 py-2 text-xs text-gray-600">
                 {fmtDateTime(d.date)}
@@ -401,6 +424,133 @@ function UsageTable({
           ))}
         </tbody>
       </table>
+
+      {preview && (
+        <DocumentPreviewModal
+          type={entity}
+          id={preview.id}
+          code={preview.code}
+          onClose={() => setPreview(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function fmtQty(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toLocaleString("vi-VN");
+}
+
+function StatCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-3">
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className="mt-1 text-xl font-semibold text-gray-900">{value}</div>
+      {sub && <div className="mt-0.5 text-xs text-gray-500">{sub}</div>}
+    </div>
+  );
+}
+
+function StatsPanel({
+  stats,
+  loading,
+}: {
+  stats?: PromotionStats;
+  loading?: boolean;
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-8">
+        <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+        <span className="text-gray-600">Đang tải...</span>
+      </div>
+    );
+  }
+  if (!stats) {
+    return (
+      <p className="py-8 text-center text-sm text-gray-400">
+        Chưa có dữ liệu thống kê
+      </p>
+    );
+  }
+
+  const { totals, limits, items } = stats;
+  const usageText =
+    limits.usageLimit != null
+      ? `${limits.usageCount} / ${limits.usageLimit}`
+      : String(limits.usageCount);
+  const usageSub =
+    limits.usageRemaining != null
+      ? `Còn lại: ${limits.usageRemaining}`
+      : "Không giới hạn lượt";
+  const rewardText =
+    limits.maxRewardQuantity != null
+      ? `${fmtQty(limits.rewardIssued)} / ${fmtQty(limits.maxRewardQuantity)}`
+      : fmtQty(limits.rewardIssued);
+  const rewardSub =
+    limits.rewardRemaining != null
+      ? `Còn lại: ${fmtQty(limits.rewardRemaining)}`
+      : "Không giới hạn SL";
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Tổng hàng bán" value={fmtQty(totals.soldQty)} />
+        <StatCard label="Tổng hàng khuyến mãi" value={fmtQty(totals.promoQty)} />
+        <StatCard label="Lượt dùng" value={usageText} sub={usageSub} />
+        <StatCard label="SL khuyến mãi" value={rewardText} sub={rewardSub} />
+      </div>
+
+      {items.length === 0 ? (
+        <p className="py-6 text-center text-sm text-gray-400">
+          Chưa có hàng hóa nào được ghi nhận
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-gray-200">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-100">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Mã hàng
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Tên hàng
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  SL bán
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  SL khuyến mãi
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {items.map((it) => (
+                <tr key={it.productId} className="hover:bg-gray-50">
+                  <td className="px-3 py-2 text-sm font-medium text-gray-800">
+                    <CodeLink entity="product" code={it.code} />
+                  </td>
+                  <td className="px-3 py-2 text-sm text-gray-700">{it.name}</td>
+                  <td className="px-3 py-2 text-center text-sm text-gray-800">
+                    {fmtQty(it.soldQty)}
+                  </td>
+                  <td className="px-3 py-2 text-center text-sm text-gray-800">
+                    {fmtQty(it.promoQty)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
