@@ -18,6 +18,8 @@ import { MisaInventoryItem } from "@/lib/api/misa";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { API_URL } from "@/lib/config/api";
 import { toast } from "sonner";
+import { usePublication } from "./publication/usePublication";
+import { PublicationSection } from "./publication/PublicationSection";
 
 interface ComboComponent {
   id?: number;
@@ -63,6 +65,9 @@ export function ComboProductForm({
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const canLinkMisa = usePermission("products", "link_misa");
+  const canViewPublication = usePermission("products", "view_publication");
+  const [activeTab, setActiveTab] = useState<"info" | "publication">("info");
+  const pub = usePublication(product);
 
   // Liên kết với vật tư hàng hóa Misa (lưu mã + tên + đơn vị).
   const [misaMapping, setMisaMapping] = useState<{
@@ -296,6 +301,9 @@ export function ComboProductForm({
 
       const finalBasePrice = Number(data.basePrice) || comboRetailPrice || 0;
 
+      // Gói dữ liệu công bố (chỉ khi có quyền xem).
+      const publicationPayload = await pub.getPayload(canViewPublication);
+
       const formData = {
         code: data.code,
         name: data.name,
@@ -327,6 +335,7 @@ export function ComboProductForm({
         isDirectSale: data.isDirectSale || false,
         isActive: data.isActive ?? true,
         imageUrls: uploadedUrls,
+        ...publicationPayload,
         components: components.map((comp) => ({
           componentProductId: comp.componentProductId,
           quantity: comp.quantity,
@@ -379,16 +388,35 @@ export function ComboProductForm({
           </button>
         </div>
 
-        <div className="border-b px-4">
-          <button className="py-3 border-b-2 border-brand text-brand">
+        <div className="border-b px-4 flex gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("info")}
+            className={`py-3 px-3 border-b-2 ${
+              activeTab === "info"
+                ? "border-brand text-brand font-medium"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
             Thông tin
           </button>
+          {canViewPublication && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("publication")}
+              className={`py-3 px-3 border-b-2 ${
+                activeTab === "publication"
+                  ? "border-brand text-brand font-medium"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              Công bố
+            </button>
+          )}
         </div>
 
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
+          <div className={activeTab === "info" ? "p-6 space-y-6" : "hidden"}>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -816,6 +844,16 @@ export function ComboProductForm({
                 <span className="text-sm font-medium">Bán trực tiếp</span>
               </label>
             </div>
+          </div>
+
+          {/* Tab Công bố */}
+          <div
+            className={
+              canViewPublication && activeTab === "publication"
+                ? "p-6 space-y-5"
+                : "hidden"
+            }>
+            <PublicationSection pub={pub} />
           </div>
 
           <div className="border-t p-4 flex justify-end gap-2">

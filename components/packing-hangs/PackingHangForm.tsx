@@ -105,6 +105,7 @@ export function PackingHangForm({
     branchId: branchId || undefined,
     pageSize: 100,
     search: debouncedInvoiceSearch || undefined,
+    excludeDelivered: true,
   });
 
   const { data: consignmentsData } = useConsignmentsForPacking({

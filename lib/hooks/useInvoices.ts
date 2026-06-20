@@ -28,6 +28,7 @@ export function useInvoicesForPacking(params?: {
   branchId?: number;
   pageSize?: number;
   search?: string;
+  excludeDelivered?: boolean;
 }) {
   return useQuery({
     queryKey: ["invoices", "for-packing", params],
@@ -257,6 +258,104 @@ export function useExportInvoices() {
     Object.entries(exportFilters).forEach(([k, v]) => {
       if (k.startsWith("_")) return; // param meta client-only (vd "_preset")
       if (v !== undefined && v !== null && v !== "") {
+        url.searchParams.append(k, String(v));
+      }
+    });
+    if (selectedColumns.length > 0) {
+      url.searchParams.append("columns", selectedColumns.join(","));
+    }
+    await doExport(url, setIsExportingDetail);
+  };
+
+  return {
+    exportOverview,
+    exportDetail,
+    isExportingOverview,
+    isExportingDetail,
+  };
+}
+
+/**
+ * Xuất Excel hóa đơn VAT (trang /don-hang/hoa-don-vat).
+ * Khác trang hóa đơn thường: dữ liệu tập trung vào VAT (tiền trước/sau thuế,
+ * thuế VAT từng dòng) + thông tin đồng bộ Misa (trạng thái, mã chứng từ).
+ * Endpoint: /invoices/vat/export và /invoices/vat/export-detail.
+ */
+export function useExportInvoicesVat() {
+  const [isExportingOverview, setIsExportingOverview] = useState(false);
+  const [isExportingDetail, setIsExportingDetail] = useState(false);
+
+  const doExport = async (url: URL, setLoading: (v: boolean) => void) => {
+    setLoading(true);
+    try {
+      const token = useAuthStore.getState().token;
+      const selectedBranch = useBranchStore.getState().selectedBranch;
+
+      const res = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(selectedBranch?.id
+            ? { "X-Branch-Id": String(selectedBranch.id) }
+            : {}),
+        },
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Lỗi khi xuất dữ liệu");
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const filenameMatch = disposition.match(/filename=([^;]+)/);
+      const filename = filenameMatch
+        ? filenameMatch[1].trim()
+        : `HoaDonVAT_${Date.now()}.xlsx`;
+
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+
+      toast.success("Xuất file thành công");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportOverview = async (filters: Record<string, any>) => {
+    const { pageSize: _ps, currentItem: _ci, ...exportFilters } = filters;
+    const url = new URL(`${API_URL}/invoices/vat/export`);
+    Object.entries(exportFilters).forEach(([k, v]) => {
+      if (k.startsWith("_")) return;
+      if (v === undefined || v === null || v === "") return;
+      if (Array.isArray(v)) {
+        v.forEach((item) => url.searchParams.append(k, String(item)));
+      } else {
+        url.searchParams.append(k, String(v));
+      }
+    });
+    await doExport(url, setIsExportingOverview);
+  };
+
+  const exportDetail = async (
+    filters: Record<string, any>,
+    selectedColumns: string[]
+  ) => {
+    const { pageSize: _ps, currentItem: _ci, ...exportFilters } = filters;
+    const url = new URL(`${API_URL}/invoices/vat/export-detail`);
+    Object.entries(exportFilters).forEach(([k, v]) => {
+      if (k.startsWith("_")) return;
+      if (v === undefined || v === null || v === "") return;
+      if (Array.isArray(v)) {
+        v.forEach((item) => url.searchParams.append(k, String(item)));
+      } else {
         url.searchParams.append(k, String(v));
       }
     });

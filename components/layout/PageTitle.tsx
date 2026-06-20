@@ -40,6 +40,7 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
 
   // Khách hàng
   { prefix: "/khach-hang/khuyen-mai", title: "Khuyến mãi" },
+  { prefix: "/khach-hang/hop-dong", title: "Hợp đồng" },
   { prefix: "/khach-hang", title: "Khách hàng" },
 
   // Tài chính

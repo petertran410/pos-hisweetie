@@ -122,6 +122,7 @@ export function DashboardHeader() {
     () => [
       { label: "Danh sách khách hàng", href: "/khach-hang" },
       { label: "Khuyến mãi", href: "/khach-hang/khuyen-mai" },
+      { label: "Hợp đồng", href: "/khach-hang/hop-dong" },
     ],
     []
   );

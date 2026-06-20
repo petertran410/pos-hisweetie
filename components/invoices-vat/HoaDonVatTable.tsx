@@ -4,6 +4,7 @@ import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import {
   useInvoicesVat,
   useInvoicesVatTotals,
+  useExportInvoicesVat,
 } from "@/lib/hooks/useInvoices";
 import {
   useCreateVoucher,
@@ -30,6 +31,8 @@ import {
   XCircle,
   Clock,
   MinusCircle,
+  Download,
+  X,
 } from "lucide-react";
 import type { InvoiceVat } from "@/lib/api/invoices";
 import { HoaDonVatDetailRow } from "@/components/invoices-vat/HoaDonVatDetailRow";
@@ -83,6 +86,48 @@ const MISA_STATUS_OPTIONS: { value: MisaStatus; label: string }[] = [
   { value: "SYNCED", label: "Đã đồng bộ" },
   { value: "FAILED", label: "Thất bại" },
   { value: "SKIP", label: "Bỏ qua" },
+];
+
+// Catalog cột export chi tiết hóa đơn VAT — PHẢI khớp key với
+// InvoicesService.getVatDetailColumns() ở backend.
+const EXPORT_VAT_DETAIL_COLUMNS = [
+  { key: "branchName", label: "Chi nhánh" },
+  { key: "invoiceCode", label: "Mã hóa đơn" },
+  { key: "purchaseDate", label: "Thời gian" },
+  { key: "createdAt", label: "Thời gian tạo" },
+  { key: "updatedAt", label: "Ngày cập nhật" },
+  { key: "orderCode", label: "Mã đặt hàng" },
+  { key: "customerCode", label: "Mã khách hàng" },
+  { key: "customerName", label: "Tên khách hàng" },
+  { key: "customerPhone", label: "Điện thoại" },
+  { key: "customerTaxCode", label: "Mã số thuế" },
+  { key: "customerInvoiceAddress", label: "Địa chỉ xuất HĐ" },
+  { key: "misaEmployeeCode", label: "Mã NV phụ trách" },
+  { key: "misaEmployeeName", label: "Nhân viên phụ trách" },
+  { key: "soldByName", label: "Người bán" },
+  { key: "creatorName", label: "Người tạo" },
+  { key: "description", label: "Ghi chú" },
+  { key: "misaStatusValue", label: "Trạng thái Misa" },
+  { key: "misaOrgRefId", label: "Mã chứng từ Misa" },
+  { key: "misaSyncedAt", label: "Thời gian đồng bộ" },
+  { key: "missingMisaCode", label: "Thiếu mã Misa" },
+  { key: "misaErrorMessage", label: "Lỗi Misa" },
+  { key: "grandTotal", label: "Tổng HĐ (gốc)" },
+  { key: "invoicePreTax", label: "Tiền trước thuế (HĐ)" },
+  { key: "invoiceVat", label: "Thuế VAT (HĐ)" },
+  { key: "invoiceAfterTax", label: "Tiền sau thuế (HĐ)" },
+  { key: "productCode", label: "Mã hàng" },
+  { key: "productName", label: "Tên hàng" },
+  { key: "misaCode", label: "Mã Misa hàng hóa" },
+  { key: "misaUnit", label: "ĐVT Misa" },
+  { key: "productNote", label: "Ghi chú hàng hóa" },
+  { key: "quantity", label: "Số lượng" },
+  { key: "vatRate", label: "Thuế suất (%)" },
+  { key: "unitPriceAfterTax", label: "Đơn giá sau thuế" },
+  { key: "unitPriceBeforeTax", label: "Đơn giá trước thuế" },
+  { key: "linePreTax", label: "Thành tiền trước thuế" },
+  { key: "lineVat", label: "Tiền thuế VAT" },
+  { key: "lineAfterTax", label: "Thành tiền sau thuế" },
 ];
 
 const formatDateTime = (d?: string) =>
@@ -386,6 +431,19 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
   const deleteVoucher = useDeleteVoucher();
   const createVouchersBulk = useCreateVouchersBulk();
 
+  const {
+    exportOverview,
+    exportDetail,
+    isExportingOverview,
+    isExportingDetail,
+  } = useExportInvoicesVat();
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [showExportDetailModal, setShowExportDetailModal] = useState(false);
+  const [exportDetailCols, setExportDetailCols] = useState<string[]>(
+    EXPORT_VAT_DETAIL_COLUMNS.map((c) => c.key)
+  );
+  const exportRef = useRef<HTMLDivElement>(null);
+
   const canPushMisa = useCan("vat_invoices", "push");
   const canDeleteMisa = useCan("vat_invoices", "delete");
   const canRowAction = canPushMisa || canDeleteMisa;
@@ -455,6 +513,15 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
     const h = (e: MouseEvent) => {
       if (actionRef.current && !actionRef.current.contains(e.target as Node))
         setOpenActionId(null);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node))
+        setShowExportDropdown(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
@@ -661,6 +728,56 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
       );
     }
   };
+
+  // Filter dùng cho export: bám theo bộ lọc hiện tại (search + filter sidebar +
+  // tab trạng thái + trạng thái Misa + tìm kiếm nâng cao), bỏ phân trang.
+  const buildExportFilters = () => ({
+    ...effectiveFilters,
+    search: debouncedSearch,
+    ...(advancedSearch.invoiceCodeSearch && {
+      invoiceCodeSearch: advancedSearch.invoiceCodeSearch,
+    }),
+    ...(advancedSearch.productSearch && {
+      productSearch: advancedSearch.productSearch,
+    }),
+    ...(advancedSearch.customerSearch && {
+      customerSearch: advancedSearch.customerSearch,
+    }),
+    ...(advancedSearch.deliveryCodeSearch && {
+      deliveryCodeSearch: advancedSearch.deliveryCodeSearch,
+    }),
+    ...(advancedSearch.orderCodeSearch && {
+      orderCodeSearch: advancedSearch.orderCodeSearch,
+    }),
+    ...(advancedSearch.descriptionSearch && {
+      descriptionSearch: advancedSearch.descriptionSearch,
+    }),
+    ...(advancedSearch.productNoteSearch && {
+      productNoteSearch: advancedSearch.productNoteSearch,
+    }),
+  });
+
+  const handleExportOverview = async () => {
+    setShowExportDropdown(false);
+    await exportOverview(buildExportFilters());
+  };
+
+  const handleExportDetailConfirm = async () => {
+    setShowExportDetailModal(false);
+    await exportDetail(buildExportFilters(), exportDetailCols);
+  };
+
+  const toggleExportCol = (key: string) =>
+    setExportDetailCols((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+
+  const toggleAllExportCols = () =>
+    setExportDetailCols(
+      exportDetailCols.length === EXPORT_VAT_DETAIL_COLUMNS.length
+        ? []
+        : EXPORT_VAT_DETAIL_COLUMNS.map((c) => c.key)
+    );
 
   const colSpan = visibleColumns.length + 2;
 
@@ -916,6 +1033,42 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                 )}
                 Retry FAILED
               </button>
+            </PermissionGate>
+
+            <PermissionGate resource="vat_invoices" action="export">
+              <div ref={exportRef} className="relative">
+                <button
+                  onClick={() => setShowExportDropdown((p) => !p)}
+                  disabled={isExportingOverview || isExportingDetail}
+                  className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 disabled:opacity-50">
+                  {isExportingOverview || isExportingDetail ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  Xuất file
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${showExportDropdown ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {showExportDropdown && (
+                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-44 overflow-hidden">
+                    <button
+                      onClick={handleExportOverview}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                      Tổng quan
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowExportDropdown(false);
+                        setShowExportDetailModal(true);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
+                      Chi tiết (chọn cột)
+                    </button>
+                  </div>
+                )}
+              </div>
             </PermissionGate>
 
             <ColumnToggle columns={columns} onToggle={toggleColumn} />
@@ -1190,6 +1343,71 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
           </span>
         </div>
       </div>
+
+      {/* ── Modal chọn cột export chi tiết ── */}
+      {showExportDetailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-3 border-b">
+              <h3 className="text-base font-semibold text-gray-900">
+                Chọn cột xuất file chi tiết
+              </h3>
+              <button
+                onClick={() => setShowExportDetailModal(false)}
+                className="p-1 rounded hover:bg-gray-100 text-gray-500">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-5 py-3 border-b flex items-center justify-between">
+              <button
+                onClick={toggleAllExportCols}
+                className="text-sm text-brand hover:text-brand-dark font-medium">
+                {exportDetailCols.length === EXPORT_VAT_DETAIL_COLUMNS.length
+                  ? "Bỏ chọn tất cả"
+                  : "Chọn tất cả"}
+              </button>
+              <span className="text-xs text-gray-500">
+                ({exportDetailCols.length}/{EXPORT_VAT_DETAIL_COLUMNS.length}{" "}
+                cột)
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-auto px-5 py-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {EXPORT_VAT_DETAIL_COLUMNS.map((col) => (
+                <label
+                  key={col.key}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={exportDetailCols.includes(col.key)}
+                    onChange={() => toggleExportCol(col.key)}
+                    className="accent-brand"
+                  />
+                  <span className="text-sm text-gray-700">{col.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2 px-5 py-3 border-t">
+              <button
+                onClick={() => setShowExportDetailModal(false)}
+                className="px-4 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                Hủy
+              </button>
+              <button
+                onClick={handleExportDetailConfirm}
+                disabled={exportDetailCols.length === 0 || isExportingDetail}
+                className="px-4 py-1.5 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark flex items-center gap-1.5 disabled:opacity-50">
+                {isExportingDetail && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                Xuất {exportDetailCols.length} cột
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PermissionGate>
   );
 }
