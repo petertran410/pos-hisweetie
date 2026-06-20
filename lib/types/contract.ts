@@ -1,31 +1,37 @@
 export const CONTRACT_STATUSES = [
-  "DRAFT",
-  "SENT",
-  "SIGNED",
-  "REJECTED",
-  "EXPIRED",
-  "CANCELLED",
+  'DRAFT',
+  'REVIEW_SENT',
+  'REVIEW_APPROVED',
+  'SENT',
+  'SIGNED',
+  'REJECTED',
+  'EXPIRED',
+  'CANCELLED',
 ] as const;
 
 export type ContractStatus = (typeof CONTRACT_STATUSES)[number];
 
 export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
-  DRAFT: "Nháp",
-  SENT: "Đã gửi",
-  SIGNED: "Đã ký",
-  REJECTED: "Từ chối",
-  EXPIRED: "Hết hạn",
-  CANCELLED: "Đã hủy",
+  DRAFT: 'Nháp',
+  REVIEW_SENT: 'Chờ duyệt',
+  REVIEW_APPROVED: 'Đã duyệt',
+  SENT: 'Chờ ký',
+  SIGNED: 'Đã ký',
+  REJECTED: 'Từ chối',
+  EXPIRED: 'Hết hạn',
+  CANCELLED: 'Đã hủy',
 };
 
 // Màu badge theo trạng thái (tailwind classes).
 export const CONTRACT_STATUS_BADGE: Record<ContractStatus, string> = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  SENT: "bg-blue-100 text-blue-700",
-  SIGNED: "bg-green-100 text-green-700",
-  REJECTED: "bg-red-100 text-red-700",
-  EXPIRED: "bg-orange-100 text-orange-700",
-  CANCELLED: "bg-gray-200 text-gray-500",
+  DRAFT: 'bg-gray-100 text-gray-700',
+  REVIEW_SENT: 'bg-yellow-100 text-yellow-700',
+  REVIEW_APPROVED: 'bg-emerald-100 text-emerald-700',
+  SENT: 'bg-blue-100 text-blue-700',
+  SIGNED: 'bg-green-100 text-green-700',
+  REJECTED: 'bg-red-100 text-red-700',
+  EXPIRED: 'bg-orange-100 text-orange-700',
+  CANCELLED: 'bg-gray-200 text-gray-500',
 };
 
 export interface ContractCustomerRef {
@@ -48,7 +54,9 @@ export interface Contract {
   status: ContractStatus;
   signingUrl: string | null;
   signedFileUrl: string | null;
+  reviewFileUrl: string | null;
   rejectReason: string | null;
+  reviewSentAt: string | null;
   sentAt: string | null;
   signedAt: string | null;
   createdBy: number | null;

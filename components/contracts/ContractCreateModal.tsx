@@ -313,7 +313,7 @@ export function ContractCreateModal({ isOpen, onClose, onSuccess }: Props) {
             disabled={submitting || !selected || !templateId || noEmail}
             className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            Tạo & gửi
+            Gửi bản xem trước
           </button>
         </div>
       </div>

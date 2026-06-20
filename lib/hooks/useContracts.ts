@@ -50,7 +50,7 @@ export function useCreateContractFromTemplate() {
       contractsApi.createFromTemplate(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contracts"] });
-      toast.success("Đã tạo và gửi hợp đồng cho khách hàng");
+      toast.success("Đã gửi bản xem trước cho khách hàng qua email");
     },
     onError: (err: any) => {
       toast.error(err?.message || "Tạo hợp đồng thất bại");
@@ -82,11 +82,39 @@ export function useResendContract() {
   return useMutation({
     mutationFn: (id: number) => contractsApi.resend(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["contracts"] });
-      toast.success("Đã gửi lại hợp đồng");
+      qc.invalidateQueries({ queryKey: ['contracts'] });
+      toast.success('Đã gửi lại hợp đồng');
     },
     onError: (err: any) => {
-      toast.error(err?.message || "Gửi lại thất bại");
+      toast.error(err?.message || 'Gửi lại thất bại');
+    },
+  });
+}
+
+export function useApproveReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => contractsApi.approveReview(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contracts'] });
+      toast.success('Đã xác nhận khách đồng ý nội dung');
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Duyệt thất bại');
+    },
+  });
+}
+
+export function useSendForSigning() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => contractsApi.sendForSigning(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contracts'] });
+      toast.success('Đã gửi bản ký cho khách hàng');
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Gửi bản ký thất bại');
     },
   });
 }

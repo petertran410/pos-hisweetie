@@ -39,6 +39,14 @@ export const contractsApi = {
     return apiClient.post<Contract>(`/contracts/${id}/resend`);
   },
 
+  approveReview: async (id: number) => {
+    return apiClient.post<Contract>(`/contracts/${id}/approve-review`);
+  },
+
+  sendForSigning: async (id: number) => {
+    return apiClient.post<Contract>(`/contracts/${id}/send-for-signing`);
+  },
+
   // Upload PDF (multipart) — apiClient luôn JSON.stringify nên fetch trực tiếp.
   upload: async (params: {
     customerId: number;
