@@ -17,8 +17,9 @@ export interface CreateCategoryDto {
 
 export const categoriesApi = {
   getAll: (type?: CategoryType) => {
-    const params = type ? { type } : {};
-    return apiClient.get<Category[]>("/categories", { params });
+    // apiClient.get(endpoint, params) — arg thứ 2 LÀ query map. Trước đây bọc
+    // { params } thừa 1 lớp → URL thành ?params=[object Object]. Truyền thẳng.
+    return apiClient.get<Category[]>("/categories", type ? { type } : undefined);
   },
 
   create: (data: CreateCategoryDto) =>

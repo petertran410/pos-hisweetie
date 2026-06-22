@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { CategoryType, Category } from "@/lib/api/categories";
 import { useCategories } from "@/lib/hooks/useCategories";
 import { CategoryModal } from "./CategoryModal";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface CategoryDropdownProps {
   type: CategoryType;
@@ -28,7 +29,12 @@ export function CategoryDropdown({
   >();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: categories } = useCategories(type);
+  // Thiếu quyền categories:view → không fetch (tránh 403) + chỉ hiển thị read-only.
+  const canView = usePermission("categories", "view");
+  const { data: categories } = useCategories(type, {
+    enabled: canView,
+    silentForbidden: true,
+  });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -83,6 +89,12 @@ export function CategoryDropdown({
     <div className="relative" ref={dropdownRef}>
       <label className="block text-sm font-medium mb-1">{label}</label>
 
+      {!canView ? (
+        // Không có quyền xem nhóm hàng → hiển thị giá trị read-only, không fetch.
+        <div className="w-full border rounded px-3 py-2 bg-gray-50 text-gray-700">
+          {value || <span className="text-gray-400">{placeholder}</span>}
+        </div>
+      ) : (
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -132,6 +144,7 @@ export function CategoryDropdown({
           </svg>
         </div>
       </button>
+      )}
 
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-hidden">

@@ -66,7 +66,13 @@ export function ComboProductForm({
   const updateProduct = useUpdateProduct();
   const canLinkMisa = usePermission("products", "link_misa");
   const canViewPublication = usePermission("products", "view_publication");
-  const [activeTab, setActiveTab] = useState<"info" | "publication">("info");
+  const canViewCostPrice = usePermission("products", "view_cost_price");
+  const canViewSalePrice = usePermission("products", "view_sale_price");
+  // Chỉ-công-bố: thiếu cả quyền giá vốn lẫn giá bán.
+  const isPublicationOnly = !canViewCostPrice && !canViewSalePrice;
+  const [activeTab, setActiveTab] = useState<
+    "info" | "description" | "publication"
+  >("info");
   const pub = usePublication(product);
 
   // Liên kết với vật tư hàng hóa Misa (lưu mã + tên + đơn vị).
@@ -115,6 +121,10 @@ export function ComboProductForm({
   });
 
   const hasCostChanged = (): boolean => {
+    // Thiếu quyền giá vốn → calculateTotalPurchasePrice() ra NaN (cost thành
+    // phần bị strip). Không coi là thay đổi để tránh bật modal sai + gửi NaN.
+    if (!canViewCostPrice) return false;
+
     const newCost = calculateTotalPurchasePrice();
 
     if (!product) return newCost > 0;
@@ -296,15 +306,10 @@ export function ComboProductForm({
         }
       }
 
-      const comboCost = calculateTotalPurchasePrice();
-      const comboRetailPrice = calculateTotalRetailPrice();
-
-      const finalBasePrice = Number(data.basePrice) || comboRetailPrice || 0;
-
       // Gói dữ liệu công bố (chỉ khi có quyền xem).
       const publicationPayload = await pub.getPayload(canViewPublication);
 
-      const formData = {
+      const formData: Record<string, any> = {
         code: data.code,
         name: data.name,
         type: 1,
@@ -312,19 +317,6 @@ export function ComboProductForm({
         orderTemplate: data.orderTemplate || undefined,
         categoryId: data.categoryId ? Number(data.categoryId) : undefined,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
-        basePrice: finalBasePrice,
-        purchasePrice: comboCost,
-        stockQuantity: 0,
-        minStockAlert: Number(data.minStockAlert) || 0,
-        maxStockAlert: Number(data.maxStockAlert) || 0,
-        weight: data.weight ? Number(data.weight) : undefined,
-        weightUnit: data.weightUnit || "kg",
-        shippingWeight: data.shippingWeight
-          ? Number(data.shippingWeight)
-          : undefined,
-        shippingWeightUnit: data.shippingWeightUnit || "g",
-        vat: data.vat != null && !isNaN(Number(data.vat)) ? Number(data.vat) : 8,
-        unit: data.unit || undefined,
         ...(canLinkMisa
           ? {
               misa_code: misaMapping.code,
@@ -336,12 +328,40 @@ export function ComboProductForm({
         isActive: data.isActive ?? true,
         imageUrls: uploadedUrls,
         ...publicationPayload,
+        branchId: selectedBranch?.id,
+      };
+
+      // Luồng chỉ-công-bố: không gửi giá/tồn kho/thành phần để tránh ghi đè
+      // dữ liệu thật, tránh NaN (giá vốn thành phần bị strip) và StockAudit ảo.
+      if (isPublicationOnly) {
+        await submitProduct(formData);
+        return;
+      }
+
+      const comboCost = calculateTotalPurchasePrice();
+      const comboRetailPrice = calculateTotalRetailPrice();
+      const finalBasePrice = Number(data.basePrice) || comboRetailPrice || 0;
+
+      Object.assign(formData, {
+        ...(canViewSalePrice ? { basePrice: finalBasePrice } : {}),
+        ...(canViewCostPrice ? { purchasePrice: comboCost } : {}),
+        stockQuantity: 0,
+        minStockAlert: Number(data.minStockAlert) || 0,
+        maxStockAlert: Number(data.maxStockAlert) || 0,
+        weight: data.weight ? Number(data.weight) : undefined,
+        weightUnit: data.weightUnit || "kg",
+        shippingWeight: data.shippingWeight
+          ? Number(data.shippingWeight)
+          : undefined,
+        shippingWeightUnit: data.shippingWeightUnit || "g",
+        vat:
+          data.vat != null && !isNaN(Number(data.vat)) ? Number(data.vat) : 8,
+        unit: data.unit || undefined,
         components: components.map((comp) => ({
           componentProductId: comp.componentProductId,
           quantity: comp.quantity,
         })),
-        branchId: selectedBranch?.id,
-      };
+      });
 
       if (hasCostChanged()) {
         setPendingFormData(formData);
@@ -398,6 +418,16 @@ export function ComboProductForm({
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}>
             Thông tin
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("description")}
+            className={`py-3 px-3 border-b-2 ${
+              activeTab === "description"
+                ? "border-brand text-brand font-medium"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
+            Mô tả
           </button>
           {canViewPublication && (
             <button
@@ -684,22 +714,24 @@ export function ComboProductForm({
               </div>
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-3">Giá bán</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Giá bán
-                  </label>
-                  <input
-                    {...register("basePrice", { valueAsNumber: true })}
-                    type="number"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="0"
-                  />
+            {canViewSalePrice && (
+              <div>
+                <h3 className="font-semibold mb-3">Giá bán</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Giá bán
+                    </label>
+                    <input
+                      {...register("basePrice", { valueAsNumber: true })}
+                      type="number"
+                      className="w-full border rounded px-3 py-2"
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div>
               <h3 className="font-semibold mb-3">Vị trí, Trọng lượng</h3>
@@ -817,15 +849,27 @@ export function ComboProductForm({
             </div>
 
             <div>
+              <label className="flex items-center gap-2">
+                <input {...register("isDirectSale")} type="checkbox" />
+                <span className="text-sm font-medium">Bán trực tiếp</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Tab Mô tả */}
+          <div
+            className={
+              activeTab === "description" ? "p-6 space-y-5" : "hidden"
+            }>
+            <div>
               <label className="block text-sm font-medium mb-1">Mô tả</label>
               <textarea
                 {...register("description")}
                 maxLength={1000}
-                className="w-full border rounded px-3 py-2 h-24"
+                className="w-full border rounded px-3 py-2 h-40 bg-white"
                 placeholder="Nhập mô tả sản phẩm"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">
                 Ghi chú đơn hàng
@@ -833,16 +877,9 @@ export function ComboProductForm({
               <textarea
                 {...register("orderTemplate")}
                 maxLength={1000}
-                className="w-full border rounded px-3 py-2 h-24"
+                className="w-full border rounded px-3 py-2 h-40 bg-white"
                 placeholder="Nhập ghi chú đơn hàng"
               />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2">
-                <input {...register("isDirectSale")} type="checkbox" />
-                <span className="text-sm font-medium">Bán trực tiếp</span>
-              </label>
             </div>
           </div>
 

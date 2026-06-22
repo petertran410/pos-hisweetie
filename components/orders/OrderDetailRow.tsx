@@ -11,10 +11,12 @@ import {
   ChevronDown,
   Copy,
   ExternalLink,
+  FileSpreadsheet,
   Loader2,
   MapPin,
   Printer,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import {
   ORDER_STATUS,
@@ -74,6 +76,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const hasPermCancel = useCan("orders", "cancel");
   const hasPermUpdate = useCan("orders", "update");
   const hasPermPrint = useCan("orders", "print");
+  const hasPermExport = useCan("orders", "export");
 
   const isAdmin = user?.roles?.some(
     (role: string) => role === "Admin" || role === "Super Admin"
@@ -245,6 +248,83 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
       await printDeliverySlip("order", order.id);
     } catch (e: any) {
       toast.error(e?.message || "In phiếu giao hàng thất bại");
+    }
+  };
+
+  const handleExportFile = () => {
+    if (!order) return;
+    try {
+      const header = [
+        "Mã hàng",
+        "Tên hàng",
+        "Đơn vị tính",
+        "Số lượng",
+        "Đơn giá",
+        "Giảm giá %",
+        "Giảm giá",
+        "Giá bán",
+        "Thành tiền",
+      ];
+
+      const itemRows = (order.items ?? []).map((item: any) => [
+        item.product?.code ?? item.productCode ?? "",
+        item.product?.name ?? item.productName ?? "",
+        item.product?.unit ?? "",
+        Number(item.quantity) || 0,
+        Number(item.price) || 0,
+        Number(item.discountRatio ?? 0) || 0,
+        Number(item.discount ?? 0) || 0,
+        Number(item.appliedPrice) || 0,
+        Number(item.totalPrice) || 0,
+      ]);
+
+      // Dòng tổng kết: label ở cột áp chót (index 7), giá trị ở cột cuối (index 8).
+      const blank = ["", "", "", "", "", "", ""];
+      const summaryRows = [
+        [...blank, `Tổng tiền hàng (${order.items?.length ?? 0})`, Number(order.totalAmount) || 0],
+        [...blank, "Giảm giá đơn hàng", Number(order.discount) || 0],
+        [...blank, "Phí ship", 0],
+        [...blank, "Tổng cộng", Number(order.grandTotal) || 0],
+        [...blank, "Khách đã trả", Number(order.paidAmount) || 0],
+        [...blank, "Khách cần trả", Number(order.debtAmount) || 0],
+      ];
+
+      const aoa = [header, ...itemRows, ...summaryRows];
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws["!cols"] = [
+        { wch: 12 }, // Mã hàng
+        { wch: 36 }, // Tên hàng
+        { wch: 12 }, // Đơn vị tính
+        { wch: 10 }, // Số lượng
+        { wch: 12 }, // Đơn giá
+        { wch: 10 }, // Giảm giá %
+        { wch: 12 }, // Giảm giá
+        { wch: 14 }, // Giá bán
+        { wch: 14 }, // Thành tiền
+      ];
+
+      // Number format cho các cột tiền/số lượng.
+      const range = XLSX.utils.decode_range(ws["!ref"] as string);
+      const moneyCols = [3, 4, 5, 6, 7, 8];
+      for (let r = 1; r <= range.e.r; r++) {
+        for (const c of moneyCols) {
+          const cell = ws[XLSX.utils.encode_cell({ r, c })];
+          if (cell && typeof cell.v === "number") cell.z = "#,##0";
+        }
+      }
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "ChiTietDatHang");
+
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+        now.getDate()
+      )}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      XLSX.writeFile(wb, `ChiTietDatHang_${order.code}_${stamp}.xlsx`);
+    } catch (e: any) {
+      toast.error(e?.message || "Xuất file thất bại");
     }
   };
 
@@ -828,6 +908,13 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50">
                           <Copy className="w-3.5 h-3.5" />
                           Sao chép
+                        </button>
+                        <button
+                          onClick={handleExportFile}
+                          hidden={!hasPermExport}
+                          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50">
+                          <FileSpreadsheet className="w-3.5 h-3.5" />
+                          Xuất file
                         </button>
                       </div>
                       <div className="flex gap-2">

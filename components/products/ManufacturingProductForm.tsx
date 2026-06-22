@@ -225,7 +225,13 @@ export function ManufacturingProductForm({
 
   const canLinkMisa = usePermission("products", "link_misa");
   const canViewPublication = usePermission("products", "view_publication");
-  const [activeTab, setActiveTab] = useState<"info" | "publication">("info");
+  const canViewCostPrice = usePermission("products", "view_cost_price");
+  const canViewSalePrice = usePermission("products", "view_sale_price");
+  // Chỉ-công-bố: thiếu cả quyền giá vốn lẫn giá bán.
+  const isPublicationOnly = !canViewCostPrice && !canViewSalePrice;
+  const [activeTab, setActiveTab] = useState<
+    "info" | "description" | "publication"
+  >("info");
   const pub = usePublication(product);
 
   // Liên kết với vật tư hàng hóa Misa (lưu mã + tên + đơn vị).
@@ -248,6 +254,9 @@ export function ManufacturingProductForm({
   }, [product]);
 
   const hasCostChanged = (): boolean => {
+    // Thiếu quyền xem giá vốn → giá vốn được derive từ dữ liệu đã bị strip
+    // (NaN). Không coi là thay đổi để tránh bật modal sai + gửi NaN lên BE.
+    if (!canViewCostPrice) return false;
     if (!product) return purchasePrice.value > 0;
     const currentCost =
       product.inventories?.find((inv) => inv.branchId === selectedBranch?.id)
@@ -284,6 +293,9 @@ export function ManufacturingProductForm({
       return;
     }
 
+    // Thiếu quyền giá vốn → calculateTotalPurchasePrice() ra NaN (cost bị strip).
+    // Không reset để tránh NaN lan sang logic khác.
+    if (!canViewCostPrice) return;
     if (!costManuallyEdited.current) {
       purchasePrice.reset(calculateTotalPurchasePrice());
     }
@@ -514,7 +526,7 @@ export function ManufacturingProductForm({
 
       const publicationPayload = await pub.getPayload(canViewPublication);
 
-      const formData = {
+      const formData: Record<string, any> = {
         code: data.code,
         name: data.name,
         type: 4,
@@ -524,18 +536,6 @@ export function ManufacturingProductForm({
         middleName: data.middleName || undefined,
         childName: data.childName || undefined,
         tradeMarkId: data.tradeMarkId ? Number(data.tradeMarkId) : undefined,
-        basePrice: basePrice.value,
-        purchasePrice: purchasePrice.value,
-        manualCostOverride: costManuallyEdited.current,
-        stockQuantity: stockQuantity.value,
-        minStockAlert: minStockAlert.value,
-        maxStockAlert: maxStockAlert.value,
-        weight: weight.value || undefined,
-        weightUnit: data.weightUnit || "kg",
-        shippingWeight: shippingWeight.value || undefined,
-        shippingWeightUnit: data.shippingWeightUnit || "g",
-        vat: data.vat != null && !isNaN(Number(data.vat)) ? Number(data.vat) : 8,
-        unit: data.unit || undefined,
         ...(canLinkMisa
           ? {
               misa_code: misaMapping.code,
@@ -547,13 +547,42 @@ export function ManufacturingProductForm({
         isActive: data.isActive ?? true,
         imageUrls: uploadedUrls,
         ...publicationPayload,
+        branchId: selectedBranch?.id,
+      };
+
+      // Luồng chỉ-công-bố: không gửi giá/tồn kho/khối lượng/thành phần để tránh
+      // ghi đè dữ liệu thật, tránh NaN (giá vốn bị strip) và StockAudit ảo.
+      if (isPublicationOnly) {
+        await submitProduct(formData);
+        return;
+      }
+
+      Object.assign(formData, {
+        ...(canViewSalePrice ? { basePrice: basePrice.value } : {}),
+        ...(canViewCostPrice
+          ? {
+              purchasePrice: purchasePrice.value,
+              manualCostOverride: costManuallyEdited.current,
+            }
+          : {}),
+        stockQuantity: stockQuantity.value,
+        minStockAlert: minStockAlert.value,
+        maxStockAlert: maxStockAlert.value,
+        weight: weight.value || undefined,
+        weightUnit: data.weightUnit || "kg",
+        shippingWeight: shippingWeight.value || undefined,
+        shippingWeightUnit: data.shippingWeightUnit || "g",
+        vat:
+          data.vat != null && !isNaN(Number(data.vat))
+            ? Number(data.vat)
+            : 8,
+        unit: data.unit || undefined,
         components: components.map((comp) => ({
           componentProductId: comp.componentProductId,
           quantity: comp.quantity,
           inputMode: inputModes[comp.componentProductId] ?? "gram",
         })),
-        branchId: selectedBranch?.id,
-      };
+      });
 
       if (hasCostChanged()) {
         setPendingFormData(formData);
@@ -627,6 +656,16 @@ export function ManufacturingProductForm({
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}>
             Thông tin
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("description")}
+            className={`py-3 px-3 border-b-2 ${
+              activeTab === "description"
+                ? "border-brand text-brand font-medium"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
+            Mô tả
           </button>
           {canViewPublication && (
             <button
@@ -1021,41 +1060,47 @@ export function ManufacturingProductForm({
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Giá vốn
-                </label>
-                <input
-                  type="text"
-                  value={purchasePrice.displayValue}
-                  onChange={(e) => {
-                    costManuallyEdited.current = true;
-                    purchasePrice.handleChange(e);
-                  }}
-                  onBlur={purchasePrice.handleBlur}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Tự động tính:{" "}
-                  {calculateTotalPurchasePrice().toLocaleString("vi-VN")} đ
-                </p>
+            {(canViewCostPrice || canViewSalePrice) && (
+              <div className="grid grid-cols-2 gap-4">
+                {canViewCostPrice && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Giá vốn
+                    </label>
+                    <input
+                      type="text"
+                      value={purchasePrice.displayValue}
+                      onChange={(e) => {
+                        costManuallyEdited.current = true;
+                        purchasePrice.handleChange(e);
+                      }}
+                      onBlur={purchasePrice.handleBlur}
+                      className="w-full border rounded px-3 py-2"
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Tự động tính:{" "}
+                      {calculateTotalPurchasePrice().toLocaleString("vi-VN")} đ
+                    </p>
+                  </div>
+                )}
+                {canViewSalePrice && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Giá bán
+                    </label>
+                    <input
+                      type="text"
+                      value={formatNumberInput(basePrice.displayValue)}
+                      onChange={basePrice.handleChange}
+                      onBlur={basePrice.handleBlur}
+                      className="w-full border rounded px-3 py-2"
+                      placeholder="0"
+                    />
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Giá bán
-                </label>
-                <input
-                  type="text"
-                  value={formatNumberInput(basePrice.displayValue)}
-                  onChange={basePrice.handleChange}
-                  onBlur={basePrice.handleBlur}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                />
-              </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-3 gap-4">
               <div>
@@ -1226,15 +1271,27 @@ export function ManufacturingProductForm({
             </div>
 
             <div>
+              <label className="flex items-center gap-2">
+                <input {...register("isDirectSale")} type="checkbox" />
+                <span className="text-sm font-medium">Bán trực tiếp</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Tab Mô tả */}
+          <div
+            className={
+              activeTab === "description" ? "p-6 space-y-5" : "hidden"
+            }>
+            <div>
               <label className="block text-sm font-medium mb-1">Mô tả</label>
               <textarea
                 {...register("description")}
                 maxLength={1000}
-                className="w-full border rounded px-3 py-2 h-24 resize-none"
+                className="w-full border rounded px-3 py-2 h-40 bg-white"
                 placeholder="Nhập mô tả sản phẩm"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">
                 Ghi chú đơn hàng
@@ -1242,16 +1299,9 @@ export function ManufacturingProductForm({
               <textarea
                 {...register("orderTemplate")}
                 maxLength={1000}
-                className="w-full border rounded px-3 py-2 h-24 resize-none"
+                className="w-full border rounded px-3 py-2 h-40 bg-white"
                 placeholder="Nhập ghi chú đơn hàng"
               />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2">
-                <input {...register("isDirectSale")} type="checkbox" />
-                <span className="text-sm font-medium">Bán trực tiếp</span>
-              </label>
             </div>
           </div>
 

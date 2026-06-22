@@ -8,11 +8,12 @@ import { toast } from "sonner";
 
 export function useCategories(
   type?: CategoryType,
-  options?: { silentForbidden?: boolean }
+  options?: { silentForbidden?: boolean; enabled?: boolean }
 ) {
   return useQuery({
     queryKey: ["categories", type],
     queryFn: () => categoriesApi.getAll(type),
+    enabled: options?.enabled ?? true,
     ...(options?.silentForbidden
       ? { meta: { silentForbidden: true } }
       : {}),

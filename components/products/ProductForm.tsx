@@ -257,6 +257,12 @@ export function ProductForm({
     }
   }, [product, selectedBranch]);
 
+  // Trạng thái chỉ-công-bố: user không có quyền xem giá vốn lẫn giá bán.
+  // Khi đó: không gửi giá/tồn kho/khối lượng để tránh ghi đè giá trị thật
+  // hoặc tạo StockAudit ảo, và tránh NaN làm Prisma reject.
+  const isPublicationOnly =
+    !canViewCostPrice && !canViewSalePrice;
+
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
@@ -274,7 +280,7 @@ export function ProductForm({
       // Upload tài liệu + gói dữ liệu công bố (chỉ khi có quyền xem).
       const publicationPayload = await pub.getPayload(canViewPublication);
 
-      const formData = {
+      const formData: Record<string, any> = {
         code: data.code,
         name: data.name,
         type: product ? product.type : productType || 2,
@@ -295,23 +301,8 @@ export function ProductForm({
         // Chỉ gửi giá vốn khi user có quyền xem — tránh ghi đè 0 lên giá vốn
         // thật khi backend đã strip cost khỏi response.
         ...(canViewCostPrice ? { purchasePrice: purchasePrice.value } : {}),
-        basePrice: basePrice.value,
-        stockQuantity: Number(data.stockQuantity) || 0,
-        minStockAlert: Number(data.minStockAlert) || 0,
-        maxStockAlert: Number(data.maxStockAlert) || 0,
-        weight: data.isPieceUnit ? undefined : weightValue || undefined,
-        weightUnit: data.weightUnit,
-        shippingWeight: shippingWeightValue || undefined,
-        shippingWeightUnit: data.shippingWeightUnit || "g",
-        vat: data.vat != null && !isNaN(Number(data.vat)) ? Number(data.vat) : 8,
-        unit: data.unit || undefined,
-        conversionValue: data.conversionValue
-          ? Number(data.conversionValue)
-          : undefined,
-        attributesText:
-          attributes.length > 0
-            ? attributes.map((a) => `${a.name}:${a.value}`).join("|")
-            : undefined,
+        // Chỉ gửi giá bán khi có quyền xem, tránh NaN/0 ghi đè.
+        ...(canViewSalePrice ? { basePrice: basePrice.value } : {}),
         imageUrls: uploadedUrls,
         // Dữ liệu công bố (documents + publicationLocation/Date/Link) — hook
         // trả {} khi thiếu quyền để tránh xóa trắng dữ liệu thật.
@@ -321,6 +312,36 @@ export function ProductForm({
         isActive: Boolean(data.isActive),
         branchId: selectedBranch?.id,
       };
+
+      // Luồng chỉ-công-bố: bỏ hết giá/tồn kho/khối lượng/thuế/đơn vị để
+      // tránh ghi đè và tránh tạo StockAudit ảo khi onHand round-trip sai.
+      if (isPublicationOnly) {
+        await submitProduct(formData);
+        return;
+      }
+
+      // Full payload — chỉ gửi khi có đủ quyền hoặc có giá muốn cập nhật.
+      Object.assign(formData, {
+        stockQuantity: Number(data.stockQuantity) || 0,
+        minStockAlert: Number(data.minStockAlert) || 0,
+        maxStockAlert: Number(data.maxStockAlert) || 0,
+        weight: data.isPieceUnit ? undefined : weightValue || undefined,
+        weightUnit: data.weightUnit,
+        shippingWeight: shippingWeightValue || undefined,
+        shippingWeightUnit: data.shippingWeightUnit || "g",
+        vat:
+          data.vat != null && !isNaN(Number(data.vat))
+            ? Number(data.vat)
+            : 8,
+        unit: data.unit || undefined,
+        conversionValue: data.conversionValue
+          ? Number(data.conversionValue)
+          : undefined,
+        attributesText:
+          attributes.length > 0
+            ? attributes.map((a) => `${a.name}:${a.value}`).join("|")
+            : undefined,
+      });
 
       if (canViewCostPrice && hasCostChanged(purchasePrice.value)) {
         setPendingFormData(formData);
