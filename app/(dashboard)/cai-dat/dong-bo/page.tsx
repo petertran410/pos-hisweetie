@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/config/api";
-import { RefreshCw, XCircle, Loader2, Database, ShieldCheck, Users } from "lucide-react";
+import { RefreshCw, XCircle, Loader2, Database, ShieldCheck, Users, Package } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { useSyncMisaDictionary } from "@/lib/hooks/useMisa";
@@ -118,6 +118,45 @@ export default function SyncSettingsPage() {
     });
     if (result.isConfirmed) {
       syncCustomersToLark.mutate();
+    }
+  };
+
+  // Đồng bộ sản phẩm lên Lark
+  const syncProductsToLark = useMutation({
+    mutationFn: () =>
+      apiClient.post<{ ok: boolean; success: number; failed: number }>(
+        "/lark-sync/products/full",
+      ),
+    onSuccess: (res) => {
+      Swal.fire({
+        title: "Đồng bộ hoàn tất",
+        text: `Thành công: ${res?.success ?? 0} — Thất bại: ${res?.failed ?? 0}`,
+        icon: "success",
+        confirmButtonColor: "#2563eb",
+      });
+    },
+    onError: () => {
+      Swal.fire({
+        title: "Đồng bộ thất bại",
+        text: "Không thể đồng bộ sản phẩm lên Lark. Vui lòng thử lại.",
+        icon: "error",
+        confirmButtonColor: "#2563eb",
+      });
+    },
+  });
+
+  const handleSyncProductsToLark = async () => {
+    const result = await Swal.fire({
+      title: "Đồng bộ sản phẩm lên Lark?",
+      text: "Đẩy toàn bộ sản phẩm lên bảng Lark: mã, tên, thương hiệu, đơn vị, tồn kho & giá vốn (Kho Hà Nội, Kho Sài Gòn, Văn Phòng Hà Nội), bảng giá... Quá trình có thể mất vài phút.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Đồng bộ ngay",
+      cancelButtonText: "Hủy",
+      confirmButtonColor: "#2563eb",
+    });
+    if (result.isConfirmed) {
+      syncProductsToLark.mutate();
     }
   };
 
@@ -489,6 +528,80 @@ export default function SyncSettingsPage() {
                   <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                   <p className="text-sm text-red-700">
                     Đồng bộ khách hàng lên Lark thất bại. Vui lòng thử lại.
+                  </p>
+                </div>
+              )}
+            </div>
+          </PermissionGate>
+
+          {/* Đồng bộ sản phẩm lên Lark */}
+          <PermissionGate resource="products" action="view">
+            <div className="bg-white rounded-lg border p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-amber-100">
+                    <Package className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Đồng bộ sản phẩm lên Lark
+                    </h2>
+                    <p className="text-sm text-gray-500 max-w-2xl">
+                      Đẩy toàn bộ sản phẩm lên bảng Lark: mã, tên, thương hiệu,
+                      đơn vị, nguồn gốc, loại hàng, danh mục, tồn kho & giá vốn
+                      (Kho Hà Nội, Kho Sài Gòn, Văn Phòng Hà Nội) và các bảng
+                      giá. Quá trình có thể mất vài phút.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSyncProductsToLark}
+                  disabled={syncProductsToLark.isPending}
+                  className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  {syncProductsToLark.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Đang đồng bộ...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      Đồng bộ ngay
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {syncProductsToLark.isSuccess && syncProductsToLark.data && (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  {[
+                    {
+                      label: "Thành công",
+                      value: syncProductsToLark.data.success ?? 0,
+                    },
+                    {
+                      label: "Thất bại",
+                      value: syncProductsToLark.data.failed ?? 0,
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="p-3 bg-gray-50 border rounded-lg text-center">
+                      <p className="text-xs text-gray-500">{stat.label}</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {stat.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {syncProductsToLark.isError && (
+                <div className="mt-4 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">
+                    Đồng bộ sản phẩm lên Lark thất bại. Vui lòng thử lại.
                   </p>
                 </div>
               )}

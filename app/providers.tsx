@@ -10,37 +10,22 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/store/auth";
 import { initBranchCrossTabSync } from "@/lib/store/branch";
 
-// Nhớ các thông báo "không có quyền" (403) đã hiển thị để chỉ toast 1 lần,
-// tránh lặp lại mỗi khi người dùng chuyển trang trong cùng phiên app.
-const shownForbiddenMessages = new Set<string>();
-
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
         queryCache: new QueryCache({
           // Xử lý lỗi tập trung cho tất cả useQuery (fires 1 lần sau khi hết retry)
-          onError: (error: any, query) => {
+          onError: (error: any) => {
             const status = error?.status;
 
             // 401: đã tự clear auth + redirect sang /login → không cần toast.
             if (status === 401) return;
 
-            // Query "tra cứu phụ" (vd: product picker trong form) có thể tự
-            // tắt toast lỗi toàn cục qua meta.silentForbidden — tránh popup
-            // "không có quyền" khi UI đã chủ động ẩn chức năng đó.
-            if (status === 403 && query?.meta?.silentForbidden) return;
-
-            // 403 (không có quyền): chỉ hiển thị 1 lần cho mỗi nội dung,
-            // không spam mỗi lần chuyển trang/refetch.
-            if (status === 403) {
-              const message =
-                error?.message || "Bạn không có quyền thực hiện thao tác này";
-              if (shownForbiddenMessages.has(message)) return;
-              shownForbiddenMessages.add(message);
-              toast.error(message, { id: `forbidden:${message}` });
-              return;
-            }
+            // 403 (không có quyền): KHÔNG popup. UI đã chủ động ẩn chức năng
+            // user không có quyền (useFilteredNav/usePermission/PagePermissionGuard),
+            // nên toast 403 chỉ gây phiền (spam mỗi lần reload/refetch query).
+            if (status === 403) return;
 
             toast.error(error.message || "Có lỗi xảy ra");
           },
