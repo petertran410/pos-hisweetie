@@ -124,18 +124,6 @@ export interface Tab {
 const STORAGE_KEY = "pos-tabs";
 const EDIT_STORAGE_KEY = "pos-edit-state";
 
-// Gom promotionId từ các dòng quà có sẵn (server) để bật lại opt-in cho dòng thường.
-const collectEnabledPromoIds = (items: any[]): number[] => {
-  const ids = new Set<number>();
-  for (const it of items || []) {
-    const isGift =
-      it?.isGift ||
-      it?.lineType === "gift" ||
-      it?.lineType === "discounted_buy";
-    if (isGift && it?.promotionId != null) ids.add(Number(it.promotionId));
-  }
-  return [...ids];
-};
 const getPriceBookStorageKey = (userId?: number) =>
   `pos-selected-price-book-${userId || "default"}`;
 
@@ -309,25 +297,46 @@ export default function BanHangPage() {
     const timer = setTimeout(async () => {
       promoSyncRef.current = signature;
       try {
-        const res = await promotionsApi.evaluate({
-          branchId,
-          customerId: activeTab.selectedCustomer?.id,
-          userId: activeTab.soldById ?? user?.id,
-          items: normalItems.map((it) => ({
-            productId: Number(it.product.id),
-            quantity: Number(it.quantity),
-            price: Number(it.price),
-            discount: Number(it.discount) || 0,
-          })),
-        });
+        // 2 lần đánh giá:
+        // (1) discovery — KHÔNG truyền opt-in → để hiện badge "Khuyến Mãi"
+        //     trên mọi dòng đủ điều kiện (kể cả chưa bật).
+        // (2) applied — truyền opt-in → tính SL hàng tặng theo đúng dòng đã bật.
+        const [discoveryRes, appliedRes] = await Promise.all([
+          promotionsApi.evaluate({
+            branchId,
+            customerId: activeTab.selectedCustomer?.id,
+            userId: activeTab.soldById ?? user?.id,
+            items: normalItems.map((it) => ({
+              productId: Number(it.product.id),
+              quantity: Number(it.quantity),
+              price: Number(it.price),
+              discount: Number(it.discount) || 0,
+            })),
+          }),
+          promotionsApi.evaluate({
+            branchId,
+            customerId: activeTab.selectedCustomer?.id,
+            userId: activeTab.soldById ?? user?.id,
+            items: normalItems.map((it) => ({
+              productId: Number(it.product.id),
+              quantity: Number(it.quantity),
+              price: Number(it.price),
+              discount: Number(it.discount) || 0,
+              enabledPromotionIds: it.promoEnabledIds || [],
+            })),
+          }),
+        ]);
 
-        // Chỉ lấy KM loại sinh quà / mua kèm
-        const giftPromos = res.eligiblePromotions.filter(
-          (p) =>
-            p.type === "BUY_X_GET_Y" ||
-            p.type === "BUY_N_GET_M_SAME" ||
-            p.type === "BUY_X_BUY_Y_PRICE"
-        );
+        const isGiftType = (p: any) =>
+          p.type === "BUY_X_GET_Y" ||
+          p.type === "BUY_N_GET_M_SAME" ||
+          p.type === "BUY_X_BUY_Y_PRICE";
+
+        // Badge: dựa trên discovery (không phụ thuộc opt-in)
+        const discoveryGiftPromos =
+          discoveryRes.eligiblePromotions.filter(isGiftType);
+        // Sinh dòng quà: dựa trên applied (đã lọc theo opt-in)
+        const giftPromos = appliedRes.eligiblePromotions.filter(isGiftType);
 
         setTabs((prev) =>
           prev.map((t) => {
@@ -342,7 +351,7 @@ export default function BanHangPage() {
             > = {};
             for (const n of normals) {
               const pid = Number(n.product?.id);
-              const matched = giftPromos.filter((p) =>
+              const matched = discoveryGiftPromos.filter((p) =>
                 (p.matchedProductIds || []).includes(pid)
               );
               if (matched.length > 0) {
@@ -950,9 +959,6 @@ export default function BanHangPage() {
         }
       });
 
-      const remainingEnabledPromoIds = collectEnabledPromoIds(
-        existingOrder.items || []
-      );
       const remainingCartItems: CartItem[] = (existingOrder.items || [])
         .map((item: any) => {
           const invoiced = invoicedQuantities[item.product?.id] || 0;
@@ -978,9 +984,12 @@ export default function BanHangPage() {
                   promoLineType,
                   promotionId: item.promotionId ?? undefined,
                 }
-              : remainingEnabledPromoIds.length > 0
-                ? { promoEnabledIds: remainingEnabledPromoIds }
-                : {}),
+              : {
+                  promoEnabledIds:
+                    item.promotionId != null
+                      ? [Number(item.promotionId)]
+                      : [],
+                }),
           };
         })
         .filter(Boolean) as CartItem[];
@@ -1042,9 +1051,6 @@ export default function BanHangPage() {
             `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
         }))
       : (() => {
-          const enabledPromoIds = collectEnabledPromoIds(
-            existingOrder.items || []
-          );
           return (
             existingOrder.items?.map((item: any) => {
               const promoLineType =
@@ -1067,9 +1073,12 @@ export default function BanHangPage() {
                       promoLineType,
                       promotionId: item.promotionId ?? undefined,
                     }
-                  : enabledPromoIds.length > 0
-                    ? { promoEnabledIds: enabledPromoIds }
-                    : {}),
+                  : {
+                      promoEnabledIds:
+                        item.promotionId != null
+                          ? [Number(item.promotionId)]
+                          : [],
+                    }),
               };
             }) || []
           );
@@ -1207,9 +1216,6 @@ export default function BanHangPage() {
             `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
         }))
       : (() => {
-          const enabledPromoIds = collectEnabledPromoIds(
-            existingInvoice.details || []
-          );
           return (
             existingInvoice.details?.map((item: any) => {
               const promoLineType =
@@ -1232,9 +1238,12 @@ export default function BanHangPage() {
                       promoLineType,
                       promotionId: item.promotionId ?? undefined,
                     }
-                  : enabledPromoIds.length > 0
-                    ? { promoEnabledIds: enabledPromoIds }
-                    : {}),
+                  : {
+                      promoEnabledIds:
+                        item.promotionId != null
+                          ? [Number(item.promotionId)]
+                          : [],
+                    }),
               };
             }) || []
           );
@@ -1529,7 +1538,6 @@ export default function BanHangPage() {
       }
     });
 
-    const remainingEnabledPromoIds = collectEnabledPromoIds(order.items || []);
     const remainingCartItems: CartItem[] = (order.items || [])
       .map((item: any) => {
         const invoiced = invoicedQuantities[item.productId] || 0;
@@ -1554,9 +1562,10 @@ export default function BanHangPage() {
                 promoLineType,
                 promotionId: item.promotionId ?? undefined,
               }
-            : remainingEnabledPromoIds.length > 0
-              ? { promoEnabledIds: remainingEnabledPromoIds }
-              : {}),
+            : {
+                promoEnabledIds:
+                  item.promotionId != null ? [Number(item.promotionId)] : [],
+              }),
         };
       })
       .filter((item: CartItem) => item.quantity > 0);
@@ -1747,6 +1756,9 @@ export default function BanHangPage() {
                 : {}),
               ...(isDiscountedBuy
                 ? { lineType: "discounted_buy", promotionId: item.promotionId }
+                : {}),
+              ...(!isGift && !isDiscountedBuy
+                ? { enabledPromotionIds: item.promoEnabledIds || [] }
                 : {}),
             };
           }),
@@ -2198,6 +2210,9 @@ export default function BanHangPage() {
               ...(isDiscountedBuy
                 ? { lineType: "discounted_buy", promotionId: item.promotionId }
                 : {}),
+              ...(!isGift && !isDiscountedBuy
+                ? { enabledPromotionIds: item.promoEnabledIds || [] }
+                : {}),
             };
           }),
           skipPromotions: false,
@@ -2361,6 +2376,9 @@ export default function BanHangPage() {
             ...(isDiscountedBuy
               ? { lineType: "discounted_buy", promotionId: item.promotionId }
               : {}),
+            ...(!isGift && !isDiscountedBuy
+              ? { enabledPromotionIds: item.promoEnabledIds || [] }
+              : {}),
           };
         }),
         delivery: {
@@ -2509,6 +2527,9 @@ export default function BanHangPage() {
           ...(isDiscountedBuy
             ? { lineType: "discounted_buy", promotionId: item.promotionId }
             : {}),
+          ...(!isGift && !isDiscountedBuy
+            ? { enabledPromotionIds: item.promoEnabledIds || [] }
+            : {}),
         };
       });
       documentData.delivery = {
@@ -2598,6 +2619,9 @@ export default function BanHangPage() {
             : {}),
           ...(isDiscountedBuy
             ? { lineType: "discounted_buy", promotionId: item.promotionId }
+            : {}),
+          ...(!isGift && !isDiscountedBuy
+            ? { enabledPromotionIds: item.promoEnabledIds || [] }
             : {}),
         };
       });
