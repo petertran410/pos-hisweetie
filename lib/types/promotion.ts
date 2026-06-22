@@ -194,6 +194,8 @@ export interface EvaluateItem {
   quantity: number;
   price: number;
   discount?: number;
+  // Opt-in per-line: promotionId mà thu ngân bật KM cho dòng này.
+  enabledPromotionIds?: number[];
 }
 
 export interface PromoGiftLine {
