@@ -114,6 +114,28 @@ export const orderSuppliersApi = {
   },
 
   /**
+   * Giá nhập gần nhất của từng sản phẩm theo MỘT nhà cung cấp (cột price,
+   * không trừ giảm giá), lấy từ phiếu đặt hàng nhập gần nhất (loại phiếu Đã hủy).
+   * Sản phẩm chưa có lịch sử với NCC → fallback giá vốn theo chi nhánh (nếu
+   * truyền branchId). Endpoint chạy ở BE nên KHÔNG bị strip giá vốn theo quyền
+   * → dùng làm "giá nền" cho mọi user, kể cả user không có quyền xem giá.
+   * Trả về { [productId]: number | null } — null nếu không có cả hai nguồn.
+   */
+  getLatestSupplierPrices: (
+    supplierId: number,
+    productIds: number[],
+    branchId?: number
+  ): Promise<Record<number, number | null>> => {
+    if (!supplierId || !productIds.length) return Promise.resolve({});
+    const params: Record<string, any> = {
+      supplierId,
+      productIds: productIds.join(","),
+    };
+    if (branchId) params.branchId = branchId;
+    return apiClient.get(`/order-suppliers/latest-supplier-prices`, params);
+  },
+
+  /**
    * Bảng phẳng toàn bộ dòng sản phẩm của các PĐN khớp filter — trang
    * "Đặt hàng nhập chi tiết".
    */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   X,
@@ -27,6 +27,7 @@ import { CreditCard, Calendar } from "lucide-react";
 import { SupplierPaymentModal } from "./SupplierPaymentModal";
 import { ProductPickerDropdown } from "@/components/products/ProductPickerDropdown";
 import { useCan } from "@/lib/hooks/useCan";
+import { useLatestSupplierPrices } from "@/lib/hooks/useLatestSupplierPrices";
 
 interface ProductItem {
   productId: number;
@@ -378,6 +379,57 @@ export function OrderSupplierForm({
   );
   const selectedSupplier = selectedSupplierFromList || selectedSupplierFetched;
 
+  // ─── Auto-load giá nhập gần nhất theo nhà cung cấp ──────────────────────────
+  // Chạy cho MỌI user (kể cả user không có quyền xem giá): giá là "nền" để tính
+  // subTotal và lưu phiếu. Tầng render cột mới ẩn theo canViewSalePrice.
+  const productIds = useMemo(
+    () => products.map((p) => p.productId),
+    [products]
+  );
+  const { pricesByProduct: supplierPrices, isLoading: isLoadingSupplierPrices } =
+    useLatestSupplierPrices(
+      supplierId || undefined,
+      productIds,
+      branchId || undefined
+    );
+  // NCC trước đó — init = NCC của phiếu đang sửa để mount KHÔNG ghi đè giá đã lưu.
+  const prevSupplierRef = useRef<number>(orderSupplier?.supplierId || 0);
+  // Tập productId cần áp giá NCC (thêm SP mới khi đã có NCC, hoặc đổi NCC).
+  const pendingPriceRef = useRef<Set<number>>(new Set());
+
+  // Đổi NCC (user-initiated) → đánh dấu áp giá lại TOÀN BỘ dòng theo NCC mới.
+  useEffect(() => {
+    if (prevSupplierRef.current === supplierId) return;
+    prevSupplierRef.current = supplierId;
+    if (!supplierId) return;
+    products.forEach((p) => pendingPriceRef.current.add(p.productId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supplierId]);
+
+  // Khi đã có giá NCC trả về → ghi đè price cho các dòng đang chờ.
+  useEffect(() => {
+    if (isLoadingSupplierPrices || pendingPriceRef.current.size === 0) return;
+    setProducts((prev) => {
+      let changed = false;
+      const next = prev.map((p) => {
+        if (!pendingPriceRef.current.has(p.productId)) return p;
+        const lp = supplierPrices[p.productId];
+        pendingPriceRef.current.delete(p.productId);
+        // Không có lịch sử với NCC này → giữ nguyên giá vốn đang có.
+        if (lp == null) return p;
+        changed = true;
+        return {
+          ...p,
+          price: lp,
+          subTotal: (lp - p.discount) * p.quantity,
+        };
+      });
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supplierPrices, isLoadingSupplierPrices]);
+
+
   useEffect(() => {
     if (orderSupplier?.items) {
       const loadedProducts: ProductItem[] = orderSupplier.items.map((item) => {
@@ -487,6 +539,13 @@ export function OrderSupplierForm({
     };
 
     setProducts((prev) => [...prev, newProduct]);
+
+    // Đã chọn NCC từ trước → đánh dấu áp giá nhập gần nhất theo NCC cho SP này
+    // (effect sẽ ghi đè khi data về; giá vốn ở trên chỉ là fallback). Chạy cho
+    // mọi user để subTotal nền luôn đúng dù không hiển thị cột giá.
+    if (supplierId) {
+      pendingPriceRef.current.add(product.id);
+    }
   };
 
   const handleRemoveProduct = (index: number) => {
