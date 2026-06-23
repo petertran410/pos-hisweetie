@@ -486,10 +486,19 @@ export function CustomerForm({
       "isDefault",
     ];
 
+    // Field text user-editable — cần gửi cả "" để BE xóa được giá trị cũ.
+    const clearableTextFields = new Set([
+      "receiver",
+      "contactNumber",
+      "label",
+      "address",
+    ]);
+
     const clean: Record<string, any> = {};
     for (const key of allowedFields) {
       const val = addr[key];
-      if (val === null || val === undefined || val === "") continue;
+      if (val === null || val === undefined) continue;
+      if (val === "" && !clearableTextFields.has(key)) continue;
       if (key === "id") {
         clean.id = typeof val === "number" ? val : parseInt(val, 10);
       } else if (key === "isDefault") {

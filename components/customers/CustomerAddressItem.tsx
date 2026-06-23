@@ -197,10 +197,8 @@ export function CustomerAddressItem({
           <label className="block text-sm font-medium mb-2">Người nhận</label>
           <input
             type="text"
-            value={address.receiver || ""}
-            onChange={(e) =>
-              updateField("receiver", e.target.value || undefined)
-            }
+            value={address.receiver ?? ""}
+            onChange={(e) => updateField("receiver", e.target.value)}
             placeholder="Tên người nhận"
             className="w-full border rounded px-3 py-2"
           />

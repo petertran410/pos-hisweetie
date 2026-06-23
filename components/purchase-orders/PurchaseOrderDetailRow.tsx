@@ -77,6 +77,23 @@ const getPaymentMethodLabel = (method: string) => {
   }
 };
 
+// Trả về label + className cho badge phân loại hàng. Pattern giống
+// `getConditionLabel` trong InvoiceItemsList.tsx:173-188 nhưng chỉ hiển
+// thị "Loại B" (không hiển thị "Bục rách" theo yêu cầu UX — phía nhập
+// hàng dùng thuật ngữ thân thiện hơn). Hàng thường ("normal") trả về
+// null → caller không render badge.
+const getConditionLabel = (
+  conditionType?: string
+): { text: string; className: string } | null => {
+  if (conditionType === "damaged") {
+    return {
+      text: "Loại B",
+      className: "bg-red-50 text-red-600 border-red-200",
+    };
+  }
+  return null;
+};
+
 export function PurchaseOrderDetailRow({
   purchaseOrderId,
   colSpan,
@@ -480,6 +497,9 @@ export function PurchaseOrderDetailRow({
                               <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
                                 Số lượng
                               </th>
+                              <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Loại
+                              </th>
                               {canViewPrice && (
                                 <>
                                   <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -520,6 +540,26 @@ export function PurchaseOrderDetailRow({
                                   <td className="px-3 py-2 text-center text-sm text-gray-700">
                                     {Number(item.quantity)}
                                   </td>
+                                  <td className="px-3 py-2 text-center">
+                                    {(() => {
+                                      const label = getConditionLabel(
+                                        item.conditionType
+                                      );
+                                      if (!label) {
+                                        return (
+                                          <span className="text-xs text-gray-400">
+                                            Tốt
+                                          </span>
+                                        );
+                                      }
+                                      return (
+                                        <span
+                                          className={`px-2 py-0.5 text-xs rounded-full border ${label.className}`}>
+                                          {label.text}
+                                        </span>
+                                      );
+                                    })()}
+                                  </td>
                                   {canViewPrice && (
                                     <>
                                       <td className="px-3 py-2 text-right text-sm text-gray-700">
@@ -538,7 +578,7 @@ export function PurchaseOrderDetailRow({
                             ) : (
                               <tr>
                                 <td
-                                  colSpan={canViewPrice ? 7 : 4}
+                                  colSpan={canViewPrice ? 8 : 5}
                                   className="px-3 py-6 text-center text-sm text-gray-400">
                                   Không có sản phẩm
                                 </td>

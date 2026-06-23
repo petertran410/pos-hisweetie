@@ -270,8 +270,8 @@ export function CustomerAddressFormModal({
               </label>
               <input
                 type="text"
-                value={form.receiver || ""}
-                onChange={(e) => set("receiver", e.target.value || undefined)}
+                value={form.receiver ?? ""}
+                onChange={(e) => set("receiver", e.target.value)}
                 placeholder="Tên người nhận"
                 className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
               />

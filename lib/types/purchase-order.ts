@@ -62,6 +62,14 @@ export interface PurchaseOrderItem {
   totalPrice: number;
   description?: string;
   serialNumbers?: string;
+  // Số thứ tự dòng trong phiếu (1, 2, 3...). Cho phép cùng 1 sản phẩm
+  // xuất hiện nhiều dòng (vd 1 dòng hàng thường + 1 dòng loại B). Nullable
+  // vì row cũ (data trước migration) có thể chưa có giá trị.
+  lineNumber?: number;
+  // Phân loại hàng: "normal" (hàng thường, mặc định) hoặc "damaged" (loại B
+  // = bục rách). Khi hoàn thành phiếu, phần "damaged" được cộng vào
+  // Inventory.damagedQuantity (riêng, không ảnh hưởng tổng onHand).
+  conditionType?: "normal" | "damaged";
   product?: {
     id: number;
     code: string;

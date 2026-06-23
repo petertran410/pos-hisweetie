@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { X, Search, ChevronDown, Minus, Plus, Calendar } from "lucide-react";
+import { X, Search, ChevronDown, Minus, Plus, Calendar, Copy } from "lucide-react";
 import { MiniCalendar } from "@/components/ui/MiniCalendar";
 import { useSuppliers, useSupplier } from "@/lib/hooks/useSuppliers";
 import { useBranches } from "@/lib/hooks/useBranches";
@@ -115,6 +115,12 @@ interface ProductItem {
   // nguồn chính: đổi SL/giảm giá sẽ suy ra Đơn giá (= thành tiền / SL + giảm
   // giá). Khi false (mặc định): Đơn giá là nguồn chính, Thành tiền tự tính.
   manualSubTotal?: boolean;
+  // Phân loại hàng: "normal" (hàng thường, mặc định — UI hiển thị "Tốt")
+  // hoặc "damaged" (loại B = bục rách). Mỗi dòng có thể là normal hoặc
+  // damaged; cùng 1 sản phẩm có thể có nhiều dòng (vd 1 dòng Tốt + 1 dòng
+  // Loại B). Khi hoàn thành phiếu, phần damaged được cộng vào
+  // Inventory.damagedQuantity (riêng); phần normal cộng vào Inventory.onHand.
+  conditionType?: "normal" | "damaged";
 }
 
 interface PurchaseOrderFormProps {
@@ -288,6 +294,11 @@ export function PurchaseOrderForm({
           inventory: 0,
           vatRate: Number((item.product as any)?.vat ?? 8),
           note: item.description,
+          // Fallback "normal" cho row cũ (data trước migration — không có
+          // field conditionType). Row mới (sau migration) sẽ có đúng giá trị
+          // từ BE trả về.
+          conditionType:
+            (item as any).conditionType === "damaged" ? "damaged" : "normal",
         };
       });
       setProducts(loadedProducts);
@@ -317,6 +328,10 @@ export function PurchaseOrderForm({
           inventory: 0,
           vatRate: Number((item.product as any)?.vat ?? 8),
           note: item.description,
+          // Copy kèm conditionType để dòng "Loại B" trong PN nguồn được
+          // giữ nguyên khi user copy sang PN mới.
+          conditionType:
+            (item as any).conditionType === "damaged" ? "damaged" : "normal",
         };
       });
       setProducts(loadedProducts);
@@ -348,6 +363,10 @@ export function PurchaseOrderForm({
             inventory: 0,
             vatRate: Number((item as any).product?.vat ?? 8),
             note: item.description,
+            // PDN không có phân loại hàng → tất cả items kế thừa sang PN
+            // mặc định là "normal". Nếu muốn nhập 1 phần là loại B, user
+            // có thể duplicate dòng sau khi form load và đổi type.
+            conditionType: "normal" as const,
           };
         })
         .filter((item) => item.quantity > 0);
@@ -424,12 +443,10 @@ export function PurchaseOrderForm({
   const handleAddProduct = (product: any, quantity: number = 1) => {
     if (isFormDisabled) return;
 
-    const existingProduct = products.find((p) => p.productId === product.id);
-    if (existingProduct) {
-      toast.error("Sản phẩm đã có trong danh sách");
-      return;
-    }
-
+    // Cho phép thêm cùng 1 sản phẩm nhiều dòng (vd 1 dòng Tốt + 1 dòng
+    // Loại B). Phân biệt qua `conditionType` + `lineNumber` (BE generate).
+    // Không còn check duplicate như phiên bản cũ — pattern này giống
+    // `addToCart` trong ban-hang/page.tsx và OrderItemsList.
     const inventory = product.inventories?.find(
       (inv: any) => inv.branchId === branchId
     );
@@ -448,6 +465,10 @@ export function PurchaseOrderForm({
       subTotal: Math.round(price * qty),
       inventory: Number(inventory?.onHand || 0),
       vatRate: Number(product.vat ?? 8),
+      // Mặc định "normal" khi thêm mới. User có thể đổi sang "damaged"
+      // bằng cách click badge "Tốt" trong cột Loại, hoặc click button Copy
+      // để duplicate dòng rồi đổi type.
+      conditionType: "normal",
     };
 
     setProducts((prev) => [...prev, newProduct]);
@@ -456,6 +477,55 @@ export function PurchaseOrderForm({
   const handleRemoveProduct = (index: number) => {
     if (isFormDisabled) return;
     setProducts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Duplicate 1 dòng sản phẩm — chèn ngay dưới dòng gốc. Copy nguyên
+  // trạng (kể cả conditionType, price, discount, vatRate) để user có thể
+  // nhanh tạo dòng "Tốt" + dòng "Loại B" cho cùng 1 SP. Pattern tương tự
+  // `duplicateCartItem` trong ban-hang/page.tsx:2110.
+  const handleDuplicateProduct = (index: number) => {
+    if (isFormDisabled) return;
+    setProducts((prev) => {
+      const source = prev[index];
+      if (!source) return prev;
+      // Tạo object mới (không dùng spread `{...source}` để tránh share
+      // reference các object/array con nếu có).
+      const newItem: ProductItem = {
+        productId: source.productId,
+        productCode: source.productCode,
+        productName: source.productName,
+        quantity: source.quantity,
+        price: source.price,
+        discount: source.discount,
+        subTotal: source.subTotal,
+        inventory: source.inventory,
+        vatRate: source.vatRate,
+        note: source.note,
+        manualSubTotal: source.manualSubTotal,
+        conditionType: source.conditionType || "normal",
+      };
+      const next = [...prev];
+      next.splice(index + 1, 0, newItem);
+      return next;
+    });
+  };
+
+  // Đổi conditionType (Tốt ↔ Loại B) cho 1 dòng. Chỉ áp dụng khi form
+  // chưa bị khóa (PN đã hủy). Không đụng tới quantity/price — chỉ thay đổi
+  // cờ conditionType. BE sẽ dựa vào cờ này để ghi đúng bucket tồn kho.
+  const handleConditionTypeChange = (
+    index: number,
+    type: "normal" | "damaged"
+  ) => {
+    if (isFormDisabled) return;
+    setProducts((prev) => {
+      const next = [...prev];
+      const item = { ...next[index], conditionType: type };
+      // Tính lại subTotal không đổi khi đổi loại (giá + SL giữ nguyên).
+      // KHÔNG recompute subTotal vì user có thể đã nhập tay thành tiền.
+      next[index] = item;
+      return next;
+    });
   };
 
   const handleQuantityChange = (index: number, value: string) => {
@@ -625,7 +695,7 @@ export function PurchaseOrderForm({
         discount: discountType === "amount" ? Number(discount) || 0 : 0,
         discountRatio:
           discountType === "ratio" ? Number(discountRatio) || 0 : 0,
-        items: products.map((p) => ({
+        items: products.map((p, index) => ({
           productId: Number(p.productId),
           productCode: p.productCode,
           productName: p.productName,
@@ -636,6 +706,12 @@ export function PurchaseOrderForm({
           // Gửi thành tiền (số nguyên) đã chốt trên form làm nguồn sự thật.
           totalPrice: Math.round(Number(p.subTotal)),
           description: p.note,
+          // Số thứ tự dòng (index+1) — đảm bảo cùng 1 SP có thể lặp lại
+          // nhiều dòng với lineNumber khác nhau. BE generate nếu thiếu, nhưng
+          // gửi sẵn giúp PN từ PDN đồng nhất với UI hiển thị.
+          lineNumber: index + 1,
+          // Phân loại hàng: "normal" (mặc định) hoặc "damaged" (loại B).
+          conditionType: p.conditionType || "normal",
         })),
         additionalPayment: paymentAmount > 0 ? Number(paymentAmount) : 0,
         payments:
@@ -660,7 +736,7 @@ export function PurchaseOrderForm({
       description: note,
       discount: discountType === "amount" ? Number(discount) || 0 : 0,
       discountRatio: discountType === "ratio" ? Number(discountRatio) || 0 : 0,
-      items: products.map((p) => ({
+      items: products.map((p, index) => ({
         productId: Number(p.productId),
         quantity: Number(p.quantity),
         price: Number(p.price),
@@ -669,6 +745,15 @@ export function PurchaseOrderForm({
         // này thay vì recompute từ đơn giá (tránh lệch do đơn giá 3 số thập phân).
         totalPrice: Math.round(Number(p.subTotal)),
         description: p.note,
+        // Số thứ tự dòng. Khi tạo mới (không có purchaseOrder), luôn dùng
+        // index+1 — đảm bảo unique key (purchaseOrderId, lineNumber) không
+        // trùng trong cùng phiếu. Khi sửa PN đã có, các dòng giữ nguyên
+        // lineNumber (BE dùng `item.lineNumber ?? index + 1` để fallback).
+        lineNumber: index + 1,
+        // Phân loại hàng: "normal" (mặc định) hoặc "damaged" (loại B).
+        // Khi hoàn thành phiếu, BE sẽ dựa vào đây để cộng đúng bucket
+        // tồn kho (onHand vs damagedQuantity).
+        conditionType: p.conditionType || "normal",
       })),
       paidAmount: paymentAmount > 0 ? Number(paymentAmount) : 0,
       purchaseById: purchaseById || undefined,
@@ -754,7 +839,7 @@ export function PurchaseOrderForm({
         <div className="flex-1 overflow-y-auto px-4 py-3">
 
           <div className="border border-gray-200 rounded-lg overflow-x-auto bg-white">
-            <table className="w-full min-w-[1180px]">
+            <table className="w-full min-w-[1320px]">
               <thead>
                 <tr className="bg-gray-100 border-b border-gray-200">
                   <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-12">
@@ -768,6 +853,9 @@ export function PurchaseOrderForm({
                   </th>
                   <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
                     SL
+                  </th>
+                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-[90px]">
+                    Loại
                   </th>
                   <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider whitespace-nowrap">
                     ĐG trước thuế
@@ -787,8 +875,8 @@ export function PurchaseOrderForm({
                   <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
                     TT sau thuế
                   </th>
-                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-12">
-                    Xóa
+                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-[72px]">
+                    Thao tác
                   </th>
                 </tr>
               </thead>
@@ -857,6 +945,37 @@ export function PurchaseOrderForm({
                           </button>
                         </div>
                       </td>
+                      <td className="px-[10px] py-2 align-middle text-center whitespace-nowrap">
+                        {/* Badge click-to-toggle giữa "Tốt" (mặc định) và
+                            "Loại B" (= damaged). Click để chuyển. Màu đỏ
+                            nhạt để phân biệt với hàng thường, tương tự badge
+                            "Bục rách" trong InvoiceItemsList.tsx:177-179. */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleConditionTypeChange(
+                              index,
+                              item.conditionType === "damaged"
+                                ? "normal"
+                                : "damaged"
+                            )
+                          }
+                          disabled={isFormDisabled ? true : false}
+                          className={`px-2 py-0.5 text-xs rounded-full border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                            item.conditionType === "damaged"
+                              ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                              : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                          }`}
+                          title={
+                            item.conditionType === "damaged"
+                              ? "Hàng loại B (bục rách) — click để đổi về hàng thường"
+                              : "Hàng thường — click để đánh dấu là loại B"
+                          }>
+                          {item.conditionType === "damaged"
+                            ? "Loại B"
+                            : "Tốt"}
+                        </button>
+                      </td>
                       <td className="px-[10px] py-2 align-middle text-right text-sm text-gray-600 whitespace-nowrap">
                         {formatCurrency(lineVat.unitPriceBeforeTax)}
                       </td>
@@ -894,12 +1013,29 @@ export function PurchaseOrderForm({
                         />
                       </td>
                       <td className="px-[10px] py-2 align-middle text-center">
-                        <button
-                          onClick={() => handleRemoveProduct(index)}
-                          disabled={isFormDisabled ? true : false}
-                          className="text-red-600 hover:text-red-800 disabled:opacity-50">
-                          <X className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          {/* Duplicate dòng: chèn ngay dưới dòng gốc với
+                              cùng conditionType, price, discount. Tiện để
+                              tạo nhanh cặp Tốt + Loại B cho cùng 1 SP
+                              (vd click Copy trên dòng Tốt → đổi badge sang
+                              Loại B trên dòng mới). */}
+                          <button
+                            type="button"
+                            onClick={() => handleDuplicateProduct(index)}
+                            disabled={isFormDisabled ? true : false}
+                            className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded disabled:opacity-50"
+                            title="Thêm dòng mới cho sản phẩm này">
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProduct(index)}
+                            disabled={isFormDisabled ? true : false}
+                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded disabled:opacity-50"
+                            title="Xóa dòng này">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
