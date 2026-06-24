@@ -240,10 +240,24 @@ export function SupplierPaymentBulkModal({
       return;
     }
 
+    // Cấn trừ tiền trả thừa NCC: gom các PN có nhập số tiền cấn trừ > 0.
+    // Tính trước để dùng cho cả validate (bỏ qua alert + bỏ qua check tài khoản)
+    // và payload gửi BE.
+    const debtOffsetsToApply = Object.entries(purchaseOrderDebtOffsets)
+      .filter(([_, amount]) => parseNumberInput(amount) > 0)
+      .map(([poId, amount]) => ({
+        purchaseOrderId: Number(poId),
+        amount: parseNumberInput(amount),
+      }));
+    const hasDebtOffsets = debtOffsetsToApply.length > 0;
+
     if (
       method === "transfer" &&
       !selectedAccountId &&
-      parseNumberInput(totalAmount) > 0
+      (parseNumberInput(totalAmount) > 0 ||
+        Object.values(purchaseOrderPayments).some(
+          (v) => parseNumberInput(v) > 0
+        ))
     ) {
       alert("Vui lòng chọn tài khoản ngân hàng");
       return;
@@ -261,7 +275,11 @@ export function SupplierPaymentBulkModal({
           amount: parseNumberInput(amount),
         }));
 
-      if (finalTotalAmount <= 0 && purchaseOrdersToPay.length === 0) {
+      if (
+        finalTotalAmount <= 0 &&
+        purchaseOrdersToPay.length === 0 &&
+        !hasDebtOffsets
+      ) {
         alert("Vui lòng nhập số tiền thanh toán");
         return;
       }
@@ -273,19 +291,11 @@ export function SupplierPaymentBulkModal({
         );
       }
     } else {
-      if (finalTotalAmount <= 0) {
+      if (finalTotalAmount <= 0 && !hasDebtOffsets) {
         alert("Vui lòng nhập số tiền thanh toán");
         return;
       }
     }
-
-    // Cấn trừ tiền trả thừa NCC: gom các PN có nhập số tiền cấn trừ > 0.
-    const debtOffsetsToApply = Object.entries(purchaseOrderDebtOffsets)
-      .filter(([_, amount]) => parseNumberInput(amount) > 0)
-      .map(([poId, amount]) => ({
-        purchaseOrderId: Number(poId),
-        amount: parseNumberInput(amount),
-      }));
 
     await createPayment.mutateAsync({
       supplierId,
