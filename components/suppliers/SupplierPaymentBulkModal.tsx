@@ -97,6 +97,7 @@ export function SupplierPaymentBulkModal({
       queryClient.invalidateQueries({ queryKey: ["cashflows"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["supplier-debt-timeline"] });
       alert("Trả tiền nhà cung cấp thành công!");
       onClose();
     },
@@ -180,15 +181,31 @@ export function SupplierPaymentBulkModal({
     const po = unpaidPurchaseOrders.find((p: any) => p.id === poId);
     if (!po) return;
 
-    const maxAmount = Number(po.debtAmount);
+    const otherTotal = Object.entries(purchaseOrderDebtOffsets)
+      .filter(([id]) => Number(id) !== poId)
+      .reduce((sum, [, amt]) => sum + parseNumberInput(amt), 0);
+
+    const remaining = Math.max(0, availableCredit - otherTotal);
+    const maxAmount = Math.min(Number(po.debtAmount), remaining);
     const numericValue = parseNumberInput(value);
     const limitedValue = Math.min(numericValue, maxAmount);
-
     const formatted = formatNumberInput(limitedValue.toString());
     setPurchaseOrderDebtOffsets((prev) => ({
       ...prev,
       [poId]: formatted,
     }));
+
+    // Cap lại tiền trả nếu vượt phần còn lại sau cấn trừ
+    const currentPayment = parseNumberInput(
+      purchaseOrderPayments[poId] || "0"
+    );
+    const maxPayment = Math.max(0, Number(po.debtAmount) - limitedValue);
+    if (currentPayment > maxPayment) {
+      setPurchaseOrderPayments((prev) => ({
+        ...prev,
+        [poId]: formatNumberInput(maxPayment.toString()),
+      }));
+    }
   };
 
   const handleTotalAmountChange = (value: string) => {
@@ -205,7 +222,11 @@ export function SupplierPaymentBulkModal({
           if (remaining <= 0) break;
 
           const debtAmount = Number(po.debtAmount);
-          const paymentForThisPO = Math.min(remaining, debtAmount);
+          const debtOffsetForPO = parseNumberInput(
+            purchaseOrderDebtOffsets[po.id] || "0"
+          );
+          const maxForPO = Math.max(0, debtAmount - debtOffsetForPO);
+          const paymentForThisPO = Math.min(remaining, maxForPO);
           newPayments[po.id] = formatNumberInput(
             paymentForThisPO.toString()
           );
@@ -223,7 +244,13 @@ export function SupplierPaymentBulkModal({
     const po = unpaidPurchaseOrders.find((p: any) => p.id === poId);
     if (!po) return;
 
-    const maxAmount = Number(po.debtAmount);
+    const debtOffsetForPO = parseNumberInput(
+      purchaseOrderDebtOffsets[poId] || "0"
+    );
+    const maxAmount = Math.max(
+      0,
+      Number(po.debtAmount) - debtOffsetForPO
+    );
     const numericValue = parseNumberInput(value);
     const limitedValue = Math.min(numericValue, maxAmount);
 
@@ -249,6 +276,25 @@ export function SupplierPaymentBulkModal({
       return;
     }
 
+    // Cấn trừ tiền trả thừa NCC: gom các PN có nhập số tiền cấn trừ > 0.
+    const debtOffsetsToApply = Object.entries(purchaseOrderDebtOffsets)
+      .filter(([_, amount]) => parseNumberInput(amount) > 0)
+      .map(([poId, amount]) => ({
+        purchaseOrderId: Number(poId),
+        amount: parseNumberInput(amount),
+      }));
+
+    const totalDebtOffset = debtOffsetsToApply.reduce(
+      (sum, d) => sum + d.amount,
+      0
+    );
+    if (totalDebtOffset > availableCredit) {
+      alert(
+        `Tổng cấn trừ nợ (${formatCurrency(totalDebtOffset)}) vượt quá giới hạn cho phép (${formatCurrency(availableCredit)})`
+      );
+      return;
+    }
+
     let purchaseOrdersToPay: Array<{ purchaseOrderId: number; amount: number }> =
       [];
     let finalTotalAmount = parseNumberInput(totalAmount);
@@ -261,8 +307,12 @@ export function SupplierPaymentBulkModal({
           amount: parseNumberInput(amount),
         }));
 
-      if (finalTotalAmount <= 0 && purchaseOrdersToPay.length === 0) {
-        alert("Vui lòng nhập số tiền thanh toán");
+      if (
+        finalTotalAmount <= 0 &&
+        purchaseOrdersToPay.length === 0 &&
+        debtOffsetsToApply.length === 0
+      ) {
+        alert("Vui lòng nhập số tiền thanh toán hoặc cấn trừ nợ");
         return;
       }
 
@@ -273,19 +323,11 @@ export function SupplierPaymentBulkModal({
         );
       }
     } else {
-      if (finalTotalAmount <= 0) {
+      if (finalTotalAmount <= 0 && debtOffsetsToApply.length === 0) {
         alert("Vui lòng nhập số tiền thanh toán");
         return;
       }
     }
-
-    // Cấn trừ tiền trả thừa NCC: gom các PN có nhập số tiền cấn trừ > 0.
-    const debtOffsetsToApply = Object.entries(purchaseOrderDebtOffsets)
-      .filter(([_, amount]) => parseNumberInput(amount) > 0)
-      .map(([poId, amount]) => ({
-        purchaseOrderId: Number(poId),
-        amount: parseNumberInput(amount),
-      }));
 
     await createPayment.mutateAsync({
       supplierId,
