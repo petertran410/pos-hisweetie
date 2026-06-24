@@ -267,22 +267,27 @@ export function SupplierPaymentBulkModal({
       return;
     }
 
-    if (
-      method === "transfer" &&
-      !selectedAccountId &&
-      parseNumberInput(totalAmount) > 0
-    ) {
-      alert("Vui lòng chọn tài khoản ngân hàng");
-      return;
-    }
-
-    // Cấn trừ tiền trả thừa NCC: gom các PN có nhập số tiền cấn trừ > 0.
+    // Tính trước debtOffsetsToApply để dùng cho cả validate (bỏ qua check tài
+    // khoản ngân hàng khi chỉ cấn trừ nợ) và payload gửi BE.
     const debtOffsetsToApply = Object.entries(purchaseOrderDebtOffsets)
       .filter(([_, amount]) => parseNumberInput(amount) > 0)
       .map(([poId, amount]) => ({
         purchaseOrderId: Number(poId),
         amount: parseNumberInput(amount),
       }));
+    const hasDebtOffsets = debtOffsetsToApply.length > 0;
+
+    if (
+      method === "transfer" &&
+      !selectedAccountId &&
+      (parseNumberInput(totalAmount) > 0 ||
+        Object.values(purchaseOrderPayments).some(
+          (v) => parseNumberInput(v) > 0
+        ))
+    ) {
+      alert("Vui lòng chọn tài khoản ngân hàng");
+      return;
+    }
 
     const totalDebtOffset = debtOffsetsToApply.reduce(
       (sum, d) => sum + d.amount,
@@ -310,7 +315,7 @@ export function SupplierPaymentBulkModal({
       if (
         finalTotalAmount <= 0 &&
         purchaseOrdersToPay.length === 0 &&
-        debtOffsetsToApply.length === 0
+        !hasDebtOffsets
       ) {
         alert("Vui lòng nhập số tiền thanh toán hoặc cấn trừ nợ");
         return;
@@ -323,7 +328,7 @@ export function SupplierPaymentBulkModal({
         );
       }
     } else {
-      if (finalTotalAmount <= 0 && debtOffsetsToApply.length === 0) {
+      if (finalTotalAmount <= 0 && !hasDebtOffsets) {
         alert("Vui lòng nhập số tiền thanh toán");
         return;
       }
