@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   usePurchaseOrder,
   useUpdatePurchaseOrder,
@@ -17,6 +18,7 @@ import {
   Save,
   Copy,
   XCircle,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
@@ -28,6 +30,8 @@ import {
 } from "@/lib/types/purchase-order";
 import Link from "next/link";
 import { CodeLink } from "../shared/CodeLink";
+import { printTemplatesApi } from "@/lib/api/print-templates";
+import { printEntity } from "@/lib/utils/print";
 
 interface PurchaseOrderDetailRowProps {
   purchaseOrderId: number;
@@ -114,6 +118,7 @@ export function PurchaseOrderDetailRow({
   const [editedDescription, setEditedDescription] = useState<string>("");
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [showPurchaseByDropdown, setShowPurchaseByDropdown] = useState(false);
+  const [showPrintDropdown, setShowPrintDropdown] = useState(false);
 
   const canUpdatePO = useCan("purchase_orders", "update");
   const canViewPrice = useCan("purchase_orders", "view_price");
@@ -121,6 +126,17 @@ export function PurchaseOrderDetailRow({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const purchaseByDropdownRef = useRef<HTMLDivElement>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  // Danh sách mẫu in phiếu nhập hàng đang active (để chọn khi in).
+  const { data: printTemplates } = useQuery({
+    queryKey: ["print-templates", "purchase_order"],
+    queryFn: () =>
+      printTemplatesApi.getAll({
+        templateFor: "purchase_order",
+        isActive: true,
+      }),
+  });
 
   // Sticky width: đo chiều rộng vùng cuộn rồi set cho wrapper. KHÔNG dùng
   // ResizeObserver trên scrollEl vì việc ghi width làm reflow (bật/tắt
@@ -175,6 +191,8 @@ export function PurchaseOrderDetailRow({
         !purchaseByDropdownRef.current.contains(e.target as Node)
       )
         setShowPurchaseByDropdown(false);
+      if (printRef.current && !printRef.current.contains(e.target as Node))
+        setShowPrintDropdown(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
@@ -236,6 +254,16 @@ export function PurchaseOrderDetailRow({
   const handleCopyPurchaseOrder = () => {
     if (!purchaseOrder) return;
     router.push(`/san-pham/nhap-hang/new?copyPurchaseOrderId=${purchaseOrder.id}`);
+  };
+
+  const handlePrint = async (templateId?: number) => {
+    if (!purchaseOrder) return;
+    setShowPrintDropdown(false);
+    try {
+      await printEntity("purchase_order", purchaseOrder.id, templateId);
+    } catch (e: any) {
+      toast.error(e?.message || "In thất bại");
+    }
   };
 
   // ── Loading ──
@@ -661,6 +689,42 @@ export function PurchaseOrderDetailRow({
                         <Copy className="w-3.5 h-3.5" />
                         Sao chép
                       </button>
+                      {(printTemplates?.length ?? 0) <= 1 ? (
+                        <button
+                          onClick={() => handlePrint(printTemplates?.[0]?.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                          <Printer className="w-3.5 h-3.5" />
+                          In
+                        </button>
+                      ) : (
+                        <div ref={printRef} className="relative">
+                          <button
+                            onClick={() => setShowPrintDropdown((p) => !p)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            <Printer className="w-3.5 h-3.5" />
+                            In
+                            <ChevronDown
+                              className={`w-3.5 h-3.5 text-gray-400 transition-transform ${
+                                showPrintDropdown ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+                          {showPrintDropdown && (
+                            <div className="absolute z-20 mt-1 w-[240px] bg-white border rounded-lg shadow-lg overflow-hidden">
+                              {printTemplates!.map((t: any) => (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => handlePrint(t.id)}
+                                  className="w-full px-3 py-2 text-sm text-left hover:bg-gray-50">
+                                  {t.name}
+                                  {t.isDefault ? " (Mặc định)" : ""}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {canUpdatePO && canCancel && (
                         <button
                           onClick={handleCancelPurchaseOrder}
