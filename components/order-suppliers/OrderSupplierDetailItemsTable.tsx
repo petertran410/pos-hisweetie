@@ -54,7 +54,9 @@ const STATUS_COLOR: Record<number, string> = {
 const fmtDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
 const fmtNum = (n?: number) =>
-  n == null ? "-" : Number(n).toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+  n == null
+    ? "-"
+    : Number(n).toLocaleString("vi-VN", { maximumFractionDigits: 2 });
 
 type FactoryField = "factoryPrice" | "factorySubTotal";
 
@@ -74,8 +76,12 @@ interface EditCtx {
   // Giai đoạn hiện tại / nhà máy
   productionStages: { id: number; name: string }[];
   factories: { id: number; name: string }[];
-  createProductionStage: (name: string) => Promise<{ id: number; name: string } | undefined>;
-  createFactory: (name: string) => Promise<{ id: number; name: string } | undefined>;
+  createProductionStage: (
+    name: string
+  ) => Promise<{ id: number; name: string } | undefined>;
+  createFactory: (
+    name: string
+  ) => Promise<{ id: number; name: string } | undefined>;
   setStageFactory: (
     r: OrderSupplierDetailItem,
     data: { productionStageId?: number | null; factoryId?: number | null }
@@ -393,11 +399,10 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
     return f;
   }, [filters, activeStatusTab]);
 
-  const { columns, visibleColumns, toggleColumn } =
-    useColumnVisibility<OrderSupplierDetailItem, EditCtx>(
-      "orderSupplierDetailItemColumns",
-      DEFAULT_COLUMNS
-    );
+  const { columns, visibleColumns, toggleColumn } = useColumnVisibility<
+    OrderSupplierDetailItem,
+    EditCtx
+  >("orderSupplierDetailItemColumns", DEFAULT_COLUMNS);
 
   const { data, isLoading } = useOrderSupplierDetailItems({
     ...effectiveFilters,

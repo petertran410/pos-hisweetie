@@ -21,6 +21,7 @@ import {
 } from "@/lib/hooks/useNoteTemplates";
 import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
+import { useInventoryByBranch } from "@/lib/hooks/useInventoryByBranch";
 import { NoteDropdown } from "./NoteDropdown";
 import { NoteTemplateModal } from "./NoteTemplateModal";
 import { ItemDiscountModal } from "./ItemDiscountModal";
@@ -136,6 +137,17 @@ export function OrderItemsList({
   );
   const supplierMap = supplierSummary || {};
 
+  // Tồn kho realtime theo (productIds, branchId). Refetch khi:
+  //  - reload trang (cache reset)
+  //  - đổi selectedBranch
+  //  - thêm/xóa SP trong giỏ
+  // Fallback `getItemOnHand(item)` (snapshot từ product.inventories) khi hook
+  // chưa load xong → tránh flash "0" lúc mới mount.
+  const { inventoryMap } = useInventoryByBranch(
+    cartProductIds,
+    selectedBranch?.id
+  );
+
   const isMobile = useIsMobile();
 
   const getItemOnHand = (item: CartItem): number | null =>
@@ -143,6 +155,12 @@ export function OrderItemsList({
 
   const getStockWarning = (item: CartItem): string | null =>
     getStockWarningHelper(item, selectedBranch?.id);
+
+  const getOnHandRealtime = (item: CartItem): number => {
+    const live = inventoryMap.get(item.product.id);
+    if (live !== undefined) return live;
+    return getItemOnHand(item) ?? 0;
+  };
 
   const getCustomerOrdered = (item: CartItem): number =>
     pendingMap[item.product.id] ?? 0;
@@ -761,7 +779,7 @@ export function OrderItemsList({
                 {/* Dòng nhỏ in nghiêng: Tồn / KH Đặt / Đặt NCC theo chi nhánh */}
                 {canViewInventory && !item.isPromoGift && (
                   <div className="text-[11px] italic text-black">
-                    Tồn: {getItemOnHand(item) ?? 0} | KH Đặt:{" "}
+                    Tồn: {getOnHandRealtime(item)} | KH Đặt:{" "}
                     {getCustomerOrdered(item).toLocaleString()} | Đặt NCC:{" "}
                     {getSupplierOrdered(item).toLocaleString()}
                   </div>
@@ -844,7 +862,7 @@ export function OrderItemsList({
                   {/* Dòng nhỏ in nghiêng: Tồn / KH Đặt / Đặt NCC theo chi nhánh */}
                   {canViewInventory && !item.isPromoGift && (
                     <div className="text-xs italic text-black whitespace-nowrap">
-                      Tồn: {getItemOnHand(item) ?? 0} | KH Đặt:{" "}
+                      Tồn: {getOnHandRealtime(item)} | KH Đặt:{" "}
                       {getCustomerOrdered(item).toLocaleString()} | Đặt NCC:{" "}
                       {getSupplierOrdered(item).toLocaleString()}
                     </div>

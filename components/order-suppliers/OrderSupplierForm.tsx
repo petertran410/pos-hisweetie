@@ -329,6 +329,12 @@ export function OrderSupplierForm({
   const [paymentMethod, setPaymentMethod] = useState<
     "cash" | "transfer" | "card"
   >("cash");
+  // Tài khoản ngân hàng công ty dùng để chuyển khoản cho NCC. Chỉ có nghĩa
+  // khi paymentMethod === "transfer". Gửi lên BE khi submit để gắn vào
+  // CashFlow + OrderSupplierPayment (đối chiếu sao kê ngân hàng).
+  const [paymentAccountId, setPaymentAccountId] = useState<number | null>(
+    null
+  );
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [orderDate, setOrderDate] = useState<Date | null>(
     orderSupplier?.orderDate ? new Date(orderSupplier.orderDate) : null
@@ -340,10 +346,12 @@ export function OrderSupplierForm({
 
   const handlePaymentConfirm = (
     amount: number,
-    method: "cash" | "transfer" | "card"
+    method: "cash" | "transfer" | "card",
+    accountId?: number
   ) => {
     setPaymentAmount(amount);
     setPaymentMethod(method);
+    setPaymentAccountId(method === "transfer" ? accountId ?? null : null);
   };
 
   const [code, setCode] = useState<string>(orderSupplier?.code || "");
@@ -449,12 +457,7 @@ export function OrderSupplierForm({
       return liveRateQuery.data.rate;
     }
     return exchangeRate;
-  }, [
-    orderSupplier,
-    isImportSupplier,
-    liveRateQuery.data,
-    exchangeRate,
-  ]);
+  }, [orderSupplier, isImportSupplier, liveRateQuery.data, exchangeRate]);
 
   // Effect: khi user chọn NCC thuộc nhóm nước ngoài ở phiếu MỚI, tự động
   // set currency=CNY + lấy tỉ giá mới nhất. Khi chuyển sang NCC trong nước
@@ -497,12 +500,14 @@ export function OrderSupplierForm({
     () => products.map((p) => p.productId),
     [products]
   );
-  const { pricesByProduct: supplierPrices, isLoading: isLoadingSupplierPrices } =
-    useLatestSupplierPrices(
-      supplierId || undefined,
-      productIds,
-      branchId || undefined
-    );
+  const {
+    pricesByProduct: supplierPrices,
+    isLoading: isLoadingSupplierPrices,
+  } = useLatestSupplierPrices(
+    supplierId || undefined,
+    productIds,
+    branchId || undefined
+  );
   // NCC trước đó — init = NCC của phiếu đang sửa để mount KHÔNG ghi đè giá đã lưu.
   const prevSupplierRef = useRef<number>(orderSupplier?.supplierId || 0);
   // Tập productId cần áp giá NCC (thêm SP mới khi đã có NCC, hoặc đổi NCC).
@@ -539,7 +544,6 @@ export function OrderSupplierForm({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supplierPrices, isLoadingSupplierPrices]);
-
 
   useEffect(() => {
     if (orderSupplier?.items) {
@@ -579,6 +583,10 @@ export function OrderSupplierForm({
         setPaymentMethod(
           firstPayment.paymentMethod as "cash" | "transfer" | "card"
         );
+        // Pre-fill tài khoản ngân hàng từ payment đầu tiên (nếu là CK) để
+        // lần mở modal "Tiền trả nhà cung cấp" tiếp theo hiển thị sẵn TK
+        // đã chọn trước đó.
+        setPaymentAccountId(firstPayment.accountId ?? null);
       }
     }
   }, [orderSupplier]);
@@ -683,8 +691,7 @@ export function OrderSupplierForm({
       if (!updated[index].factorySubTotalManual) {
         // Thành tiền NM = Đơn giá NM × SL (CÙNG đơn vị CNY, không nhân tỉ giá).
         // Tỉ giá chỉ dùng để hiển thị "Tổng tiền hàng (CNY)" ở panel bên phải.
-        updated[index].factorySubTotal =
-          updated[index].factoryPrice * quantity;
+        updated[index].factorySubTotal = updated[index].factoryPrice * quantity;
       }
       return updated;
     });
@@ -766,8 +773,7 @@ export function OrderSupplierForm({
       // Logic 2-chiều: Thành tiền NM và Đơn giá NM CÙNG đơn vị CNY, nên
       // tính ngược Đơn giá = Thành tiền / SL (không cần tỉ giá).
       if (updated[index].quantity > 0) {
-        updated[index].factoryPrice =
-          factorySubTotal / updated[index].quantity;
+        updated[index].factoryPrice = factorySubTotal / updated[index].quantity;
       }
       return updated;
     });
@@ -786,7 +792,7 @@ export function OrderSupplierForm({
   const handleRefreshExchangeRate = () => {
     if (hasLinkedPurchaseOrder) {
       toast.error(
-        "Phiếu đã có phiếu nhập hàng liên quan. Không thể cập nhật lại tỉ giá.",
+        "Phiếu đã có phiếu nhập hàng liên quan. Không thể cập nhật lại tỉ giá."
       );
       return;
     }
@@ -805,10 +811,10 @@ export function OrderSupplierForm({
                 ...p,
                 factorySubTotal: (p.factoryPrice || 0) * (p.quantity || 0),
               };
-            }),
+            })
           );
         },
-      },
+      }
     );
   };
 
@@ -873,6 +879,11 @@ export function OrderSupplierForm({
       }),
       paymentAmount: paymentAmount > 0 ? paymentAmount : undefined,
       paymentMethod: paymentAmount > 0 ? paymentMethod : undefined,
+      // Chỉ gửi tài khoản khi thực sự thanh toán bằng chuyển khoản.
+      paymentAccountId:
+        paymentAmount > 0 && paymentMethod === "transfer"
+          ? paymentAccountId ?? undefined
+          : undefined,
       orderDate: orderDate?.toISOString(),
     };
 
@@ -933,10 +944,10 @@ export function OrderSupplierForm({
                   <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider min-w-[220px]">
                     Tên hàng
                   </th>
-                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
+                  <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-[160px]">
                     SL đặt
                   </th>
-                  {canViewSalePrice && (
+                  {canViewSalePrice && !isImportSupplier && (
                     <>
                       <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
                         Giá nhập
@@ -951,10 +962,10 @@ export function OrderSupplierForm({
                   )}
                   {canViewFactoryPrice && isImportSupplier && (
                     <>
-                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
+                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[150px]">
                         {`Đơn giá NM${currency === "CNY" ? " (¥)" : ""}`}
                       </th>
-                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
+                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[170px]">
                         {`Thành tiền NM (¥)`}
                       </th>
                       <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
@@ -1022,7 +1033,7 @@ export function OrderSupplierForm({
                         </button>
                       </div>
                     </td>
-                    {canViewSalePrice && (
+                    {canViewSalePrice && !isImportSupplier && (
                       <>
                         <td className="px-[10px] py-2 align-middle">
                           <input
@@ -1222,9 +1233,7 @@ export function OrderSupplierForm({
                       <MiniCalendar
                         withTime
                         value={orderDateStr}
-                        onChange={(d) =>
-                          setOrderDate(d ? new Date(d) : null)
-                        }
+                        onChange={(d) => setOrderDate(d ? new Date(d) : null)}
                         onClose={() => setShowOrderDateCalendar(false)}
                       />
                     )}
@@ -1385,167 +1394,179 @@ export function OrderSupplierForm({
 
           {canViewSalePrice && (
             <>
-          <div className="border-t my-3"></div>
+              <div className="border-t my-4" style={{ borderColor: "var(--dt-border)" }}></div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <div className="block text-md text-gray-600">Tổng tiền hàng:</div>
-              <div>
-                {formatCurrency(
-                  products.reduce((sum, p) => sum + p.subTotal, 0)
-                )}
-              </div>
-            </div>
-            {/* Tổng tiền hàng theo tiền tệ (chỉ hiện khi NCC nước ngoài).
-                Vì Đơn giá NM và Thành tiền NM đều tính bằng CNY (không nhân
-                tỉ giá), nên hiển thị 2 dòng:
-                  - Tổng CNY: tổng factorySubTotal (đã = CNY thuần)
-                  - Tổng VND (quy đổi): tổng CNY × tỉ giá (chỉ tham khảo,
-                    không dùng để ghi nhận công nợ — đó là VND "Cần trả NCC"
-                    ở dưới, dùng cột "Thành tiền" VND). */}
-            {isImportSupplier && (
-              <div className="flex flex-col gap-1">
-                <div className="flex gap-2 items-center flex-wrap">
-                  <div className="block text-md text-gray-600">
-                    Tổng tiền hàng (CNY):
+              <div className="flex flex-col gap-3 text-sm">
+                {/* Tiền hàng ngoại tệ (chỉ hiển thị khi NCC nước ngoài) */}
+                {isImportSupplier && (
+                  <div className="bg-gray-50/50 rounded-xl p-3 border border-gray-100 flex flex-col gap-2.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 font-medium">Tổng tiền hàng ({currency}):</span>
+                      <span className="font-semibold text-gray-900 text-base">
+                        {new Intl.NumberFormat("vi-VN", {
+                          maximumFractionDigits: 2,
+                        }).format(
+                          products.reduce(
+                            (sum, p) => sum + (p.factorySubTotal || 0),
+                            0
+                          )
+                        )}{" "}
+                        {currency}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-1 border-t pt-2 border-gray-100/70">
+                      <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">
+                        Thông tin tỉ giá áp dụng
+                      </span>
+                      {orderSupplier != null && (
+                        <ExchangeRateIndicator
+                          base={currency}
+                          target="VND"
+                          rate={
+                            orderSupplier?.currency === "CNY"
+                              ? effectiveRate
+                              : null
+                          }
+                          fetchedAt={orderSupplier?.createdAt}
+                          allowRefresh={
+                            !hasLinkedPurchaseOrder && !isFormDisabled
+                          }
+                          onRefresh={handleRefreshExchangeRate}
+                        />
+                      )}
+                      {!orderSupplier && (
+                        <ExchangeRateIndicator
+                          base="CNY"
+                          target="VND"
+                          allowRefresh={!isFormDisabled}
+                          onRefresh={handleRefreshExchangeRate}
+                        />
+                      )}
+                    </div>
                   </div>
-                  <div className="font-medium text-gray-900">
-                    {new Intl.NumberFormat("vi-VN", {
-                      maximumFractionDigits: 2,
-                    }).format(
-                      products.reduce(
-                        (sum, p) => sum + (p.factorySubTotal || 0),
-                        0
-                      )
-                    )}{" "}
-                    CNY
+                )}
+
+                {/* Tiền hàng VND (chỉ hiện khi NCC trong nước) */}
+                {!isImportSupplier && (
+                  <div className="flex justify-between items-center py-0.5">
+                    <span className="text-gray-600">Tổng tiền hàng:</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatCurrency(
+                        products.reduce((sum, p) => sum + p.subTotal, 0)
+                      )}
+                    </span>
+                  </div>
+                )}
+                {/* Giảm giá */}
+                {/* Giảm giá */}
+                <div className="flex justify-between items-center py-0.5">
+                  <span className="text-gray-500 font-medium">Giảm giá:</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <input
+                      type="text"
+                      value={
+                        discountType === "amount"
+                          ? formatCurrency(discount)
+                          : discountRatio
+                      }
+                      onChange={(e) => {
+                        if (discountType === "amount") {
+                          const value = parseNumberInput(e.target.value);
+                          setDiscount(value);
+                        } else {
+                          const value = parseFloat(e.target.value) || 0;
+                          setDiscountRatio(value);
+                        }
+                      }}
+                      disabled={isFormDisabled ? true : false}
+                      placeholder="0"
+                      className="w-24 text-right text-sm px-2.5 py-1 border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand disabled:bg-gray-50 bg-white"
+                    />
+                    <select
+                      value={discountType}
+                      onChange={(e) => {
+                        setDiscountType(e.target.value as "amount" | "ratio");
+                        setDiscount(0);
+                        setDiscountRatio(0);
+                      }}
+                      disabled={isFormDisabled ? true : false}
+                      className="w-16 text-sm px-1.5 py-1 border rounded-lg bg-white disabled:bg-gray-50 focus:outline-none"
+                    >
+                      <option value="amount">VND</option>
+                      <option value="ratio">%</option>
+                    </select>
                   </div>
                 </div>
-                <div className="flex gap-2 items-center flex-wrap">
-                  <div className="block text-md text-gray-600">
-                    Tổng quy đổi (VND):
-                  </div>
-                  <div className="font-medium text-gray-700 text-sm">
-                    {formatCurrency(
-                      products.reduce(
-                        (sum, p) => sum + (p.factorySubTotal || 0),
-                        0
-                      ) * (effectiveRate || 1)
-                    )}
-                  </div>
+              </div>
+
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-gray-900 font-semibold">
+                  {isImportSupplier
+                    ? `Cần trả NCC (${currency}):`
+                    : "Cần trả nhà cung cấp:"}
+                </span>
+                <span className={`font-bold text-base ${isImportSupplier ? "text-brand" : "text-gray-950"}`}>
+                  {isImportSupplier
+                    ? new Intl.NumberFormat("vi-VN", {
+                        maximumFractionDigits: 2,
+                      }).format(
+                        (calculateTotalValue() - previouslyPaid) /
+                          (effectiveRate || 1)
+                      ) + ` ${currency}`
+                    : formatCurrency(calculateTotalValue() - previouslyPaid)}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-gray-500 font-medium">
+                  {orderSupplier ? "Trả thêm cho NCC:" : "Tiền trả nhà cung cấp:"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-gray-800">
+                    {formatCurrency(paymentAmount)}
+                  </span>
+                  <button
+                    onClick={() => setShowPaymentModal(true)}
+                    disabled={isFormDisabled ? true : false}
+                    className="p-1.5 border rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    type="button"
+                  >
+                    <CreditCard className="w-4 h-4 text-brand" />
+                  </button>
                 </div>
-                {orderSupplier != null && (
-                  // Phiếu CŨ: hiển thị tỉ giá snapshot từ DB. Cho refresh nếu
-                  // chưa có PN liên quan.
-                  <ExchangeRateIndicator
-                    base={currency}
-                    target="VND"
-                    rate={
-                      orderSupplier?.currency === "CNY" ? effectiveRate : null
-                    }
-                    fetchedAt={orderSupplier?.createdAt}
-                    allowRefresh={!hasLinkedPurchaseOrder && !isFormDisabled}
-                    onRefresh={handleRefreshExchangeRate}
-                  />
-                )}
-                {!orderSupplier && (
-                  // Phiếu MỚI: hiển thị live rate từ BE + cho refresh
-                  <ExchangeRateIndicator
-                    base="CNY"
-                    target="VND"
-                    allowRefresh={!isFormDisabled}
-                    onRefresh={handleRefreshExchangeRate}
-                  />
-                )}
               </div>
-            )}
-            <div className="flex gap-2 items-center">
-              <div className="block text-md text-gray-600">Giảm giá:</div>
-              <div className="flex gap-1">
-                <input
-                  type="text"
-                  value={
-                    discountType === "amount"
-                      ? formatCurrency(discount)
-                      : discountRatio
-                  }
-                  onChange={(e) => {
-                    if (discountType === "amount") {
-                      const value = parseNumberInput(e.target.value);
-                      setDiscount(value);
-                    } else {
-                      const value = parseFloat(e.target.value) || 0;
-                      setDiscountRatio(value);
-                    }
-                  }}
-                  disabled={isFormDisabled ? true : false}
-                  placeholder="0"
-                  className="flex-1 text-right text-sm px-2 py-1.5 border rounded disabled:bg-gray-100"
-                />
-                <select
-                  value={discountType}
-                  onChange={(e) => {
-                    setDiscountType(e.target.value as "amount" | "ratio");
-                    setDiscount(0);
-                    setDiscountRatio(0);
-                  }}
-                  disabled={isFormDisabled ? true : false}
-                  className="w-16 text-sm border rounded disabled:bg-gray-100">
-                  <option value="amount">VND</option>
-                  <option value="ratio">%</option>
-                </select>
-              </div>
-            </div>
-          </div>
 
-          <div className="flex gap-2">
-            <div className="text-md text-gray-600">Cần trả nhà cung cấp:</div>
-            <div>{formatCurrency(calculateTotalValue() - previouslyPaid)}</div>
-          </div>
-
-          <div className="flex gap-2 items-center">
-            <div className="text-md text-gray-600">
-              {orderSupplier ? "Trả thêm cho NCC:" : "Tiền trả nhà cung cấp:"}
-            </div>
-            <div className="flex items-center gap-2">
-              <div>{formatCurrency(paymentAmount)}</div>
-              <button
-                onClick={() => setShowPaymentModal(true)}
-                disabled={isFormDisabled ? true : false}
-                className="p-1.5 border rounded hover:bg-gray-50 disabled:opacity-50">
-                <CreditCard className="w-4 h-4 text-brand" />
-              </button>
-            </div>
-            {paymentAmount > 0 && (
-              <div className="mt-1 text-xs text-gray-500">
-                {paymentMethod === "cash" && "Tiền mặt"}
-                {/* {paymentMethod === "card" && "Thẻ"} */}
-                {paymentMethod === "transfer" && "Chuyển khoản"}
-              </div>
-            )}
-          </div>
-
-          {orderSupplier && (previouslyPaid > 0 || paymentAmount > 0) && (
-            <div className="flex gap-2">
-              <div className="text-md text-gray-600">Tổng đã trả:</div>
-              <div>{formatCurrency(previouslyPaid + paymentAmount)}</div>
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <div className="text-md text-gray-600">
-              Tiền nhà cung cấp trả lại:
-            </div>
-            <div>
-              {formatCurrency(
-                Math.max(
-                  0,
-                  previouslyPaid + paymentAmount - calculateTotalValue()
-                )
+              {paymentAmount > 0 && (
+                <div className="text-right text-xs text-gray-400 -mt-1.5">
+                  Phương thức: {paymentMethod === "cash" && "Tiền mặt"}
+                  {paymentMethod === "transfer" && "Chuyển khoản"}
+                  {paymentMethod === "card" && "Thẻ"}
+                </div>
               )}
-            </div>
-          </div>
-            </>
+
+              {orderSupplier && (previouslyPaid > 0 || paymentAmount > 0) && (
+                <div className="flex justify-between items-center py-0.5 text-xs text-gray-400">
+                  <span>Tổng đã trả:</span>
+                  <span className="font-medium text-gray-800">
+                    {formatCurrency(previouslyPaid + paymentAmount)}
+                  </span>
+                </div>
+              )}
+
+              {previouslyPaid + paymentAmount - calculateTotalValue() > 0 && (
+                <div className="flex justify-between items-center py-0.5 text-xs text-green-600 bg-green-50/50 px-2.5 py-1.5 rounded-lg border border-green-100/50">
+                  <span>Tiền nhà cung cấp trả lại:</span>
+                  <span className="font-semibold text-gray-800">
+                    {formatCurrency(
+                      Math.max(
+                        0,
+                        previouslyPaid + paymentAmount - calculateTotalValue()
+                      )
+                    )}
+                  </span>
+                </div>
+              )}</>
           )}
 
           <div>
