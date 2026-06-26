@@ -332,9 +332,7 @@ export function OrderSupplierForm({
   // Tài khoản ngân hàng công ty dùng để chuyển khoản cho NCC. Chỉ có nghĩa
   // khi paymentMethod === "transfer". Gửi lên BE khi submit để gắn vào
   // CashFlow + OrderSupplierPayment (đối chiếu sao kê ngân hàng).
-  const [paymentAccountId, setPaymentAccountId] = useState<number | null>(
-    null
-  );
+  const [paymentAccountId, setPaymentAccountId] = useState<number | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [orderDate, setOrderDate] = useState<Date | null>(
     orderSupplier?.orderDate ? new Date(orderSupplier.orderDate) : null
@@ -351,7 +349,7 @@ export function OrderSupplierForm({
   ) => {
     setPaymentAmount(amount);
     setPaymentMethod(method);
-    setPaymentAccountId(method === "transfer" ? accountId ?? null : null);
+    setPaymentAccountId(method === "transfer" ? (accountId ?? null) : null);
   };
 
   const [code, setCode] = useState<string>(orderSupplier?.code || "");
@@ -882,7 +880,7 @@ export function OrderSupplierForm({
       // Chỉ gửi tài khoản khi thực sự thanh toán bằng chuyển khoản.
       paymentAccountId:
         paymentAmount > 0 && paymentMethod === "transfer"
-          ? paymentAccountId ?? undefined
+          ? (paymentAccountId ?? undefined)
           : undefined,
       orderDate: orderDate?.toISOString(),
     };
@@ -1394,14 +1392,18 @@ export function OrderSupplierForm({
 
           {canViewSalePrice && (
             <>
-              <div className="border-t my-4" style={{ borderColor: "var(--dt-border)" }}></div>
+              <div
+                className="border-t my-4"
+                style={{ borderColor: "var(--dt-border)" }}></div>
 
               <div className="flex flex-col gap-3 text-sm">
                 {/* Tiền hàng ngoại tệ (chỉ hiển thị khi NCC nước ngoài) */}
                 {isImportSupplier && (
                   <div className="bg-gray-50/50 rounded-xl p-3 border border-gray-100 flex flex-col gap-2.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-500 font-medium">Tổng tiền hàng ({currency}):</span>
+                      <span className="text-gray-500 font-medium">
+                        Tổng tiền hàng ({currency}):
+                      </span>
                       <span className="font-semibold text-gray-900 text-base">
                         {new Intl.NumberFormat("vi-VN", {
                           maximumFractionDigits: 2,
@@ -1491,8 +1493,7 @@ export function OrderSupplierForm({
                         setDiscountRatio(0);
                       }}
                       disabled={isFormDisabled ? true : false}
-                      className="w-16 text-sm px-1.5 py-1 border rounded-lg bg-white disabled:bg-gray-50 focus:outline-none"
-                    >
+                      className="w-16 text-sm px-1.5 py-1 border rounded-lg bg-white disabled:bg-gray-50 focus:outline-none">
                       <option value="amount">VND</option>
                       <option value="ratio">%</option>
                     </select>
@@ -1506,7 +1507,8 @@ export function OrderSupplierForm({
                     ? `Cần trả NCC (${currency}):`
                     : "Cần trả nhà cung cấp:"}
                 </span>
-                <span className={`font-bold text-base ${isImportSupplier ? "text-brand" : "text-gray-950"}`}>
+                <span
+                  className={`font-bold text-base ${isImportSupplier ? "text-brand" : "text-gray-950"}`}>
                   {isImportSupplier
                     ? new Intl.NumberFormat("vi-VN", {
                         maximumFractionDigits: 2,
@@ -1520,7 +1522,9 @@ export function OrderSupplierForm({
 
               <div className="flex justify-between items-center py-0.5">
                 <span className="text-gray-500 font-medium">
-                  {orderSupplier ? "Trả thêm cho NCC:" : "Tiền trả nhà cung cấp:"}
+                  {orderSupplier
+                    ? "Trả thêm cho NCC:"
+                    : "Tiền trả nhà cung cấp:"}
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-gray-800">
@@ -1530,8 +1534,7 @@ export function OrderSupplierForm({
                     onClick={() => setShowPaymentModal(true)}
                     disabled={isFormDisabled ? true : false}
                     className="p-1.5 border rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
-                    type="button"
-                  >
+                    type="button">
                     <CreditCard className="w-4 h-4 text-brand" />
                   </button>
                 </div>
@@ -1555,7 +1558,7 @@ export function OrderSupplierForm({
               )}
 
               {previouslyPaid + paymentAmount - calculateTotalValue() > 0 && (
-                <div className="flex justify-between items-center py-0.5 text-xs text-green-600 bg-green-50/50 px-2.5 py-1.5 rounded-lg border border-green-100/50">
+                <div className="flex justify-between items-center text-xs text-green-600 bg-green-50/50 px-2.5 py-1.5 rounded-lg border border-green-100/50">
                   <span>Tiền nhà cung cấp trả lại:</span>
                   <span className="font-semibold text-gray-800">
                     {formatCurrency(
@@ -1566,7 +1569,8 @@ export function OrderSupplierForm({
                     )}
                   </span>
                 </div>
-              )}</>
+              )}
+            </>
           )}
 
           <div>
