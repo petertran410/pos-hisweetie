@@ -32,6 +32,7 @@ import { promotionsApi } from "@/lib/api/promotions";
 import {
   getDefaultAddress,
   addressToDeliveryInfo,
+  findAddressFromDelivery,
 } from "@/lib/utils/customer-address";
 import { useAuthStore } from "@/lib/store/auth";
 import { useCan } from "@/lib/hooks/useCan";
@@ -580,6 +581,7 @@ export default function BanHangPage() {
       discountRatio: number;
       paymentAmount: number;
       deliveryInfo: DeliveryInfo;
+      selectedAddressId: number | null;
     };
   }>({});
 
@@ -603,6 +605,7 @@ export default function BanHangPage() {
       tab.paymentAmount !== initialData.paymentAmount ||
       tab.selectedPriceBookId !== initialData.selectedPriceBookId ||
       tab.selectedPriceBookName !== initialData.selectedPriceBookName ||
+      tab.selectedAddressId !== initialData.selectedAddressId ||
       JSON.stringify(tab.deliveryInfo) !==
         JSON.stringify(initialData.deliveryInfo);
 
@@ -619,6 +622,7 @@ export default function BanHangPage() {
         paymentAmount: tab.paymentAmount,
         selectedPriceBookId: tab.selectedPriceBookId,
         selectedPriceBookName: tab.selectedPriceBookName,
+        selectedAddressId: tab.selectedAddressId ?? null,
         deliveryInfo: tab.deliveryInfo,
         timestamp: Date.now(),
       };
@@ -674,6 +678,7 @@ export default function BanHangPage() {
                 height: 10,
                 noteForDriver: "",
               },
+              selectedAddressId: editState.selectedAddressId ?? null,
               documentId: editState.documentId,
               isEditMode: true,
             };
@@ -689,6 +694,7 @@ export default function BanHangPage() {
               discountRatio: editTab.discountRatio,
               paymentAmount: editTab.paymentAmount,
               deliveryInfo: editTab.deliveryInfo,
+              selectedAddressId: editTab.selectedAddressId ?? null,
             };
 
             editTabs.push(editTab);
@@ -1127,6 +1133,13 @@ export default function BanHangPage() {
             height: Number(existingOrder.delivery?.height) || 10,
             noteForDriver: existingOrder.delivery?.noteForDriver || "",
           },
+      selectedAddressId:
+        restoredState?.selectedAddressId != null
+          ? restoredState.selectedAddressId
+          : findAddressFromDelivery(
+              existingOrder.customer?.addresses,
+              existingOrder.delivery
+            )?.id ?? null,
       documentId: existingOrder.id,
       isEditMode: true,
     };
@@ -1142,6 +1155,7 @@ export default function BanHangPage() {
       discountRatio: editTab.discountRatio,
       paymentAmount: editTab.paymentAmount,
       deliveryInfo: editTab.deliveryInfo,
+      selectedAddressId: editTab.selectedAddressId ?? null,
     };
 
     setTabs((prevTabs) => {
@@ -1308,6 +1322,13 @@ export default function BanHangPage() {
               noteForDriver: "",
             },
       documentId: existingInvoice.id,
+      selectedAddressId:
+        restoredState?.selectedAddressId != null
+          ? restoredState.selectedAddressId
+          : findAddressFromDelivery(
+              existingInvoice.customer?.addresses,
+              existingInvoice.delivery
+            )?.id ?? null,
       isEditMode: true,
     };
 
@@ -1322,6 +1343,7 @@ export default function BanHangPage() {
       discountRatio: editTab.discountRatio,
       paymentAmount: editTab.paymentAmount,
       deliveryInfo: editTab.deliveryInfo,
+      selectedAddressId: editTab.selectedAddressId ?? null,
     };
 
     setTabs((prevTabs) => {

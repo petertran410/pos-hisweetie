@@ -34,6 +34,7 @@ import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
 import { LineTypeBadge, PromotionLineName } from "../shared/LineTypeBadge";
 import Swal from "sweetalert2";
+import { findAddressFromDelivery } from "@/lib/utils/customer-address";
 
 const getOrderStatusBadgeColor = (status: number) => {
   switch (status) {
@@ -635,6 +636,12 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                         <DeliveryInfoCard
                           delivery={order.delivery}
                           customerAddresses={order.customer?.addresses}
+                          selectedAddressId={
+                            findAddressFromDelivery(
+                              order.customer?.addresses,
+                              order.delivery
+                            )?.id ?? null
+                          }
                           onUpdateToNewAddress={handleUpdateDeliveryAddress}
                         />
                         <div className="flex justify-end">

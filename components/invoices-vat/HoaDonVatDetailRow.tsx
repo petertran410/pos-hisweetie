@@ -21,6 +21,7 @@ import {
   InvoiceBuyerTaxInfo,
   InvoiceBuyerInfoValue,
 } from "./InvoiceBuyerTaxInfo";
+import { findAddressFromDelivery } from "@/lib/utils/customer-address";
 
 interface HoaDonVatDetailRowProps {
   invoiceId: number;
@@ -314,6 +315,12 @@ export function HoaDonVatDetailRow({
                       <DeliveryInfoCard
                         delivery={invoice.delivery}
                         customerAddresses={invoice.customer?.addresses}
+                        selectedAddressId={
+                          findAddressFromDelivery(
+                            invoice.customer?.addresses,
+                            invoice.delivery
+                          )?.id ?? null
+                        }
                         onUpdateToNewAddress={handleUpdateDeliveryAddress}
                       />
                       <div className="flex justify-end">

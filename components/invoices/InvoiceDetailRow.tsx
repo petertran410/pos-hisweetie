@@ -21,6 +21,7 @@ import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 import { CodeLink } from "../shared/CodeLink";
 import { LineTypeBadge, PromotionLineName } from "../shared/LineTypeBadge";
 import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
+import { findAddressFromDelivery } from "@/lib/utils/customer-address";
 
 interface InvoiceDetailRowProps {
   invoiceId: number;
@@ -435,6 +436,12 @@ export function InvoiceDetailRow({
                       <DeliveryInfoCard
                         delivery={invoice.delivery}
                         customerAddresses={invoice.customer?.addresses}
+                        selectedAddressId={
+                          findAddressFromDelivery(
+                            invoice.customer?.addresses,
+                            invoice.delivery
+                          )?.id ?? null
+                        }
                         onUpdateToNewAddress={handleUpdateDeliveryAddress}
                       />
                       <div className="flex justify-end">

@@ -14,30 +14,42 @@ interface DeliveryInfoCardProps {
     | null
     | undefined;
   customerAddresses?: Array<{
+    id?: number;
     isDefault?: boolean;
     wardName?: string | null;
     newWardName?: string | null;
     cityName?: string | null;
     newCityName?: string | null;
   }> | null;
+  /**
+   * Id của CustomerAddress thực sự đang được dùng trong đơn/hóa đơn.
+   * Nếu không truyền → fallback theo isDefault/first (giữ behavior cũ).
+   */
+  selectedAddressId?: number | null;
   onUpdateToNewAddress?: (wardName: string, cityName: string) => void;
 }
 
 export function DeliveryInfoCard({
   delivery,
   customerAddresses,
+  selectedAddressId,
   onUpdateToNewAddress,
 }: DeliveryInfoCardProps) {
   if (!delivery) return null;
 
-  const defaultAddr =
-    customerAddresses?.find((a) => a.isDefault) || customerAddresses?.[0];
+  // Ưu tiên địa chỉ đang được chọn (khớp selectedAddressId) thay vì luôn lấy isDefault.
+  const usedAddress =
+    customerAddresses?.find((a) => a.id === selectedAddressId) ||
+    customerAddresses?.find((a) => a.isDefault) ||
+    customerAddresses?.[0] ||
+    null;
 
-  // Phát hiện địa chỉ đã sáp nhập (newWardName tồn tại) và khác với snapshot delivery
+  // Phát hiện địa chỉ đã sáp nhập (newWardName tồn tại) và khác với snapshot delivery.
+  // So sánh newWardName/newCityName của ĐỊA CHỈ ĐANG DÙNG với snapshot delivery.wardName/locationName.
   const hasAddressChange =
-    !!defaultAddr?.newWardName &&
-    (defaultAddr.newWardName !== delivery.wardName ||
-      defaultAddr.newCityName !== delivery.locationName);
+    !!usedAddress?.newWardName &&
+    (usedAddress.newWardName !== delivery.wardName ||
+      usedAddress.newCityName !== delivery.locationName);
 
   const rows = [
     { label: "Người nhận", value: delivery.receiver },
@@ -60,7 +72,7 @@ export function DeliveryInfoCard({
         </div>
       ))}
 
-      {hasAddressChange && defaultAddr && (
+      {hasAddressChange && usedAddress && (
         <div className="px-3 py-2 bg-amber-50 border-t border-amber-200">
           <div className="flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -71,7 +83,7 @@ export function DeliveryInfoCard({
               <p className="mt-0.5">
                 Bạn có muốn đổi thành địa chỉ mới:{" "}
                 <strong>
-                  {[defaultAddr.newWardName, defaultAddr.newCityName]
+                  {[usedAddress.newWardName, usedAddress.newCityName]
                     .filter(Boolean)
                     .join(" - ")}
                 </strong>
@@ -82,8 +94,8 @@ export function DeliveryInfoCard({
               <button
                 onClick={() =>
                   onUpdateToNewAddress(
-                    defaultAddr.newWardName!,
-                    defaultAddr.newCityName || ""
+                    usedAddress.newWardName!,
+                    usedAddress.newCityName || ""
                   )
                 }
                 className="px-2 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors flex-shrink-0 whitespace-nowrap">
