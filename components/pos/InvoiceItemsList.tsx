@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Copy, Gift, Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 import { NoteTemplate } from "@/lib/api/note-templates";
@@ -10,6 +10,8 @@ import {
   useUpdateNoteTemplate,
   useDeleteNoteTemplate,
 } from "@/lib/hooks/useNoteTemplates";
+import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
+import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { NoteDropdown } from "./NoteDropdown";
 import { NoteTemplateModal } from "./NoteTemplateModal";
 import { ItemDiscountModal } from "./ItemDiscountModal";
@@ -95,6 +97,29 @@ export function InvoiceItemsList({
 
   const getStockWarning = (item: CartItem): string | null =>
     getStockWarningHelper(item, selectedBranch?.id);
+
+  // Gom id sản phẩm trong giỏ để lấy "KH Đặt" / "Đặt NCC" realtime theo chi nhánh
+  // (cùng logic với ProductSearchDropdown).
+  const cartProductIds = useMemo(
+    () => Array.from(new Set(cartItems.map((it) => it.product.id))),
+    [cartItems]
+  );
+  const { data: pendingSummary } = useOrdersPendingSummary(
+    cartProductIds,
+    selectedBranch?.id
+  );
+  const pendingMap = pendingSummary || {};
+  const { data: supplierSummary } = useOrderSuppliersConfirmedSummary(
+    cartProductIds,
+    selectedBranch?.id
+  );
+  const supplierMap = supplierSummary || {};
+
+  const getCustomerOrdered = (item: CartItem): number =>
+    pendingMap[item.product.id] ?? 0;
+
+  const getSupplierOrdered = (item: CartItem): number =>
+    supplierMap[item.product.id] ?? 0;
 
   const getCartItemKey = (item: CartItem): string => item.rowId;
 
@@ -639,6 +664,15 @@ export function InvoiceItemsList({
                   </span>
                 </div>
 
+                {/* Dòng nhỏ in nghiêng: Tồn / KH Đặt / Đặt NCC theo chi nhánh */}
+                {canViewInventory && !item.isPromoGift && (
+                  <div className="text-[11px] italic text-black">
+                    Tồn: {getItemOnHand(item) ?? 0} | KH Đặt:{" "}
+                    {getCustomerOrdered(item).toLocaleString()} | Đặt NCC:{" "}
+                    {getSupplierOrdered(item).toLocaleString()}
+                  </div>
+                )}
+
                 {/* Row 2: Đơn giá + Chiết khấu + Giảm giá */}
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-400">Đơn giá:</span>
@@ -679,35 +713,48 @@ export function InvoiceItemsList({
 
               {/* ── DESKTOP LAYOUT ── hidden lg:flex ──────────── */}
               <div className="hidden lg:flex flex-wrap items-center mt-2 gap-y-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      onUpdateItem(item.rowId, {
-                        quantity: Math.max(1, item.quantity - 1),
-                      });
-                      clearQuantityDisplay(item);
-                    }}
-                    className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <input
-                    type="text"
-                    value={getQuantityDisplay(item)}
-                    onChange={(e) => handleQuantityChange(item, e.target.value)}
-                    onBlur={() => handleQuantityBlur(item)}
-                    className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-brand"
-                    min="1"
-                  />
-                  <button
-                    onClick={() => {
-                      onUpdateItem(item.rowId, {
-                        quantity: Math.max(1, item.quantity + 1),
-                      });
-                      clearQuantityDisplay(item);
-                    }}
-                    className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                    <Plus className="w-3 h-3" />
-                  </button>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        onUpdateItem(item.rowId, {
+                          quantity: Math.max(1, item.quantity - 1),
+                        });
+                        clearQuantityDisplay(item);
+                      }}
+                      className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <input
+                      type="text"
+                      value={getQuantityDisplay(item)}
+                      onChange={(e) =>
+                        handleQuantityChange(item, e.target.value)
+                      }
+                      onBlur={() => handleQuantityBlur(item)}
+                      className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-brand"
+                      min="1"
+                    />
+                    <button
+                      onClick={() => {
+                        onUpdateItem(item.rowId, {
+                          quantity: Math.max(1, item.quantity + 1),
+                        });
+                        clearQuantityDisplay(item);
+                      }}
+                      className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {/* Dòng nhỏ in nghiêng: Tồn / KH Đặt / Đặt NCC theo chi nhánh */}
+                  {canViewInventory && !item.isPromoGift && (
+                    <div className="text-xs italic text-black whitespace-nowrap">
+                      Tồn: {getItemOnHand(item) ?? 0} | KH Đặt:{" "}
+                      {getCustomerOrdered(item).toLocaleString()} | Đặt NCC:{" "}
+                      {getSupplierOrdered(item).toLocaleString()}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-end gap-3 ml-auto">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import {
   useCreateSupplier,
@@ -29,6 +30,15 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [groupSearchTerm, setGroupSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Guard SSR: chỉ render modal qua Portal sau khi component đã mount trên
+  // client. Tránh lỗi "document is not defined" khi Next.js render initial
+  // HTML trên server (dù component là "use client", vẫn có 1 lần render
+  // trên server để tạo HTML gốc).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const {
     register,
@@ -135,7 +145,9 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-4xl h-[92dvh] sm:h-auto sm:max-h-[90vh] sm:m-4 flex flex-col overflow-hidden shadow-2xl">
         {/* ── Header ── */}
@@ -404,6 +416,7 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

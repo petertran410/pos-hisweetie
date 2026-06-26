@@ -525,6 +525,12 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
             : "Tạo phiếu chuyển hàng thành công"
         );
       }
+
+      // Lưu ý: Khi kho nhận "Nhận hàng" (status 2→3), backend tự động
+      // hoàn shortage về kho chuyển (xem returnShortageToFromBranch trong
+      // transfers.service.ts). Nếu SL nhận < SL chuyển, phần chênh lệch
+      // được cộng lại tồn kho kho chuyển NGAY TRONG transaction cập nhật
+      // → không cần modal xác nhận từ người dùng.
       onClose();
     } catch (error: any) {
       toast.error(error?.message || "Có lỗi xảy ra khi lưu phiếu chuyển hàng", {
