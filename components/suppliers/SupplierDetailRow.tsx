@@ -110,187 +110,192 @@ export function SupplierDetailRow({
       .filter(Boolean) || [];
 
   return (
-    <tr>
-      <td
-        colSpan={colSpan}
-        className="border-b-2 border-l-2 border-r-2 border-brand p-0 bg-gray-50">
-        <div
-          ref={wrapperRef}
-          className="sticky left-0 bg-gray-50"
-          style={{ width: 0 }}>
-          <div className="bg-white border border-gray-200 overflow-hidden">
-            <div className="p-4">
-              {/* ── Header ── */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-gray-900">
-                      <CodeLink
-                        entity="supplier"
-                        code={supplier.code}
-                        className="text-lg font-bold text-brand hover:underline"
-                      />
-                    </span>
-                    <span className="text-gray-400">-</span>
-                    <span className="text-lg font-semibold text-gray-800">
-                      {supplier.name}
-                    </span>
-                    <span
-                      className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${
-                        supplier.isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}>
-                      {supplier.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
+    <>
+      <tr>
+        <td
+          colSpan={colSpan}
+          className="border-b-2 border-l-2 border-r-2 border-brand p-0 bg-gray-50">
+          <div
+            ref={wrapperRef}
+            className="sticky left-0 bg-gray-50"
+            style={{ width: 0 }}>
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="p-4">
+                {/* ── Header ── */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-gray-900">
+                        <CodeLink
+                          entity="supplier"
+                          code={supplier.code}
+                          className="text-lg font-bold text-brand hover:underline"
+                        />
+                      </span>
+                      <span className="text-gray-400">-</span>
+                      <span className="text-lg font-semibold text-gray-800">
+                        {supplier.name}
+                      </span>
+                      <span
+                        className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${
+                          supplier.isActive
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}>
+                        {supplier.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium text-gray-600">
+                      {supplier.branch?.name || "-"}
                     </span>
                   </div>
-                  <span className="text-sm font-medium text-gray-600">
-                    {supplier.branch?.name || "-"}
-                  </span>
+
+                  {/* ── Tabs ── */}
+                  <div className="flex gap-1 border-b border-gray-200">
+                    {TABS.map((tab) => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        className={`px-4 py-2 text-md font-medium border-b-2 transition-colors ${
+                          activeTab === tab.key
+                            ? "border-brand text-brand"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                        }`}>
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {/* ── Tabs ── */}
-                <div className="flex gap-1 border-b border-gray-200">
-                  {TABS.map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveTab(tab.key)}
-                      className={`px-4 py-2 text-md font-medium border-b-2 transition-colors ${
-                        activeTab === tab.key
-                          ? "border-brand text-brand"
-                          : "border-transparent text-gray-500 hover:text-gray-700"
-                      }`}>
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Tab: Thông tin ── */}
-              {activeTab === "info" && (
-                <div>
-                  {/* Meta */}
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-3 text-sm text-gray-500 flex-wrap">
-                      <span>
-                        Ngày tạo:{" "}
-                        <span className="text-gray-700">
-                          {formatDate(supplier.createdAt)}
+                {/* ── Tab: Thông tin ── */}
+                {activeTab === "info" && (
+                  <div>
+                    {/* Meta */}
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-3 text-sm text-gray-500 flex-wrap">
+                        <span>
+                          Ngày tạo:{" "}
+                          <span className="text-gray-700">
+                            {formatDate(supplier.createdAt)}
+                          </span>
                         </span>
-                      </span>
-                      <span className="text-gray-300">|</span>
-                      <span>
-                        Người tạo:{" "}
-                        <span className="text-gray-700">
-                          {supplier.createdName || "admin"}
+                        <span className="text-gray-300">|</span>
+                        <span>
+                          Người tạo:{" "}
+                          <span className="text-gray-700">
+                            {supplier.createdName || "admin"}
+                          </span>
                         </span>
-                      </span>
-                      <span className="text-gray-300">|</span>
-                      <span>
-                        Nhóm NCC:{" "}
-                        <span className="text-gray-700">
-                          {groups.length > 0
-                            ? groups.join(", ")
-                            : "Chưa có nhóm"}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="text-right text-sm shrink-0 ml-4">
-                      <div className="text-gray-500">
-                        Nợ hiện tại:{" "}
-                        <span className="font-semibold text-red-600">
-                          {formatCurrency(supplier.debt ?? 0)}
+                        <span className="text-gray-300">|</span>
+                        <span>
+                          Nhóm NCC:{" "}
+                          <span className="text-gray-700">
+                            {groups.length > 0
+                              ? groups.join(", ")
+                              : "Chưa có nhóm"}
+                          </span>
                         </span>
                       </div>
-                      <div className="text-gray-500">
-                        Tổng mua:{" "}
-                        <span className="font-semibold text-gray-800">
-                          {formatCurrency(supplier.totalInvoiced ?? 0)}
-                        </span>
+                      <div className="text-right text-sm shrink-0 ml-4">
+                        <div className="text-gray-500">
+                          Nợ hiện tại:{" "}
+                          <span className="font-semibold text-red-600">
+                            {formatCurrency(supplier.debt ?? 0)}
+                          </span>
+                        </div>
+                        <div className="text-gray-500">
+                          Tổng mua:{" "}
+                          <span className="font-semibold text-gray-800">
+                            {formatCurrency(supplier.totalInvoiced ?? 0)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Fields */}
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm mb-6">
-                    <div className="flex gap-2 text-gray-700">
-                      <span className="text-gray-500 shrink-0">
-                        Điện thoại:
-                      </span>
-                      <span>{supplier.contactNumber || "-"}</span>
+                    {/* Fields */}
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm mb-6">
+                      <div className="flex gap-2 text-gray-700">
+                        <span className="text-gray-500 shrink-0">
+                          Điện thoại:
+                        </span>
+                        <span>{supplier.contactNumber || "-"}</span>
+                      </div>
+                      <div className="flex gap-2 text-gray-700">
+                        <span className="text-gray-500 shrink-0">Email:</span>
+                        <span>{supplier.email || "-"}</span>
+                      </div>
+                      <div className="flex gap-2 text-gray-700">
+                        <span className="text-gray-500 shrink-0">
+                          Mã số thuế:
+                        </span>
+                        <span>{supplier.taxCode || "-"}</span>
+                      </div>
+                      <div className="flex gap-2 text-gray-700 col-span-2">
+                        <span className="text-gray-500 shrink-0">Địa chỉ:</span>
+                        <span>{supplier.address || "-"}</span>
+                      </div>
                     </div>
-                    <div className="flex gap-2 text-gray-700">
-                      <span className="text-gray-500 shrink-0">Email:</span>
-                      <span>{supplier.email || "-"}</span>
-                    </div>
-                    <div className="flex gap-2 text-gray-700">
-                      <span className="text-gray-500 shrink-0">
-                        Mã số thuế:
-                      </span>
-                      <span>{supplier.taxCode || "-"}</span>
-                    </div>
-                    <div className="flex gap-2 text-gray-700 col-span-2">
-                      <span className="text-gray-500 shrink-0">Địa chỉ:</span>
-                      <span>{supplier.address || "-"}</span>
-                    </div>
-                  </div>
 
-                  {/* ── Action footer ── */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <div className="flex gap-2">
-                      {canDeleteSupplier && (
-                        <button
-                          onClick={handleDelete}
-                          className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors">
-                          <Trash2 className="w-4 h-4 inline mr-1" />
-                          Xóa
-                        </button>
-                      )}
+                    {/* ── Action footer ── */}
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                      <div className="flex gap-2">
+                        {canDeleteSupplier && (
+                          <button
+                            onClick={handleDelete}
+                            className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors">
+                            <Trash2 className="w-4 h-4 inline mr-1" />
+                            Xóa
+                          </button>
+                        )}
+                        {canUpdateSupplier && (
+                          <button
+                            onClick={handleToggleStatus}
+                            className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                            {supplier.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
+                          </button>
+                        )}
+                      </div>
                       {canUpdateSupplier && (
                         <button
-                          onClick={handleToggleStatus}
-                          className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                          {supplier.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
+                          onClick={() => setShowEditModal(true)}
+                          className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors shadow-sm">
+                          <Pencil className="w-4 h-4 inline mr-1" />
+                          Chỉnh sửa
                         </button>
                       )}
                     </div>
-                    {canUpdateSupplier && (
-                      <button
-                        onClick={() => setShowEditModal(true)}
-                        className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors shadow-sm">
-                        <Pencil className="w-4 h-4 inline mr-1" />
-                        Chỉnh sửa
-                      </button>
-                    )}
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* ── Tab: Lịch sử nhập/trả hàng ── */}
-              {activeTab === "history" && (
-                <div className="text-center text-gray-500 py-8 text-sm">
-                  Chưa có lịch sử nhập/trả hàng
-                </div>
-              )}
+                {/* ── Tab: Lịch sử nhập/trả hàng ── */}
+                {activeTab === "history" && (
+                  <div className="text-center text-gray-500 py-8 text-sm">
+                    Chưa có lịch sử nhập/trả hàng
+                  </div>
+                )}
 
-              {/* ── Tab: Nợ cần trả ── */}
-              {activeTab === "debt" && (
-                <SupplierDebtsTab
-                  supplierId={supplierId}
-                  supplierDebt={Number(supplier.debt || 0)}
-                />
-              )}
+                {/* ── Tab: Nợ cần trả ── */}
+                {activeTab === "debt" && (
+                  <SupplierDebtsTab
+                    supplierId={supplierId}
+                    supplierDebt={Number(supplier.debt || 0)}
+                  />
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </td>
+        </td>
+      </tr>
 
+      {/* Modal chỉnh sửa — đặt ngoài <tr> để tránh lỗi HTML invalid
+          (`<div>` không được phép làm con của `<tr>`). Fragment <> giúp
+          `<SupplierForm>` render như sibling của `<tr>`, không phải con. */}
       {showEditModal && (
         <SupplierForm
           supplier={supplier}
           onClose={() => setShowEditModal(false)}
         />
       )}
-    </tr>
+    </>
   );
 }

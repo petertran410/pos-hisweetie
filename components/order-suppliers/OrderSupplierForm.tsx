@@ -28,6 +28,20 @@ import { SupplierPaymentModal } from "./SupplierPaymentModal";
 import { ProductPickerDropdown } from "@/components/products/ProductPickerDropdown";
 import { useCan } from "@/lib/hooks/useCan";
 import { useLatestSupplierPrices } from "@/lib/hooks/useLatestSupplierPrices";
+import {
+  useExchangeRate,
+  useRefreshExchangeRate,
+} from "@/lib/hooks/useExchangeRate";
+import { ExchangeRateIndicator } from "@/components/exchange-rates/ExchangeRateIndicator";
+
+// ID nhóm nhà cung cấp "nước ngoài". Theo yêu cầu của hệ thống: NCC thuộc
+// nhóm id = 1 → được phép nhập Đơn giá NM / Thành tiền NM bằng ngoại tệ
+// (hiện tại chỉ hỗ trợ CNY). NCC không thuộc nhóm này → 2 cột ẩn, dùng
+// mặc định VND.
+const IMPORT_SUPPLIER_GROUP_ID = 1;
+// Mã tiền tệ mặc định khi chưa có nhóm nước ngoài.
+const DEFAULT_CURRENCY = "VND";
+const DEFAULT_EXCHANGE_RATE = 1;
 
 interface ProductItem {
   productId: number;
@@ -299,10 +313,15 @@ export function OrderSupplierForm({
     const t = setTimeout(() => setDebouncedSupplierSearch(supplierSearch), 250);
     return () => clearTimeout(t);
   }, [supplierSearch]);
+  // Cần `includeSupplierGroup: true` để dropdown NCC trả về
+  // `supplierGroupDetails` — nếu thiếu, `selectedSupplier` ở dưới sẽ không
+  // có thông tin nhóm nước ngoài → form không hiển thị 3 cột "Đơn giá NM" /
+  // "Thành tiền NM" / "Tỉ giá" dù NCC đó thực sự thuộc nhóm id=1.
   const { data: suppliersData } = useSuppliers({
     name: debouncedSupplierSearch || undefined,
     pageSize: 50,
     currentItem: 0,
+    includeSupplierGroup: true,
   });
   const createOrderSupplier = useCreateOrderSupplier();
   const updateOrderSupplier = useUpdateOrderSupplier();
@@ -347,6 +366,19 @@ export function OrderSupplierForm({
     "amount"
   );
 
+  // ─── Tiền tệ & tỉ giá ────────────────────────────────────────────────────
+  // Snapshot tỉ giá tại thời điểm tạo phiếu (lưu vào OrderSupplier.currency /
+  // OrderSupplier.exchangeRate). Nếu không có sẵn → mặc định VND + 1.
+  // Khi chọn NCC thuộc nhóm nước ngoài sẽ tự động fetch tỉ giá mới nhất.
+  const [currency, setCurrency] = useState<"VND" | "CNY">(
+    (orderSupplier?.currency as "VND" | "CNY" | undefined) || DEFAULT_CURRENCY
+  );
+  const [exchangeRate, setExchangeRate] = useState<number>(
+    orderSupplier?.exchangeRate != null
+      ? Number(orderSupplier.exchangeRate)
+      : DEFAULT_EXCHANGE_RATE
+  );
+
   const [products, setProducts] = useState<ProductItem[]>([]);
 
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -371,13 +403,92 @@ export function OrderSupplierForm({
   const selectedStatus = STATUS_OPTIONS.find((s) => s.value === status);
   const selectedBranchData = branches?.find((b) => b.id === branchId);
   const activeBranches = branches?.filter((b) => b.isActive);
-  const selectedSupplierFromList = suppliersData?.data?.find(
-    (s) => s.id === supplierId
-  );
-  const { data: selectedSupplierFetched } = useSupplier(
-    supplierId && !selectedSupplierFromList ? supplierId : undefined
-  );
-  const selectedSupplier = selectedSupplierFromList || selectedSupplierFetched;
+  // LUÔN fetch detail NCC khi user chọn (bỏ qua cache từ dropdown list).
+  // Lý do: dù `useSuppliers` của dropdown đã truyền `includeSupplierGroup:
+  // true`, React Query cache có thể chứa query cũ từ session trước/page khác
+  // thiếu field `supplierGroupDetails`. Nếu dùng cache cũ, `isImportSupplier`
+  // luôn false → form không hiển thị 3 cột NM. `useSupplier(supplierId)`
+  // gọi `findOne` — BE findOne luôn include group đầy đủ, nên đây là nguồn
+  // đáng tin duy nhất.
+  const { data: selectedSupplier } = useSupplier(supplierId || undefined);
+
+  // NCC nước ngoài = có ít nhất 1 supplierGroupDetails.supplierGroupId === 1.
+  // Khi đó mới hiển thị 2 cột "Đơn giá NM" / "Thành tiền NM" và cho phép
+  // nhập tỉ giá.
+  const isImportSupplier = useMemo(() => {
+    return (
+      selectedSupplier?.supplierGroupDetails?.some(
+        (d) => d.supplierGroupId === IMPORT_SUPPLIER_GROUP_ID
+      ) ?? false
+    );
+  }, [selectedSupplier]);
+
+  // Phiếu đã có phiếu nhập hàng (PurchaseOrder) liên quan chưa? Nếu rồi thì
+  // KHÔNG cho phép refresh tỉ giá (đã snapshot xuống PN, đổi sẽ lệch dữ liệu).
+  const hasLinkedPurchaseOrder = useMemo(() => {
+    return (
+      orderSupplier?.purchaseOrders != null &&
+      orderSupplier.purchaseOrders.length > 0
+    );
+  }, [orderSupplier]);
+
+  // ─── Tỉ giá: chỉ gọi live khi chưa có snapshot trên phiếu ──────────────
+  // - Phiếu MỚI (orderSupplier = null) + NCC nước ngoài: gọi live, cho refresh
+  // - Phiếu CŨ (orderSupplier != null) + currency=CNY: KHÔNG gọi live; dùng
+  //   snapshot từ DB. Vẫn cho refresh nếu chưa có PN liên quan.
+  const isLiveRateNeeded = isImportSupplier;
+  const liveRateQuery = useExchangeRate("CNY", "VND");
+  // Khi là phiếu cũ có currency=CNY, KHÔNG lấy rate từ live query mà dùng
+  // snapshot exchangeRate. Ngược lại: phiếu mới + NCC nước ngoài → dùng live.
+  const effectiveRate = useMemo(() => {
+    if (orderSupplier?.currency === "CNY" && orderSupplier?.exchangeRate) {
+      // Snapshot từ DB — ưu tiên.
+      return Number(orderSupplier.exchangeRate);
+    }
+    if (isImportSupplier && liveRateQuery.data) {
+      return liveRateQuery.data.rate;
+    }
+    return exchangeRate;
+  }, [
+    orderSupplier,
+    isImportSupplier,
+    liveRateQuery.data,
+    exchangeRate,
+  ]);
+
+  // Effect: khi user chọn NCC thuộc nhóm nước ngoài ở phiếu MỚI, tự động
+  // set currency=CNY + lấy tỉ giá mới nhất. Khi chuyển sang NCC trong nước
+  // thì reset về VND.
+  useEffect(() => {
+    // Chỉ áp dụng auto-set khi đang TẠO MỚI (không có orderSupplier).
+    if (orderSupplier) return;
+    if (isImportSupplier) {
+      setCurrency("CNY");
+      // Lấy rate từ live query (nếu đã có) hoặc giữ nguyên default 1
+      // (sẽ tự cập nhật khi live query trả data).
+      if (liveRateQuery.data?.rate) {
+        setExchangeRate(liveRateQuery.data.rate);
+      }
+    } else {
+      setCurrency("VND");
+      setExchangeRate(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isImportSupplier, orderSupplier]);
+
+  // Effect phụ: khi live rate load xong (sau khi chọn NCC nước ngoài lần
+  // đầu) → cập nhật exchangeRate state.
+  useEffect(() => {
+    if (
+      !orderSupplier &&
+      isImportSupplier &&
+      liveRateQuery.data?.rate &&
+      exchangeRate !== liveRateQuery.data.rate
+    ) {
+      setExchangeRate(liveRateQuery.data.rate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveRateQuery.data]);
 
   // ─── Auto-load giá nhập gần nhất theo nhà cung cấp ──────────────────────────
   // Chạy cho MỌI user (kể cả user không có quyền xem giá): giá là "nền" để tính
@@ -446,7 +557,9 @@ export function OrderSupplierForm({
           subTotal: Number(item.subTotal),
           factoryPrice,
           factorySubTotal,
-          // Coi như nhập tay nếu giá trị lưu khác công thức auto (giá NM × SL).
+          // Coi như nhập tay nếu giá trị lưu khác công thức auto
+          // (Đơn giá NM × SL). factorySubTotal cùng đơn vị CNY với
+          // factoryPrice, không liên quan tỉ giá.
           factorySubTotalManual:
             item.factorySubTotal != null &&
             factorySubTotal !== factoryPrice * qty,
@@ -568,7 +681,10 @@ export function OrderSupplierForm({
       updated[index].subTotal =
         (updated[index].price - updated[index].discount) * quantity;
       if (!updated[index].factorySubTotalManual) {
-        updated[index].factorySubTotal = updated[index].factoryPrice * quantity;
+        // Thành tiền NM = Đơn giá NM × SL (CÙNG đơn vị CNY, không nhân tỉ giá).
+        // Tỉ giá chỉ dùng để hiển thị "Tổng tiền hàng (CNY)" ở panel bên phải.
+        updated[index].factorySubTotal =
+          updated[index].factoryPrice * quantity;
       }
       return updated;
     });
@@ -622,10 +738,12 @@ export function OrderSupplierForm({
     setProducts((prev) => {
       const updated = [...prev];
       updated[index].factoryPrice = factoryPrice;
-      // Chỉ tự tính lại thành tiền NM khi người dùng chưa nhập tay.
-      if (!updated[index].factorySubTotalManual) {
-        updated[index].factorySubTotal = factoryPrice * updated[index].quantity;
-      }
+      // Khi user sửa Đơn giá NM (CNY) → coi như user đang điều khiển dòng
+      // này từ "đầu vào". Reset manual flag + tự tính lại Thành tiền NM.
+      // Logic 2-chiều: nếu trước đó user đã nhập tay Thành tiền NM, lần sửa
+      // Đơn giá này sẽ override → Thành tiền NM = Đơn giá × SL (cùng CNY).
+      updated[index].factorySubTotalManual = false;
+      updated[index].factorySubTotal = factoryPrice * updated[index].quantity;
       return updated;
     });
   };
@@ -642,9 +760,56 @@ export function OrderSupplierForm({
     setProducts((prev) => {
       const updated = [...prev];
       updated[index].factorySubTotal = factorySubTotal;
+      // Đánh dấu user nhập tay → handler khác (handleQuantityChange,
+      // handleFactoryPriceChange) sẽ KHÔNG override giá trị này.
       updated[index].factorySubTotalManual = true;
+      // Logic 2-chiều: Thành tiền NM và Đơn giá NM CÙNG đơn vị CNY, nên
+      // tính ngược Đơn giá = Thành tiền / SL (không cần tỉ giá).
+      if (updated[index].quantity > 0) {
+        updated[index].factoryPrice =
+          factorySubTotal / updated[index].quantity;
+      }
       return updated;
     });
+  };
+
+  /**
+   * User ấn nút "Cập nhật tỉ giá" trên form. Cập nhật tỉ giá mới nhất từ
+   * API + tự tính lại factorySubTotal cho tất cả các dòng KHÔNG manual
+   * (giữ nguyên giá trị user đã nhập tay).
+   *
+   * Đây là entry point duy nhất để đổi tỉ giá khi phiếu đang edit (chưa có
+   * PN liên quan). Sau khi gọi, exchangeRate state cập nhật → các dòng
+   * auto-calc sẽ tự nhảy số.
+   */
+  const refreshExchangeRateMutation = useRefreshExchangeRate();
+  const handleRefreshExchangeRate = () => {
+    if (hasLinkedPurchaseOrder) {
+      toast.error(
+        "Phiếu đã có phiếu nhập hàng liên quan. Không thể cập nhật lại tỉ giá.",
+      );
+      return;
+    }
+    refreshExchangeRateMutation.mutate(
+      { base: "CNY", target: "VND" },
+      {
+        onSuccess: (data) => {
+          setExchangeRate(data.rate);
+          // Cập nhật lại factorySubTotal cho các dòng KHÔNG manual. Vì
+          // factorySubTotal cùng đơn vị CNY với factoryPrice, KHÔNG nhân
+          // tỉ giá — chỉ cần đảm bảo công thức factoryPrice × SL đúng.
+          setProducts((prev) =>
+            prev.map((p) => {
+              if (p.factorySubTotalManual) return p;
+              return {
+                ...p,
+                factorySubTotal: (p.factoryPrice || 0) * (p.quantity || 0),
+              };
+            }),
+          );
+        },
+      },
+    );
   };
 
   const calculateTotalValue = () => {
@@ -684,6 +849,10 @@ export function OrderSupplierForm({
       description: note,
       discount: discountType === "amount" ? Number(discount) || 0 : 0,
       discountRatio: discountType === "ratio" ? Number(discountRatio) || 0 : 0,
+      // Tiền tệ & tỉ giá áp dụng cho phiếu. Chỉ thực sự có ý nghĩa khi NCC
+      // thuộc nhóm nước ngoài; với NCC trong nước sẽ là VND + 1 (mặc định).
+      currency,
+      exchangeRate,
       items: products.map((p) => {
         const priceNum = Number(p.price);
         const item: any = {
@@ -780,13 +949,16 @@ export function OrderSupplierForm({
                       </th>
                     </>
                   )}
-                  {canViewFactoryPrice && (
+                  {canViewFactoryPrice && isImportSupplier && (
                     <>
                       <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
-                        Đơn giá NM
+                        {`Đơn giá NM${currency === "CNY" ? " (¥)" : ""}`}
                       </th>
                       <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
-                        Thành tiền NM
+                        {`Thành tiền NM (¥)`}
+                      </th>
+                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
+                        Tỉ giá
                       </th>
                     </>
                   )}
@@ -888,7 +1060,7 @@ export function OrderSupplierForm({
                         </td>
                       </>
                     )}
-                    {canViewFactoryPrice && (
+                    {canViewFactoryPrice && isImportSupplier && (
                       <>
                         <td className="px-[10px] py-2 align-middle">
                           <input
@@ -923,6 +1095,17 @@ export function OrderSupplierForm({
                             disabled={isFormDisabled ? true : false}
                             className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                           />
+                        </td>
+                        <td className="px-[10px] py-2 align-middle text-right text-xs whitespace-nowrap">
+                          <span className="text-gray-600">
+                            1 {currency} ={" "}
+                            <strong className="text-gray-900">
+                              {new Intl.NumberFormat("vi-VN", {
+                                maximumFractionDigits: 2,
+                              }).format(effectiveRate)}
+                            </strong>{" "}
+                            VND
+                          </span>
                         </td>
                       </>
                     )}
@@ -1213,6 +1396,69 @@ export function OrderSupplierForm({
                 )}
               </div>
             </div>
+            {/* Tổng tiền hàng theo tiền tệ (chỉ hiện khi NCC nước ngoài).
+                Vì Đơn giá NM và Thành tiền NM đều tính bằng CNY (không nhân
+                tỉ giá), nên hiển thị 2 dòng:
+                  - Tổng CNY: tổng factorySubTotal (đã = CNY thuần)
+                  - Tổng VND (quy đổi): tổng CNY × tỉ giá (chỉ tham khảo,
+                    không dùng để ghi nhận công nợ — đó là VND "Cần trả NCC"
+                    ở dưới, dùng cột "Thành tiền" VND). */}
+            {isImportSupplier && (
+              <div className="flex flex-col gap-1">
+                <div className="flex gap-2 items-center flex-wrap">
+                  <div className="block text-md text-gray-600">
+                    Tổng tiền hàng (CNY):
+                  </div>
+                  <div className="font-medium text-gray-900">
+                    {new Intl.NumberFormat("vi-VN", {
+                      maximumFractionDigits: 2,
+                    }).format(
+                      products.reduce(
+                        (sum, p) => sum + (p.factorySubTotal || 0),
+                        0
+                      )
+                    )}{" "}
+                    CNY
+                  </div>
+                </div>
+                <div className="flex gap-2 items-center flex-wrap">
+                  <div className="block text-md text-gray-600">
+                    Tổng quy đổi (VND):
+                  </div>
+                  <div className="font-medium text-gray-700 text-sm">
+                    {formatCurrency(
+                      products.reduce(
+                        (sum, p) => sum + (p.factorySubTotal || 0),
+                        0
+                      ) * (effectiveRate || 1)
+                    )}
+                  </div>
+                </div>
+                {orderSupplier != null && (
+                  // Phiếu CŨ: hiển thị tỉ giá snapshot từ DB. Cho refresh nếu
+                  // chưa có PN liên quan.
+                  <ExchangeRateIndicator
+                    base={currency}
+                    target="VND"
+                    rate={
+                      orderSupplier?.currency === "CNY" ? effectiveRate : null
+                    }
+                    fetchedAt={orderSupplier?.createdAt}
+                    allowRefresh={!hasLinkedPurchaseOrder && !isFormDisabled}
+                    onRefresh={handleRefreshExchangeRate}
+                  />
+                )}
+                {!orderSupplier && (
+                  // Phiếu MỚI: hiển thị live rate từ BE + cho refresh
+                  <ExchangeRateIndicator
+                    base="CNY"
+                    target="VND"
+                    allowRefresh={!isFormDisabled}
+                    onRefresh={handleRefreshExchangeRate}
+                  />
+                )}
+              </div>
+            )}
             <div className="flex gap-2 items-center">
               <div className="block text-md text-gray-600">Giảm giá:</div>
               <div className="flex gap-1">

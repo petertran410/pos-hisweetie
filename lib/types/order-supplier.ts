@@ -24,6 +24,12 @@ export interface OrderSupplier {
   supplierDebt: number;
   supplierOldDebt: number;
   expectedDeliveryDate?: string;
+  // Tiền tệ áp dụng cho phiếu: 'VND' (mặc định) hoặc 'CNY' (khi NCC nước
+  // ngoài). Khi CNY thì `exchangeRate` lưu tỉ giá snapshot tại thời điểm
+  // tạo phiếu. Cả 2 đều optional vì phiếu cũ (tạo trước feature này) sẽ
+  // trả về null → FE fallback mặc định VND + rate=1.
+  currency?: string | null;
+  exchangeRate?: number | null;
   createdBy: number;
   createdAt: string;
   updatedAt: string;

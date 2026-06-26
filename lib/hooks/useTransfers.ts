@@ -3,7 +3,7 @@ import {
   transfersApi,
   type TransferQueryParams,
   type CreateTransferData,
-  CancelTransferData,
+  type CancelTransferData,
 } from "../api/transfers";
 import { toast } from "sonner";
 
