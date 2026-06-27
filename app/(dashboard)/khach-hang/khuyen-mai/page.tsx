@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { usePromotions } from "@/lib/hooks/usePromotions";
 import { Promotion, PROMOTION_TYPE_LABELS } from "@/lib/types/promotion";
 import { PromotionsTable } from "@/components/promotions/PromotionsTable";
@@ -50,13 +51,15 @@ export default function PromotionsPage() {
         style={{ borderColor: "var(--dt-border)" }}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-semibold">Khuyến mãi</h1>
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm text-white hover:bg-brand-dark transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Tạo chương trình
-          </button>
+          <PermissionGate resource="promotions" action="create">
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm text-white hover:bg-brand-dark transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Tạo chương trình
+            </button>
+          </PermissionGate>
         </div>
 
         <div className="mb-3 flex flex-wrap items-center gap-2">

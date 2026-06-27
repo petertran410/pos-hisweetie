@@ -238,6 +238,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
 
       const loadProductsWithInventory = async () => {
         try {
+          let forbiddenCount = 0;
           const productsWithInventory = await Promise.all(
             transfer.details.map(async (detail) => {
               try {
@@ -265,16 +266,37 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                   toInventory: Number(toInventory?.onHand || 0),
                 };
               } catch (error: any) {
-                if (error.name === "AbortError") {
-                  return error;
-                }
-                return error;
+                // 403 (thiếu quyền products:view) / lỗi mạng / product bị xóa:
+                // KHÔNG nhét Error vào state. Dựng ProductItem hợp lệ từ chính
+                // `detail` (đã có đủ mã/tên/SL/giá), fallback tồn kho = 0 để
+                // tránh crash `undefined.toLocaleString()` khi render.
+                if (error?.status === 403) forbiddenCount++;
+                return {
+                  productId: detail.productId,
+                  productCode: detail.productCode,
+                  productName: detail.productName,
+                  unit: undefined,
+                  sendQuantity: Number(detail.sendQuantity),
+                  receivedQuantity: isReceiver
+                    ? Number(detail.receivedQuantity) ||
+                      Number(detail.sendQuantity)
+                    : Number(detail.sendQuantity),
+                  price: Number(detail.sendPrice),
+                  fromInventory: 0,
+                  toInventory: 0,
+                };
               }
             })
           );
 
           if (isActive && !abortController.signal.aborted) {
             setProducts(productsWithInventory);
+            if (forbiddenCount > 0) {
+              toast.error(
+                `Thiếu quyền xem sản phẩm — cột tồn kho đang hiển thị 0. Hãy cấp quyền "products:view" cho chi nhánh này.`,
+                { duration: 5000 }
+              );
+            }
           }
         } catch (error) {
           console.error("Error updating products inventory:", error);
@@ -800,7 +822,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                 ? "text-red-600 font-semibold"
                                 : "text-gray-600"
                             }`}>
-                            {Number(item.fromInventory).toLocaleString()}
+                            {Number(item.fromInventory ?? 0).toLocaleString()}
                             {isOverStock && (
                               <div className="text-[11px] font-normal text-red-500">
                                 Vượt tồn, kho sẽ âm
@@ -808,7 +830,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                             )}
                           </td>
                           <td className="px-4 py-3 text-right text-gray-600">
-                            {Number(item.toInventory).toLocaleString()}
+                            {Number(item.toInventory ?? 0).toLocaleString()}
                           </td>
                           <td className="px-4 py-3">
                             {canEditProducts ? (
@@ -855,7 +877,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                               </div>
                             ) : (
                               <div className="text-center text-sm text-gray-900 font-medium">
-                                {item.sendQuantity.toLocaleString()}
+                                {Number(item.sendQuantity ?? 0).toLocaleString()}
                               </div>
                             )}
                           </td>
@@ -906,7 +928,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                 </div>
                               ) : (
                                 <div className="text-center text-sm text-gray-900 font-medium">
-                                  {item.receivedQuantity.toLocaleString()}
+                                  {Number(item.receivedQuantity ?? 0).toLocaleString()}
                                 </div>
                               )}
                             </td>
