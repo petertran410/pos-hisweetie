@@ -170,6 +170,7 @@ function SaleContent({ type, doc }: { type: DocType; doc: any }) {
               <th className="px-2 py-2 text-center">Số lượng</th>
               <th className="px-2 py-2 text-right">Đơn giá</th>
               <th className="px-2 py-2 text-right">Giảm giá</th>
+              <th className="px-2 py-2 text-right">Đơn giá sau giảm giá</th>
               <th className="px-2 py-2 text-right">Thành tiền</th>
             </tr>
           </thead>
@@ -202,6 +203,9 @@ function SaleContent({ type, doc }: { type: DocType; doc: any }) {
                 </td>
                 <td className="px-2 py-2 text-right text-sm">
                   {item.discount ? formatCurrency(Number(item.discount)) : "-"}
+                </td>
+                <td className="px-2 py-2 text-right text-sm">
+                  {formatCurrency(Number(item.price) - Number(item.discount || 0))}
                 </td>
                 <td className="px-2 py-2 text-right text-sm font-semibold text-brand">
                   {formatCurrency(Number(item.totalPrice))}
