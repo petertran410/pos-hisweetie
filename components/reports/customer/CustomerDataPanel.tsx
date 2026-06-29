@@ -309,6 +309,16 @@ function CustomerProductPanel({
         {canExport("khach-hang") && (
           <ExportMenu
             onExportOverview={handleExportOverview}
+            onExportDetail={async () => {
+              try {
+                await customerReportApi.exportDetail(filters);
+                toast.success("Xuất file thành công");
+              } catch (err) {
+                toast.error(
+                  err instanceof Error ? err.message : "Xuất file thất bại",
+                );
+              }
+            }}
             disabled={rows.length === 0}
           />
         )}
@@ -772,6 +782,16 @@ function CustomerDebtPanel({ filters }: { filters: CustomerReportFilters }) {
         {canExport("khach-hang") && (
           <ExportMenu
             onExportOverview={handleExportOverview}
+            onExportDetail={async () => {
+              try {
+                await customerReportApi.exportDebtDetail(filters);
+                toast.success("Xuất file thành công");
+              } catch (err) {
+                toast.error(
+                  err instanceof Error ? err.message : "Xuất file thất bại",
+                );
+              }
+            }}
             disabled={rows.length === 0}
           />
         )}

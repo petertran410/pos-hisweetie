@@ -901,6 +901,20 @@ export const customerReportApi = {
     });
     return downloadReportFile(url, `chi-tiet-cong-no-kh_${Date.now()}.xlsx`);
   },
+  exportDebtDetail: (params: CustomerReportFilters) => {
+    const url = new URL(
+      `${API_URL}/reports/customer/debt-documents/export-all`,
+    );
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+    return downloadReportFile(
+      url,
+      `chi-tiet-cong-no-toan-bo_${Date.now()}.xlsx`,
+    );
+  },
 };
 
 export const reportsApi = {
