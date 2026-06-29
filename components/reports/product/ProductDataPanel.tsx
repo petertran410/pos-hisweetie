@@ -490,6 +490,12 @@ function ProductInvoiceDrilldown({
                   Đơn giá
                 </th>
                 <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Giảm giá
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Đơn giá sau giảm giá
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
                   Thành tiền
                 </th>
               </tr>
@@ -503,6 +509,8 @@ function ProductInvoiceDrilldown({
                   <td className="px-3 py-2 text-right text-gray-900">
                     {summary.totalQuantity.toLocaleString("vi-VN")}
                   </td>
+                  <td className="px-3 py-2" />
+                  <td className="px-3 py-2" />
                   <td className="px-3 py-2" />
                   <td className="px-3 py-2 text-right text-brand-dark">
                     {formatCurrency(summary.totalRevenue)}
@@ -526,6 +534,12 @@ function ProductInvoiceDrilldown({
                   </td>
                   <td className="px-3 py-2 text-right text-gray-600">
                     {formatCurrency(row.price)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-gray-600">
+                    {formatCurrency(row.discount)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-gray-700">
+                    {formatCurrency(row.priceAfterDiscount)}
                   </td>
                   <td className="px-3 py-2 text-right font-medium">
                     {formatCurrency(row.totalPrice)}

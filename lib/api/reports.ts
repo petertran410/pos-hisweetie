@@ -334,6 +334,9 @@ export interface ProductInvoiceRow {
   productName: string;
   quantity: number;
   price: number;
+  discount: number;
+  discountRatio: number;
+  priceAfterDiscount: number;
   totalPrice: number;
 }
 
