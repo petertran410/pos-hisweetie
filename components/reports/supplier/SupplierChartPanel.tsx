@@ -45,21 +45,35 @@ export function SupplierChartPanel({ filters, viewType }: Props) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
-      <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
-        <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+      <div className="border-b px-5 py-3 shrink-0">
+        <h2 className="text-base font-semibold text-gray-900">
           {VIEW_TITLE[viewType]}
         </h2>
+        <p className="text-xs text-gray-500 mt-0.5">
+          Tất cả chi nhánh · Top 20
+        </p>
       </div>
 
       {!isLoading && !isError && rows.length > 0 && (
-        <div className="px-4 py-2 bg-gray-50 border-b flex flex-wrap gap-x-8 gap-y-1 text-sm shrink-0">
+        <div className="px-5 py-3 border-b bg-white flex flex-wrap gap-x-10 gap-y-2 shrink-0">
           <div>
-            <span className="text-gray-500">
+            <p className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
               {viewType === "SupplierReturn"
-                ? "Tổng trả hàng:"
-                : "Tổng giá trị nhập:"}
-            </span>{" "}
-            <span className="font-semibold text-brand-dark">{vi(total)}</span>
+                ? "Tổng trả hàng"
+                : "Tổng giá trị nhập"}
+            </p>
+            <p className="text-xl font-bold text-brand-dark mt-0.5">
+              {vi(total)}
+              <span className="text-sm font-semibold text-gray-600 ml-1">đ</span>
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
+              Số dòng
+            </p>
+            <p className="text-xl font-bold text-gray-800 mt-0.5">
+              {rows.length}
+            </p>
           </div>
         </div>
       )}
@@ -100,6 +114,8 @@ function SupplierChart({
   isDebt: boolean;
 }) {
   const top = rows.slice(0, 20);
+  const gridStroke = "#e5e7eb";
+  const axisTick = { fontSize: 11, fill: "#6b7280" };
   if (isDebt) {
     return (
       <ResponsiveContainer width="100%" height="100%">
@@ -107,18 +123,37 @@ function SupplierChart({
           data={top}
           layout="vertical"
           margin={{ left: 24, right: 16, top: 8, bottom: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-          <XAxis type="number" tickFormatter={moneyAxis} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            horizontal={false}
+            stroke={gridStroke}
+          />
+          <XAxis type="number" tickFormatter={moneyAxis} tick={axisTick} />
           <YAxis
             type="category"
             dataKey="subject"
-            width={160}
-            tick={{ fontSize: 11 }}
+            width={220}
+            tick={<TruncatedTick />}
+            interval={0}
+            stroke={gridStroke}
           />
-          <Tooltip formatter={(v: number | string) => money(Number(v))} />
+          <Tooltip
+            formatter={(v: number | string) => money(Number(v))}
+            cursor={{ fill: "#f3f4f6" }}
+          />
           <Legend />
-          <Bar dataKey="debit" name="Tổng nhập" fill={DT_COLORS.primary} />
-          <Bar dataKey="credit" name="Đã trả" fill={DT_COLORS.gold} />
+          <Bar
+            dataKey="debit"
+            name="Tổng nhập"
+            fill={DT_COLORS.primary}
+            maxBarSize={8}
+          />
+          <Bar
+            dataKey="credit"
+            name="Đã trả"
+            fill={DT_COLORS.gold}
+            maxBarSize={8}
+          />
         </BarChart>
       </ResponsiveContainer>
     );
@@ -129,22 +164,50 @@ function SupplierChart({
         data={top}
         layout="vertical"
         margin={{ left: 24, right: 16, top: 8, bottom: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-        <XAxis type="number" tickFormatter={moneyAxis} />
+        <CartesianGrid
+          strokeDasharray="3 3"
+          horizontal={false}
+          stroke={gridStroke}
+        />
+        <XAxis type="number" tickFormatter={moneyAxis} tick={axisTick} />
         <YAxis
           type="category"
           dataKey="subject"
-          width={160}
-          tick={{ fontSize: 11 }}
+          width={220}
+          tick={<TruncatedTick />}
+          interval={0}
+          stroke={gridStroke}
         />
-        <Tooltip formatter={(v: number | string) => money(Number(v))} />
+        <Tooltip
+          formatter={(v: number | string) => money(Number(v))}
+          cursor={{ fill: "#f3f4f6" }}
+        />
         <Bar
           dataKey="value"
           name="Giá trị"
           fill={DT_COLORS.primary}
-          radius={[0, 4, 4, 0]}
+          radius={[0, 6, 6, 0]}
+          maxBarSize={14}
         />
       </BarChart>
     </ResponsiveContainer>
+  );
+}
+
+// ── Custom YAxis tick: 1 dòng cắt "…" ──
+interface TickProps {
+  x?: number;
+  y?: number;
+  payload?: { value: string };
+}
+function TruncatedTick({ x = 0, y = 0, payload }: TickProps) {
+  const text = String(payload?.value ?? "");
+  const maxChars = 32;
+  const truncated =
+    text.length > maxChars ? text.slice(0, maxChars) + "…" : text;
+  return (
+    <text x={x - 8} y={y + 4} textAnchor="end" fontSize={11} fill="#374151">
+      {truncated}
+    </text>
   );
 }

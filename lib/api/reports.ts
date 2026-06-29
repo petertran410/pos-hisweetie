@@ -21,6 +21,16 @@ export interface CustomerChartRow {
   value: number;
   total: number;
   extra1?: string | null;
+  revenue?: number;
+  totalCost?: number;
+  profit?: number;
+  opening?: number;
+  debit?: number;
+  credit?: number;
+  closing?: number;
+  rankStart?: number;
+  rankEnd?: number;
+  customerIds?: number[];
 }
 
 export interface CustomerSalesRow {
@@ -698,6 +708,173 @@ export const eodReportApi = {
       }
     });
     return downloadReportFile(url, `bao-cao-cuoi-ngay_${Date.now()}.xlsx`);
+  },
+};
+
+// ─── Nhóm báo cáo Khách hàng (Customer) — pattern Product ───
+export type CustomerViewType =
+  | "CustomerBySale"
+  | "CustomerByProfit"
+  | "CustomerDebt"
+  | "CustomerByProduct";
+
+export interface CustomerReportFilters {
+  viewType?: CustomerViewType;
+  fromDate?: string;
+  toDate?: string;
+  branchId?: number;
+  customerId?: number;
+  customerGroupId?: number;
+  customerKeyword?: string;
+  typeOfCustomer?: number;
+  rankStart?: number;
+  rankEnd?: number;
+  page?: number;
+  limit?: number;
+  top?: number;
+}
+
+export interface CustomerPreviewResponse {
+  viewType: CustomerViewType;
+  data: CustomerChartRow[];
+  total: number;
+  summary: {
+    totalRows: number;
+    totalValue: number;
+    totalRevenue?: number;
+    totalCost?: number;
+    totalOpening?: number;
+    totalDebit?: number;
+    totalCredit?: number;
+    totalClosing?: number;
+  };
+}
+
+export interface CustomerDebtCustomerRow {
+  customerId: number;
+  customerCode: string;
+  customerName: string;
+  contactNumber: string;
+  customerGroups: string;
+  openingDebt: number;
+  debit: number;
+  credit: number;
+  closingDebt: number;
+}
+
+export interface CustomerDebtCustomersResponse {
+  data: CustomerDebtCustomerRow[];
+  total: number;
+  summary: {
+    totalCustomers: number;
+    totalOpening: number;
+    totalDebit: number;
+    totalCredit: number;
+    totalClosing: number;
+  };
+}
+
+export interface CustomerDebtDocumentRow {
+  code: string;
+  date: string;
+  type: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+export interface CustomerDebtDocumentsResponse {
+  data: CustomerDebtDocumentRow[];
+  total: number;
+  summary: {
+    openingDebt: number;
+    totalDebit: number;
+    totalCredit: number;
+    closingDebt: number;
+    totalRows: number;
+  };
+}
+
+export interface CustomerInvoiceRow {
+  id: number;
+  invoiceCode: string;
+  purchaseDate: string;
+  customerName: string;
+  productCode: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  discount: number;
+  priceAfterDiscount: number;
+  totalPrice: number;
+  cost: number;
+  profit: number;
+}
+
+export interface CustomerInvoicesResponse {
+  data: CustomerInvoiceRow[];
+  total: number;
+  page: number;
+  limit: number;
+  summary: {
+    totalInvoices: number;
+    totalQuantity: number;
+    totalRevenue: number;
+    totalCost: number;
+    totalProfit: number;
+  };
+}
+
+export const customerReportApi = {
+  getChart: (params: CustomerReportFilters): Promise<CustomerChartRow[]> => {
+    return apiClient.get("/reports/customer/chart", params);
+  },
+  getPreview: (
+    params: CustomerReportFilters,
+  ): Promise<CustomerPreviewResponse> => {
+    return apiClient.get("/reports/customer/preview", params);
+  },
+  getInvoices: (
+    params: CustomerReportFilters,
+  ): Promise<CustomerInvoicesResponse> => {
+    return apiClient.get("/reports/customer/invoices", params);
+  },
+  getDebtCustomers: (
+    params: CustomerReportFilters,
+  ): Promise<CustomerDebtCustomersResponse> => {
+    return apiClient.get("/reports/customer/debt-customers", params);
+  },
+  getDebtDocuments: (
+    params: CustomerReportFilters,
+  ): Promise<CustomerDebtDocumentsResponse> => {
+    return apiClient.get("/reports/customer/debt-documents", params);
+  },
+  exportExcel: (params: CustomerReportFilters) => {
+    const url = new URL(`${API_URL}/reports/customer/export`);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+    return downloadReportFile(url, `bao-cao-khach-hang_${Date.now()}.xlsx`);
+  },
+  exportDetail: (params: CustomerReportFilters) => {
+    const url = new URL(`${API_URL}/reports/customer/invoices/export`);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+    return downloadReportFile(url, `chi-tiet-khach-hang_${Date.now()}.xlsx`);
+  },
+  exportDebtDocuments: (params: CustomerReportFilters) => {
+    const url = new URL(`${API_URL}/reports/customer/debt-documents/export`);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+    return downloadReportFile(url, `chi-tiet-cong-no-kh_${Date.now()}.xlsx`);
   },
 };
 
