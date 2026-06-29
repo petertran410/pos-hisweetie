@@ -1503,9 +1503,7 @@ export function OrderSupplierForm({
 
               <div className="flex justify-between items-center py-0.5">
                 <span className="text-gray-900 font-semibold">
-                  {isImportSupplier
-                    ? `Cần trả NCC (${currency}):`
-                    : "Cần trả nhà cung cấp:"}
+                  {isImportSupplier ? `Cần trả NCC:` : "Cần trả nhà cung cấp:"}
                 </span>
                 <span
                   className={`font-bold text-base ${isImportSupplier ? "text-brand" : "text-gray-950"}`}>
