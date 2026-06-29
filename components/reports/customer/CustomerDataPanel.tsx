@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   useCustomerPreview,
   useCustomerInvoices,
+  useCustomerProducts,
   useCustomerDebtCustomers,
   useCustomerDebtDocuments,
 } from "@/lib/hooks/useReports";
@@ -16,6 +17,7 @@ import {
   CustomerReportFilters,
   CustomerViewType,
   CustomerChartRow,
+  CustomerProductRow,
 } from "@/lib/api/reports";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CodeLink } from "@/components/shared/CodeLink";
@@ -35,6 +37,9 @@ const VIEW_TITLE: Record<CustomerViewType, string> = {
 export function CustomerDataPanel({ filters, viewType }: Props) {
   if (viewType === "CustomerDebt") {
     return <CustomerDebtPanel filters={filters} />;
+  }
+  if (viewType === "CustomerByProduct") {
+    return <CustomerProductPanel filters={filters} />;
   }
   return <CustomerSummaryPanel filters={filters} viewType={viewType} />;
 }
@@ -232,18 +237,319 @@ function CustomerSummaryPanel({
   );
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// CustomerByProduct: 3 cấp — Lv1 KH → Lv2 Sản phẩm → Lv3 dòng hóa đơn
+// ════════════════════════════════════════════════════════════════════════════
+function CustomerProductPanel({
+  filters,
+}: {
+  filters: CustomerReportFilters;
+}) {
+  const { data, isLoading, isError, refetch } = useCustomerPreview(filters);
+  const { canExport } = useReportAccess();
+  const [customer, setCustomer] = useState<{ code: string; name: string } | null>(
+    null,
+  );
+  const [product, setProduct] = useState<{ code: string; name: string } | null>(
+    null,
+  );
+
+  const rows = useMemo(() => data?.data || [], [data]);
+  const summary = data?.summary;
+
+  const handleExportOverview = async () => {
+    try {
+      await customerReportApi.exportExcel(filters);
+      toast.success("Xuất file thành công");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Xuất file thất bại");
+    }
+  };
+
+  // Lv3: dòng hóa đơn của SP đó cho KH đó
+  if (customer && product) {
+    return (
+      <CustomerInvoiceDrilldown
+        filters={filters}
+        viewType="CustomerByProduct"
+        title={`${customer.name} · ${product.name}`}
+        code={customer.code}
+        productCode={product.code}
+        onBack={() => setProduct(null)}
+      />
+    );
+  }
+
+  // Lv2: sản phẩm KH đã mua
+  if (customer) {
+    return (
+      <CustomerProductListPanel
+        filters={filters}
+        customer={customer}
+        onBack={() => setCustomer(null)}
+        onSelectProduct={(p) => setProduct(p)}
+      />
+    );
+  }
+
+  // Lv1: bảng khách hàng
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
+      <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+            Hàng bán theo khách
+          </h2>
+          {summary && (
+            <span className="text-sm text-gray-500">
+              • {summary.totalRows} dòng
+            </span>
+          )}
+        </div>
+        {canExport("khach-hang") && (
+          <ExportMenu
+            onExportOverview={handleExportOverview}
+            disabled={rows.length === 0}
+          />
+        )}
+      </div>
+
+      {summary && rows.length > 0 && (
+        <div className="px-4 py-2 bg-gray-50 border-b flex flex-wrap gap-x-8 gap-y-1 text-sm shrink-0">
+          <div>
+            <span className="text-gray-500">Tổng doanh thu:</span>{" "}
+            <span className="font-semibold text-brand-dark">
+              {formatCurrency(summary.totalValue || 0)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-40">
+            <Loader2 className="h-6 w-6 animate-spin text-brand" />
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center h-40 gap-2 text-sm text-gray-500">
+            <span>Không tải được dữ liệu</span>
+            <button
+              onClick={() => refetch()}
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50">
+              Thử lại
+            </button>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+            Không có dữ liệu
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-sky-100 sticky top-0 z-10">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  Mã KH
+                </th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  Khách hàng
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Doanh thu
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rows.map((row: CustomerChartRow, idx: number) => (
+                <tr
+                  key={idx}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() =>
+                    row.extra1 &&
+                    setCustomer({ code: row.extra1, name: row.subject })
+                  }>
+                  <td className="px-3 py-2 font-medium text-brand-dark">
+                    {row.extra1 || ""}
+                  </td>
+                  <td className="px-3 py-2 text-gray-900">{row.subject}</td>
+                  <td className="px-3 py-2 text-right font-medium text-brand-dark">
+                    {(row.value || 0).toLocaleString("vi-VN")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Lv2: sản phẩm 1 KH đã mua ──
+function CustomerProductListPanel({
+  filters,
+  customer,
+  onBack,
+  onSelectProduct,
+}: {
+  filters: CustomerReportFilters;
+  customer: { code: string; name: string };
+  onBack: () => void;
+  onSelectProduct: (p: { code: string; name: string }) => void;
+}) {
+  const [page, setPage] = useState(1);
+  const limit = filters.limit ?? 500;
+
+  const { data, isLoading, isError, refetch } = useCustomerProducts({
+    ...filters,
+    customerKeyword: customer.code,
+    page,
+    limit,
+  });
+
+  const rows = data?.data || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / limit) || 1;
+  const summary = data?.summary;
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
+      <div className="border-b px-4 py-2.5 flex items-center gap-3 shrink-0">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-brand hover:bg-gray-50 rounded-lg transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+          Quay lại
+        </button>
+        <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+          {customer.name}
+        </h2>
+        {summary && (
+          <span className="text-sm text-gray-500">
+            • {summary.totalRows} sản phẩm
+          </span>
+        )}
+      </div>
+
+      {summary && rows.length > 0 && (
+        <div className="px-4 py-2 bg-gray-50 border-b flex flex-wrap gap-x-8 gap-y-1 text-sm shrink-0">
+          <div>
+            <span className="text-gray-500">Tổng SL:</span>{" "}
+            <span className="font-semibold text-gray-900">
+              {summary.totalQuantity.toLocaleString("vi-VN")}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-500">Tổng doanh thu:</span>{" "}
+            <span className="font-semibold text-brand-dark">
+              {formatCurrency(summary.totalRevenue)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-40">
+            <Loader2 className="h-6 w-6 animate-spin text-brand" />
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center h-40 gap-2 text-sm text-gray-500">
+            <span>Không tải được dữ liệu</span>
+            <button
+              onClick={() => refetch()}
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50">
+              Thử lại
+            </button>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+            Không có dữ liệu
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-sky-100 sticky top-0 z-10">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  Mã SP
+                </th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  Sản phẩm
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  SL
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Doanh thu
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rows.map((row: CustomerProductRow, idx: number) => (
+                <tr
+                  key={idx}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() =>
+                    onSelectProduct({
+                      code: row.productCode,
+                      name: row.productName,
+                    })
+                  }>
+                  <td className="px-3 py-2 font-medium text-brand-dark">
+                    {row.productCode}
+                  </td>
+                  <td className="px-3 py-2 text-gray-900">{row.productName}</td>
+                  <td className="px-3 py-2 text-right text-gray-700">
+                    {row.quantity.toLocaleString("vi-VN")}
+                  </td>
+                  <td className="px-3 py-2 text-right font-medium text-brand-dark">
+                    {row.revenue.toLocaleString("vi-VN")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="border-t px-4 py-2 flex items-center justify-between shrink-0">
+          <span className="text-sm text-gray-500">
+            Trang {page}/{totalPages}
+          </span>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50">
+              {"\u2039"}
+            </button>
+            <button
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50">
+              {"\u203a"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Drilldown Lv2: dòng hóa đơn của 1 KH ──
 function CustomerInvoiceDrilldown({
   filters,
   viewType,
   title,
   code,
+  productCode,
   onBack,
 }: {
   filters: CustomerReportFilters;
   viewType: CustomerViewType;
   title: string;
   code: string;
+  productCode?: string;
   onBack: () => void;
 }) {
   const [page, setPage] = useState(1);
@@ -253,6 +559,7 @@ function CustomerInvoiceDrilldown({
   const { data, isLoading, isError, refetch } = useCustomerInvoices({
     ...filters,
     customerKeyword: code,
+    productKeyword: productCode,
     page,
     limit,
   });

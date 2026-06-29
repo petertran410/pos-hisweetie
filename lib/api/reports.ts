@@ -726,6 +726,7 @@ export interface CustomerReportFilters {
   customerId?: number;
   customerGroupId?: number;
   customerKeyword?: string;
+  productKeyword?: string;
   typeOfCustomer?: number;
   rankStart?: number;
   rankEnd?: number;
@@ -825,6 +826,25 @@ export interface CustomerInvoicesResponse {
   };
 }
 
+export interface CustomerProductRow {
+  productCode: string;
+  productName: string;
+  quantity: number;
+  revenue: number;
+}
+
+export interface CustomerProductsResponse {
+  data: CustomerProductRow[];
+  total: number;
+  page: number;
+  limit: number;
+  summary: {
+    totalRows: number;
+    totalQuantity: number;
+    totalRevenue: number;
+  };
+}
+
 export const customerReportApi = {
   getChart: (params: CustomerReportFilters): Promise<CustomerChartRow[]> => {
     return apiClient.get("/reports/customer/chart", params);
@@ -838,6 +858,11 @@ export const customerReportApi = {
     params: CustomerReportFilters,
   ): Promise<CustomerInvoicesResponse> => {
     return apiClient.get("/reports/customer/invoices", params);
+  },
+  getProducts: (
+    params: CustomerReportFilters,
+  ): Promise<CustomerProductsResponse> => {
+    return apiClient.get("/reports/customer/products", params);
   },
   getDebtCustomers: (
     params: CustomerReportFilters,

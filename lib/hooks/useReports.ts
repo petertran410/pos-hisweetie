@@ -121,6 +121,18 @@ export function useCustomerInvoices(filters: CustomerReportFilters) {
   });
 }
 
+export function useCustomerProducts(filters: CustomerReportFilters) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
+
+  return useQuery({
+    queryKey: ["reports", "customer-products", filters],
+    queryFn: () => customerReportApi.getProducts(filters),
+    enabled:
+      hasHydrated && isAuthenticated && filters.customerKeyword != null,
+  });
+}
+
 export function useCustomerDebtCustomers(filters: CustomerReportFilters) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasHydrated = useAuthStore((s) => s._hasHydrated);
