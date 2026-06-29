@@ -421,7 +421,7 @@ function ProductInvoiceDrilldown({
   onBack: () => void;
 }) {
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const limit = filters.limit ?? 500;
 
   const { data, isLoading, isError, refetch } = useProductInvoices({
     ...filters,

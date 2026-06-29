@@ -221,6 +221,8 @@ export function ProductReportSidebar({
   const [categoryLevel, setCategoryLevel] = useState<CategoryLevel>("parent");
   const [categoryValue, setCategoryValue] = useState("");
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  // Số dòng hiển thị mỗi trang (chế độ Dữ liệu) — cố định 20 cho Biểu đồ.
+  const [pageSize, setPageSize] = useState<number>(500);
 
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState("this_month");
@@ -306,6 +308,8 @@ export function ProductReportSidebar({
       f.fromDate = range.from.toISOString();
       f.toDate = range.to.toISOString();
 
+      f.limit = pageSize;
+
       onFiltersChange(f);
     }, 300);
     return () => clearTimeout(timer);
@@ -324,6 +328,7 @@ export function ProductReportSidebar({
     fromDate,
     toDate,
     isFromMissing,
+    pageSize,
   ]);
 
   return (
@@ -537,6 +542,23 @@ export function ProductReportSidebar({
               ))}
           </select>
         </div>
+
+        {/* ── Số dòng hiển thị (chỉ tab Dữ liệu) ── */}
+        {mode === "data" && (
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+              Dòng mỗi trang
+            </label>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
+              <option value={500}>500</option>
+              <option value={1000}>1000</option>
+              <option value={2000}>2000</option>
+            </select>
+          </div>
+        )}
 
         {/* ── Tìm sản phẩm ── */}
         <div>

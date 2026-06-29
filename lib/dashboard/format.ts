@@ -24,10 +24,13 @@ export function money(vnd: number): string {
   return Math.round(vnd).toLocaleString("vi-VN");
 }
 
-/** Rút gọn cho trục biểu đồ. */
+/** Rút gọn cho trục biểu đồ: 200tr, 1.2 tỷ, 2 tỷ. */
 export function moneyAxis(vnd: number): string {
   const abs = Math.abs(vnd);
-  if (abs >= 1_000_000_000) return (vnd / 1_000_000_000).toFixed(1) + "tỷ";
+  if (abs >= 1_000_000_000) {
+    const ty = vnd / 1_000_000_000;
+    return (ty < 10 ? ty.toFixed(1) : ty.toFixed(0)) + " tỷ";
+  }
   if (abs >= 1_000_000) return (vnd / 1_000_000).toFixed(0) + "tr";
   if (abs >= 1_000) return (vnd / 1_000).toFixed(0) + "k";
   return String(Math.round(vnd));

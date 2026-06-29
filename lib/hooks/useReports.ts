@@ -124,9 +124,12 @@ export function useProductChart(filters: ProductReportFilters) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasHydrated = useAuthStore((s) => s._hasHydrated);
 
+  // Chart biểu đồ luôn Top 20, không phụ thuộc dropdown "Số dòng hiển thị".
+  const chartFilters = { ...filters, top: 20, limit: undefined };
+
   return useQuery({
-    queryKey: ["reports", "product-chart", filters],
-    queryFn: () => productReportApi.getChart(filters),
+    queryKey: ["reports", "product-chart", chartFilters],
+    queryFn: () => productReportApi.getChart(chartFilters),
     enabled: hasHydrated && isAuthenticated,
   });
 }
