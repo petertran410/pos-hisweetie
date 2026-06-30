@@ -50,6 +50,39 @@ const formatDateTime = (date?: string) =>
 
 const DEFAULT_COLUMNS: ColumnConfig<OrderSupplier>[] = [
   {
+    key: "contractNos",
+    label: "Số HĐ",
+    visible: true,
+    width: "160px",
+    render: (os) => {
+      // BE trả về `contractNos` (mảng DISTINCT, có thể rỗng) + `contractNo`
+      // (string|null, phần tử đầu tiên) cho backward-compat. Ưu tiên
+      // `contractNos` để hiển thị đủ các HĐ (vd HH00082-26 → "169, 197").
+      const list = (os as any).contractNos as string[] | undefined;
+      if (list && list.length > 0) {
+        return (
+          <div className="flex flex-wrap gap-1">
+            {list.map((c) => (
+              <span
+                key={c}
+                className="inline-block px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-xs font-medium border border-amber-200">
+                {c}
+              </span>
+            ))}
+          </div>
+        );
+      }
+      const single = (os as any).contractNo as string | null | undefined;
+      return single ? (
+        <span className="inline-block px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-xs font-medium border border-amber-200">
+          {single}
+        </span>
+      ) : (
+        <span className="text-xs text-gray-300 italic">—</span>
+      );
+    },
+  },
+  {
     key: "code",
     label: "Mã đặt hàng nhập",
     visible: true,

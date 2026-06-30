@@ -131,14 +131,12 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
     : [];
 
   const handleResolve = (
-    orderSupplierId: number,
-    productId: number,
+    vehicleShipmentItemId: number,
     action: string
   ) => {
     resolveMutation.mutate({
       id: vehicleShipmentId,
-      orderSupplierId,
-      productId,
+      vehicleShipmentItemId,
       action,
     });
   };
@@ -188,37 +186,31 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                   </span>
                 </div>
 
-                {/* Info grid — 3 cols */}
-                <div className="grid grid-cols-3 gap-x-8 pb-2">
-                  <div className="flex flex-col gap-1 mb-2 border-b pb-1">
-                    <label className="text-sm text-gray-500">Số hợp đồng:</label>
-                    <span className="text-sm text-gray-900">
-                      {vs.vehicleInfo || "-"}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1 mb-2 border-b pb-1">
-                    <label className="text-sm text-gray-500">Cửa khẩu:</label>
-                    <span className="text-sm text-gray-900">
+                {/* Info grid — compact like OrderDetailRow */}
+                <div className="grid grid-cols-3 gap-x-8 pb-4 mb-4">
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                    <label className="block text-sm text-gray-500">Cửa khẩu:</label>
+                    <span className="block text-sm text-gray-900">
                       {vs.borderGate?.name || "-"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1 mb-2 border-b pb-1">
-                    <label className="text-sm text-gray-500">Người tạo:</label>
-                    <span className="text-sm text-gray-900">
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                    <label className="block text-sm text-gray-500">Người tạo:</label>
+                    <span className="block text-sm text-gray-900">
                       {vs.creator?.name || "-"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1 mb-2 border-b pb-1">
-                    <label className="text-sm text-gray-500">Ngày tạo:</label>
-                    <span className="text-sm text-gray-900">
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                    <label className="block text-sm text-gray-500">Ngày tạo:</label>
+                    <span className="block text-sm text-gray-900">
                       {formatDateTime(vs.createdAt)}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1 mb-2 border-b pb-1">
-                    <label className="text-sm text-gray-500">
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                    <label className="block text-sm text-gray-500">
                       Ngày dự kiến về kho:
                     </label>
-                    <span className="text-sm text-gray-900">
+                    <span className="block text-sm text-gray-900">
                       {vs.expectedArrivalDate
                         ? new Date(vs.expectedArrivalDate).toLocaleDateString(
                             "vi-VN"
@@ -226,11 +218,11 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                         : "-"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1 mb-2 border-b pb-1">
-                    <label className="text-sm text-gray-500">
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                    <label className="block text-sm text-gray-500">
                       Ngày về kho thực tế:
                     </label>
-                    <span className="text-sm text-gray-900">
+                    <span className="block text-sm text-gray-900">
                       {vs.actualArrivalDate
                         ? new Date(vs.actualArrivalDate).toLocaleDateString(
                             "vi-VN"
@@ -238,11 +230,11 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                         : "-"}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1 mb-2 border-b pb-1">
-                    <label className="text-sm text-gray-500">
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                    <label className="block text-sm text-gray-500">
                       Tổng cân nặng:
                     </label>
-                    <span className="text-sm text-gray-900 font-medium">
+                    <span className="block text-sm text-gray-900 font-medium">
                       {((vs.totalWeightKg ?? 0) * 1000).toLocaleString("vi-VN", {
                         maximumFractionDigits: 2,
                       })}{" "}
@@ -253,8 +245,8 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                       kg
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1 mb-2 border-b pb-1 col-span-2">
-                    <label className="text-sm text-gray-500">
+                  <div className="flex flex-col gap-2 mb-2 border-b pb-1 col-span-3">
+                    <label className="block text-sm text-gray-500">
                       File đính kèm:
                     </label>
                     {vs.files && vs.files.length > 0 ? (
@@ -275,9 +267,9 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                     )}
                   </div>
                   {vs.description && (
-                    <div className="flex flex-col gap-1 mb-2 border-b pb-1 col-span-3">
-                      <label className="text-sm text-gray-500">Ghi chú:</label>
-                      <span className="text-sm text-gray-900">
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1 col-span-3">
+                      <label className="block text-sm text-gray-500">Ghi chú:</label>
+                      <span className="block text-sm text-gray-900">
                         {vs.description}
                       </span>
                     </div>
@@ -310,101 +302,129 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
               </div>
             )}
             {sections.map((sec) => (
-              <div key={sec.orderSupplierId} className="border rounded-lg">
-                <div className="px-3 py-2 bg-gray-50 border-b flex items-center gap-2 text-sm">
+              <div key={sec.orderSupplierId} className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-[10px] py-2 bg-gray-50 border-b flex items-center gap-2 text-sm">
                   <CodeLink entity="order-supplier" code={sec.code} />
                   <span className="text-gray-400">·</span>
-                  <span className="text-gray-600">{sec.supplierName}</span>
+                  <span className="text-gray-600 truncate">{sec.supplierName}</span>
                 </div>
-                <table className="w-full text-sm table-fixed">
+                <table className="w-full table-fixed">
                   <colgroup>
-                    <col style={{ width: "140px" }} />
+                    <col style={{ width: "180px" }} />
                     <col />
-                    <col style={{ width: "120px" }} />
-                    <col style={{ width: "130px" }} />
+                    <col style={{ width: "180px" }} />
+                    <col style={{ width: "140px" }} />
+                    <col style={{ width: "180px" }} />
                     {isReceived && (
                       <>
-                        <col style={{ width: "120px" }} />
-                        <col style={{ width: "120px" }} />
-                        <col style={{ width: "320px" }} />
+                        <col style={{ width: "130px" }} />
+                        <col style={{ width: "130px" }} />
+                        <col style={{ width: "280px" }} />
                       </>
                     )}
                   </colgroup>
                   <thead>
-                    <tr className="text-xs text-gray-500 uppercase">
-                      <th className="px-3 py-2 text-left font-medium">
+                    <tr className="bg-gray-100 border-b border-gray-200">
+                      <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider">
                         Mã hàng
                       </th>
-                      <th className="px-3 py-2 text-left font-medium">
+                      <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider">
                         Tên sản phẩm
                       </th>
-                      <th className="px-3 py-2 text-right font-medium">
-                        SL ghép xe
+                      <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
+                        Số HĐ
                       </th>
-                      <th className="px-3 py-2 text-right font-medium">
+                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
+                        SL ghép
+                      </th>
+                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
                         Trọng lượng (gram)
                       </th>
                       {isReceived && (
                         <>
-                          <th className="px-3 py-2 text-right font-medium">
+                          <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
                             Thực nhận
                           </th>
-                          <th className="px-3 py-2 text-right font-medium">
+                          <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
                             Chênh lệch
                           </th>
-                          <th className="px-3 py-2 text-center font-medium">
+                          <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
                             Xử lý
                           </th>
                         </>
                       )}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {sec.items?.map((it) => {
                       const diff = Number(it.diff ?? 0);
                       const isShort = diff > 0;
                       const isOver = diff < 0;
                       const status = it.postImportStatus || "pending";
+                      const unitGramDisplay =
+                        (it.weightUnit || "kg").toLowerCase() === "g"
+                          ? Number(it.unitWeight ?? 0)
+                          : Number(it.unitWeight ?? 0) * 1000;
                       return (
-                        <tr key={it.id} className="border-t">
-                          <td className="px-3 py-2">{it.productCode}</td>
-                          <td className="px-3 py-2 break-words">
-                            {it.productName}
+                        <tr key={it.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-[10px] py-2">
+                            <span className="text-sm font-medium text-gray-900">
+                              {it.productCode}
+                            </span>
                           </td>
-                          <td className="px-3 py-2 text-right font-medium">
-                            {Number(it.quantity).toLocaleString("vi-VN")}
+                          <td className="px-[10px] py-2">
+                            <span className="text-sm text-gray-900">
+                              {it.productName}
+                            </span>
                           </td>
-                          <td className="px-3 py-2 text-right text-gray-600">
-                            {(
-                              (it.weightUnit || "kg").toLowerCase() === "g"
-                                ? Number(it.unitWeight ?? 0)
-                                : Number(it.unitWeight ?? 0) * 1000
-                            ).toLocaleString("vi-VN", {
-                              maximumFractionDigits: 2,
-                            })}
+                          <td className="px-[10px] py-2 text-center">
+                            {it.contractNo ? (
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-xs font-medium border border-amber-200">
+                                {it.contractNo}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-300 italic">
+                                chưa gán
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-[10px] py-2 text-right">
+                            <span className="text-sm font-medium text-gray-900">
+                              {Number(it.quantity).toLocaleString("vi-VN")}
+                            </span>
+                          </td>
+                          <td className="px-[10px] py-2 text-right">
+                            <span className="text-sm text-gray-600">
+                              {unitGramDisplay.toLocaleString("vi-VN", {
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
                           </td>
                           {isReceived && (
                             <>
-                              <td className="px-3 py-2 text-right text-gray-600">
-                                {Number(it.received ?? 0).toLocaleString(
-                                  "vi-VN"
-                                )}
+                              <td className="px-[10px] py-2 text-right">
+                                <span className="text-sm text-gray-600">
+                                  {Number(it.received ?? 0).toLocaleString(
+                                    "vi-VN"
+                                  )}
+                                </span>
                               </td>
-                              <td className="px-3 py-2 text-right font-medium">
+                              <td className="px-[10px] py-2 text-right">
                                 {isShort ? (
-                                  <span className="text-red-600">
+                                  <span className="text-sm font-medium text-red-600">
                                     Thiếu {diff.toLocaleString("vi-VN")}
                                   </span>
                                 ) : isOver ? (
-                                  <span className="text-blue-600">
-                                    Dư{" "}
-                                    {Math.abs(diff).toLocaleString("vi-VN")}
+                                  <span className="text-sm font-medium text-blue-600">
+                                    Dư {Math.abs(diff).toLocaleString("vi-VN")}
                                   </span>
                                 ) : (
-                                  <span className="text-green-600">Đủ</span>
+                                  <span className="text-sm font-medium text-green-600">
+                                    Đủ
+                                  </span>
                                 )}
                               </td>
-                              <td className="px-3 py-2">
+                              <td className="px-[10px] py-2 text-center">
                                 {isShort ? (
                                   <div className="flex items-center justify-center gap-1.5">
                                     <button
@@ -413,14 +433,13 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                                       }
                                       onClick={() =>
                                         handleResolve(
-                                          it.orderSupplierId,
-                                          it.productId,
+                                          it.id,
                                           status === "returned"
                                             ? "pending"
                                             : "returned"
                                         )
                                       }
-                                      className={`px-2 py-1 text-xs rounded-lg border flex items-center gap-1 transition-colors disabled:opacity-50 ${
+                                      className={`px-2 py-1 text-xs rounded-full border flex items-center gap-1 transition-colors disabled:opacity-50 ${
                                         status === "returned"
                                           ? "bg-green-600 text-white border-green-600"
                                           : "text-green-700 border-green-300 hover:bg-green-50"
@@ -434,18 +453,17 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                                       }
                                       onClick={() =>
                                         handleResolve(
-                                          it.orderSupplierId,
-                                          it.productId,
+                                          it.id,
                                           status === "kept" ? "pending" : "kept"
                                         )
                                       }
-                                      className={`px-2 py-1 text-xs rounded-lg border flex items-center gap-1 transition-colors disabled:opacity-50 ${
+                                      className={`px-2 py-1 text-xs rounded-full border flex items-center gap-1 transition-colors disabled:opacity-50 ${
                                         status === "kept"
                                           ? "bg-gray-600 text-white border-gray-600"
                                           : "text-gray-600 border-gray-300 hover:bg-gray-50"
                                       }`}>
                                       <Ban className="w-3.5 h-3.5" />
-                                      Giữ (bỏ phần thiếu)
+                                      Giữ
                                     </button>
                                   </div>
                                 ) : isOver ? (

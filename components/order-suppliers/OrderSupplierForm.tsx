@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import type { OrderSupplier } from "@/lib/types/order-supplier";
 import { formatCurrency, parseNumberInput } from "@/lib/utils";
 import { useBranchStore } from "@/lib/store/branch";
-import { CreditCard, Calendar } from "lucide-react";
+import { CreditCard, Calendar, RefreshCw } from "lucide-react";
 import { SupplierPaymentModal } from "./SupplierPaymentModal";
 import { ProductPickerDropdown } from "@/components/products/ProductPickerDropdown";
 import { useCan } from "@/lib/hooks/useCan";
@@ -32,7 +32,6 @@ import {
   useExchangeRate,
   useRefreshExchangeRate,
 } from "@/lib/hooks/useExchangeRate";
-import { ExchangeRateIndicator } from "@/components/exchange-rates/ExchangeRateIndicator";
 
 // ID nhóm nhà cung cấp "nước ngoài". Theo yêu cầu của hệ thống: NCC thuộc
 // nhóm id = 1 → được phép nhập Đơn giá NM / Thành tiền NM bằng ngoại tệ
@@ -237,7 +236,7 @@ function MiniCalendar({
             value={hh}
             onChange={(e) => setHh(e.target.value)}
             onBlur={(e) => handleTimeChange(clampHour(e.target.value), mm)}
-            className="w-14 text-center border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+            className="w-14 text-center border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
           />
           <span className="text-gray-400 font-semibold">:</span>
           <input
@@ -247,7 +246,7 @@ function MiniCalendar({
             value={mm}
             onChange={(e) => setMm(e.target.value)}
             onBlur={(e) => handleTimeChange(hh, clampMinute(e.target.value))}
-            className="w-14 text-center border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+            className="w-14 text-center border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
       )}
@@ -260,7 +259,7 @@ function MiniCalendar({
             onChange("");
             onClose();
           }}
-          className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100 transition-colors">
+          className="text-xs text-gray-500 hover:text-gray-700 px-3 py-2 rounded hover:bg-gray-100 transition-colors">
           Xóa
         </button>
         <div className="flex gap-1">
@@ -282,7 +281,7 @@ function MiniCalendar({
               }
               onClose();
             }}
-            className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft transition-colors">
+            className="text-xs text-brand hover:text-brand-dark font-medium px-3 py-2 rounded hover:bg-brand-soft transition-colors">
             {withTime ? "Bây giờ" : "Hôm nay"}
           </button>
           {withTime && (
@@ -333,6 +332,18 @@ export function OrderSupplierForm({
   // khi paymentMethod === "transfer". Gửi lên BE khi submit để gắn vào
   // CashFlow + OrderSupplierPayment (đối chiếu sao kê ngân hàng).
   const [paymentAccountId, setPaymentAccountId] = useState<number | null>(null);
+  // Tỉ giá quy đổi VND/CNY user nhập tại thời điểm thanh toán (chỉ dùng khi
+  // NCC nước ngoài). Snapshot riêng — khác OrderSupplier.exchangeRate (tỉ
+  // giá đặt hàng, chỉ tham khảo).
+  const [paymentExchangeRate, setPaymentExchangeRate] = useState<number | null>(
+    null
+  );
+  // Thành tiền ngoại tệ (CNY) snapshot tại thời điểm thanh toán. Được tính
+  // = paymentAmount / paymentExchangeRate trong modal khi user ấn "Xong".
+  // Lưu riêng ở OrderSupplierPayment.foreignAmount — không quy đổi ngược.
+  const [paymentForeignAmount, setPaymentForeignAmount] = useState<
+    number | null
+  >(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [orderDate, setOrderDate] = useState<Date | null>(
     orderSupplier?.orderDate ? new Date(orderSupplier.orderDate) : null
@@ -345,11 +356,18 @@ export function OrderSupplierForm({
   const handlePaymentConfirm = (
     amount: number,
     method: "cash" | "transfer" | "card",
-    accountId?: number
+    accountId?: number,
+    exchangeRate?: number,
+    foreignAmount?: number
   ) => {
     setPaymentAmount(amount);
     setPaymentMethod(method);
     setPaymentAccountId(method === "transfer" ? (accountId ?? null) : null);
+    // Snapshot tỉ giá + thành tiền ngoại tệ tại thời điểm thanh toán. Null nếu
+    // NCC trong nước hoặc không truyền (modal cũ). Lưu để hiển thị sidebar
+    // CNY (F2) + gửi lên BE lưu vào OrderSupplierPayment (F1).
+    setPaymentExchangeRate(exchangeRate ?? null);
+    setPaymentForeignAmount(foreignAmount ?? null);
   };
 
   const [code, setCode] = useState<string>(orderSupplier?.code || "");
@@ -585,6 +603,10 @@ export function OrderSupplierForm({
         // lần mở modal "Tiền trả nhà cung cấp" tiếp theo hiển thị sẵn TK
         // đã chọn trước đó.
         setPaymentAccountId(firstPayment.accountId ?? null);
+        // Pre-fill tỉ giá + thành tiền ngoại tệ snapshot (F2: khi mở lại
+        // phiếu cũ, sidebar hiển thị CNY từ paymentForeignAmount đã lưu).
+        setPaymentExchangeRate(firstPayment.exchangeRate ?? null);
+        setPaymentForeignAmount(firstPayment.foreignAmount ?? null);
       }
     }
   }, [orderSupplier]);
@@ -823,6 +845,22 @@ export function OrderSupplierForm({
     return subtotal - discountAmount;
   };
 
+  // Tổng tiền hàng CNY (chỉ dùng cho NCC nước ngoài). Dùng factorySubTotal
+  // (đã được set theo Đơn giá NM × SL, cùng đơn vị CNY). Trừ discount:
+  // - discountRatio (%) → tính trên factory → ra CNY thuần
+  // - discount (VND amount) → quy đổi sang CNY qua effectiveRate
+  const calculateTotalCNY = () => {
+    const factorySubTotalSum = products.reduce(
+      (sum, p) => sum + (p.factorySubTotal || 0),
+      0
+    );
+    const discountAmountCNY =
+      discountType === "amount"
+        ? discount / (effectiveRate || 1)
+        : (factorySubTotalSum * discountRatio) / 100;
+    return factorySubTotalSum - discountAmountCNY;
+  };
+
   const handleSubmit = async () => {
     if (!branchId) {
       toast.error("Vui lòng chọn chi nhánh");
@@ -881,6 +919,18 @@ export function OrderSupplierForm({
       paymentAccountId:
         paymentAmount > 0 && paymentMethod === "transfer"
           ? (paymentAccountId ?? undefined)
+          : undefined,
+      // Tỉ giá + thành tiền ngoại tệ snapshot tại thời điểm thanh toán. Chỉ
+      // gửi khi NCC nước ngoài. KHÁC orderSupplier.exchangeRate (snapshot
+      // lúc đặt hàng, chỉ tham khảo) — phản ánh tỉ giá thực tế ngân hàng
+      // báo lúc chuyển khoản cho NCC Trung Quốc.
+      paymentExchangeRate:
+        paymentAmount > 0 && isImportSupplier
+          ? (paymentExchangeRate ?? undefined)
+          : undefined,
+      paymentForeignAmount:
+        paymentAmount > 0 && isImportSupplier
+          ? (paymentForeignAmount ?? undefined)
           : undefined,
       orderDate: orderDate?.toISOString(),
     };
@@ -1016,7 +1066,7 @@ export function OrderSupplierForm({
                             );
                           }}
                           disabled={isFormDisabled ? true : false}
-                          className="w-16 text-center border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                          className="w-16 text-center border rounded px-3 py-2 text-sm disabled:bg-gray-100"
                         />
                         <button
                           onClick={() =>
@@ -1044,7 +1094,7 @@ export function OrderSupplierForm({
                               handlePriceChange(index, numericValue.toString());
                             }}
                             disabled={isFormDisabled ? true : false}
-                            className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                            className="w-full text-right border rounded px-3 py-2 text-sm disabled:bg-gray-100"
                           />
                         </td>
                         <td className="px-[10px] py-2 align-middle">
@@ -1061,7 +1111,7 @@ export function OrderSupplierForm({
                               );
                             }}
                             disabled={isFormDisabled ? true : false}
-                            className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                            className="w-full text-right border rounded px-3 py-2 text-sm disabled:bg-gray-100"
                           />
                         </td>
                         <td className="px-[10px] py-2 align-middle text-sm text-right font-medium text-gray-900 whitespace-nowrap">
@@ -1085,7 +1135,7 @@ export function OrderSupplierForm({
                               );
                             }}
                             disabled={isFormDisabled ? true : false}
-                            className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                            className="w-full text-right border rounded px-3 py-2 text-sm disabled:bg-gray-100"
                           />
                         </td>
                         <td className="px-[10px] py-2 align-middle">
@@ -1102,7 +1152,7 @@ export function OrderSupplierForm({
                               );
                             }}
                             disabled={isFormDisabled ? true : false}
-                            className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                            className="w-full text-right border rounded px-3 py-2 text-sm disabled:bg-gray-100"
                           />
                         </td>
                         <td className="px-[10px] py-2 align-middle text-right text-xs whitespace-nowrap">
@@ -1140,12 +1190,20 @@ export function OrderSupplierForm({
         </div>
       </div>
 
-      <div className="w-[420px] border mr-4 mt-4 mb-4 rounded-xl overflow-y-auto bg-white border-l flex flex-col custom-sidebar-scroll">
-        <div className="px-4 py-3 border-b bg-gray-50">
-          <h3 className="font-semibold text-gray-900">Thông tin đơn hàng</h3>
+      <div className="w-[360px] border mr-4 mt-4 mb-4 rounded-xl overflow-y-auto bg-white border-l flex flex-col custom-sidebar-scroll">
+        <div className="px-4 py-2.5 border-b bg-gray-50">
+          <h3 className="font-semibold text-gray-900 text-sm">
+            Thông tin đơn hàng
+          </h3>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {/* Đồng nhất pattern với Phiếu nhập hàng (PurchaseOrderForm.tsx):
+            • width 360px (gọn).
+            • Container p-3 + space-y-2.5.
+            • Tất cả label + value cùng text-sm.
+            • Padding input px-2 py-1.5 (compact, khớp PN).
+            • Dòng phụ / hint dùng text-xs. */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
           {/* Hàng trên cùng: Người đặt + Ngày — giống KiotViet */}
           <div className="flex gap-2">
             <div ref={userDropdownRef} className="relative flex-1">
@@ -1155,7 +1213,7 @@ export function OrderSupplierForm({
                   !isFormDisabled && setShowUserDropdown(!showUserDropdown)
                 }
                 disabled={isFormDisabled ? true : false}
-                className="w-full px-3 py-2 text-sm border rounded-lg flex items-center justify-between disabled:bg-gray-100">
+                className="w-full px-2 py-1.5 text-sm border rounded-lg flex items-center justify-between disabled:bg-gray-100">
                 <span
                   className={`truncate ${!selectedUser ? "text-gray-400" : ""}`}>
                   {selectedUser ? selectedUser.name : "Người đặt hàng"}
@@ -1169,7 +1227,7 @@ export function OrderSupplierForm({
                       setUserId(0);
                       setShowUserDropdown(false);
                     }}
-                    className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-400">
+                    className="px-2 py-1.5 hover:bg-gray-50 cursor-pointer text-sm text-gray-400">
                     Không chọn
                   </div>
                   {users?.map((user: any) => (
@@ -1179,7 +1237,7 @@ export function OrderSupplierForm({
                         setUserId(user.id);
                         setShowUserDropdown(false);
                       }}
-                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      className="px-2 py-1.5 hover:bg-gray-50 cursor-pointer text-sm">
                       {user.name}
                     </div>
                   ))}
@@ -1215,7 +1273,7 @@ export function OrderSupplierForm({
                       onClick={() =>
                         !isFormDisabled && setShowOrderDateCalendar((v) => !v)
                       }
-                      className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                      className={`w-full flex items-center justify-between px-2 py-1.5 border rounded-lg text-sm transition-all disabled:bg-gray-100 disabled:cursor-not-allowed ${
                         orderDate
                           ? "border-brand bg-brand-soft text-gray-800"
                           : "border-gray-200 text-gray-500"
@@ -1250,7 +1308,7 @@ export function OrderSupplierForm({
                 setShowSupplierDropdown(!showSupplierDropdown)
               }
               disabled={isFormDisabled ? true : false}
-              className="w-full px-3 py-2 text-sm border rounded-lg flex items-center justify-between disabled:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-brand">
+              className="w-full px-2 py-1.5 text-sm border rounded-lg flex items-center justify-between disabled:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-brand">
               <span
                 className={`truncate ${!selectedSupplier ? "text-gray-400" : ""}`}>
                 {selectedSupplier ? selectedSupplier.name : "Tìm nhà cung cấp"}
@@ -1268,7 +1326,7 @@ export function OrderSupplierForm({
                       value={supplierSearch}
                       onChange={(e) => setSupplierSearch(e.target.value)}
                       placeholder="Tìm nhà cung cấp..."
-                      className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand"
+                      className="w-full pl-8 pr-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand"
                     />
                   </div>
                 </div>
@@ -1282,12 +1340,12 @@ export function OrderSupplierForm({
                           setShowSupplierDropdown(false);
                           setSupplierSearch("");
                         }}
-                        className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                        className="px-2 py-1.5 hover:bg-gray-50 cursor-pointer text-sm">
                         {supplier.name}
                       </div>
                     ))
                   ) : (
-                    <div className="px-3 py-2 text-sm text-gray-500">
+                    <div className="px-2 py-1.5 text-sm text-gray-500">
                       Không tìm thấy nhà cung cấp
                     </div>
                   )}
@@ -1296,7 +1354,7 @@ export function OrderSupplierForm({
             )}
           </div>
 
-          {/* Nợ hiện tại NCC — 1 dòng text nhỏ in nghiêng */}
+          {/* Nợ hiện tại NCC — 1 dòng text nhỏ in nghiêng (text-xs giống PN) */}
           {selectedSupplier && (
             <p className="text-xs italic text-gray-500 -mt-1">
               Nợ hiện tại:{" "}
@@ -1308,7 +1366,7 @@ export function OrderSupplierForm({
 
           <div className="flex flex-col gap-1">
             <div className="flex gap-2 items-center">
-              <label className="text-md text-gray-600 whitespace-nowrap">
+              <label className="text-sm text-gray-600 whitespace-nowrap">
                 Mã đặt hàng nhập:
               </label>
               <input
@@ -1317,17 +1375,15 @@ export function OrderSupplierForm({
                 onChange={(e) => setCode(e.target.value)}
                 placeholder=""
                 maxLength={50}
-                className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-gray-100"
+                className="flex-1 px-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-gray-100"
                 disabled={!!isFormDisabled}
               />
             </div>
-            <p className="text-xs text-gray-500">
-              Bạn có thể tự nhập mã. Để trống, hệ thống sẽ tự sinh mã PDN######.
-            </p>
+            <p className="text-xs text-gray-500">Bạn có thể tự nhập mã.</p>
           </div>
 
           <div ref={statusDropdownRef} className="flex gap-2 items-center">
-            <div className="text-md text-gray-600">Trạng thái:</div>
+            <div className="text-sm text-gray-600">Trạng thái:</div>
             <div className="relative w-40">
               <button
                 type="button"
@@ -1350,7 +1406,7 @@ export function OrderSupplierForm({
                         setStatus(option.value);
                         setShowStatusDropdown(false);
                       }}
-                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      className="px-2 py-1.5 hover:bg-gray-50 cursor-pointer text-sm">
                       {option.label}
                     </div>
                   ))}
@@ -1360,7 +1416,7 @@ export function OrderSupplierForm({
           </div>
 
           <div ref={branchDropdownRef} className="flex gap-2 items-center">
-            <div className="text-md text-gray-600">Chi nhánh:</div>
+            <div className="text-sm text-gray-600">Chi nhánh:</div>
             <div className="relative w-40">
               <button
                 type="button"
@@ -1381,7 +1437,7 @@ export function OrderSupplierForm({
                         setBranchId(branch.id);
                         setShowBranchDropdown(false);
                       }}
-                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                      className="px-2 py-1.5 hover:bg-gray-50 cursor-pointer text-sm">
                       {branch.name}
                     </div>
                   ))}
@@ -1392,19 +1448,25 @@ export function OrderSupplierForm({
 
           {canViewSalePrice && (
             <>
-              <div
-                className="border-t my-4"
-                style={{ borderColor: "var(--dt-border)" }}></div>
+              <div className="border-t my-3"></div>
 
-              <div className="flex flex-col gap-3 text-sm">
-                {/* Tiền hàng ngoại tệ (chỉ hiển thị khi NCC nước ngoài) */}
+              {/* Panel tiền — bám sát pattern PurchaseOrderForm.tsx:
+                  • Mỗi dòng là 1 flex gap-2 với label + value cùng text-sm.
+                  • KHÔNG dùng font-semibold/bold ở value thường → đồng nhất.
+                  • Tổng tiền hàng không có panel riêng khi NCC trong nước,
+                    hiển thị thẳng dòng giống Phiếu nhập.
+                  • NCC nước ngoài: 3 dòng tách biệt (CNY + Tỉ giá + Quy đổi VND),
+                    cùng pattern flex gap-2.
+                  • Compact: gap-2 (8px) giữa các dòng. */}
+              <div className="flex flex-col gap-2">
+                {/* --- NCC nước ngoài: dòng Tổng tiền hàng CNY --- */}
                 {isImportSupplier && (
-                  <div className="bg-gray-50/50 rounded-xl p-3 border border-gray-100 flex flex-col gap-2.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 font-medium">
+                  <>
+                    <div className="flex gap-2 items-center">
+                      <div className="text-sm text-gray-600 whitespace-nowrap">
                         Tổng tiền hàng ({currency}):
-                      </span>
-                      <span className="font-semibold text-gray-900 text-base">
+                      </div>
+                      <div>
                         {new Intl.NumberFormat("vi-VN", {
                           maximumFractionDigits: 2,
                         }).format(
@@ -1414,57 +1476,93 @@ export function OrderSupplierForm({
                           )
                         )}{" "}
                         {currency}
-                      </span>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-1 border-t pt-2 border-gray-100/70">
-                      <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">
-                        Thông tin tỉ giá áp dụng
+                    {/* Dòng tỉ giá — nhỏ hơn, màu phụ, nằm trong khung nhẹ */}
+                    <div className="flex gap-2 items-center text-sm text-gray-500 bg-gray-50/60 rounded px-2 py-1.5 border border-gray-100">
+                      <span className="whitespace-nowrap">Tỉ giá:</span>
+                      <span>
+                        1 {currency} ={" "}
+                        {new Intl.NumberFormat("vi-VN", {
+                          maximumFractionDigits: 4,
+                        }).format(effectiveRate || 0)}{" "}
+                        VND
                       </span>
-                      {orderSupplier != null && (
-                        <ExchangeRateIndicator
-                          base={currency}
-                          target="VND"
-                          rate={
-                            orderSupplier?.currency === "CNY"
-                              ? effectiveRate
-                              : null
-                          }
-                          fetchedAt={orderSupplier?.createdAt}
-                          allowRefresh={
-                            !hasLinkedPurchaseOrder && !isFormDisabled
-                          }
-                          onRefresh={handleRefreshExchangeRate}
-                        />
-                      )}
-                      {!orderSupplier && (
-                        <ExchangeRateIndicator
-                          base="CNY"
-                          target="VND"
-                          allowRefresh={!isFormDisabled}
-                          onRefresh={handleRefreshExchangeRate}
-                        />
+                      {orderSupplier?.currency === "CNY" &&
+                        orderSupplier?.createdAt && (
+                          <span className="text-gray-400 ml-auto">
+                            (
+                            {new Date(orderSupplier.createdAt).toLocaleString(
+                              "vi-VN",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
+                            )
+                          </span>
+                        )}
+                      {!isFormDisabled && (
+                        <button
+                          type="button"
+                          onClick={handleRefreshExchangeRate}
+                          disabled={refreshExchangeRateMutation.isPending}
+                          className="ml-auto text-brand hover:text-brand-dark disabled:opacity-50"
+                          title="Cập nhật tỉ giá">
+                          <RefreshCw
+                            className={`w-3.5 h-3.5 ${
+                              refreshExchangeRateMutation.isPending
+                                ? "animate-spin"
+                                : ""
+                            }`}
+                          />
+                        </button>
                       )}
                     </div>
-                  </div>
+
+                    {/* Dòng quy đổi sang VND để tham khảo */}
+                    <div className="flex gap-2 items-center">
+                      <div className="text-sm text-gray-600 whitespace-nowrap">
+                        Quy đổi VND:
+                      </div>
+                      <div>
+                        {formatCurrency(
+                          products.reduce(
+                            (sum, p) =>
+                              sum +
+                              (p.factorySubTotal || 0) * (effectiveRate || 1),
+                            0
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </>
                 )}
 
-                {/* Tiền hàng VND (chỉ hiện khi NCC trong nước) */}
+                {/* --- NCC trong nước: 1 dòng Tổng tiền hàng --- */}
                 {!isImportSupplier && (
-                  <div className="flex justify-between items-center py-0.5">
-                    <span className="text-gray-600">Tổng tiền hàng:</span>
-                    <span className="font-semibold text-gray-900">
+                  <div className="flex gap-2 items-center">
+                    <div className="text-sm text-gray-600 whitespace-nowrap">
+                      Tổng tiền hàng:
+                    </div>
+                    <div>
                       {formatCurrency(
                         products.reduce((sum, p) => sum + p.subTotal, 0)
                       )}
-                    </span>
+                    </div>
                   </div>
                 )}
-                {/* Giảm giá */}
-                {/* Giảm giá */}
-                <div className="flex justify-between items-center py-0.5">
-                  <span className="text-gray-500 font-medium">Giảm giá:</span>
-                  <div className="flex items-center gap-1.5 shrink-0">
+
+                {/* --- Giảm giá --- */}
+                <div className="flex gap-2 items-center">
+                  <div className="text-sm text-gray-600 whitespace-nowrap">
+                    Giảm giá:
+                  </div>
+                  <div className="flex items-center gap-1.5">
                     <input
                       type="text"
                       value={
@@ -1483,7 +1581,7 @@ export function OrderSupplierForm({
                       }}
                       disabled={isFormDisabled ? true : false}
                       placeholder="0"
-                      className="w-24 text-right text-sm px-2.5 py-1 border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand disabled:bg-gray-50 bg-white"
+                      className="w-24 text-right text-sm px-2 py-1.5 border rounded focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand disabled:bg-gray-50 bg-white"
                     />
                     <select
                       value={discountType}
@@ -1493,111 +1591,152 @@ export function OrderSupplierForm({
                         setDiscountRatio(0);
                       }}
                       disabled={isFormDisabled ? true : false}
-                      className="w-16 text-sm px-1.5 py-1 border rounded-lg bg-white disabled:bg-gray-50 focus:outline-none">
+                      className="w-16 text-sm px-2 py-1.5 border rounded bg-white disabled:bg-gray-50 focus:outline-none">
                       <option value="amount">VND</option>
                       <option value="ratio">%</option>
                     </select>
                   </div>
                 </div>
+
+                {/* --- Border ngăn trước các dòng tiền thanh toán --- */}
+                <div className="border-t pt-2 mt-1"></div>
+
+                {/* --- Cần trả NCC --- */}
+                <div className="flex gap-2 items-center">
+                  <div className="text-sm text-gray-600 whitespace-nowrap">
+                    {isImportSupplier
+                      ? "Cần trả NCC:"
+                      : "Cần trả nhà cung cấp:"}
+                  </div>
+                  <div
+                    className={
+                      isImportSupplier ? "text-brand" : "text-gray-900"
+                    }>
+                    {isImportSupplier
+                      ? new Intl.NumberFormat("vi-VN", {
+                          maximumFractionDigits: 2,
+                        }).format(
+                          Math.max(
+                            0,
+                            calculateTotalCNY() -
+                              (paymentForeignAmount || 0) -
+                              previouslyPaid / (effectiveRate || 1)
+                          )
+                        ) + ` ${currency}`
+                      : formatCurrency(
+                          Math.max(0, calculateTotalValue() - previouslyPaid)
+                        )}
+                  </div>
+                </div>
+
+                {/* --- Trả thêm cho NCC --- */}
+                <div className="flex gap-2 items-center">
+                  <div className="text-sm text-gray-600 whitespace-nowrap">
+                    {orderSupplier
+                      ? "Trả thêm cho NCC:"
+                      : "Tiền trả nhà cung cấp:"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div>
+                      {isImportSupplier && paymentForeignAmount != null
+                        ? new Intl.NumberFormat("vi-VN", {
+                            maximumFractionDigits: 2,
+                          }).format(paymentForeignAmount) + ` ${currency}`
+                        : formatCurrency(paymentAmount)}
+                    </div>
+                    <button
+                      onClick={() => setShowPaymentModal(true)}
+                      disabled={isFormDisabled ? true : false}
+                      className="p-1 border rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                      type="button">
+                      <CreditCard className="w-4 h-4 text-brand" />
+                    </button>
+                  </div>
+                </div>
+
+                {paymentAmount > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Phương thức: {paymentMethod === "cash" && "Tiền mặt"}
+                    {paymentMethod === "transfer" && "Chuyển khoản"}
+                    {paymentMethod === "card" && "Thẻ"}
+                  </div>
+                )}
+
+                {/* --- Tổng đã trả --- */}
+                <div className="flex gap-2 items-center text-sm text-gray-500">
+                  <div className="whitespace-nowrap text-sm">Tổng đã trả:</div>
+                  <div className="font-medium text-gray-700">
+                    {isImportSupplier
+                      ? new Intl.NumberFormat("vi-VN", {
+                          maximumFractionDigits: 2,
+                        }).format(
+                          previouslyPaid / (effectiveRate || 1) +
+                            (paymentForeignAmount || 0)
+                        ) + ` ${currency}`
+                      : formatCurrency(previouslyPaid + paymentAmount)}
+                  </div>
+                </div>
+
+                {/* --- Tiền NCC trả lại --- */}
+                {previouslyPaid + paymentAmount - calculateTotalValue() > 0 && (
+                  <div className="flex gap-2 items-center text-sm text-green-700 bg-green-50/60 px-2 py-1.5 rounded border border-green-100">
+                    <div className="whitespace-nowrap">
+                      Tiền nhà cung cấp trả lại:
+                    </div>
+                    <div>
+                      {isImportSupplier
+                        ? new Intl.NumberFormat("vi-VN", {
+                            maximumFractionDigits: 2,
+                          }).format(
+                            Math.max(
+                              0,
+                              previouslyPaid / (effectiveRate || 1) +
+                                (paymentForeignAmount || 0) -
+                                calculateTotalCNY()
+                            )
+                          ) + ` ${currency}`
+                        : formatCurrency(
+                            Math.max(
+                              0,
+                              previouslyPaid +
+                                paymentAmount -
+                                calculateTotalValue()
+                            )
+                          )}
+                    </div>
+                  </div>
+                )}
               </div>
-
-              <div className="flex justify-between items-center py-0.5">
-                <span className="text-gray-900 font-semibold">
-                  {isImportSupplier ? `Cần trả NCC:` : "Cần trả nhà cung cấp:"}
-                </span>
-                <span
-                  className={`font-bold text-base ${isImportSupplier ? "text-brand" : "text-gray-950"}`}>
-                  {isImportSupplier
-                    ? new Intl.NumberFormat("vi-VN", {
-                        maximumFractionDigits: 2,
-                      }).format(
-                        (calculateTotalValue() - previouslyPaid) /
-                          (effectiveRate || 1)
-                      ) + ` ${currency}`
-                    : formatCurrency(calculateTotalValue() - previouslyPaid)}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center py-0.5">
-                <span className="text-gray-500 font-medium">
-                  {orderSupplier
-                    ? "Trả thêm cho NCC:"
-                    : "Tiền trả nhà cung cấp:"}
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-gray-800">
-                    {formatCurrency(paymentAmount)}
-                  </span>
-                  <button
-                    onClick={() => setShowPaymentModal(true)}
-                    disabled={isFormDisabled ? true : false}
-                    className="p-1.5 border rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
-                    type="button">
-                    <CreditCard className="w-4 h-4 text-brand" />
-                  </button>
-                </div>
-              </div>
-
-              {paymentAmount > 0 && (
-                <div className="text-right text-xs text-gray-400 -mt-1.5">
-                  Phương thức: {paymentMethod === "cash" && "Tiền mặt"}
-                  {paymentMethod === "transfer" && "Chuyển khoản"}
-                  {paymentMethod === "card" && "Thẻ"}
-                </div>
-              )}
-
-              {orderSupplier && (previouslyPaid > 0 || paymentAmount > 0) && (
-                <div className="flex justify-between items-center py-0.5 text-xs text-gray-400">
-                  <span>Tổng đã trả:</span>
-                  <span className="font-medium text-gray-800">
-                    {formatCurrency(previouslyPaid + paymentAmount)}
-                  </span>
-                </div>
-              )}
-
-              {previouslyPaid + paymentAmount - calculateTotalValue() > 0 && (
-                <div className="flex justify-between items-center text-xs text-green-600 bg-green-50/50 px-2.5 py-1.5 rounded-lg border border-green-100/50">
-                  <span>Tiền nhà cung cấp trả lại:</span>
-                  <span className="font-semibold text-gray-800">
-                    {formatCurrency(
-                      Math.max(
-                        0,
-                        previouslyPaid + paymentAmount - calculateTotalValue()
-                      )
-                    )}
-                  </span>
-                </div>
-              )}
             </>
           )}
 
           <div>
-            <label className="block text-md text-gray-600 mb-1">Ghi chú</label>
+            <label className="block text-sm text-gray-600 mb-1">Ghi chú</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 1000))}
               maxLength={1000}
               disabled={isFormDisabled ? true : false}
               placeholder="Nhập ghi chú..."
-              rows={2}
-              className="w-full text-md px-2 py-1.5 border rounded disabled:bg-gray-100 resize-none"
+              rows={3}
+              className="w-full text-sm px-2 py-1.5 border rounded disabled:bg-gray-100 resize-none"
             />
           </div>
         </div>
 
-        {/* Sidebar Footer - Buttons */}
-        <div className="p-4 border-t bg-gray-50 flex gap-2">
+        {/* Sidebar Footer - Buttons — compact giống PurchaseOrderForm.tsx */}
+        <div className="p-3 border-t bg-gray-50 flex gap-2">
           <button
             onClick={handleSubmit}
             disabled={isFormDisabled ? true : false}
-            className="w-full bg-brand text-white py-2.5 rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm flex items-center justify-center gap-2">
+            className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm flex items-center justify-center gap-2">
             <Plus className="w-4 h-4" />
             {orderSupplier ? "Cập nhật" : "Đặt hàng nhập"}
           </button>
 
           <button
             onClick={() => router.push("/san-pham/dat-hang-nhap")}
-            className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 font-medium text-sm">
+            className="w-full bg-white border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 font-medium text-sm">
             Hủy
           </button>
         </div>
@@ -1608,6 +1747,9 @@ export function OrderSupplierForm({
         onClose={() => setShowPaymentModal(false)}
         totalAmount={calculateTotalValue()}
         previouslyPaid={previouslyPaid}
+        isImportMode={isImportSupplier}
+        foreignTotalAmount={isImportSupplier ? calculateTotalCNY() : undefined}
+        defaultExchangeRate={effectiveRate}
         onConfirm={handlePaymentConfirm}
       />
     </div>

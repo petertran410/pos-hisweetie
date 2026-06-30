@@ -29,6 +29,14 @@ export function useVehicleAvailableItems(branchId?: number) {
   });
 }
 
+export function useVehicleShipmentContractNos() {
+  return useQuery({
+    queryKey: ["vehicle-shipment-contract-nos"],
+    queryFn: () => vehicleShipmentsApi.getContractNos(),
+    staleTime: 60_000,
+  });
+}
+
 export function useCreateVehicleShipment() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -113,18 +121,15 @@ export function useResolveVehicleItem() {
   return useMutation({
     mutationFn: ({
       id,
-      orderSupplierId,
-      productId,
+      vehicleShipmentItemId,
       action,
     }: {
       id: number;
-      orderSupplierId: number;
-      productId: number;
+      vehicleShipmentItemId: number;
       action: string;
     }) =>
       vehicleShipmentsApi.resolveItem(id, {
-        orderSupplierId,
-        productId,
+        vehicleShipmentItemId,
         action,
       }),
     onSuccess: (_, variables) => {

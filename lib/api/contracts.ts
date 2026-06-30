@@ -2,6 +2,7 @@ import { apiClient, API_URL, getAuthHeaders } from "@/lib/config/api";
 import type {
   Contract,
   ContractFilters,
+  ContractSigner,
   ContractTemplate,
   ContractTemplateField,
   CreateFromTemplatePayload,
@@ -27,6 +28,12 @@ export const contractsApi = {
     );
   },
 
+  listSigners: async (refresh = false) => {
+    return apiClient.get<ContractSigner[]>(
+      `/contracts/signers${refresh ? "?refresh=true" : ""}`
+    );
+  },
+
   getById: async (id: number) => {
     return apiClient.get<Contract>(`/contracts/${id}`);
   },
@@ -37,14 +44,6 @@ export const contractsApi = {
 
   resend: async (id: number) => {
     return apiClient.post<Contract>(`/contracts/${id}/resend`);
-  },
-
-  approveReview: async (id: number) => {
-    return apiClient.post<Contract>(`/contracts/${id}/approve-review`);
-  },
-
-  sendForSigning: async (id: number) => {
-    return apiClient.post<Contract>(`/contracts/${id}/send-for-signing`);
   },
 
   // Upload PDF (multipart) — apiClient luôn JSON.stringify nên fetch trực tiếp.

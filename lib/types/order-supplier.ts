@@ -132,6 +132,13 @@ export interface OrderSupplierPayment {
   description?: string;
   status: number;
   statusValue?: string;
+  // Tỉ giá quy đổi VND/CNY user nhập tại thời điểm thanh toán. Snapshot riêng
+  // — KHÔNG liên quan OrderSupplier.exchangeRate (tỉ giá đặt hàng, chỉ tham
+  // khảo). null = NCC trong nước hoặc phiếu cũ chưa có field này.
+  exchangeRate?: number | null;
+  // Thành tiền quy đổi sang tiền tệ NCC (CNY) snapshot tại thời điểm thanh
+  // toán. = amount / exchangeRate. null = NCC trong nước hoặc phiếu cũ.
+  foreignAmount?: number | null;
 }
 
 export const ORDER_SUPPLIER_STATUS = {

@@ -14,11 +14,49 @@ interface SupplierPaymentModalProps {
   onClose: () => void;
   totalAmount: number;
   previouslyPaid?: number;
+  /**
+   * true khi NCC nước ngoài — hiển thị thêm ô tỉ giá quy đổi bắt buộc
+   * + preview "Thành tiền CNY" realtime. Khi false, modal giữ nguyên UX cũ.
+   */
+  isImportMode?: boolean;
+  /**
+   * Tổng cần trả bằng ngoại tệ (hiện tại CNY), dùng khi isImportMode=true.
+   * Modal vẫn nhập số tiền VND, nhưng phần tổng kết dưới sẽ hiển thị theo CNY.
+   */
+  foreignTotalAmount?: number;
+  /**
+   * Tỉ giá snapshot (chỉ làm placeholder cho ô input — KHÔNG tự dùng để
+   * tính). User bắt buộc phải nhập lại tỉ giá thực tế tại thời điểm trả.
+   */
+  defaultExchangeRate?: number;
   onConfirm: (
     amount: number,
     method: "cash" | "transfer" | "card",
-    accountId?: number
+    accountId?: number,
+    exchangeRate?: number,
+    foreignAmount?: number
   ) => void;
+}
+
+function formatExchangeRateInput(value: number | string | undefined): string {
+  if (value == null || value === "") return "";
+  const normalized = String(value).replace(/,/g, "");
+  if (!/^\d*(?:\.\d*)?$/.test(normalized)) return "";
+
+  const [integerPart = "", decimalPart] = normalized.split(".");
+  const formattedInteger = integerPart
+    ? new Intl.NumberFormat("en-US").format(Number(integerPart))
+    : "";
+
+  if (decimalPart !== undefined) {
+    return `${formattedInteger}.${decimalPart.slice(0, 2)}`;
+  }
+
+  return formattedInteger;
+}
+
+function parseExchangeRateInput(value: string): number {
+  return Number(value.replace(/,/g, "")) || 0;
 }
 
 export function SupplierPaymentModal({
@@ -26,6 +64,9 @@ export function SupplierPaymentModal({
   onClose,
   totalAmount,
   previouslyPaid = 0,
+  isImportMode = false,
+  foreignTotalAmount,
+  defaultExchangeRate,
   onConfirm,
 }: SupplierPaymentModalProps) {
   const needToPay = totalAmount - previouslyPaid;
@@ -35,6 +76,11 @@ export function SupplierPaymentModal({
     null
   );
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+  // Tỉ giá user nhập tay (chỉ dùng khi isImportMode=true). Snapshot tại thời
+  // điểm thanh toán — khác defaultExchangeRate (snapshot lúc đặt hàng).
+  const [exchangeRate, setExchangeRate] = useState<string>(
+    defaultExchangeRate ? formatExchangeRateInput(defaultExchangeRate) : ""
+  );
   const [mounted, setMounted] = useState(false);
   const accountDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -69,16 +115,62 @@ export function SupplierPaymentModal({
     }
   }, [method]);
 
+  // Reset tỉ giá về default khi mở modal mới
+  useEffect(() => {
+    if (isOpen) {
+      setExchangeRate(
+        defaultExchangeRate ? formatExchangeRateInput(defaultExchangeRate) : ""
+      );
+    }
+  }, [isOpen, defaultExchangeRate]);
+
   if (!isOpen || !mounted) return null;
 
   const handleAmountChange = (value: string) => {
-    const formatted = formatNumberInput(value);
-    setAmount(formatted);
+    setAmount(formatNumberInput(value));
   };
 
+  const handleExchangeRateChange = (value: string) => {
+    const normalized = value.replace(/,/g, "");
+    if (normalized === "") {
+      setExchangeRate("");
+      return;
+    }
+    if (!/^\d*(?:\.\d{0,2})?$/.test(normalized)) return;
+    setExchangeRate(formatExchangeRateInput(normalized));
+  };
+
+  // Tỉ giá đã parse để tính toán.
+  const parsedAmount = parseNumberInput(amount);
+  const parsedRate = parseExchangeRateInput(exchangeRate);
+  const effectiveRate =
+    parsedRate > 0
+      ? parsedRate
+      : defaultExchangeRate && defaultExchangeRate > 0
+      ? defaultExchangeRate
+      : 0;
+  const foreignPreview = effectiveRate > 0 ? parsedAmount / effectiveRate : 0;
+
+  // Khi NCC nước ngoài, phần tổng kết dưới modal hiển thị theo ngoại tệ
+  // (CNY), dù ô thanh toán vẫn nhập bằng VND.
+  const foreignTotal =
+    isImportMode && foreignTotalAmount != null
+      ? foreignTotalAmount
+      : isImportMode && effectiveRate > 0
+        ? totalAmount / effectiveRate
+        : 0;
+  const foreignPreviouslyPaid =
+    isImportMode && effectiveRate > 0 ? previouslyPaid / effectiveRate : 0;
+  const foreignNeedToPay = Math.max(0, foreignTotal - foreignPreviouslyPaid);
+  const foreignRemaining = Math.max(0, foreignNeedToPay - foreignPreview);
+
+  // Chỉ hiện preview khi NCC nước ngoài.
+  const showForeignPreview = isImportMode && effectiveRate > 0;
+
+  const remaining = needToPay - parsedAmount;
+
   const handleConfirm = () => {
-    const numericAmount = parseNumberInput(amount);
-    if (numericAmount <= 0) {
+    if (parsedAmount <= 0) {
       alert("Vui lòng nhập số tiền hợp lệ");
       return;
     }
@@ -86,12 +178,28 @@ export function SupplierPaymentModal({
       alert("Vui lòng chọn tài khoản ngân hàng");
       return;
     }
-    onConfirm(numericAmount, method, selectedAccountId ?? undefined);
+
+    let rate: number | undefined;
+    let foreign: number | undefined;
+    if (isImportMode) {
+      // Tỉ giá bắt buộc nhập khi NCC nước ngoài (F4).
+      if (parsedRate <= 0) {
+        alert("Vui lòng nhập tỉ giá quy đổi");
+        return;
+      }
+      rate = parsedRate;
+      foreign = parsedAmount / parsedRate;
+    }
+
+    onConfirm(
+      parsedAmount,
+      method,
+      selectedAccountId ?? undefined,
+      rate,
+      foreign
+    );
     onClose();
   };
-
-  const numericAmount = parseNumberInput(amount);
-  const remaining = needToPay - numericAmount;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
@@ -206,9 +314,7 @@ export function SupplierPaymentModal({
                       (a: any) => a.id === selectedAccountId
                     );
                     return account ? (
-                      <>
-                        Chủ TK: {account.accountHolder}
-                      </>
+                      <>Chủ TK: {account.accountHolder}</>
                     ) : null;
                   })()}
                 </div>
@@ -216,17 +322,62 @@ export function SupplierPaymentModal({
             </div>
           )}
 
+          {/* Block Quy đổi — chỉ hiện khi NCC nước ngoài (F4: bắt buộc nhập). */}
+          {isImportMode && (
+            <div className="border border-brand/30 rounded-lg p-3 bg-brand/5 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600 whitespace-nowrap">
+                  Tỉ giá quy đổi: <span className="text-red-500">*</span>
+                </span>
+                <input
+                  type="text"
+                  value={exchangeRate}
+                  onChange={(e) => handleExchangeRateChange(e.target.value)}
+                  placeholder={
+                    defaultExchangeRate
+                      ? formatExchangeRateInput(defaultExchangeRate)
+                      : "Nhập tỉ giá VND/CNY"
+                  }
+                  className="flex-1 text-right text-sm px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-brand bg-white"
+                />
+                <span className="text-xs text-gray-500 whitespace-nowrap">
+                  VND/CNY
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">
+                  Thành tiền (snapshot tại thời điểm TT):
+                </span>
+                <span className="font-semibold text-brand text-sm">
+                  {showForeignPreview
+                    ? new Intl.NumberFormat("vi-VN", {
+                        maximumFractionDigits: 2,
+                      }).format(foreignPreview) + " CNY"
+                    : "—"}
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2 pt-4 border-t">
             <div className="flex justify-between text-base">
               <span className="text-gray-600">Cần trả nhà cung cấp</span>
               <span className="font-semibold text-brand">
-                {formatCurrency(needToPay)}
+                {isImportMode
+                  ? new Intl.NumberFormat("vi-VN", {
+                      maximumFractionDigits: 2,
+                    }).format(foreignNeedToPay) + " CNY"
+                  : formatCurrency(needToPay)}
               </span>
             </div>
             <div className="flex justify-between text-base">
               <span className="text-gray-600">Còn nợ</span>
               <span className="font-semibold text-red-600">
-                {formatCurrency(Math.max(0, remaining))}
+                {isImportMode
+                  ? new Intl.NumberFormat("vi-VN", {
+                      maximumFractionDigits: 2,
+                    }).format(foreignRemaining) + " CNY"
+                  : formatCurrency(Math.max(0, remaining))}
               </span>
             </div>
           </div>

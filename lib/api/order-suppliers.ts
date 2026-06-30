@@ -213,9 +213,12 @@ export interface OrderSupplierDetailItem {
   productionStageName?: string | null;
   factoryId?: number | null;
   factoryName?: string | null;
-  // Từ phiếu ghép xe mới nhất
+  // Từ phiếu ghép xe (gom DISTINCT — 1 dòng item có thể thuộc nhiều Số HĐ)
   borderGateName?: string | null;
+  /** Số HĐ đầu tiên (backward-compat). Ưu tiên dùng `contractNos` cho UI mới. */
   contractNo?: string | null;
+  /** Danh sách Số HĐ DISTINCT mà dòng item này đã được ghép. */
+  contractNos?: string[];
   expectedArrivalDate?: string | null;
   actualArrivalDate?: string | null;
 }

@@ -9,9 +9,13 @@ import {
   useCreateContractFromTemplate,
   useContractTemplates,
   useContractTemplateFields,
+  useContractSigners,
 } from "@/lib/hooks/useContracts";
 import type { Customer } from "@/lib/types/customer";
-import type { ContractTemplateField } from "@/lib/types/contract";
+import type {
+  ContractSigner,
+  ContractTemplateField,
+} from "@/lib/types/contract";
 
 interface Props {
   isOpen: boolean;
@@ -52,12 +56,16 @@ export function ContractCreateModal({ isOpen, onClose, onSuccess }: Props) {
   const [title, setTitle] = useState("");
   // Map fieldId -> value (động theo template).
   const [values, setValues] = useState<Record<number, string>>({});
+  // Email Documenso user cho "BÊN A" (NV ký sau, áp dụng khi HĐ 2 bên).
+  const [signerEmail, setSignerEmail] = useState("");
 
   const createTpl = useCreateContractFromTemplate();
   const { data: templates, isLoading: loadingTemplates } =
     useContractTemplates(isOpen);
   const { data: fields, isLoading: loadingFields } =
     useContractTemplateFields(isOpen ? templateId : "");
+  const { data: signers, isLoading: loadingSigners } =
+    useContractSigners(isOpen);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 350);
@@ -91,6 +99,14 @@ export function ContractCreateModal({ isOpen, onClose, onSuccess }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fields, selected]);
 
+  // Auto-fill signer mặc định (user đầu tiên trong list).
+  useEffect(() => {
+    if (signers && signers.length && !signerEmail) {
+      setSignerEmail(signers[0].documensoEmail);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signers]);
+
   const handleSelect = (c: Customer) => {
     setSelected(c);
     setTitle(`Hợp đồng - ${c.name}`);
@@ -109,6 +125,7 @@ export function ContractCreateModal({ isOpen, onClose, onSuccess }: Props) {
     setTemplateId("");
     setTitle("");
     setValues({});
+    setSignerEmail("");
   };
 
   const handleClose = () => {
@@ -131,6 +148,7 @@ export function ContractCreateModal({ isOpen, onClose, onSuccess }: Props) {
         templateId: Number(templateId),
         title: title || undefined,
         prefillFields,
+        companySignerEmail: signerEmail || undefined,
       });
       handleClose();
       onSuccess?.();
@@ -182,6 +200,34 @@ export function ContractCreateModal({ isOpen, onClose, onSuccess }: Props) {
                 Chưa có template nào trên Documenso. Vui lòng tạo template trước.
               </div>
             )}
+          </div>
+
+          {/* NV ký BÊN A (chọn từ Documenso user) */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Người đại diện ký BÊN A (công ty)
+            </label>
+            <select
+              value={signerEmail}
+              onChange={(e) => setSignerEmail(e.target.value)}
+              disabled={loadingSigners}
+              className="w-full border rounded px-3 py-2 text-sm bg-white">
+              <option value="">
+                {loadingSigners
+                  ? "Đang tải..."
+                  : "-- Chọn người ký BÊN A --"}
+              </option>
+              {(signers || []).map((s: ContractSigner) => (
+                <option key={s.id} value={s.documensoEmail}>
+                  {s.name || s.documensoEmail}
+                  {s.department ? ` — ${s.department}` : ""}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Dùng cho HĐ 2 bên ký. Documenso sẽ tự apply chữ ký cá nhân của
+              user này khi họ ký.
+            </p>
           </div>
 
           {/* Chọn khách hàng */}
@@ -313,7 +359,7 @@ export function ContractCreateModal({ isOpen, onClose, onSuccess }: Props) {
             disabled={submitting || !selected || !templateId || noEmail}
             className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            Gửi bản xem trước
+            Gửi khách ký điện tử
           </button>
         </div>
       </div>

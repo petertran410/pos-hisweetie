@@ -39,6 +39,10 @@ interface Props {
 }
 
 interface PickedItem {
+  // ID ổn định sinh phía client (UUID-ish) khi thêm dòng. Dùng làm React key
+  // để tránh unmount/remount <tr> khi user sửa các field dữ liệu (đặc biệt
+  // `contractNo` — vì key không được phụ thuộc giá trị user đang gõ vào).
+  clientId: string;
   orderSupplierId: number;
   osCode: string;
   supplierName: string;
@@ -47,9 +51,19 @@ interface PickedItem {
   productName: string;
   remaining: number; // còn lại để ghép (chỉ tham chiếu khi thêm mới)
   quantity: number; // SL ghép
+  // Số HĐ gắn với dòng này. Mặc định auto-fill từ vehicleInfo, user sửa tay
+  // được (null khi xóa trỗng). Quan trọng để phân biệt các dòng cùng (osId,
+  // productId) nhưng khác HĐ (vd HH00082-26 có 2 dòng: HĐ 169 + HĐ 197).
+  contractNo?: string | null;
   weight: number; // trọng lượng đơn vị
   weightUnit: string; // 'g' | 'kg'
 }
+
+/** Sinh ID ngắn cho dòng picked. Đủ unique trong 1 phiếu (dùng Date.now +
+ * counter) — không cần crypto vì chỉ tồn tại trong session FE. */
+let _pickedCounter = 0;
+const nextClientId = () =>
+  `p_${Date.now().toString(36)}_${(++_pickedCounter).toString(36)}`;
 
 /** Quy đổi trọng lượng đơn vị về kg. */
 const toKg = (weight: number, unit: string) =>
@@ -80,6 +94,9 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
   const [branchId, setBranchId] = useState<number | undefined>(
     selectedBranch?.id
   );
+  // Lưu ý: "Số hợp đồng" không còn ô nhập tổng — user nhập trực tiếp per-row
+  // ở cột "Số HĐ" trong bảng hàng đã ghép. State vehicleInfo chỉ dùng nội bộ
+  // để gửi BE (giữ backward-compat với VehicleShipment.vehicleInfo).
   const [vehicleInfo, setVehicleInfo] = useState("");
   const [borderGateId, setBorderGateId] = useState<number | undefined>(
     undefined
@@ -137,6 +154,7 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
     setFiles(existing.files || []);
     setPicked(
       (existing.items || []).map((it) => ({
+        clientId: nextClientId(),
         orderSupplierId: it.orderSupplierId,
         osCode: it.orderSupplier?.code || `PĐN #${it.orderSupplierId}`,
         supplierName: it.orderSupplier?.supplier?.name || "-",
@@ -145,6 +163,7 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
         productName: it.productName,
         remaining: Number(it.quantity),
         quantity: Number(it.quantity),
+        contractNo: it.contractNo ?? null,
         weight: it.unitWeight ?? 0,
         weightUnit: it.weightUnit ?? "kg",
       }))
@@ -152,9 +171,15 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
     setInitialized(true);
   }
 
-  const pickedKey = (osId: number, pId: number) => `${osId}:${pId}`;
+  // pickedKey gồm contractNo — cùng (osId, productId) có thể xuất hiện nhiều lần
+  // nếu khác HĐ (vd HH00082-26 có 2 dòng thuộc 2 HĐ khác nhau).
+  const pickedKey = (osId: number, pId: number, contractNo?: string | null) =>
+    `${osId}:${pId}:${contractNo ?? ""}`;
   const pickedSet = useMemo(
-    () => new Set(picked.map((p) => pickedKey(p.orderSupplierId, p.productId))),
+    () =>
+      new Set(
+        picked.map((p) => pickedKey(p.orderSupplierId, p.productId, p.contractNo))
+      ),
     [picked]
   );
 
@@ -179,9 +204,14 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
   const addItem = (os: AvailableOrderSupplier, productId: number) => {
     const item = os.items.find((i) => i.productId === productId);
     if (!item) return;
+    // Không auto-fill Số HĐ — để null để user tự nhập per-row ở cột "Số HĐ".
+    // Trước đây có auto-fill từ `vehicleInfo` (ô nhập tổng) nhưng ô này đã bỏ
+    // theo yêu cầu UX — phiếu có thể gồm nhiều HĐ, không có giá trị "chung"
+    // nào hợp lý để fill mặc định.
     setPicked((prev) => [
       ...prev,
       {
+        clientId: nextClientId(),
         orderSupplierId: os.orderSupplierId,
         osCode: os.code,
         supplierName: os.supplier?.name || "-",
@@ -190,6 +220,7 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
         productName: item.productName,
         remaining: item.remaining,
         quantity: item.remaining,
+        contractNo: null,
         weight: item.weight ?? 0,
         weightUnit: item.weightUnit ?? "kg",
       },
@@ -220,21 +251,51 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
   const removeFile = (url: string) =>
     setFiles((prev) => prev.filter((f) => f.url !== url));
 
-  const removeItem = (osId: number, productId: number) =>
+  const removeItem = (osId: number, productId: number, contractNo?: string | null) =>
     setPicked((prev) =>
       prev.filter(
-        (p) => !(p.orderSupplierId === osId && p.productId === productId)
+        (p) =>
+          !(
+            p.orderSupplierId === osId &&
+            p.productId === productId &&
+            (p.contractNo ?? null) === (contractNo ?? null)
+          )
       )
     );
 
-  const updateQty = (osId: number, productId: number, value: number) =>
+  const updateQty = (
+    osId: number,
+    productId: number,
+    contractNo: string | null | undefined,
+    value: number
+  ) =>
     setPicked((prev) =>
       prev.map((p) =>
-        p.orderSupplierId === osId && p.productId === productId
+        p.orderSupplierId === osId &&
+        p.productId === productId &&
+        (p.contractNo ?? null) === (contractNo ?? null)
           ? { ...p, quantity: value }
           : p
       )
     );
+
+  const updateContractNo = (
+    osId: number,
+    productId: number,
+    currentContractNo: string | null | undefined,
+    value: string
+  ) => {
+    const trimmed = value.trim();
+    setPicked((prev) =>
+      prev.map((p) =>
+        p.orderSupplierId === osId &&
+        p.productId === productId &&
+        (p.contractNo ?? null) === (currentContractNo ?? null)
+          ? { ...p, contractNo: trimmed || null }
+          : p
+      )
+    );
+  };
 
   const buildPayload = (status: number) => ({
     code: code.trim() || undefined,
@@ -249,6 +310,7 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
       orderSupplierId: p.orderSupplierId,
       productId: p.productId,
       quantity: Number(p.quantity),
+      contractNo: p.contractNo?.trim() || undefined,
     })),
   });
 
@@ -412,17 +474,6 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">
-                Số hợp đồng
-              </label>
-              <input
-                value={vehicleInfo}
-                onChange={(e) => setVehicleInfo(e.target.value)}
-                placeholder="VD: HD-2026-001"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
                 Ngày dự kiến về kho
               </label>
               <div ref={dateRef} className="relative">
@@ -550,6 +601,9 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
                           <th className="px-3 py-2 text-right font-medium w-32">
                             SL ghép
                           </th>
+                          <th className="px-3 py-2 text-left font-medium w-36">
+                            Số HĐ
+                          </th>
                           <th className="px-3 py-2 text-right font-medium">
                             Trọng lượng (gram)
                           </th>
@@ -558,7 +612,9 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
                       </thead>
                       <tbody>
                         {sec.items.map((it) => (
-                          <tr key={it.productId} className="border-t">
+                          <tr
+                            key={it.clientId}
+                            className="border-t">
                             <td className="px-3 py-2">
                               <div className="font-medium text-gray-800">
                                 {it.productName}
@@ -579,10 +635,26 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
                                   updateQty(
                                     sec.orderSupplierId,
                                     it.productId,
+                                    it.contractNo,
                                     Number(e.target.value)
                                   )
                                 }
                                 className="w-24 border rounded-lg px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                value={it.contractNo ?? ""}
+                                onChange={(e) =>
+                                  updateContractNo(
+                                    sec.orderSupplierId,
+                                    it.productId,
+                                    it.contractNo,
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Nhập Số HĐ"
+                                className="w-32 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                               />
                             </td>
                             <td className="px-3 py-2 text-right text-gray-700">
@@ -594,7 +666,11 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
                             <td className="px-3 py-2 text-center">
                               <button
                                 onClick={() =>
-                                  removeItem(sec.orderSupplierId, it.productId)
+                                  removeItem(
+                                    sec.orderSupplierId,
+                                    it.productId,
+                                    it.contractNo
+                                  )
                                 }
                                 className="p-1 text-red-500 hover:bg-red-50 rounded">
                                 <Trash2 className="w-4 h-4" />
@@ -697,8 +773,14 @@ export function VehicleShipmentForm({ shipmentId }: Props) {
                     {isOpen && (
                       <div className="divide-y">
                         {os.items.map((it) => {
+                          // Disable "Thêm" khi đã có dòng cùng (osId, productId)
+                          // và cùng Số HĐ null. Dòng mới luôn có contractNo=null
+                          // (không auto-fill sau khi bỏ ô tổng) → chặn trùng SP
+                          // vô tình. Để thêm dòng cùng SP khác HĐ: nhập HĐ cho
+                          // dòng đã thêm, rồi bấm Thêm lại (lúc đó contractNo
+                          // khác null → key khác → cho phép).
                           const isPicked = pickedSet.has(
-                            pickedKey(os.orderSupplierId, it.productId)
+                            pickedKey(os.orderSupplierId, it.productId, null)
                           );
                           return (
                             <div
