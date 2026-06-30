@@ -7,17 +7,12 @@ import {
   ExternalLink,
   Loader2,
   Eye,
-  CheckCircle,
-  FileSignature,
+  PenLine,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Contract } from "@/lib/types/contract";
 import { contractsApi } from "@/lib/api/contracts";
-import {
-  useApproveReview,
-  useSendForSigning,
-  useResendContract,
-} from "@/lib/hooks/useContracts";
+import { useResendContract } from "@/lib/hooks/useContracts";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 interface Props {
@@ -25,8 +20,6 @@ interface Props {
 }
 
 export function ContractRowActions({ contract }: Props) {
-  const approveReview = useApproveReview();
-  const sendForSigning = useSendForSigning();
   const resend = useResendContract();
   const [downloading, setDownloading] = useState(false);
   const [previewing, setPreviewing] = useState(false);
@@ -64,71 +57,32 @@ export function ContractRowActions({ contract }: Props) {
     }
   };
 
-  // Phase 1 — REVIEW_SENT: khách đang xem bản review.
-  const canApprove = contract.status === "REVIEW_SENT";
-
-  // Phase 1.5 — REVIEW_APPROVED: đã duyệt, chờ gửi bản ký.
-  const canSendForSigning =
-    contract.status === "REVIEW_APPROVED" ||
-    contract.status === "REVIEW_SENT";
-
-  // Gửi lại: REVIEW_SENT / REVIEW_APPROVED → Lark Mail bản xem.
-  const canResendReview =
-    contract.status === "REVIEW_SENT" ||
-    contract.status === "REVIEW_APPROVED";
-
-  // Gửi lại: SENT → Documenso bản ký.
-  const canResendDocumenso = contract.status === "SENT";
+  // Có thể gửi lại (khi HĐ chưa ký xong).
+  const canResend = ["SENT", "PARTIALLY_SIGNED"].includes(contract.status);
 
   return (
     <div className="flex items-center gap-1">
-      {/* Duyệt bản xem (khách đồng ý) → cho phép gửi bản ký */}
-      {canApprove && (
-        <PermissionGate resource="contracts" action="send">
-          <button
-            onClick={() => approveReview.mutate(contract.id)}
-            disabled={approveReview.isPending}
-            title="Khách đồng ý nội dung — cho phép gửi bản ký"
-            className="p-1.5 rounded hover:bg-green-50 text-green-600 disabled:opacity-50"
-          >
-            {approveReview.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <CheckCircle className="w-4 h-4" />
-            )}
-          </button>
-        </PermissionGate>
+      {/* NV ký tiếp (Loại 2) — mở Documenso link ký của NV trong tab mới. */}
+      {contract.status === "PARTIALLY_SIGNED" && contract.signingUrl && (
+        <a
+          href={contract.signingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Khách đã ký xong — NV ký phần BÊN A"
+          className="p-1.5 rounded hover:bg-purple-50 text-purple-600 flex items-center gap-1 px-2"
+        >
+          <PenLine className="w-4 h-4" />
+          <span className="text-xs font-medium">Ký ngay</span>
+        </a>
       )}
 
-      {/* Gửi bản ký Documenso */}
-      {canSendForSigning && (
-        <PermissionGate resource="contracts" action="send">
-          <button
-            onClick={() => sendForSigning.mutate(contract.id)}
-            disabled={sendForSigning.isPending}
-            title="Gửi bản ký cho khách (Documenso)"
-            className="p-1.5 rounded hover:bg-blue-50 text-blue-600 disabled:opacity-50"
-          >
-            {sendForSigning.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <FileSignature className="w-4 h-4" />
-            )}
-          </button>
-        </PermissionGate>
-      )}
-
-      {/* Gửi lại bản xem (Lark Mail) hoặc Documenso */}
-      {(canResendReview || canResendDocumenso) && (
+      {/* Gửi lại mail ký cho khách (Documenso). */}
+      {canResend && (
         <PermissionGate resource="contracts" action="send">
           <button
             onClick={() => resend.mutate(contract.id)}
             disabled={resend.isPending}
-            title={
-              canResendReview
-                ? "Gửi lại bản xem trước qua email"
-                : "Gửi lại bản ký"
-            }
+            title="Gửi lại email ký cho khách"
             className="p-1.5 rounded hover:bg-blue-50 text-blue-600 disabled:opacity-50"
           >
             {resend.isPending ? (
@@ -175,11 +129,9 @@ export function ContractRowActions({ contract }: Props) {
         </>
       )}
 
-      {/* Mở link ký Documenso */}
+      {/* Mở link ký Documenso (chỉ khi khách chưa ký). */}
       {contract.signingUrl &&
-        contract.status !== "SIGNED" &&
-        contract.status !== "REJECTED" &&
-        contract.status !== "CANCELLED" && (
+        contract.status === "SENT" && (
           <a
             href={contract.signingUrl}
             target="_blank"

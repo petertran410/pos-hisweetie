@@ -5,6 +5,7 @@ import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranchStore } from "@/lib/store/branch";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useBorderGates } from "@/lib/hooks/useBorderGates";
+import { useVehicleShipmentContractNos } from "@/lib/hooks/useVehicleShipments";
 import {
   ChevronDown,
   Check,
@@ -447,6 +448,7 @@ export function VehicleShipmentSidebar({ filters, setFilters }: Props) {
   const { data: branches } = useBranches();
   const { data: users } = useUsersForFilter();
   const { data: borderGates } = useBorderGates();
+  const { data: contractNos } = useVehicleShipmentContractNos();
   const { selectedBranch } = useBranchStore();
 
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
@@ -469,6 +471,9 @@ export function VehicleShipmentSidebar({ filters, setFilters }: Props) {
   );
   const [borderGateValue, setBorderGateValue] = useState(
     filters.borderGateId ? String(filters.borderGateId) : ""
+  );
+  const [contractNoValue, setContractNoValue] = useState(
+    filters.contractNo || ""
   );
   const [createdByValue, setCreatedByValue] = useState(
     filters.createdById ? String(filters.createdById) : ""
@@ -536,6 +541,7 @@ export function VehicleShipmentSidebar({ filters, setFilters }: Props) {
     if (selectedBranchIds.length > 0) n++;
     if (statusValue) n++;
     if (borderGateValue) n++;
+    if (contractNoValue) n++;
     if (createdByValue) n++;
     if (dateMode === "custom" && fromDate && toDate) n++;
     if (dateMode === "preset" && selectedPreset !== "all_time") n++;
@@ -544,6 +550,7 @@ export function VehicleShipmentSidebar({ filters, setFilters }: Props) {
     selectedBranchIds,
     statusValue,
     borderGateValue,
+    contractNoValue,
     createdByValue,
     dateMode,
     fromDate,
@@ -555,6 +562,7 @@ export function VehicleShipmentSidebar({ filters, setFilters }: Props) {
     setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setStatusValue("");
     setBorderGateValue("");
+    setContractNoValue("");
     setCreatedByValue("");
     setDateMode("preset");
     setSelectedPreset("all_time");
@@ -563,6 +571,7 @@ export function VehicleShipmentSidebar({ filters, setFilters }: Props) {
     setFilters({
       status: undefined,
       borderGateId: undefined,
+      contractNo: undefined,
       createdById: undefined,
       createdDateFrom: undefined,
       createdDateTo: undefined,
@@ -580,6 +589,14 @@ export function VehicleShipmentSidebar({ filters, setFilters }: Props) {
     () =>
       borderGates?.map((g) => ({ value: String(g.id), label: g.name })) ?? [],
     [borderGates]
+  );
+  const contractNoOptions = useMemo<SimpleOption[]>(
+    () =>
+      (contractNos || []).map((contractNo) => ({
+        value: contractNo,
+        label: contractNo,
+      })),
+    [contractNos]
   );
   const userOptions = useMemo<SimpleOption[]>(
     () =>
@@ -760,6 +777,23 @@ export function VehicleShipmentSidebar({ filters, setFilters }: Props) {
             onChange={(v) => {
               setBorderGateValue(v);
               setFilters({ borderGateId: v ? Number(v) : undefined });
+            }}
+          />
+        </div>
+
+        {/* Số HĐ */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">
+            Số HĐ
+          </label>
+          <FilterSearchableSelect
+            options={contractNoOptions}
+            value={contractNoValue}
+            placeholder="Tất cả Số HĐ"
+            searchPlaceholder="Tìm Số HĐ..."
+            onChange={(v) => {
+              setContractNoValue(v);
+              setFilters({ contractNo: v || undefined });
             }}
           />
         </div>

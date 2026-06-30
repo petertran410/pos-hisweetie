@@ -27,6 +27,9 @@ export const vehicleShipmentsApi = {
       branchId ? { branchId } : undefined
     ),
 
+  getContractNos: () =>
+    apiClient.get<string[]>("/vehicle-shipments/contract-nos"),
+
   create: (data: {
     code?: string;
     branchId?: number;
@@ -67,7 +70,10 @@ export const vehicleShipmentsApi = {
 
   resolveItem: (
     id: number,
-    payload: { orderSupplierId: number; productId: number; action: string }
+    payload: {
+      vehicleShipmentItemId: number;
+      action: string;
+    }
   ) => apiClient.put(`/vehicle-shipments/${id}/resolve-item`, payload),
 
   /** Upload nhiều file vào folder riêng của ghép xe. */

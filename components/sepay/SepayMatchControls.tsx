@@ -607,8 +607,11 @@ function AllocationModal({
   const balanced = diff === 0;
   const allPositive = rows.every((r) => Number(r.amount) > 0);
 
-  // Ghi chú tự điền theo mã tham chiếu của giao dịch.
-  const autoNote = tx.referenceNumber || tx.transactionContent || "";
+  // Ghi chú tự điền: để trống để BE quyết định theo ngân hàng.
+  //  - TK đặc biệt (env SEPAY_SPECIAL_ACCOUNT_NUMBERS) → transactionContent
+  //    (nội dung gốc Sepay, ví dụ "Nguyen Van A chuyen khoan")
+  //  - Ngân hàng khác → referenceNumber (mã tham chiếu / mã đơn nếu quét QR)
+  const autoNote = "";
 
   const handleSubmit = () => {
     if (!balanced || !allPositive) return;

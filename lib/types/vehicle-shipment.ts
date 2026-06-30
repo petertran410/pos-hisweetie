@@ -24,6 +24,7 @@ export interface VehicleShipmentItem {
   productCode: string;
   productName: string;
   quantity: number;
+  contractNo?: string | null; // Số HĐ gắn với dòng này (nullable)
   postImportStatus?: string; // pending | returned | kept
   // Các field tính toán trả về từ findOne:
   shipped?: number;
@@ -83,6 +84,8 @@ export interface VehicleShipmentFilters {
   createdById?: number;
   status?: number;
   search?: string;
+  /** Số HĐ per-item trong phiếu ghép xe. */
+  contractNo?: string;
   createdDateFrom?: string;
   createdDateTo?: string;
   pageSize?: number;
@@ -94,6 +97,8 @@ export interface VehicleShipmentItemInput {
   orderSupplierId: number;
   productId: number;
   quantity: number;
+  /** Số HĐ (hợp đồng) gắn với dòng này. Optional. */
+  contractNo?: string;
 }
 
 /** Một dòng SP còn ghép được, trả về từ available-items. */

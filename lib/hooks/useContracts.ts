@@ -43,6 +43,18 @@ export function useContractTemplateFields(templateId: number | "") {
   });
 }
 
+export function useContractSigners(enabled = true) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
+
+  return useQuery({
+    queryKey: ["contract-signers"],
+    queryFn: () => contractsApi.listSigners(false),
+    enabled: enabled && hasHydrated && isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useCreateContractFromTemplate() {
   const qc = useQueryClient();
   return useMutation({
@@ -50,7 +62,7 @@ export function useCreateContractFromTemplate() {
       contractsApi.createFromTemplate(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contracts"] });
-      toast.success("Đã gửi bản xem trước cho khách hàng qua email");
+      toast.success("Đã gửi hợp đồng cho khách ký điện tử");
     },
     onError: (err: any) => {
       toast.error(err?.message || "Tạo hợp đồng thất bại");
@@ -83,38 +95,10 @@ export function useResendContract() {
     mutationFn: (id: number) => contractsApi.resend(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contracts'] });
-      toast.success('Đã gửi lại hợp đồng');
+      toast.success('Đã gửi lại hợp đồng cho khách');
     },
     onError: (err: any) => {
       toast.error(err?.message || 'Gửi lại thất bại');
-    },
-  });
-}
-
-export function useApproveReview() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => contractsApi.approveReview(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['contracts'] });
-      toast.success('Đã xác nhận khách đồng ý nội dung');
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Duyệt thất bại');
-    },
-  });
-}
-
-export function useSendForSigning() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => contractsApi.sendForSigning(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['contracts'] });
-      toast.success('Đã gửi bản ký cho khách hàng');
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Gửi bản ký thất bại');
     },
   });
 }
