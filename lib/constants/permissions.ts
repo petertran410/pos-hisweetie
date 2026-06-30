@@ -91,6 +91,7 @@ export const ACTION_LABELS: Record<string, string> = {
   product_bysupplier: "Hàng hóa - NCC theo hàng nhập",
   product_damage: "Hàng hóa - Xuất hủy",
   customer_sale: "Khách hàng - Bán hàng",
+  customer_profit: "Khách hàng - Lợi nhuận",
   customer_product: "Khách hàng - Hàng bán theo khách",
   customer_debt: "Khách hàng - Công nợ",
   supplier_purchase: "Nhà cung cấp - Nhập hàng",
@@ -196,6 +197,7 @@ export const REPORT_SUBGROUPS: ReportSubgroup[] = [
     label: "Báo cáo khách hàng",
     actions: [
       "customer_sale",
+      "customer_profit",
       "customer_product",
       "customer_debt",
       "export_customer",
@@ -271,6 +273,7 @@ export const REPORT_LEAF_LABELS: Record<string, string> = {
   product_bysupplier: "Nhà cung cấp theo hàng nhập",
   product_damage: "Xuất hủy",
   customer_sale: "Bán hàng",
+  customer_profit: "Lợi nhuận",
   customer_product: "Hàng bán theo khách",
   customer_debt: "Công nợ",
   supplier_purchase: "Nhập hàng",
