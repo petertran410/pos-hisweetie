@@ -46,9 +46,10 @@ export const REPORT_VIEWTYPE_PERMISSION: Record<
     SupplierInfo: "reports:supplier_info",
   },
   "khach-hang": {
-    "customer-sales": "reports:customer_sale",
-    "product-by-customer": "reports:customer_product",
-    "customer-debt": "reports:customer_debt",
+    CustomerBySale: "reports:customer_sale",
+    CustomerByProfit: "reports:customer_profit",
+    CustomerDebt: "reports:customer_debt",
+    CustomerByProduct: "reports:customer_product",
   },
   "cuoi-ngay": {
     Synthetic: "reports:eod_synthetic",

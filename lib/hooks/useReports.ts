@@ -12,6 +12,8 @@ import {
   FinancialReportFilters,
   eodReportApi,
   EodReportFilters,
+  customerReportApi,
+  CustomerReportFilters,
 } from "@/lib/api/reports";
 import { useAuthStore } from "@/lib/store/auth";
 
@@ -82,6 +84,81 @@ export function useCustomerDebtChart(filters: ReportFilters) {
   });
 }
 
+// ─── Nhóm Khách hàng (Customer) — pattern Product ───
+export function useCustomerChart(filters: CustomerReportFilters) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
+
+  // Chart biểu đồ luôn Top 20, không phụ thuộc dropdown "Số dòng hiển thị".
+  const chartFilters = { ...filters, top: 20, limit: undefined };
+
+  return useQuery({
+    queryKey: ["reports", "customer-chart", chartFilters],
+    queryFn: () => customerReportApi.getChart(chartFilters),
+    enabled: hasHydrated && isAuthenticated,
+  });
+}
+
+export function useCustomerPreview(filters: CustomerReportFilters) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
+
+  return useQuery({
+    queryKey: ["reports", "customer-preview", filters],
+    queryFn: () => customerReportApi.getPreview(filters),
+    enabled: hasHydrated && isAuthenticated,
+  });
+}
+
+export function useCustomerInvoices(filters: CustomerReportFilters) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
+
+  return useQuery({
+    queryKey: ["reports", "customer-invoices", filters],
+    queryFn: () => customerReportApi.getInvoices(filters),
+    enabled: hasHydrated && isAuthenticated,
+  });
+}
+
+export function useCustomerProducts(filters: CustomerReportFilters) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
+
+  return useQuery({
+    queryKey: ["reports", "customer-products", filters],
+    queryFn: () => customerReportApi.getProducts(filters),
+    enabled:
+      hasHydrated && isAuthenticated && filters.customerKeyword != null,
+  });
+}
+
+export function useCustomerDebtCustomers(filters: CustomerReportFilters) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
+
+  return useQuery({
+    queryKey: ["reports", "customer-debt-customers", filters],
+    queryFn: () => customerReportApi.getDebtCustomers(filters),
+    enabled:
+      hasHydrated &&
+      isAuthenticated &&
+      filters.rankStart != null &&
+      filters.rankEnd != null,
+  });
+}
+
+export function useCustomerDebtDocuments(filters: CustomerReportFilters) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
+
+  return useQuery({
+    queryKey: ["reports", "customer-debt-documents", filters],
+    queryFn: () => customerReportApi.getDebtDocuments(filters),
+    enabled: hasHydrated && isAuthenticated && filters.customerId != null,
+  });
+}
+
 // ─── Nhóm Bán hàng (Sale) ───
 export function useSaleChart(filters: SaleReportFilters) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -124,9 +201,12 @@ export function useProductChart(filters: ProductReportFilters) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasHydrated = useAuthStore((s) => s._hasHydrated);
 
+  // Chart biểu đồ luôn Top 20, không phụ thuộc dropdown "Số dòng hiển thị".
+  const chartFilters = { ...filters, top: 20, limit: undefined };
+
   return useQuery({
-    queryKey: ["reports", "product-chart", filters],
-    queryFn: () => productReportApi.getChart(filters),
+    queryKey: ["reports", "product-chart", chartFilters],
+    queryFn: () => productReportApi.getChart(chartFilters),
     enabled: hasHydrated && isAuthenticated,
   });
 }

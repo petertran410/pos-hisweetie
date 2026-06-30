@@ -5,37 +5,28 @@ import { createPortal } from "react-dom";
 import { ChevronRight, Calendar, BarChart2, Table2 } from "lucide-react";
 import { MiniCalendar } from "@/components/shared/MiniCalendar";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { useUsersForFilter } from "@/lib/hooks/useUsers";
-import { dashboardApi } from "@/lib/api/dashboard";
+import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups";
 import {
   useReportAccess,
   REPORT_VIEWTYPE_PERMISSION,
 } from "@/lib/permissions/reportPermissions";
-import {
-  ProductReportFilters,
-  ProductViewType,
-  CategoryLevel,
-} from "@/lib/api/reports";
+import { CustomerReportFilters, CustomerViewType } from "@/lib/api/reports";
 
-export type ProductMode = "chart" | "data";
+export type CustomerMode = "chart" | "data";
 
 interface Props {
-  viewType: ProductViewType;
-  onViewTypeChange: (v: ProductViewType) => void;
-  mode: ProductMode;
-  onModeChange: (m: ProductMode) => void;
-  onFiltersChange: (filters: ProductReportFilters) => void;
+  viewType: CustomerViewType;
+  onViewTypeChange: (v: CustomerViewType) => void;
+  mode: CustomerMode;
+  onModeChange: (m: CustomerMode) => void;
+  onFiltersChange: (filters: CustomerReportFilters) => void;
 }
 
-const VIEW_TYPES: { value: ProductViewType; label: string }[] = [
-  { value: "ProductBySale", label: "Bán theo sản phẩm" },
-  { value: "ProductByProfit", label: "Lợi nhuận theo SP" },
-  { value: "ProductByCategory", label: "Theo nhóm hàng" },
-  { value: "InOutStock", label: "Nhập - Xuất - Tồn" },
-  { value: "ProductByUser", label: "Theo nhân viên" },
-  { value: "ProductByCustomer", label: "Theo khách hàng" },
-  { value: "ProductBySupplier", label: "Theo nhà cung cấp" },
-  { value: "DamageItem", label: "Hàng hỏng / hủy" },
+const VIEW_TYPES: { value: CustomerViewType; label: string }[] = [
+  { value: "CustomerBySale", label: "Bán hàng" },
+  { value: "CustomerByProfit", label: "Lợi nhuận" },
+  { value: "CustomerDebt", label: "Công nợ" },
+  { value: "CustomerByProduct", label: "Hàng bán theo khách" },
 ];
 
 const PRESET_GROUPS = [
@@ -62,6 +53,7 @@ const PRESET_GROUPS = [
       { value: "this_quarter", label: "Quý này" },
       { value: "last_quarter", label: "Quý trước" },
       { value: "this_year", label: "Năm nay" },
+      { value: "last_year", label: "Năm trước" },
     ],
   },
 ];
@@ -77,6 +69,7 @@ const PRESET_LABELS: Record<string, string> = {
   this_quarter: "Quý này",
   last_quarter: "Quý trước",
   this_year: "Năm nay",
+  last_year: "Năm trước",
 };
 
 function endOfDay(d: Date) {
@@ -132,6 +125,11 @@ function getDateRangeFromPreset(preset: string) {
     }
     case "this_year":
       return { from: new Date(now.getFullYear(), 0, 1), to: now };
+    case "last_year":
+      return {
+        from: new Date(now.getFullYear() - 1, 0, 1),
+        to: endOfDay(new Date(now.getFullYear() - 1, 11, 31)),
+      };
     default:
       return { from: today, to: now };
   }
@@ -199,11 +197,11 @@ function PresetPanel({
         </div>
       ))}
     </div>,
-    document.body
+    document.body,
   );
 }
 
-export function ProductReportSidebar({
+export function CustomerReportSidebar({
   viewType,
   onViewTypeChange,
   mode,
@@ -211,17 +209,13 @@ export function ProductReportSidebar({
   onFiltersChange,
 }: Props) {
   const { data: branches } = useBranches();
-  const { data: users } = useUsersForFilter();
+  const { data: customerGroups } = useCustomerGroups();
   const { has } = useReportAccess();
 
   const [branchId, setBranchId] = useState("");
-  const [soldById, setSoldById] = useState("");
-  const [productKeyword, setProductKeyword] = useState("");
-  const [productKeywordDebounced, setProductKeywordDebounced] = useState("");
-  const [categoryLevel, setCategoryLevel] = useState<CategoryLevel>("parent");
-  const [categoryValue, setCategoryValue] = useState("");
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
-  // Số dòng hiển thị mỗi trang (chế độ Dữ liệu) — cố định 20 cho Biểu đồ.
+  const [customerGroupId, setCustomerGroupId] = useState("");
+  const [customerKeyword, setCustomerKeyword] = useState("");
+  const [customerKeywordDebounced, setCustomerKeywordDebounced] = useState("");
   const [pageSize, setPageSize] = useState<number>(500);
 
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
@@ -235,14 +229,12 @@ export function ProductReportSidebar({
   const presetRowRef = useRef<HTMLDivElement>(null);
   const customDateRef = useRef<HTMLDivElement>(null);
 
-  const showSoldBy = viewType === "ProductByUser";
-
   const visibleViewTypes = useMemo(
     () =>
       VIEW_TYPES.filter((v) =>
-        has(REPORT_VIEWTYPE_PERMISSION["hang-hoa"][v.value])
+        has(REPORT_VIEWTYPE_PERMISSION["khach-hang"][v.value]),
       ),
-    [has]
+    [has],
   );
 
   useEffect(() => {
@@ -253,47 +245,24 @@ export function ProductReportSidebar({
       onViewTypeChange(visibleViewTypes[0].value);
     }
   }, [visibleViewTypes, viewType, onViewTypeChange]);
-  const showCategory = viewType === "ProductByCategory";
 
-  // Nạp option nhóm hàng theo cấp
-  useEffect(() => {
-    if (!showCategory) return;
-    let alive = true;
-    dashboardApi
-      .getCategoryOptions(categoryLevel)
-      .then((opts) => {
-        if (alive) setCategoryOptions(opts || []);
-      })
-      .catch(() => {
-        if (alive) setCategoryOptions([]);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [showCategory, categoryLevel]);
-
-  // Debounce từ khóa SP
   useEffect(() => {
     const t = setTimeout(
-      () => setProductKeywordDebounced(productKeyword.trim()),
-      300
+      () => setCustomerKeywordDebounced(customerKeyword.trim()),
+      300,
     );
     return () => clearTimeout(t);
-  }, [productKeyword]);
+  }, [customerKeyword]);
 
   const isFromMissing = dateMode === "custom" && !!toDate && !fromDate;
 
   useEffect(() => {
     if (isFromMissing) return;
     const timer = setTimeout(() => {
-      const f: ProductReportFilters = { viewType };
+      const f: CustomerReportFilters = { viewType };
       if (branchId) f.branchId = parseInt(branchId);
-      if (soldById && showSoldBy) f.soldById = parseInt(soldById);
-      if (productKeywordDebounced) f.productKeyword = productKeywordDebounced;
-      if (showCategory) {
-        f.categoryLevel = categoryLevel;
-        if (categoryValue) f.categoryValue = categoryValue;
-      }
+      if (customerGroupId) f.customerGroupId = parseInt(customerGroupId);
+      if (customerKeywordDebounced) f.customerKeyword = customerKeywordDebounced;
 
       const range =
         dateMode === "preset"
@@ -307,7 +276,6 @@ export function ProductReportSidebar({
 
       f.fromDate = range.from.toISOString();
       f.toDate = range.to.toISOString();
-
       f.limit = pageSize;
 
       onFiltersChange(f);
@@ -317,12 +285,8 @@ export function ProductReportSidebar({
   }, [
     viewType,
     branchId,
-    soldById,
-    showSoldBy,
-    productKeywordDebounced,
-    showCategory,
-    categoryLevel,
-    categoryValue,
+    customerGroupId,
+    customerKeywordDebounced,
     dateMode,
     selectedPreset,
     fromDate,
@@ -334,7 +298,7 @@ export function ProductReportSidebar({
   return (
     <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
       <div className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-xl">
-        <h2 className="text-base font-semibold text-gray-800">Hàng hóa</h2>
+        <h2 className="text-base font-semibold text-gray-800">Khách hàng</h2>
       </div>
 
       <div className="p-4 space-y-3 overflow-y-auto flex-1">
@@ -404,7 +368,7 @@ export function ProductReportSidebar({
                   setShowPresetPanel(false);
                 } else {
                   setPanelAnchorRect(
-                    presetRowRef.current?.getBoundingClientRect() ?? null
+                    presetRowRef.current?.getBoundingClientRect() ?? null,
                   );
                   setShowPresetPanel(true);
                 }
@@ -484,7 +448,7 @@ export function ProductReportSidebar({
                                   day: "2-digit",
                                   month: "2-digit",
                                   year: "numeric",
-                                }
+                                },
                               )
                             : "Chọn ngày"}
                         </span>
@@ -560,77 +524,39 @@ export function ProductReportSidebar({
           </div>
         )}
 
-        {/* ── Tìm sản phẩm ── */}
+        {/* ── Nhóm khách hàng ── */}
         <div>
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-            Sản phẩm
+            Nhóm khách hàng
+          </label>
+          <select
+            value={customerGroupId}
+            onChange={(e) => setCustomerGroupId(e.target.value)}
+            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
+            <option value="">Tất cả</option>
+            {((customerGroups as any)?.data || customerGroups || []).map(
+              (g: { id: number; name: string }) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
+
+        {/* ── Tìm khách hàng ── */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Khách hàng
           </label>
           <input
             type="text"
-            placeholder="Tìm tên / mã SP..."
-            value={productKeyword}
-            onChange={(e) => setProductKeyword(e.target.value)}
+            placeholder="Theo mã, tên, SĐT..."
+            value={customerKeyword}
+            onChange={(e) => setCustomerKeyword(e.target.value)}
             className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white"
           />
         </div>
-
-        {/* ── Nhóm hàng (ProductByCategory) ── */}
-        {showCategory && (
-          <div className="space-y-2">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                Cấp nhóm hàng
-              </label>
-              <select
-                value={categoryLevel}
-                onChange={(e) => {
-                  setCategoryLevel(e.target.value as CategoryLevel);
-                  setCategoryValue("");
-                }}
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-                <option value="parent">Nhóm cha</option>
-                <option value="middle">Nhóm giữa</option>
-                <option value="child">Nhóm con</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                Nhóm hàng
-              </label>
-              <select
-                value={categoryValue}
-                onChange={(e) => setCategoryValue(e.target.value)}
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-                <option value="">Tất cả</option>
-                {categoryOptions.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* ── NV bán hàng (ProductByUser) ── */}
-        {showSoldBy && (
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-              NV bán hàng
-            </label>
-            <select
-              value={soldById}
-              onChange={(e) => setSoldById(e.target.value)}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-              <option value="">Tất cả</option>
-              {(users || []).map((u: { id: number; name: string }) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
     </aside>
   );

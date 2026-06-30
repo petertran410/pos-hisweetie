@@ -64,54 +64,85 @@ export function FinancialChartPanel({ filters, viewType }: Props) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
-      <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
-        <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+      <div className="border-b px-5 py-3 shrink-0">
+        <h2 className="text-base font-semibold text-gray-900">
           {VIEW_TITLE[viewType]}
         </h2>
+        <p className="text-xs text-gray-500 mt-0.5">Tất cả chi nhánh</p>
       </div>
 
       {!isLoading && !isError && rows.length > 0 && (
-        <div className="px-4 py-2 bg-gray-50 border-b flex flex-wrap gap-x-8 gap-y-1 text-sm shrink-0">
+        <div className="px-5 py-3 border-b bg-white flex flex-wrap gap-x-10 gap-y-2 shrink-0">
           {viewType === "SalePerformance" ? (
             <>
               <div>
-                <span className="text-gray-500">Doanh thu:</span>{" "}
-                <span className="font-semibold text-gray-900">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
+                  Doanh thu
+                </p>
+                <p className="text-xl font-bold text-gray-800 mt-0.5">
                   {vi(totals.revenue)}
-                </span>
+                  <span className="text-sm font-semibold text-gray-600 ml-1">
+                    đ
+                  </span>
+                </p>
               </div>
               <div>
-                <span className="text-gray-500">Giá vốn:</span>{" "}
-                <span className="font-semibold text-orange-600">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
+                  Giá vốn
+                </p>
+                <p className="text-xl font-bold text-orange-600 mt-0.5">
                   {vi(totals.cost)}
-                </span>
+                  <span className="text-sm font-semibold text-gray-600 ml-1">
+                    đ
+                  </span>
+                </p>
               </div>
               <div>
-                <span className="text-gray-500">Lợi nhuận:</span>{" "}
-                <span className="font-semibold text-brand-dark">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
+                  Lợi nhuận
+                </p>
+                <p className="text-xl font-bold text-brand-dark mt-0.5">
                   {vi(totals.revenue - totals.cost)}
-                </span>
+                  <span className="text-sm font-semibold text-gray-600 ml-1">
+                    đ
+                  </span>
+                </p>
               </div>
             </>
           ) : (
             <>
               <div>
-                <span className="text-gray-500">Tổng thu:</span>{" "}
-                <span className="font-semibold text-green-700">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
+                  Tổng thu
+                </p>
+                <p className="text-xl font-bold text-green-700 mt-0.5">
                   {vi(totals.receipt)}
-                </span>
+                  <span className="text-sm font-semibold text-gray-600 ml-1">
+                    đ
+                  </span>
+                </p>
               </div>
               <div>
-                <span className="text-gray-500">Tổng chi:</span>{" "}
-                <span className="font-semibold text-red-600">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
+                  Tổng chi
+                </p>
+                <p className="text-xl font-bold text-red-600 mt-0.5">
                   {vi(totals.payment)}
-                </span>
+                  <span className="text-sm font-semibold text-gray-600 ml-1">
+                    đ
+                  </span>
+                </p>
               </div>
               <div>
-                <span className="text-gray-500">Chênh lệch:</span>{" "}
-                <span className="font-semibold text-brand-dark">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
+                  Chênh lệch
+                </p>
+                <p className="text-xl font-bold text-brand-dark mt-0.5">
                   {vi(totals.receipt - totals.payment)}
-                </span>
+                  <span className="text-sm font-semibold text-gray-600 ml-1">
+                    đ
+                  </span>
+                </p>
               </div>
             </>
           )}
@@ -154,6 +185,8 @@ function FinancialChart({
   viewType: FinancialViewType;
 }) {
   const tooltipFmt = (v: number | string) => money(Number(v));
+  const gridStroke = "#e5e7eb";
+  const axisTick = { fontSize: 11, fill: "#6b7280" };
 
   if (viewType === "CashByGroup") {
     // Pie theo tổng giá trị mỗi nhóm
@@ -186,10 +219,10 @@ function FinancialChart({
     return (
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={rows} margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="subject" tick={{ fontSize: 12 }} />
-          <YAxis tickFormatter={moneyAxis} />
-          <Tooltip formatter={tooltipFmt} />
+          <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+          <XAxis dataKey="subject" tick={axisTick} />
+          <YAxis tickFormatter={moneyAxis} tick={axisTick} />
+          <Tooltip formatter={tooltipFmt} cursor={{ fill: "#f3f4f6" }} />
           <Legend />
           <Line type="monotone" dataKey="revenue" name="Doanh thu" stroke={DT_COLORS.primary} strokeWidth={2} dot={false} />
           <Line type="monotone" dataKey="cost" name="Giá vốn" stroke={DT_COLORS.gold} strokeWidth={2} dot={false} />
@@ -203,13 +236,13 @@ function FinancialChart({
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={rows} margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="subject" tick={{ fontSize: 12 }} />
-        <YAxis tickFormatter={moneyAxis} />
-        <Tooltip formatter={tooltipFmt} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+        <XAxis dataKey="subject" tick={axisTick} />
+        <YAxis tickFormatter={moneyAxis} tick={axisTick} />
+        <Tooltip formatter={tooltipFmt} cursor={{ fill: "#f3f4f6" }} />
         <Legend />
-        <Bar dataKey="receipt" name="Thu" fill={DT_COLORS.primary} />
-        <Bar dataKey="payment" name="Chi" fill={DT_COLORS.error} />
+        <Bar dataKey="receipt" name="Thu" fill={DT_COLORS.primary} maxBarSize={28} />
+        <Bar dataKey="payment" name="Chi" fill={DT_COLORS.error} maxBarSize={28} />
       </BarChart>
     </ResponsiveContainer>
   );
