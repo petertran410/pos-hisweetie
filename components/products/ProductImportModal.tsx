@@ -203,7 +203,10 @@ function parseExcelPreview(file: File): Promise<PreviewRow[]> {
           return row;
         });
 
-        const filtered = rows.filter((r) => r.code?.trim() && r.name?.trim());
+        // BE đã xử lý: nếu `code` trống → tự sinh mã mới; nếu `code` có giá trị
+        // mà không tồn tại trong DB → BE throw BadRequestException (toast lỗi).
+        // Ở FE chỉ cần đảm bảo `name` không trống.
+        const filtered = rows.filter((r) => r.name?.trim());
         resolve(filtered);
       } catch (err: any) {
         reject(new Error(err.message || "Không thể đọc file Excel"));
@@ -230,11 +233,12 @@ export function ProductImportModal({ onClose }: ProductImportModalProps) {
   const [updateDescription, setUpdateDescription] = useState(false);
 
   // Validation preview
+  // Bỏ check "Thiếu mã hàng" — dòng trống mã giờ được BE tự sinh mã mới.
+  // Validate mã-tồn-tại (nếu user nhập mà DB không có) sẽ do BE xử lý khi import.
   const validation = useMemo(() => {
     const errors: Record<number, string> = {};
     previewRows.forEach((r, i) => {
       if (!r.name?.trim()) errors[i] = "Thiếu tên hàng";
-      else if (!r.code?.trim()) errors[i] = "Thiếu mã hàng";
     });
     return errors;
   }, [previewRows]);
@@ -355,6 +359,10 @@ export function ProductImportModal({ onClose }: ProductImportModalProps) {
       }
     },
     onError: (err: Error) => {
+      // BE trả message tiếng Việt, vd:
+      // "Có 2 dòng có mã không tồn tại trong hệ thống (dòng 3, dòng 7). Vui lòng sửa file rồi import lại."
+      // Hoặc lỗi Prisma / runtime → set.onError từ Nest sẽ trả về message rõ ràng.
+      // User chỉ cần sửa file rồi import lại (yêu cầu đã chốt ở plan).
       toast.error(err.message || "Import thất bại");
     },
   });
