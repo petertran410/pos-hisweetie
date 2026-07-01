@@ -6,7 +6,6 @@ import { ProductsTable } from "@/components/products/ProductTable";
 import { ProductsMobileView } from "@/components/products/ProductsMobileView";
 import { useSearchParams } from "next/navigation";
 import { ProductImportModal } from "@/components/products/ProductImportModal";
-import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function ProductListPage() {

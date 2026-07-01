@@ -11,7 +11,7 @@ interface Props {
   branchId?: number;
 }
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 15;
 
 const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   PURCHASE: "Nhập hàng",
@@ -150,8 +150,7 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
           {logs.map((log) => (
             <tr key={log.id} className="border-t hover:bg-gray-50">
               <td className="px-4 py-3">
-                {log.refCode &&
-                TRANSACTION_TYPE_ENTITY[log.transactionType] ? (
+                {log.refCode && TRANSACTION_TYPE_ENTITY[log.transactionType] ? (
                   <CodeLink
                     entity={TRANSACTION_TYPE_ENTITY[log.transactionType]}
                     code={log.refCode}
