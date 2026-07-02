@@ -475,6 +475,21 @@ export function OrderSupplierForm({
     return exchangeRate;
   }, [orderSupplier, isImportSupplier, liveRateQuery.data, exchangeRate]);
 
+  // Sum all past payments in CNY (with legacy fallback)
+  const previouslyPaidCNY = useMemo(() => {
+    if (!orderSupplier?.payments) return 0;
+    const sumForeign = orderSupplier.payments.reduce(
+      (sum, p) => sum + (Number(p.foreignAmount) || 0),
+      0
+    );
+    if (sumForeign > 0) return sumForeign;
+    // Fallback for legacy payments
+    if (previouslyPaid > 0 && effectiveRate > 0) {
+      return previouslyPaid / effectiveRate;
+    }
+    return 0;
+  }, [orderSupplier?.payments, previouslyPaid, effectiveRate]);
+
   // Effect: khi user chọn NCC thuộc nhóm nước ngoài ở phiếu MỚI, tự động
   // set currency=CNY + lấy tỉ giá mới nhất. Khi chuyển sang NCC trong nước
   // thì reset về VND.
@@ -1619,8 +1634,8 @@ export function OrderSupplierForm({
                           Math.max(
                             0,
                             calculateTotalCNY() -
-                              (paymentForeignAmount || 0) -
-                              previouslyPaid / (effectiveRate || 1)
+                              previouslyPaidCNY -
+                              (paymentAmount > 0 ? (paymentForeignAmount || 0) : 0)
                           )
                         ) + ` ${currency}`
                       : formatCurrency(
@@ -1638,7 +1653,7 @@ export function OrderSupplierForm({
                   </div>
                   <div className="flex items-center gap-2">
                     <div>
-                      {isImportSupplier && paymentForeignAmount != null
+                      {isImportSupplier && paymentAmount > 0 && paymentForeignAmount != null
                         ? new Intl.NumberFormat("vi-VN", {
                             maximumFractionDigits: 2,
                           }).format(paymentForeignAmount) + ` ${currency}`
@@ -1670,8 +1685,8 @@ export function OrderSupplierForm({
                       ? new Intl.NumberFormat("vi-VN", {
                           maximumFractionDigits: 2,
                         }).format(
-                          previouslyPaid / (effectiveRate || 1) +
-                            (paymentForeignAmount || 0)
+                          previouslyPaidCNY +
+                            (paymentAmount > 0 ? (paymentForeignAmount || 0) : 0)
                         ) + ` ${currency}`
                       : formatCurrency(previouslyPaid + paymentAmount)}
                   </div>
@@ -1690,8 +1705,8 @@ export function OrderSupplierForm({
                           }).format(
                             Math.max(
                               0,
-                              previouslyPaid / (effectiveRate || 1) +
-                                (paymentForeignAmount || 0) -
+                              previouslyPaidCNY +
+                                (paymentAmount > 0 ? (paymentForeignAmount || 0) : 0) -
                                 calculateTotalCNY()
                             )
                           ) + ` ${currency}`

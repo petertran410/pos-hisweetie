@@ -20,6 +20,8 @@ export interface PurchaseOrder {
   partnerType?: string;
   description?: string;
   purchaseById?: number;
+  currency?: string | null;
+  exchangeRate?: number | null;
   createdBy: number;
   createdAt: string;
   updatedAt: string;
@@ -70,6 +72,8 @@ export interface PurchaseOrderItem {
   // = bục rách). Khi hoàn thành phiếu, phần "damaged" được cộng vào
   // Inventory.damagedQuantity (riêng, không ảnh hưởng tổng onHand).
   conditionType?: "normal" | "damaged";
+  factoryPrice?: number | null;
+  factorySubTotal?: number | null;
   product?: {
     id: number;
     code: string;
@@ -89,6 +93,8 @@ export interface PurchaseOrderPayment {
   description?: string;
   status: number;
   statusValue?: string;
+  exchangeRate?: number | null;
+  foreignAmount?: number | null;
 }
 
 export interface PurchaseOrderSurcharge {

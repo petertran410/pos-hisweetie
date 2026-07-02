@@ -9,7 +9,13 @@ export const purchaseOrdersApi = {
     payload: {
       additionalPayment?: number;
       items?: any[];
-      payments?: Array<{ method: string; amount: number; accountId?: number }>;
+      payments?: Array<{
+        method: string;
+        amount: number;
+        accountId?: number;
+        exchangeRate?: number;
+        foreignAmount?: number;
+      }>;
       branchId?: number;
       purchaseDate?: string;
       discount?: number;

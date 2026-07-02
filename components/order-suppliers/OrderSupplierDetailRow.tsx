@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   useOrderSupplier,
@@ -245,6 +245,42 @@ export function OrderSupplierDetailRow({
     return matchCode && matchName;
   });
 
+  const isImport = orderSupplier.currency === "CNY";
+
+  const totalCNY = useMemo(() => {
+    if (!isImport) return 0;
+    return (orderSupplier.items || []).reduce(
+      (sum: number, item: any) => sum + (Number(item.factorySubTotal) || 0),
+      0
+    );
+  }, [orderSupplier, isImport]);
+
+  const paidAmountCNY = useMemo(() => {
+    if (!isImport) return 0;
+    const sumForeign = (payments || []).reduce(
+      (sum: number, p: any) => sum + (Number(p.foreignAmount) || 0),
+      0
+    );
+    if (sumForeign > 0) return sumForeign;
+    // Fallback for legacy
+    const rate = Number(orderSupplier.exchangeRate) || 1;
+    return Number(orderSupplier.paidAmount || 0) / rate;
+  }, [payments, orderSupplier, isImport]);
+
+  const discountCNY = useMemo(() => {
+    if (!isImport) return 0;
+    if (orderSupplier.discountRatio > 0) {
+      return (totalCNY * orderSupplier.discountRatio) / 100;
+    }
+    const rate = Number(orderSupplier.exchangeRate) || 1;
+    return Number(orderSupplier.discount || 0) / rate;
+  }, [orderSupplier, totalCNY, isImport]);
+
+  const supplierDebtCNY = useMemo(() => {
+    if (!isImport) return 0;
+    return Math.max(0, totalCNY - discountCNY - paidAmountCNY);
+  }, [totalCNY, discountCNY, paidAmountCNY, isImport]);
+
   const canCancel = orderSupplier.status === 0 || orderSupplier.status === 1;
 
   const receivedQuantities: Record<number, number> = {};
@@ -402,18 +438,46 @@ export function OrderSupplierDetailRow({
                         <>
                           <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                             <label className="text-sm text-gray-500">
-                              Tổng tiền hàng:
+                              {isImport ? "Tổng tiền hàng (CNY):" : "Tổng tiền hàng:"}
                             </label>
                             <span className="text-sm text-gray-900 font-medium">
-                              {formatCurrency(orderSupplier.total)}
+                              {isImport ? (
+                                <>
+                                  <span>
+                                    {new Intl.NumberFormat("vi-VN", {
+                                      maximumFractionDigits: 2,
+                                    }).format(totalCNY)}{" "}
+                                    CNY
+                                  </span>
+                                  <span className="block text-xs text-gray-400 font-normal">
+                                    ({formatCurrency(orderSupplier.total)})
+                                  </span>
+                                </>
+                              ) : (
+                                formatCurrency(orderSupplier.total)
+                              )}
                             </span>
                           </div>
                           <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                             <label className="text-sm text-gray-500">
-                              Cần trả NCC:
+                              {isImport ? "Cần trả NCC (CNY):" : "Cần trả nhà cung cấp:"}
                             </label>
-                            <span className="text-sm text-gray-900 font-medium">
-                              {formatCurrency(orderSupplier.supplierDebt)}
+                            <span className="text-sm text-brand font-medium">
+                              {isImport ? (
+                                <>
+                                  <span>
+                                    {new Intl.NumberFormat("vi-VN", {
+                                      maximumFractionDigits: 2,
+                                    }).format(supplierDebtCNY)}{" "}
+                                    CNY
+                                  </span>
+                                  <span className="block text-xs text-gray-400 font-normal">
+                                    ({formatCurrency(orderSupplier.supplierDebt)})
+                                  </span>
+                                </>
+                              ) : (
+                                formatCurrency(orderSupplier.supplierDebt)
+                              )}
                             </span>
                           </div>
                         </>
@@ -782,8 +846,22 @@ export function OrderSupplierDetailRow({
                                 <td className="px-3 py-2 text-sm text-gray-700">
                                   {getPaymentMethodLabel(payment.method)}
                                 </td>
-                                <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
-                                  {formatCurrency(payment.amount)}
+                                 <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
+                                  {orderSupplier.currency === "CNY" && payment.foreignAmount != null ? (
+                                    <>
+                                      <span>
+                                        {new Intl.NumberFormat("vi-VN", {
+                                          maximumFractionDigits: 2,
+                                        }).format(payment.foreignAmount)}{" "}
+                                        CNY
+                                      </span>
+                                      <span className="block text-xs text-gray-500 font-normal">
+                                        ({formatCurrency(payment.amount)})
+                                      </span>
+                                    </>
+                                  ) : (
+                                    formatCurrency(payment.amount)
+                                  )}
                                 </td>
                                 <td className="px-3 py-2 text-sm text-gray-500">
                                   {payment.note || "-"}

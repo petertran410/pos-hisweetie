@@ -2,10 +2,15 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { ChevronRight, Calendar, BarChart2, Table2 } from "lucide-react";
+import { ChevronRight, Calendar, BarChart2, Table2, Check } from "lucide-react";
 import { MiniCalendar } from "@/components/shared/MiniCalendar";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups";
+import { useCategories } from "@/lib/hooks/useCategories";
+import { Category } from "@/lib/api/categories";
+import { useTrademarks } from "@/lib/hooks/useTrademarks";
+import { TradeMark } from "@/lib/api/trademarks";
+import { MultiSelectDropdown } from "@/components/shared/MultiSelectDropdown";
 import {
   useReportAccess,
   REPORT_VIEWTYPE_PERMISSION,
@@ -210,6 +215,16 @@ export function CustomerReportSidebar({
 }: Props) {
   const { data: branches } = useBranches();
   const { data: customerGroups } = useCustomerGroups();
+  const { data: parentCategories } = useCategories("parent", {
+    silentForbidden: true,
+  });
+  const { data: middleCategories } = useCategories("middle", {
+    silentForbidden: true,
+  });
+  const { data: childCategories } = useCategories("child", {
+    silentForbidden: true,
+  });
+  const { data: trademarks } = useTrademarks({ silentForbidden: true });
   const { has } = useReportAccess();
 
   const [branchId, setBranchId] = useState("");
@@ -217,6 +232,13 @@ export function CustomerReportSidebar({
   const [customerKeyword, setCustomerKeyword] = useState("");
   const [customerKeywordDebounced, setCustomerKeywordDebounced] = useState("");
   const [pageSize, setPageSize] = useState<number>(500);
+
+  // ── Bộ lọc sản phẩm ──
+  const [selectedTypes, setSelectedTypes] = useState<number[]>([]);
+  const [parentNames, setParentNames] = useState<string[]>([]);
+  const [middleNames, setMiddleNames] = useState<string[]>([]);
+  const [childNames, setChildNames] = useState<string[]>([]);
+  const [tradeMarkIds, setTradeMarkIds] = useState<string[]>([]);
 
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState("this_month");
@@ -254,6 +276,39 @@ export function CustomerReportSidebar({
     return () => clearTimeout(t);
   }, [customerKeyword]);
 
+  const parentOptions = useMemo(
+    () =>
+      (parentCategories || [])
+        .filter((c: Category) => c.type === "parent")
+        .map((c: Category) => ({ value: c.name, label: c.name })),
+    [parentCategories]
+  );
+
+  const middleOptions = useMemo(
+    () =>
+      (middleCategories || [])
+        .filter((c: Category) => c.type === "middle")
+        .map((c: Category) => ({ value: c.name, label: c.name })),
+    [middleCategories]
+  );
+
+  const childOptions = useMemo(
+    () =>
+      (childCategories || [])
+        .filter((c: Category) => c.type === "child")
+        .map((c: Category) => ({ value: c.name, label: c.name })),
+    [childCategories]
+  );
+
+  const trademarkOptions = useMemo(
+    () =>
+      (trademarks || []).map((t: TradeMark) => ({
+        value: String(t.id),
+        label: t.name,
+      })),
+    [trademarks]
+  );
+
   const isFromMissing = dateMode === "custom" && !!toDate && !fromDate;
 
   useEffect(() => {
@@ -263,6 +318,19 @@ export function CustomerReportSidebar({
       if (branchId) f.branchId = parseInt(branchId);
       if (customerGroupId) f.customerGroupId = parseInt(customerGroupId);
       if (customerKeywordDebounced) f.customerKeyword = customerKeywordDebounced;
+
+      const isSaleReport =
+        viewType === "CustomerBySale" ||
+        viewType === "CustomerByProfit" ||
+        viewType === "CustomerByProduct";
+
+      if (isSaleReport) {
+        if (selectedTypes.length > 0) f.types = selectedTypes;
+        if (parentNames.length > 0) f.parentNames = parentNames;
+        if (middleNames.length > 0) f.middleNames = middleNames;
+        if (childNames.length > 0) f.childNames = childNames;
+        if (tradeMarkIds.length > 0) f.tradeMarkIds = tradeMarkIds.map(Number);
+      }
 
       const range =
         dateMode === "preset"
@@ -293,6 +361,11 @@ export function CustomerReportSidebar({
     toDate,
     isFromMissing,
     pageSize,
+    selectedTypes,
+    parentNames,
+    middleNames,
+    childNames,
+    tradeMarkIds,
   ]);
 
   return (
@@ -534,7 +607,7 @@ export function CustomerReportSidebar({
             onChange={(e) => setCustomerGroupId(e.target.value)}
             className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
             <option value="">Tất cả</option>
-            {((customerGroups as any)?.data || customerGroups || []).map(
+            {((customerGroups as any)?.data || (customerGroups as any) || []).map(
               (g: { id: number; name: string }) => (
                 <option key={g.id} value={g.id}>
                   {g.name}
@@ -543,6 +616,102 @@ export function CustomerReportSidebar({
             )}
           </select>
         </div>
+
+        {/* ── Bộ lọc sản phẩm (chỉ áp dụng cho các báo cáo bán hàng) ── */}
+        {(viewType === "CustomerBySale" ||
+          viewType === "CustomerByProfit" ||
+          viewType === "CustomerByProduct") && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Loại sản phẩm
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { value: 2, label: "Hàng hóa" },
+                  { value: 3, label: "Dịch vụ" },
+                  { value: 1, label: "Combo - đóng gói" },
+                  { value: 4, label: "Hàng sản xuất" },
+                ].map((opt) => {
+                  const isActive = selectedTypes.includes(opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() =>
+                        setSelectedTypes((prev) =>
+                          prev.includes(opt.value)
+                            ? prev.filter((t) => t !== opt.value)
+                            : [...prev, opt.value],
+                        )
+                      }
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                        isActive
+                          ? "bg-brand-soft text-brand-dark border-brand"
+                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      {isActive && <Check className="w-3 h-3" />}
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Loại Hàng
+              </label>
+              <MultiSelectDropdown
+                options={parentOptions}
+                values={parentNames}
+                placeholder="Tất cả"
+                searchPlaceholder="Tìm loại hàng..."
+                onChange={setParentNames}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nguồn Gốc
+              </label>
+              <MultiSelectDropdown
+                options={middleOptions}
+                values={middleNames}
+                placeholder="Tất cả"
+                searchPlaceholder="Tìm nguồn gốc..."
+                onChange={setMiddleNames}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Danh Mục
+              </label>
+              <MultiSelectDropdown
+                options={childOptions}
+                values={childNames}
+                placeholder="Tất cả"
+                searchPlaceholder="Tìm danh mục..."
+                onChange={setChildNames}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Thương hiệu
+              </label>
+              <MultiSelectDropdown
+                options={trademarkOptions}
+                values={tradeMarkIds}
+                placeholder="Tất cả"
+                searchPlaceholder="Tìm thương hiệu..."
+                onChange={setTradeMarkIds}
+              />
+            </div>
+          </>
+        )}
 
         {/* ── Tìm khách hàng ── */}
         <div>

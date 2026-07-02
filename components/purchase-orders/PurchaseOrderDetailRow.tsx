@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -122,6 +122,7 @@ export function PurchaseOrderDetailRow({
 
   const canUpdatePO = useCan("purchase_orders", "update");
   const canViewPrice = useCan("purchase_orders", "view_price");
+  const canViewFactoryPrice = useCan("purchase_orders", "view_factory_price");
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
@@ -313,6 +314,42 @@ export function PurchaseOrderDetailRow({
       0
     ) || 0;
   const itemCount = filteredItems?.length || 0;
+
+  const isImport = purchaseOrder.currency === "CNY";
+
+  const totalCNY = useMemo(() => {
+    if (!isImport) return 0;
+    return (purchaseOrder.items || []).reduce(
+      (sum: number, item: any) => sum + (Number(item.factorySubTotal) || 0),
+      0
+    );
+  }, [purchaseOrder, isImport]);
+
+  const paidAmountCNY = useMemo(() => {
+    if (!isImport) return 0;
+    const sumForeign = (purchaseOrder.payments || []).reduce(
+      (sum: number, p: any) => sum + (Number(p.foreignAmount) || 0),
+      0
+    );
+    if (sumForeign > 0) return sumForeign;
+    // Fallback for legacy
+    const rate = Number(purchaseOrder.exchangeRate) || 1;
+    return Number(purchaseOrder.paidAmount || 0) / rate;
+  }, [purchaseOrder, isImport]);
+
+  const discountCNY = useMemo(() => {
+    if (!isImport) return 0;
+    if (purchaseOrder.discountRatio > 0) {
+      return (totalCNY * purchaseOrder.discountRatio) / 100;
+    }
+    const rate = Number(purchaseOrder.exchangeRate) || 1;
+    return Number(purchaseOrder.discount || 0) / rate;
+  }, [purchaseOrder, totalCNY, isImport]);
+
+  const supplierDebtCNY = useMemo(() => {
+    if (!isImport) return 0;
+    return Math.max(0, totalCNY - discountCNY - paidAmountCNY);
+  }, [totalCNY, discountCNY, paidAmountCNY, isImport]);
 
   const canCancel = purchaseOrder.status !== PURCHASE_ORDER_STATUS.CANCELLED;
 
@@ -528,7 +565,7 @@ export function PurchaseOrderDetailRow({
                               <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">
                                 Loại
                               </th>
-                              {canViewPrice && (
+                              {canViewPrice && !isImport && (
                                 <>
                                   <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
                                     Đơn giá
@@ -538,6 +575,16 @@ export function PurchaseOrderDetailRow({
                                   </th>
                                   <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
                                     Thành tiền
+                                  </th>
+                                </>
+                              )}
+                              {canViewFactoryPrice && isImport && (
+                                <>
+                                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    Đơn giá NM
+                                  </th>
+                                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    Thành tiền NM
                                   </th>
                                 </>
                               )}
@@ -588,7 +635,7 @@ export function PurchaseOrderDetailRow({
                                       );
                                     })()}
                                   </td>
-                                  {canViewPrice && (
+                                  {canViewPrice && !isImport && (
                                     <>
                                       <td className="px-3 py-2 text-right text-sm text-gray-700">
                                         {formatCurrency(item.price)}
@@ -601,12 +648,30 @@ export function PurchaseOrderDetailRow({
                                       </td>
                                     </>
                                   )}
+                                  {canViewFactoryPrice && isImport && (
+                                    <>
+                                      <td className="px-3 py-2 text-right text-sm text-gray-700">
+                                        {item.factoryPrice == null
+                                          ? "-"
+                                          : formatCurrency(item.factoryPrice)}
+                                      </td>
+                                      <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
+                                        {item.factorySubTotal == null
+                                          ? "-"
+                                          : formatCurrency(item.factorySubTotal)}
+                                      </td>
+                                    </>
+                                  )}
                                 </tr>
                               ))
                             ) : (
                               <tr>
                                 <td
-                                  colSpan={canViewPrice ? 8 : 5}
+                                  colSpan={
+                                    5 +
+                                    (canViewPrice && !isImport ? 3 : 0) +
+                                    (canViewFactoryPrice && isImport ? 2 : 0)
+                                  }
                                   className="px-3 py-6 text-center text-sm text-gray-400">
                                   Không có sản phẩm
                                 </td>
@@ -622,44 +687,127 @@ export function PurchaseOrderDetailRow({
                         <div className="w-96 bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-600">
-                              Tổng tiền hàng:
+                              {isImport ? "Tổng tiền hàng (CNY):" : "Tổng tiền hàng:"}
                             </span>
                             <span className="font-semibold text-gray-900">
-                              {formatCurrency(purchaseOrder.total)}
+                              {isImport ? (
+                                <>
+                                  {new Intl.NumberFormat("vi-VN", {
+                                    maximumFractionDigits: 2,
+                                  }).format(totalCNY)}{" "}
+                                  CNY
+                                </>
+                              ) : (
+                                formatCurrency(purchaseOrder.total)
+                              )}
                             </span>
                           </div>
 
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-600">Giảm giá:</span>
+                            <span className="text-gray-600">
+                              Giảm giá:
+                            </span>
                             <span className="font-semibold text-red-600">
-                              - {formatCurrency(purchaseOrder.discount)}
+                              - {isImport ? (
+                                <>
+                                  {new Intl.NumberFormat("vi-VN", {
+                                    maximumFractionDigits: 2,
+                                  }).format(discountCNY)}{" "}
+                                  CNY
+                                </>
+                              ) : (
+                                formatCurrency(purchaseOrder.discount)
+                              )}
                             </span>
                           </div>
+
+                          {isImport && (
+                            <div className="flex justify-between items-center text-xs text-gray-500 bg-white border border-gray-100 rounded p-2">
+                              <span>Tỉ giá:</span>
+                              <span>
+                                1 CNY ={" "}
+                                {new Intl.NumberFormat("vi-VN", {
+                                  maximumFractionDigits: 4,
+                                }).format(purchaseOrder.exchangeRate || 0)}{" "}
+                                VND
+                              </span>
+                            </div>
+                          )}
 
                           <div className="flex justify-between items-center text-sm border-t border-gray-300 pt-3">
                             <span className="font-bold text-gray-900">
-                              Tổng cộng:
+                              {isImport ? "Tổng cộng (CNY):" : "Tổng cộng:"}
                             </span>
                             <span className="font-bold text-brand">
-                              {formatCurrency(purchaseOrder.totalAmount)}
+                              {isImport ? (
+                                <>
+                                  {new Intl.NumberFormat("vi-VN", {
+                                    maximumFractionDigits: 2,
+                                  }).format(totalCNY - discountCNY)}{" "}
+                                  CNY
+                                </>
+                              ) : (
+                                formatCurrency(purchaseOrder.totalAmount)
+                              )}
                             </span>
                           </div>
 
+                          {isImport && (
+                            <div className="flex justify-between items-center text-xs text-gray-500 pt-1">
+                              <span>Quy đổi VND:</span>
+                              <span>{formatCurrency(purchaseOrder.totalAmount)}</span>
+                            </div>
+                          )}
+
                           <div className="flex justify-between items-center text-sm pt-2 border-t border-gray-200">
-                            <span className="text-gray-600">Đã trả NCC:</span>
+                            <span className="text-gray-600">
+                              {isImport ? "Đã trả NCC (CNY):" : "Đã trả NCC:"}
+                            </span>
                             <span className="font-semibold text-green-600">
-                              {formatCurrency(purchaseOrder.paidAmount)}
+                              {isImport ? (
+                                <>
+                                  {new Intl.NumberFormat("vi-VN", {
+                                    maximumFractionDigits: 2,
+                                  }).format(paidAmountCNY)}{" "}
+                                  CNY
+                                </>
+                              ) : (
+                                formatCurrency(purchaseOrder.paidAmount)
+                              )}
                             </span>
                           </div>
+
+                          {isImport && (
+                            <div className="flex justify-between items-center text-xs text-gray-500 pt-1">
+                              <span>Đã trả (VND):</span>
+                              <span>{formatCurrency(purchaseOrder.paidAmount)}</span>
+                            </div>
+                          )}
 
                           <div className="flex justify-between items-center border-t-2 border-red-200 pt-2">
                             <span className="text-base font-bold text-gray-900">
-                              Cần trả NCC:
+                              {isImport ? "Cần trả NCC (CNY):" : "Cần trả NCC:"}
                             </span>
                             <span className="text-base font-bold text-red-600">
-                              {formatCurrency(purchaseOrder.debtAmount)}
+                              {isImport ? (
+                                <>
+                                  {new Intl.NumberFormat("vi-VN", {
+                                    maximumFractionDigits: 2,
+                                  }).format(supplierDebtCNY)}{" "}
+                                  CNY
+                                </>
+                              ) : (
+                                formatCurrency(purchaseOrder.debtAmount)
+                              )}
                             </span>
                           </div>
+
+                          {isImport && (
+                            <div className="flex justify-between items-center text-xs text-gray-500 pt-1">
+                              <span>Còn nợ (VND):</span>
+                              <span>{formatCurrency(purchaseOrder.debtAmount)}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -779,7 +927,21 @@ export function PurchaseOrderDetailRow({
                                   </td>
                                   {canViewPrice && (
                                     <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
-                                      {formatCurrency(payment.amount)}
+                                      {isImport && payment.foreignAmount != null ? (
+                                        <>
+                                          <span>
+                                            {new Intl.NumberFormat("vi-VN", {
+                                              maximumFractionDigits: 2,
+                                            }).format(payment.foreignAmount)}{" "}
+                                            CNY
+                                          </span>
+                                          <span className="block text-xs text-gray-500 font-normal">
+                                            ({formatCurrency(payment.amount)})
+                                          </span>
+                                        </>
+                                      ) : (
+                                        formatCurrency(payment.amount)
+                                      )}
                                     </td>
                                   )}
                                   <td className="px-3 py-2 text-sm text-gray-500">

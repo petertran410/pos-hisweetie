@@ -733,6 +733,12 @@ export interface CustomerReportFilters {
   page?: number;
   limit?: number;
   top?: number;
+  // ── Bộ lọc sản phẩm (array ở FE, convert CSV khi gửi API) ──
+  types?: number[];
+  parentNames?: string[];
+  middleNames?: string[];
+  childNames?: string[];
+  tradeMarkIds?: number[];
 }
 
 export interface CustomerPreviewResponse {
@@ -845,38 +851,62 @@ export interface CustomerProductsResponse {
   };
 }
 
+export const serializeCustomerFilters = (
+  params: CustomerReportFilters,
+): Record<string, unknown> => {
+  const serialized: Record<string, unknown> = { ...params };
+  const arrayFields: (keyof CustomerReportFilters)[] = [
+    "types",
+    "parentNames",
+    "middleNames",
+    "childNames",
+    "tradeMarkIds",
+  ];
+  arrayFields.forEach((field) => {
+    if (Array.isArray(serialized[field])) {
+      if (serialized[field].length > 0) {
+        serialized[field] = serialized[field].join(",");
+      } else {
+        delete serialized[field];
+      }
+    }
+  });
+  return serialized;
+};
+
 export const customerReportApi = {
   getChart: (params: CustomerReportFilters): Promise<CustomerChartRow[]> => {
-    return apiClient.get("/reports/customer/chart", params);
+    return apiClient.get("/reports/customer/chart", serializeCustomerFilters(params));
   },
   getPreview: (
     params: CustomerReportFilters,
   ): Promise<CustomerPreviewResponse> => {
-    return apiClient.get("/reports/customer/preview", params);
+    return apiClient.get("/reports/customer/preview", serializeCustomerFilters(params));
   },
   getInvoices: (
     params: CustomerReportFilters,
   ): Promise<CustomerInvoicesResponse> => {
-    return apiClient.get("/reports/customer/invoices", params);
+    return apiClient.get("/reports/customer/invoices", serializeCustomerFilters(params));
   },
   getProducts: (
     params: CustomerReportFilters,
   ): Promise<CustomerProductsResponse> => {
-    return apiClient.get("/reports/customer/products", params);
+    return apiClient.get("/reports/customer/products", serializeCustomerFilters(params));
   },
   getDebtCustomers: (
     params: CustomerReportFilters,
   ): Promise<CustomerDebtCustomersResponse> => {
-    return apiClient.get("/reports/customer/debt-customers", params);
+    return apiClient.get("/reports/customer/debt-customers", serializeCustomerFilters(params));
   },
   getDebtDocuments: (
     params: CustomerReportFilters,
   ): Promise<CustomerDebtDocumentsResponse> => {
-    return apiClient.get("/reports/customer/debt-documents", params);
+    return apiClient.get("/reports/customer/debt-documents", serializeCustomerFilters(params));
   },
   exportExcel: (params: CustomerReportFilters) => {
     const url = new URL(`${API_URL}/reports/customer/export`);
-    Object.entries(params).forEach(([key, value]) => {
+    const serialized = serializeCustomerFilters(params);
+    Object.entries(serialized).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         url.searchParams.append(key, String(value));
       }
@@ -885,7 +915,8 @@ export const customerReportApi = {
   },
   exportDetail: (params: CustomerReportFilters) => {
     const url = new URL(`${API_URL}/reports/customer/invoices/export`);
-    Object.entries(params).forEach(([key, value]) => {
+    const serialized = serializeCustomerFilters(params);
+    Object.entries(serialized).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         url.searchParams.append(key, String(value));
       }
@@ -894,7 +925,8 @@ export const customerReportApi = {
   },
   exportDebtDocuments: (params: CustomerReportFilters) => {
     const url = new URL(`${API_URL}/reports/customer/debt-documents/export`);
-    Object.entries(params).forEach(([key, value]) => {
+    const serialized = serializeCustomerFilters(params);
+    Object.entries(serialized).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         url.searchParams.append(key, String(value));
       }
@@ -905,7 +937,8 @@ export const customerReportApi = {
     const url = new URL(
       `${API_URL}/reports/customer/debt-documents/export-all`,
     );
-    Object.entries(params).forEach(([key, value]) => {
+    const serialized = serializeCustomerFilters(params);
+    Object.entries(serialized).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         url.searchParams.append(key, String(value));
       }

@@ -15,6 +15,8 @@ import {
 import { useBranchStore } from "@/lib/store/branch";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { createPortal } from "react-dom";
+import { useSupplier } from "@/lib/hooks/useSuppliers";
+import { useExchangeRate } from "@/lib/hooks/useExchangeRate";
 
 /**
  * Modal "Trả tiền NCC" bulk multi-PN. Mirror chính xác `CustomerPaymentModal`
@@ -52,6 +54,24 @@ export function SupplierPaymentBulkModal({
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { selectedBranch } = useBranchStore();
+
+  const { data: supplierData } = useSupplier(supplierId);
+  const isImport = useMemo(() => {
+    return (
+      supplierData?.supplierGroupDetails?.some(
+        (d) => d.supplierGroupId === 1
+      ) ?? false
+    );
+  }, [supplierData]);
+
+  const [exchangeRate, setExchangeRate] = useState("");
+  const liveRateQuery = useExchangeRate("CNY", "VND");
+
+  useEffect(() => {
+    if (isImport && liveRateQuery.data?.rate && !exchangeRate) {
+      setExchangeRate(String(liveRateQuery.data.rate));
+    }
+  }, [isImport, liveRateQuery.data, exchangeRate]);
 
   const [method, setMethod] = useState("cash");
   const [totalAmount, setTotalAmount] = useState("");
@@ -181,30 +201,63 @@ export function SupplierPaymentBulkModal({
     const po = unpaidPurchaseOrders.find((p: any) => p.id === poId);
     if (!po) return;
 
-    const otherTotal = Object.entries(purchaseOrderDebtOffsets)
-      .filter(([id]) => Number(id) !== poId)
-      .reduce((sum, [, amt]) => sum + parseNumberInput(amt), 0);
-
-    const remaining = Math.max(0, availableCredit - otherTotal);
-    const maxAmount = Math.min(Number(po.debtAmount), remaining);
     const numericValue = parseNumberInput(value);
-    const limitedValue = Math.min(numericValue, maxAmount);
-    const formatted = formatNumberInput(limitedValue.toString());
-    setPurchaseOrderDebtOffsets((prev) => ({
-      ...prev,
-      [poId]: formatted,
-    }));
+    const effectiveRateVal = Number(exchangeRate) || 1;
 
-    // Cap lại tiền trả nếu vượt phần còn lại sau cấn trừ
-    const currentPayment = parseNumberInput(
-      purchaseOrderPayments[poId] || "0"
-    );
-    const maxPayment = Math.max(0, Number(po.debtAmount) - limitedValue);
-    if (currentPayment > maxPayment) {
-      setPurchaseOrderPayments((prev) => ({
+    if (isImport) {
+      const poRate = Number(po.exchangeRate) || 1;
+      const poDebtCNY = Number(po.debtAmount) / poRate;
+      const otherTotalCNY = Object.entries(purchaseOrderDebtOffsets)
+        .filter(([id]) => Number(id) !== poId)
+        .reduce((sum, [, amt]) => sum + parseNumberInput(amt), 0);
+
+      const availableCreditCNY = availableCredit / effectiveRateVal;
+      const remainingCNY = Math.max(0, availableCreditCNY - otherTotalCNY);
+      const maxAmountCNY = Math.min(poDebtCNY, remainingCNY);
+      const limitedValue = Math.min(numericValue, maxAmountCNY);
+      const formatted = formatNumberInput(limitedValue.toString());
+
+      setPurchaseOrderDebtOffsets((prev) => ({
         ...prev,
-        [poId]: formatNumberInput(maxPayment.toString()),
+        [poId]: formatted,
       }));
+
+      // Cap lại tiền trả nếu vượt phần còn lại sau cấn trừ
+      const currentPaymentCNY = parseNumberInput(
+        purchaseOrderPayments[poId] || "0"
+      );
+      const maxPaymentCNY = Math.max(0, poDebtCNY - limitedValue);
+      if (currentPaymentCNY > maxPaymentCNY) {
+        setPurchaseOrderPayments((prev) => ({
+          ...prev,
+          [poId]: formatNumberInput(maxPaymentCNY.toString()),
+        }));
+      }
+    } else {
+      const otherTotal = Object.entries(purchaseOrderDebtOffsets)
+        .filter(([id]) => Number(id) !== poId)
+        .reduce((sum, [, amt]) => sum + parseNumberInput(amt), 0);
+
+      const remaining = Math.max(0, availableCredit - otherTotal);
+      const maxAmount = Math.min(Number(po.debtAmount), remaining);
+      const limitedValue = Math.min(numericValue, maxAmount);
+      const formatted = formatNumberInput(limitedValue.toString());
+      setPurchaseOrderDebtOffsets((prev) => ({
+        ...prev,
+        [poId]: formatted,
+      }));
+
+      // Cap lại tiền trả nếu vượt phần còn lại sau cấn trừ
+      const currentPayment = parseNumberInput(
+        purchaseOrderPayments[poId] || "0"
+      );
+      const maxPayment = Math.max(0, Number(po.debtAmount) - limitedValue);
+      if (currentPayment > maxPayment) {
+        setPurchaseOrderPayments((prev) => ({
+          ...prev,
+          [poId]: formatNumberInput(maxPayment.toString()),
+        }));
+      }
     }
   };
 
@@ -215,22 +268,39 @@ export function SupplierPaymentBulkModal({
     if (allocateToPurchaseOrders && unpaidPurchaseOrders.length > 0) {
       const numericAmount = parseNumberInput(value);
       if (numericAmount > 0) {
-        let remaining = numericAmount;
         const newPayments: Record<number, string> = {};
+        const effectiveRateVal = Number(exchangeRate) || 1;
 
-        for (const po of unpaidPurchaseOrders) {
-          if (remaining <= 0) break;
+        if (isImport) {
+          let remainingCNY = numericAmount / effectiveRateVal;
+          for (const po of unpaidPurchaseOrders) {
+            if (remainingCNY <= 0) break;
+            const poRate = Number(po.exchangeRate) || 1;
+            const poDebtCNY = Number(po.debtAmount) / poRate;
+            const debtOffsetCNY = parseNumberInput(
+              purchaseOrderDebtOffsets[po.id] || "0"
+            );
+            const maxForPOCNY = Math.max(0, poDebtCNY - debtOffsetCNY);
+            const paymentCNY = Math.min(remainingCNY, maxForPOCNY);
+            newPayments[po.id] = formatNumberInput(paymentCNY.toString());
+            remainingCNY -= paymentCNY;
+          }
+        } else {
+          let remaining = numericAmount;
+          for (const po of unpaidPurchaseOrders) {
+            if (remaining <= 0) break;
 
-          const debtAmount = Number(po.debtAmount);
-          const debtOffsetForPO = parseNumberInput(
-            purchaseOrderDebtOffsets[po.id] || "0"
-          );
-          const maxForPO = Math.max(0, debtAmount - debtOffsetForPO);
-          const paymentForThisPO = Math.min(remaining, maxForPO);
-          newPayments[po.id] = formatNumberInput(
-            paymentForThisPO.toString()
-          );
-          remaining -= paymentForThisPO;
+            const debtAmount = Number(po.debtAmount);
+            const debtOffsetForPO = parseNumberInput(
+              purchaseOrderDebtOffsets[po.id] || "0"
+            );
+            const maxForPO = Math.max(0, debtAmount - debtOffsetForPO);
+            const paymentForThisPO = Math.min(remaining, maxForPO);
+            newPayments[po.id] = formatNumberInput(
+              paymentForThisPO.toString()
+            );
+            remaining -= paymentForThisPO;
+          }
         }
 
         setPurchaseOrderPayments(newPayments);
@@ -244,21 +314,36 @@ export function SupplierPaymentBulkModal({
     const po = unpaidPurchaseOrders.find((p: any) => p.id === poId);
     if (!po) return;
 
-    const debtOffsetForPO = parseNumberInput(
-      purchaseOrderDebtOffsets[poId] || "0"
-    );
-    const maxAmount = Math.max(
-      0,
-      Number(po.debtAmount) - debtOffsetForPO
-    );
     const numericValue = parseNumberInput(value);
-    const limitedValue = Math.min(numericValue, maxAmount);
 
-    const formatted = formatNumberInput(limitedValue.toString());
-    setPurchaseOrderPayments((prev) => ({
-      ...prev,
-      [poId]: formatted,
-    }));
+    if (isImport) {
+      const poRate = Number(po.exchangeRate) || 1;
+      const poDebtCNY = Number(po.debtAmount) / poRate;
+      const debtOffsetCNY = parseNumberInput(
+        purchaseOrderDebtOffsets[poId] || "0"
+      );
+      const maxAmountCNY = Math.max(0, poDebtCNY - debtOffsetCNY);
+      const limitedValue = Math.min(numericValue, maxAmountCNY);
+      const formatted = formatNumberInput(limitedValue.toString());
+      setPurchaseOrderPayments((prev) => ({
+        ...prev,
+        [poId]: formatted,
+      }));
+    } else {
+      const debtOffsetForPO = parseNumberInput(
+        purchaseOrderDebtOffsets[poId] || "0"
+      );
+      const maxAmount = Math.max(
+        0,
+        Number(po.debtAmount) - debtOffsetForPO
+      );
+      const limitedValue = Math.min(numericValue, maxAmount);
+      const formatted = formatNumberInput(limitedValue.toString());
+      setPurchaseOrderPayments((prev) => ({
+        ...prev,
+        [poId]: formatted,
+      }));
+    }
   };
 
   const handleSubmit = async () => {
@@ -267,14 +352,19 @@ export function SupplierPaymentBulkModal({
       return;
     }
 
+    const rate = isImport ? (parseNumberInput(exchangeRate) || 1) : 1;
+
     // Tính trước debtOffsetsToApply để dùng cho cả validate (bỏ qua check tài
     // khoản ngân hàng khi chỉ cấn trừ nợ) và payload gửi BE.
     const debtOffsetsToApply = Object.entries(purchaseOrderDebtOffsets)
       .filter(([_, amount]) => parseNumberInput(amount) > 0)
-      .map(([poId, amount]) => ({
-        purchaseOrderId: Number(poId),
-        amount: parseNumberInput(amount),
-      }));
+      .map(([poId, amount]) => {
+        const amtCNY = parseNumberInput(amount);
+        return {
+          purchaseOrderId: Number(poId),
+          amount: isImport ? Math.round(amtCNY * rate) : amtCNY,
+        };
+      });
     const hasDebtOffsets = debtOffsetsToApply.length > 0;
 
     if (
@@ -293,24 +383,34 @@ export function SupplierPaymentBulkModal({
       (sum, d) => sum + d.amount,
       0
     );
-    if (totalDebtOffset > availableCredit) {
+    const availableCreditVND = availableCredit;
+    if (totalDebtOffset > availableCreditVND) {
       alert(
-        `Tổng cấn trừ nợ (${formatCurrency(totalDebtOffset)}) vượt quá giới hạn cho phép (${formatCurrency(availableCredit)})`
+        `Tổng cấn trừ nợ (${formatCurrency(totalDebtOffset)}) vượt quá giới hạn cho phép (${formatCurrency(availableCreditVND)})`
       );
       return;
     }
 
-    let purchaseOrdersToPay: Array<{ purchaseOrderId: number; amount: number }> =
-      [];
+    let purchaseOrdersToPay: Array<{
+      purchaseOrderId: number;
+      amount: number;
+      exchangeRate?: number;
+      foreignAmount?: number;
+    }> = [];
     let finalTotalAmount = parseNumberInput(totalAmount);
 
     if (allocateToPurchaseOrders) {
       purchaseOrdersToPay = Object.entries(purchaseOrderPayments)
         .filter(([_, amount]) => parseNumberInput(amount) > 0)
-        .map(([poId, amount]) => ({
-          purchaseOrderId: Number(poId),
-          amount: parseNumberInput(amount),
-        }));
+        .map(([poId, amount]) => {
+          const amtCNY = parseNumberInput(amount);
+          return {
+            purchaseOrderId: Number(poId),
+            amount: isImport ? Math.round(amtCNY * rate) : amtCNY,
+            exchangeRate: isImport ? rate : undefined,
+            foreignAmount: isImport ? amtCNY : undefined,
+          };
+        });
 
       if (
         finalTotalAmount <= 0 &&
@@ -374,7 +474,7 @@ export function SupplierPaymentBulkModal({
 
         <div className="p-6 flex-1 overflow-y-auto">
           <div className="mb-4">
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className={`grid ${isImport ? "grid-cols-3" : "grid-cols-2"} gap-4 mb-4`}>
               <div className="relative">
                 <label className="block text-sm font-medium mb-2">
                   Phương thức thanh toán
@@ -417,16 +517,49 @@ export function SupplierPaymentBulkModal({
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Số tiền
+                  {isImport ? "Số tiền (VND)" : "Số tiền"}
                 </label>
                 <input
                   type="text"
                   value={totalAmount}
                   onChange={(e) => handleTotalAmountChange(e.target.value)}
                   placeholder="0"
-                  className="w-full px-3 py-2 border rounded-lg text-right"
+                  className="w-full px-3 py-2 border rounded-lg text-right font-medium"
                 />
+                {isImport && (
+                  <span className="text-xs text-gray-500 mt-1 block">
+                    Quy đổi:{" "}
+                    <strong className="text-brand">
+                      {new Intl.NumberFormat("vi-VN", {
+                        maximumFractionDigits: 2,
+                      }).format(
+                        parseNumberInput(totalAmount) / (Number(exchangeRate) || 1)
+                      )}{" "}
+                      CNY
+                    </strong>
+                  </span>
+                )}
               </div>
+
+              {isImport && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Tỉ giá VND/CNY <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={exchangeRate}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setExchangeRate(val);
+                      // Trigger recalculating of allocated payments when exchange rate changes!
+                      setTimeout(() => handleTotalAmountChange(totalAmount), 0);
+                    }}
+                    placeholder="Nhập tỉ giá..."
+                    className="w-full px-3 py-2 border rounded-lg text-right font-semibold"
+                  />
+                </div>
+              )}
             </div>
 
             {method === "transfer" && (
@@ -519,7 +652,15 @@ export function SupplierPaymentBulkModal({
                 <div className="px-4 py-2 bg-brand-soft border-b text-xs text-brand-dark">
                   Có thể cấn trừ tối đa{" "}
                   <span className="font-semibold">
-                    {formatCurrency(availableCredit)}
+                    {isImport ? (
+                      <>
+                        {new Intl.NumberFormat("vi-VN", {
+                          maximumFractionDigits: 2,
+                        }).format(availableCredit / (Number(exchangeRate) || 1)) + " CNY"}
+                      </>
+                    ) : (
+                      formatCurrency(availableCredit)
+                    )}
                   </span>{" "}
                   từ credit hiện có của nhà cung cấp
                 </div>
@@ -534,21 +675,21 @@ export function SupplierPaymentBulkModal({
                       Thời gian
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium">
-                      Giá trị phiếu
+                      {isImport ? "Giá trị phiếu (¥)" : "Giá trị phiếu"}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium">
-                      Đã trả
+                      {isImport ? "Đã trả (¥)" : "Đã trả"}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium">
-                      Còn cần trả
+                      {isImport ? "Còn cần trả (¥)" : "Còn cần trả"}
                     </th>
                     {availableCredit > 0 && (
                       <th className="px-4 py-3 text-left text-xs font-medium">
-                        Cấn trừ nợ
+                        {isImport ? "Cấn trừ nợ (¥)" : "Cấn trừ nợ"}
                       </th>
                     )}
                     <th className="px-4 py-3 text-left text-xs font-medium">
-                      Tiền trả
+                      {isImport ? "Tiền trả (¥)" : "Tiền trả"}
                     </th>
                   </tr>
                 </thead>
@@ -561,11 +702,25 @@ export function SupplierPaymentBulkModal({
                         Tổng còn cần trả
                       </td>
                       <td className="px-4 py-2 text-right text-xs text-red-600">
-                        {formatCurrency(
-                          unpaidPurchaseOrders.reduce(
-                            (sum: number, po: any) =>
-                              sum + Number(po.debtAmount),
-                            0
+                        {isImport ? (
+                          <>
+                            {new Intl.NumberFormat("vi-VN", {
+                              maximumFractionDigits: 2,
+                            }).format(
+                              unpaidPurchaseOrders.reduce(
+                                (sum: number, po: any) =>
+                                  sum + Number(po.debtAmount) / (Number(po.exchangeRate) || 1),
+                                0
+                              )
+                            ) + " CNY"}
+                          </>
+                        ) : (
+                          formatCurrency(
+                            unpaidPurchaseOrders.reduce(
+                              (sum: number, po: any) =>
+                                sum + Number(po.debtAmount),
+                              0
+                            )
                           )
                         )}
                       </td>
@@ -605,13 +760,55 @@ export function SupplierPaymentBulkModal({
                           })}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {formatCurrency(po.subTotal || po.total)}
+                          {isImport ? (
+                            <>
+                              <span>
+                                {new Intl.NumberFormat("vi-VN", {
+                                  maximumFractionDigits: 2,
+                                }).format((po.subTotal || po.total) / (Number(po.exchangeRate) || 1))}{" "}
+                                CNY
+                              </span>
+                              <span className="block text-xs text-gray-400 font-normal">
+                                ({formatCurrency(po.subTotal || po.total)})
+                              </span>
+                            </>
+                          ) : (
+                            formatCurrency(po.subTotal || po.total)
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {formatCurrency(Number(po.paidAmount || 0))}
+                          {isImport ? (
+                            <>
+                              <span>
+                                {new Intl.NumberFormat("vi-VN", {
+                                  maximumFractionDigits: 2,
+                                }).format(Number(po.paidAmount || 0) / (Number(po.exchangeRate) || 1))}{" "}
+                                CNY
+                              </span>
+                              <span className="block text-xs text-gray-400 font-normal">
+                                ({formatCurrency(Number(po.paidAmount || 0))})
+                              </span>
+                            </>
+                          ) : (
+                            formatCurrency(Number(po.paidAmount || 0))
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right font-medium">
-                          {formatCurrency(po.debtAmount)}
+                          {isImport ? (
+                            <>
+                              <span className="text-brand">
+                                {new Intl.NumberFormat("vi-VN", {
+                                  maximumFractionDigits: 2,
+                                }).format(Number(po.debtAmount) / (Number(po.exchangeRate) || 1))}{" "}
+                                CNY
+                              </span>
+                              <span className="block text-xs text-gray-400 font-normal">
+                                ({formatCurrency(po.debtAmount)})
+                              </span>
+                            </>
+                          ) : (
+                            formatCurrency(po.debtAmount)
+                          )}
                         </td>
                         {availableCredit > 0 && (
                           <td className="px-4 py-3">
@@ -624,6 +821,11 @@ export function SupplierPaymentBulkModal({
                               placeholder="0"
                               className="w-full px-2 py-1 border rounded text-right"
                             />
+                            {isImport && purchaseOrderDebtOffsets[po.id] && (
+                              <span className="text-[10px] text-gray-400 block text-right">
+                                = {formatCurrency(Math.round(parseNumberInput(purchaseOrderDebtOffsets[po.id]) * (Number(exchangeRate) || 1)))}
+                              </span>
+                            )}
                           </td>
                         )}
                         <td className="px-4 py-3">
@@ -631,11 +833,16 @@ export function SupplierPaymentBulkModal({
                             type="text"
                             value={purchaseOrderPayments[po.id] || ""}
                             onChange={(e) =>
-                              handlePOPaymentChange(po.id, e.target.value)
+                                handlePOPaymentChange(po.id, e.target.value)
                             }
                             placeholder="0"
                             className="w-full px-2 py-1 border rounded text-right"
                           />
+                          {isImport && purchaseOrderPayments[po.id] && (
+                            <span className="text-[10px] text-gray-400 block text-right">
+                              = {formatCurrency(Math.round(parseNumberInput(purchaseOrderPayments[po.id]) * (Number(exchangeRate) || 1)))}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))
