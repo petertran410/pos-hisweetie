@@ -267,6 +267,42 @@ export function PurchaseOrderDetailRow({
     }
   };
 
+  const isImport = purchaseOrder?.currency === "CNY";
+
+  const totalCNY = useMemo(() => {
+    if (!isImport) return 0;
+    return (purchaseOrder?.items || []).reduce(
+      (sum: number, item: any) => sum + (Number(item.factorySubTotal) || 0),
+      0
+    );
+  }, [purchaseOrder, isImport]);
+
+  const paidAmountCNY = useMemo(() => {
+    if (!isImport) return 0;
+    const sumForeign = (purchaseOrder?.payments || []).reduce(
+      (sum: number, p: any) => sum + (Number(p.foreignAmount) || 0),
+      0
+    );
+    if (sumForeign > 0) return sumForeign;
+    // Fallback for legacy
+    const rate = Number(purchaseOrder?.exchangeRate) || 1;
+    return Number(purchaseOrder?.paidAmount || 0) / rate;
+  }, [purchaseOrder, isImport]);
+
+  const discountCNY = useMemo(() => {
+    if (!isImport) return 0;
+    if (purchaseOrder && purchaseOrder.discountRatio > 0) {
+      return (totalCNY * purchaseOrder.discountRatio) / 100;
+    }
+    const rate = Number(purchaseOrder?.exchangeRate) || 1;
+    return Number(purchaseOrder?.discount || 0) / rate;
+  }, [purchaseOrder, totalCNY, isImport]);
+
+  const supplierDebtCNY = useMemo(() => {
+    if (!isImport) return 0;
+    return Math.max(0, totalCNY - discountCNY - paidAmountCNY);
+  }, [totalCNY, discountCNY, paidAmountCNY, isImport]);
+
   // ── Loading ──
   if (isLoading) {
     return (
@@ -314,42 +350,6 @@ export function PurchaseOrderDetailRow({
       0
     ) || 0;
   const itemCount = filteredItems?.length || 0;
-
-  const isImport = purchaseOrder.currency === "CNY";
-
-  const totalCNY = useMemo(() => {
-    if (!isImport) return 0;
-    return (purchaseOrder.items || []).reduce(
-      (sum: number, item: any) => sum + (Number(item.factorySubTotal) || 0),
-      0
-    );
-  }, [purchaseOrder, isImport]);
-
-  const paidAmountCNY = useMemo(() => {
-    if (!isImport) return 0;
-    const sumForeign = (purchaseOrder.payments || []).reduce(
-      (sum: number, p: any) => sum + (Number(p.foreignAmount) || 0),
-      0
-    );
-    if (sumForeign > 0) return sumForeign;
-    // Fallback for legacy
-    const rate = Number(purchaseOrder.exchangeRate) || 1;
-    return Number(purchaseOrder.paidAmount || 0) / rate;
-  }, [purchaseOrder, isImport]);
-
-  const discountCNY = useMemo(() => {
-    if (!isImport) return 0;
-    if (purchaseOrder.discountRatio > 0) {
-      return (totalCNY * purchaseOrder.discountRatio) / 100;
-    }
-    const rate = Number(purchaseOrder.exchangeRate) || 1;
-    return Number(purchaseOrder.discount || 0) / rate;
-  }, [purchaseOrder, totalCNY, isImport]);
-
-  const supplierDebtCNY = useMemo(() => {
-    if (!isImport) return 0;
-    return Math.max(0, totalCNY - discountCNY - paidAmountCNY);
-  }, [totalCNY, discountCNY, paidAmountCNY, isImport]);
 
   const canCancel = purchaseOrder.status !== PURCHASE_ORDER_STATUS.CANCELLED;
 

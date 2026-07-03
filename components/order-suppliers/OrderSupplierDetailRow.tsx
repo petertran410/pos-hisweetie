@@ -204,6 +204,42 @@ export function OrderSupplierDetailRow({
   const handleCreatePurchaseOrder = () =>
     router.push(`/san-pham/nhap-hang/new?orderSupplierId=${orderSupplierId}`);
 
+  const isImport = orderSupplier?.currency === "CNY";
+
+  const totalCNY = useMemo(() => {
+    if (!isImport) return 0;
+    return (orderSupplier?.items || []).reduce(
+      (sum: number, item: any) => sum + (Number(item.factorySubTotal) || 0),
+      0
+    );
+  }, [orderSupplier, isImport]);
+
+  const paidAmountCNY = useMemo(() => {
+    if (!isImport) return 0;
+    const sumForeign = (payments || []).reduce(
+      (sum: number, p: any) => sum + (Number(p.foreignAmount) || 0),
+      0
+    );
+    if (sumForeign > 0) return sumForeign;
+    // Fallback for legacy
+    const rate = Number(orderSupplier?.exchangeRate) || 1;
+    return Number(orderSupplier?.paidAmount || 0) / rate;
+  }, [payments, orderSupplier, isImport]);
+
+  const discountCNY = useMemo(() => {
+    if (!isImport) return 0;
+    if (orderSupplier && orderSupplier.discountRatio > 0) {
+      return (totalCNY * orderSupplier.discountRatio) / 100;
+    }
+    const rate = Number(orderSupplier?.exchangeRate) || 1;
+    return Number(orderSupplier?.discount || 0) / rate;
+  }, [orderSupplier, totalCNY, isImport]);
+
+  const supplierDebtCNY = useMemo(() => {
+    if (!isImport) return 0;
+    return Math.max(0, totalCNY - discountCNY - paidAmountCNY);
+  }, [totalCNY, discountCNY, paidAmountCNY, isImport]);
+
   // ── Loading ──
   if (isLoading) {
     return (
@@ -244,42 +280,6 @@ export function OrderSupplierDetailRow({
       : true;
     return matchCode && matchName;
   });
-
-  const isImport = orderSupplier.currency === "CNY";
-
-  const totalCNY = useMemo(() => {
-    if (!isImport) return 0;
-    return (orderSupplier.items || []).reduce(
-      (sum: number, item: any) => sum + (Number(item.factorySubTotal) || 0),
-      0
-    );
-  }, [orderSupplier, isImport]);
-
-  const paidAmountCNY = useMemo(() => {
-    if (!isImport) return 0;
-    const sumForeign = (payments || []).reduce(
-      (sum: number, p: any) => sum + (Number(p.foreignAmount) || 0),
-      0
-    );
-    if (sumForeign > 0) return sumForeign;
-    // Fallback for legacy
-    const rate = Number(orderSupplier.exchangeRate) || 1;
-    return Number(orderSupplier.paidAmount || 0) / rate;
-  }, [payments, orderSupplier, isImport]);
-
-  const discountCNY = useMemo(() => {
-    if (!isImport) return 0;
-    if (orderSupplier.discountRatio > 0) {
-      return (totalCNY * orderSupplier.discountRatio) / 100;
-    }
-    const rate = Number(orderSupplier.exchangeRate) || 1;
-    return Number(orderSupplier.discount || 0) / rate;
-  }, [orderSupplier, totalCNY, isImport]);
-
-  const supplierDebtCNY = useMemo(() => {
-    if (!isImport) return 0;
-    return Math.max(0, totalCNY - discountCNY - paidAmountCNY);
-  }, [totalCNY, discountCNY, paidAmountCNY, isImport]);
 
   const canCancel = orderSupplier.status === 0 || orderSupplier.status === 1;
 
