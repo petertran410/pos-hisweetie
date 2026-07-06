@@ -348,6 +348,8 @@ export interface ProductInvoiceRow {
   discountRatio: number;
   priceAfterDiscount: number;
   totalPrice: number;
+  priceBookId?: number | null;
+  priceBookName?: string;
 }
 
 export interface ProductInvoicesResponse {

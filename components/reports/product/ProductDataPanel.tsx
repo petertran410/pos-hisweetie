@@ -481,6 +481,9 @@ function ProductInvoiceDrilldown({
                   Khách hàng
                 </th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  Bảng giá
+                </th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
                   Sản phẩm
                 </th>
                 <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
@@ -503,7 +506,7 @@ function ProductInvoiceDrilldown({
             <tbody className="divide-y divide-gray-100">
               {summary && page === 1 && (
                 <tr className="bg-amber-50 font-semibold">
-                  <td className="px-3 py-2 text-gray-800" colSpan={4}>
+                  <td className="px-3 py-2 text-gray-800" colSpan={5}>
                     SL dòng: {summary.totalInvoices}
                   </td>
                   <td className="px-3 py-2 text-right text-gray-900">
@@ -527,6 +530,9 @@ function ProductInvoiceDrilldown({
                   </td>
                   <td className="px-3 py-2 text-gray-900">
                     {row.customerName}
+                  </td>
+                  <td className="px-3 py-2 text-gray-700">
+                    {row.priceBookName || "-"}
                   </td>
                   <td className="px-3 py-2 text-gray-700">{row.productName}</td>
                   <td className="px-3 py-2 text-right text-gray-700">
