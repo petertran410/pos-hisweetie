@@ -48,12 +48,102 @@ const STATUS_COLOR: Record<number, string> = {
 const formatDateTime = (date?: string) =>
   date ? new Date(date).toLocaleString("vi-VN") : "-";
 
+// Format số CNY (làm tròn 2 chữ số thập phân, dùng dấu phẩy phân cách hàng nghìn)
+const formatCNY = (value: number) =>
+  new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 2,
+  }).format(value) + " CNY";
+
+// Tính các giá trị CNY cho PDN NCC nước ngoài.
+// - totalCNY = Σ items[i].factorySubTotal (đã là CNY, BE lưu CNY gốc)
+// - paidCNY = Σ items[i].factorySubTotal * discountRatio/100 (nếu có)
+//            hoặc discount / exchangeRate (legacy)
+// - paidAmountCNY fallback = paidAmount / exchangeRate (legacy PDN cũ)
+//
+// LƯU Ý: BE lưu `total`/`supplierDebt`/`paidAmount` có thể là số ÂM cho
+// PDN của NCC nước ngoài (do lỗi logic cũ). Để hiển thị CNY đúng, ta lấy
+// giá trị tuyệt đối khi quy đổi sang CNY (vì CNY luôn dương).
+function computeImportAmounts(os: OrderSupplier) {
+  const rate = Number(os.exchangeRate) || 1;
+  const totalCNY = (os.items || []).reduce(
+    (sum, it) => sum + (Math.abs(Number(it.factorySubTotal)) || 0),
+    0
+  );
+  const paidAmountCNY =
+    Math.abs(Number(os.paidAmount || 0)) > 0
+      ? Math.abs(Number(os.paidAmount)) / rate
+      : 0;
+  const discountCNY =
+    Number(os.discountRatio) > 0
+      ? (totalCNY * Number(os.discountRatio)) / 100
+      : Math.abs(Number(os.discount || 0)) / rate;
+  const supplierDebtCNY = Math.max(0, totalCNY - discountCNY - paidAmountCNY);
+  return { totalCNY, paidAmountCNY, discountCNY, supplierDebtCNY };
+}
+
+// Ô hiển thị 2-dòng: CNY làm chính (text-sm), VND phụ (text-xs xám).
+// Dùng cho 3 cột Tổng tiền hàng / Cần trả NCC / Đã trả NCC ở bảng danh sách
+// khi NCC nước ngoài. Khi NCC nội địa → fallback dùng formatCurrency bình thường.
+// VND luôn hiển thị giá trị tuyệt đối — BE có thể lưu số âm cho
+// total/supplierDebt/paidAmount (vd đối với PDN NCC nước ngoài trong một số
+// edge case cũ); Math.abs() để tránh hiển thị dấu "-" sai context.
+// Layout: w-full + items-end để 2 dòng canh phải trong <td> (kết hợp
+// text-right + align-top của <td>). Hàng 1-dòng (NCC nội địa) vẫn canh phải
+// đồng nhất.
+function ImportAmountCell({
+  primaryCNY,
+  vnd,
+  className,
+}: {
+  primaryCNY: number;
+  vnd: number | null;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex flex-col items-end leading-tight whitespace-nowrap ${
+        className ?? ""
+      }`}>
+      <span className="text-sm font-medium text-gray-900">
+        {formatCNY(primaryCNY)}
+      </span>
+      {vnd != null && (
+        <span className="text-xs text-gray-400">
+          (~{formatCurrency(Math.abs(vnd))})
+        </span>
+      )}
+    </div>
+  );
+}
+
 const DEFAULT_COLUMNS: ColumnConfig<OrderSupplier>[] = [
+  {
+    key: "code",
+    label: "Mã đặt hàng nhập",
+    visible: true,
+    width: "140px",
+    render: (os) => <CodeLink entity="order-supplier" code={os.code} />,
+  },
+  {
+    key: "purchaseOrderCode",
+    label: "Mã nhập hàng",
+    visible: true,
+    width: "150px",
+    render: (os) =>
+      os.purchaseOrders?.length
+        ? os.purchaseOrders.map((po, idx) => (
+            <Fragment key={po.code ?? idx}>
+              {idx > 0 && <span className="text-gray-400"> | </span>}
+              <CodeLink entity="purchase-order" code={po.code} />
+            </Fragment>
+          ))
+        : "-",
+  },
   {
     key: "contractNos",
     label: "Số HĐ",
     visible: true,
-    width: "160px",
+    width: "130px",
     render: (os) => {
       // BE trả về `contractNos` (mảng DISTINCT, có thể rỗng) + `contractNo`
       // (string|null, phần tử đầu tiên) cho backward-compat. Ưu tiên
@@ -83,60 +173,38 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplier>[] = [
     },
   },
   {
-    key: "code",
-    label: "Mã đặt hàng nhập",
-    visible: true,
-    width: "180px",
-    render: (os) => <CodeLink entity="order-supplier" code={os.code} />,
-  },
-  {
-    key: "purchaseOrderCode",
-    label: "Mã nhập hàng",
-    visible: true,
-    width: "180px",
-    render: (os) =>
-      os.purchaseOrders?.length
-        ? os.purchaseOrders.map((po, idx) => (
-            <Fragment key={po.code ?? idx}>
-              {idx > 0 && <span className="text-gray-400"> | </span>}
-              <CodeLink entity="purchase-order" code={po.code} />
-            </Fragment>
-          ))
-        : "-",
-  },
-  {
     key: "orderDate",
     label: "Ngày dự kiến nhập hàng",
     visible: true,
-    width: "170px",
+    width: "150px",
     render: (os) => formatDateTime(os.orderDate),
   },
   {
     key: "createdDate",
     label: "Ngày tạo",
     visible: true,
-    width: "170px",
+    width: "150px",
     render: (os) => formatDateTime(os.createdAt),
   },
   {
     key: "updatedDate",
     label: "Ngày cập nhật",
     visible: false,
-    width: "170px",
+    width: "150px",
     render: (os) => formatDateTime(os.updatedAt),
   },
   {
     key: "supplier",
     label: "Nhà cung cấp",
     visible: true,
-    width: "180px",
+    width: "160px",
     render: (os) => os.supplier?.name || "-",
   },
   {
     key: "branch",
     label: "Chi nhánh",
     visible: true,
-    width: "150px",
+    width: "130px",
     render: (os) => os.branch?.name || "-",
   },
   {
@@ -144,34 +212,41 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplier>[] = [
     label: "Tổng tiền hàng",
     visible: true,
     width: "150px",
-    render: (os) => formatCurrency(os.total),
+    render: (os) => {
+      // NCC nước ngoài: hiển thị CNY chính + VND phụ
+      if (os.currency === "CNY") {
+        const { totalCNY } = computeImportAmounts(os);
+        return <ImportAmountCell primaryCNY={totalCNY} vnd={os.total} />;
+      }
+      return formatCurrency(os.total);
+    },
   },
   {
     key: "orderBy",
     label: "Người đặt",
     visible: false,
-    width: "150px",
+    width: "130px",
     render: (os) => os.user?.name || "-",
   },
   {
     key: "creator",
     label: "Người tạo",
     visible: true,
-    width: "150px",
+    width: "130px",
     render: (os) => os.creator?.name || "-",
   },
   {
     key: "totalQuantity",
     label: "Tổng số lượng",
     visible: false,
-    width: "150px",
+    width: "120px",
     render: (os) => String(os.totalQty ?? "-"),
   },
   {
     key: "productQty",
     label: "Số mặt hàng",
     visible: false,
-    width: "150px",
+    width: "120px",
     render: (os) => String(os.productQty ?? "-"),
   },
   {
@@ -186,20 +261,41 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplier>[] = [
     label: "Cần trả NCC",
     visible: true,
     width: "150px",
-    render: (os) => formatCurrency(os.supplierDebt),
+    render: (os) => {
+      // NCC nước ngoài: hiển thị CNY chính + VND phụ
+      if (os.currency === "CNY") {
+        const { supplierDebtCNY } = computeImportAmounts(os);
+        return (
+          <ImportAmountCell
+            primaryCNY={supplierDebtCNY}
+            vnd={os.supplierDebt}
+          />
+        );
+      }
+      return formatCurrency(os.supplierDebt);
+    },
   },
   {
     key: "paidAmount",
     label: "Đã trả NCC",
     visible: true,
     width: "150px",
-    render: (os) => formatCurrency(os.paidAmount),
+    render: (os) => {
+      // NCC nước ngoài: hiển thị CNY chính + VND phụ
+      if (os.currency === "CNY") {
+        const { paidAmountCNY } = computeImportAmounts(os);
+        return (
+          <ImportAmountCell primaryCNY={paidAmountCNY} vnd={os.paidAmount} />
+        );
+      }
+      return formatCurrency(os.paidAmount);
+    },
   },
   {
     key: "status",
     label: "Trạng thái",
     visible: true,
-    width: "170px",
+    width: "130px",
     render: (os) => (
       <span
         className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -340,7 +436,7 @@ export function OrderSuppliersTable({
 
         {/* ── Table ── */}
         <div className="flex-1 overflow-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ minWidth: "max-content" }}>
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-2.5 text-left w-10 sticky left-0 bg-gray-50">
@@ -354,14 +450,28 @@ export function OrderSuppliersTable({
                     className="cursor-pointer"
                   />
                 </th>
-                {visibleColumns.map((col) => (
-                  <th
-                    key={col.key}
-                    className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide"
-                    style={{ width: col.width, minWidth: col.width }}>
-                    {col.label}
-                  </th>
-                ))}
+                {visibleColumns.map((col) => {
+                  // Cột tiền tệ (3 cột Tổng tiền hàng / Cần trả NCC / Đã trả
+                  // NCC) chứa CNY + VND phụ 2 dòng cho NCC nước ngoài.
+                  // Header canh phải cho khớp với cell để mắt không bị lệch.
+                  // Cell align-top để các hàng 1-dòng (NCC nội địa) có text
+                  // dính lên đầu, các hàng 2-dòng (NCC ngoài) text cũng
+                  // dính lên → không bị "nhảy" giữa các hàng.
+                  const isMoneyColumn =
+                    col.key === "total" ||
+                    col.key === "subTotal" ||
+                    col.key === "paidAmount";
+                  return (
+                    <th
+                      key={col.key}
+                      className={`px-4 py-2.5 ${
+                        isMoneyColumn ? "text-right" : "text-left"
+                      } font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide`}
+                      style={{ width: col.width, minWidth: col.width, maxWidth: col.width }}>
+                      {col.label}
+                    </th>
+                  );
+                })}
                 <th className="px-4 py-2.5 w-8" />
               </tr>
             </thead>
@@ -409,24 +519,34 @@ export function OrderSuppliersTable({
                           className="cursor-pointer"
                         />
                       </td>
-                      {visibleColumns.map((col) => (
-                        <td
-                          key={col.key}
-                          className={`px-4 py-2.5 ${
-                            expandedId === os.id
-                              ? "border-t-2 border-brand"
-                              : ""
-                          }`}
-                          style={{
-                            width: col.width,
-                            minWidth: col.width,
-                            maxWidth: col.width,
-                            wordWrap: "break-word",
-                            whiteSpace: "normal",
-                          }}>
-                          {col.render(os)}
-                        </td>
-                      ))}
+                      {visibleColumns.map((col) => {
+                        const isMoneyColumn =
+                          col.key === "total" ||
+                          col.key === "subTotal" ||
+                          col.key === "paidAmount";
+                        return (
+                          <td
+                            key={col.key}
+                            className={`px-4 py-2.5 ${
+                              isMoneyColumn
+                                ? "align-top text-right"
+                                : "align-middle"
+                            } ${
+                              expandedId === os.id
+                                ? "border-t-2 border-brand"
+                                : ""
+                            }`}
+                            style={{
+                              width: col.width,
+                              minWidth: col.width,
+                              maxWidth: col.width,
+                              wordWrap: "break-word",
+                              whiteSpace: "normal",
+                            }}>
+                            {col.render(os)}
+                          </td>
+                        );
+                      })}
                       <td
                         className={`px-4 py-2.5 ${
                           expandedId === os.id

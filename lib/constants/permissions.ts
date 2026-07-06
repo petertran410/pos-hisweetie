@@ -11,6 +11,9 @@ export const RESOURCE_LABELS: Record<string, string> = {
   orders: "Đơn hàng",
   invoices: "Hóa đơn",
   vat_invoices: "Hóa đơn VAT",
+  promotions: "Khuyến mãi",
+  contracts: "Hợp đồng",
+  vehicle_shipments: "Ghép xe",
   customers: "Khách hàng",
   customer_groups: "Nhóm khách hàng",
   suppliers: "Nhà cung cấp",
@@ -62,11 +65,14 @@ export const ACTION_LABELS: Record<string, string> = {
   push: "Đẩy Misa",
   import: "Nhập dữ liệu",
   export: "Xuất dữ liệu",
+  download: "Tải xuống",
+  send: "Gửi",
   approve: "Duyệt",
   cancel: "Hủy",
   confirm_export: "Xác nhận xuất kho",
   confirm_refund: "Xác nhận hoàn tiền",
   print: "In",
+  report_delivered: "Báo đơn (Giao thành công)",
   sales: "Báo cáo bán hàng",
   inventory: "Báo cáo tồn kho",
   financial: "Xem báo cáo tài chính",
@@ -307,9 +313,12 @@ export function getPermGroupKey(resource: string, action: string): string | null
   return REPORT_ACTION_TO_SUBGROUP[action] || "reports";
 }
 
-/** Nhãn header nhóm con. Report subgroup → tiếng Việt; khác → giữ nguyên key. */
+/** Nhãn header nhóm con. Report subgroup → tiếng Việt; resource thường → tra
+ * RESOURCE_LABELS; không có thì mới giữ nguyên key. */
 export function getPermGroupLabel(groupKey: string): string {
-  return REPORT_SUBGROUP_LABELS[groupKey] || groupKey;
+  return (
+    REPORT_SUBGROUP_LABELS[groupKey] || RESOURCE_LABELS[groupKey] || groupKey
+  );
 }
 
 /** Nhãn lá trong cây. Report → nhãn ngắn; khác → giữ hành vi cũ. */

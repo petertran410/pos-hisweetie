@@ -32,6 +32,10 @@ export interface ProductQueryParams {
   onlyInPriceBook?: boolean;
   orderBy?: string;
   orderDirection?: "asc" | "desc";
+  // Filter theo nhà máy / NCC (mới)
+  supplierId?: number;
+  factoryId?: number;
+  factoryRelation?: "primary" | "backup" | "either";
 }
 
 export interface Inventory {
@@ -118,6 +122,23 @@ export interface Product {
   publicationLocation?: ProductPublicationLocation;
   publicationDate?: string;
   publicationLink?: string;
+  // Nhà máy chính / backup (mới)
+  primaryFactoryId?: number | null;
+  backupFactoryId?: number | null;
+  primaryFactory?: {
+    id: number;
+    code?: string | null;
+    name: string;
+    country?: string | null;
+    currency?: string | null;
+  } | null;
+  backupFactory?: {
+    id: number;
+    code?: string | null;
+    name: string;
+    country?: string | null;
+    currency?: string | null;
+  } | null;
 }
 
 export interface ProductsResponse {

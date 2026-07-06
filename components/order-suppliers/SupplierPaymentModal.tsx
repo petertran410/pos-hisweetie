@@ -21,7 +21,6 @@ interface SupplierPaymentModalProps {
   isImportMode?: boolean;
   /**
    * Tổng cần trả bằng ngoại tệ (hiện tại CNY), dùng khi isImportMode=true.
-   * Modal vẫn nhập số tiền VND, nhưng phần tổng kết dưới sẽ hiển thị theo CNY.
    */
   foreignTotalAmount?: number;
   /**
@@ -29,6 +28,11 @@ interface SupplierPaymentModalProps {
    * tính). User bắt buộc phải nhập lại tỉ giá thực tế tại thời điểm trả.
    */
   defaultExchangeRate?: number;
+  /**
+   * Tiền tệ của phiếu — dùng để xác định mode nhập tiền trong modal.
+   * Khi là "CNY": user nhập CNY trực tiếp, modal convert → VND cho onConfirm.
+   */
+  currency?: "VND" | "CNY";
   onConfirm: (
     amount: number,
     method: "cash" | "transfer" | "card",
@@ -67,6 +71,7 @@ export function SupplierPaymentModal({
   isImportMode = false,
   foreignTotalAmount,
   defaultExchangeRate,
+  currency = "VND",
   onConfirm,
 }: SupplierPaymentModalProps) {
   const needToPay = totalAmount - previouslyPaid;
@@ -126,6 +131,10 @@ export function SupplierPaymentModal({
 
   if (!isOpen || !mounted) return null;
 
+  // Khi currency === "CNY": user nhập CNY trực tiếp. Modal convert → VND
+  // cho onConfirm (CashFlow lưu amount bằng VND).
+  const isCNYMode = currency === "CNY";
+
   const handleAmountChange = (value: string) => {
     setAmount(formatNumberInput(value));
   };
@@ -149,25 +158,38 @@ export function SupplierPaymentModal({
       : defaultExchangeRate && defaultExchangeRate > 0
       ? defaultExchangeRate
       : 0;
-  const foreignPreview = effectiveRate > 0 ? parsedAmount / effectiveRate : 0;
 
-  // Khi NCC nước ngoài, phần tổng kết dưới modal hiển thị theo ngoại tệ
-  // (CNY), dù ô thanh toán vẫn nhập bằng VND.
+  // Khi CNY mode: amount = CNY → VND = amount × rate.
+  // Khi VND mode: amount = VND (giữ nguyên).
+  const amountVND = isCNYMode && effectiveRate > 0
+    ? parsedAmount * effectiveRate
+    : parsedAmount;
+  const foreignPreview = isCNYMode && effectiveRate > 0
+    ? parsedAmount
+    : 0;
+
+  // Khi NCC nước ngoài, phần tổng kết dưới modal hiển thị theo CNY.
+  // CNY mode: foreignTotalAmount đã là CNY (từ calculateTotalCNY).
+  // VND mode: quy đổi tổng VND → CNY qua effectiveRate.
   const foreignTotal =
-    isImportMode && foreignTotalAmount != null
+    isCNYMode && foreignTotalAmount != null
       ? foreignTotalAmount
       : isImportMode && effectiveRate > 0
         ? totalAmount / effectiveRate
         : 0;
   const foreignPreviouslyPaid =
-    isImportMode && effectiveRate > 0 ? previouslyPaid / effectiveRate : 0;
+    isCNYMode && effectiveRate > 0 && foreignTotalAmount != null
+      ? (previouslyPaid / effectiveRate)
+      : isImportMode && effectiveRate > 0
+        ? previouslyPaid / effectiveRate
+        : 0;
   const foreignNeedToPay = Math.max(0, foreignTotal - foreignPreviouslyPaid);
-  const foreignRemaining = Math.max(0, foreignNeedToPay - foreignPreview);
+  const foreignRemaining = Math.max(0, foreignNeedToPay - parsedAmount);
 
   // Chỉ hiện preview khi NCC nước ngoài.
-  const showForeignPreview = isImportMode && effectiveRate > 0;
+  const showForeignPreview = isCNYMode && effectiveRate > 0;
 
-  const remaining = needToPay - parsedAmount;
+  const remaining = needToPay - amountVND;
 
   const handleConfirm = () => {
     if (parsedAmount <= 0) {
@@ -181,23 +203,30 @@ export function SupplierPaymentModal({
 
     let rate: number | undefined;
     let foreign: number | undefined;
-    if (isImportMode) {
-      // Tỉ giá bắt buộc nhập khi NCC nước ngoài (F4).
+    if (isCNYMode) {
+      // CNY mode: user nhập CNY, convert → VND. Tỉ giá bắt buộc nhập.
       if (parsedRate <= 0) {
         alert("Vui lòng nhập tỉ giá quy đổi");
         return;
       }
       rate = parsedRate;
-      foreign = parsedAmount / parsedRate;
+      foreign = parsedAmount; // CNY amount đã nhập
+      onConfirm(
+        amountVND,        // VND để lưu vào CashFlow
+        method,
+        selectedAccountId ?? undefined,
+        rate,
+        foreign           // CNY để lưu vào OrderSupplierPayment.foreignAmount
+      );
+    } else {
+      onConfirm(
+        amountVND,
+        method,
+        selectedAccountId ?? undefined,
+        undefined,
+        undefined
+      );
     }
-
-    onConfirm(
-      parsedAmount,
-      method,
-      selectedAccountId ?? undefined,
-      rate,
-      foreign
-    );
     onClose();
   };
 
@@ -216,13 +245,13 @@ export function SupplierPaymentModal({
         <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Thanh toán
+              Thanh toán{currency === "CNY" ? ` (${currency})` : ""}
             </label>
             <input
               type="text"
               value={amount}
               onChange={(e) => handleAmountChange(e.target.value)}
-              placeholder="Nhập số tiền"
+              placeholder={isCNYMode ? "0.00" : "Nhập số tiền"}
               className="w-full text-right text-2xl font-semibold border-2 border-brand rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
@@ -322,8 +351,8 @@ export function SupplierPaymentModal({
             </div>
           )}
 
-          {/* Block Quy đổi — chỉ hiện khi NCC nước ngoài (F4: bắt buộc nhập). */}
-          {isImportMode && (
+          {/* Block Quy đổi — chỉ hiện khi currency = CNY. Tỉ giá bắt buộc nhập. */}
+          {isCNYMode && (
             <div className="border border-brand/30 rounded-lg p-3 bg-brand/5 space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-600 whitespace-nowrap">
@@ -363,7 +392,7 @@ export function SupplierPaymentModal({
             <div className="flex justify-between text-base">
               <span className="text-gray-600">Cần trả nhà cung cấp</span>
               <span className="font-semibold text-brand">
-                {isImportMode
+                {isCNYMode
                   ? new Intl.NumberFormat("vi-VN", {
                       maximumFractionDigits: 2,
                     }).format(foreignNeedToPay) + " CNY"
@@ -373,7 +402,7 @@ export function SupplierPaymentModal({
             <div className="flex justify-between text-base">
               <span className="text-gray-600">Còn nợ</span>
               <span className="font-semibold text-red-600">
-                {isImportMode
+                {isCNYMode
                   ? new Intl.NumberFormat("vi-VN", {
                       maximumFractionDigits: 2,
                     }).format(foreignRemaining) + " CNY"

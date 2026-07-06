@@ -752,13 +752,6 @@ export function PurchaseOrderDetailRow({
                             </span>
                           </div>
 
-                          {isImport && (
-                            <div className="flex justify-between items-center text-xs text-gray-500 pt-1">
-                              <span>Quy đổi VND:</span>
-                              <span>{formatCurrency(purchaseOrder.totalAmount)}</span>
-                            </div>
-                          )}
-
                           <div className="flex justify-between items-center text-sm pt-2 border-t border-gray-200">
                             <span className="text-gray-600">
                               {isImport ? "Đã trả NCC (CNY):" : "Đã trả NCC:"}
@@ -777,13 +770,6 @@ export function PurchaseOrderDetailRow({
                             </span>
                           </div>
 
-                          {isImport && (
-                            <div className="flex justify-between items-center text-xs text-gray-500 pt-1">
-                              <span>Đã trả (VND):</span>
-                              <span>{formatCurrency(purchaseOrder.paidAmount)}</span>
-                            </div>
-                          )}
-
                           <div className="flex justify-between items-center border-t-2 border-red-200 pt-2">
                             <span className="text-base font-bold text-gray-900">
                               {isImport ? "Cần trả NCC (CNY):" : "Cần trả NCC:"}
@@ -801,13 +787,6 @@ export function PurchaseOrderDetailRow({
                               )}
                             </span>
                           </div>
-
-                          {isImport && (
-                            <div className="flex justify-between items-center text-xs text-gray-500 pt-1">
-                              <span>Còn nợ (VND):</span>
-                              <span>{formatCurrency(purchaseOrder.debtAmount)}</span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}
@@ -928,17 +907,9 @@ export function PurchaseOrderDetailRow({
                                   {canViewPrice && (
                                     <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
                                       {isImport && payment.foreignAmount != null ? (
-                                        <>
-                                          <span>
-                                            {new Intl.NumberFormat("vi-VN", {
-                                              maximumFractionDigits: 2,
-                                            }).format(payment.foreignAmount)}{" "}
-                                            CNY
-                                          </span>
-                                          <span className="block text-xs text-gray-500 font-normal">
-                                            ({formatCurrency(payment.amount)})
-                                          </span>
-                                        </>
+                                        new Intl.NumberFormat("vi-VN", {
+                                          maximumFractionDigits: 2,
+                                        }).format(payment.foreignAmount) + " CNY"
                                       ) : (
                                         formatCurrency(payment.amount)
                                       )}

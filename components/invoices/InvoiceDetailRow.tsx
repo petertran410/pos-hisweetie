@@ -67,6 +67,9 @@ export function InvoiceDetailRow({
   const hasPermCancel = useCan("invoices", "cancel");
   const hasPermUpdate = useCan("invoices", "update");
   const hasPermPrint = useCan("invoices", "print");
+  // Quyền riêng: chỉ quyết định việc HIỂN THỊ nút "Đã Báo Đơn"
+  // (không phải quyền cập nhật hóa đơn).
+  const hasPermReportDelivered = useCan("invoices", "report_delivered");
   const isAdmin = useIsAdmin();
 
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -241,6 +244,60 @@ export function InvoiceDetailRow({
     router.push(`/ban-hang?invoiceId=${invoice.id}&from=hoa-don`);
   };
 
+  const handleComplete = async () => {
+    if (!invoice) return;
+    const result = await Swal.fire({
+      title: "Kết thúc hóa đơn",
+      text: `Bạn có chắc chắn muốn chuyển hóa đơn ${invoice.code} sang Hoàn thành?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Xác nhận",
+      cancelButtonText: "Hủy bỏ",
+      confirmButtonColor: "#16a34a",
+      cancelButtonColor: "#6b7280",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      setIsSaving(true);
+      await updateInvoice.mutateAsync({
+        id: invoice.id,
+        data: { status: INVOICE_STATUS.COMPLETED },
+      });
+      toast.success("Đã chuyển hóa đơn sang Hoàn thành");
+    } catch {
+      toast.error("Không thể kết thúc hóa đơn");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleMarkDelivered = async () => {
+    if (!invoice) return;
+    const result = await Swal.fire({
+      title: "Đã báo đơn",
+      text: `Bạn có chắc chắn muốn chuyển hóa đơn ${invoice.code} sang Giao thành công?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Xác nhận",
+      cancelButtonText: "Hủy bỏ",
+      confirmButtonColor: "#0d9488",
+      cancelButtonColor: "#6b7280",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      setIsSaving(true);
+      await updateInvoice.mutateAsync({
+        id: invoice.id,
+        data: { status: INVOICE_STATUS.DELIVERED },
+      });
+      toast.success("Đã chuyển hóa đơn sang Giao thành công");
+    } catch {
+      toast.error("Không thể cập nhật trạng thái hóa đơn");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleCopy = () => {
     if (!invoice) return;
     router.push(`/ban-hang?copyInvoiceId=${invoice.id}`);
@@ -277,6 +334,19 @@ export function InvoiceDetailRow({
   // Admin/Super Admin được bỏ qua điều kiện ẩn theo trạng thái hóa đơn
   const canCancel = !isFinalState || isAdmin;
   const canProcess = !isFinalState || isAdmin;
+
+  // Nút "Đã Báo Đơn":
+  // - User: chỉ thấy khi hóa đơn CHƯA giao thành công.
+  // - Admin: luôn thấy (kể cả đã Giao thành công / Hoàn thành / Hủy).
+  const canReportDelivered =
+    isAdmin || invoice.status !== INVOICE_STATUS.DELIVERED;
+
+  // Nút "Kết thúc" chỉ ẩn khi hóa đơn đã Hoàn thành hoặc Đã hủy.
+  // KHÔNG ẩn khi mới ở DELIVERED (Giao thành công) — vì sau khi "Đã Báo Đơn"
+  // vẫn cần "Kết thúc" để chuyển sang Hoàn thành.
+  const hideCompleteButton =
+    invoice.status === INVOICE_STATUS.COMPLETED ||
+    invoice.status === INVOICE_STATUS.CANCELLED;
 
   const getConditionLabel = (conditionType?: string) => {
     switch (conditionType) {
@@ -734,6 +804,21 @@ export function InvoiceDetailRow({
                     hidden={!hasPermUpdate}
                     className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {isSaving ? "Đang lưu..." : "Lưu"}
+                  </button>
+                  {canReportDelivered && hasPermReportDelivered && (
+                    <button
+                      onClick={handleMarkDelivered}
+                      disabled={isSaving}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-teal-600 rounded-full hover:bg-teal-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                      Đã Báo Đơn
+                    </button>
+                  )}
+                  <button
+                    onClick={handleComplete}
+                    disabled={isSaving}
+                    hidden={hideCompleteButton}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    Kết thúc
                   </button>
                   <button
                     onClick={handlePrint}

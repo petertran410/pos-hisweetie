@@ -227,8 +227,10 @@ export function PurchaseOrderForm({
   const [discountRatio, setDiscountRatio] = useState<number>(
     purchaseOrder?.discountRatio || copyFrom?.discountRatio || 0
   );
-  const [discountType, setDiscountType] = useState<"amount" | "ratio">(
-    "amount"
+  const [discountType, setDiscountType] = useState<"amount" | "ratio" | "cny">(
+    (purchaseOrder?.currency || orderSupplier?.currency || copyFrom?.currency) === "CNY"
+      ? "ratio"
+      : "amount"
   );
   const [currency, setCurrency] = useState<"VND" | "CNY">(
     (purchaseOrder?.currency || orderSupplier?.currency || copyFrom?.currency) as "VND" | "CNY" || DEFAULT_CURRENCY
@@ -300,6 +302,11 @@ export function PurchaseOrderForm({
       ) ?? false
     );
   }, [selectedSupplier]);
+
+  // Dùng currency === "CNY" cho tầng hiển thị tiền tệ (sidebar/modal), để
+  // phiếu cũ mở lại vẫn nhận đúng CNY. isImportSupplier chỉ dùng cho cột
+  // bảng NM/¥ và logic ghi giá vốn.
+  const isCurrencyCNY = currency === "CNY";
 
   const liveRateQuery = useExchangeRate("CNY", "VND");
   const effectiveRate = useMemo(() => {
@@ -869,9 +876,11 @@ export function PurchaseOrderForm({
       0
     );
     const discountAmountCNY =
-      discountType === "amount"
-        ? discount / (effectiveRate || 1)
-        : (factorySubTotalSum * discountRatio) / 100;
+      discountType === "ratio"
+        ? (factorySubTotalSum * discountRatio) / 100
+        : discountType === "cny"
+          ? discount / (effectiveRate || 1)
+          : discount / (effectiveRate || 1);
     return factorySubTotalSum - discountAmountCNY;
   };
 
@@ -941,7 +950,12 @@ export function PurchaseOrderForm({
         branchId,
         isDraft: asDraft,
         description: note,
-        discount: discountType === "amount" ? Number(discount) || 0 : 0,
+        discount:
+          discountType === "amount"
+            ? Number(discount) || 0
+            : discountType === "cny"
+              ? (Number(discount) || 0) * (effectiveRate || 1)
+              : 0,
         discountRatio:
           discountType === "ratio" ? Number(discountRatio) || 0 : 0,
         items: products.map((p, index) => ({
@@ -993,7 +1007,12 @@ export function PurchaseOrderForm({
       branchId,
       isDraft: asDraft,
       description: note,
-      discount: discountType === "amount" ? Number(discount) || 0 : 0,
+      discount:
+        discountType === "amount"
+          ? Number(discount) || 0
+          : discountType === "cny"
+            ? (Number(discount) || 0) * (effectiveRate || 1)
+            : 0,
       discountRatio: discountType === "ratio" ? Number(discountRatio) || 0 : 0,
       currency,
       exchangeRate,
@@ -1627,7 +1646,7 @@ export function PurchaseOrderForm({
           <div className="border-t my-3"></div>
 
           <div className="flex flex-col gap-2">
-            {isImportSupplier ? (
+            {isCurrencyCNY ? (
               <>
                 <div className="flex gap-2">
                   <div className="text-sm text-gray-600">Tổng tiền hàng ({currency}):</div>
@@ -1664,15 +1683,6 @@ export function PurchaseOrderForm({
                       />
                     </button>
                   )}
-                </div>
-
-                <div className="flex gap-2">
-                  <div className="text-sm text-gray-600">Quy đổi VND:</div>
-                  <div className="text-sm">
-                    {formatCurrency(
-                      products.reduce((sum, p) => sum + p.subTotal, 0)
-                    )}
-                  </div>
                 </div>
               </>
             ) : (
@@ -1731,7 +1741,11 @@ export function PurchaseOrderForm({
                   value={
                     discountType === "amount"
                       ? formatCurrency(discount)
-                      : discountRatio
+                      : discountType === "cny"
+                        ? new Intl.NumberFormat("vi-VN", {
+                            maximumFractionDigits: 2,
+                          }).format(discount)
+                        : discountRatio
                   }
                   onChange={(e) => {
                     if (discountType === "amount") {
@@ -1746,6 +1760,9 @@ export function PurchaseOrderForm({
                         setDiscount(availableDiscount);
                         return;
                       }
+                      setDiscount(value);
+                    } else if (discountType === "cny") {
+                      const value = parseFormattedNumber(e.target.value);
                       setDiscount(value);
                     } else {
                       const value = parseFloat(e.target.value) || 0;
@@ -1772,14 +1789,23 @@ export function PurchaseOrderForm({
                 <select
                   value={discountType}
                   onChange={(e) => {
-                    setDiscountType(e.target.value as "amount" | "ratio");
+                    setDiscountType(e.target.value as "amount" | "ratio" | "cny");
                     setDiscount(0);
                     setDiscountRatio(0);
                   }}
                   disabled={isFormDisabled ? true : false}
                   className="w-16 text-sm border rounded disabled:bg-gray-100">
-                  <option value="amount">VND</option>
-                  <option value="ratio">%</option>
+                  {isCurrencyCNY ? (
+                    <>
+                      <option value="cny">CNY</option>
+                      <option value="ratio">%</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="amount">VND</option>
+                      <option value="ratio">%</option>
+                    </>
+                  )}
                 </select>
               </div>
             </div>
@@ -1789,8 +1815,8 @@ export function PurchaseOrderForm({
             <div className="block text-sm text-gray-600 mb-1">
               Cần trả nhà cung cấp:
             </div>
-            <div className={isImportSupplier ? "text-brand text-sm" : "text-sm"}>
-              {isImportSupplier
+            <div className={isCurrencyCNY ? "text-brand text-sm" : "text-sm"}>
+              {isCurrencyCNY
                 ? new Intl.NumberFormat("vi-VN", {
                     maximumFractionDigits: 2,
                   }).format(
@@ -1814,7 +1840,7 @@ export function PurchaseOrderForm({
                     : "Đã thanh toán ở phiếu đặt hàng:"}
                 </div>
                 <div className="text-sm font-medium text-green-600">
-                  {isImportSupplier
+                  {isCurrencyCNY
                     ? new Intl.NumberFormat("vi-VN", {
                         maximumFractionDigits: 2,
                       }).format(previouslyPaidCNY) + ` ${currency}`
@@ -1826,7 +1852,7 @@ export function PurchaseOrderForm({
                   Còn cần trả thêm:
                 </div>
                 <div className="text-sm font-semibold">
-                  {isImportSupplier
+                  {isCurrencyCNY
                     ? new Intl.NumberFormat("vi-VN", {
                         maximumFractionDigits: 2,
                       }).format(
@@ -1848,11 +1874,13 @@ export function PurchaseOrderForm({
             </div>
             <div className="flex gap-2 items-center">
               <div>
-                {isImportSupplier && paymentAmount > 0 && paymentForeignAmount != null
+                {isCurrencyCNY && paymentAmount > 0 && paymentForeignAmount != null
                   ? new Intl.NumberFormat("vi-VN", {
                       maximumFractionDigits: 2,
                     }).format(paymentForeignAmount) + ` ${currency}`
-                  : formatCurrency(paymentAmount)}
+                  : !isCurrencyCNY
+                    ? formatCurrency(paymentAmount)
+                    : "—"}
               </div>
               <button
                 onClick={() => setShowPaymentModal(true)}
@@ -1875,7 +1903,7 @@ export function PurchaseOrderForm({
               Tiền nhà cung cấp trả lại:
             </label>
             <div className="">
-              {isImportSupplier
+              {isCurrencyCNY
                 ? new Intl.NumberFormat("vi-VN", {
                     maximumFractionDigits: 2,
                   }).format(
@@ -1927,9 +1955,10 @@ export function PurchaseOrderForm({
         onClose={() => setShowPaymentModal(false)}
         totalAmount={calculateTotal()}
         previouslyPaid={previouslyPaid}
-        isImportMode={isImportSupplier}
-        foreignTotalAmount={isImportSupplier ? calculateTotalCNY() : undefined}
+        isImportMode={isCurrencyCNY}
+        foreignTotalAmount={isCurrencyCNY ? calculateTotalCNY() : undefined}
         defaultExchangeRate={effectiveRate}
+        currency={currency}
         onConfirm={handlePaymentConfirm}
       />
     </div>

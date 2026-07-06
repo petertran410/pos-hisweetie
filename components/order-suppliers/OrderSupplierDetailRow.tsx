@@ -92,6 +92,43 @@ const getPurchaseOrderStatusLabel = (status: number) => {
   }
 };
 
+// Format số CNY (làm tròn 2 chữ số thập phân)
+const formatCNY = (value: number) =>
+  new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 2,
+  }).format(value) + " CNY";
+
+// Ô hiển thị CNY chính + VND phụ (text-xs xám bên dưới) theo Option A.
+// Dùng cho info grid và tab payment của PDN NCC nước ngoài.
+// VND luôn hiển thị giá trị tuyệt đối (BE có thể trả số âm).
+function ImportAmountInline({
+  primaryCNY,
+  vnd,
+  className,
+  vndLabel,
+}: {
+  primaryCNY: number;
+  vnd: number | null;
+  className?: string;
+  vndLabel?: string;
+}) {
+  return (
+    <span
+      className={`inline-flex flex-col items-end leading-tight ${
+        className ?? ""
+      }`}>
+      <span className="font-medium whitespace-nowrap">
+        {formatCNY(primaryCNY)}
+      </span>
+      {vnd != null && (
+        <span className="text-xs text-gray-400 whitespace-nowrap">
+          {vndLabel ?? "(~" + formatCurrency(Math.abs(vnd)) + ")"}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function OrderSupplierDetailRow({
   orderSupplierId,
   colSpan,
@@ -209,7 +246,8 @@ export function OrderSupplierDetailRow({
   const totalCNY = useMemo(() => {
     if (!isImport) return 0;
     return (orderSupplier?.items || []).reduce(
-      (sum: number, item: any) => sum + (Number(item.factorySubTotal) || 0),
+      (sum: number, item: any) =>
+        sum + (Math.abs(Number(item.factorySubTotal)) || 0),
       0
     );
   }, [orderSupplier, isImport]);
@@ -217,13 +255,13 @@ export function OrderSupplierDetailRow({
   const paidAmountCNY = useMemo(() => {
     if (!isImport) return 0;
     const sumForeign = (payments || []).reduce(
-      (sum: number, p: any) => sum + (Number(p.foreignAmount) || 0),
+      (sum: number, p: any) => sum + (Math.abs(Number(p.foreignAmount)) || 0),
       0
     );
     if (sumForeign > 0) return sumForeign;
     // Fallback for legacy
     const rate = Number(orderSupplier?.exchangeRate) || 1;
-    return Number(orderSupplier?.paidAmount || 0) / rate;
+    return Math.abs(Number(orderSupplier?.paidAmount || 0)) / rate;
   }, [payments, orderSupplier, isImport]);
 
   const discountCNY = useMemo(() => {
@@ -232,7 +270,7 @@ export function OrderSupplierDetailRow({
       return (totalCNY * orderSupplier.discountRatio) / 100;
     }
     const rate = Number(orderSupplier?.exchangeRate) || 1;
-    return Number(orderSupplier?.discount || 0) / rate;
+    return Math.abs(Number(orderSupplier?.discount || 0)) / rate;
   }, [orderSupplier, totalCNY, isImport]);
 
   const supplierDebtCNY = useMemo(() => {
@@ -442,17 +480,10 @@ export function OrderSupplierDetailRow({
                             </label>
                             <span className="text-sm text-gray-900 font-medium">
                               {isImport ? (
-                                <>
-                                  <span>
-                                    {new Intl.NumberFormat("vi-VN", {
-                                      maximumFractionDigits: 2,
-                                    }).format(totalCNY)}{" "}
-                                    CNY
-                                  </span>
-                                  <span className="block text-xs text-gray-400 font-normal">
-                                    ({formatCurrency(orderSupplier.total)})
-                                  </span>
-                                </>
+                                <ImportAmountInline
+                                  primaryCNY={totalCNY}
+                                  vnd={orderSupplier.total}
+                                />
                               ) : (
                                 formatCurrency(orderSupplier.total)
                               )}
@@ -464,17 +495,10 @@ export function OrderSupplierDetailRow({
                             </label>
                             <span className="text-sm text-brand font-medium">
                               {isImport ? (
-                                <>
-                                  <span>
-                                    {new Intl.NumberFormat("vi-VN", {
-                                      maximumFractionDigits: 2,
-                                    }).format(supplierDebtCNY)}{" "}
-                                    CNY
-                                  </span>
-                                  <span className="block text-xs text-gray-400 font-normal">
-                                    ({formatCurrency(orderSupplier.supplierDebt)})
-                                  </span>
-                                </>
+                                <ImportAmountInline
+                                  primaryCNY={supplierDebtCNY}
+                                  vnd={orderSupplier.supplierDebt}
+                                />
                               ) : (
                                 formatCurrency(orderSupplier.supplierDebt)
                               )}
@@ -654,16 +678,50 @@ export function OrderSupplierDetailRow({
                                     {canViewFactoryPrice && (
                                       <>
                                         <td className="px-3 py-2 text-right text-sm text-gray-700">
-                                          {item.factoryPrice == null
-                                            ? "-"
-                                            : formatCurrency(item.factoryPrice)}
+                                          {item.factoryPrice == null ? (
+                                            "-"
+                                          ) : isImport ? (
+                                            // NCC nước ngoài: BE lưu factoryPrice
+                                            // là VND (đã nhân exchangeRate sẵn).
+                                            // Ta CHIA ngược lại để ra CNY gốc,
+                                            // VND phụ giữ nguyên BE trả.
+                                            <ImportAmountInline
+                                              primaryCNY={Math.round(
+                                                Math.abs(
+                                                  Number(item.factoryPrice)
+                                                ) /
+                                                  (Number(
+                                                    orderSupplier.exchangeRate
+                                                  ) || 1)
+                                              )}
+                                              vnd={Math.abs(
+                                                Number(item.factoryPrice)
+                                              )}
+                                            />
+                                          ) : (
+                                            formatCurrency(item.factoryPrice)
+                                          )}
                                         </td>
                                         <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
-                                          {item.factorySubTotal == null
-                                            ? "-"
-                                            : formatCurrency(
-                                                item.factorySubTotal
+                                          {item.factorySubTotal == null ? (
+                                            "-"
+                                          ) : isImport ? (
+                                            <ImportAmountInline
+                                              primaryCNY={Math.round(
+                                                Math.abs(
+                                                  Number(item.factorySubTotal)
+                                                ) /
+                                                  (Number(
+                                                    orderSupplier.exchangeRate
+                                                  ) || 1)
                                               )}
+                                              vnd={Math.abs(
+                                                Number(item.factorySubTotal)
+                                              )}
+                                            />
+                                          ) : (
+                                            formatCurrency(item.factorySubTotal)
+                                          )}
                                         </td>
                                       </>
                                     )}
@@ -848,17 +906,10 @@ export function OrderSupplierDetailRow({
                                 </td>
                                  <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
                                   {orderSupplier.currency === "CNY" && payment.foreignAmount != null ? (
-                                    <>
-                                      <span>
-                                        {new Intl.NumberFormat("vi-VN", {
-                                          maximumFractionDigits: 2,
-                                        }).format(payment.foreignAmount)}{" "}
-                                        CNY
-                                      </span>
-                                      <span className="block text-xs text-gray-500 font-normal">
-                                        ({formatCurrency(payment.amount)})
-                                      </span>
-                                    </>
+                                    <ImportAmountInline
+                                      primaryCNY={Number(payment.foreignAmount)}
+                                      vnd={Number(payment.amount)}
+                                    />
                                   ) : (
                                     formatCurrency(payment.amount)
                                   )}

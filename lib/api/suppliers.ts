@@ -36,6 +36,14 @@ export const suppliersApi = {
   getDebtTimeline: (supplierId: number) =>
     apiClient.get(`/suppliers/${supplierId}/debt-timeline`),
 
+  /**
+   * Trả về danh sách productId của các sản phẩm có gắn nhà máy (primary
+   * hoặc backup) thuộc NCC này. Nếu mảng rỗng → NCC chưa có nhà máy nào
+   * gắn sản phẩm → search bình thường. Nếu > 0 → filter chặt.
+   */
+  getProductIdsWithFactory: (supplierId: number) =>
+    apiClient.get<number[]>(`/suppliers/${supplierId}/product-ids-with-factory`),
+
   importBalanceAdjustments: (data: { rows: any[] }) =>
     apiClient.post("/suppliers/import-balance-adjustments", data),
 };

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Search, Barcode } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Search, Barcode, Filter } from "lucide-react";
 import { useProducts } from "@/lib/hooks/useProducts";
+import { useSupplierProductIdsWithFactory } from "@/lib/hooks/useSupplierProductIds";
 import { formatCurrency } from "@/lib/utils";
 
 interface ProductPickerDropdownProps {
@@ -10,6 +11,12 @@ interface ProductPickerDropdownProps {
   disabled?: boolean;
   placeholder?: string;
   onAddProduct: (product: any, quantity?: number) => void;
+  /**
+   * Khi chọn NCC có nhà máy trong phiếu đặt hàng nhập, truyền supplierId để
+   * search chỉ trả về sản phẩm đã gắn nhà máy của NCC đó. Nếu NCC không có
+   * sản phẩm gắn nhà máy nào → fallback search toàn bộ (UX cũ).
+   */
+  supplierId?: number;
 }
 
 export function ProductPickerDropdown({
@@ -17,6 +24,7 @@ export function ProductPickerDropdown({
   disabled,
   placeholder = "Tìm sản phẩm theo mã hoặc tên... (F3)",
   onAddProduct,
+  supplierId,
 }: ProductPickerDropdownProps) {
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
@@ -41,7 +49,19 @@ export function ProductPickerDropdown({
     branchId,
     isActive: true,
   }, { silentForbidden: true });
-  const products = productsData?.data || [];
+  const allProducts = productsData?.data || [];
+
+  // Lấy danh sách productId được phép hiển thị (filter chặt khi NCC có nhà máy)
+  const { data: supplierProductIds } = useSupplierProductIdsWithFactory(supplierId);
+  const isStrictFilter = !!supplierId && (supplierProductIds?.length ?? 0) > 0;
+  const allowedIds = useMemo(
+    () => new Set(supplierProductIds ?? []),
+    [supplierProductIds]
+  );
+  const products = useMemo(() => {
+    if (!isStrictFilter) return allProducts;
+    return allProducts.filter((p) => allowedIds.has(p.id));
+  }, [allProducts, isStrictFilter, allowedIds]);
 
   // Debounce search input
   useEffect(() => {
@@ -215,6 +235,13 @@ export function ProductPickerDropdown({
           <Barcode className="w-5 h-5" />
         </button>
 
+        {isStrictFilter && (
+          <div className="absolute -top-7 left-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs border border-amber-200">
+            <Filter className="w-3 h-3" />
+            Chỉ hiển thị {supplierProductIds?.length} sản phẩm có gắn nhà máy của NCC này
+          </div>
+        )}
+
         {showDropdown && products.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-96 overflow-y-auto z-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
             {products.map((product, idx) => {
@@ -280,7 +307,9 @@ export function ProductPickerDropdown({
 
         {showDropdown && search && products.length === 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 px-4 py-3 text-sm text-gray-500 text-center">
-            Không tìm thấy sản phẩm
+            {isStrictFilter
+              ? "Không tìm thấy sản phẩm đã gắn nhà máy của NCC này"
+              : "Không tìm thấy sản phẩm"}
           </div>
         )}
       </div>

@@ -14,6 +14,7 @@ import { TrademarkDropdown } from "./TrademarkDropdown";
 import { MisaItemDropdown } from "./MisaItemDropdown";
 import { MisaInventoryItem } from "@/lib/api/misa";
 import { FormSection } from "./FormSection";
+import { FactoriesDropdown } from "@/components/factories/FactoriesDropdown";
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { API_URL } from "@/lib/config/api";
@@ -74,11 +75,21 @@ export function ProductForm({
     name: product?.misa_name || "",
     unit: product?.misa_unit || "",
   });
+
+  // Liên kết nhà máy chính / backup (mới)
+  const [primaryFactoryId, setPrimaryFactoryId] = useState<number | null>(
+    product?.primaryFactoryId ?? null
+  );
+  const [backupFactoryId, setBackupFactoryId] = useState<number | null>(
+    product?.backupFactoryId ?? null
+  );
   const { selectedBranch } = useBranchStore();
   const canViewCostPrice = usePermission("products", "view_cost_price");
   const canViewSalePrice = usePermission("products", "view_sale_price");
   const canViewPublication = usePermission("products", "view_publication");
   const canLinkMisa = usePermission("products", "link_misa");
+  const canViewFactory = usePermission("products", "view_factory");
+  const canAssignFactory = usePermission("products", "assign_factory");
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const currentBranchInventory = product?.inventories?.find(
@@ -311,6 +322,11 @@ export function ProductForm({
         isPieceUnit: Boolean(data.isPieceUnit),
         isActive: Boolean(data.isActive),
         branchId: selectedBranch?.id,
+        // Nhà máy chính / backup — chỉ gửi khi có quyền assign_factory, tránh
+        // ghi đè (null) lên dữ liệu thật khi user không có quyền chỉnh sửa.
+        ...(canAssignFactory
+          ? { primaryFactoryId, backupFactoryId }
+          : {}),
       };
 
       // Luồng chỉ-công-bố: bỏ hết giá/tồn kho/khối lượng/thuế/đơn vị để
@@ -577,6 +593,46 @@ export function ProductForm({
                 </div>
               </div>
             </FormSection>
+
+            {/* Section: Nhà máy sản xuất (mới) — chỉ hiện khi có quyền view_factory */}
+            {canViewFactory && (
+              <FormSection
+                title="Nhà máy sản xuất"
+                description="Gắn nhà máy chính (thường xuyên gia công) và nhà máy backup (dự phòng khi cần chuyển đổi).">
+                <div className="grid grid-cols-2 gap-4">
+                  <FactoriesDropdown
+                    label="Nhà máy chính"
+                    value={primaryFactoryId}
+                    onChange={setPrimaryFactoryId}
+                    excludeFactoryId={backupFactoryId}
+                    placeholder="— Chưa gắn —"
+                    disabled={!canAssignFactory}
+                  />
+                  <FactoriesDropdown
+                    label="Nhà máy backup"
+                    value={backupFactoryId}
+                    onChange={setBackupFactoryId}
+                    excludeFactoryId={primaryFactoryId}
+                    placeholder="— Chưa gắn —"
+                    disabled={!canAssignFactory}
+                  />
+                </div>
+                {!canAssignFactory && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Bạn chỉ có quyền xem thông tin nhà máy, không thể chỉnh sửa.
+                  </p>
+                )}
+                {canAssignFactory &&
+                  primaryFactoryId != null &&
+                  backupFactoryId != null &&
+                  primaryFactoryId === backupFactoryId && (
+                    <p className="text-xs text-red-600 mt-2">
+                      Không thể chọn cùng 1 nhà máy cho cả chính và backup.
+                    </p>
+                  )}
+              </FormSection>
+            )}
+
 
             {/* Section: Giá vốn, giá bán */}
             {(canViewCostPrice || canViewSalePrice) && (

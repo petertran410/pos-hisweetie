@@ -23,7 +23,7 @@ import {
   useProductionStages,
   useCreateProductionStage,
 } from "@/lib/hooks/useProductionStages";
-import { useFactories, useCreateFactory } from "@/lib/hooks/useFactories";
+import { useFactoriesLegacy, useCreateFactory } from "@/lib/hooks/useFactories";
 import {
   useColumnVisibility,
   type ColumnConfig,
@@ -431,7 +431,7 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
 
   // ── Master data giai đoạn / nhà máy ──
   const { data: productionStages } = useProductionStages();
-  const { data: factories } = useFactories();
+  const factories = useFactoriesLegacy();
   const createProductionStageMut = useCreateProductionStage();
   const createFactoryMut = useCreateFactory();
   const updateStageFactory = useUpdateOrderSupplierItemStageFactory();
