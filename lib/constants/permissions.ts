@@ -54,6 +54,8 @@ export const RESOURCE_LABELS: Record<string, string> = {
   view_factory_price: "Xem giá nhà máy",
   view_stage_factory: "Xem giai đoạn & nhà máy",
   edit_stage_factory: "Sửa giai đoạn & nhà máy",
+  view_factory: "Xem nhà máy",
+  assign_factory: "Gắn nhà máy",
   link_misa: "Liên kết Misa",
 };
 
@@ -117,6 +119,8 @@ export const ACTION_LABELS: Record<string, string> = {
   view_factory_price: "Xem giá nhà máy",
   view_stage_factory: "Xem giai đoạn & nhà máy",
   edit_stage_factory: "Sửa giai đoạn & nhà máy",
+  view_factory: "Xem nhà máy",
+  assign_factory: "Gắn nhà máy",
   link_misa: "Liên kết Misa",
 };
 
