@@ -10,7 +10,8 @@ import {
 } from "@/lib/hooks/useSuppliers";
 import { Supplier } from "@/lib/types/supplier";
 import { useBranchStore } from "@/lib/store/branch";
-import { X, Check, ChevronDown, Search, Loader2 } from "lucide-react";
+import { X, Check, ChevronDown, Search, Loader2, Info } from "lucide-react";
+import { SupplierFactoriesSection } from "./SupplierFactoriesSection";
 
 interface SupplierFormProps {
   supplier?: Supplier;
@@ -396,6 +397,24 @@ export function SupplierForm({ supplier, onClose }: SupplierFormProps) {
                 </div>
               </div>
             </section>
+
+            {/* ── Section: Nhà máy của NCC ── */}
+            {supplier ? (
+              <SupplierFactoriesSection supplierId={supplier.id} />
+            ) : (
+              <section className="border-t border-gray-100 pt-5">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                  Nhà máy của nhà cung cấp
+                </h3>
+                <div className="flex gap-2 items-start bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5">
+                  <Info className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Lưu nhà cung cấp trước, sau đó mở lại để thêm và quản lý các
+                    nhà máy thuộc nhà cung cấp này.
+                  </p>
+                </div>
+              </section>
+            )}
           </div>
 
           {/* ── Footer ── */}

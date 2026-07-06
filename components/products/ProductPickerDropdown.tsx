@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Search, Barcode, Filter } from "lucide-react";
+import { Search, Barcode } from "lucide-react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useSupplierProductIdsWithFactory } from "@/lib/hooks/useSupplierProductIds";
 import { formatCurrency } from "@/lib/utils";
@@ -203,10 +203,9 @@ export function ProductPickerDropdown({
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full flex items-center gap-2">
-      <div className="relative flex-1">
+    <div ref={containerRef} className="relative w-full">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
         <input
           ref={searchInputRef}
@@ -235,15 +234,9 @@ export function ProductPickerDropdown({
           <Barcode className="w-5 h-5" />
         </button>
 
-        {isStrictFilter && (
-          <div className="absolute -top-7 left-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs border border-amber-200">
-            <Filter className="w-3 h-3" />
-            Chỉ hiển thị {supplierProductIds?.length} sản phẩm có gắn nhà máy của NCC này
-          </div>
-        )}
-
         {showDropdown && products.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-96 overflow-y-auto z-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+
             {products.map((product, idx) => {
               const isHighlighted = idx === highlightedIndex;
               const stock = getInventoryQuantity(product);
@@ -314,19 +307,31 @@ export function ProductPickerDropdown({
         )}
       </div>
 
-      {showQuantityInput && (
-        <input
-          ref={quantityInputRef}
-          type="text"
-          inputMode="numeric"
-          value={quantityDisplay}
-          onChange={(e) =>
-            setQuantityDisplay(e.target.value.replace(/[^\d]/g, ""))
-          }
-          onKeyDown={handleQuantityKeyDown}
-          placeholder="SL"
-          className="w-20 px-3 py-2.5 border rounded-lg text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-        />
+        {showQuantityInput && (
+          <input
+            ref={quantityInputRef}
+            type="text"
+            inputMode="numeric"
+            value={quantityDisplay}
+            onChange={(e) =>
+              setQuantityDisplay(e.target.value.replace(/[^\d]/g, ""))
+            }
+            onKeyDown={handleQuantityKeyDown}
+            placeholder="SL"
+            className="w-20 px-3 py-2.5 border rounded-lg text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+          />
+        )}
+      </div>
+
+      {/* Dòng hint nhỏ in nghiêng dưới ô search — đồng bộ style với "Nợ hiện tại" */}
+      {isStrictFilter && (
+        <p className="text-xs italic text-gray-500 mt-1">
+          Chỉ hiển thị{" "}
+          <span className="text-amber-700 font-medium not-italic">
+            {supplierProductIds?.length}
+          </span>{" "}
+          sản phẩm có gắn nhà máy của NCC này
+        </p>
       )}
     </div>
   );

@@ -993,13 +993,13 @@ export function OrderSupplierForm({
   return (
     <div className="flex h-full border-t bg-gray-50 overflow-hidden">
       <div className="flex-1 flex flex-col overflow-hidden m-4 border rounded-xl">
-        <div className="bg-white border-b px-6 py-4 flex items-center gap-4">
+        <div className="bg-white border-b px-6 py-4 flex items-start gap-4">
           <button
             onClick={() => router.push("/san-pham/dat-hang-nhap")}
             className="p-2 hover:bg-gray-100 rounded-lg shrink-0">
             <X className="w-5 h-5" />
           </button>
-          <h2 className="text-xl font-semibold shrink-0">
+          <h2 className="text-xl font-semibold shrink-0 py-1.5">
             {orderSupplier ? "Cập nhật đặt hàng nhập" : "Tạo đặt hàng nhập"}
           </h2>
           <div className="flex-1 max-w-xl">

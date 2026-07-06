@@ -682,20 +682,20 @@ export function OrderSupplierDetailRow({
                                             "-"
                                           ) : isImport ? (
                                             // NCC nước ngoài: BE lưu factoryPrice
-                                            // là VND (đã nhân exchangeRate sẵn).
-                                            // Ta CHIA ngược lại để ra CNY gốc,
-                                            // VND phụ giữ nguyên BE trả.
+                                            // là CNY gốc (giá nhà máy theo ¥).
+                                            // CNY chính giữ nguyên; VND phụ =
+                                            // factoryPrice * exchangeRate.
                                             <ImportAmountInline
-                                              primaryCNY={Math.round(
+                                              primaryCNY={Math.abs(
+                                                Number(item.factoryPrice)
+                                              )}
+                                              vnd={Math.round(
                                                 Math.abs(
                                                   Number(item.factoryPrice)
-                                                ) /
+                                                ) *
                                                   (Number(
                                                     orderSupplier.exchangeRate
                                                   ) || 1)
-                                              )}
-                                              vnd={Math.abs(
-                                                Number(item.factoryPrice)
                                               )}
                                             />
                                           ) : (
@@ -707,16 +707,16 @@ export function OrderSupplierDetailRow({
                                             "-"
                                           ) : isImport ? (
                                             <ImportAmountInline
-                                              primaryCNY={Math.round(
+                                              primaryCNY={Math.abs(
+                                                Number(item.factorySubTotal)
+                                              )}
+                                              vnd={Math.round(
                                                 Math.abs(
                                                   Number(item.factorySubTotal)
-                                                ) /
+                                                ) *
                                                   (Number(
                                                     orderSupplier.exchangeRate
                                                   ) || 1)
-                                              )}
-                                              vnd={Math.abs(
-                                                Number(item.factorySubTotal)
                                               )}
                                             />
                                           ) : (

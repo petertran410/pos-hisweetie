@@ -301,7 +301,7 @@ export default function SyncSettingsPage() {
             {syncSepayTransactions.isSuccess &&
               syncSepayTransactions.data?.success &&
               syncSepayTransactions.data.result && (
-                <div className="mt-4 grid grid-cols-3 gap-3">
+                <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     {
                       label: "Tải về",
@@ -314,6 +314,10 @@ export default function SyncSettingsPage() {
                     {
                       label: "Cập nhật",
                       value: syncSepayTransactions.data.result.updated,
+                    },
+                    {
+                      label: "Bỏ qua (khác TK)",
+                      value: syncSepayTransactions.data.result.skipped ?? 0,
                     },
                   ].map((stat) => (
                     <div

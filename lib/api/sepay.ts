@@ -5,6 +5,8 @@ export interface SepaySyncResult {
   created: number;
   updated: number;
   pages: number;
+  /** Số giao dịch bị bỏ qua vì tài khoản không nằm trong whitelist bank_accounts. */
+  skipped?: number;
 }
 
 export interface SepaySyncResponse {

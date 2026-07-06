@@ -14,7 +14,7 @@ import { TrademarkDropdown } from "./TrademarkDropdown";
 import { MisaItemDropdown } from "./MisaItemDropdown";
 import { MisaInventoryItem } from "@/lib/api/misa";
 import { FormSection } from "./FormSection";
-import { FactoriesDropdown } from "@/components/factories/FactoriesDropdown";
+import { FactorySelect } from "@/components/factories/FactorySelect";
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { API_URL } from "@/lib/config/api";
@@ -600,7 +600,7 @@ export function ProductForm({
                 title="Nhà máy sản xuất"
                 description="Gắn nhà máy chính (thường xuyên gia công) và nhà máy backup (dự phòng khi cần chuyển đổi).">
                 <div className="grid grid-cols-2 gap-4">
-                  <FactoriesDropdown
+                  <FactorySelect
                     label="Nhà máy chính"
                     value={primaryFactoryId}
                     onChange={setPrimaryFactoryId}
@@ -608,7 +608,7 @@ export function ProductForm({
                     placeholder="— Chưa gắn —"
                     disabled={!canAssignFactory}
                   />
-                  <FactoriesDropdown
+                  <FactorySelect
                     label="Nhà máy backup"
                     value={backupFactoryId}
                     onChange={setBackupFactoryId}
