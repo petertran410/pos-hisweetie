@@ -1,9 +1,20 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
-import { useStockAudits } from "@/lib/hooks/useStockAudits";
+import { useState, useEffect, Fragment, useRef } from "react";
+import {
+  useStockAudits,
+  useExportStockAudits,
+} from "@/lib/hooks/useStockAudits";
 import { useBranchStore } from "@/lib/store/branch";
-import { Plus, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Search,
+  Download,
+  Loader2,
+} from "lucide-react";
 import { StockAuditDetailRow } from "./StockAuditDetailRow";
 import { StockAuditForm } from "./StockAuditForm";
 import { usePermission } from "@/lib/hooks/usePermissions";
@@ -31,6 +42,12 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
   const [limit, setLimit] = useState(15);
 
   const canCreate = usePermission("stock_audits", "create");
+  const canExport = usePermission("stock_audits", "export");
+
+  const { exportToFile, exportDetailToFile, isExporting } =
+    useExportStockAudits();
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -40,6 +57,33 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, filters]);
+
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showExportMenu]);
+
+  // Bộ lọc xuất file khớp với danh sách đang hiển thị (bỏ phân trang).
+  const buildExportFilters = () => ({
+    search: filters?.search || debouncedSearch || undefined,
+    branchIds: filters?.branchIds || undefined,
+    branchId: !filters?.branchIds
+      ? filters?.branchId || selectedBranch?.id
+      : undefined,
+    status: filters?.status,
+    fromDate: filters?.fromDate,
+    toDate: filters?.toDate,
+    creatorId: filters?.creatorId,
+  });
 
   const { data, isLoading } = useStockAudits({
     page,
@@ -80,13 +124,51 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
             />
           </div>
         </div>
-        {canCreate && (
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-brand text-white text-sm rounded-lg hover:bg-brand-dark">
-            <Plus className="w-4 h-4" /> Tạo phiếu kiểm kho
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {canExport && (
+            <div ref={exportMenuRef} className="relative">
+              <button
+                onClick={() => setShowExportMenu((o) => !o)}
+                disabled={isExporting}
+                className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {isExporting ? "Đang xuất..." : "Xuất file"}
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              {showExportMenu && (
+                <div className="absolute right-0 top-full mt-1 z-30 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                  <button
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      exportToFile(buildExportFilters());
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors">
+                    Xuất tổng quan
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      exportDetailToFile(buildExportFilters());
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors border-t border-gray-100">
+                    Xuất chi tiết
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          {canCreate && (
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-brand text-white text-sm rounded-lg hover:bg-brand-dark">
+              <Plus className="w-4 h-4" /> Tạo phiếu kiểm kho
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
