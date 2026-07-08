@@ -28,6 +28,37 @@ const createApiError = (message: string, status: number): Error => {
   return err;
 };
 
+const DEFAULT_TIMEOUT_MS = 30000;
+
+// fetch có timeout qua AbortController. Chuỗi proxy trước backend nhiều hop
+// (Cloudflare → Synology RP → nginx → Node); nếu một hop đóng connection mà
+// client không nhận tín hiệu, fetch có thể treo vô hạn. Timeout biến nó thành
+// lỗi rõ ràng để UI phản hồi thay vì kẹt spinner.
+const fetchWithTimeout = async (
+  input: string,
+  init: RequestInit = {},
+  timeoutMs: number = DEFAULT_TIMEOUT_MS
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw createApiError(
+        "Kết nối tới máy chủ quá thời gian, vui lòng thử lại",
+        0
+      );
+    }
+    if (e instanceof TypeError) {
+      throw createApiError("Không thể kết nối tới máy chủ", 0);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 const handleApiError = async (res: Response) => {
   if (res.status === 401) {
     let errorMessage = "Phiên đăng nhập đã hết hạn";
@@ -106,7 +137,7 @@ export const apiClient = {
       });
     }
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithTimeout(url.toString(), {
       headers: getAuthHeaders(),
     });
 
@@ -118,7 +149,7 @@ export const apiClient = {
   },
 
   post: async <T = any>(endpoint: string, data?: any): Promise<T> => {
-    const res = await fetch(`${API_URL}${endpoint}`, {
+    const res = await fetchWithTimeout(`${API_URL}${endpoint}`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -142,7 +173,7 @@ export const apiClient = {
   },
 
   put: async <T = any>(endpoint: string, data?: any): Promise<T> => {
-    const res = await fetch(`${API_URL}${endpoint}`, {
+    const res = await fetchWithTimeout(`${API_URL}${endpoint}`, {
       method: "PUT",
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -166,7 +197,7 @@ export const apiClient = {
   },
 
   patch: async <T = any>(endpoint: string, data?: any): Promise<T> => {
-    const res = await fetch(`${API_URL}${endpoint}`, {
+    const res = await fetchWithTimeout(`${API_URL}${endpoint}`, {
       method: "PATCH",
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -198,7 +229,7 @@ export const apiClient = {
       options.body = JSON.stringify(data);
     }
 
-    const res = await fetch(`${API_URL}${endpoint}`, options);
+    const res = await fetchWithTimeout(`${API_URL}${endpoint}`, options);
 
     if (!res.ok) {
       await handleApiError(res);

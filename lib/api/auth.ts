@@ -21,15 +21,53 @@ export interface LoginResponse {
   };
 }
 
+// Lỗi mạng thô (fetch reject) → TypeError; timeout AbortController → AbortError.
+// Đây là các lỗi "connection", nên retry 1 lần thường cứu được khi request đầu
+// rơi trúng socket đã bị 1 hop proxy đóng (ERR_CONNECTION_CLOSED).
+const isNetworkError = (e: unknown): boolean => {
+  if (e instanceof DOMException && e.name === "AbortError") return true;
+  if (e instanceof TypeError) return true; // "Failed to fetch" / "Load failed"
+  return false;
+};
+
+const LOGIN_TIMEOUT_MS = 25000;
+
 export const authApi = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    const res = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(credentials),
-    });
+    const doFetch = async (): Promise<Response> => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), LOGIN_TIMEOUT_MS);
+      try {
+        return await fetch(`${API_URL}/auth/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(credentials),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
+    let res: Response;
+    try {
+      res = await doFetch();
+    } catch (e) {
+      // Chỉ retry cho lỗi mạng/timeout, KHÔNG retry lỗi nghiệp vụ (4xx đã là
+      // response hợp lệ, không rơi vào nhánh catch này).
+      if (!isNetworkError(e)) throw e;
+      await new Promise((r) => setTimeout(r, 800));
+      try {
+        res = await doFetch();
+      } catch (e2) {
+        if (e2 instanceof DOMException && e2.name === "AbortError") {
+          throw new Error("Kết nối tới máy chủ quá thời gian, vui lòng thử lại");
+        }
+        throw new Error("Không thể kết nối tới máy chủ, vui lòng thử lại");
+      }
+    }
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({}));
