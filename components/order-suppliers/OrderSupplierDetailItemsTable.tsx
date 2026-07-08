@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
 import {
   useOrderSupplierDetailItems,
   useUpdateOrderSupplierItemFactoryPrice,
   useUpdateOrderSupplierItemStageFactory,
+  useExportOrderSuppliers,
 } from "@/lib/hooks/useOrderSuppliers";
 import type { OrderSupplierDetailItem } from "@/lib/api/order-suppliers";
 import type { OrderSupplierFilters } from "@/lib/types/order-supplier";
@@ -521,6 +522,19 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / limit) || 1;
 
+  // ── Xuất file CHI TIẾT theo bộ lọc hiện tại (mặc định của trang này) ──
+  const {
+    exportDetailToFile,
+    isExportingDetail,
+  } = useExportOrderSuppliers();
+  const buildExportFilters = useCallback(
+    () => ({
+      ...effectiveFilters,
+      search: debouncedSearch || undefined,
+    }),
+    [effectiveFilters, debouncedSearch]
+  );
+
   // Lọc cột theo quyền: ẩn hẳn (kể cả khỏi menu "Cột hiển thị") khi thiếu quyền.
   // - view_price        → Đơn giá / Thành tiền
   // - view_factory_price → Đơn giá NM / Thành tiền NM
@@ -571,7 +585,22 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
               className="w-72 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
-          <ColumnToggle columns={toggleableColumns} onToggle={toggleColumn} />
+          <div className="flex items-center gap-2 shrink-0">
+            <PermissionGate resource="order_suppliers" action="export">
+              <button
+                onClick={() => exportDetailToFile(buildExportFilters())}
+                disabled={isExportingDetail}
+                className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
+                {isExportingDetail ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {isExportingDetail ? "Đang xuất..." : "Xuất file"}
+              </button>
+            </PermissionGate>
+            <ColumnToggle columns={toggleableColumns} onToggle={toggleColumn} />
+          </div>
         </div>
 
         {/* Status tabs */}

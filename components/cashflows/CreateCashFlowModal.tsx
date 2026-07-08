@@ -8,7 +8,8 @@ import {
   useCustomers,
   useSearchCustomers,
 } from "@/lib/hooks/useCustomers";
-import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import { useSupplier, useSuppliers } from "@/lib/hooks/useSuppliers";
+import { useExchangeRate } from "@/lib/hooks/useExchangeRate";
 import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useUnpaidInvoicesByPartner } from "@/lib/hooks/useInvoices";
 import { useAuthStore } from "@/lib/store/auth";
@@ -19,6 +20,9 @@ import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { useCollectionBranches } from "@/lib/hooks/useCashflowCollectionBranches";
 import { CreateCashFlowCollectionBranchModal } from "./CreateCashFlowCollectionBranchModal";
 import { invoicesApi } from "@/lib/api/invoices";
+import { cashflowsApi } from "@/lib/api/cashflows";
+import { purchaseOrdersApi } from "@/lib/api/purchase-orders";
+import { formatCurrency } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 
 interface CreateCashFlowModalProps {
@@ -39,6 +43,16 @@ const PARTNER_TYPES = [
   { value: "S", label: "Nhà cung cấp" },
   { value: "O", label: "Đối tác giao dịch" },
 ];
+
+// ID nhóm NCC = "Nhập khẩu" — đối xứng logic ở OrderSupplierForm +
+// SupplierPaymentBulkModal (groupId === 1 đánh dấu NCC nước ngoài).
+const IMPORT_SUPPLIER_GROUP_ID = 1;
+
+// Format số CNY (làm tròn 2 chữ số thập phân, dấu phẩy phân cách hàng nghìn)
+const formatCNY = (value: number) =>
+  new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 2,
+  }).format(value) + " CNY";
 
 const formatNumberInput = (value: string) => {
   const number = value.replace(/\D/g, "");
@@ -126,7 +140,54 @@ export function CreateCashFlowModal({
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
+  // ===== Tiền tệ ngoài nước (chỉ áp dụng cho phiếu chi NCC nước ngoài) =====
+  const [exchangeRate, setExchangeRate] = useState("");
+  // Phân bổ cho từng phiếu nhập (CNY)
+  const [purchaseOrderPayments, setPurchaseOrderPayments] = useState<
+    Record<number, string>
+  >({});
+  // Cấn trừ tiền trả thừa NCC vào PN còn nợ (CNY)
+  const [purchaseOrderDebtOffsets, setPurchaseOrderDebtOffsets] = useState<
+    Record<number, string>
+  >({});
+  const [poCurrentPage, setPoCurrentPage] = useState(1);
+  const poDebtOffsetsInitialized = useRef(false);
+
   const debtOffsetsInitialized = useRef(false);
+
+  // Fetch full supplier khi đã chọn NCC (cần supplierGroupDetails để detect
+  // NCC nước ngoài — list suppliers dropdown không bao gồm).
+  const { data: fullSupplierData } = useSupplier(
+    partnerType === "S" && selectedPartner?.id ? selectedPartner.id : 0
+  );
+  const isImportSupplier = useMemo(() => {
+    return (
+      fullSupplierData?.supplierGroupDetails?.some(
+        (d: any) => d.supplierGroupId === IMPORT_SUPPLIER_GROUP_ID
+      ) ?? false
+    );
+  }, [fullSupplierData]);
+
+  // Tiền tệ chỉ áp dụng cho phiếu chi NCC nước ngoài
+  const showCurrencyFields =
+    !isReceipt && partnerType === "S" && isImportSupplier;
+
+  const liveRateQuery = useExchangeRate("CNY", "VND");
+
+  // Auto-fill tỉ giá khi vừa chọn NCC nước ngoài (chỉ fill lần đầu, không
+  // ghi đè khi user đã nhập tay)
+  useEffect(() => {
+    if (
+      showCurrencyFields &&
+      liveRateQuery.data?.rate &&
+      !exchangeRate
+    ) {
+      setExchangeRate(String(liveRateQuery.data.rate));
+    }
+    if (!showCurrencyFields && exchangeRate) {
+      setExchangeRate("");
+    }
+  }, [showCurrencyFields, liveRateQuery.data]);
 
   const { data: bankAccounts } = useBankAccountsForPayment();
 
@@ -166,6 +227,23 @@ export function CreateCashFlowModal({
     partnerType === "C" && selectedPartner?.id ? selectedPartner.id : 0
   );
 
+  // Fetch danh sách phiếu nhập chưa thanh toán cho NCC nước ngoài
+  const { data: poData } = useQuery({
+    queryKey: [
+      "purchase-orders",
+      "supplier",
+      selectedPartner?.id,
+      "unpaid",
+      showCurrencyFields,
+    ],
+    queryFn: () =>
+      purchaseOrdersApi.getAll({
+        supplierId: selectedPartner!.id,
+        pageSize: 1000,
+      }),
+    enabled: showCurrencyFields && !!selectedPartner?.id,
+  });
+
   const groups = cashFlowGroups || [];
   const customers = customerSearchData?.data || [];
   const suppliers = suppliersData?.data || [];
@@ -199,6 +277,31 @@ export function CreateCashFlowModal({
       ? Number(freshCustomerData?.totalDebt ?? selectedPartner.totalDebt ?? 0)
       : 0;
 
+  // ===== Danh sách phiếu nhập chưa thanh toán (NCC nước ngoài) =====
+  const unpaidPurchaseOrders = useMemo(() => {
+    if (!showCurrencyFields || !(poData as any)?.data) return [];
+    return (poData as any).data
+      .filter((po: any) => {
+        const debtAmount = Number(po.debtAmount);
+        if (debtAmount <= 0) return false;
+        if (po.isDraft) return false;
+        if (po.status === 2) return false;
+        return true;
+      })
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.purchaseDate).getTime() -
+          new Date(b.purchaseDate).getTime()
+      );
+  }, [poData, showCurrencyFields]);
+  const poTotalPages = Math.ceil(unpaidPurchaseOrders.length / pageSize);
+  const paginatedPOs = unpaidPurchaseOrders.slice(
+    (poCurrentPage - 1) * pageSize,
+    poCurrentPage * pageSize
+  );
+
+  // Credit NCC = phần chênh giữa tổng debtAmount các PN và supplierDebt thực tế
+  // (đối xứng availableCredit của KH)
   const availableCredit = useMemo(() => {
     if (partnerType !== "C" || !isReceipt || !selectedPartner) return 0;
     const totalUnpaid = unpaidInvoices.reduce(
@@ -207,6 +310,25 @@ export function CreateCashFlowModal({
     );
     return Math.max(0, totalUnpaid - customerDebt);
   }, [unpaidInvoices, customerDebt, partnerType, isReceipt, selectedPartner]);
+
+  const importAvailableCredit = useMemo(() => {
+    if (!showCurrencyFields) return 0;
+    // Lấy supplierDebt từ fresh supplier (totalDebt) — supplierDebt của NCC
+    const supplierDebt = Number(
+      (fullSupplierData as any)?.debt ?? 0
+    );
+    const totalUnpaidPO = unpaidPurchaseOrders.reduce(
+      (sum: number, po: any) => sum + Number(po.debtAmount),
+      0
+    );
+    return Math.max(0, totalUnpaidPO - supplierDebt);
+  }, [unpaidPurchaseOrders, fullSupplierData, showCurrencyFields]);
+
+  // Tỉ giá hiệu lực cho các phép tính
+  const effectiveRate = useMemo(() => {
+    const r = parseNumberInput(exchangeRate);
+    return r > 0 ? r : 1;
+  }, [exchangeRate]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedPartnerSearch(partnerSearch), 300);
@@ -279,9 +401,13 @@ export function CreateCashFlowModal({
   // Reset debt offsets khi đổi partner
   useEffect(() => {
     setInvoiceDebtOffsets({});
+    setPurchaseOrderDebtOffsets({});
+    setPurchaseOrderPayments({});
     debtOffsetsInitialized.current = false;
+    poDebtOffsetsInitialized.current = false;
     setCurrentPage(1);
-  }, [selectedPartner?.id]);
+    setPoCurrentPage(1);
+  }, [selectedPartner?.id, showCurrencyFields]);
 
   // Auto-init debt offsets cho hóa đơn cũ nhất
   useEffect(() => {
@@ -309,6 +435,32 @@ export function CreateCashFlowModal({
     freshCustomerData,
     selectedPartner?.id,
     partnerType,
+  ]);
+
+  // Auto-init debt offsets cho phiếu nhập cũ nhất (NCC nước ngoài — CNY)
+  useEffect(() => {
+    if (
+      poDebtOffsetsInitialized.current ||
+      unpaidPurchaseOrders.length === 0
+    )
+      return;
+    poDebtOffsetsInitialized.current = true;
+
+    const importCreditCNY = importAvailableCredit / effectiveRate;
+    if (importCreditCNY <= 0) return;
+
+    const oldestPO = unpaidPurchaseOrders[0];
+    const poDebtCNY = Number(oldestPO.debtAmount) / effectiveRate;
+    const defaultOffset = Math.min(importCreditCNY, poDebtCNY);
+    if (defaultOffset > 0) {
+      setPurchaseOrderDebtOffsets({
+        [oldestPO.id]: formatNumberInput(defaultOffset.toString()),
+      });
+    }
+  }, [
+    unpaidPurchaseOrders,
+    importAvailableCredit,
+    effectiveRate,
   ]);
 
   const filteredPartners = useMemo(() => {
@@ -386,6 +538,78 @@ export function CreateCashFlowModal({
       }
 
       setInvoicePayments(newPayments);
+    }
+
+    // Auto phân bổ cho PN (NCC nước ngoài, CNY)
+    if (
+      showCurrencyFields &&
+      allocateToInvoices &&
+      unpaidPurchaseOrders.length > 0
+    ) {
+      const numericAmountVND = parseNumberInput(value);
+      const rate = effectiveRate;
+      let remainingCNY = numericAmountVND / rate;
+      const newPOPayments: Record<number, string> = {};
+
+      for (const po of unpaidPurchaseOrders) {
+        if (remainingCNY <= 0) break;
+        const poRate = Number(po.exchangeRate) || rate;
+        const poDebtCNY = Number(po.debtAmount) / poRate;
+        const debtOffsetCNY = parseNumberInput(
+          purchaseOrderDebtOffsets[po.id] || "0"
+        );
+        const maxForPOCNY = Math.max(0, poDebtCNY - debtOffsetCNY);
+        const paymentCNY = Math.min(remainingCNY, maxForPOCNY);
+        newPOPayments[po.id] = formatNumberInput(paymentCNY.toString());
+        remainingCNY -= paymentCNY;
+      }
+      setPurchaseOrderPayments(newPOPayments);
+    }
+  };
+
+  // Handler cho ô "Tiền trả" (CNY) trong bảng PN
+  const handlePOPaymentChange = (poId: number, value: string) => {
+    const po = unpaidPurchaseOrders.find((p: any) => p.id === poId);
+    if (!po) return;
+    const poRate = Number(po.exchangeRate) || effectiveRate;
+    const poDebtCNY = Number(po.debtAmount) / poRate;
+    const debtOffsetCNY = parseNumberInput(
+      purchaseOrderDebtOffsets[poId] || "0"
+    );
+    const maxCNY = Math.max(0, poDebtCNY - debtOffsetCNY);
+    const numericValue = parseNumberInput(value);
+    const limited = Math.min(numericValue, maxCNY);
+    const formatted = formatNumberInput(limited.toString());
+    setPurchaseOrderPayments((prev) => ({ ...prev, [poId]: formatted }));
+  };
+
+  // Handler cho ô "Cấn trừ" (CNY) trong bảng PN
+  const handlePODebtOffsetChange = (poId: number, value: string) => {
+    const po = unpaidPurchaseOrders.find((p: any) => p.id === poId);
+    if (!po) return;
+    const poRate = Number(po.exchangeRate) || effectiveRate;
+    const poDebtCNY = Number(po.debtAmount) / poRate;
+    const numericValue = parseNumberInput(value);
+    const otherTotalCNY = Object.entries(purchaseOrderDebtOffsets)
+      .filter(([id]) => Number(id) !== poId)
+      .reduce((sum, [, amt]) => sum + parseNumberInput(amt), 0);
+    const importCreditCNY = importAvailableCredit / effectiveRate;
+    const remainingCNY = Math.max(0, importCreditCNY - otherTotalCNY);
+    const maxAmountCNY = Math.min(poDebtCNY, remainingCNY);
+    const limited = Math.min(numericValue, maxAmountCNY);
+    const formatted = formatNumberInput(limited.toString());
+    setPurchaseOrderDebtOffsets((prev) => ({ ...prev, [poId]: formatted }));
+
+    // Cap lại tiền trả nếu vượt phần còn lại sau cấn trừ
+    const currentPayment = parseNumberInput(
+      purchaseOrderPayments[poId] || "0"
+    );
+    const maxPaymentCNY = Math.max(0, poDebtCNY - limited);
+    if (currentPayment > maxPaymentCNY) {
+      setPurchaseOrderPayments((prev) => ({
+        ...prev,
+        [poId]: formatNumberInput(maxPaymentCNY.toString()),
+      }));
     }
   };
 
@@ -484,10 +708,78 @@ export function CreateCashFlowModal({
       return;
     }
 
-    // Cho phép amount=0 nếu có debtOffsets
+    // Validate tỉ giá khi chi NCC nước ngoài
+    if (showCurrencyFields && (!exchangeRate || effectiveRate <= 0)) {
+      alert("Vui lòng nhập tỉ giá VND/CNY hợp lệ");
+      return;
+    }
+
+    // Tính purchaseOrders + debtOffsets cho NCC nước ngoài (CNY)
+    const importPurchaseOrders: Array<{
+      purchaseOrderId: number;
+      amount: number;
+      exchangeRate: number;
+      foreignAmount: number;
+    }> = [];
+    const importDebtOffsets: Array<{
+      purchaseOrderId: number;
+      amount: number;
+    }> = [];
+    let finalTotalAmount = numericAmount;
+    let totalForeignAmount = 0;
+
+    if (showCurrencyFields && affectDebt && allocateToInvoices) {
+      const rate = effectiveRate;
+      for (const [poId, amt] of Object.entries(purchaseOrderPayments)) {
+        const amtCNY = parseNumberInput(amt);
+        if (amtCNY > 0) {
+          const amountVND = Math.round(amtCNY * rate);
+          importPurchaseOrders.push({
+            purchaseOrderId: Number(poId),
+            amount: amountVND,
+            exchangeRate: rate,
+            foreignAmount: amtCNY,
+          });
+          totalForeignAmount += amtCNY;
+        }
+      }
+      for (const [poId, amt] of Object.entries(purchaseOrderDebtOffsets)) {
+        const amtCNY = parseNumberInput(amt);
+        if (amtCNY > 0) {
+          importDebtOffsets.push({
+            purchaseOrderId: Number(poId),
+            amount: Math.round(amtCNY * rate),
+          });
+        }
+      }
+      // Tổng tiền trên cashflow = tổng tiền trả + tổng cấn trừ (VND)
+      const totalPaymentsVND = importPurchaseOrders.reduce(
+        (s, p) => s + p.amount,
+        0
+      );
+      const totalOffsetsVND = importDebtOffsets.reduce(
+        (s, d) => s + d.amount,
+        0
+      );
+      if (
+        importPurchaseOrders.length > 0 ||
+        importDebtOffsets.length > 0
+      ) {
+        finalTotalAmount = totalPaymentsVND;
+        // Tổng cấn trừ NCC tạo SupplierReturn riêng ngoài cashflow — không cộng vào amount
+        // (đối xứng pattern SupplierPaymentBulkModal).
+      }
+    }
+
+    const hasImportAllocations = importPurchaseOrders.length > 0;
+    const hasImportOffsets = importDebtOffsets.length > 0;
+
+    // Cho phép amount=0 nếu có debtOffsets (KH) hoặc import offsets
     if (
       (!numericAmount || numericAmount <= 0) &&
-      debtOffsetsToApply.length === 0
+      debtOffsetsToApply.length === 0 &&
+      !hasImportAllocations &&
+      !hasImportOffsets
     ) {
       alert("Vui lòng nhập số tiền hợp lệ");
       return;
@@ -514,32 +806,75 @@ export function CreateCashFlowModal({
         : undefined;
 
     try {
-      await createCashFlow.mutateAsync({
-        branchId: selectedBranch.id,
-        isReceipt,
-        amount: numericAmount,
-        transDate: finalTransDate.toISOString(),
-        method:
-          type === "cash" ? "cash" : type === "bank" ? "transfer" : "ewallet",
-        accountId: selectedAccountId || undefined,
-        cashFlowGroupId: cashFlowGroupId ? Number(cashFlowGroupId) : undefined,
-        collectionBranchId:
-          type === "cash" && collectionBranchId
-            ? Number(collectionBranchId)
+      // ===== Rẽ nhánh: NCC nước ngoài có phân bổ PO → dùng
+      // createSupplierPayment (đã có sẵn, đối xứng KH), ngược lại dùng
+      // createCashFlow như cũ =====
+      if (showCurrencyFields && (hasImportAllocations || hasImportOffsets || numericAmount > 0)) {
+        const methodValue =
+          type === "cash" ? "cash" : type === "bank" ? "transfer" : "ewallet";
+        // Tổng VND gửi lên BE = tổng tiền trả (không cộng debtOffsets vì
+        // BE tự tạo SupplierReturn cho phần cấn trừ).
+        const totalAmountVND =
+          importPurchaseOrders.length > 0
+            ? importPurchaseOrders.reduce((s, p) => s + p.amount, 0)
+            : numericAmount;
+        const finalForeignAmount =
+          importPurchaseOrders.length > 0
+            ? totalForeignAmount
+            : numericAmount / effectiveRate;
+        await cashflowsApi.createSupplierPayment({
+          supplierId: selectedPartner!.id,
+          totalAmount: totalAmountVND,
+          branchId: selectedBranch.id,
+          transDate: finalTransDate.toISOString(),
+          method: methodValue,
+          accountId: selectedAccountId || undefined,
+          description,
+          allocateToPurchaseOrders:
+            affectDebt && hasImportAllocations,
+          purchaseOrders:
+            affectDebt && importPurchaseOrders.length > 0
+              ? importPurchaseOrders
+              : undefined,
+          debtOffsets:
+            affectDebt && importDebtOffsets.length > 0
+              ? importDebtOffsets
+              : undefined,
+        } as any);
+      } else {
+        await createCashFlow.mutateAsync({
+          branchId: selectedBranch.id,
+          isReceipt,
+          amount: numericAmount,
+          transDate: finalTransDate.toISOString(),
+          method:
+            type === "cash"
+              ? "cash"
+              : type === "bank"
+              ? "transfer"
+              : "ewallet",
+          accountId: selectedAccountId || undefined,
+          cashFlowGroupId: cashFlowGroupId
+            ? Number(cashFlowGroupId)
             : undefined,
-        partnerType,
-        partnerId: selectedPartner?.id,
-        partnerName: selectedPartner?.name || partnerSearch || undefined,
-        description,
-        usedForFinancialReporting: usedForFinancialReporting ? 1 : 0,
-        collectorUserId: Number(collectorUserId),
-        affectDebt,
-        allocateToInvoices: affectDebt ? allocateToInvoices : false,
-        invoiceAllocations:
-          affectDebt && allocateToInvoices ? invoiceAllocations : undefined,
-        debtOffsets:
-          debtOffsetsToApply.length > 0 ? debtOffsetsToApply : undefined,
-      });
+          collectionBranchId:
+            type === "cash" && collectionBranchId
+              ? Number(collectionBranchId)
+              : undefined,
+          partnerType,
+          partnerId: selectedPartner?.id,
+          partnerName: selectedPartner?.name || partnerSearch || undefined,
+          description,
+          usedForFinancialReporting: usedForFinancialReporting ? 1 : 0,
+          collectorUserId: Number(collectorUserId),
+          affectDebt,
+          allocateToInvoices: affectDebt ? allocateToInvoices : false,
+          invoiceAllocations:
+            affectDebt && allocateToInvoices ? invoiceAllocations : undefined,
+          debtOffsets:
+            debtOffsetsToApply.length > 0 ? debtOffsetsToApply : undefined,
+        });
+      }
 
       resetForm();
       onClose();
@@ -567,7 +902,12 @@ export function CreateCashFlowModal({
     setSelectedAccountId(null);
     setShowAccountDropdown(false);
     setInvoiceDebtOffsets({});
+    setExchangeRate("");
+    setPurchaseOrderPayments({});
+    setPurchaseOrderDebtOffsets({});
+    setPoCurrentPage(1);
     debtOffsetsInitialized.current = false;
+    poDebtOffsetsInitialized.current = false;
     setCurrentPage(1);
   };
 
@@ -958,16 +1298,62 @@ export function CreateCashFlowModal({
               )}
             </div>
 
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-2">Số tiền</label>
-              <input
-                type="text"
-                value={amount}
-                onChange={(e) => handleAmountChange(e.target.value)}
-                placeholder="0"
-                className="w-full px-3 py-2 border rounded-lg text-right text-lg"
-              />
-            </div>
+            {showCurrencyFields ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Số tiền (VND)
+                  </label>
+                  <input
+                    type="text"
+                    value={amount}
+                    onChange={(e) => handleAmountChange(e.target.value)}
+                    placeholder="0"
+                    className="w-full px-3 py-2 border rounded-lg text-right text-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Tỉ giá VND/CNY <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={exchangeRate}
+                    onChange={(e) => {
+                      setExchangeRate(e.target.value);
+                      // Recalculate phân bổ PO khi tỉ giá đổi
+                      setTimeout(
+                        () => handleAmountChange(amount),
+                        0
+                      );
+                    }}
+                    placeholder="Nhập tỉ giá..."
+                    className="w-full px-3 py-2 border rounded-lg text-right font-semibold"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium mb-2">
+                    Quy đổi (¥)
+                  </label>
+                  <div className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-right text-base text-brand font-medium">
+                    {formatCNY(
+                      parseNumberInput(amount) / (effectiveRate || 1)
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="col-span-2">
+                <label className="block text-sm font-medium mb-2">Số tiền</label>
+                <input
+                  type="text"
+                  value={amount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 border rounded-lg text-right text-lg"
+                />
+              </div>
+            )}
 
             {(type === "bank" || type === "ewallet") && (
               <div className="col-span-2">
@@ -1212,6 +1598,235 @@ export function CreateCashFlowModal({
                     {allocateToInvoices && unpaidInvoices.length === 0 && (
                       <div className="text-sm text-gray-500 italic">
                         Khách hàng không có hóa đơn nợ
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Khối phân bổ phiếu nhập cho NCC nước ngoài (CNY) */}
+            {showCurrencyFields && selectedPartner && (
+              <div className="col-span-2 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={affectDebt}
+                    onChange={(e) => {
+                      setAffectDebt(e.target.checked);
+                      if (!e.target.checked) {
+                        setAllocateToInvoices(false);
+                        setPurchaseOrderPayments({});
+                      }
+                    }}
+                    className="cursor-pointer"
+                  />
+                  <span className="text-sm font-medium">
+                    Tính vào công nợ NCC
+                  </span>
+                </label>
+
+                {affectDebt && (
+                  <div className="ml-6 space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={allocateToInvoices}
+                        onChange={() => setAllocateToInvoices(true)}
+                        className="cursor-pointer"
+                      />
+                      <span className="text-sm">Phân bổ vào phiếu nhập</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={!allocateToInvoices}
+                        onChange={() => {
+                          setAllocateToInvoices(false);
+                          setPurchaseOrderPayments({});
+                        }}
+                        className="cursor-pointer"
+                      />
+                      <span className="text-sm">
+                        Chỉ trừ vào công nợ, không phân bổ phiếu nhập
+                      </span>
+                    </label>
+
+                    {allocateToInvoices && unpaidPurchaseOrders.length > 0 && (
+                      <div className="border rounded-lg overflow-hidden mt-2">
+                        {importAvailableCredit > 0 && (
+                          <div className="px-4 py-2 bg-brand-soft border-b text-xs text-brand-dark">
+                            Có thể cấn trừ tối đa{" "}
+                            <span className="font-semibold">
+                              {formatCNY(
+                                importAvailableCredit / effectiveRate
+                              )}
+                            </span>{" "}
+                            từ credit hiện có của nhà cung cấp
+                          </div>
+                        )}
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-100 border-b">
+                            <tr>
+                              <th className="px-3 py-2 text-left">
+                                Mã phiếu nhập
+                              </th>
+                              <th className="px-3 py-2 text-left">
+                                Thời gian
+                              </th>
+                              <th className="px-3 py-2 text-right">
+                                Giá trị phiếu (¥)
+                              </th>
+                              <th className="px-3 py-2 text-right">
+                                Đã trả (¥)
+                              </th>
+                              <th className="px-3 py-2 text-right">
+                                Còn cần trả (¥)
+                              </th>
+                              {importAvailableCredit > 0 && (
+                                <th className="px-3 py-2 text-right">
+                                  Cấn trừ nợ (¥)
+                                </th>
+                              )}
+                              <th className="px-3 py-2 text-right">
+                                Tiền trả (¥)
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paginatedPOs.map((po: any) => {
+                              const poRate =
+                                Number(po.exchangeRate) || effectiveRate;
+                              const poDebtCNY =
+                                Number(po.debtAmount) / poRate;
+                              return (
+                                <tr key={po.id} className="border-b">
+                                  <td className="px-3 py-2 text-brand">
+                                    {po.code}
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    {new Date(
+                                      po.purchaseDate
+                                    ).toLocaleDateString("vi-VN")}
+                                  </td>
+                                  <td className="px-3 py-2 text-right">
+                                    <div>
+                                      {formatCNY(
+                                        Number(
+                                          po.subTotal || po.total || 0
+                                        ) / poRate
+                                      )}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 font-normal">
+                                      ({formatCurrency(po.subTotal || po.total)})
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2 text-right">
+                                    <div>
+                                      {formatCNY(
+                                        Number(po.paidAmount || 0) / poRate
+                                      )}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 font-normal">
+                                      ({formatCurrency(po.paidAmount || 0)})
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-medium">
+                                    <div className="text-brand">
+                                      {formatCNY(poDebtCNY)}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 font-normal">
+                                      ({formatCurrency(po.debtAmount)})
+                                    </div>
+                                  </td>
+                                  {importAvailableCredit > 0 && (
+                                    <td className="px-3 py-2">
+                                      <input
+                                        type="text"
+                                        value={
+                                          purchaseOrderDebtOffsets[po.id] || ""
+                                        }
+                                        onChange={(e) =>
+                                          handlePODebtOffsetChange(
+                                            po.id,
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder="0"
+                                        className="w-full px-2 py-1 border rounded text-right"
+                                      />
+                                    </td>
+                                  )}
+                                  <td className="px-3 py-2">
+                                    <input
+                                      type="text"
+                                      value={
+                                        purchaseOrderPayments[po.id] || ""
+                                      }
+                                      onChange={(e) =>
+                                        handlePOPaymentChange(
+                                          po.id,
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="0"
+                                      className="w-full px-2 py-1 border rounded text-right"
+                                      disabled={!allocateToInvoices}
+                                    />
+                                    {purchaseOrderPayments[po.id] && (
+                                      <div className="text-[10px] text-gray-400 text-right">
+                                        ={" "}
+                                        {formatCurrency(
+                                          Math.round(
+                                            parseNumberInput(
+                                              purchaseOrderPayments[po.id]
+                                            ) * effectiveRate
+                                          )
+                                        )}
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                        {poTotalPages > 1 && (
+                          <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                            <div className="text-sm text-gray-600">
+                              Hiển thị {paginatedPOs.length} /{" "}
+                              {unpaidPurchaseOrders.length} phiếu nhập (Trang{" "}
+                              {poCurrentPage} / {poTotalPages})
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() =>
+                                  setPoCurrentPage((p) => Math.max(1, p - 1))
+                                }
+                                disabled={poCurrentPage === 1}
+                                className="px-3 py-1 border rounded text-sm hover:bg-gray-100 disabled:opacity-50">
+                                Trước
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setPoCurrentPage((p) =>
+                                    Math.min(poTotalPages, p + 1)
+                                  )
+                                }
+                                disabled={poCurrentPage === poTotalPages}
+                                className="px-3 py-1 border rounded text-sm hover:bg-gray-100 disabled:opacity-50">
+                                Sau
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {allocateToInvoices && unpaidPurchaseOrders.length === 0 && (
+                      <div className="text-sm text-gray-500 italic">
+                        Nhà cung cấp không có phiếu nhập nợ
                       </div>
                     )}
                   </div>

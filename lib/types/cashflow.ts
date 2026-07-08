@@ -8,6 +8,9 @@ export interface CashFlow {
   collectionBranchName?: string;
   isReceipt: boolean;
   amount: number;
+  currency?: string | null;
+  exchangeRate?: number | null;
+  foreignAmount?: number | null;
   transDate: string;
   method: string;
   accountId?: number;

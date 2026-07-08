@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { X, Search, ChevronDown, Minus, Plus, Calendar, Copy, RefreshCw } from "lucide-react";
+import { X, Search, ChevronDown, Minus, Plus, Calendar, Copy, RefreshCw, Trash2 } from "lucide-react";
 import { MiniCalendar } from "@/components/ui/MiniCalendar";
 import { useSuppliers, useSupplier } from "@/lib/hooks/useSuppliers";
 import { useBranches } from "@/lib/hooks/useBranches";
@@ -10,6 +10,7 @@ import {
   useCreatePurchaseOrder,
   useCreatePurchaseOrderFromOrderSupplier,
   useUpdatePurchaseOrder,
+  useCreatePurchaseOrderPayment,
 } from "@/lib/hooks/usePurchaseOrders";
 import { toast } from "sonner";
 import type { PurchaseOrder } from "@/lib/types/purchase-order";
@@ -23,10 +24,22 @@ import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useAuthStore } from "@/lib/store/auth";
 import { ProductPickerDropdown } from "@/components/products/ProductPickerDropdown";
 import { useExchangeRate, useRefreshExchangeRate } from "@/lib/hooks/useExchangeRate";
+import Swal from "sweetalert2";
 
 const IMPORT_SUPPLIER_GROUP_ID = 1;
 const DEFAULT_CURRENCY = "VND";
 const DEFAULT_EXCHANGE_RATE = 1;
+
+// Định dạng số lượng: tối đa 2 chữ số thập phân, bỏ trailing zeros.
+// `1 → "1"`, `1.5 → "1.5"`, `1.25 → "1.25"`, `1.234 → "1.23"` (đã được
+// làm tròn trước khi format). Khác formatCurrency ở chỗ KHÔNG ép phần
+// thập phân tối thiểu và KHÔNG làm tròn về số nguyên.
+function formatQuantity(value: number): string {
+  if (!isFinite(value) || value === 0) return "0";
+  const fixed = roundTo(value, 2).toFixed(2);
+  // Bỏ trailing zeros + dấu "." nếu là số nguyên.
+  return fixed.replace(/\.?0+$/, "");
+}
 
 // Định dạng số có ngăn cách hàng nghìn, tối đa `maxFractionDigits` số thập
 // phân (mặc định 3 cho đơn giá). Không ép số thập phân tối thiểu nên 1000 vẫn
@@ -43,6 +56,14 @@ function roundTo(value: number, digits = 3): number {
   const f = Math.pow(10, digits);
   return Math.round((value + Number.EPSILON) * f) / f;
 }
+
+// Validate chuỗi nhập SL: cho phép số thập phân tối đa 2 chữ số. Phải chấp
+// nhận cả các trạng thái gõ dở như "1." (đã gõ dấu chấm nhưng chưa gõ chữ
+// số sau), "" (đang xóa), "0", "0.01". Pattern: phần nguyên (\d*), tuỳ chọn
+// theo dấu "." + tối đa 2 chữ số thập phân. "1." pass vì phần thập phân là
+// rỗng (zero digits), regex cũ "/^\d*\.?\d{0,2}$/" sai ở chỗ bắt buộc có
+// phần thập phân — dẫn đến user gõ "1." bị reject → mất focus.
+const QUANTITY_INPUT_PATTERN = /^\d*(?:\.\d{0,2})?$/;
 
 /**
  * Ô nhập số tiền cho phép gõ số thập phân mượt (giữ nguyên dấu "." và số 0 ở
@@ -96,6 +117,53 @@ function NumericInput({
         if (cleaned === "" || decimalPattern.test(cleaned)) {
           setRaw(cleaned);
           onValueChange(cleaned === "" ? 0 : parseFloat(cleaned) || 0);
+        }
+      }}
+      onBlur={() => setFocused(false)}
+    />
+  );
+}
+
+/**
+ * Ô nhập SỐ LƯỢNG cho phép gõ số thập phân mượt (tối đa 2 chữ số thập phân).
+ * Giữ raw string trong lúc focus để không bị mất dấu "." khi đang gõ "1." —
+ * đây là lý do input controlled thuần (value=formatQuantity) không gõ được
+ * "1.5": onChange "1." → parse ra 1 → re-render "1" → xóa mất dấu chấm.
+ * Khi blur mới normalize hiển thị qua formatQuantity.
+ */
+function QuantityInput({
+  value,
+  onValueChange,
+  disabled,
+  className,
+}: {
+  value: number;
+  onValueChange: (next: number) => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [raw, setRaw] = useState("");
+
+  const display = focused ? raw : formatQuantity(value);
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={display}
+      disabled={disabled}
+      className={className}
+      onFocus={(e) => {
+        setFocused(true);
+        setRaw(value ? String(value) : "");
+        e.target.select();
+      }}
+      onChange={(e) => {
+        const cleaned = e.target.value.replace(/,/g, "");
+        if (cleaned === "" || QUANTITY_INPUT_PATTERN.test(cleaned)) {
+          setRaw(cleaned);
+          onValueChange(cleaned === "" ? 0 : roundTo(parseFloat(cleaned) || 0, 2));
         }
       }}
       onBlur={() => setFocused(false)}
@@ -157,15 +225,22 @@ export function PurchaseOrderForm({
     const t = setTimeout(() => setDebouncedSupplierSearch(supplierSearch), 250);
     return () => clearTimeout(t);
   }, [supplierSearch]);
+  // Cần `includeSupplierGroup: true` để dropdown NCC trả về
+  // `supplierGroupDetails` — nếu thiếu, `selectedSupplier` ở dưới sẽ không
+  // có thông tin nhóm nước ngoài → form không hiển thị 3 cột "Đơn giá NM" /
+  // "Thành tiền NM" / "Tỉ giá" dù NCC đó thực sự thuộc nhóm id=1. Mirror
+  // pattern OrderSupplierForm.tsx:391-396.
   const { data: suppliersData } = useSuppliers({
     name: debouncedSupplierSearch || undefined,
     pageSize: 50,
     currentItem: 0,
+    includeSupplierGroup: true,
   });
   const createPurchaseOrder = useCreatePurchaseOrder();
   const createPurchaseOrderFromOrderSupplier =
     useCreatePurchaseOrderFromOrderSupplier();
   const updatePurchaseOrder = useUpdatePurchaseOrder();
+  const createPurchaseOrderPayment = useCreatePurchaseOrderPayment();
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [previouslyPaid, setPreviouslyPaid] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<
@@ -192,6 +267,17 @@ export function PurchaseOrderForm({
     setPaymentAccountId(method === "transfer" ? (accountId ?? null) : null);
     setPaymentExchangeRate(exchangeRate ?? null);
     setPaymentForeignAmount(foreignAmount ?? null);
+  };
+
+  // Gỡ khoản thanh toán MỚI đang nhập (chưa lưu DB). Dùng khi user muốn "Lưu
+  // tạm" nhưng đã lỡ nhập tiền trả NCC — phiếu tạm không được ghi nhận thanh
+  // toán. KHÔNG đụng tới tiền đã trả trước đó (previouslyPaid — đã có phiếu chi
+  // thật trong DB); việc hủy phiếu chi cũ làm ở tab "Lịch sử thanh toán".
+  const handleClearPayment = () => {
+    setPaymentAmount(0);
+    setPaymentAccountId(null);
+    setPaymentExchangeRate(null);
+    setPaymentForeignAmount(null);
   };
 
   const [branchId, setBranchId] = useState<number>(
@@ -287,13 +373,14 @@ export function PurchaseOrderForm({
   const selectedStatus = STATUS_OPTIONS.find((s) => s.value === isDraft);
   const selectedBranchData = branches?.find((b) => b.id === branchId);
   const activeBranches = branches?.filter((b) => b.isActive);
-  const selectedSupplierFromList = suppliersData?.data?.find(
-    (s) => s.id === supplierId
-  );
-  const { data: selectedSupplierFetched } = useSupplier(
-    supplierId && !selectedSupplierFromList ? supplierId : undefined
-  );
-  const selectedSupplier = selectedSupplierFromList || selectedSupplierFetched;
+  // LUÔN fetch detail NCC khi user chọn (bỏ qua cache từ dropdown list).
+  // Lý do: dù `useSuppliers` của dropdown đã truyền `includeSupplierGroup:
+  // true`, React Query cache có thể chứa query cũ từ session trước/page khác
+  // thiếu field `supplierGroupDetails`. Nếu dùng cache cũ, `isImportSupplier`
+  // luôn false → form không hiển thị 3 cột NM. `useSupplier(supplierId)`
+  // gọi `findOne` — BE findOne luôn include group đầy đủ, nên đây là nguồn
+  // đáng tin duy nhất. Mirror pattern OrderSupplierForm.tsx:506-513.
+  const { data: selectedSupplier } = useSupplier(supplierId || undefined);
 
   const isImportSupplier = useMemo(() => {
     return (
@@ -307,6 +394,15 @@ export function PurchaseOrderForm({
   // phiếu cũ mở lại vẫn nhận đúng CNY. isImportSupplier chỉ dùng cho cột
   // bảng NM/¥ và logic ghi giá vốn.
   const isCurrencyCNY = currency === "CNY";
+
+  // Nguồn tin cậy cho logic ghi giá vốn NM (factoryPrice/factorySubTotal) +
+  // sync giá VND theo tỉ giá. `isImportSupplier` phụ thuộc selectedSupplier
+  // load qua API (useSupplier/useSuppliers) → có race: form mount trước khi
+  // fetch xong → isImportSupplier=false → payload gửi factoryPrice=null →
+  // BE XÓA dữ liệu NM đã điền ở PDN. `currency` được init đồng bộ ngay từ
+  // orderSupplier/purchaseOrder.currency nên isCurrencyCNY luôn đúng. Gộp
+  // OR để bền vững: chỉ cần 1 trong 2 nguồn xác nhận là luồng nhập khẩu.
+  const isImportFlow = isImportSupplier || isCurrencyCNY;
 
   const liveRateQuery = useExchangeRate("CNY", "VND");
   const effectiveRate = useMemo(() => {
@@ -648,7 +744,7 @@ export function PurchaseOrderForm({
 
   const handleQuantityChange = (index: number, value: string) => {
     if (isFormDisabled) return;
-    const quantity = parseFloat(value) || 0;
+    const quantity = roundTo(parseFloat(value) || 0, 2);
 
     if (quantity < 0) {
       toast.error("Số lượng không được nhỏ hơn 0");
@@ -832,7 +928,7 @@ export function PurchaseOrderForm({
 
   // Sync VND prices when effectiveRate changes
   useEffect(() => {
-    if (!isImportSupplier || effectiveRate <= 0) return;
+    if (!isImportFlow || effectiveRate <= 0) return;
     setProducts((prev) => {
       let changed = false;
       const next = prev.map((p) => {
@@ -847,10 +943,10 @@ export function PurchaseOrderForm({
       });
       return changed ? next : prev;
     });
-  }, [effectiveRate, isImportSupplier]);
+  }, [effectiveRate, isImportFlow]);
 
   useEffect(() => {
-    if (isImportSupplier) {
+    if (isImportFlow) {
       setProducts((prev) => {
         let changed = false;
         const next = prev.map((p) => {
@@ -861,7 +957,7 @@ export function PurchaseOrderForm({
         return changed ? next : prev;
       });
     }
-  }, [isImportSupplier]);
+  }, [isImportFlow]);
 
   const calculateTotal = () => {
     const subtotal = products.reduce((sum, p) => sum + p.subTotal, 0);
@@ -899,6 +995,23 @@ export function PurchaseOrderForm({
   }, [purchaseOrder?.payments, previouslyPaid, effectiveRate]);
 
   const handleSubmit = async () => {
+    // Nghiệp vụ: "Lưu tạm" (phiếu tạm) KHÔNG được ghi nhận thanh toán vì bản
+    // chất phiếu tạm chưa phát sinh phiếu chi + công nợ. Nếu phiếu đang có
+    // tiền trả NCC (paymentAmount > 0) mà user bấm Lưu tạm → chặn hẳn, báo
+    // lỗi, không lưu gì. User phải bấm "Hoàn thành" (mới tạo được phiếu chi)
+    // hoặc bỏ khoản thanh toán trước khi lưu tạm.
+    if (paymentAmount > 0) {
+      await Swal.fire({
+        title: "Không thể lưu tạm khi có thanh toán",
+        html:
+          "Phiếu tạm chưa phát sinh phiếu chi và công nợ nên không thể ghi nhận tiền trả nhà cung cấp.<br/><br/>" +
+          "Vui lòng chọn <b>Hoàn thành</b> để ghi nhận thanh toán, hoặc xoá khoản thanh toán rồi mới lưu tạm.",
+        icon: "warning",
+        confirmButtonText: "Đã hiểu",
+        confirmButtonColor: "#16a34a",
+      });
+      return;
+    }
     handleFormSubmit();
   };
 
@@ -975,8 +1088,8 @@ export function PurchaseOrderForm({
           lineNumber: index + 1,
           // Phân loại hàng: "normal" (mặc định) hoặc "damaged" (loại B).
           conditionType: p.conditionType || "normal",
-          factoryPrice: isImportSupplier ? (Number(p.factoryPrice) || null) : null,
-          factorySubTotal: isImportSupplier ? (Number(p.factorySubTotal) || null) : null,
+          factoryPrice: isImportFlow ? (Number(p.factoryPrice) || null) : null,
+          factorySubTotal: isImportFlow ? (Number(p.factorySubTotal) || null) : null,
         })),
         additionalPayment: paymentAmount > 0 ? Number(paymentAmount) : 0,
         payments:
@@ -986,8 +1099,8 @@ export function PurchaseOrderForm({
                   method: paymentMethod,
                   amount: Number(paymentAmount),
                   accountId: paymentAccountId || undefined,
-                  exchangeRate: isImportSupplier ? (paymentExchangeRate || undefined) : undefined,
-                  foreignAmount: isImportSupplier ? (paymentForeignAmount || undefined) : undefined,
+                  exchangeRate: isImportFlow ? (paymentExchangeRate || undefined) : undefined,
+                  foreignAmount: isImportFlow ? (paymentForeignAmount || undefined) : undefined,
                 },
               ]
             : [],
@@ -1034,25 +1147,34 @@ export function PurchaseOrderForm({
         // Khi hoàn thành phiếu, BE sẽ dựa vào đây để cộng đúng bucket
         // tồn kho (onHand vs damagedQuantity).
         conditionType: p.conditionType || "normal",
-        factoryPrice: isImportSupplier ? (Number(p.factoryPrice) || null) : null,
-        factorySubTotal: isImportSupplier ? (Number(p.factorySubTotal) || null) : null,
+        factoryPrice: isImportFlow ? (Number(p.factoryPrice) || null) : null,
+        factorySubTotal: isImportFlow ? (Number(p.factorySubTotal) || null) : null,
       })),
-      paidAmount: paymentAmount > 0 ? Number(paymentAmount) : 0,
       purchaseById: purchaseById || undefined,
-      paymentMethod: paymentAmount > 0 ? paymentMethod : undefined,
-      paymentAccountId:
+    };
+
+    // Payment fields CHỈ hợp lệ khi TẠO MỚI. Endpoint `PUT /:id` (update)
+    // dùng DTO `forbidNonWhitelisted` KHÔNG chấp nhận paymentMethod/
+    // paymentAccountId/paymentExchangeRate/paymentForeignAmount (nó recompute
+    // paidAmount từ PurchaseOrderPayment records). Khi edit, tiền trả THÊM
+    // được xử lý riêng qua `POST /:id/payments` trong handleFormSubmit/Complete.
+    if (!purchaseOrder?.id) {
+      standardPayload.paidAmount = paymentAmount > 0 ? Number(paymentAmount) : 0;
+      standardPayload.paymentMethod =
+        paymentAmount > 0 ? paymentMethod : undefined;
+      standardPayload.paymentAccountId =
         paymentAmount > 0 && paymentMethod === "transfer"
           ? (paymentAccountId ?? undefined)
-          : undefined,
-      paymentExchangeRate:
-        paymentAmount > 0 && isImportSupplier
+          : undefined;
+      standardPayload.paymentExchangeRate =
+        paymentAmount > 0 && isImportFlow
           ? (paymentExchangeRate ?? undefined)
-          : undefined,
-      paymentForeignAmount:
-        paymentAmount > 0 && isImportSupplier
+          : undefined;
+      standardPayload.paymentForeignAmount =
+        paymentAmount > 0 && isImportFlow
           ? (paymentForeignAmount ?? undefined)
-          : undefined,
-    };
+          : undefined;
+    }
     if (code.trim()) {
       standardPayload.code = code.trim();
     }
@@ -1060,6 +1182,32 @@ export function PurchaseOrderForm({
       standardPayload.purchaseDate = purchaseDate.toISOString();
     }
     return { kind: "standard" as const, payload: standardPayload };
+  };
+
+  // Khi SỬA PN đã tồn tại: endpoint PUT /:id KHÔNG nhận các field payment
+  // (BE recompute paidAmount từ PurchaseOrderPayment records). Nếu user nhập
+  // tiền trả THÊM (paymentAmount) lúc sửa, phải gọi endpoint payment riêng
+  // POST /:id/payments — đối xứng cách tạo mới nhét paidAmount vào body.
+  const submitAdditionalPaymentOnEdit = async (poId: number) => {
+    if (!(paymentAmount > 0)) return;
+    await createPurchaseOrderPayment.mutateAsync({
+      id: poId,
+      data: {
+        amount: Number(paymentAmount),
+        paymentMethod,
+        accountId:
+          paymentMethod === "transfer"
+            ? (paymentAccountId ?? undefined)
+            : undefined,
+        paymentDate: purchaseDate ? purchaseDate.toISOString() : undefined,
+        exchangeRate: isImportFlow
+          ? (paymentExchangeRate ?? undefined)
+          : undefined,
+        foreignAmount: isImportFlow
+          ? (paymentForeignAmount ?? undefined)
+          : undefined,
+      },
+    });
   };
 
   const handleFormSubmit = async () => {
@@ -1072,6 +1220,7 @@ export function PurchaseOrderForm({
           id: purchaseOrder.id,
           data: built.payload,
         });
+        await submitAdditionalPaymentOnEdit(purchaseOrder.id);
         toast.success("Cập nhật phiếu nhập hàng thành công");
       } else if (built.kind === "from-os") {
         await createPurchaseOrderFromOrderSupplier.mutateAsync(built.payload);
@@ -1096,6 +1245,7 @@ export function PurchaseOrderForm({
           id: purchaseOrder.id,
           data: built.payload,
         });
+        await submitAdditionalPaymentOnEdit(purchaseOrder.id);
         toast.success("Cập nhật phiếu nhập hàng thành công");
       } else if (built.kind === "from-os") {
         await createPurchaseOrderFromOrderSupplier.mutateAsync(built.payload);
@@ -1127,6 +1277,7 @@ export function PurchaseOrderForm({
               branchId={branchId}
               disabled={!!isFormDisabled}
               onAddProduct={handleAddProduct}
+              supplierId={supplierId || undefined}
             />
           </div>
         </div>
@@ -1152,7 +1303,7 @@ export function PurchaseOrderForm({
                   <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-[90px]">
                     Loại
                   </th>
-                  {!isImportSupplier ? (
+                  {!isCurrencyCNY ? (
                     <>
                       <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider whitespace-nowrap">
                         ĐG trước thuế
@@ -1228,18 +1379,11 @@ export function PurchaseOrderForm({
                             className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
                             <Minus className="w-4 h-4" />
                           </button>
-                          <input
-                            type="text"
-                            value={formatCurrency(item.quantity)}
-                            onChange={(e) => {
-                              const numericValue = parseFormattedNumber(
-                                e.target.value
-                              );
-                              handleQuantityChange(
-                                index,
-                                numericValue.toString()
-                              );
-                            }}
+                          <QuantityInput
+                            value={item.quantity}
+                            onValueChange={(next) =>
+                              handleQuantityChange(index, String(next))
+                            }
                             disabled={isFormDisabled ? true : false}
                             className="w-16 text-center border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                           />
@@ -1287,7 +1431,7 @@ export function PurchaseOrderForm({
                             : "Tốt"}
                         </button>
                       </td>
-                      {!isImportSupplier ? (
+                      {!isCurrencyCNY ? (
                         <>
                           <td className="px-[10px] py-2 align-middle text-right text-sm text-gray-600 whitespace-nowrap">
                             {formatCurrency(lineVat.unitPriceBeforeTax)}
@@ -1889,6 +2033,16 @@ export function PurchaseOrderForm({
                 type="button">
                 <CreditCard className="w-4 h-4 text-brand" />
               </button>
+              {paymentAmount > 0 && (
+                <button
+                  onClick={handleClearPayment}
+                  disabled={isFormDisabled ? true : false}
+                  className="p-1.5 border border-red-200 rounded hover:bg-red-50 disabled:opacity-50"
+                  type="button"
+                  title="Xóa khoản thanh toán đang nhập">
+                  <Trash2 className="w-4 h-4 text-red-500" />
+                </button>
+              )}
             </div>
             {paymentAmount > 0 && (
               <div className="mt-1 text-xs text-gray-500">

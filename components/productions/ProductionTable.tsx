@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useEffect, Fragment, useMemo } from "react";
-import { useProductions } from "@/lib/hooks/useProductions";
+import { useState, useEffect, Fragment, useMemo, useRef } from "react";
+import {
+  useProductions,
+  useExportProductions,
+} from "@/lib/hooks/useProductions";
 import {
   Plus,
   ChevronLeft,
   ChevronRight,
   Search,
+  Download,
+  ChevronDown,
+  Loader2,
 } from "lucide-react";
 import type { Production } from "@/lib/api/productions";
 import { ProductionDetailRow } from "./ProductionDetailRow";
@@ -163,6 +169,25 @@ export function ProductionTable({ filters }: ProductionTableProps) {
     DEFAULT_COLUMNS
   );
 
+  const { exportToFile, exportDetailToFile, isExporting } =
+    useExportProductions();
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showExportMenu]);
+
   // Debounce search
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -188,6 +213,12 @@ export function ProductionTable({ filters }: ProductionTableProps) {
     if (activeStatusTab !== "all") f.status = [Number(activeStatusTab)];
     return f;
   }, [filters, activeStatusTab]);
+
+  // Bộ lọc xuất file khớp đúng danh sách đang hiển thị (bỏ pageSize/currentItem).
+  const buildExportFilters = () => ({
+    search: debouncedSearch || undefined,
+    ...effectiveFilters,
+  });
 
   const { data, isLoading } = useProductions({
     pageSize: limit,
@@ -270,6 +301,43 @@ export function ProductionTable({ filters }: ProductionTableProps) {
                 <Plus className="w-4 h-4" />
                 Sản xuất
               </button>
+            </PermissionGate>
+
+            <PermissionGate resource="productions" action="export">
+              <div ref={exportMenuRef} className="relative">
+                <button
+                  onClick={() => setShowExportMenu((o) => !o)}
+                  disabled={isExporting}
+                  className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  {isExporting ? "Đang xuất..." : "Xuất file"}
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                {showExportMenu && (
+                  <div className="absolute right-0 top-full mt-1 z-30 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                    <button
+                      onClick={() => {
+                        setShowExportMenu(false);
+                        exportToFile(buildExportFilters());
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors">
+                      Xuất tổng quan
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowExportMenu(false);
+                        exportDetailToFile(buildExportFilters());
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors border-t border-gray-100">
+                      Xuất chi tiết
+                    </button>
+                  </div>
+                )}
+              </div>
             </PermissionGate>
 
             {/* Column toggle */}

@@ -76,6 +76,10 @@ export default function DestructionsPage() {
           onDelete={handleDelete}
           searchValue={search}
           onSearchChange={setSearch}
+          exportParams={{
+            ...filters,
+            search: debouncedSearch || undefined,
+          }}
         />
       </div>
     </PagePermissionGuard>

@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Upload } from "lucide-react";
-import { useSupplierReturns } from "@/lib/hooks/useSupplierReturns";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Upload, Download, ChevronDown, Loader2 } from "lucide-react";
+import {
+  useSupplierReturns,
+  useExportSupplierReturns,
+} from "@/lib/hooks/useSupplierReturns";
 import { useBranchStore } from "@/lib/store/branch";
 import type { SupplierReturn } from "@/lib/types/supplier-return";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
@@ -150,6 +153,32 @@ export function SupplierReturnsTable({
       DEFAULT_COLUMNS
     );
 
+  const { exportToFile, exportDetailToFile, isExporting } =
+    useExportSupplierReturns();
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showExportMenu]);
+
+  // Bộ lọc xuất file khớp với danh sách đang hiển thị (bỏ phân trang).
+  const buildExportFilters = () => ({
+    search,
+    branchId: selectedBranch?.id,
+    ...filters,
+  });
+
   const { data, isLoading } = useSupplierReturns({
     page,
     limit,
@@ -179,6 +208,42 @@ export function SupplierReturnsTable({
           />
           <div className="flex items-center gap-2">
             <ColumnToggle columns={columns} onToggle={toggleColumn} />
+            <PermissionGate resource="supplier_returns" action="export">
+              <div ref={exportMenuRef} className="relative">
+                <button
+                  onClick={() => setShowExportMenu((o) => !o)}
+                  disabled={isExporting}
+                  className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  {isExporting ? "Đang xuất..." : "Xuất file"}
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                {showExportMenu && (
+                  <div className="absolute right-0 top-full mt-1 z-30 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                    <button
+                      onClick={() => {
+                        setShowExportMenu(false);
+                        exportToFile(buildExportFilters());
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors">
+                      Xuất tổng quan
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowExportMenu(false);
+                        exportDetailToFile(buildExportFilters());
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors border-t border-gray-100">
+                      Xuất chi tiết
+                    </button>
+                  </div>
+                )}
+              </div>
+            </PermissionGate>
             {onImportClick && (
               <PermissionGate resource="supplier_returns" action="create">
                 <button

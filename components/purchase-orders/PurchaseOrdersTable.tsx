@@ -47,6 +47,77 @@ const STATUS_COLOR: Record<number, string> = {
 const formatDateTime = (date?: string) =>
   date ? new Date(date).toLocaleString("vi-VN") : "-";
 
+// Format số CNY (làm tròn 2 chữ số thập phân, dấu phẩy phân cách hàng nghìn)
+const formatCNY = (value: number) =>
+  new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 2,
+  }).format(value) + " CNY";
+
+// Tính các giá trị CNY cho phiếu nhập NCC nước ngoài.
+// - totalCNY = Σ items[i].factorySubTotal (BE lưu CNY gốc trên item)
+// - paidAmountCNY fallback = paidAmount / exchangeRate (legacy)
+// - discountCNY: ưu tiên ratio nếu có, fallback chia discount cho rate
+// - supplierDebtCNY = max(0, totalCNY - discountCNY - paidAmountCNY)
+//
+// LƯU Ý: BE có thể lưu totalAmount/paidAmount/debtAmount ở dạng số âm
+// cho PO của NCC nước ngoài trong một số edge case cũ. Math.abs() để
+// quy đổi CNY cho đúng (CNY luôn dương).
+function computeImportAmounts(po: PurchaseOrder) {
+  const rate = Number(po.exchangeRate) || 1;
+  const totalCNY = (po.items || []).reduce(
+    (sum, it) => sum + (Math.abs(Number(it.factorySubTotal)) || 0),
+    0
+  );
+  // Ưu tiên tổng foreignAmount (CNY thật đã snapshot mỗi lần trả) — chính xác
+  // kể cả khi tỉ giá thanh toán khác tỉ giá phiếu. Fallback (payment legacy
+  // không có foreignAmount) mới chia paidAmount(VND)/rate gốc của phiếu.
+  const paidForeignSum = (po.payments || [])
+    .filter((p) => p.foreignAmount != null)
+    .reduce((s, p) => s + Math.abs(Number(p.foreignAmount)), 0);
+  const paidAmountCNY =
+    paidForeignSum > 0
+      ? paidForeignSum
+      : Math.abs(Number(po.paidAmount || 0)) > 0
+        ? Math.abs(Number(po.paidAmount)) / rate
+        : 0;
+  const discountCNY =
+    Number(po.discountRatio) > 0
+      ? (totalCNY * Number(po.discountRatio)) / 100
+      : Math.abs(Number(po.discount || 0)) / rate;
+  const supplierDebtCNY = Math.max(0, totalCNY - discountCNY - paidAmountCNY);
+  return { totalCNY, paidAmountCNY, discountCNY, supplierDebtCNY };
+}
+
+// Ô hiển thị 2-dòng: CNY chính (text-sm) + VND phụ (text-xs xám).
+// Dùng cho 3 cột Chi phí nhập trả NCC / Cần trả NCC / Đã trả NCC khi
+// NCC nước ngoài. Khi NCC nội địa → fallback dùng formatCurrency.
+// VND hiển thị giá trị tuyệt đối (Math.abs) tránh dấu "-" sai context.
+function ImportAmountCell({
+  primaryCNY,
+  vnd,
+  className,
+}: {
+  primaryCNY: number;
+  vnd: number | null;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex flex-col items-end leading-tight whitespace-nowrap ${
+        className ?? ""
+      }`}>
+      <span className="text-sm font-medium text-gray-900">
+        {formatCNY(primaryCNY)}
+      </span>
+      {vnd != null && (
+        <span className="text-xs text-gray-400">
+          (~{formatCurrency(Math.abs(vnd))})
+        </span>
+      )}
+    </div>
+  );
+}
+
 const DEFAULT_COLUMNS: ColumnConfig<PurchaseOrder>[] = [
   {
     key: "code",
@@ -144,21 +215,49 @@ const DEFAULT_COLUMNS: ColumnConfig<PurchaseOrder>[] = [
     label: "Chi phí nhập trả NCC",
     visible: false,
     width: "200px",
-    render: (po) => formatCurrency(po.totalAmount),
+    render: (po) => {
+      // NCC nước ngoài: hiển thị CNY chính + VND phụ
+      if (po.currency === "CNY") {
+        const { totalCNY } = computeImportAmounts(po);
+        return <ImportAmountCell primaryCNY={totalCNY} vnd={po.totalAmount} />;
+      }
+      return formatCurrency(po.totalAmount);
+    },
   },
   {
     key: "needToPay",
     label: "Cần trả NCC",
     visible: true,
     width: "150px",
-    render: (po) => formatCurrency(po.debtAmount),
+    render: (po) => {
+      // NCC nước ngoài: hiển thị CNY chính + VND phụ
+      if (po.currency === "CNY") {
+        const { supplierDebtCNY } = computeImportAmounts(po);
+        return (
+          <ImportAmountCell
+            primaryCNY={supplierDebtCNY}
+            vnd={po.debtAmount}
+          />
+        );
+      }
+      return formatCurrency(po.debtAmount);
+    },
   },
   {
     key: "paidAmount",
     label: "Đã trả NCC",
     visible: true,
     width: "150px",
-    render: (po) => formatCurrency(po.paidAmount),
+    render: (po) => {
+      // NCC nước ngoài: hiển thị CNY chính + VND phụ
+      if (po.currency === "CNY") {
+        const { paidAmountCNY } = computeImportAmounts(po);
+        return (
+          <ImportAmountCell primaryCNY={paidAmountCNY} vnd={po.paidAmount} />
+        );
+      }
+      return formatCurrency(po.paidAmount);
+    },
   },
   {
     key: "status",
@@ -372,14 +471,25 @@ export function PurchaseOrdersTable({
                     className="cursor-pointer"
                   />
                 </th>
-                {visibleColumns.map((col) => (
-                  <th
-                    key={col.key}
-                    className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide"
-                    style={{ width: col.width, minWidth: col.width }}>
-                    {col.label}
-                  </th>
-                ))}
+                {visibleColumns.map((col) => {
+                  // 3 cột tiền (Chi phí nhập trả NCC / Cần trả NCC / Đã trả
+                  // NCC) chứa CNY + VND phụ 2 dòng cho NCC nước ngoài.
+                  // Header canh phải cho khớp với cell.
+                  const isMoneyColumn =
+                    col.key === "totalPayForSupplier" ||
+                    col.key === "needToPay" ||
+                    col.key === "paidAmount";
+                  return (
+                    <th
+                      key={col.key}
+                      className={`px-4 py-2.5 ${
+                        isMoneyColumn ? "text-right" : "text-left"
+                      } font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide`}
+                      style={{ width: col.width, minWidth: col.width }}>
+                      {col.label}
+                    </th>
+                  );
+                })}
                 <th className="px-4 py-2.5 w-8" />
               </tr>
             </thead>
@@ -425,20 +535,30 @@ export function PurchaseOrdersTable({
                           className="cursor-pointer"
                         />
                       </td>
-                      {visibleColumns.map((col) => (
-                        <td
-                          key={col.key}
-                          className={`px-4 py-2.5 ${expandedId === po.id ? "border-t-2 border-brand" : ""}`}
-                          style={{
-                            width: col.width,
-                            minWidth: col.width,
-                            maxWidth: col.width,
-                            wordWrap: "break-word",
-                            whiteSpace: "normal",
-                          }}>
-                          {col.render(po)}
-                        </td>
-                      ))}
+                      {visibleColumns.map((col) => {
+                        const isMoneyColumn =
+                          col.key === "totalPayForSupplier" ||
+                          col.key === "needToPay" ||
+                          col.key === "paidAmount";
+                        return (
+                          <td
+                            key={col.key}
+                            className={`px-4 py-2.5 ${
+                              isMoneyColumn
+                                ? "align-top text-right"
+                                : "align-middle"
+                            } ${expandedId === po.id ? "border-t-2 border-brand" : ""}`}
+                            style={{
+                              width: col.width,
+                              minWidth: col.width,
+                              maxWidth: col.width,
+                              wordWrap: "break-word",
+                              whiteSpace: "normal",
+                            }}>
+                            {col.render(po)}
+                          </td>
+                        );
+                      })}
                       <td
                         className={`px-4 py-2.5 ${expandedId === po.id ? "border-t-2 border-r-2 border-brand" : ""}`}>
                         <ChevronDown

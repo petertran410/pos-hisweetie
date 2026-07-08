@@ -43,6 +43,18 @@ export const purchaseOrdersApi = {
     }),
   update: (id: number, data: any) =>
     apiClient.put(`/purchase-orders/${id}`, data),
+  createPayment: (
+    id: number,
+    data: {
+      amount: number;
+      paymentMethod?: string;
+      accountId?: number;
+      paymentDate?: string;
+      notes?: string;
+      exchangeRate?: number;
+      foreignAmount?: number;
+    }
+  ) => apiClient.post(`/purchase-orders/${id}/payments`, data),
   cancel: (id: number, data?: { cancelPayments?: boolean }) =>
     apiClient.put(`/purchase-orders/${id}/cancel`, data || {}),
   delete: (id: number) => apiClient.delete(`/purchase-orders/${id}`),

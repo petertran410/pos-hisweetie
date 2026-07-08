@@ -56,6 +56,38 @@ export function useUpdatePurchaseOrder() {
   });
 }
 
+export function useCreatePurchaseOrderPayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: {
+        amount: number;
+        paymentMethod?: string;
+        accountId?: number;
+        paymentDate?: string;
+        notes?: string;
+        exchangeRate?: number;
+        foreignAmount?: number;
+      };
+    }) => purchaseOrdersApi.createPayment(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({
+        queryKey: ["purchase-orders", variables.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["cashflows"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Thanh toán phiếu nhập hàng thất bại");
+    },
+  });
+}
+
 export function useDeletePurchaseOrder() {
   const queryClient = useQueryClient();
 

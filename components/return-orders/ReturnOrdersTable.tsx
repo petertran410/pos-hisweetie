@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useReturnOrders } from "@/lib/hooks/useReturnOrders";
+import { useState, useMemo, useEffect, useRef } from "react";
+import {
+  useReturnOrders,
+  useExportReturnOrders,
+} from "@/lib/hooks/useReturnOrders";
 import { useBranchStore } from "@/lib/store/branch";
-import { Plus } from "lucide-react";
+import { Plus, Download, ChevronDown, Loader2 } from "lucide-react";
 import type { ReturnOrder } from "@/lib/types/return-order";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
@@ -230,6 +233,33 @@ export function ReturnOrdersTable({
     [columns, canViewTotalPrices]
   );
 
+  const { exportToFile, exportDetailToFile, isExporting } =
+    useExportReturnOrders();
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showExportMenu]);
+
+  // Bộ lọc xuất file khớp với danh sách đang hiển thị (bỏ phân trang).
+  const buildExportFilters = () => ({
+    search,
+    branchId: selectedBranch?.id,
+    ...filters,
+    refundType: "returns_only",
+  });
+
   const { data, isLoading } = useReturnOrders({
     page,
     limit,
@@ -266,6 +296,42 @@ export function ReturnOrdersTable({
           </div>
           <div className="flex items-center gap-2">
             <ColumnToggle columns={displayColumns} onToggle={toggleColumn} />
+            <PermissionGate resource="return_orders" action="export">
+              <div ref={exportMenuRef} className="relative">
+                <button
+                  onClick={() => setShowExportMenu((o) => !o)}
+                  disabled={isExporting}
+                  className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  {isExporting ? "Đang xuất..." : "Xuất file"}
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                {showExportMenu && (
+                  <div className="absolute right-0 top-full mt-1 z-30 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                    <button
+                      onClick={() => {
+                        setShowExportMenu(false);
+                        exportToFile(buildExportFilters());
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors">
+                      Xuất tổng quan
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowExportMenu(false);
+                        exportDetailToFile(buildExportFilters());
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors border-t border-gray-100">
+                      Xuất chi tiết
+                    </button>
+                  </div>
+                )}
+              </div>
+            </PermissionGate>
             <button
               onClick={onCreateClick}
               className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">

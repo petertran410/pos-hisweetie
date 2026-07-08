@@ -642,6 +642,45 @@ export function EditCashFlowModal({
             </div>
           )}
 
+          {/* Thông tin tiền tệ ngoài nước (readonly) — chỉ hiển thị khi phiếu
+              chi NCC nước ngoài có snapshot currency = CNY. */}
+          {cashFlow.partnerType === "S" && cashFlow.currency === "CNY" && (
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                  Loại tiền tệ
+                </label>
+                <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 cursor-not-allowed flex items-center gap-2">
+                  <span className="font-semibold">CNY (¥)</span>
+                  <span className="text-xs text-gray-500">
+                    — Nhà cung cấp nước ngoài
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                  Tỉ giá VND/CNY (snapshot)
+                </label>
+                <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 cursor-not-allowed">
+                  {Number(cashFlow.exchangeRate || 1).toLocaleString("vi-VN")}
+                </div>
+              </div>
+              {cashFlow.foreignAmount != null && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                    Số tiền ngoại tệ
+                  </label>
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 cursor-not-allowed font-medium">
+                    {Number(cashFlow.foreignAmount).toLocaleString("vi-VN", {
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    CNY
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Tổng tiền — readonly */}
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-1.5">
@@ -649,6 +688,16 @@ export function EditCashFlowModal({
             </label>
             <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-right font-semibold text-gray-800 cursor-not-allowed">
               {formatCurrencyDisplay(Number(cashFlow.amount))}
+              {cashFlow.partnerType === "S" && cashFlow.currency === "CNY" &&
+                cashFlow.foreignAmount != null && (
+                  <span className="block text-xs text-gray-500 font-normal">
+                    (
+                    {Number(cashFlow.foreignAmount).toLocaleString("vi-VN", {
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    CNY)
+                  </span>
+                )}
             </div>
           </div>
 

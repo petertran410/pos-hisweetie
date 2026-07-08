@@ -394,6 +394,20 @@ export function CashFlowDetailRow({
                         <span className="dt-field-value">
                           {cashFlow.isReceipt ? "+" : "-"}
                           {formatCurrency(Number(cashFlow.amount))}
+                          {cashFlow.partnerType === "S" &&
+                            cashFlow.currency === "CNY" &&
+                            cashFlow.foreignAmount != null && (
+                              <span
+                                className="block text-xs font-normal"
+                                style={{ color: "var(--dt-text-muted)" }}>
+                                (
+                                {Number(cashFlow.foreignAmount).toLocaleString(
+                                  "vi-VN",
+                                  { maximumFractionDigits: 2 }
+                                )}{" "}
+                                CNY)
+                              </span>
+                            )}
                         </span>
                       </div>
                       <div className="flex flex-col gap-2 mb-2 dt-field-divider">
@@ -442,6 +456,45 @@ export function CashFlowDetailRow({
                         </div>
                       </div>
                     )}
+
+                    {/* Thông tin ngoại tệ (chỉ phiếu chi NCC nước ngoài) */}
+                    {cashFlow.partnerType === "S" &&
+                      cashFlow.currency === "CNY" && (
+                        <div className="grid grid-cols-3 gap-5">
+                          <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                            <label className="dt-field-label">
+                              Loại tiền tệ:
+                            </label>
+                            <span className="dt-field-value">
+                              CNY (¥) — Nhà cung cấp nước ngoài
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                            <label className="dt-field-label">
+                              Tỉ giá VND/CNY (snapshot):
+                            </label>
+                            <span className="dt-field-value">
+                              {Number(
+                                cashFlow.exchangeRate || 1
+                              ).toLocaleString("vi-VN")}
+                            </span>
+                          </div>
+                          {cashFlow.foreignAmount != null && (
+                            <div className="flex flex-col gap-2 mb-2 dt-field-divider">
+                              <label className="dt-field-label">
+                                Số tiền ngoại tệ:
+                              </label>
+                              <span className="dt-field-value">
+                                {Number(cashFlow.foreignAmount).toLocaleString(
+                                  "vi-VN",
+                                  { maximumFractionDigits: 2 }
+                                )}{" "}
+                                CNY
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                     {/* Row 3: Đối tượng */}
                     {partnerName && (
@@ -814,72 +867,113 @@ export function CashFlowDetailRow({
                                   </tr>
                                 </thead>
                                 <tbody className="bg-white dt-divide">
-                                  {purchaseOrderPayments.map((payment: any) => (
-                                    <tr
-                                      key={payment.id}
-                                      className="dt-row">
-                                      <td className="px-4 py-3">
-                                        <Link
-                                          className="text-md font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
-                                          href={`/san-pham/nhap-hang?Code=${payment.purchaseOrder?.code}`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          onClick={(e) => e.stopPropagation()}>
-                                          {payment.purchaseOrder?.code}
-                                        </Link>
-                                      </td>
-                                      <td className="px-4 py-3 text-md" style={{ color: "var(--dt-text)" }}>
-                                        {formatDateTime(payment.paymentDate)}
-                                      </td>
-                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
-                                        {formatCurrency(
-                                          Number(
-                                            payment.purchaseOrder?.subTotal ||
-                                              payment.purchaseOrder?.total ||
-                                              0
-                                          )
-                                        )}
-                                      </td>
-                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
-                                        {formatCurrency(
-                                          Number(
-                                            payment.purchaseOrder?.paidAmount ||
-                                              0
-                                          ) - Number(payment.amount)
-                                        )}
-                                      </td>
-                                      <td className="px-4 py-3 text-right text-md font-medium text-red-600">
-                                        {formatCurrency(Number(payment.amount))}
-                                      </td>
-                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
-                                        {formatCurrency(
-                                          Number(
-                                            payment.purchaseOrder?.debtAmount ||
-                                              0
-                                          )
-                                        )}
-                                      </td>
-                                      <td className="px-4 py-3 text-center">
-                                        <span
-                                          className={`px-2 py-1 rounded text-xs font-medium ${
-                                            payment.purchaseOrder?.status === 1
-                                              ? "bg-green-100 text-green-700"
-                                              : payment.purchaseOrder
-                                                    ?.status === 2
+                                  {purchaseOrderPayments.map((payment: any) => {
+                                    const isForeignPO =
+                                      cashFlow.partnerType === "S" &&
+                                      cashFlow.currency === "CNY" &&
+                                      payment.foreignAmount != null &&
+                                      payment.exchangeRate != null;
+                                    const formatAmount = (vnd: number) => {
+                                      if (!isForeignPO) return formatCurrency(vnd);
+                                      const rate = Number(payment.exchangeRate);
+                                      const cny = vnd / rate;
+                                      return (
+                                        <div className="flex flex-col items-end leading-tight">
+                                          <span>
+                                            {new Intl.NumberFormat("vi-VN", {
+                                              maximumFractionDigits: 2,
+                                            }).format(cny)}{" "}
+                                            CNY
+                                          </span>
+                                          <span className="text-xs text-gray-400 font-normal">
+                                            ({formatCurrency(vnd)})
+                                          </span>
+                                        </div>
+                                      );
+                                    };
+                                    return (
+                                      <tr
+                                        key={payment.id}
+                                        className="dt-row">
+                                        <td className="px-4 py-3">
+                                          <Link
+                                            className="text-md font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
+                                            href={`/san-pham/nhap-hang?Code=${payment.purchaseOrder?.code}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}>
+                                            {payment.purchaseOrder?.code}
+                                          </Link>
+                                        </td>
+                                        <td className="px-4 py-3 text-md" style={{ color: "var(--dt-text)" }}>
+                                          {formatDateTime(payment.paymentDate)}
+                                        </td>
+                                        <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                          {formatAmount(
+                                            Number(
+                                              payment.purchaseOrder?.subTotal ||
+                                                payment.purchaseOrder?.total ||
+                                                0
+                                            )
+                                          )}
+                                        </td>
+                                        <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                          {formatAmount(
+                                            Number(
+                                              payment.purchaseOrder?.paidAmount ||
+                                                0
+                                            ) - Number(payment.amount)
+                                          )}
+                                        </td>
+                                        <td className="px-4 py-3 text-right text-md font-medium text-red-600">
+                                          <div className="flex flex-col items-end">
+                                            {isForeignPO && payment.foreignAmount != null ? (
+                                              <>
+                                                <span>
+                                                  {new Intl.NumberFormat("vi-VN", {
+                                                    maximumFractionDigits: 2,
+                                                  }).format(Number(payment.foreignAmount))}{" "}
+                                                  CNY
+                                                </span>
+                                                <span className="text-xs text-gray-400 font-normal">
+                                                  ({formatCurrency(Number(payment.amount))})
+                                                </span>
+                                              </>
+                                            ) : (
+                                              formatCurrency(Number(payment.amount))
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                          {formatAmount(
+                                            Number(
+                                              payment.purchaseOrder?.debtAmount ||
+                                                0
+                                            )
+                                          )}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                          <span
+                                            className={`px-2 py-1 rounded text-xs font-medium ${
+                                              payment.purchaseOrder?.status === 1
+                                                ? "bg-green-100 text-green-700"
+                                                : payment.purchaseOrder
+                                                      ?.status === 2
                                                 ? "bg-red-100 text-red-700"
                                                 : "bg-yellow-100 text-yellow-700"
-                                          }`}>
-                                          {payment.purchaseOrder?.statusValue ||
-                                            (payment.purchaseOrder?.status === 1
-                                              ? "Đã nhập hàng"
-                                              : payment.purchaseOrder
-                                                    ?.status === 2
+                                            }`}>
+                                            {payment.purchaseOrder?.statusValue ||
+                                              (payment.purchaseOrder?.status === 1
+                                                ? "Đã nhập hàng"
+                                                : payment.purchaseOrder
+                                                      ?.status === 2
                                                 ? "Đã hủy"
                                                 : "Phiếu tạm")}
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  ))}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
                                 </tbody>
                               </table>
                             </div>

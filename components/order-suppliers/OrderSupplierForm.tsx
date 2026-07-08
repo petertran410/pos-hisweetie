@@ -33,6 +33,78 @@ import {
   useRefreshExchangeRate,
 } from "@/lib/hooks/useExchangeRate";
 
+// Làm tròn về `digits` số thập phân, tránh sai số dấu phẩy động (vd 0.1+0.2).
+function roundTo(value: number, digits = 3): number {
+  const f = Math.pow(10, digits);
+  return Math.round((value + Number.EPSILON) * f) / f;
+}
+
+// Định dạng số lượng: tối đa 2 chữ số thập phân, bỏ trailing zeros.
+// `1 → "1"`, `1.5 → "1.5"`, `1.25 → "1.25"`, `1.234 → "1.23"` (đã được
+// làm tròn trước khi format). Khác formatCurrency ở chỗ KHÔNG ép phần
+// thập phân tối thiểu và KHÔNG làm tròn về số nguyên.
+function formatQuantity(value: number): string {
+  if (!isFinite(value) || value === 0) return "0";
+  const fixed = roundTo(value, 2).toFixed(2);
+  // Bỏ trailing zeros + dấu "." nếu là số nguyên.
+  return fixed.replace(/\.?0+$/, "");
+}
+
+// Validate chuỗi nhập SL: cho phép số thập phân tối đa 2 chữ số. Phải chấp
+// nhận cả các trạng thái gõ dở như "1." (đã gõ dấu chấm nhưng chưa gõ chữ
+// số sau), "" (đang xóa), "0", "0.01". Pattern: phần nguyên (\d*), tuỳ chọn
+// theo dấu "." + tối đa 2 chữ số thập phân. "1." pass vì phần thập phân là
+// rỗng (zero digits), regex cũ "/^\d*\.?\d{0,2}$/" sai ở chỗ bắt buộc có
+// phần thập phân — dẫn đến user gõ "1." bị reject → mất focus.
+const QUANTITY_INPUT_PATTERN = /^\d*(?:\.\d{0,2})?$/;
+
+/**
+ * Ô nhập SỐ LƯỢNG cho phép gõ số thập phân mượt (tối đa 2 chữ số thập phân).
+ * Giữ raw string trong lúc focus để không bị mất dấu "." khi đang gõ "1." —
+ * đây là lý do input controlled thuần (value=formatQuantity) không gõ được
+ * "1.5": onChange "1." → parse ra 1 → re-render "1" → xóa mất dấu chấm.
+ * Khi blur mới normalize hiển thị qua formatQuantity.
+ */
+function QuantityInput({
+  value,
+  onValueChange,
+  disabled,
+  className,
+}: {
+  value: number;
+  onValueChange: (next: number) => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [raw, setRaw] = useState("");
+
+  const display = focused ? raw : formatQuantity(value);
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={display}
+      disabled={disabled}
+      className={className}
+      onFocus={(e) => {
+        setFocused(true);
+        setRaw(value ? String(value) : "");
+        e.target.select();
+      }}
+      onChange={(e) => {
+        const cleaned = e.target.value.replace(/,/g, "");
+        if (cleaned === "" || QUANTITY_INPUT_PATTERN.test(cleaned)) {
+          setRaw(cleaned);
+          onValueChange(cleaned === "" ? 0 : roundTo(parseFloat(cleaned) || 0, 2));
+        }
+      }}
+      onBlur={() => setFocused(false)}
+    />
+  );
+}
+
 // ID nhóm nhà cung cấp "nước ngoài". Theo yêu cầu của hệ thống: NCC thuộc
 // nhóm id = 1 → được phép nhập Đơn giá NM / Thành tiền NM bằng ngoại tệ
 // (hiện tại chỉ hỗ trợ CNY). NCC không thuộc nhóm này → 2 cột ẩn, dùng
@@ -720,7 +792,7 @@ export function OrderSupplierForm({
 
   const handleQuantityChange = (index: number, value: string) => {
     if (isFormDisabled) return;
-    const quantity = parseFloat(value) || 0;
+    const quantity = roundTo(parseFloat(value) || 0, 2);
 
     if (quantity < 0) {
       toast.error("Số lượng không được nhỏ hơn 0");
@@ -1087,18 +1159,11 @@ export function OrderSupplierForm({
                           className="p-1 hover:bg-gray-100 rounded disabled:opacity-50">
                           <Minus className="w-4 h-4" />
                         </button>
-                        <input
-                          type="text"
-                          value={formatCurrency(item.quantity)}
-                          onChange={(e) => {
-                            const numericValue = parseNumberInput(
-                              e.target.value
-                            );
-                            handleQuantityChange(
-                              index,
-                              numericValue.toString()
-                            );
-                          }}
+                        <QuantityInput
+                          value={item.quantity}
+                          onValueChange={(next) =>
+                            handleQuantityChange(index, String(next))
+                          }
                           disabled={isFormDisabled ? true : false}
                           className="w-16 text-center border rounded px-3 py-2 text-sm disabled:bg-gray-100"
                         />

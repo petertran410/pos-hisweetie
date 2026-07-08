@@ -56,6 +56,50 @@ const METHOD_TEXT: Record<string, string> = {
   // card: "Thẻ",
 };
 
+// Format số CNY (làm tròn 2 chữ số thập phân, dấu phẩy phân cách hàng nghìn)
+const formatCNY = (value: number) =>
+  new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 2,
+  }).format(value) + " CNY";
+
+// Cell hiển thị 2-dòng cho cột tiền tệ khi NCC nước ngoài:
+//   Dòng 1 (chính): X CNY
+//   Dòng 2 (phụ):   (~Y VND)
+// NCC nội địa → fallback formatCurrency bình thường (1 dòng).
+function CashFlowAmountCell({
+  cf,
+}: {
+  cf: CashFlow;
+}) {
+  const isForeign = cf.partnerType === "S" && cf.currency === "CNY";
+  if (!isForeign) {
+    return (
+      <span
+        className={`font-medium ${
+          cf.isReceipt ? "text-green-600" : "text-red-600"
+        }`}>
+        {cf.isReceipt ? "+" : "-"}
+        {formatCurrency(Number(cf.amount))}
+      </span>
+    );
+  }
+  return (
+    <div className="flex flex-col items-end leading-tight whitespace-nowrap">
+      <span
+        className={`text-sm font-semibold ${
+          cf.isReceipt ? "text-green-600" : "text-red-600"
+        }`}>
+        {cf.foreignAmount != null
+          ? formatCNY(Number(cf.foreignAmount))
+          : formatCNY(Number(cf.amount) / (Number(cf.exchangeRate) || 1))}
+      </span>
+      <span className="text-xs text-gray-400">
+        (~{formatCurrency(Math.abs(Number(cf.amount)))})
+      </span>
+    </div>
+  );
+}
+
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
 
@@ -94,14 +138,8 @@ const DEFAULT_COLUMNS: ColumnConfig<CashFlow>[] = [
     key: "amount",
     label: "Số tiền",
     visible: true,
-    width: "140px",
-    render: (cf) => (
-      <span
-        className={`font-medium ${cf.isReceipt ? "text-green-600" : "text-red-600"}`}>
-        {cf.isReceipt ? "+" : "-"}
-        {formatCurrency(Number(cf.amount))}
-      </span>
-    ),
+    width: "150px",
+    render: (cf) => <CashFlowAmountCell cf={cf} />,
   },
   {
     key: "method",

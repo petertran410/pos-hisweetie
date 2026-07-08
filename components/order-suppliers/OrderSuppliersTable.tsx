@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, Fragment, useMemo } from "react";
-import { useOrderSuppliers } from "@/lib/hooks/useOrderSuppliers";
+import { useState, useEffect, Fragment, useMemo, useRef } from "react";
+import {
+  useOrderSuppliers,
+  useExportOrderSuppliers,
+} from "@/lib/hooks/useOrderSuppliers";
 import type {
   OrderSupplier,
   OrderSupplierFilters,
@@ -11,7 +14,14 @@ import {
   ORDER_SUPPLIER_STATUS,
 } from "@/lib/types/order-supplier";
 import { OrderSupplierDetailRow } from "./OrderSupplierDetailRow";
-import { Plus, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Loader2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
@@ -365,6 +375,35 @@ export function OrderSuppliersTable({
     currentItem: (page - 1) * limit,
   });
 
+  const {
+    exportToFile,
+    exportDetailToFile,
+    isExportingOverview,
+    isExportingDetail,
+  } = useExportOrderSuppliers();
+  const isExporting = isExportingOverview || isExportingDetail;
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showExportMenu]);
+
+  const buildExportFilters = (): OrderSupplierFilters => ({
+    ...effectiveFilters,
+    search: debouncedSearch || undefined,
+  });
+
   const orderSuppliers = data?.data || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / limit) || 1;
@@ -413,6 +452,42 @@ export function OrderSuppliersTable({
                   Tạo phiếu
                 </button>
               )}
+            </PermissionGate>
+            <PermissionGate resource="order_suppliers" action="export">
+              <div ref={exportMenuRef} className="relative">
+                <button
+                  onClick={() => setShowExportMenu((o) => !o)}
+                  disabled={isExporting}
+                  className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  {isExporting ? "Đang xuất..." : "Xuất file"}
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                {showExportMenu && (
+                  <div className="absolute right-0 top-full mt-1 z-30 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                    <button
+                      onClick={() => {
+                        setShowExportMenu(false);
+                        exportToFile(buildExportFilters());
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors">
+                      Xuất tổng quan
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowExportMenu(false);
+                        exportDetailToFile(buildExportFilters());
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors border-t border-gray-100">
+                      Xuất chi tiết
+                    </button>
+                  </div>
+                )}
+              </div>
             </PermissionGate>
             <ColumnToggle columns={columns} onToggle={toggleColumn} />
           </div>
