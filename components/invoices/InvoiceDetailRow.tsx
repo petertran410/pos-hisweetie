@@ -689,11 +689,12 @@ export function InvoiceDetailRow({
                         <div className="flex justify-between items-center text-md">
                           <span className="text-gray-600">Giảm giá:</span>
                           <span className="font-semibold text-gray-900">
-                            {formatCurrency(Number(invoice.discount))}
                             {(() => {
                               const discountAmt = Number(invoice.discount);
                               const total = Number(invoice.totalAmount);
-                              if (discountAmt <= 0 || total <= 0) return null;
+                              if (discountAmt <= 0 || total <= 0) {
+                                return formatCurrency(discountAmt);
+                              }
                               // Ưu tiên % đã lưu; fallback tính từ số tiền (HĐ cũ / HĐ từ đơn).
                               const stored = Number(invoice.discountRatio) || 0;
                               const pct =
@@ -705,9 +706,12 @@ export function InvoiceDetailRow({
                                         100
                                     ) / 100;
                               return (
-                                <span className="text-red-600 ml-1">
-                                  ({pct}%)
-                                </span>
+                                <>
+                                  <span className="text-red-600 mr-1">
+                                    ({pct}%)
+                                  </span>
+                                  {formatCurrency(discountAmt)}
+                                </>
                               );
                             })()}
                           </span>

@@ -854,8 +854,11 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                       : 0;
                                 return (
                                   <>
-                                    - {formatCurrency(effective)}
-                                    {pct > 0 && ` (${pct}%)`}
+                                    -{" "}
+                                    {pct > 0 && (
+                                      <span className="mr-1">({pct}%)</span>
+                                    )}
+                                    {formatCurrency(effective)}
                                   </>
                                 );
                               })()}
