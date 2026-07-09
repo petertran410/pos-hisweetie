@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useState } from "react";
 import { promotionsApi } from "@/lib/api/promotions";
 import {
   PromotionFilters,
@@ -7,6 +8,98 @@ import {
   EvaluateItem,
 } from "@/lib/types/promotion";
 import { useAuthStore } from "../store/auth";
+import { useBranchStore } from "../store/branch";
+import { API_URL } from "../config/api";
+
+async function downloadExcelFromUrl(url: URL, filename: string) {
+  const token = useAuthStore.getState().token;
+  const selectedBranch = useBranchStore.getState().selectedBranch;
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(selectedBranch?.id
+        ? { "X-Branch-Id": String(selectedBranch.id) }
+        : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || "Lỗi khi xuất dữ liệu");
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename=([^;]+)/);
+  const finalName = match ? match[1].trim() : filename;
+
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = finalName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(objectUrl);
+}
+
+function buildPromotionExportUrl(
+  path: string,
+  filters: PromotionFilters
+): URL {
+  const { page: _p, pageSize: _ps, ...exportFilters } = filters;
+  const url = new URL(`${API_URL}${path}`);
+  Object.entries(exportFilters).forEach(([k, v]) => {
+    if (k.startsWith("_")) return;
+    if (v === undefined || v === null || v === "") return;
+    url.searchParams.append(k, String(v));
+  });
+  return url;
+}
+
+/**
+ * Xuất Excel chương trình khuyến mãi (theo bộ lọc hiện tại):
+ *   - exportToFile: xuất TỔNG QUAN (mỗi CTKM 1 dòng)
+ *   - exportDetailToFile: xuất CHI TIẾT (mỗi dòng reward 1 dòng)
+ */
+export function useExportPromotions() {
+  const [isExportingOverview, setIsExportingOverview] = useState(false);
+  const [isExportingDetail, setIsExportingDetail] = useState(false);
+
+  const exportToFile = async (filters: PromotionFilters) => {
+    setIsExportingOverview(true);
+    try {
+      const url = buildPromotionExportUrl("/promotions/export", filters);
+      await downloadExcelFromUrl(url, `KhuyenMai_${Date.now()}.xlsx`);
+      toast.success("Xuất file thành công");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExportingOverview(false);
+    }
+  };
+
+  const exportDetailToFile = async (filters: PromotionFilters) => {
+    setIsExportingDetail(true);
+    try {
+      const url = buildPromotionExportUrl("/promotions/export-detail", filters);
+      await downloadExcelFromUrl(url, `KhuyenMai_ChiTiet_${Date.now()}.xlsx`);
+      toast.success("Xuất file thành công");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExportingDetail(false);
+    }
+  };
+
+  return {
+    exportToFile,
+    exportDetailToFile,
+    isExportingOverview,
+    isExportingDetail,
+  };
+}
 
 export function usePromotions(filters?: PromotionFilters) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
