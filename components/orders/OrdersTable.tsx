@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Fragment, useMemo } from "react";
-import { useOrders, useOrdersTotals } from "@/lib/hooks/useOrders";
+import { useState, useEffect, Fragment, useMemo, useRef } from "react";
+import { useOrders, useOrdersTotals, useExportOrders } from "@/lib/hooks/useOrders";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -13,6 +13,8 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  Download,
+  Loader2,
 } from "lucide-react";
 import type { Order } from "@/lib/types/order";
 import { OrderDetailRow } from "./OrderDetailRow";
@@ -355,6 +357,36 @@ export function OrdersTable({ filters, onCreateClick, autoExpandCode }: OrdersTa
     ...effectiveFilters,
   });
 
+  const {
+    exportToFile,
+    exportDetailToFile,
+    isExportingOverview,
+    isExportingDetail,
+  } = useExportOrders();
+  const isExporting = isExportingOverview || isExportingDetail;
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showExportMenu]);
+
+  const buildExportFilters = (): Record<string, any> => ({
+    search: debouncedSearch || undefined,
+    branchId: selectedBranch?.id,
+    ...effectiveFilters,
+  });
+
   const orders = data?.data || [];
   const total = (data as any)?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
@@ -469,6 +501,42 @@ export function OrdersTable({ filters, onCreateClick, autoExpandCode }: OrdersTa
                 <Plus className="w-4 h-4" />
                 Tạo đơn
               </button>
+            </PermissionGate>
+            <PermissionGate resource="orders" action="export">
+              <div ref={exportMenuRef} className="relative">
+                <button
+                  onClick={() => setShowExportMenu((o) => !o)}
+                  disabled={isExporting}
+                  className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  {isExporting ? "Đang xuất..." : "Xuất file"}
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                {showExportMenu && (
+                  <div className="absolute right-0 top-full mt-1 z-30 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                    <button
+                      onClick={() => {
+                        setShowExportMenu(false);
+                        exportToFile(buildExportFilters());
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors">
+                      Xuất tổng quan
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowExportMenu(false);
+                        exportDetailToFile(buildExportFilters());
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors border-t border-gray-100">
+                      Xuất chi tiết
+                    </button>
+                  </div>
+                )}
+              </div>
             </PermissionGate>
             <ColumnToggle columns={columns} onToggle={toggleColumn} />
           </div>

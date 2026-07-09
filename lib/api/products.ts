@@ -36,6 +36,9 @@ export interface ProductQueryParams {
   supplierId?: number;
   factoryId?: number;
   factoryRelation?: "primary" | "backup" | "either";
+  // Filter theo thời gian tạo sản phẩm (ISO string)
+  fromCreatedDate?: string;
+  toCreatedDate?: string;
 }
 
 export interface Inventory {
