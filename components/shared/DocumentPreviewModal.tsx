@@ -230,6 +230,16 @@ function SaleContent({ type, doc }: { type: DocType; doc: any }) {
           <div className="flex justify-between">
             <span className="text-gray-600">Giảm giá:</span>
             <span className="font-semibold text-gray-900">
+              {Number(doc.discount) > 0 && Number(doc.totalAmount) > 0 && (
+                <span className="text-red-500 mr-1">
+                  (
+                  {(
+                    (Number(doc.discount) / Number(doc.totalAmount)) *
+                    100
+                  ).toFixed(2)}
+                  %)
+                </span>
+              )}
               {formatCurrency(Number(doc.discount))}
             </span>
           </div>
