@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/config/api";
-import { RefreshCw, XCircle, Loader2, Database, ShieldCheck, Users, Package } from "lucide-react";
+import { RefreshCw, XCircle, Loader2, Database, ShieldCheck, Users, Package, AlertTriangle } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { useSyncMisaDictionary } from "@/lib/hooks/useMisa";
@@ -13,31 +13,62 @@ import Swal from "sweetalert2";
 export default function SyncSettingsPage() {
   const queryClient = useQueryClient();
   const [togglingSepayFilter, setTogglingSepayFilter] = useState(false);
+  const [togglingLarkCron, setTogglingLarkCron] = useState(false);
+  const [togglingMisaCron, setTogglingMisaCron] = useState(false);
 
   const { data: settings, isLoading: loadingSettings } = useQuery({
     queryKey: ["settings"],
     queryFn: () => apiClient.get("/settings"),
   });
 
-  const updateSepayFilter = useMutation({
-    mutationFn: (data: { sepayFilterByAccount: boolean }) =>
-      apiClient.put("/settings", data),
+  const updateSettings = useMutation({
+    mutationFn: (data: {
+      sepayFilterByAccount?: boolean;
+      larkProductRetryCronEnabled?: boolean;
+      misaDictionaryCronEnabled?: boolean;
+    }) => apiClient.put("/settings", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
   });
 
   const sepayFilterByAccount = settings?.sepayFilterByAccount ?? false;
+  const larkCronEnabled = settings?.larkProductRetryCronEnabled ?? true;
+  const misaCronEnabled = settings?.misaDictionaryCronEnabled ?? false;
 
   const handleToggleSepayFilter = async () => {
     if (!settings) return;
     setTogglingSepayFilter(true);
     try {
-      await updateSepayFilter.mutateAsync({
+      await updateSettings.mutateAsync({
         sepayFilterByAccount: !settings.sepayFilterByAccount,
       });
     } finally {
       setTogglingSepayFilter(false);
+    }
+  };
+
+  const handleToggleLarkCron = async () => {
+    if (!settings) return;
+    setTogglingLarkCron(true);
+    try {
+      await updateSettings.mutateAsync({
+        larkProductRetryCronEnabled: !settings.larkProductRetryCronEnabled,
+      });
+    } finally {
+      setTogglingLarkCron(false);
+    }
+  };
+
+  const handleToggleMisaCron = async () => {
+    if (!settings) return;
+    setTogglingMisaCron(true);
+    try {
+      await updateSettings.mutateAsync({
+        misaDictionaryCronEnabled: !settings.misaDictionaryCronEnabled,
+      });
+    } finally {
+      setTogglingMisaCron(false);
     }
   };
   // ===== ĐỒNG BỘ KIOTVIET (ĐÃ TẠM ẨN) =====
@@ -201,6 +232,123 @@ export default function SyncSettingsPage() {
         </div>
 
         <div className="p-6 space-y-6">
+          {/* ===== Cron đồng bộ sản phẩm Lark ===== */}
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    larkCronEnabled ? "bg-indigo-100" : "bg-gray-100"
+                  }`}>
+                  <RefreshCw
+                    className={`w-6 h-6 ${
+                      larkCronEnabled ? "text-indigo-600" : "text-gray-400"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    Cron đồng bộ sản phẩm Lark
+                  </h2>
+                  <p className="text-sm text-gray-500 max-w-2xl">
+                    {larkCronEnabled
+                      ? "Đang bật — Tự động retry các sản phẩm PENDING/FAILED lên Lark mỗi 5 phút"
+                      : "Đã tắt — Cron retry sản phẩm không chạy. Bạn vẫn có thể bấm 'Đồng bộ ngay' bên dưới để chạy thủ công"}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleToggleLarkCron}
+                disabled={loadingSettings || togglingLarkCron}
+                className={`shrink-0 relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  larkCronEnabled
+                    ? "bg-indigo-500 focus:ring-indigo-500"
+                    : "bg-gray-300 focus:ring-gray-400"
+                } ${loadingSettings || togglingLarkCron ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+                {togglingLarkCron ? (
+                  <Loader2 className="absolute left-1/2 -translate-x-1/2 w-4 h-4 text-white animate-spin" />
+                ) : (
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+                      larkCronEnabled ? "translate-x-7" : "translate-x-1"
+                    }`}
+                  />
+                )}
+              </button>
+            </div>
+
+            {!larkCronEnabled && (
+              <div className="mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-700">
+                  Khi tắt, các sản phẩm PENDING/FAILED sẽ KHÔNG được tự động
+                  đẩy lên Lark. Bạn cần bấm &quot;Đồng bộ sản phẩm lên
+                  Lark&quot; thủ công bên dưới hoặc bật lại cron.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ===== Cron đồng bộ danh mục Misa ===== */}
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    misaCronEnabled ? "bg-brand-soft" : "bg-gray-100"
+                  }`}>
+                  <Database
+                    className={`w-6 h-6 ${
+                      misaCronEnabled ? "text-brand" : "text-gray-400"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    Cron đồng bộ danh mục Misa
+                  </h2>
+                  <p className="text-sm text-gray-500 max-w-2xl">
+                    {misaCronEnabled
+                      ? "Đang bật — Tự động đồng bộ danh mục Misa (hàng hóa, kho, đối tượng kế toán, đơn vị tổ chức) mỗi 6 giờ"
+                      : "Đã tắt — Cron Misa không chạy. Bạn vẫn có thể bấm 'Đồng bộ ngay' bên dưới để chạy thủ công"}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleToggleMisaCron}
+                disabled={loadingSettings || togglingMisaCron}
+                className={`shrink-0 relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  misaCronEnabled
+                    ? "bg-brand focus:ring-brand"
+                    : "bg-gray-300 focus:ring-gray-400"
+                } ${loadingSettings || togglingMisaCron ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+                {togglingMisaCron ? (
+                  <Loader2 className="absolute left-1/2 -translate-x-1/2 w-4 h-4 text-white animate-spin" />
+                ) : (
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+                      misaCronEnabled ? "translate-x-7" : "translate-x-1"
+                    }`}
+                  />
+                )}
+              </button>
+            </div>
+
+            {!misaCronEnabled && (
+              <div className="mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-700">
+                  Khi tắt, danh mục Misa (hàng hóa, kho, đối tượng, đơn vị) sẽ
+                  KHÔNG được tự động đồng bộ về database. Bạn cần bấm
+                  &quot;Đồng bộ danh mục Misa&quot; thủ công bên dưới hoặc bật
+                  lại cron.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* ===== ĐỒNG BỘ KIOTVIET (ĐÃ TẠM ẨN) =====
           {/* Toggle Section */}
           {/*

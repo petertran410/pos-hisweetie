@@ -69,7 +69,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
     name: "",
     type: "INVOICE_DISCOUNT",
     priority: 0,
-    autoApply: true,
+    autoApply: false,
     stackable: false,
     forAllBranch: true,
     forAllCustomer: true,
@@ -341,7 +341,9 @@ export function PromotionForm({ promotion, onClose }: Props) {
                         setForm({ ...form, autoApply: e.target.checked })
                       }
                     />
-                    Tự động áp dụng (bỏ tick = chỉ gợi ý)
+                    {form.type === "INVOICE_DISCOUNT"
+                      ? "Tự động áp dụng khi thanh toán (bỏ tick = thu ngân phải bật tay)"
+                      : "Tự động áp dụng (bỏ tick = chỉ gợi ý)"}
                   </label>
                   <label className="flex items-center gap-2 text-sm">
                     <input
