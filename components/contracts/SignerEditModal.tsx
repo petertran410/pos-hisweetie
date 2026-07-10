@@ -7,13 +7,8 @@ import type {
   CreateContractSignerPayload,
   UpdateContractSignerPayload,
 } from "@/lib/types/contract";
-import type {
-  useCreateSigner,
-  useUpdateSigner,
-  useDeleteSigner,
-} from "@/lib/hooks/useContracts";
 
-export interface SignerInitial {
+export interface SignerFormValues {
   documensoEmail: string;
   name: string;
   department: string;
@@ -21,118 +16,74 @@ export interface SignerInitial {
   isActive: boolean;
 }
 
-interface FireOpts {
-  initial: SignerInitial;
+export interface SignerEditModalProps {
+  isOpen: boolean;
   isEdit: boolean;
-  createMutation: ReturnType<typeof useCreateSigner>;
-  updateMutation: ReturnType<typeof useUpdateSigner>;
-  deleteMutation: ReturnType<typeof useDeleteSigner>;
-  editId?: number;
+  initial: SignerFormValues;
+  submitting?: boolean;
+  onClose: () => void;
+  onSubmit: (
+    data: CreateContractSignerPayload | UpdateContractSignerPayload,
+  ) => Promise<void> | void;
 }
 
-// Build payload cho BE: bỏ field rỗng (để optional của DTO hoạt động đúng)
 function buildPayload(
-  form: SignerInitial,
+  form: SignerFormValues,
   isEdit: boolean,
 ): CreateContractSignerPayload | UpdateContractSignerPayload {
   const clean: Record<string, unknown> = {};
   clean.documensoEmail = form.documensoEmail.trim();
   if (form.name.trim()) clean.name = form.name.trim();
-  else if (!isEdit) clean.name = null; // create: cho phép null
+  else if (!isEdit) clean.name = null;
   if (form.department.trim()) clean.department = form.department.trim();
   else if (!isEdit) clean.department = null;
   if (form.code.trim()) clean.code = form.code.trim();
   else if (!isEdit) clean.code = null;
   clean.isActive = form.isActive;
-  return clean as any;
+  return clean as CreateContractSignerPayload | UpdateContractSignerPayload;
 }
 
-const SignerEditModal = {
-  async fire(opts: FireOpts): Promise<void> {
-    return new Promise((resolve) => {
-      const handleClose = () => {
-        cleanup();
-        resolve();
-      };
-      const handleSubmit = async (form: SignerInitial) => {
-        const payload = buildPayload(form, opts.isEdit);
-        try {
-          if (opts.isEdit && opts.editId != null) {
-            await opts.updateMutation.mutateAsync({
-              id: opts.editId,
-              data: payload as UpdateContractSignerPayload,
-            });
-          } else {
-            await opts.createMutation.mutateAsync(
-              payload as CreateContractSignerPayload,
-            );
-          }
-          cleanup();
-          resolve();
-        } catch {
-          // hook đã toast lỗi; đóng modal vẫn để user retry
-          cleanup();
-          resolve();
-        }
-      };
-
-      const overlay = document.createElement("div");
-      overlay.setAttribute("data-signer-modal", "1");
-      document.body.appendChild(overlay);
-      const cleanup = () => {
-        try {
-          document.body.removeChild(overlay);
-        } catch {}
-      };
-
-      const root = (
-        <Modal
-          initial={opts.initial}
-          isEdit={opts.isEdit}
-          onClose={handleClose}
-          onSubmit={handleSubmit}
-        />
-      );
-      createPortal(root, overlay);
-    });
-  },
-};
-
-export default SignerEditModal;
-
-interface ModalProps {
-  initial: SignerInitial;
-  isEdit: boolean;
-  onClose: () => void;
-  onSubmit: (data: SignerInitial) => Promise<void> | void;
-}
-
-function Modal({ initial, isEdit, onClose, onSubmit }: ModalProps) {
+export default function SignerEditModal({
+  isOpen,
+  isEdit,
+  initial,
+  submitting = false,
+  onClose,
+  onSubmit,
+}: SignerEditModalProps) {
   const [mounted, setMounted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState<SignerInitial>(initial);
+  const [localSubmitting, setLocalSubmitting] = useState(false);
+  const [form, setForm] = useState<SignerFormValues>(initial);
 
   useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
 
-  const handleChange = (k: keyof SignerInitial) => (v: string | boolean) => {
-    setForm((f) => ({ ...f, [k]: v }));
-  };
+  useEffect(() => {
+    if (isOpen) setForm(initial);
+  }, [isOpen, initial]);
+
+  if (!mounted || !isOpen) return null;
+
+  const busy = submitting || localSubmitting;
+
+  const handleChange =
+    (k: keyof SignerFormValues) => (v: string | boolean) => {
+      setForm((f) => ({ ...f, [k]: v }));
+    };
 
   const handleSubmit = async () => {
     if (!form.documensoEmail.trim()) {
       alert("Vui lòng nhập email Documenso");
       return;
     }
-    setSubmitting(true);
+    setLocalSubmitting(true);
     try {
-      await onSubmit(form);
+      await onSubmit(buildPayload(form, isEdit));
     } finally {
-      setSubmitting(false);
+      setLocalSubmitting(false);
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col">
         <div className="flex items-center justify-between px-5 py-3 border-b">
@@ -142,7 +93,7 @@ function Modal({ initial, isEdit, onClose, onSubmit }: ModalProps) {
           <button
             onClick={onClose}
             className="p-1 rounded hover:bg-gray-100"
-            disabled={submitting}>
+            disabled={busy}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -173,9 +124,7 @@ function Modal({ initial, isEdit, onClose, onSubmit }: ModalProps) {
             <input
               type="text"
               value={form.department}
-              onChange={(e) =>
-                handleChange("department")(e.target.value)
-              }
+              onChange={(e) => handleChange("department")(e.target.value)}
               placeholder="vd: Ban Giám đốc"
               className="w-full border rounded px-3 py-2 text-sm"
             />
@@ -203,20 +152,21 @@ function Modal({ initial, isEdit, onClose, onSubmit }: ModalProps) {
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t">
           <button
             onClick={onClose}
-            disabled={submitting}
+            disabled={busy}
             className="px-4 py-2 text-sm rounded border hover:bg-gray-50 disabled:opacity-40">
             Huỷ
           </button>
           <button
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={busy}
             className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
-            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
             {isEdit ? "Lưu thay đổi" : "Thêm"}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

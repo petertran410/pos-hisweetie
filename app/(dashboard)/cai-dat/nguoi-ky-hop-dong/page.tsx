@@ -10,13 +10,31 @@ import {
   useDeleteSigner,
 } from "@/lib/hooks/useContracts";
 import { usePermission } from "@/lib/hooks/usePermissions";
-import SignerEditModal from "@/components/contracts/SignerEditModal";
-import type { ContractSigner } from "@/lib/types/contract";
+import SignerEditModal, {
+  type SignerFormValues,
+} from "@/components/contracts/SignerEditModal";
+import type {
+  ContractSigner,
+  CreateContractSignerPayload,
+  UpdateContractSignerPayload,
+} from "@/lib/types/contract";
+
+const EMPTY_FORM: SignerFormValues = {
+  documensoEmail: "",
+  name: "",
+  department: "",
+  code: "",
+  isActive: true,
+};
 
 export default function ContractSignersPage() {
   const canManage = usePermission("contracts", "manage_signers");
 
   const [search, setSearch] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<ContractSigner | null>(null);
+  const [formInitial, setFormInitial] = useState<SignerFormValues>(EMPTY_FORM);
+
   const { data: signers, isLoading } = useContractSigners(canManage);
   const createMutation = useCreateSigner();
   const updateMutation = useUpdateSigner();
@@ -37,40 +55,48 @@ export default function ContractSignersPage() {
 
   if (!canManage) return null;
 
-  async function handleAdd() {
-    await SignerEditModal.fire({
-      initial: {
-        documensoEmail: "",
-        name: "",
-        department: "",
-        code: "",
-        isActive: true,
-      },
-      isEdit: false,
-      createMutation,
-      updateMutation,
-      deleteMutation,
-    });
-  }
+  const openAdd = () => {
+    setEditing(null);
+    setFormInitial(EMPTY_FORM);
+    setModalOpen(true);
+  };
 
-  async function handleEdit(s: ContractSigner) {
-    await SignerEditModal.fire({
-      initial: {
-        documensoEmail: s.documensoEmail,
-        name: s.name || "",
-        department: s.department || "",
-        code: s.code || "",
-        isActive: s.isActive,
-      },
-      isEdit: true,
-      editId: s.id,
-      createMutation,
-      updateMutation,
-      deleteMutation,
+  const openEdit = (s: ContractSigner) => {
+    setEditing(s);
+    setFormInitial({
+      documensoEmail: s.documensoEmail,
+      name: s.name || "",
+      department: s.department || "",
+      code: s.code || "",
+      isActive: s.isActive,
     });
-  }
+    setModalOpen(true);
+  };
 
-  async function handleToggle(s: ContractSigner) {
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditing(null);
+  };
+
+  const handleSubmit = async (
+    data: CreateContractSignerPayload | UpdateContractSignerPayload,
+  ) => {
+    try {
+      if (editing) {
+        await updateMutation.mutateAsync({
+          id: editing.id,
+          data: data as UpdateContractSignerPayload,
+        });
+      } else {
+        await createMutation.mutateAsync(data as CreateContractSignerPayload);
+      }
+      closeModal();
+    } catch {
+      /* toast đã hiện trong hook */
+    }
+  };
+
+  const handleToggle = async (s: ContractSigner) => {
     const next = !s.isActive;
     const label = s.name || s.documensoEmail;
     const confirm = await Swal.fire({
@@ -85,7 +111,10 @@ export default function ContractSignersPage() {
     });
     if (!confirm.isConfirmed) return;
     updateMutation.mutate({ id: s.id, data: { isActive: next } });
-  }
+  };
+
+  const submitting =
+    createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="flex flex-col h-full">
@@ -101,7 +130,7 @@ export default function ContractSignersPage() {
             </p>
           </div>
           <button
-            onClick={handleAdd}
+            onClick={openAdd}
             disabled={createMutation.isPending}
             className="flex items-center gap-1.5 px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
             <Plus className="w-4 h-4" /> Thêm người ký
@@ -196,7 +225,7 @@ export default function ContractSignersPage() {
                     <td className="px-4 py-3 align-top">
                       <div className="flex items-center gap-1 justify-end">
                         <button
-                          onClick={() => handleEdit(s)}
+                          onClick={() => openEdit(s)}
                           disabled={
                             updateMutation.isPending ||
                             deleteMutation.isPending
@@ -231,6 +260,15 @@ export default function ContractSignersPage() {
           </table>
         </div>
       </div>
+
+      <SignerEditModal
+        isOpen={modalOpen}
+        isEdit={!!editing}
+        initial={formInitial}
+        submitting={submitting}
+        onClose={closeModal}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }
