@@ -60,6 +60,11 @@ export const contractsApi = {
     return apiClient.post<Contract>(`/contracts/${id}/resend`);
   },
 
+  /** Đồng bộ trạng thái từ Documenso (khi webhook miss). */
+  sync: async (id: number) => {
+    return apiClient.post<Contract>(`/contracts/${id}/sync`);
+  },
+
   // Upload PDF (multipart) — apiClient luôn JSON.stringify nên fetch trực tiếp.
   upload: async (params: {
     customerId: number;

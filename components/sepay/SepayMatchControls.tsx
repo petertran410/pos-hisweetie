@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { invoicesApi } from "@/lib/api/invoices";
-import { useSearchCustomers } from "@/lib/hooks/useCustomers";
+import { useCustomer, useSearchCustomers } from "@/lib/hooks/useCustomers";
 import {
   useAssignSepayCustomer,
   useUnassignSepayCustomer,
@@ -355,6 +355,9 @@ function CustomerInvoiceAllocator({
   onInvoicesChange: (next: Record<number, string>) => void;
 }) {
   const { invoices, isLoading } = useUnpaidInvoices(row.customerId, true);
+  const { data: customer, isLoading: isCustomerLoading } = useCustomer(
+    row.customerId
+  );
   const allocated = Number(row.amount) || 0;
 
   // Phân trang hóa đơn: 10 dòng / trang.
@@ -416,7 +419,26 @@ function CustomerInvoiceAllocator({
   return (
     <div className="border rounded-lg p-3 space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <div className="font-medium text-sm text-gray-800">{row.name}</div>
+        <div>
+          <div className="font-medium text-sm text-gray-800">{row.name}</div>
+          <div className="mt-0.5 text-xs text-gray-500">
+            {isCustomerLoading ? (
+              "Đang tải công nợ..."
+            ) : (
+              <>
+                Nợ hiện tại:{" "}
+                <span
+                  className={
+                    Number(customer?.totalDebt || 0) > 0
+                      ? "font-semibold text-red-600"
+                      : "font-semibold text-gray-700"
+                  }>
+                  {formatCurrency(Number(customer?.totalDebt || 0))}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-gray-500">Số tiền thu</label>
           <input

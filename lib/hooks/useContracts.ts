@@ -105,6 +105,26 @@ export function useResendContract() {
   });
 }
 
+export function useSyncContract() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => contractsApi.sync(id),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      if (data?.status === "PARTIALLY_SIGNED") {
+        toast.success("Khách đã ký — trạng thái: Chờ NV ký (BÊN A)");
+      } else if (data?.status === "SIGNED") {
+        toast.success("Hợp đồng đã ký hoàn tất");
+      } else {
+        toast.success("Đã đồng bộ từ Documenso");
+      }
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Đồng bộ thất bại");
+    },
+  });
+}
+
 export function useCreateSigner() {
   const qc = useQueryClient();
   return useMutation({

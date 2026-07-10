@@ -8,11 +8,15 @@ import {
   Loader2,
   Eye,
   PenLine,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Contract } from "@/lib/types/contract";
 import { contractsApi } from "@/lib/api/contracts";
-import { useResendContract } from "@/lib/hooks/useContracts";
+import {
+  useResendContract,
+  useSyncContract,
+} from "@/lib/hooks/useContracts";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 interface Props {
@@ -21,6 +25,7 @@ interface Props {
 
 export function ContractRowActions({ contract }: Props) {
   const resend = useResendContract();
+  const sync = useSyncContract();
   const [downloading, setDownloading] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
@@ -57,12 +62,11 @@ export function ContractRowActions({ contract }: Props) {
     }
   };
 
-  // Có thể gửi lại (khi HĐ chưa ký xong).
   const canResend = ["SENT", "PARTIALLY_SIGNED"].includes(contract.status);
+  const canSync = ["SENT", "PARTIALLY_SIGNED"].includes(contract.status);
 
   return (
     <div className="flex items-center gap-1">
-      {/* NV ký tiếp (Loại 2) — mở Documenso link ký của NV trong tab mới. */}
       {contract.status === "PARTIALLY_SIGNED" && contract.signingUrl && (
         <a
           href={contract.signingUrl}
@@ -76,13 +80,29 @@ export function ContractRowActions({ contract }: Props) {
         </a>
       )}
 
-      {/* Gửi lại mail ký cho khách (Documenso). */}
+      {canSync && (
+        <PermissionGate resource="contracts" action="view">
+          <button
+            onClick={() => sync.mutate(contract.id)}
+            disabled={sync.isPending}
+            title="Đồng bộ trạng thái từ Documenso (khi khách đã ký nhưng POS chưa cập nhật)"
+            className="p-1.5 rounded hover:bg-amber-50 text-amber-600 disabled:opacity-50"
+          >
+            {sync.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+          </button>
+        </PermissionGate>
+      )}
+
       {canResend && (
         <PermissionGate resource="contracts" action="send">
           <button
             onClick={() => resend.mutate(contract.id)}
             disabled={resend.isPending}
-            title="Gửi lại email ký cho khách"
+            title="Gửi lại email ký"
             className="p-1.5 rounded hover:bg-blue-50 text-blue-600 disabled:opacity-50"
           >
             {resend.isPending ? (
@@ -94,7 +114,6 @@ export function ContractRowActions({ contract }: Props) {
         </PermissionGate>
       )}
 
-      {/* Xem trước / tải PDF đã ký */}
       {contract.status === "SIGNED" && (
         <>
           <PermissionGate resource="contracts" action="view">
@@ -129,19 +148,17 @@ export function ContractRowActions({ contract }: Props) {
         </>
       )}
 
-      {/* Mở link ký Documenso (chỉ khi khách chưa ký). */}
-      {contract.signingUrl &&
-        contract.status === "SENT" && (
-          <a
-            href={contract.signingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Mở trang ký Documenso"
-            className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        )}
+      {contract.signingUrl && contract.status === "SENT" && (
+        <a
+          href={contract.signingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Mở trang ký Documenso"
+          className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </a>
+      )}
     </div>
   );
 }
