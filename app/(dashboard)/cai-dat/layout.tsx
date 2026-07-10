@@ -11,6 +11,7 @@ import {
   Printer,
   RefreshCw,
   CreditCard,
+  FileSignature,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import "@/app/dashboard.css";
@@ -58,6 +59,12 @@ export default function SettingsLayout({
       label: "TK ngân hàng theo sale",
       icon: CreditCard,
       permission: { resource: "bank_accounts", action: "view" },
+    },
+    {
+      href: "/cai-dat/nguoi-ky-hop-dong",
+      label: "Người ký hợp đồng",
+      icon: FileSignature,
+      permission: { resource: "contracts", action: "manage_signers" },
     },
     {
       href: "/cai-dat/lich-su",

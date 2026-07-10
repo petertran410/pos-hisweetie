@@ -6,6 +6,8 @@ import type {
   ContractTemplate,
   ContractTemplateField,
   CreateFromTemplatePayload,
+  CreateContractSignerPayload,
+  UpdateContractSignerPayload,
 } from "../types/contract";
 
 export const contractsApi = {
@@ -32,6 +34,18 @@ export const contractsApi = {
     return apiClient.get<ContractSigner[]>(
       `/contracts/signers${refresh ? "?refresh=true" : ""}`
     );
+  },
+
+  createSigner: async (data: CreateContractSignerPayload) => {
+    return apiClient.post<ContractSigner>("/contracts/signers", data);
+  },
+
+  updateSigner: async (id: number, data: UpdateContractSignerPayload) => {
+    return apiClient.patch<ContractSigner>(`/contracts/signers/${id}`, data);
+  },
+
+  deleteSigner: async (id: number) => {
+    return apiClient.delete<ContractSigner>(`/contracts/signers/${id}`);
   },
 
   getById: async (id: number) => {

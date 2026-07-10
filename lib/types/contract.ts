@@ -121,3 +121,19 @@ export interface ContractSigner {
   code: string | null;
   isActive: boolean;
 }
+
+export interface CreateContractSignerPayload {
+  documensoEmail: string;
+  name?: string | null;
+  department?: string | null;
+  code?: string | null;
+  isActive?: boolean;
+}
+
+export interface UpdateContractSignerPayload {
+  documensoEmail?: string;
+  name?: string | null;
+  department?: string | null;
+  code?: string | null;
+  isActive?: boolean;
+}

@@ -108,6 +108,7 @@ export const ACTION_LABELS: Record<string, string> = {
   supplier_return: "Nhà cung cấp - Trả hàng nhập",
   supplier_info: "Nhà cung cấp - Tổng hợp NCC",
   assign_permissions: "Phân quyền",
+  manage_signers: "Quản lý người ký",
   view_cost_price: "Xem giá vốn",
   view_sale_price: "Xem giá bán",
   view_publication: "Xem thông tin công bố",

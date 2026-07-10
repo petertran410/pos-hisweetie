@@ -3,6 +3,8 @@ import { contractsApi } from "@/lib/api/contracts";
 import type {
   ContractFilters,
   CreateFromTemplatePayload,
+  CreateContractSignerPayload,
+  UpdateContractSignerPayload,
 } from "@/lib/types/contract";
 import { toast } from "sonner";
 import { useAuthStore } from "../store/auth";
@@ -99,6 +101,52 @@ export function useResendContract() {
     },
     onError: (err: any) => {
       toast.error(err?.message || 'Gửi lại thất bại');
+    },
+  });
+}
+
+export function useCreateSigner() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateContractSignerPayload) =>
+      contractsApi.createSigner(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contract-signers"] });
+      toast.success("Đã thêm người ký");
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Thêm người ký thất bại");
+    },
+  });
+}
+
+export function useUpdateSigner() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      id: number;
+      data: UpdateContractSignerPayload;
+    }) => contractsApi.updateSigner(params.id, params.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contract-signers"] });
+      toast.success("Đã cập nhật người ký");
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Cập nhật thất bại");
+    },
+  });
+}
+
+export function useDeleteSigner() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => contractsApi.deleteSigner(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contract-signers"] });
+      toast.success("Đã ẩn người ký");
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Ẩn người ký thất bại");
     },
   });
 }
