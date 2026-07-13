@@ -337,7 +337,6 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
       try {
         const params: any = {
           search: productSearch,
-          limit: 10,
           isActive: true,
         };
         if (branchId) params.branchId = branchId;
