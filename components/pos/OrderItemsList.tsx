@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   AlertCircle,
   Calendar,
@@ -577,6 +578,11 @@ export function OrderItemsList({
                                     Math.min(item.quantity, Number(opt.remaining))
                                   )
                                 : item.quantity;
+                            if (opt.remaining != null && Number(opt.remaining) < item.quantity) {
+                              toast.warning(
+                                `Tồn khuyến mãi/còn tặng của ${opt.productName || opt.productId} còn ${opt.remaining}, đang xuất ${item.quantity}. Vẫn cho phép xuất.`
+                              );
+                            }
                             onUpdateItem(item.rowId, {
                               product: {
                                 id: opt.productId,

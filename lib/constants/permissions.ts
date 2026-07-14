@@ -40,6 +40,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   debt_offsets: "Cấn trừ công nợ",
   stock_audits: "Kiểm kho",
   inventory_checks: "Kiểm hàng loại B",
+  inventory_promo_checks: "Kiểm hàng khuyến mãi",
   settings: "Cài đặt hệ thống",
   return_orders_price: "Giá nhập lại trả hàng",
   return_orders_total_prices: "Tổng tiền hàng trả hàng",

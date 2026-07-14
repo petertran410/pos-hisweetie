@@ -689,6 +689,9 @@ export function ProductDetailRow({
                             Cận date
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
+                            Khuyến mãi
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
                             Hàng tốt
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
@@ -715,7 +718,10 @@ export function ProductDetailRow({
                           const nearExpiry = Number(
                             inv.nearExpiryQuantity || 0
                           );
-                          const goodStock = onHand - damaged - nearExpiry;
+                          const promoQty = Number(inv.promoQuantity || 0);
+                          // Hàng tốt = tồn - bục rách - cận date - hàng KM phân bổ
+                          const goodStock =
+                            onHand - damaged - nearExpiry - Math.max(promoQty, 0);
                           const isEditing = editingCondition === inv.branchId;
 
                           return (
@@ -783,6 +789,19 @@ export function ProductDetailRow({
                                     {nearExpiry.toLocaleString()}
                                   </span>
                                 )}
+                              </td>
+
+                              <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
+                                <span
+                                  className={
+                                    promoQty < 0
+                                      ? "text-purple-700 font-medium"
+                                      : promoQty > 0
+                                        ? "text-purple-600 font-medium"
+                                        : ""
+                                  }>
+                                  {promoQty.toLocaleString()}
+                                </span>
                               </td>
 
                               <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">

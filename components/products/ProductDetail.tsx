@@ -487,6 +487,7 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                             <th className="p-3 text-right">Tồn kho</th>
                             <th className="p-3 text-right">Bục rách</th>
                             <th className="p-3 text-right">Cận date</th>
+                            <th className="p-3 text-right">Khuyến mãi</th>
                             <th className="p-3 text-right">Hàng tốt</th>
                             <th className="p-3 text-right">Đã đặt</th>
                             <th className="p-3 text-right">Đang giao</th>
@@ -508,7 +509,12 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                               const nearExpiry = Number(
                                 inv.nearExpiryQuantity || 0
                               );
-                              const goodStock = onHand - damaged - nearExpiry;
+                              const promoQty = Number(inv.promoQuantity || 0);
+                              const goodStock =
+                                onHand -
+                                damaged -
+                                nearExpiry -
+                                Math.max(promoQty, 0);
                               const isEditing =
                                 editingCondition === inv.branchId;
 
@@ -580,6 +586,18 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                                         {nearExpiry.toLocaleString()}
                                       </span>
                                     )}
+                                  </td>
+                                  <td className="p-3 text-right">
+                                    <span
+                                      className={
+                                        promoQty < 0
+                                          ? "text-purple-700 font-medium"
+                                          : promoQty > 0
+                                            ? "text-purple-600 font-medium"
+                                            : ""
+                                      }>
+                                      {promoQty.toLocaleString()}
+                                    </span>
                                   </td>
                                   <td className="p-3 text-right">
                                     <span className="text-green-700 font-medium">

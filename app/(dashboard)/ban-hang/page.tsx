@@ -65,6 +65,7 @@ export interface CartItem {
   promotionCode?: string;
   promoLineType?: "gift" | "discounted_buy";
   triggerRowId?: string; // rowId dòng SP X kích hoạt CT (để chèn dưới + gỡ cùng)
+  triggerProductId?: number; // productId X kích hoạt — dùng khi lưu/re-validate BE
   rewardOptions?: {
     productId: number;
     productCode?: string;
@@ -202,15 +203,24 @@ const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[
     };
   });
 
-  const normals = mapped.filter((it) => !it.isPromoGift);
-  for (const gift of mapped.filter((it) => it.isPromoGift)) {
-    const trigger =
-      (gift.promotionId != null
-        ? normals.find((n) =>
-            (n.promoEnabledIds || []).includes(gift.promotionId!)
-          )
-        : undefined) || normals[0];
-    if (trigger) gift.triggerRowId = trigger.rowId;
+  // Dữ liệu BE đã sắp gift ngay sau đúng dòng X. Khôi phục trigger theo thứ tự
+  // thay vì luôn gắn vào dòng đầu tiên có cùng promotionId.
+  for (let index = 0; index < mapped.length; index += 1) {
+    const gift = mapped[index];
+    if (!gift.isPromoGift) continue;
+    const trigger = mapped
+      .slice(0, index)
+      .reverse()
+      .find(
+        (item) =>
+          !item.isPromoGift &&
+          gift.promotionId != null &&
+          (item.promoEnabledIds || []).includes(gift.promotionId)
+      );
+    if (trigger) {
+      gift.triggerRowId = trigger.rowId;
+      gift.triggerProductId = Number(trigger.product?.id);
+    }
   }
 
   return mapped;
@@ -436,8 +446,8 @@ export default function BanHangPage() {
             > = {};
             for (const n of normals) {
               const pid = Number(n.product?.id);
-              const matched = discoveryGiftPromos.filter((p) =>
-                (p.matchedProductIds || []).includes(pid)
+              const matched = discoveryGiftPromos.filter(
+                (p) => p.triggerProductId === pid
               );
               if (matched.length > 0) {
                 eligibleByRow[n.rowId] = matched.map((p) => ({
@@ -448,19 +458,20 @@ export default function BanHangPage() {
               }
             }
 
-            // Sinh dòng quà: mỗi CT gắn vào dòng X khớp ĐẦU TIÊN chưa tắt CT đó
+            // Sinh dòng quà độc lập theo từng mã X đã bật KM.
             const newGifts: CartItem[] = [];
             for (const promo of giftPromos) {
               const trigger = normals.find(
                 (n) =>
-                  (promo.matchedProductIds || []).includes(
-                    Number(n.product?.id)
-                  ) && (n.promoEnabledIds || []).includes(promo.promotionId)
+                  Number(n.product?.id) === promo.triggerProductId &&
+                  (n.promoEnabledIds || []).includes(promo.promotionId)
               );
               if (!trigger) continue;
 
               const prevGift = oldGifts.find(
-                (g) => g.promotionId === promo.promotionId
+                (g) =>
+                  g.promotionId === promo.promotionId &&
+                  g.triggerRowId === trigger.rowId
               );
 
               const isBuyY = promo.type === "BUY_X_BUY_Y_PRICE";
@@ -524,6 +535,7 @@ export default function BanHangPage() {
                 promotionCode: promo.code,
                 promoLineType: isBuyY ? "discounted_buy" : "gift",
                 triggerRowId: trigger.rowId,
+                triggerProductId: promo.triggerProductId,
                 rewardOptions: promo.rewardOptions,
                 requiresChoice,
               });
@@ -532,35 +544,40 @@ export default function BanHangPage() {
             // Giữ gift đã hydrate từ đơn/HĐ nếu evaluate không re-apply
             // nhưng opt-in vẫn bật (hoặc gift thủ công không có promotionId).
             // Tránh mất KM khi mở xử lý HĐ; vẫn gỡ khi user tắt opt-in.
-            const appliedPromoIds = new Set(
+            const appliedGiftKeys = new Set(
               newGifts
-                .map((g) => g.promotionId)
-                .filter((id): id is number => id != null)
-            );
-            const enabledPromoIds = new Set(
-              normals.flatMap((n) => n.promoEnabledIds || [])
+                .filter(
+                  (g) => g.promotionId != null && g.triggerRowId != null
+                )
+                .map((g) => `${g.promotionId}:${g.triggerRowId}`)
             );
             const preservedGifts: CartItem[] = oldGifts.filter((g) => {
-              if (g.promotionId != null && appliedPromoIds.has(g.promotionId)) {
+              if (
+                g.promotionId != null &&
+                g.triggerRowId != null &&
+                appliedGiftKeys.has(`${g.promotionId}:${g.triggerRowId}`)
+              ) {
                 return false;
               }
               if (normals.length === 0) return false;
               // Gift engine: chỉ giữ khi CT vẫn được opt-in trên dòng thường
-              if (g.promotionId != null) {
-                if (!enabledPromoIds.has(g.promotionId)) return false;
-              }
-              const trigger =
-                (g.triggerRowId
-                  ? normals.find((n) => n.rowId === g.triggerRowId)
-                  : undefined) ||
-                (g.promotionId != null
-                  ? normals.find((n) =>
-                      (n.promoEnabledIds || []).includes(g.promotionId!)
+              const trigger = g.triggerRowId
+                ? normals.find(
+                    (n) =>
+                      n.rowId === g.triggerRowId &&
+                      (g.promotionId == null ||
+                        (n.promoEnabledIds || []).includes(g.promotionId))
+                  )
+                : g.promotionId != null && g.triggerProductId != null
+                  ? normals.find(
+                      (n) =>
+                        Number(n.product?.id) === g.triggerProductId &&
+                        (n.promoEnabledIds || []).includes(g.promotionId!)
                     )
-                  : undefined) ||
-                normals[0];
+                  : undefined;
               if (!trigger) return false;
               g.triggerRowId = trigger.rowId;
+              g.triggerProductId = Number(trigger.product?.id);
               return true;
             });
 
@@ -1606,35 +1623,17 @@ export default function BanHangPage() {
       }
     });
 
-    const remainingCartItems: CartItem[] = (order.items || [])
-      .map((item: any) => {
-        const invoiced = invoicedQuantities[item.productId] || 0;
+    // Giữ nguyên giỏ đang hiển thị để không làm mất lựa chọn quà vừa đổi khi
+    // chuyển trực tiếp từ tab sửa đơn sang hóa đơn. Chỉ fallback về dữ liệu API
+    // khi tab chưa có giỏ (ví dụ mở luồng chuyển đổi từ danh sách đơn hàng).
+    const sourceCartItems = activeTab.cartItems.length
+      ? activeTab.cartItems
+      : mapDocumentLinesToCartItems(order.items || []);
+    const remainingCartItems: CartItem[] = sourceCartItems
+      .map((item) => {
+        const invoiced = invoicedQuantities[Number(item.product?.id)] || 0;
         const remaining = Number(item.quantity) - invoiced;
-        const promoLineType: "gift" | "discounted_buy" | undefined =
-          item.lineType === "discounted_buy"
-            ? "discounted_buy"
-            : item.isGift || item.lineType === "gift"
-              ? "gift"
-              : undefined;
-        return {
-          rowId: `${item.productId}_normal_${Date.now()}_${Math.random()}`,
-          product: item.product,
-          quantity: remaining,
-          price: Number(item.price),
-          discount: Number(item.discount) || 0,
-          note: item.note || "",
-          conditionType: item.conditionType || "normal",
-          ...(promoLineType
-            ? {
-                isPromoGift: true,
-                promoLineType,
-                promotionId: item.promotionId ?? undefined,
-              }
-            : {
-                promoEnabledIds:
-                  item.promotionId != null ? [Number(item.promotionId)] : [],
-              }),
-        };
+        return { ...item, quantity: remaining };
       })
       .filter((item: CartItem) => item.quantity > 0);
 
@@ -1824,10 +1823,15 @@ export default function BanHangPage() {
                     lineType: "gift",
                     isGift: true,
                     promotionId: item.promotionId,
+                    triggerProductId: item.triggerProductId,
                   }
                 : {}),
               ...(isDiscountedBuy
-                ? { lineType: "discounted_buy", promotionId: item.promotionId }
+                ? {
+                    lineType: "discounted_buy",
+                    promotionId: item.promotionId,
+                    triggerProductId: item.triggerProductId,
+                  }
                 : {}),
               ...(!isGift && !isDiscountedBuy
                 ? {
@@ -2282,10 +2286,15 @@ export default function BanHangPage() {
                     lineType: "gift",
                     isGift: true,
                     promotionId: item.promotionId,
+                    triggerProductId: item.triggerProductId,
                   }
                 : {}),
               ...(isDiscountedBuy
-                ? { lineType: "discounted_buy", promotionId: item.promotionId }
+                ? {
+                    lineType: "discounted_buy",
+                    promotionId: item.promotionId,
+                    triggerProductId: item.triggerProductId,
+                  }
                 : {}),
               ...(!isGift && !isDiscountedBuy
                 ? { enabledPromotionIds: item.promoEnabledIds || [] }
@@ -2297,6 +2306,7 @@ export default function BanHangPage() {
             .filter((it) => it.isPromoGift && it.promotionId)
             .map((it) => ({
               promotionId: it.promotionId!,
+              triggerProductId: it.triggerProductId,
               giftProductId: Number(it.product.id),
               giftQuantity: Number(it.quantity),
             })),
@@ -2448,10 +2458,15 @@ export default function BanHangPage() {
                   lineType: "gift",
                   isGift: true,
                   promotionId: item.promotionId,
+                  triggerProductId: item.triggerProductId,
                 }
               : {}),
             ...(isDiscountedBuy
-              ? { lineType: "discounted_buy", promotionId: item.promotionId }
+              ? {
+                  lineType: "discounted_buy",
+                  promotionId: item.promotionId,
+                  triggerProductId: item.triggerProductId,
+                }
               : {}),
             ...(!isGift && !isDiscountedBuy
               ? { enabledPromotionIds: item.promoEnabledIds || [] }
@@ -2599,10 +2614,19 @@ export default function BanHangPage() {
           note: item.note || "",
           conditionType: item.conditionType || "normal",
           ...(isGift
-            ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
+            ? {
+                lineType: "gift",
+                isGift: true,
+                promotionId: item.promotionId,
+                triggerProductId: item.triggerProductId,
+              }
             : {}),
           ...(isDiscountedBuy
-            ? { lineType: "discounted_buy", promotionId: item.promotionId }
+            ? {
+                lineType: "discounted_buy",
+                promotionId: item.promotionId,
+                triggerProductId: item.triggerProductId,
+              }
             : {}),
           ...(!isGift && !isDiscountedBuy
             ? {
@@ -2632,6 +2656,7 @@ export default function BanHangPage() {
         .filter((it) => it.isPromoGift && it.promotionId)
         .map((it) => ({
           promotionId: it.promotionId!,
+          triggerProductId: it.triggerProductId,
           giftProductId: Number(it.product.id),
           giftQuantity: Number(it.quantity),
         }));
@@ -2697,10 +2722,19 @@ export default function BanHangPage() {
           note: item.note || "",
           conditionType: item.conditionType || "normal",
           ...(isGift
-            ? { lineType: "gift", isGift: true, promotionId: item.promotionId }
+            ? {
+                lineType: "gift",
+                isGift: true,
+                promotionId: item.promotionId,
+                triggerProductId: item.triggerProductId,
+              }
             : {}),
           ...(isDiscountedBuy
-            ? { lineType: "discounted_buy", promotionId: item.promotionId }
+            ? {
+                lineType: "discounted_buy",
+                promotionId: item.promotionId,
+                triggerProductId: item.triggerProductId,
+              }
             : {}),
           ...(!isGift && !isDiscountedBuy
             ? {
@@ -2730,6 +2764,7 @@ export default function BanHangPage() {
         .filter((it) => it.isPromoGift && it.promotionId)
         .map((it) => ({
           promotionId: it.promotionId!,
+          triggerProductId: it.triggerProductId,
           giftProductId: Number(it.product.id),
           giftQuantity: Number(it.quantity),
         }));

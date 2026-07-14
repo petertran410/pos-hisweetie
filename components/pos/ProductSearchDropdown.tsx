@@ -154,13 +154,15 @@ export function ProductSearchDropdown({
   };
 
   const getInventoryCondition = (product: any) => {
-    if (!selectedBranch) return { damaged: 0, nearExpiry: 0 };
+    if (!selectedBranch) return { damaged: 0, nearExpiry: 0, promo: 0 };
     const inventory = product.inventories?.find(
       (inv: any) => inv.branchId === selectedBranch.id
     );
     return {
       damaged: inventory ? Number(inventory.damagedQuantity || 0) : 0,
       nearExpiry: inventory ? Number(inventory.nearExpiryQuantity || 0) : 0,
+      // Tồn phân bổ KM (có thể âm khi xuất vượt). Chỉ hiển thị, không chọn được.
+      promo: inventory ? Number(inventory.promoQuantity || 0) : 0,
     };
   };
 
@@ -326,6 +328,8 @@ export function ProductSearchDropdown({
               const condition = getInventoryCondition(product);
               const hasDamaged = condition.damaged > 0;
               const hasNearExpiry = condition.nearExpiry > 0;
+              // Hiển thị cả khi âm (xuất vượt phân bổ KM).
+              const hasPromo = condition.promo !== 0;
               const isHighlighted = idx === highlightedIndex;
 
               let rowRing = "";
@@ -386,8 +390,8 @@ export function ProductSearchDropdown({
                     </div>
                   </div>
 
-                  {(hasDamaged || hasNearExpiry) && (
-                    <div className="flex gap-2 mt-2 pl-[60px]">
+                  {(hasDamaged || hasNearExpiry || hasPromo) && (
+                    <div className="flex gap-2 mt-2 pl-[60px] flex-wrap">
                       {hasDamaged && (
                         <button
                           onClick={(e) => {
@@ -417,6 +421,17 @@ export function ProductSearchDropdown({
                           }`}>
                           Cận date: {condition.nearExpiry}
                         </button>
+                      )}
+                      {hasPromo && (
+                        <span
+                          title="Chỉ hiển thị — chọn quà KM từ giỏ hàng (nút khuyến mãi)"
+                          className={`px-2 py-0.5 text-xs rounded-full border select-none cursor-default ${
+                            condition.promo < 0
+                              ? "bg-purple-50 text-purple-700 border-purple-300"
+                              : "bg-purple-50 text-purple-600 border-purple-200"
+                          }`}>
+                          KM: {condition.promo}
+                        </span>
                       )}
                     </div>
                   )}

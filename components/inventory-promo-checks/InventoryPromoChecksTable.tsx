@@ -1,0 +1,373 @@
+"use client";
+
+import { useState, useEffect, Fragment, useMemo, useRef } from "react";
+import {
+  useInventoryPromoChecks,
+  useExportInventoryPromoChecks,
+} from "@/lib/hooks/useInventoryPromoChecks";
+import { useBranchStore } from "@/lib/store/branch";
+import {
+  Plus,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Download,
+  Loader2,
+} from "lucide-react";
+import { InventoryPromoCheckDetailRow } from "./InventoryPromoCheckDetailRow";
+import { InventoryPromoCheckForm } from "./InventoryPromoCheckForm";
+import { usePermission } from "@/lib/hooks/usePermissions";
+import { CodeLink } from "@/components/shared/CodeLink";
+
+const formatDateTime = (d?: string) =>
+  d ? new Date(d).toLocaleString("vi-VN") : "-";
+
+export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
+  const { selectedBranch } = useBranchStore();
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(15);
+
+  const canCreate = usePermission("inventory_promo_checks", "create");
+  const canExport = usePermission("inventory_promo_checks", "export");
+
+  const { exportToFile, exportDetailToFile, isExporting } =
+    useExportInventoryPromoChecks();
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showExportMenu]);
+
+  // Bộ lọc xuất file khớp với danh sách đang hiển thị (bỏ phân trang).
+  const buildExportFilters = () => ({
+    search: filters?.search || debouncedSearch || undefined,
+    branchIds: filters?.branchIds || undefined,
+    branchId: !filters?.branchIds
+      ? filters?.branchId || selectedBranch?.id
+      : undefined,
+    fromDate: filters?.fromDate,
+    toDate: filters?.toDate,
+  });
+
+  const { data, isLoading } = useInventoryPromoChecks({
+    page,
+    limit,
+    search: filters?.search || debouncedSearch,
+    branchIds: filters?.branchIds || undefined,
+    branchId: !filters?.branchIds ? (filters?.branchId || selectedBranch?.id) : undefined,
+    fromDate: filters?.fromDate,
+    toDate: filters?.toDate,
+  });
+
+  const checks = data?.data || [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  const toggleExpand = (id: number) =>
+    setExpandedId((prev) => (prev === id ? null : id));
+
+  const colSpan = 7;
+
+  if (showCreateForm) {
+    return <InventoryPromoCheckForm onClose={() => setShowCreateForm(false)} />;
+  }
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
+      {/* Modal form */}
+      {showCreateForm && (
+        <InventoryPromoCheckForm onClose={() => setShowCreateForm(false)} />
+      )}
+      {/* Toolbar */}
+      <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+            Kiểm hàng khuyến mãi
+          </h2>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Tìm mã phiếu, người kiểm..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 pr-3 py-1.5 border rounded text-sm w-64 focus:outline-none focus:ring-1 focus:ring-brand"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {canExport && (
+            <div ref={exportMenuRef} className="relative">
+              <button
+                onClick={() => setShowExportMenu((o) => !o)}
+                disabled={isExporting}
+                className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {isExporting ? "Đang xuất..." : "Xuất file"}
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              {showExportMenu && (
+                <div className="absolute right-0 top-full mt-1 z-30 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                  <button
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      exportToFile(buildExportFilters());
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors">
+                    Xuất tổng quan
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      exportDetailToFile(buildExportFilters());
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors border-t border-gray-100">
+                    Xuất chi tiết
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          {canCreate && (
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white rounded text-sm hover:bg-brand-dark">
+              <Plus className="w-4 h-4" />
+              Tạo phiếu kiểm
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="flex-1 overflow-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50 sticky top-0 z-10">
+            <tr>
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
+                Mã phiếu
+              </th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
+                Chi nhánh
+              </th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
+                Người kiểm
+              </th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
+                Ngày kiểm
+              </th>
+              <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500">
+                Số SP
+              </th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
+                Ghi chú
+              </th>
+              <th className="px-4 py-2.5 text-center text-xs font-medium text-gray-500">
+                Trạng thái
+              </th>
+              {/* <th className="px-4 py-2.5 w-8"></th> */}
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={colSpan} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
+                    <span className="text-xs">Đang tải...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : checks.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={colSpan}
+                  className="py-20 text-center text-gray-400">
+                  <div className="text-sm">Chưa có phiếu kiểm nào</div>
+                </td>
+              </tr>
+            ) : (
+              checks.map((check) => (
+                <Fragment key={check.id}>
+                  <tr
+                    className={`cursor-pointer transition-colors ${
+                      expandedId === check.id
+                        ? "bg-brand-soft"
+                        : "border-b hover:bg-gray-50"
+                    }`}
+                    onClick={() => toggleExpand(check.id)}>
+                    <td
+                      className={`px-4 py-2.5 text-sm ${
+                        expandedId === check.id
+                          ? "border-t-2 border-l-2 border-brand"
+                          : ""
+                      }`}>
+                      <CodeLink entity="inventory-promo-check" code={check.code} />
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm ${
+                        expandedId === check.id
+                          ? "border-t-2 border-brand"
+                          : ""
+                      }`}>
+                      {check.branchName}
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm ${
+                        expandedId === check.id
+                          ? "border-t-2 border-brand"
+                          : ""
+                      }`}>
+                      {check.createdByName}
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm ${
+                        expandedId === check.id
+                          ? "border-t-2 border-brand"
+                          : ""
+                      }`}>
+                      {formatDateTime(check.checkDate)}
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm text-right ${
+                        expandedId === check.id
+                          ? "border-t-2 border-brand"
+                          : ""
+                      }`}>
+                      {check.details?.length || 0}
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm text-gray-500 truncate max-w-[200px] ${
+                        expandedId === check.id
+                          ? "border-t-2 border-brand"
+                          : ""
+                      }`}>
+                      {check.note || "-"}
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm text-center ${expandedId === check.id ? "border-t-2 border-brand" : ""}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          check.status === 2
+                            ? "bg-red-100 text-red-700"
+                            : "bg-green-100 text-green-700"
+                        }`}>
+                        {check.status === 2 ? "Đã hủy" : "Hoàn thành"}
+                      </span>
+                    </td>
+                    {/* <td
+                      className={`px-4 py-2.5 ${
+                        expandedId === check.id
+                          ? "border-t-2 border-r-2 border-brand"
+                          : ""
+                      }`}>
+                      <ChevronDown
+                        className={`w-4 h-4 text-gray-400 transition-transform ${
+                          expandedId === check.id ? "rotate-180" : ""
+                        }`}
+                      />
+                    </td> */}
+                  </tr>
+                  {expandedId === check.id && (
+                    <InventoryPromoCheckDetailRow
+                      checkId={check.id}
+                      colSpan={colSpan}
+                    />
+                  )}
+                </Fragment>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="border-t px-4 py-2.5 flex items-center justify-between bg-white shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">Hiển thị</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
+            {[10, 15, 20, 50].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-gray-500">/ trang</span>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPage(Math.max(1, page - 1))}
+            disabled={page === 1}
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            const p = Math.min(
+              Math.max(page - 2 + i, i + 1),
+              totalPages - (Math.min(5, totalPages) - 1 - i)
+            );
+            return (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
+                  p === page
+                    ? "bg-brand text-white border-brand"
+                    : "hover:bg-gray-50 text-gray-600 border-gray-200"
+                }`}>
+                {p}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setPage(Math.min(totalPages, page + 1))}
+            disabled={page >= totalPages}
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        <span className="text-xs text-gray-400">
+          Trang {page}/{totalPages}
+          {total > 0 ? ` · ${total} phiếu` : ""}
+        </span>
+      </div>
+    </div>
+  );
+}

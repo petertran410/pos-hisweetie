@@ -143,8 +143,9 @@ export function usePromotionUsage(id?: number) {
 
 export function usePromotionStats(id?: number) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const selectedBranch = useBranchStore((state) => state.selectedBranch);
   return useQuery({
-    queryKey: ["promotion-stats", id],
+    queryKey: ["promotion-stats", id, selectedBranch?.id],
     queryFn: () => promotionsApi.stats(id!),
     enabled: isAuthenticated && !!id,
   });

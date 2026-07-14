@@ -35,6 +35,10 @@ export const ROUTE_PERMISSIONS: Record<
     resource: "inventory_checks",
     action: "view",
   },
+  "/san-pham/kiem-hang-khuyen-mai": {
+    resource: "inventory_promo_checks",
+    action: "view",
+  },
   "/san-pham/san-xuat": { resource: "productions", action: "view" },
   "/san-pham/xuat-huy": { resource: "destructions", action: "view" },
   "/san-pham/xuat-dung-noi-bo": { resource: "internal-use", action: "view" },

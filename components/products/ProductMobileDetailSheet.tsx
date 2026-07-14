@@ -400,7 +400,9 @@ export function ProductMobileDetailSheet({
                         const onHand = Number(inv.onHand);
                         const damaged = Number(inv.damagedQuantity || 0);
                         const nearExpiry = Number(inv.nearExpiryQuantity || 0);
-                        const goodStock = onHand - damaged - nearExpiry;
+                        const promoQty = Number(inv.promoQuantity || 0);
+                        const goodStock =
+                          onHand - damaged - nearExpiry - Math.max(promoQty, 0);
 
                         return (
                           <div
@@ -439,6 +441,19 @@ export function ProductMobileDetailSheet({
                                 <p
                                   className={`text-xs font-medium ${nearExpiry > 0 ? "text-orange-500" : "text-gray-500"}`}>
                                   {nearExpiry.toLocaleString()}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-gray-400">
+                                  Khuyến mãi
+                                </p>
+                                <p
+                                  className={`text-xs font-medium ${
+                                    promoQty !== 0
+                                      ? "text-purple-600"
+                                      : "text-gray-500"
+                                  }`}>
+                                  {promoQty.toLocaleString()}
                                 </p>
                               </div>
                               <div>

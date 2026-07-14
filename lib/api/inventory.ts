@@ -11,6 +11,7 @@ export interface InventoryByBranchItem {
   onHand: number | string;
   damagedQuantity?: number | string;
   nearExpiryQuantity?: number | string;
+  promoQuantity?: number | string;
   productCode?: string;
   productName?: string;
   product?: {

@@ -57,6 +57,7 @@ export interface Inventory {
   totalWeight?: number;
   damagedQuantity: number;
   nearExpiryQuantity: number;
+  promoQuantity?: number;
   createdAt: string;
   updatedAt: string;
   branch?: { id: number; name: string; isActive: boolean };

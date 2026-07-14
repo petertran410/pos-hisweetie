@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { usePromotion, usePromotionUsage, usePromotionStats } from "@/lib/hooks/usePromotions";
+import {
+  usePromotion,
+  usePromotionUsage,
+  usePromotionStats,
+} from "@/lib/hooks/usePromotions";
 import {
   Promotion,
   PromotionReward,
@@ -59,7 +63,7 @@ function listProductsByRole(promo: Promotion, role: "buy" | "reward"): string {
         ? productLabel(p.product)
         : p.categoryName
           ? `nhóm "${p.categoryName}"`
-          : "sản phẩm",
+          : "sản phẩm"
     )
     .join(", ");
 }
@@ -106,7 +110,7 @@ function rewardText(promo: Promotion, rw: PromotionReward): string {
   if (promo.type === "BUY_X_BUY_Y_PRICE") {
     const list = listProductsByRole(promo, "reward");
     return `Mua kèm ${rewardQty} ${list || "sản phẩm"} giá ${formatCurrency(
-      rw.rewardValue || 0,
+      rw.rewardValue || 0
     )}`;
   }
 
@@ -146,7 +150,9 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
         <td colSpan={colSpan} className="px-6 py-8">
           <div className="flex items-center justify-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-            <span className="text-gray-600">Đang tải chi tiết khuyến mãi...</span>
+            <span className="text-gray-600">
+              Đang tải chi tiết khuyến mãi...
+            </span>
           </div>
         </td>
       </tr>
@@ -171,7 +177,7 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
   ];
 
   const effectiveText = `${fmtDateTime(promotion.startDate)} - ${fmtDateTime(
-    promotion.endDate,
+    promotion.endDate
   )}`;
   const timeText =
     promotion.applyTimeFrom && promotion.applyTimeTo
@@ -184,7 +190,9 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
 
   return (
     <tr>
-      <td colSpan={colSpan} className="border-b-2 border-l-2 border-r-2 border-blue-500 bg-gray-50">
+      <td
+        colSpan={colSpan}
+        className="border-b-2 border-l-2 border-r-2 border-blue-500 bg-gray-50">
         <div className="bg-white p-4">
           {/* Header */}
           <div className="mb-4 border-b border-gray-200 pb-3">
@@ -198,8 +206,7 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
               <span
                 className={`rounded-full px-2 py-0.5 text-xs ${
                   statusColor[promotion.status] || "bg-gray-100"
-                }`}
-              >
+                }`}>
                 {PROMOTION_STATUS_LABELS[promotion.status]}
               </span>
             </div>
@@ -213,8 +220,7 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
                     activeTab === tab.value
                       ? "border-blue-600 text-blue-600"
                       : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
-                >
+                  }`}>
                   {tab.label}
                 </button>
               ))}
@@ -229,14 +235,20 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
                   <label className="text-xs text-gray-500">Hiệu lực</label>
                   <span className="text-sm text-gray-900">{effectiveText}</span>
                   {timeText && (
-                    <span className="text-xs text-gray-500">Khung giờ: {timeText}</span>
+                    <span className="text-xs text-gray-500">
+                      Khung giờ: {timeText}
+                    </span>
                   )}
                   {weekdaysText && (
-                    <span className="text-xs text-gray-500">Ngày: {weekdaysText}</span>
+                    <span className="text-xs text-gray-500">
+                      Ngày: {weekdaysText}
+                    </span>
                   )}
                 </div>
                 <div className="flex flex-col gap-1 border-b pb-1">
-                  <label className="text-xs text-gray-500">Hình thức khuyến mại</label>
+                  <label className="text-xs text-gray-500">
+                    Hình thức khuyến mại
+                  </label>
                   <span className="text-sm text-gray-900">
                     {PROMOTION_TYPE_LABELS[promotion.type]}
                   </span>
@@ -250,7 +262,9 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 border-b pb-1">
-                  <label className="text-xs text-gray-500">Nhóm khách hàng</label>
+                  <label className="text-xs text-gray-500">
+                    Nhóm khách hàng
+                  </label>
                   <span className="text-sm text-gray-900">
                     {promotion.forAllCustomer
                       ? "Tất cả nhóm khách hàng"
@@ -261,7 +275,9 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 border-b pb-1">
-                  <label className="text-xs text-gray-500">Người tạo giao dịch</label>
+                  <label className="text-xs text-gray-500">
+                    Người tạo giao dịch
+                  </label>
                   <span className="text-sm text-gray-900">
                     {promotion.forAllUser
                       ? "Tất cả người tạo giao dịch"
@@ -271,7 +287,9 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
               </div>
 
               {promotion.description && (
-                <div className="text-sm text-gray-600">{promotion.description}</div>
+                <div className="text-sm text-gray-600">
+                  {promotion.description}
+                </div>
               )}
 
               {/* Điều kiện khuyến mại */}
@@ -313,8 +331,7 @@ export function PromotionDetailRow({ promotionId, colSpan }: Props) {
                         <tr>
                           <td
                             colSpan={3}
-                            className="px-3 py-6 text-center text-sm text-gray-400"
-                          >
+                            className="px-3 py-6 text-center text-sm text-gray-400">
                             Chưa có cấu hình phần thưởng
                           </td>
                         </tr>
@@ -368,7 +385,7 @@ function UsageTable({
   emptyText: string;
 }) {
   const [preview, setPreview] = useState<{ id: number; code: string } | null>(
-    null,
+    null
   );
 
   if (loading) {
@@ -380,7 +397,9 @@ function UsageTable({
     );
   }
   if (!docs.length) {
-    return <p className="py-8 text-center text-sm text-gray-400">{emptyText}</p>;
+    return (
+      <p className="py-8 text-center text-sm text-gray-400">{emptyText}</p>
+    );
   }
 
   return (
@@ -409,8 +428,7 @@ function UsageTable({
                     e.stopPropagation();
                     setPreview({ id: d.id, code: d.code });
                   }}
-                  className="text-brand hover:underline font-medium"
-                >
+                  className="text-brand hover:underline font-medium">
                   {d.code}
                 </button>
               </td>
@@ -504,7 +522,10 @@ function StatsPanel({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Tổng hàng bán" value={fmtQty(totals.soldQty)} />
-        <StatCard label="Tổng hàng khuyến mãi" value={fmtQty(totals.promoQty)} />
+        <StatCard
+          label="Tổng hàng khuyến mãi"
+          value={fmtQty(totals.promoQty)}
+        />
         <StatCard label="Lượt dùng" value={usageText} sub={usageSub} />
         <StatCard label="SL khuyến mãi" value={rewardText} sub={rewardSub} />
       </div>
@@ -512,7 +533,7 @@ function StatsPanel({
       {limits.perProduct && limits.perProduct.length > 0 && (
         <div className="overflow-hidden rounded-lg border border-gray-200">
           <div className="border-b border-gray-200 bg-gray-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
-            Trần SL tặng theo từng sản phẩm
+            Trần SL tặng theo sản phẩm
           </div>
           <table className="w-full">
             <thead>
@@ -527,7 +548,10 @@ function StatsPanel({
                   Đã tặng / Trần
                 </th>
                 <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
-                  Còn lại
+                  Còn theo trần
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Tồn KM
                 </th>
               </tr>
             </thead>
@@ -539,15 +563,27 @@ function StatsPanel({
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-700">{pp.name}</td>
                   <td className="px-3 py-2 text-center text-sm text-gray-800">
-                    {fmtQty(pp.rewardIssued)} / {fmtQty(pp.rewardLimit)}
+                    {fmtQty(pp.rewardIssued)}
+                    {" / "}
+                    {pp.rewardLimit != null ? fmtQty(pp.rewardLimit) : "∞"}
                   </td>
                   <td
                     className={`px-3 py-2 text-center text-sm font-medium ${
-                      pp.rewardRemaining <= 0
+                      pp.rewardRemaining != null && pp.rewardRemaining <= 0
                         ? "text-red-600"
                         : "text-gray-800"
                     }`}>
-                    {fmtQty(pp.rewardRemaining)}
+                    {pp.rewardRemaining != null
+                      ? fmtQty(pp.rewardRemaining)
+                      : "∞"}
+                  </td>
+                  <td
+                    className={`px-3 py-2 text-center text-sm font-medium ${
+                      (pp.promoQuantity ?? 0) <= 0
+                        ? "text-red-600"
+                        : "text-brand"
+                    }`}>
+                    {fmtQty(pp.promoQuantity ?? 0)}
                   </td>
                 </tr>
               ))}
@@ -562,9 +598,12 @@ function StatsPanel({
         </p>
       ) : (
         <div className="overflow-hidden rounded-lg border border-gray-200">
+          <div className="border-b border-gray-200 bg-gray-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
+            Sản phẩm điều kiện mua
+          </div>
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-100">
+              <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                   Mã hàng
                 </th>
@@ -573,9 +612,6 @@ function StatsPanel({
                 </th>
                 <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
                   SL bán
-                </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
-                  SL khuyến mãi
                 </th>
               </tr>
             </thead>
@@ -588,9 +624,6 @@ function StatsPanel({
                   <td className="px-3 py-2 text-sm text-gray-700">{it.name}</td>
                   <td className="px-3 py-2 text-center text-sm text-gray-800">
                     {fmtQty(it.soldQty)}
-                  </td>
-                  <td className="px-3 py-2 text-center text-sm text-gray-800">
-                    {fmtQty(it.promoQty)}
                   </td>
                 </tr>
               ))}

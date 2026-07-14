@@ -137,15 +137,23 @@ export interface PromotionStatsItem {
   name: string;
   soldQty: number;
   promoQty: number;
+  onHand?: number;
+  damagedQuantity?: number;
+  nearExpiryQuantity?: number;
+  promoQuantity?: number;
 }
 
 export interface PromotionStatsPerProduct {
   productId: number;
   code: string;
   name: string;
-  rewardLimit: number;
+  rewardLimit: number | null;
   rewardIssued: number;
-  rewardRemaining: number;
+  rewardRemaining: number | null;
+  onHand?: number;
+  damagedQuantity?: number;
+  nearExpiryQuantity?: number;
+  promoQuantity?: number;
 }
 
 export interface PromotionStats {
@@ -270,6 +278,7 @@ export interface EligiblePromotion {
   promoPrice?: number;
   requiresChoice?: boolean;
   matchedProductIds?: number[];
+  triggerProductId?: number;
 }
 
 export interface EvaluateResult {
@@ -283,6 +292,7 @@ export interface EvaluateResult {
 
 export interface AppliedPromotion {
   promotionId: number;
+  triggerProductId?: number;
   giftProductId?: number;
   giftQuantity?: number;
   discountedBuyProductId?: number;
