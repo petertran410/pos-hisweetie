@@ -522,6 +522,13 @@ export function InvoiceItemsList({
                             (o) => o.productId === Number(e.target.value)
                           );
                           if (opt) {
+                            const capped =
+                              opt.remaining != null
+                                ? Math.max(
+                                    0,
+                                    Math.min(item.quantity, Number(opt.remaining))
+                                  )
+                                : item.quantity;
                             onUpdateItem(item.rowId, {
                               product: {
                                 id: opt.productId,
@@ -529,15 +536,23 @@ export function InvoiceItemsList({
                                 code: opt.productCode || "",
                                 basePrice: 0,
                               },
+                              quantity: Math.max(1, capped),
                               requiresChoice: false,
                             });
                           }
                         }}>
                         <option value="">-- Chọn quà tặng --</option>
                         {item.rewardOptions.map((o) => (
-                          <option key={o.productId} value={o.productId}>
+                          <option
+                            key={o.productId}
+                            value={o.productId}
+                            disabled={o.remaining != null && o.remaining <= 0}>
                             {o.productName || `SP#${o.productId}`} (tồn{" "}
-                            {o.availableStock})
+                            {o.availableStock}
+                            {o.remaining != null
+                              ? `, còn tặng ${o.remaining}`
+                              : ""}
+                            )
                           </option>
                         ))}
                       </select>

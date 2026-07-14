@@ -23,7 +23,8 @@ interface Props {
   onImportClick?: () => void;
 }
 
-const formatMoney = (v: number) => new Intl.NumberFormat("en-US").format(v);
+const formatMoney = (v: number, currency = "VND") =>
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency, minimumFractionDigits: currency === "VND" ? 0 : 2, maximumFractionDigits: currency === "VND" ? 0 : 2 }).format(v);
 const formatDateTime = (s?: string) =>
   s ? new Date(s).toLocaleString("vi-VN") : "-";
 
@@ -102,13 +103,13 @@ const DEFAULT_COLUMNS: ColumnConfig<SupplierReturn>[] = [
     key: "totalReturnAmount",
     label: "Tổng tiền trả",
     visible: true,
-    render: (item) => formatMoney(Number(item.totalReturnAmount)),
+    render: (item) => formatMoney(Number(item.currency === "VND" ? item.totalReturnAmount : item.totalForeignReturnAmount || 0), item.currency || "VND"),
   },
   {
     key: "refundAmount",
     label: "Thực xuất",
     visible: true,
-    render: (item) => formatMoney(Number(item.refundAmount)),
+    render: (item) => formatMoney(Number(item.currency === "VND" ? item.refundAmount : item.refundForeignAmount || 0), item.currency || "VND"),
   },
   {
     key: "refundType",

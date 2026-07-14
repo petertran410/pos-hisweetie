@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useSupplierReturn } from "@/lib/hooks/useSupplierReturns";
-import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 
 interface Props {
@@ -20,6 +19,8 @@ interface ExportItem {
   requestQuantity: number;
   confirmedQuantity: number;
   returnPrice: number;
+  totalAmount: number;
+  conditionType: "normal" | "damaged";
 }
 
 export function ConfirmExportModal({
@@ -82,14 +83,16 @@ export function ConfirmExportModal({
         productName: d.productName,
         requestQuantity: Number(d.requestQuantity),
         confirmedQuantity: Number(d.requestQuantity),
-        returnPrice: Number(d.returnPrice),
+        returnPrice: Number(d.foreignReturnPrice ?? d.returnPrice),
+        totalAmount: Number(d.foreignReturnAmount ?? d.totalAmount),
+        conditionType: "normal",
       }))
     );
     setNote(supplierReturn.note || "");
   }, [supplierReturn]);
 
   const totalConfirmed = exportItems.reduce(
-    (sum, item) => sum + item.confirmedQuantity * item.returnPrice,
+    (sum, item) => sum + (item.confirmedQuantity > 0 ? item.totalAmount : 0),
     0
   );
 
@@ -101,11 +104,14 @@ export function ConfirmExportModal({
       details: validItems.map((i) => ({
         detailId: i.detailId,
         confirmedQuantity: i.confirmedQuantity,
+        conditionType: i.conditionType,
       })),
     });
   };
 
   if (isLoading) return null;
+  const currency = supplierReturn?.currency || "VND";
+  const formatMoney = (value: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency, minimumFractionDigits: currency === "VND" ? 0 : 2, maximumFractionDigits: currency === "VND" ? 0 : 2 }).format(value);
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -156,7 +162,10 @@ export function ConfirmExportModal({
                   SL xuất kho
                 </th>
                 <th className="text-right py-2 font-medium text-gray-600">
-                  Đơn giá
+                  Thành tiền thỏa thuận
+                </th>
+                <th className="text-right py-2 font-medium text-gray-600">
+                  Loại hàng
                 </th>
               </tr>
             </thead>
@@ -183,7 +192,15 @@ export function ConfirmExportModal({
                     />
                   </td>
                   <td className="py-3 text-right">
-                    {new Intl.NumberFormat("en-US").format(item.returnPrice)}
+                    {formatMoney(
+                      item.confirmedQuantity > 0 ? item.totalAmount : 0
+                    )}
+                  </td>
+                  <td className="py-3 text-right">
+                    <select value={item.conditionType} onChange={(e) => setExportItems((prev) => prev.map((row, i) => i === idx ? { ...row, conditionType: e.target.value as "normal" | "damaged" } : row))} className="border rounded px-2 py-1 text-sm">
+                      <option value="normal">Hàng tốt</option>
+                      <option value="damaged">Hàng loại B</option>
+                    </select>
                   </td>
                 </tr>
               ))}
@@ -217,7 +234,7 @@ export function ConfirmExportModal({
           <div className="flex items-center justify-between text-sm font-semibold">
             <span>Tổng tiền xuất kho</span>
             <span className="text-brand">
-              {formatCurrency(totalConfirmed)}
+              {formatMoney(totalConfirmed)}
             </span>
           </div>
           <textarea

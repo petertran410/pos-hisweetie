@@ -104,6 +104,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
       promotion.products?.filter((p) => p.role === "reward").map((p) => ({
         productId: p.productId ?? undefined,
         categoryName: p.categoryName ?? undefined,
+        rewardLimit: p.rewardLimit ?? null,
       })) || [];
 
     setForm({
@@ -382,6 +383,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
                       }
                       items={reward.rewardItems || []}
                       productLabels={rewardItemLabels}
+                      showRewardLimit
                       onChange={(items, labels) => {
                         setReward({ rewardItems: items });
                         setRewardItemLabels(labels);
@@ -648,7 +650,9 @@ export function PromotionForm({ promotion, onClose }: Props) {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500">Trần SL tặng / mua kèm</label>
+                    <label className="text-xs text-gray-500">
+                      Trần tổng toàn chương trình (mọi SP quà)
+                    </label>
                     <input
                       type="number"
                       className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
@@ -662,6 +666,10 @@ export function PromotionForm({ promotion, onClose }: Props) {
                         })
                       }
                     />
+                    <p className="mt-1 text-[11px] text-gray-400">
+                      Tổng SL quà tối đa cộng dồn cả chương trình. Trần riêng
+                      từng SP đặt ở mục Phần thưởng.
+                    </p>
                   </div>
                 </div>
               </section>

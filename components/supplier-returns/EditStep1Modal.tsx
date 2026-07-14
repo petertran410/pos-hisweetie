@@ -6,7 +6,6 @@ import {
   useSupplierReturn,
   useUpdateSupplierReturnStep1,
 } from "@/lib/hooks/useSupplierReturns";
-import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 
 interface Props {
@@ -15,6 +14,24 @@ interface Props {
   onSubmit: (data: any) => void;
   onCancel: () => void;
 }
+
+const roundMoney = (value: number) =>
+  Math.round((value + Number.EPSILON) * 100) / 100;
+const parseDecimal = (raw: string) => {
+  const normalized = raw.replace(",", ".").replace(/[^\d.]/g, "");
+  const [whole = "", ...fraction] = normalized.split(".");
+  const display = fraction.length
+    ? `${whole}.${fraction.join("").slice(0, 2)}`
+    : whole;
+  return { display, value: display ? Number(display) : 0 };
+};
+const formatMoney = (value: number, currency: string) =>
+  new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: currency === "VND" ? 0 : 2,
+    maximumFractionDigits: currency === "VND" ? 0 : 2,
+  }).format(value);
 
 export function EditStep1Modal({
   supplierReturnId,
@@ -44,7 +61,9 @@ export function EditStep1Modal({
         purchaseOrderId: d.purchaseOrderId,
         purchaseOrderCode: d.purchaseOrderCode,
         requestQuantity: Number(d.requestQuantity),
-        returnPrice: Number(d.returnPrice),
+        returnPrice: Number(d.foreignReturnPrice ?? d.returnPrice),
+        totalAmount: Number(d.foreignReturnAmount ?? d.totalAmount ?? 0),
+        inputMode: d.inputMode || "unit_price",
       }))
     );
     setNote(supplierReturn.note || "");
@@ -61,15 +80,40 @@ export function EditStep1Modal({
 
   const handleFieldChange = (
     idx: number,
-    field: "requestQuantity" | "returnPrice",
+    field: "requestQuantity" | "returnPrice" | "totalAmount",
     raw: string
   ) => {
     const key = `${idx}_${field}`;
-    const onlyNums = raw.replace(/[^\d]/g, "");
-    setDisplays((prev) => ({ ...prev, [key]: onlyNums }));
-    const parsed = onlyNums === "" ? 0 : parseInt(onlyNums, 10);
+    const decimal = parseDecimal(raw);
+    const display = decimal.display;
+    setDisplays((prev) => ({ ...prev, [key]: display }));
+    const parsed = decimal.value;
     setReturnItems((prev) =>
-      prev.map((item, i) => (i === idx ? { ...item, [field]: parsed } : item))
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        if (field === "requestQuantity")
+          return {
+            ...item,
+            requestQuantity: parsed,
+            totalAmount: roundMoney(parsed * item.returnPrice),
+          };
+        if (field === "returnPrice")
+          return {
+            ...item,
+            returnPrice: parsed,
+            totalAmount: roundMoney(item.requestQuantity * parsed),
+            inputMode: "unit_price",
+          };
+        return {
+          ...item,
+          totalAmount: parsed,
+          returnPrice:
+            item.requestQuantity > 0
+              ? roundMoney(parsed / item.requestQuantity)
+              : 0,
+          inputMode: "total_amount",
+        };
+      })
     );
   };
 
@@ -83,11 +127,7 @@ export function EditStep1Modal({
   };
 
   const totalReturnAmount = useMemo(
-    () =>
-      returnItems.reduce(
-        (sum, i) => sum + i.requestQuantity * i.returnPrice,
-        0
-      ),
+    () => returnItems.reduce((sum, i) => sum + i.totalAmount, 0),
     [returnItems]
   );
 
@@ -112,6 +152,14 @@ export function EditStep1Modal({
               purchaseOrderCode: i.purchaseOrderCode,
               requestQuantity: i.requestQuantity,
               returnPrice: i.returnPrice,
+              totalAmount: i.totalAmount,
+              inputMode: i.inputMode,
+              ...(supplierReturn?.currency !== "VND"
+                ? {
+                    foreignReturnPrice: i.returnPrice,
+                    foreignReturnAmount: i.totalAmount,
+                  }
+                : {}),
             })),
         },
       });
@@ -123,6 +171,9 @@ export function EditStep1Modal({
   };
 
   if (isLoading) return null;
+
+  const currency = supplierReturn?.currency || "VND";
+  const currencySymbol = currency === "CNY" ? "¥" : "₫";
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -175,10 +226,10 @@ export function EditStep1Modal({
                   SL trả
                 </th>
                 <th className="text-right py-2 font-medium text-gray-600">
-                  Giá trả
+                  Đơn giá trả ({currency})
                 </th>
                 <th className="text-right py-2 font-medium text-gray-600">
-                  Thành tiền
+                  Thành tiền ({currency})
                 </th>
               </tr>
             </thead>
@@ -197,7 +248,7 @@ export function EditStep1Modal({
                   <td className="py-3 text-right">
                     <input
                       type="text"
-                      inputMode="numeric"
+                      inputMode="decimal"
                       value={getDisplay(
                         idx,
                         "requestQuantity",
@@ -217,7 +268,8 @@ export function EditStep1Modal({
                   <td className="py-3 text-right">
                     <input
                       type="text"
-                      inputMode="numeric"
+                      inputMode="decimal"
+                      placeholder={`${currencySymbol} 0.00`}
                       value={getDisplay(idx, "returnPrice", item.returnPrice)}
                       onChange={(e) =>
                         handleFieldChange(idx, "returnPrice", e.target.value)
@@ -227,9 +279,17 @@ export function EditStep1Modal({
                     />
                   </td>
                   <td className="py-3 text-right font-medium">
-                    {new Intl.NumberFormat("en-US").format(
-                      item.requestQuantity * item.returnPrice
-                    )}
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder={`${currencySymbol} 0.00`}
+                      value={getDisplay(idx, "totalAmount", item.totalAmount)}
+                      onChange={(e) =>
+                        handleFieldChange(idx, "totalAmount", e.target.value)
+                      }
+                      onBlur={() => handleFieldBlur(idx, "totalAmount")}
+                      className="w-28 border rounded px-2 py-1 text-right text-sm"
+                    />
                   </td>
                 </tr>
               ))}
@@ -261,9 +321,12 @@ export function EditStep1Modal({
           )}
 
           <div className="flex items-center justify-between text-sm font-semibold">
-            <span>Tổng tiền trả</span>
+            <span>Tổng tiền trả ({currency})</span>
             <span className="text-brand">
-              {formatCurrency(totalReturnAmount)}
+              {formatMoney(
+                totalReturnAmount,
+                supplierReturn?.currency || "VND"
+              )}
             </span>
           </div>
           <textarea

@@ -12,6 +12,9 @@ export interface SupplierReturnDetail {
   confirmedQuantity: number;
   returnPrice: number;
   totalAmount: number;
+  inputMode?: "unit_price" | "total_amount";
+  foreignReturnPrice?: number;
+  foreignReturnAmount?: number;
   note?: string;
   product?: {
     id: number;
@@ -31,9 +34,14 @@ export interface SupplierReturn {
   status: number;
   statusValue?: string;
   totalReturnAmount: number;
+  currency: string;
+  exchangeRate?: number;
+  totalForeignReturnAmount?: number;
   refundAmount: number;
+  refundForeignAmount?: number;
   refundType?: string;
   refundedAmount: number;
+  refundedForeignAmount?: number;
   note?: string;
   exportedById?: number;
   exportedByName?: string;

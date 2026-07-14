@@ -41,6 +41,8 @@ export const PROMOTION_STATUS_LABELS: Record<PromotionStatus, string> = {
 export interface PromotionProductRef {
   productId?: number | null;
   categoryName?: string | null;
+  // Chỉ dùng cho rewardItems (Y): trần lifetime riêng cho dòng quà này.
+  rewardLimit?: number | null;
 }
 
 export interface PromotionReward {
@@ -92,6 +94,7 @@ export interface Promotion {
     role: string;
     productId?: number | null;
     categoryName?: string | null;
+    rewardLimit?: number | null;
     product?: { id: number; name: string; code: string };
   }[];
   _count?: { logs: number };
@@ -136,6 +139,15 @@ export interface PromotionStatsItem {
   promoQty: number;
 }
 
+export interface PromotionStatsPerProduct {
+  productId: number;
+  code: string;
+  name: string;
+  rewardLimit: number;
+  rewardIssued: number;
+  rewardRemaining: number;
+}
+
 export interface PromotionStats {
   items: PromotionStatsItem[];
   totals: { soldQty: number; promoQty: number };
@@ -146,6 +158,7 @@ export interface PromotionStats {
     maxRewardQuantity: number | null;
     rewardIssued: number;
     rewardRemaining: number | null;
+    perProduct?: PromotionStatsPerProduct[];
   };
 }
 
@@ -234,6 +247,8 @@ export interface RewardOption {
   productName?: string;
   productCode?: string;
   availableStock: number;
+  // Số quà còn được tặng (lifetime) cho SP này. null = không giới hạn.
+  remaining?: number | null;
 }
 
 export interface EligiblePromotion {

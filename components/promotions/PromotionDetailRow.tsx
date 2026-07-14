@@ -509,6 +509,53 @@ function StatsPanel({
         <StatCard label="SL khuyến mãi" value={rewardText} sub={rewardSub} />
       </div>
 
+      {limits.perProduct && limits.perProduct.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-gray-200">
+          <div className="border-b border-gray-200 bg-gray-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
+            Trần SL tặng theo từng sản phẩm
+          </div>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Mã hàng
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Tên hàng
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Đã tặng / Trần
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Còn lại
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {limits.perProduct.map((pp) => (
+                <tr key={pp.productId} className="hover:bg-gray-50">
+                  <td className="px-3 py-2 text-sm font-medium text-gray-800">
+                    <CodeLink entity="product" code={pp.code} />
+                  </td>
+                  <td className="px-3 py-2 text-sm text-gray-700">{pp.name}</td>
+                  <td className="px-3 py-2 text-center text-sm text-gray-800">
+                    {fmtQty(pp.rewardIssued)} / {fmtQty(pp.rewardLimit)}
+                  </td>
+                  <td
+                    className={`px-3 py-2 text-center text-sm font-medium ${
+                      pp.rewardRemaining <= 0
+                        ? "text-red-600"
+                        : "text-gray-800"
+                    }`}>
+                    {fmtQty(pp.rewardRemaining)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {items.length === 0 ? (
         <p className="py-6 text-center text-sm text-gray-400">
           Chưa có hàng hóa nào được ghi nhận

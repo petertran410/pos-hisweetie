@@ -5,8 +5,9 @@ import { X, Search, Plus, Trash2 } from "lucide-react";
 import { useBranchStore } from "@/lib/store/branch";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import { useSupplier } from "@/lib/hooks/useSuppliers";
+import { useExchangeRate } from "@/lib/hooks/useExchangeRate";
 import { apiClient } from "@/lib/config/api";
-import { formatCurrency } from "@/lib/utils";
 
 // ─── Modal local dropdowns ────────────────────────────────────────────────────
 
@@ -226,10 +227,31 @@ interface ReturnItem {
   purchaseOrderCode: string | null;
   requestQuantity: number;
   returnPrice: number;
+  totalAmount: number;
+  inputMode: "unit_price" | "total_amount";
   onHand?: number; // chỉ dùng cho by_product để hiển thị
 }
 
 type Mode = "by_purchase_order" | "by_product";
+const IMPORT_SUPPLIER_GROUP_ID = 1;
+
+const roundMoney = (value: number) =>
+  Math.round((value + Number.EPSILON) * 100) / 100;
+const parseDecimal = (raw: string) => {
+  const normalized = raw.replace(",", ".").replace(/[^\d.]/g, "");
+  const [whole = "", ...fraction] = normalized.split(".");
+  const display = fraction.length
+    ? `${whole}.${fraction.join("").slice(0, 2)}`
+    : whole;
+  return { display, value: display ? Number(display) : 0 };
+};
+const formatMoney = (value: number, currency: string) =>
+  new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: currency === "VND" ? 0 : 2,
+    maximumFractionDigits: currency === "VND" ? 0 : 2,
+  }).format(value);
 
 export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
   const { selectedBranch } = useBranchStore();
@@ -248,12 +270,21 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
   const [poSearch, setPoSearch] = useState("");
   const [poResults, setPoResults] = useState<any[]>([]);
   const [selectedPO, setSelectedPO] = useState<any | null>(null);
+  const [poDetail, setPoDetail] = useState<any | null>(null);
   const [showPoDropdown, setShowPoDropdown] = useState(false);
   const [poLoading, setPoLoading] = useState(false);
   const poDropdownRef = useRef<HTMLDivElement>(null);
 
   // ── by_product state ──────────────────────────────────────────────────────
   const [supplierId, setSupplierId] = useState<string>("");
+  const { data: selectedSupplier } = useSupplier(
+    mode === "by_product" && supplierId ? Number(supplierId) : undefined
+  );
+  const isImportSupplier =
+    selectedSupplier?.supplierGroupDetails?.some(
+      (detail) => detail.supplierGroupId === IMPORT_SUPPLIER_GROUP_ID
+    ) ?? false;
+  const liveRateQuery = useExchangeRate("CNY", "VND");
   const [productSearch, setProductSearch] = useState("");
   const [productResults, setProductResults] = useState<any[]>([]);
   const [showProductDropdown, setShowProductDropdown] = useState(false);
@@ -292,6 +323,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
   useEffect(() => {
     setReturnItems([]);
     setSelectedPO(null);
+    setPoDetail(null);
     setPoSearch("");
     setPoResults([]);
     setSupplierId("");
@@ -362,6 +394,8 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
 
     try {
       const detail = await apiClient.get(`/purchase-orders/${po.id}`);
+      setPoDetail(detail);
+      const isForeign = Boolean(detail.currency && detail.currency !== "VND");
       const items: ReturnItem[] = (detail.items || []).map((item: any) => ({
         productId: item.productId,
         productCode: item.productCode,
@@ -371,7 +405,9 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
         purchaseOrderId: po.id,
         purchaseOrderCode: po.code,
         requestQuantity: 0,
-        returnPrice: Number(item.price),
+        returnPrice: Number(isForeign ? item.factoryPrice : item.price) || 0,
+        totalAmount: 0,
+        inputMode: "unit_price",
       }));
       setReturnItems(items);
       setDisplays({});
@@ -400,11 +436,13 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
         productCode: product.code,
         productName: product.name,
         purchaseQuantity: 0,
-        purchasePrice: Number(product.basePrice || 0),
+        purchasePrice: isImportSupplier ? 0 : Number(product.basePrice || 0),
         purchaseOrderId: null,
         purchaseOrderCode: null,
         requestQuantity: 0,
-        returnPrice: Number(product.basePrice || 0),
+        returnPrice: isImportSupplier ? 0 : Number(product.basePrice || 0),
+        totalAmount: 0,
+        inputMode: "unit_price",
         onHand,
       },
     ]);
@@ -428,15 +466,42 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
 
   const handleFieldChange = (
     idx: number,
-    field: "requestQuantity" | "returnPrice",
+    field: "requestQuantity" | "returnPrice" | "totalAmount",
     raw: string
   ) => {
     const key = `${idx}_${field}`;
-    const onlyNums = raw.replace(/[^\d]/g, "");
-    setDisplays((prev) => ({ ...prev, [key]: onlyNums }));
-    const parsed = onlyNums === "" ? 0 : parseInt(onlyNums, 10);
+    const decimal = parseDecimal(raw);
+    const display = decimal.display;
+    setDisplays((prev) => ({ ...prev, [key]: display }));
+    const parsed = decimal.value;
     setReturnItems((prev) =>
-      prev.map((item, i) => (i === idx ? { ...item, [field]: parsed } : item))
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        if (field === "requestQuantity") {
+          return {
+            ...item,
+            requestQuantity: parsed,
+            totalAmount: roundMoney(parsed * item.returnPrice),
+          };
+        }
+        if (field === "returnPrice") {
+          return {
+            ...item,
+            returnPrice: parsed,
+            totalAmount: roundMoney(item.requestQuantity * parsed),
+            inputMode: "unit_price",
+          };
+        }
+        return {
+          ...item,
+          totalAmount: parsed,
+          returnPrice:
+            item.requestQuantity > 0
+              ? roundMoney(parsed / item.requestQuantity)
+              : 0,
+          inputMode: "total_amount",
+        };
+      })
     );
   };
 
@@ -451,11 +516,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
 
   // ── Tính tổng ─────────────────────────────────────────────────────────────
   const totalReturnAmount = useMemo(
-    () =>
-      returnItems.reduce(
-        (sum, i) => sum + i.requestQuantity * i.returnPrice,
-        0
-      ),
+    () => returnItems.reduce((sum, i) => sum + i.totalAmount, 0),
     [returnItems]
   );
 
@@ -466,8 +527,18 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
     if (validItems.length === 0) return false;
     if (mode === "by_purchase_order" && !selectedPO) return false;
     if (mode === "by_product" && !supplierId) return false;
+    if (mode === "by_product" && isImportSupplier && !liveRateQuery.data?.rate)
+      return false;
     return true;
-  }, [branchId, returnItems, mode, selectedPO, supplierId]);
+  }, [
+    branchId,
+    returnItems,
+    mode,
+    selectedPO,
+    supplierId,
+    isImportSupplier,
+    liveRateQuery.data?.rate,
+  ]);
 
   const buildSubmitData = (isDraft: boolean) => {
     const validItems = returnItems.filter((i) => i.requestQuantity > 0);
@@ -478,6 +549,13 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
           ? parseInt(supplierId)
           : null;
 
+    const currency =
+      mode === "by_purchase_order"
+        ? poDetail?.currency || "VND"
+        : isImportSupplier
+          ? "CNY"
+          : "VND";
+    const isForeign = currency !== "VND";
     return {
       mode,
       purchaseOrderId:
@@ -486,6 +564,14 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
       branchId,
       note,
       isDraft,
+      currency,
+      exchangeRate: isForeign
+        ? Number(
+            mode === "by_purchase_order"
+              ? poDetail?.exchangeRate
+              : liveRateQuery.data?.rate
+          )
+        : 1,
       details: validItems.map((i) => ({
         purchaseOrderId: i.purchaseOrderId,
         purchaseOrderCode: i.purchaseOrderCode,
@@ -496,11 +582,28 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
         purchasePrice: i.purchasePrice,
         requestQuantity: i.requestQuantity,
         returnPrice: i.returnPrice,
+        totalAmount: i.totalAmount,
+        inputMode: i.inputMode,
+        ...(isForeign
+          ? {
+              foreignReturnPrice: i.returnPrice,
+              foreignReturnAmount: i.totalAmount,
+            }
+          : {}),
       })),
     };
   };
 
   const suppliers = suppliersData?.data || [];
+  const currency =
+    mode === "by_purchase_order"
+      ? poDetail?.currency || "VND"
+      : isImportSupplier
+        ? "CNY"
+        : "VND";
+  const currencySymbol = currency === "CNY" ? "¥" : "₫";
+  const hasCurrencyContext =
+    mode === "by_purchase_order" ? Boolean(poDetail) : Boolean(supplierId);
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -572,10 +675,17 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
                 value={supplierId}
                 placeholder="Chọn nhà cung cấp"
                 searchPlaceholder="Tìm tên nhà cung cấp..."
-                onChange={setSupplierId}
+                onChange={(value) => {
+                  setSupplierId(value);
+                  if (mode === "by_product") {
+                    setReturnItems([]);
+                    setDisplays({});
+                  }
+                }}
               />
             </div>
           </div>
+
           {/* ── Mode by_purchase_order: tìm phiếu nhập ─────────────────── */}
           {mode === "by_purchase_order" && (
             <div ref={poDropdownRef} className="relative">
@@ -590,6 +700,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
                   onChange={(e) => {
                     setPoSearch(e.target.value);
                     setSelectedPO(null);
+                    setPoDetail(null);
                     setReturnItems([]);
                   }}
                   placeholder="Nhập mã phiếu nhập (PN...)..."
@@ -636,6 +747,7 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
                     <button
                       onClick={() => {
                         setSelectedPO(null);
+                        setPoDetail(null);
                         setPoSearch("");
                         setReturnItems([]);
                       }}
@@ -731,10 +843,10 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
                       SL trả
                     </th>
                     <th className="text-right px-3 py-2 font-medium text-gray-600">
-                      Giá trả
+                      Đơn giá trả ({currency})
                     </th>
                     <th className="text-right px-3 py-2 font-medium text-gray-600">
-                      Thành tiền
+                      Thành tiền ({currency})
                     </th>
                     {mode === "by_product" && <th className="px-3 py-2" />}
                   </tr>
@@ -765,7 +877,8 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
                       <td className="px-3 py-2 text-right">
                         <input
                           type="text"
-                          inputMode="numeric"
+                          inputMode="decimal"
+                          placeholder="0.00"
                           value={getDisplay(
                             idx,
                             "requestQuantity",
@@ -792,7 +905,8 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
                       <td className="px-3 py-2 text-right">
                         <input
                           type="text"
-                          inputMode="numeric"
+                          inputMode="decimal"
+                          placeholder={`${currencySymbol} 0.00`}
                           value={getDisplay(
                             idx,
                             "returnPrice",
@@ -812,9 +926,25 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
 
                       {/* Thành tiền */}
                       <td className="px-3 py-2 text-right font-medium">
-                        {new Intl.NumberFormat("en-US").format(
-                          item.requestQuantity * item.returnPrice
-                        )}
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder={`${currencySymbol} 0.00`}
+                          value={getDisplay(
+                            idx,
+                            "totalAmount",
+                            item.totalAmount
+                          )}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              idx,
+                              "totalAmount",
+                              e.target.value
+                            )
+                          }
+                          onBlur={() => handleFieldBlur(idx, "totalAmount")}
+                          className="w-28 border rounded px-2 py-1 text-right text-sm"
+                        />
                       </td>
 
                       {/* Xóa — chỉ by_product */}
@@ -850,9 +980,9 @@ export function CreateSupplierReturnModal({ onClose, onSubmit }: Props) {
         {/* ── Footer ──────────────────────────────────────────────────────── */}
         <div className="p-5 border-t space-y-3">
           <div className="flex items-center justify-between text-sm font-semibold">
-            <span>Tổng tiền trả</span>
+            <span>Tổng tiền trả ({currency})</span>
             <span className="text-brand">
-              {formatCurrency(totalReturnAmount)}
+              {formatMoney(totalReturnAmount, currency)}
             </span>
           </div>
           <div className="flex justify-end gap-2">

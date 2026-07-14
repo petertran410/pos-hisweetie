@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import { X, ChevronDown } from "lucide-react";
 import { useSupplierReturn } from "@/lib/hooks/useSupplierReturns";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
-import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 
 interface Props {
@@ -44,7 +43,9 @@ export function ConfirmRefundModal({
   const methodRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
 
-  const refundAmount = Number(supplierReturn?.refundAmount || 0);
+  const currency = supplierReturn?.currency || "VND";
+  const refundAmount = Number(currency === "VND" ? supplierReturn?.refundAmount : supplierReturn?.refundForeignAmount || 0);
+  const formatMoney = (value: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency, minimumFractionDigits: currency === "VND" ? 0 : 2, maximumFractionDigits: currency === "VND" ? 0 : 2 }).format(value);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -106,7 +107,7 @@ export function ConfirmRefundModal({
             <div className="flex justify-between">
               <span className="text-gray-500">Số tiền xử lý</span>
               <span className="font-semibold text-brand">
-                {formatCurrency(refundAmount)}
+                 {formatMoney(refundAmount)}
               </span>
             </div>
           </div>

@@ -70,6 +70,7 @@ export interface CartItem {
     productCode?: string;
     productName?: string;
     availableStock: number;
+    remaining?: number | null;
   }[];
   requiresChoice?: boolean; // dòng quà cần thu ngân chọn SP
   // Dòng SP thường: các promotionId được thu ngân bật áp dụng (opt-in).
@@ -463,10 +464,11 @@ export default function BanHangPage() {
               );
 
               const isBuyY = promo.type === "BUY_X_BUY_Y_PRICE";
-              const qty = Number(promo.rewardQuantity || 0);
+              const baseQty = Number(promo.rewardQuantity || 0);
 
               let giftProduct: any = null;
               let requiresChoice = false;
+              let optRemaining: number | null | undefined = undefined;
               if (promo.requiresChoice) {
                 const chosenId =
                   prevGift?.product?.id || promo.rewardOptions?.[0]?.productId;
@@ -475,6 +477,7 @@ export default function BanHangPage() {
                   (o) => o.productId === chosenId
                 );
                 if (opt) {
+                  optRemaining = opt.remaining;
                   giftProduct = {
                     id: opt.productId,
                     name: opt.productName,
@@ -496,6 +499,15 @@ export default function BanHangPage() {
                 }
               }
               if (!giftProduct) continue;
+
+              // Cap SL quà theo suất còn lại (lifetime) của SP được chọn.
+              // Với option đã có giftLine/discountedBuyLine (không requiresChoice)
+              // engine đã cap sẵn nên baseQty đã đúng.
+              let qty = baseQty;
+              if (optRemaining != null) {
+                qty = Math.min(qty, Number(optRemaining));
+              }
+              if (requiresChoice ? false : qty <= 0) continue;
 
               const promoPrice = isBuyY ? Number(promo.promoPrice || 0) : 0;
 
