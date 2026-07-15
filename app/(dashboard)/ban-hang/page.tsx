@@ -137,27 +137,11 @@ const getEditStorageKey = (id: number, type: TabType): string => {
 /**
  * Map dòng đơn/HĐ (API) → CartItem, khôi phục cờ KM:
  * - gift / discounted_buy → isPromoGift
- * - dòng thường: promoEnabledIds từ promotionId dòng đó, hoặc suy từ sibling gift
+ * - dòng thường: promoEnabledIds CHỈ từ promotionId của chính dòng đó
  * - gắn triggerRowId / promotionName cho dòng quà
  */
 const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[] => {
   if (!lines?.length) return [];
-
-  const giftPromoIds = Array.from(
-    new Set(
-      lines
-        .filter(
-          (item) =>
-            item.isGift ||
-            item.lineType === "gift" ||
-            item.lineType === "discounted_buy"
-        )
-        .map((item) =>
-          item.promotionId != null ? Number(item.promotionId) : null
-        )
-        .filter((id): id is number => id != null && !Number.isNaN(id))
-    )
-  );
 
   const mapped: CartItem[] = lines.map((item: any) => {
     const promoLineType =
@@ -185,12 +169,9 @@ const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[
     }
     const ownPromoId =
       item.promotionId != null ? Number(item.promotionId) : null;
-    const promoEnabledIds =
-      ownPromoId != null
-        ? [ownPromoId]
-        : giftPromoIds.length > 0
-          ? [...giftPromoIds]
-          : [];
+    // Chỉ opt-in KM cho đúng dòng có promotionId của chính nó (dòng X điều kiện).
+    // Không suy từ dòng quà sibling → tránh gán nhầm KM cho dòng thường khác.
+    const promoEnabledIds = ownPromoId != null ? [ownPromoId] : [];
     return {
       rowId,
       product: item.product,
