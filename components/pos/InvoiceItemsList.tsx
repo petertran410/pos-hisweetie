@@ -29,6 +29,7 @@ import {
 import { ProductInventoryModal } from "./ProductInventoryModal";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { ProductInventoryMobileSheet } from "./ProductInventoryMobileSheet";
+import { CodeLink } from "../shared/CodeLink";
 import {
   getItemOnHand as getItemOnHandHelper,
   getStockWarning as getStockWarningHelper,
@@ -506,6 +507,24 @@ export function InvoiceItemsList({
                         KM
                       </span>
                     )}
+                    {/* Dòng X: badge mã KM đang áp (opt-in) → link chi tiết KM */}
+                    {!item.isPromoGift &&
+                      item.eligiblePromos
+                        ?.filter(
+                          (p) =>
+                            (item.promoEnabledIds || []).includes(
+                              p.promotionId
+                            ) && p.code
+                        )
+                        .map((p) => (
+                          <CodeLink
+                            key={p.promotionId}
+                            entity="promotion"
+                            code={p.code}
+                            label={p.code}
+                            className="px-1.5 py-0.5 text-xs rounded-full border border-pink-300 bg-pink-50 text-pink-700 font-medium hover:bg-pink-100"
+                          />
+                        ))}
                   </div>
                   {item.isPromoGift && item.promotionName && (
                     <div className="text-xs text-blue-600 font-medium">
