@@ -16,6 +16,9 @@ interface CustomerDebtsTabProps {
   customerDebt: number;
   hidePaymentButton?: boolean;
   includeChildren?: boolean;
+  /** Ẩn toàn bộ cụm nút thao tác (Lịch sử TT, Công nợ, Thanh toán) — dùng khi
+   * chỉ cần hiển thị bảng công nợ để chụp màn hình gửi khách. */
+  hideActions?: boolean;
 }
 
 export function CustomerDebtsTab({
@@ -23,6 +26,7 @@ export function CustomerDebtsTab({
   customerDebt,
   hidePaymentButton = false,
   includeChildren = false,
+  hideActions = false,
 }: CustomerDebtsTabProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [page, setPage] = useState(1);
@@ -117,39 +121,41 @@ export function CustomerDebtsTab({
               {formatCurrency(customerDebt)}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
-            <button
-              onClick={() => exportTimeline(customerId, includeChildren)}
-              disabled={exportingTimeline}
-              className="px-2 py-1.5 lg:px-3 lg:py-2 border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-1.5 text-xs lg:text-sm text-gray-700 disabled:opacity-50">
-              {exportingTimeline ? (
-                <Loader2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" />
-              ) : (
-                <Download className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-              )}
-              Lịch sử TT
-            </button>
-
-            <button
-              onClick={() => setShowExportDebtModal(true)}
-              disabled={exportingDebt}
-              className="px-2 py-1.5 lg:px-3 lg:py-2 border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-1.5 text-xs lg:text-sm text-gray-700 disabled:opacity-50">
-              {exportingDebt ? (
-                <Loader2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" />
-              ) : (
-                <Download className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-              )}
-              Công nợ
-            </button>
-
-            {!hidePaymentButton && (
+          {!hideActions && (
+            <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
               <button
-                onClick={() => setShowPaymentModal(true)}
-                className="px-2.5 py-1.5 lg:px-4 lg:py-2 bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
-                💵 Thanh toán
+                onClick={() => exportTimeline(customerId, includeChildren)}
+                disabled={exportingTimeline}
+                className="px-2 py-1.5 lg:px-3 lg:py-2 border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-1.5 text-xs lg:text-sm text-gray-700 disabled:opacity-50">
+                {exportingTimeline ? (
+                  <Loader2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                )}
+                Lịch sử TT
               </button>
-            )}
-          </div>
+
+              <button
+                onClick={() => setShowExportDebtModal(true)}
+                disabled={exportingDebt}
+                className="px-2 py-1.5 lg:px-3 lg:py-2 border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-1.5 text-xs lg:text-sm text-gray-700 disabled:opacity-50">
+                {exportingDebt ? (
+                  <Loader2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                )}
+                Công nợ
+              </button>
+
+              {!hidePaymentButton && (
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  className="px-2.5 py-1.5 lg:px-4 lg:py-2 bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
+                  💵 Thanh toán
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="overflow-x-auto">

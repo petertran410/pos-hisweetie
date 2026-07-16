@@ -12,6 +12,10 @@ import {
 import { useBranchStore } from "@/lib/store/branch";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "@/components/shared/CodeLink";
+import {
+  SepayDebtViewModal,
+  SepayDebtViewCustomer,
+} from "@/components/sepay/SepayDebtViewModal";
 import type { SepayTransaction, SepayMatchCustomer } from "@/lib/api/sepay";
 import {
   Search,
@@ -21,6 +25,7 @@ import {
   UserPlus,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import Swal from "sweetalert2";
@@ -446,7 +451,7 @@ function CustomerInvoiceAllocator({
             inputMode="numeric"
             value={displayAmount(row.amount)}
             onChange={(e) => {
-              setTouched(false); // nhập tổng lại → cho auto-rải chạy lại
+              setTouched(false);
               onAmountChange(onlyDigitsStr(e.target.value));
             }}
             placeholder="0"
@@ -745,6 +750,10 @@ function AllocationModal({
 export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [allocOpen, setAllocOpen] = useState(false);
+  // Danh sách khách để xem bảng công nợ (mở modal). null = đóng.
+  const [debtCustomers, setDebtCustomers] = useState<
+    SepayDebtViewCustomer[] | null
+  >(null);
   const { selectedBranch } = useBranchStore();
   const canAssign = usePermission("sepay", "assign");
   const canConfirm = usePermission("sepay", "confirm");
@@ -761,13 +770,37 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
       .map((c) => c.cashFlow?.code)
       .filter(Boolean) as string[];
     return (
-      <span className="text-xs text-gray-400">
-        {tx.match?.completedSource === "webhook"
-          ? "Tự động (webhook)"
-          : cfCodes.length > 0
-            ? `Phiếu ${cfCodes.join(", ")}`
-            : "Đã tạo phiếu thu"}
-      </span>
+      <div className="flex items-center gap-2 justify-end">
+        <span className="text-xs text-gray-400">
+          {tx.match?.completedSource === "webhook"
+            ? "Tự động (webhook)"
+            : cfCodes.length > 0
+              ? `Phiếu ${cfCodes.join(", ")}`
+              : "Đã tạo phiếu thu"}
+        </span>
+        {customers.length > 0 && (
+          <button
+            onClick={() =>
+              setDebtCustomers(
+                customers.map((c) => ({
+                  id: c.id,
+                  code: c.code,
+                  name: c.name,
+                }))
+              )
+            }
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+            <FileText className="w-3.5 h-3.5" />
+            Xem công nợ
+          </button>
+        )}
+        {debtCustomers && (
+          <SepayDebtViewModal
+            customers={debtCustomers}
+            onClose={() => setDebtCustomers(null)}
+          />
+        )}
+      </div>
     );
   }
 
@@ -799,7 +832,22 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
     if (!selectedBranch?.id) return;
     confirmMut.mutate(
       { id: tx.id, branchId: selectedBranch.id, allocations },
-      { onSuccess: () => setAllocOpen(false) }
+      {
+        onSuccess: () => {
+          setAllocOpen(false);
+          // Tự bật bảng công nợ của các khách vừa lập phiếu thu để kế toán
+          // chụp màn hình gửi khách. Lấy code/name từ danh sách khách đã gán.
+          const picked = allocations
+            .map((a) => {
+              const c = customers.find((x) => x.id === a.customerId);
+              return c
+                ? { id: c.id, code: c.code, name: c.name }
+                : null;
+            })
+            .filter(Boolean) as SepayDebtViewCustomer[];
+          if (picked.length > 0) setDebtCustomers(picked);
+        },
+      }
     );
   };
 
@@ -869,6 +917,13 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
           onConfirm={handleConfirm}
           onClose={() => setAllocOpen(false)}
           isPending={confirmMut.isPending}
+        />
+      )}
+
+      {debtCustomers && (
+        <SepayDebtViewModal
+          customers={debtCustomers}
+          onClose={() => setDebtCustomers(null)}
         />
       )}
     </div>
