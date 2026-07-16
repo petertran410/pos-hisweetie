@@ -80,7 +80,7 @@ export default function PromotionsPage() {
   return (
     <PagePermissionGuard resource="promotions" action="view">
       <div
-        className="h-full w-screen border-t p-4"
+        className="h-full w-full overflow-y-auto border-t p-4"
         style={{ borderColor: "var(--dt-border)" }}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-semibold">Khuyến mãi</h1>
