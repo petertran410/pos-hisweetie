@@ -62,7 +62,7 @@ export function SepayDebtViewModal({
       className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 p-4 pt-12"
       onMouseDown={onClose}>
       <div
-        className="w-full max-w-7xl bg-white rounded-xl shadow-2xl flex flex-col max-h-[88vh]"
+        className="w-full max-w-[84rem] bg-white rounded-xl shadow-2xl flex flex-col max-h-[88vh]"
         onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div className="min-w-0">

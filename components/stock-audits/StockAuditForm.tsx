@@ -144,7 +144,6 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
     );
 
     setItems((prev) => [
-      ...prev,
       {
         productId: product.id,
         productCode: product.code,
@@ -155,6 +154,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
         actualQuantity: String(inv ? Number(inv.onHand) : 0),
         note: "",
       },
+      ...prev,
     ]);
 
     setSearch("");

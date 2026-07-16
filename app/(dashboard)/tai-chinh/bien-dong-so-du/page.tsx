@@ -3,11 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import {
-  useSepayTransactions,
-  useHideSepayTransaction,
-  useUnhideSepayTransaction,
-} from "@/lib/hooks/useSepay";
+import { useSepayTransactions } from "@/lib/hooks/useSepay";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { MiniCalendar } from "@/components/ui/MiniCalendar";
@@ -23,7 +19,6 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Search,
   Loader2,
   X,
   Calendar,
@@ -157,40 +152,6 @@ const EMPTY_FILTERS: Filters = {
 const onlyDigits = (v: string) => v.replace(/\D/g, "");
 const formatAmountInput = (v: string) =>
   v ? Number(v).toLocaleString("vi-VN") : "";
-
-/** Nút ẩn / bỏ ẩn 1 giao dịch. */
-function HideToggleButton({
-  txId,
-  isHidden,
-}: {
-  txId: number;
-  isHidden: boolean;
-}) {
-  const hideMut = useHideSepayTransaction();
-  const unhideMut = useUnhideSepayTransaction();
-  const isPending = hideMut.isPending || unhideMut.isPending;
-
-  return (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        if (isHidden) unhideMut.mutate(txId);
-        else hideMut.mutate(txId);
-      }}
-      disabled={isPending}
-      title={isHidden ? "Bỏ ẩn giao dịch" : "Ẩn giao dịch"}
-      className="inline-flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap">
-      {isPending ? (
-        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-      ) : isHidden ? (
-        <Eye className="w-3.5 h-3.5" />
-      ) : (
-        <EyeOff className="w-3.5 h-3.5" />
-      )}
-      {isHidden ? "Bỏ ẩn" : "Ẩn"}
-    </button>
-  );
-}
 
 export default function BienDongSoDuPage() {
   const searchParams = useSearchParams();
@@ -361,18 +322,15 @@ export default function BienDongSoDuPage() {
         <div className="p-4 bg-white border-b flex flex-wrap items-end gap-3">
           <div className="flex flex-col">
             <label className="text-xs text-gray-500 mb-1">Tìm kiếm</label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                value={draft.search}
-                onChange={(e) =>
-                  setDraft((p) => ({ ...p, search: e.target.value }))
-                }
-                onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-                placeholder="Nội dung / mã tham chiếu"
-                className="dt-input dt-input-sm !rounded-lg pl-8 w-60"
-              />
-            </div>
+            <input
+              value={draft.search}
+              onChange={(e) =>
+                setDraft((p) => ({ ...p, search: e.target.value }))
+              }
+              onKeyDown={(e) => e.key === "Enter" && applyFilters()}
+              placeholder="Nội dung / mã tham chiếu"
+              className="dt-input dt-input-sm !rounded-lg w-60"
+            />
           </div>
 
           <div className="flex flex-col">
@@ -571,19 +529,19 @@ export default function BienDongSoDuPage() {
                 <th className="px-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Số tiền
                 </th>
-                <th className="px-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] w-full min-w-[240px]">
+                <th className="px-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] min-w-[160px] max-w-[280px]">
                   Nội dung
                 </th>
                 <th className="px-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Mã tham chiếu
                 </th>
-                <th className="pl-5 pr-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
+                <th className="px-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap min-w-[160px]">
                   Khách hàng
                 </th>
-                <th className="pl-5 pr-3 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
+                <th className="pl-2 pr-1 py-2.5 text-left font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Trạng thái
                 </th>
-                <th className="pl-5 pr-4 py-2.5 text-right font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
+                <th className="pl-1 pr-3 py-2.5 text-right font-medium text-[var(--dt-text-muted)] whitespace-nowrap">
                   Thao tác
                 </th>
               </tr>
@@ -620,24 +578,21 @@ export default function BienDongSoDuPage() {
                       <td className="px-3 py-2.5 text-left font-medium text-green-600 whitespace-nowrap dt-mono">
                         +{formatCurrency(amountIn)}
                       </td>
-                      <td className="px-3 py-2.5 w-full min-w-[240px] break-words whitespace-normal align-top">
+                      <td className="px-3 py-2.5 min-w-[160px] max-w-[280px] break-words whitespace-normal align-middle">
                         {tx.transactionContent || "-"}
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{tx.referenceNumber || "-"}</td>
-                      <td className="pl-5 pr-3 py-2.5 w-[150px] max-w-[150px] break-words whitespace-normal align-top">
+                      <td className="px-3 py-2.5 min-w-[160px] max-w-[220px] break-words whitespace-normal align-middle">
                         <SepayCustomerCell tx={tx} />
                       </td>
-                      <td className="pl-5 pr-3 py-2.5 whitespace-nowrap">
+                      <td className="pl-2 pr-1 py-2.5 whitespace-nowrap align-middle">
                         <SepayStatusBadge status={tx.match?.status} />
                       </td>
-                      <td className="pl-5 pr-4 py-2.5 whitespace-nowrap">
-                        <div className="flex items-center gap-2 justify-end">
-                          <SepayMatchActions tx={tx} />
-                          <HideToggleButton
-                            txId={tx.id}
-                            isHidden={applied.showHidden}
-                          />
-                        </div>
+                      <td className="pl-1 pr-3 py-2.5 whitespace-nowrap align-middle">
+                        <SepayMatchActions
+                          tx={tx}
+                          isHidden={applied.showHidden}
+                        />
                       </td>
                     </tr>
                   );

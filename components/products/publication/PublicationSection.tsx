@@ -49,7 +49,7 @@ export function PublicationSection({ pub }: Props) {
     <>
       <FormSection
         title="Tài liệu công bố"
-        description="Tải lên các tệp công bố sản phẩm (PDF, ảnh, Word, Excel...). Cho phép tải nhiều tệp, mỗi tệp tối đa 10MB.">
+        description="Tải lên các tệp công bố sản phẩm (PDF, ảnh, Word, Excel...). Mỗi tệp tối đa 50MB, tổng tối đa 200MB.">
         <label className="flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-gray-50 bg-white">
           <input
             type="file"
@@ -63,7 +63,7 @@ export function PublicationSection({ pub }: Props) {
             Bấm để chọn tệp (có thể chọn nhiều)
           </span>
           <span className="text-xs text-gray-400 mt-1">
-            PDF, Word, Excel, ảnh, zip... — tối đa 10MB/tệp
+            PDF, Word, Excel, ảnh, zip... — tối đa 50MB/tệp, tổng 200MB
           </span>
         </label>
 

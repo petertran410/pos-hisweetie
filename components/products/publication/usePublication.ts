@@ -51,7 +51,8 @@ export interface DocItem {
   mimetype?: string;
 }
 
-const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_DOC_SIZE = 50 * 1024 * 1024; // 50MB / tệ
+const MAX_TOTAL_DOC_SIZE = 200 * 1024 * 1024; // 200MB tổng
 
 const emptyLocation = () => ({
   address: undefined,
@@ -287,11 +288,20 @@ export function usePublication(product?: Product) {
     if (!files || files.length === 0) return;
 
     const accepted: DocItem[] = [];
+    let currentTotal = documents.reduce((sum, d) => sum + (d.size || 0), 0);
+
     Array.from(files).forEach((file) => {
       if (file.size > MAX_DOC_SIZE) {
-        toast.error(`"${file.name}" vượt quá 10MB`);
+        toast.error(`"${file.name}" vượt quá 50MB`);
         return;
       }
+      if (currentTotal + file.size > MAX_TOTAL_DOC_SIZE) {
+        toast.error(
+          `"${file.name}" làm tổng dung lượng vượt quá 200MB. Vui lòng xóa bớt tệp.`
+        );
+        return;
+      }
+      currentTotal += file.size;
       accepted.push({
         file,
         name: file.name,

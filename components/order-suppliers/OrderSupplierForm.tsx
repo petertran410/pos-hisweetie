@@ -775,7 +775,7 @@ export function OrderSupplierForm({
       inventory: Number(inventory?.onHand || 0),
     };
 
-    setProducts((prev) => [...prev, newProduct]);
+    setProducts((prev) => [newProduct, ...prev]);
 
     // Đã chọn NCC từ trước → đánh dấu áp giá nhập gần nhất theo NCC cho SP này
     // (effect sẽ ghi đè khi data về; giá vốn ở trên chỉ là fallback). Chạy cho

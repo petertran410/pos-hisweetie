@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { invoicesApi } from "@/lib/api/invoices";
 import { useCustomer, useSearchCustomers } from "@/lib/hooks/useCustomers";
@@ -8,6 +8,8 @@ import {
   useAssignSepayCustomer,
   useUnassignSepayCustomer,
   useConfirmSepayReceipt,
+  useHideSepayTransaction,
+  useUnhideSepayTransaction,
 } from "@/lib/hooks/useSepay";
 import { useBranchStore } from "@/lib/store/branch";
 import { usePermission } from "@/lib/hooks/usePermissions";
@@ -26,6 +28,10 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  MoreHorizontal,
+  Eye,
+  EyeOff,
+  UserMinus,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import Swal from "sweetalert2";
@@ -46,33 +52,57 @@ export function SepayStatusBadge({ status }: { status?: string | null }) {
   );
 }
 
-/** Ô hiển thị (nhiều) khách hàng */
+/** Ô hiển thị (nhiều) khách hàng + số tiền đã gán / chưa gán */
 export function SepayCustomerCell({ tx }: { tx: SepayTransaction }) {
   const customers = tx.match?.customers || [];
   const unassigned = tx.match?.unassignedAmount || 0;
   if (customers.length === 0 && unassigned <= 0)
     return <span className="text-gray-400">-</span>;
+
+  // Số tiền chưa gán chỉ hiện 1 lần — gắn dưới khách cuối (hoặc một mình nếu chưa có KH)
+  const lastIdx = customers.length - 1;
+
   return (
-    <div className="flex flex-col gap-1">
-      {customers.map((c, i) => (
-        <div key={`${c.id}-${i}`} className="flex flex-col">
-          {c.code ? (
-            <CodeLink entity="customer" code={c.code} />
-          ) : (
-            <span className="text-sm break-words">{c.name}</span>
-          )}
-          <span className="text-xs text-gray-500 break-words">
-            {c.code ? c.name : ""}
-            {typeof c.amount === "number" && c.amount > 0
-              ? `${c.code ? " — " : ""}${formatCurrency(c.amount)}`
-              : ""}
-          </span>
-        </div>
-      ))}
-      {unassigned > 0 && (
-        <div className="text-xs text-amber-600">
-          Chưa gắn: {formatCurrency(unassigned)}
-        </div>
+    <div className="flex flex-col gap-1.5">
+      {customers.map((c, i) => {
+        const amount = typeof c.amount === "number" && c.amount > 0 ? c.amount : 0;
+        const showUnassignedHere = unassigned > 0 && i === lastIdx;
+        return (
+          <div key={`${c.id}-${i}`} className="flex flex-col gap-0.5 min-w-0">
+            {c.code ? (
+              <CodeLink entity="customer" code={c.code} />
+            ) : (
+              <span className="text-sm font-medium text-gray-800 break-words">
+                {c.name}
+              </span>
+            )}
+            {c.code ? (
+              <span className="text-xs text-gray-500 break-words leading-snug">
+                {c.name}
+              </span>
+            ) : null}
+            {(amount > 0 || showUnassignedHere) && (
+              <div className="flex flex-wrap items-center gap-1">
+                {amount > 0 && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-green-50 text-green-700 text-[11px] font-semibold dt-mono tabular-nums">
+                    {formatCurrency(amount)}
+                  </span>
+                )}
+                {showUnassignedHere && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[11px] font-semibold dt-mono tabular-nums">
+                    Chưa gán · {formatCurrency(unassigned)}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {/* Chưa gán nhưng chưa có khách nào */}
+      {customers.length === 0 && unassigned > 0 && (
+        <span className="inline-flex w-fit items-center px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[11px] font-semibold dt-mono tabular-nums">
+          Chưa gán · {formatCurrency(unassigned)}
+        </span>
       )}
     </div>
   );
@@ -746,14 +776,25 @@ function AllocationModal({
   );
 }
 
-/** Cụm thao tác đối soát của 1 dòng giao dịch */
-export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
+/** Cụm thao tác đối soát của 1 dòng giao dịch — CTA chính + menu ⋯ */
+export function SepayMatchActions({
+  tx,
+  isHidden = false,
+}: {
+  tx: SepayTransaction;
+  /** Đang xem danh sách giao dịch đã ẩn → menu hiện "Bỏ ẩn" */
+  isHidden?: boolean;
+}) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [allocOpen, setAllocOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   // Danh sách khách để xem bảng công nợ (mở modal). null = đóng.
   const [debtCustomers, setDebtCustomers] = useState<
     SepayDebtViewCustomer[] | null
   >(null);
+  // Element menu — dùng để đóng khi click ngoài
+  const [menuEl, setMenuEl] = useState<HTMLDivElement | null>(null);
+
   const { selectedBranch } = useBranchStore();
   const canAssign = usePermission("sepay", "assign");
   const canConfirm = usePermission("sepay", "confirm");
@@ -761,48 +802,28 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
   const assignMut = useAssignSepayCustomer();
   const unassignMut = useUnassignSepayCustomer();
   const confirmMut = useConfirmSepayReceipt();
+  const hideMut = useHideSepayTransaction();
+  const unhideMut = useUnhideSepayTransaction();
 
   const status = tx.match?.status || "processing";
   const customers: SepayMatchCustomer[] = tx.match?.customers || [];
 
-  if (status === "completed") {
-    const cfCodes = customers
-      .map((c) => c.cashFlow?.code)
-      .filter(Boolean) as string[];
-    return (
-      <div className="flex items-center gap-2 justify-end">
-        <span className="text-xs text-gray-400">
-          {tx.match?.completedSource === "webhook"
-            ? "Tự động (webhook)"
-            : cfCodes.length > 0
-              ? `Phiếu ${cfCodes.join(", ")}`
-              : "Đã tạo phiếu thu"}
-        </span>
-        {customers.length > 0 && (
-          <button
-            onClick={() =>
-              setDebtCustomers(
-                customers.map((c) => ({
-                  id: c.id,
-                  code: c.code,
-                  name: c.name,
-                }))
-              )
-            }
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
-            <FileText className="w-3.5 h-3.5" />
-            Xem công nợ
-          </button>
-        )}
-        {debtCustomers && (
-          <SepayDebtViewModal
-            customers={debtCustomers}
-            onClose={() => setDebtCustomers(null)}
-          />
-        )}
-      </div>
-    );
-  }
+  // Đóng menu khi click ngoài / Escape
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (menuEl && !menuEl.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen, menuEl]);
 
   const handleAssign = (picked: PickedCustomer[]) => {
     setPickerOpen(false);
@@ -840,15 +861,26 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
           const picked = allocations
             .map((a) => {
               const c = customers.find((x) => x.id === a.customerId);
-              return c
-                ? { id: c.id, code: c.code, name: c.name }
-                : null;
+              return c ? { id: c.id, code: c.code, name: c.name } : null;
             })
             .filter(Boolean) as SepayDebtViewCustomer[];
           if (picked.length > 0) setDebtCustomers(picked);
         },
       }
     );
+  };
+
+  const openDebtView = () => {
+    if (customers.length === 0) return;
+    setDebtCustomers(
+      customers.map((c) => ({ id: c.id, code: c.code, name: c.name }))
+    );
+  };
+
+  const toggleHide = () => {
+    setMenuOpen(false);
+    if (isHidden) unhideMut.mutate(tx.id);
+    else hideMut.mutate(tx.id);
   };
 
   // Chỉ cho gán/sửa khách CHƯA có phiếu thu (khách đã có phiếu giữ nguyên).
@@ -860,22 +892,164 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
       name: c.name,
     }));
 
+  const cfCodes = customers
+    .map((c) => c.cashFlow?.code)
+    .filter(Boolean) as string[];
+  const hidePending = hideMut.isPending || unhideMut.isPending;
+
+  // CTA ngoài: chỉ Gán KH / Tạo phiếu thu / mã Phiếu thu (sau khi hoàn thành)
+  let primary: ReactNode = null;
+  if (status === "processing" && canAssign) {
+    primary = (
+      <button
+        onClick={() => setPickerOpen(true)}
+        disabled={assignMut.isPending}
+        title="Gán khách hàng"
+        className="inline-flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap">
+        {assignMut.isPending ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <UserPlus className="w-3.5 h-3.5" />
+        )}
+        Gán KH
+      </button>
+    );
+  } else if (status === "assigned" && canConfirm) {
+    primary = (
+      <button
+        onClick={openAlloc}
+        disabled={confirmMut.isPending}
+        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-brand text-white rounded-lg text-xs font-medium hover:bg-brand-dark transition-colors disabled:opacity-50 whitespace-nowrap">
+        {confirmMut.isPending ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Check className="w-3.5 h-3.5" />
+        )}
+        Tạo phiếu thu
+      </button>
+    );
+  } else if (status === "completed") {
+    if (tx.match?.completedSource === "webhook") {
+      primary = (
+        <span className="text-xs text-gray-500 whitespace-nowrap">
+          Tự động
+        </span>
+      );
+    } else if (cfCodes.length > 0) {
+      // Nhiều phiếu → xếp dọc, không truncate ngang
+      primary = (
+        <div className="flex flex-col items-end gap-0.5 text-xs text-gray-500 leading-tight">
+          {cfCodes.map((code) => (
+            <span key={code} className="whitespace-nowrap">
+              Phiếu {code}
+            </span>
+          ))}
+        </div>
+      );
+    } else {
+      primary = (
+        <span className="text-xs text-gray-500 whitespace-nowrap">
+          Đã tạo phiếu thu
+        </span>
+      );
+    }
+  }
+
+  // Mọi thao tác phụ gom vào menu ⋯
+  const menuItems: {
+    key: string;
+    label: string;
+    icon: ReactNode;
+    onClick: () => void;
+    danger?: boolean;
+    disabled?: boolean;
+  }[] = [];
+
+  if (status === "assigned" && canAssign) {
+    menuItems.push({
+      key: "edit-kh",
+      label: "Sửa KH",
+      icon: <UserPlus className="w-3.5 h-3.5" />,
+      onClick: () => {
+        setMenuOpen(false);
+        setPickerOpen(true);
+      },
+      disabled: assignMut.isPending,
+    });
+    menuItems.push({
+      key: "unassign",
+      label: "Bỏ gán",
+      icon: <UserMinus className="w-3.5 h-3.5" />,
+      onClick: () => {
+        setMenuOpen(false);
+        unassignMut.mutate(tx.id);
+      },
+      danger: true,
+      disabled: unassignMut.isPending,
+    });
+  }
+
+  if (status === "completed" && customers.length > 0) {
+    menuItems.push({
+      key: "debt",
+      label: "Xem công nợ",
+      icon: <FileText className="w-3.5 h-3.5" />,
+      onClick: () => {
+        setMenuOpen(false);
+        openDebtView();
+      },
+    });
+  }
+
+  menuItems.push({
+    key: "hide",
+    label: isHidden ? "Bỏ ẩn" : "Ẩn giao dịch",
+    icon: isHidden ? (
+      <Eye className="w-3.5 h-3.5" />
+    ) : (
+      <EyeOff className="w-3.5 h-3.5" />
+    ),
+    onClick: toggleHide,
+    disabled: hidePending,
+  });
+
   return (
-    <div className="flex items-center gap-2 justify-end">
-      {canAssign && (
+    <div className="flex items-center gap-1.5 justify-end">
+      {primary}
+
+      <div className="relative" ref={setMenuEl}>
         <button
-          onClick={() => setPickerOpen(true)}
-          disabled={assignMut.isPending}
-          title={status === "assigned" ? "Đổi khách hàng" : "Gán khách hàng"}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap">
-          {assignMut.isPending ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <UserPlus className="w-3.5 h-3.5" />
-          )}
-          {status === "assigned" ? "Sửa KH" : "Gán KH"}
+          onClick={(e) => {
+            e.stopPropagation();
+            setMenuOpen((o) => !o);
+          }}
+          title="Thêm thao tác"
+          className="inline-flex items-center justify-center w-8 h-8 border rounded-lg text-gray-500 hover:bg-gray-50 transition-colors">
+          <MoreHorizontal className="w-4 h-4" />
         </button>
-      )}
+
+        {menuOpen && (
+          <div className="absolute right-0 top-full mt-1 z-30 min-w-[160px] bg-white border rounded-lg shadow-lg py-1">
+            {menuItems.map((item) => (
+              <button
+                key={item.key}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!item.disabled) item.onClick();
+                }}
+                disabled={item.disabled}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors disabled:opacity-50 ${
+                  item.danger
+                    ? "text-red-600 hover:bg-red-50"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}>
+                {item.icon}
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {pickerOpen && (
         <CustomerPickerModal
@@ -884,30 +1058,6 @@ export function SepayMatchActions({ tx }: { tx: SepayTransaction }) {
           onConfirm={handleAssign}
           onClose={() => setPickerOpen(false)}
         />
-      )}
-
-      {canAssign && status === "assigned" && (
-        <button
-          onClick={() => unassignMut.mutate(tx.id)}
-          disabled={unassignMut.isPending}
-          title="Bỏ gán khách hàng"
-          className="inline-flex items-center px-2 py-1.5 border rounded-lg text-xs text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50">
-          <X className="w-3.5 h-3.5" />
-        </button>
-      )}
-
-      {canConfirm && status === "assigned" && (
-        <button
-          onClick={openAlloc}
-          disabled={confirmMut.isPending}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-brand text-white rounded-lg text-xs font-medium hover:bg-brand-dark transition-colors disabled:opacity-50 whitespace-nowrap">
-          {confirmMut.isPending ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Check className="w-3.5 h-3.5" />
-          )}
-          Tạo phiếu thu
-        </button>
       )}
 
       {allocOpen && (

@@ -135,7 +135,7 @@ export function DestructionForm({
       inventory: Number(inventory.onHand || 0),
     };
 
-    setProducts((prev) => [...prev, newProduct]);
+    setProducts((prev) => [newProduct, ...prev]);
     setSearchQuery("");
     setShowSearchResults(false);
   };

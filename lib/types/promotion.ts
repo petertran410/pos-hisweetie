@@ -279,6 +279,26 @@ export interface EligiblePromotion {
   requiresChoice?: boolean;
   matchedProductIds?: number[];
   triggerProductId?: number;
+  // Cộng dồn: gộp tổng SL mọi mã X, không neo 1 triggerProductId.
+  cumulative?: boolean;
+  // Số suất (số lần đạt ngưỡng) — dùng để phân bổ quà theo suất.
+  rewardTimes?: number;
+}
+
+// Tiến độ tích lũy KM sinh quà (kể cả chưa đạt ngưỡng) — FE hiển thị thanh tiến độ.
+export interface PromotionProgress {
+  promotionId: number;
+  code: string;
+  name: string;
+  type: PromotionType;
+  stackable: boolean;
+  matchedProductIds: number[];
+  currentQuantity: number;
+  requiredQuantity: number;
+  completedTimes: number;
+  remainingToNextReward: number;
+  rewardQuantityPerTime: number;
+  earnedRewardQuantity: number;
 }
 
 export interface EvaluateResult {
@@ -288,6 +308,12 @@ export interface EvaluateResult {
   conflicts: { promotionIds: number[]; reason: string }[];
   estimatedDiscount: number;
   estimatedTotalAfter: number;
+  progress: PromotionProgress[];
+}
+
+export interface RewardSelection {
+  productId: number;
+  rewardTimes: number;
 }
 
 export interface AppliedPromotion {
@@ -297,4 +323,6 @@ export interface AppliedPromotion {
   giftQuantity?: number;
   discountedBuyProductId?: number;
   discountedBuyQuantity?: number;
+  // KM cộng dồn: phân bổ quà theo nhiều SP (mỗi SP nhận n suất).
+  rewardSelections?: RewardSelection[];
 }

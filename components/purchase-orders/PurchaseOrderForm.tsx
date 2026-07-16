@@ -682,7 +682,7 @@ export function PurchaseOrderForm({
       factorySubTotalManual: false,
     };
 
-    setProducts((prev) => [...prev, newProduct]);
+    setProducts((prev) => [newProduct, ...prev]);
   };
 
   const handleRemoveProduct = (index: number) => {

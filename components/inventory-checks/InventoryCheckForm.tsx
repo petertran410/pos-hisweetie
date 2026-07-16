@@ -75,7 +75,6 @@ export function InventoryCheckForm({ onClose }: Props) {
     );
 
     setItems((prev) => [
-      ...prev,
       {
         productId: product.id,
         productCode: product.code,
@@ -90,6 +89,7 @@ export function InventoryCheckForm({ onClose }: Props) {
         ),
         note: "",
       },
+      ...prev,
     ]);
 
     setSearch("");

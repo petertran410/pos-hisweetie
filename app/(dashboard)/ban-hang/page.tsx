@@ -29,6 +29,7 @@ import { ordersApi } from "@/lib/api/orders";
 import { INVOICE_STATUS } from "@/lib/types/invoice";
 import { ORDER_STATUS } from "@/lib/types/order";
 import { promotionsApi } from "@/lib/api/promotions";
+import type { AppliedPromotion } from "@/lib/types/promotion";
 import {
   getDefaultAddress,
   addressToDeliveryInfo,
@@ -74,11 +75,27 @@ export interface CartItem {
     remaining?: number | null;
   }[];
   requiresChoice?: boolean; // dòng quà cần thu ngân chọn SP
+  // Dòng quà cộng dồn: neo theo promotionId (không theo 1 triggerProductId).
+  cumulative?: boolean;
   // Dòng SP thường: các promotionId được thu ngân bật áp dụng (opt-in).
   // KM chỉ sinh dòng quà khi promotionId nằm trong danh sách này.
   promoEnabledIds?: number[];
   // Dòng SP thường: các CT (id+tên+mã) đang khớp dòng này (để hiện icon 🎁 / badge mã KM)
-  eligiblePromos?: { promotionId: number; name: string; code: string }[];
+  eligiblePromos?: {
+    promotionId: number;
+    name: string;
+    code: string;
+    cumulative?: boolean;
+    matchedProductIds?: number[];
+  }[];
+}
+
+// Lựa chọn phân bổ quà cho 1 KM cộng dồn: mỗi SP quà nhận n suất.
+export interface CumulativeGiftSelection {
+  productId: number;
+  productCode?: string;
+  productName?: string;
+  rewardTimes: number;
 }
 
 export interface DeliveryInfo {
@@ -122,6 +139,10 @@ export interface Tab {
   consignStatus?: string;
   // fromPage = "dat-hang" | "hoa-don" → khi tạo xong sẽ redirect về trang này (dùng cho copy)
   fromPage?: string;
+  // Phân bổ quà KM cộng dồn: { [promotionId]: các SP quà + số suất }.
+  cumulativeGiftSelections?: Record<number, CumulativeGiftSelection[]>;
+  // Opt-in KM cộng dồn ở cấp tab (áp cho MỌI dòng X thuộc CT, kể cả thêm sau).
+  enabledCumulativePromoIds?: number[];
 }
 
 const STORAGE_KEY = "pos-tabs";
@@ -132,6 +153,61 @@ const getPriceBookStorageKey = (userId?: number) =>
 
 const getEditStorageKey = (id: number, type: TabType): string => {
   return `${EDIT_STORAGE_KEY}-${type}-${id}`;
+};
+
+/**
+ * Tìm dòng quà KM chưa hoàn tất lựa chọn (chặn lưu/tạo).
+ * - KM thường: requiresChoice=true (chưa chọn SP tặng).
+ * - KM cộng dồn: placeholder product.id=0 hoặc requiresChoice=true (chưa phân bổ đủ suất).
+ */
+const findUnchosenGift = (cartItems: CartItem[]): CartItem | undefined =>
+  cartItems.find(
+    (it) =>
+      it.isPromoGift &&
+      (it.requiresChoice || (it.cumulative && !Number(it.product?.id)))
+  );
+
+/**
+ * Dựng danh sách appliedPromotions gửi BE để re-validate KM.
+ * - KM thường (không cumulative): 1 dòng quà → 1 applied {promotionId, triggerProductId,
+ *   giftProductId, giftQuantity}.
+ * - KM cộng dồn: gộp mọi dòng quà cùng promotionId → 1 applied với rewardSelections[]
+ *   (mỗi SP quà = số suất). Không gửi triggerProductId.
+ */
+const buildAppliedPromotions = (
+  cartItems: CartItem[],
+  cumulativeGiftSelections?: Record<number, CumulativeGiftSelection[]>,
+  enabledCumulativePromoIds?: number[]
+): AppliedPromotion[] => {
+  const applied: AppliedPromotion[] = [];
+
+  // KM cộng dồn: dựng từ NGUỒN SỰ THẬT cấp tab (enabledCumulativePromoIds), KHÔNG
+  // phụ thuộc dòng quà (dòng quà do effect sinh có debounce → có thể chưa kịp có).
+  const enabledCum = enabledCumulativePromoIds || [];
+  for (const promoId of enabledCum) {
+    const selections = cumulativeGiftSelections?.[promoId] || [];
+    applied.push({
+      promotionId: promoId,
+      rewardSelections: selections
+        .filter((s) => s.rewardTimes > 0)
+        .map((s) => ({ productId: s.productId, rewardTimes: s.rewardTimes })),
+    });
+  }
+
+  for (const it of cartItems) {
+    if (!it.isPromoGift || it.promotionId == null) continue;
+    // Dòng quà cộng dồn đã xử lý ở trên (theo tab) → bỏ qua để tránh trùng.
+    if (it.cumulative) continue;
+
+    applied.push({
+      promotionId: it.promotionId,
+      triggerProductId: it.triggerProductId,
+      giftProductId: Number(it.product.id),
+      giftQuantity: Number(it.quantity),
+    });
+  }
+
+  return applied;
 };
 
 /**
@@ -319,6 +395,10 @@ export default function BanHangPage() {
   // tự thêm/gỡ dòng quà (isPromoGift) ngay dưới dòng SP kích hoạt.
   // ════════════════════════════════════════════════════════════
   const promoSyncRef = useRef<string>("");
+  // Tiến độ tích lũy KM sinh quà theo tab (để render khối "Khuyến mãi của đơn hàng").
+  const [promoProgressByTab, setPromoProgressByTab] = useState<
+    Record<string, import("@/lib/types/promotion").PromotionProgress[]>
+  >({});
 
   useEffect(() => {
     if (!activeTab) return;
@@ -351,6 +431,10 @@ export default function BanHangPage() {
           p: it.promotionId,
           g: it.product?.id,
         })),
+      // phân bổ quà KM cộng dồn (đổi → sinh lại dòng quà)
+      cumSel: activeTab.cumulativeGiftSelections || {},
+      // opt-in KM cộng dồn cấp tab (đổi → áp/gỡ toàn CT)
+      enabledCum: activeTab.enabledCumulativePromoIds || [],
     });
 
     if (!branchId || normalItems.length === 0) {
@@ -373,40 +457,75 @@ export default function BanHangPage() {
     const timer = setTimeout(async () => {
       promoSyncRef.current = signature;
       try {
-        // 2 lần đánh giá:
-        // (1) discovery — KHÔNG truyền opt-in → để hiện badge "Khuyến Mãi"
-        //     trên mọi dòng đủ điều kiện (kể cả chưa bật).
-        // (2) applied — truyền opt-in → tính SL hàng tặng theo đúng dòng đã bật.
-        const [discoveryRes, appliedRes] = await Promise.all([
-          promotionsApi.evaluate({
-            branchId,
-            customerId: activeTab.selectedCustomer?.id,
-            userId: activeTab.soldById ?? user?.id,
-            items: normalItems.map((it) => ({
-              productId: Number(it.product.id),
-              quantity: Number(it.quantity),
-              price: Number(it.price),
-              discount: Number(it.discount) || 0,
-            })),
-          }),
-          promotionsApi.evaluate({
-            branchId,
-            customerId: activeTab.selectedCustomer?.id,
-            userId: activeTab.soldById ?? user?.id,
-            items: normalItems.map((it) => ({
-              productId: Number(it.product.id),
-              quantity: Number(it.quantity),
-              price: Number(it.price),
-              discount: Number(it.discount) || 0,
-              enabledPromotionIds: it.promoEnabledIds || [],
-            })),
-          }),
-        ]);
+        // (1) discovery — KHÔNG truyền opt-in → biết CT nào khớp + matchedProductIds.
+        const discoveryRes = await promotionsApi.evaluate({
+          branchId,
+          customerId: activeTab.selectedCustomer?.id,
+          userId: activeTab.soldById ?? user?.id,
+          items: normalItems.map((it) => ({
+            productId: Number(it.product.id),
+            quantity: Number(it.quantity),
+            price: Number(it.price),
+            discount: Number(it.discount) || 0,
+          })),
+        });
 
         const isGiftType = (p: any) =>
           p.type === "BUY_X_GET_Y" ||
           p.type === "BUY_N_GET_M_SAME" ||
           p.type === "BUY_X_BUY_Y_PRICE";
+
+        // Opt-in KM cộng dồn ở cấp tab → suy ra matchedProductIds để áp cho MỌI dòng.
+        const enabledCumIds = new Set(
+          activeTab.enabledCumulativePromoIds || []
+        );
+        // Seed khi mở sửa đơn/HĐ: dòng quà cộng dồn từ DB (isPromoGift + promotionId
+        // là CT cumulative) → coi như đã bật, tránh mất quà + mất trạng thái áp dụng.
+        {
+          const cumIdSet = new Set(
+            discoveryRes.eligiblePromotions
+              .filter((p) => isGiftType(p) && p.cumulative)
+              .map((p) => p.promotionId)
+          );
+          for (const it of activeTab.cartItems || []) {
+            if (
+              it.isPromoGift &&
+              it.promotionId != null &&
+              cumIdSet.has(it.promotionId)
+            ) {
+              enabledCumIds.add(it.promotionId);
+            }
+          }
+        }
+        const cumMatchByProduct = new Map<number, number[]>(); // productId -> [promoId]
+        for (const p of discoveryRes.eligiblePromotions) {
+          if (!isGiftType(p) || !p.cumulative) continue;
+          if (!enabledCumIds.has(p.promotionId)) continue;
+          for (const pid of p.matchedProductIds || []) {
+            const arr = cumMatchByProduct.get(pid) || [];
+            arr.push(p.promotionId);
+            cumMatchByProduct.set(pid, arr);
+          }
+        }
+
+        // (2) applied — opt-in per-dòng: per-row (KM thường) + cấp tab (KM cộng dồn).
+        const appliedRes = await promotionsApi.evaluate({
+          branchId,
+          customerId: activeTab.selectedCustomer?.id,
+          userId: activeTab.soldById ?? user?.id,
+          items: normalItems.map((it) => {
+            const pid = Number(it.product.id);
+            const merged = new Set(it.promoEnabledIds || []);
+            (cumMatchByProduct.get(pid) || []).forEach((id) => merged.add(id));
+            return {
+              productId: pid,
+              quantity: Number(it.quantity),
+              price: Number(it.price),
+              discount: Number(it.discount) || 0,
+              enabledPromotionIds: [...merged],
+            };
+          }),
+        });
 
         // Badge: dựa trên discovery (không phụ thuộc opt-in)
         const discoveryGiftPromos =
@@ -414,27 +533,97 @@ export default function BanHangPage() {
         // Sinh dòng quà: dựa trên applied (đã lọc theo opt-in)
         const giftPromos = appliedRes.eligiblePromotions.filter(isGiftType);
 
+        // Thông tin CT cộng dồn (perTime = SL quà mỗi suất) để tái dựng lựa chọn
+        // khi mở lại đơn/HĐ (dòng quà từ DB không mang cờ cumulative).
+        const cumulativePromoInfo = new Map<number, { perTime: number }>();
+        for (const p of [...discoveryGiftPromos, ...giftPromos]) {
+          if (!p.cumulative) continue;
+          const rt = Number(p.rewardTimes || 0);
+          const perTime =
+            rt > 0
+              ? Number(p.rewardQuantity || 0) / rt
+              : Number(p.rewardQuantity || 0);
+          if (perTime > 0 && !cumulativePromoInfo.has(p.promotionId)) {
+            cumulativePromoInfo.set(p.promotionId, { perTime });
+          }
+        }
+        const cumulativePromoIds = new Set(cumulativePromoInfo.keys());
+
         setTabs((prev) =>
           prev.map((t) => {
             if (t.id !== tabId) return t;
             const normals = t.cartItems.filter((it) => !it.isPromoGift);
             const oldGifts = t.cartItems.filter((it) => it.isPromoGift);
 
-            // Gắn "CT đang khớp" cho từng dòng thường (để hiện icon 🎁)
+            // Tái dựng phân bổ quà cộng dồn khi mở lại đơn/HĐ: dòng quà từ DB
+            // không mang cờ cumulative & tab chưa có cumulativeGiftSelections.
+            // Suy ngược số suất = SL quà / perTime cho từng SP quà.
+            const reconstructedSel: Record<number, CumulativeGiftSelection[]> = {
+              ...(t.cumulativeGiftSelections || {}),
+            };
+            for (const promoId of cumulativePromoIds) {
+              if (reconstructedSel[promoId]?.length) continue;
+              const info = cumulativePromoInfo.get(promoId);
+              if (!info || info.perTime <= 0) continue;
+              const dbGifts = oldGifts.filter(
+                (g) => g.promotionId === promoId && Number(g.product?.id) > 0
+              );
+              if (dbGifts.length === 0) continue;
+              const sels: CumulativeGiftSelection[] = [];
+              for (const g of dbGifts) {
+                const times = Math.round(Number(g.quantity) / info.perTime);
+                if (times <= 0) continue;
+                sels.push({
+                  productId: Number(g.product.id),
+                  productCode: g.product.code,
+                  productName: g.product.name,
+                  rewardTimes: times,
+                });
+              }
+              if (sels.length) reconstructedSel[promoId] = sels;
+            }
+
+            // Tái dựng opt-in CT cộng dồn cấp tab khi mở lại đơn/HĐ:
+            // CT nào có dòng quà cộng dồn (từ DB) hoặc đã có selection → coi như đã bật.
+            const reconstructedEnabledCum = new Set([
+              ...(t.enabledCumulativePromoIds || []),
+              ...enabledCumIds,
+            ]);
+            for (const promoId of cumulativePromoIds) {
+              const hasDbGift = oldGifts.some(
+                (g) => g.promotionId === promoId && Number(g.product?.id) > 0
+              );
+              if (hasDbGift || reconstructedSel[promoId]?.length) {
+                reconstructedEnabledCum.add(promoId);
+              }
+            }
+
+            // Gắn "CT đang khớp" cho từng dòng thường (để hiện icon 🎁 / badge).
+            // - KM cộng dồn: khớp mọi SP thuộc matchedProductIds (gộp tổng SL).
+            // - KM thường: khớp đúng triggerProductId (từng mã tự đạt ngưỡng).
             const eligibleByRow: Record<
               string,
-              { promotionId: number; name: string; code: string }[]
+              {
+                promotionId: number;
+                name: string;
+                code: string;
+                cumulative?: boolean;
+              }[]
             > = {};
             for (const n of normals) {
               const pid = Number(n.product?.id);
-              const matched = discoveryGiftPromos.filter(
-                (p) => p.triggerProductId === pid
+              const matched = discoveryGiftPromos.filter((p) =>
+                p.cumulative
+                  ? (p.matchedProductIds || []).includes(pid)
+                  : p.triggerProductId === pid
               );
               if (matched.length > 0) {
                 eligibleByRow[n.rowId] = matched.map((p) => ({
                   promotionId: p.promotionId,
                   name: p.name,
                   code: p.code,
+                  cumulative: p.cumulative,
+                  matchedProductIds: p.matchedProductIds,
                 }));
               }
             }
@@ -442,6 +631,132 @@ export default function BanHangPage() {
             // Sinh dòng quà độc lập theo từng mã X đã bật KM.
             const newGifts: CartItem[] = [];
             for (const promo of giftPromos) {
+              // ── KM CỘNG DỒN: gộp tổng SL mọi mã X, phân bổ quà theo suất ──
+              if (promo.cumulative) {
+                // Opt-in cấp tab → neo dòng quà dưới dòng X đầu tiên thuộc CT.
+                if (!enabledCumIds.has(promo.promotionId)) continue;
+                const anchor = normals.find((n) =>
+                  (promo.matchedProductIds || []).includes(
+                    Number(n.product?.id)
+                  )
+                );
+                if (!anchor) continue;
+
+                const isBuyY = promo.type === "BUY_X_BUY_Y_PRICE";
+                const rewardTimes = Number(promo.rewardTimes || 0);
+                const perTime =
+                  rewardTimes > 0
+                    ? Number(promo.rewardQuantity || 0) / rewardTimes
+                    : Number(promo.rewardQuantity || 0);
+
+                if (promo.requiresChoice) {
+                  const selections =
+                    t.cumulativeGiftSelections?.[promo.promotionId] || [];
+                  const totalSelectedTimes = selections.reduce(
+                    (s, sel) => s + Number(sel.rewardTimes || 0),
+                    0
+                  );
+                  // Chưa phân bổ đủ suất → 1 dòng quà placeholder cần chọn.
+                  if (
+                    selections.length === 0 ||
+                    totalSelectedTimes !== rewardTimes
+                  ) {
+                    newGifts.push({
+                      rowId: `promo_${promo.promotionId}_cumulative`,
+                      product: {
+                        id: 0,
+                        name: "(Chưa chọn quà khuyến mãi)",
+                        code: "",
+                        basePrice: 0,
+                      },
+                      quantity: 0,
+                      price: 0,
+                      discount: 0,
+                      conditionType: "normal",
+                      isPromoGift: true,
+                      cumulative: true,
+                      promotionId: promo.promotionId,
+                      promotionName: promo.name,
+                      promotionCode: promo.code,
+                      promoLineType: isBuyY ? "discounted_buy" : "gift",
+                      triggerRowId: anchor.rowId,
+                      rewardOptions: promo.rewardOptions,
+                      requiresChoice: true,
+                    });
+                    continue;
+                  }
+                  // Đã phân bổ đủ → mỗi SP quà 1 dòng.
+                  for (const sel of selections) {
+                    const times = Number(sel.rewardTimes || 0);
+                    if (times <= 0) continue;
+                    const opt = promo.rewardOptions?.find(
+                      (o) => o.productId === sel.productId
+                    );
+                    if (!opt) continue;
+                    let qty = times * perTime;
+                    if (opt.remaining != null) {
+                      qty = Math.min(qty, Number(opt.remaining));
+                    }
+                    if (qty <= 0) continue;
+                    newGifts.push({
+                      rowId: `promo_${promo.promotionId}_gift_${sel.productId}`,
+                      product: {
+                        id: opt.productId,
+                        name: opt.productName,
+                        code: opt.productCode || "",
+                        basePrice: 0,
+                      },
+                      quantity: qty,
+                      price: isBuyY ? Number(promo.promoPrice || 0) : 0,
+                      discount: 0,
+                      conditionType: "normal",
+                      isPromoGift: true,
+                      cumulative: true,
+                      promotionId: promo.promotionId,
+                      promotionName: promo.name,
+                      promotionCode: promo.code,
+                      promoLineType: isBuyY ? "discounted_buy" : "gift",
+                      triggerRowId: anchor.rowId,
+                      rewardOptions: promo.rewardOptions,
+                      requiresChoice: false,
+                    });
+                  }
+                  continue;
+                }
+
+                // Chỉ 1 SP quà → engine đã sinh sẵn giftLine/discountedBuyLine.
+                const line = isBuyY
+                  ? promo.discountedBuyLines?.[0]
+                  : promo.giftLines?.[0];
+                if (!line) continue;
+                const cumQty = Number(promo.rewardQuantity || 0);
+                if (cumQty <= 0) continue;
+                newGifts.push({
+                  rowId: `promo_${promo.promotionId}_cumulative`,
+                  product: {
+                    id: line.productId,
+                    name: line.productName,
+                    code: line.productCode || "",
+                    basePrice: 0,
+                  },
+                  quantity: cumQty,
+                  price: isBuyY ? Number(promo.promoPrice || 0) : 0,
+                  discount: 0,
+                  conditionType: "normal",
+                  isPromoGift: true,
+                  cumulative: true,
+                  promotionId: promo.promotionId,
+                  promotionName: promo.name,
+                  promotionCode: promo.code,
+                  promoLineType: isBuyY ? "discounted_buy" : "gift",
+                  triggerRowId: anchor.rowId,
+                  rewardOptions: promo.rewardOptions,
+                  requiresChoice: false,
+                });
+                continue;
+              }
+
+              // ── KM THƯỜNG: từng mã X tự đạt ngưỡng ──
               const trigger = normals.find(
                 (n) =>
                   Number(n.product?.id) === promo.triggerProductId &&
@@ -533,6 +848,11 @@ export default function BanHangPage() {
                 .map((g) => `${g.promotionId}:${g.triggerRowId}`)
             );
             const preservedGifts: CartItem[] = oldGifts.filter((g) => {
+              // Dòng quà cộng dồn luôn được sinh lại từ selections → không giữ bản cũ.
+              // (Dòng quà từ DB không mang cờ cumulative → nhận diện thêm qua promotionId.)
+              if (g.cumulative) return false;
+              if (g.promotionId != null && cumulativePromoIds.has(g.promotionId))
+                return false;
               if (
                 g.promotionId != null &&
                 g.triggerRowId != null &&
@@ -562,11 +882,27 @@ export default function BanHangPage() {
               return true;
             });
 
-            // Ghép lại: mỗi dòng thường (kèm eligiblePromos) + dòng quà dưới nó
+            // Ghép lại: mỗi dòng thường (kèm eligiblePromos) + dòng quà dưới nó.
+            // Đóng dấu promoEnabledIds cho MỌI dòng X thuộc KM cộng dồn đã bật
+            // → badge hiện đồng nhất trên mọi dòng + BE re-validate đúng khi lưu.
             const merged: CartItem[] = [];
             const allGifts = [...newGifts, ...preservedGifts];
             for (const n of normals) {
-              merged.push({ ...n, eligiblePromos: eligibleByRow[n.rowId] });
+              const pid = Number(n.product?.id);
+              const cumIds = cumMatchByProduct.get(pid) || [];
+              const enabledSet = new Set(n.promoEnabledIds || []);
+              // Bỏ các cumId không còn bật (đã tắt ở tab) rồi thêm lại cumId đang bật.
+              for (const p of discoveryGiftPromos) {
+                if (p.cumulative && (p.matchedProductIds || []).includes(pid)) {
+                  enabledSet.delete(p.promotionId);
+                }
+              }
+              cumIds.forEach((id) => enabledSet.add(id));
+              merged.push({
+                ...n,
+                promoEnabledIds: [...enabledSet],
+                eligiblePromos: eligibleByRow[n.rowId],
+              });
               allGifts
                 .filter((g) => g.triggerRowId === n.rowId)
                 .forEach((g) => merged.push(g));
@@ -575,9 +911,21 @@ export default function BanHangPage() {
             allGifts
               .filter((g) => !merged.includes(g))
               .forEach((g) => merged.push(g));
-            return { ...t, cartItems: merged };
+            return {
+              ...t,
+              cartItems: merged,
+              cumulativeGiftSelections: reconstructedSel,
+              enabledCumulativePromoIds: [...reconstructedEnabledCum],
+            };
           })
         );
+
+        // Lưu tiến độ tích lũy (từ discovery — không phụ thuộc opt-in) để render
+        // khối "Khuyến mãi của đơn hàng".
+        setPromoProgressByTab((prev) => ({
+          ...prev,
+          [tabId]: discoveryRes.progress || [],
+        }));
       } catch (e) {
         // Lỗi đánh giá KM không nên chặn bán hàng
         console.error("Promotion evaluate error:", e);
@@ -603,6 +951,9 @@ export default function BanHangPage() {
         dis: it.promoEnabledIds,
       }))
     ),
+    // phân bổ quà cộng dồn + opt-in cấp tab (đổi → sinh lại dòng quà / áp CT)
+    JSON.stringify(activeTab?.cumulativeGiftSelections || {}),
+    JSON.stringify(activeTab?.enabledCumulativePromoIds || []),
   ]);
 
   /**
@@ -1554,6 +1905,55 @@ export default function BanHangPage() {
   };
 
   /**
+   * Bật/tắt 1 KM ở cấp giỏ.
+   * - Cộng dồn: gắn/gỡ promotionId trên MỌI dòng thường có productId thuộc
+   *   matchedProductIds (không đụng dòng ngoài CT / CT khác).
+   * - Thường: chỉ bật/tắt đúng 1 dòng (theo rowId) như hành vi cũ.
+   */
+  const togglePromotionCumulative = (
+    promotionId: number,
+    enabled: boolean,
+    _matchedProductIds: number[]
+  ) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) => {
+        if (tab.id !== activeTabId) return tab;
+        const cur = new Set(tab.enabledCumulativePromoIds || []);
+        if (enabled) cur.add(promotionId);
+        else cur.delete(promotionId);
+        // Tắt CT → xoá luôn phân bổ quà cộng dồn của CT đó.
+        const nextSel = { ...(tab.cumulativeGiftSelections || {}) };
+        if (!enabled) delete nextSel[promotionId];
+        return {
+          ...tab,
+          enabledCumulativePromoIds: [...cur],
+          cumulativeGiftSelections: nextSel,
+        };
+      })
+    );
+  };
+
+  /** Lưu phân bổ quà cộng dồn cho 1 CT (thay đổi → effect tự sinh lại dòng quà). */
+  const setCumulativeGiftSelection = (
+    promotionId: number,
+    selections: CumulativeGiftSelection[]
+  ) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) =>
+        tab.id === activeTabId
+          ? {
+              ...tab,
+              cumulativeGiftSelections: {
+                ...(tab.cumulativeGiftSelections || {}),
+                [promotionId]: selections,
+              },
+            }
+          : tab
+      )
+    );
+  };
+
+  /**
    * Kiểm tra (bằng dữ liệu TƯƠI từ server, bỏ qua cache) xem đơn hàng đã ra
    * hóa đơn (chưa hủy) hay chưa. Dùng để chặn race condition: kho ra hóa đơn
    * xong, sale lưu/chuyển đơn dựa trên cache cũ làm trạng thái bị kéo ngược.
@@ -1586,6 +1986,16 @@ export default function BanHangPage() {
   const handleConvertToInvoice = async () => {
     if (!activeTab.documentId || activeTab.type !== "order") {
       toast.error("Không tìm thấy thông tin đơn hàng");
+      return;
+    }
+
+    const unchosenGift = findUnchosenGift(activeTab.cartItems);
+    if (unchosenGift) {
+      toast.error(
+        unchosenGift.cumulative
+          ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGift.promotionName}"`
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`
+      );
       return;
     }
 
@@ -2212,6 +2622,16 @@ export default function BanHangPage() {
       return;
     }
 
+    const unchosenGiftSave = findUnchosenGift(activeTab.cartItems);
+    if (unchosenGiftSave) {
+      toast.error(
+        unchosenGiftSave.cumulative
+          ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGiftSave.promotionName}"`
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGiftSave.promotionName}"`
+      );
+      return;
+    }
+
     if (!activeTab.documentId) {
       toast.error(
         `Không tìm thấy thông tin ${
@@ -2283,14 +2703,11 @@ export default function BanHangPage() {
             };
           }),
           skipPromotions: false,
-          appliedPromotions: activeTab.cartItems
-            .filter((it) => it.isPromoGift && it.promotionId)
-            .map((it) => ({
-              promotionId: it.promotionId!,
-              triggerProductId: it.triggerProductId,
-              giftProductId: Number(it.product.id),
-              giftQuantity: Number(it.quantity),
-            })),
+          appliedPromotions: buildAppliedPromotions(
+            activeTab.cartItems,
+            activeTab.cumulativeGiftSelections,
+            activeTab.enabledCumulativePromoIds
+          ),
           delivery: {
             receiver: activeTab.deliveryInfo.receiver,
             contactNumber: activeTab.deliveryInfo.contactNumber,
@@ -2380,6 +2797,16 @@ export default function BanHangPage() {
         `Vui lòng thêm sản phẩm vào ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
         }`
+      );
+      return;
+    }
+
+    const unchosenGiftInv = findUnchosenGift(activeTab.cartItems);
+    if (unchosenGiftInv) {
+      toast.error(
+        unchosenGiftInv.cumulative
+          ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGiftInv.promotionName}"`
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGiftInv.promotionName}"`
       );
       return;
     }
@@ -2543,13 +2970,13 @@ export default function BanHangPage() {
       return;
     }
 
-    // Chặn nếu còn dòng quà KM chưa chọn sản phẩm tặng
-    const unchosenGift = activeTab.cartItems.find(
-      (it) => it.isPromoGift && it.requiresChoice
-    );
+    // Chặn nếu còn dòng quà KM chưa chọn sản phẩm tặng / chưa phân bổ đủ suất
+    const unchosenGift = findUnchosenGift(activeTab.cartItems);
     if (unchosenGift) {
       toast.error(
-        `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`
+        unchosenGift.cumulative
+          ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGift.promotionName}"`
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`
       );
       return;
     }
@@ -2633,14 +3060,11 @@ export default function BanHangPage() {
         noteForDriver: activeTab.deliveryInfo.noteForDriver,
       };
       // Gửi lựa chọn KM để BE re-validate (dòng quà do KM sinh có promotionId)
-      const orderAppliedPromotions = activeTab.cartItems
-        .filter((it) => it.isPromoGift && it.promotionId)
-        .map((it) => ({
-          promotionId: it.promotionId!,
-          triggerProductId: it.triggerProductId,
-          giftProductId: Number(it.product.id),
-          giftQuantity: Number(it.quantity),
-        }));
+      const orderAppliedPromotions = buildAppliedPromotions(
+        activeTab.cartItems,
+        activeTab.cumulativeGiftSelections,
+        activeTab.enabledCumulativePromoIds
+      );
       documentData.skipPromotions = false;
       documentData.appliedPromotions = orderAppliedPromotions;
     } else if (activeTab.type === "consignment") {
@@ -2741,14 +3165,11 @@ export default function BanHangPage() {
         noteForDriver: activeTab.deliveryInfo.noteForDriver,
       };
       // Gửi lựa chọn KM để BE re-validate (dòng quà do KM sinh có promotionId)
-      const appliedPromotions = activeTab.cartItems
-        .filter((it) => it.isPromoGift && it.promotionId)
-        .map((it) => ({
-          promotionId: it.promotionId!,
-          triggerProductId: it.triggerProductId,
-          giftProductId: Number(it.product.id),
-          giftQuantity: Number(it.quantity),
-        }));
+      const appliedPromotions = buildAppliedPromotions(
+        activeTab.cartItems,
+        activeTab.cumulativeGiftSelections,
+        activeTab.enabledCumulativePromoIds
+      );
       documentData.skipPromotions = false;
       documentData.appliedPromotions = appliedPromotions;
     }
@@ -2961,6 +3382,11 @@ export default function BanHangPage() {
                 canViewInventory={canViewInventory}
                 priceWarnings={priceWarnings}
                 documentType={activeTab.type}
+                promoProgress={promoProgressByTab[activeTab.id]}
+                cumulativeGiftSelections={activeTab.cumulativeGiftSelections}
+                enabledCumulativePromoIds={activeTab.enabledCumulativePromoIds}
+                onTogglePromotion={togglePromotionCumulative}
+                onSetGiftSelection={setCumulativeGiftSelection}
                 className="w-full flex-1 bg-white flex flex-col min-h-0"
               />
               {/* Mobile action buttons */}
@@ -3072,6 +3498,10 @@ export default function BanHangPage() {
                 canEditDiscount={canEditDiscount}
                 canViewInventory={canViewInventory}
                 priceWarnings={priceWarnings}
+                promoProgress={promoProgressByTab[activeTab.id]}
+                cumulativeGiftSelections={activeTab.cumulativeGiftSelections}
+                onTogglePromotion={togglePromotionCumulative}
+                onSetGiftSelection={setCumulativeGiftSelection}
                 className="w-full flex-1 bg-white flex flex-col min-h-0"
               />
               {/* Mobile action buttons */}

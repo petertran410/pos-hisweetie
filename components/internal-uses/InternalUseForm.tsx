@@ -169,7 +169,7 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
       value: cost,
     };
 
-    setProducts((prev) => [...prev, newProduct]);
+    setProducts((prev) => [newProduct, ...prev]);
     setSearchQuery("");
     setShowSearchResults(false);
   };

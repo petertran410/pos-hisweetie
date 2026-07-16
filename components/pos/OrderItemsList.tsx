@@ -29,6 +29,7 @@ import { ItemDiscountModal } from "./ItemDiscountModal";
 import { ProductPriceHistory } from "./ProductPriceHistory";
 import { PriceMismatchNote } from "./PriceMismatchNote";
 import { CodeLink } from "../shared/CodeLink";
+import { CartPromotionSummary } from "../promotions/CartPromotionSummary";
 import type { PriceWarning } from "@/lib/utils/price-warning";
 import { useBranchStore } from "@/lib/store/branch";
 import {
@@ -62,6 +63,22 @@ interface CartItemsListProps {
   priceWarnings?: Record<string, PriceWarning | null>;
   documentType?: "order" | "invoice" | "consignment";
   className?: string;
+  // ── Khuyến mãi cộng dồn (cấp giỏ) ──
+  promoProgress?: import("@/lib/types/promotion").PromotionProgress[];
+  cumulativeGiftSelections?: Record<
+    number,
+    import("@/app/(dashboard)/ban-hang/page").CumulativeGiftSelection[]
+  >;
+  enabledCumulativePromoIds?: number[];
+  onTogglePromotion?: (
+    promotionId: number,
+    enabled: boolean,
+    matchedProductIds: number[]
+  ) => void;
+  onSetGiftSelection?: (
+    promotionId: number,
+    selections: import("@/app/(dashboard)/ban-hang/page").CumulativeGiftSelection[]
+  ) => void;
 }
 
 export function OrderItemsList({
@@ -82,6 +99,11 @@ export function OrderItemsList({
   priceWarnings,
   documentType,
   className,
+  promoProgress,
+  cumulativeGiftSelections,
+  enabledCumulativePromoIds,
+  onTogglePromotion,
+  onSetGiftSelection,
 }: CartItemsListProps) {
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
   const [quantityDisplays, setQuantityDisplays] = useState<
@@ -501,6 +523,16 @@ export function OrderItemsList({
   return (
     <div className={className ?? "w-[60%] bg-white flex flex-col"}>
       <div className="flex-1 p-3 overflow-y-auto">
+        {onTogglePromotion && onSetGiftSelection && (
+          <CartPromotionSummary
+            progress={promoProgress || []}
+            cartItems={cartItems}
+            cumulativeGiftSelections={cumulativeGiftSelections}
+            enabledPromotionIds={enabledCumulativePromoIds}
+            onTogglePromotion={onTogglePromotion}
+            onSetGiftSelection={onSetGiftSelection}
+          />
+        )}
         <div>
           {cartItems.map((item, index) => (
             <div
@@ -560,7 +592,9 @@ export function OrderItemsList({
                       🎁 {item.promotionName}
                     </div>
                   )}
+                  {/* KM cộng dồn: chọn quà ở dialog phân bổ, KHÔNG dùng dropdown legacy */}
                   {item.isPromoGift &&
+                    !item.cumulative &&
                     item.rewardOptions &&
                     item.rewardOptions.length > 1 && (
                       <select
@@ -705,11 +739,18 @@ export function OrderItemsList({
                         title="Thêm dòng mới cho sản phẩm này">
                         <Copy className="w-4 h-4 text-green-600" />
                       </button>
-                      {item.eligiblePromos && item.eligiblePromos.length > 0 && (
+                      {/* KM cộng dồn: điều khiển ở khối "Khuyến mãi của đơn hàng"
+                          phía trên, KHÔNG hiện nút trên card (tránh 2 lối bật/tắt).
+                          Chỉ hiện nút cho KM thường (per-row). */}
+                      {item.eligiblePromos &&
+                        item.eligiblePromos.some((p) => !p.cumulative) && (
                         (() => {
+                          const regularPromos = item.eligiblePromos!.filter(
+                            (p) => !p.cumulative
+                          );
                           const enabled = item.promoEnabledIds || [];
-                          const applied = item.eligiblePromos.some(
-                            (p) => enabled.includes(p.promotionId)
+                          const applied = regularPromos.some((p) =>
+                            enabled.includes(p.promotionId)
                           );
                           const colorCls = applied
                             ? "text-pink-600 group-hover:text-gray-400"
@@ -717,12 +758,17 @@ export function OrderItemsList({
                           return (
                             <button
                               onClick={() => {
+                                const regIds = regularPromos.map(
+                                  (p) => p.promotionId
+                                );
+                                const cur = new Set(item.promoEnabledIds || []);
+                                if (applied) {
+                                  regIds.forEach((id) => cur.delete(id));
+                                } else {
+                                  regIds.forEach((id) => cur.add(id));
+                                }
                                 onUpdateItem(item.rowId, {
-                                  promoEnabledIds: applied
-                                    ? []
-                                    : item.eligiblePromos!.map(
-                                        (p) => p.promotionId
-                                      ),
+                                  promoEnabledIds: [...cur],
                                 });
                               }}
                               className={`group flex items-center gap-1 px-1.5 py-1 rounded transition-colors ${
@@ -758,36 +804,49 @@ export function OrderItemsList({
                 {/* Row 1: Quantity controls + Thành tiền */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        onUpdateItem(item.rowId, {
-                          quantity: Math.max(1, item.quantity - 1),
-                        });
-                        clearQuantityDisplay(item);
-                      }}
-                      className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <input
-                      type="text"
-                      value={getQuantityDisplay(item)}
-                      onChange={(e) =>
-                        handleQuantityChange(item, e.target.value)
-                      }
-                      onBlur={() => handleQuantityBlur(item)}
-                      className="w-9 h-5 text-center border border-gray-300 rounded px-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                      min="1"
-                    />
-                    <button
-                      onClick={() => {
-                        onUpdateItem(item.rowId, {
-                          quantity: item.quantity + 1,
-                        });
-                        clearQuantityDisplay(item);
-                      }}
-                      className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                      <Plus className="w-3 h-3" />
-                    </button>
+                    {/* Dòng quà KM: SL do hệ thống quản → ẩn +/−, ô readonly */}
+                    {item.isPromoGift ? (
+                      <input
+                        type="text"
+                        value={item.quantity}
+                        readOnly
+                        tabIndex={-1}
+                        className="w-9 h-5 text-center border border-gray-200 bg-gray-50 rounded px-1 text-sm text-gray-500 cursor-default"
+                      />
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            onUpdateItem(item.rowId, {
+                              quantity: Math.max(1, item.quantity - 1),
+                            });
+                            clearQuantityDisplay(item);
+                          }}
+                          className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <input
+                          type="text"
+                          value={getQuantityDisplay(item)}
+                          onChange={(e) =>
+                            handleQuantityChange(item, e.target.value)
+                          }
+                          onBlur={() => handleQuantityBlur(item)}
+                          className="w-9 h-5 text-center border border-gray-300 rounded px-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                          min="1"
+                        />
+                        <button
+                          onClick={() => {
+                            onUpdateItem(item.rowId, {
+                              quantity: item.quantity + 1,
+                            });
+                            clearQuantityDisplay(item);
+                          }}
+                          className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
                   </div>
                   <span className="text-sm font-semibold text-gray-900">
                     {(
@@ -848,36 +907,49 @@ export function OrderItemsList({
               <div className="hidden lg:flex flex-wrap items-center mt-2 gap-y-2">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        onUpdateItem(item.rowId, {
-                          quantity: Math.max(1, item.quantity - 1),
-                        });
-                        clearQuantityDisplay(item);
-                      }}
-                      className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <input
-                      type="text"
-                      value={getQuantityDisplay(item)}
-                      onChange={(e) =>
-                        handleQuantityChange(item, e.target.value)
-                      }
-                      onBlur={() => handleQuantityBlur(item)}
-                      className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-brand"
-                      min="1"
-                    />
-                    <button
-                      onClick={() => {
-                        onUpdateItem(item.rowId, {
-                          quantity: Math.max(1, item.quantity + 1),
-                        });
-                        clearQuantityDisplay(item);
-                      }}
-                      className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                      <Plus className="w-3 h-3" />
-                    </button>
+                    {/* Dòng quà KM: SL do hệ thống quản → ẩn +/−, ô readonly */}
+                    {item.isPromoGift ? (
+                      <input
+                        type="text"
+                        value={item.quantity}
+                        readOnly
+                        tabIndex={-1}
+                        className="w-14 h-9 text-center border border-gray-200 bg-gray-50 rounded px-2 py-1 text-md text-gray-500 cursor-default"
+                      />
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            onUpdateItem(item.rowId, {
+                              quantity: Math.max(1, item.quantity - 1),
+                            });
+                            clearQuantityDisplay(item);
+                          }}
+                          className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <input
+                          type="text"
+                          value={getQuantityDisplay(item)}
+                          onChange={(e) =>
+                            handleQuantityChange(item, e.target.value)
+                          }
+                          onBlur={() => handleQuantityBlur(item)}
+                          className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-brand"
+                          min="1"
+                        />
+                        <button
+                          onClick={() => {
+                            onUpdateItem(item.rowId, {
+                              quantity: Math.max(1, item.quantity + 1),
+                            });
+                            clearQuantityDisplay(item);
+                          }}
+                          className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
                   </div>
 
                   {/* Dòng nhỏ in nghiêng: Tồn / KH Đặt / Đặt NCC theo chi nhánh */}

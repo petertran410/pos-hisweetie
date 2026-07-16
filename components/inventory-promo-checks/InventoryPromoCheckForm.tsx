@@ -75,7 +75,6 @@ export function InventoryPromoCheckForm({ onClose }: Props) {
     );
 
     setItems((prev) => [
-      ...prev,
       {
         productId: product.id,
         productCode: product.code,
@@ -88,6 +87,7 @@ export function InventoryPromoCheckForm({ onClose }: Props) {
         promoQuantity: String(inv ? Number(inv.promoQuantity || 0) : 0),
         note: "",
       },
+      ...prev,
     ]);
 
     setSearch("");
