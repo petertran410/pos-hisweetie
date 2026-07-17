@@ -22,11 +22,77 @@ import { useBranchStore } from "@/lib/store/branch";
 import type { Transfer } from "@/lib/api/transfers";
 import { productsApi, type Product } from "@/lib/api/products";
 import { toast } from "sonner";
-import {
-  formatCurrency,
-  formatNumberInput,
-  parseNumberInput,
-} from "@/lib/utils";
+import { formatCurrency, parseNumberInput } from "@/lib/utils";
+
+// Làm tròn về `digits` số thập phân, tránh sai số dấu phẩy động (vd 0.1+0.2).
+// Mirror pattern PurchaseOrderForm / OrderSupplierForm — SL tối đa 2 chữ số
+// thập phân.
+function roundTo(value: number, digits = 2): number {
+  const f = Math.pow(10, digits);
+  return Math.round((value + Number.EPSILON) * f) / f;
+}
+
+// Định dạng số lượng: tối đa 2 chữ số thập phân, bỏ trailing zeros.
+// `1 → "1"`, `1.5 → "1.5"`, `1.25 → "1.25"`.
+function formatQuantity(value: number): string {
+  if (!isFinite(value) || value === 0) return "0";
+  const fixed = roundTo(value, 2).toFixed(2);
+  return fixed.replace(/\.?0+$/, "");
+}
+
+// Validate chuỗi nhập SL: cho phép số thập phân tối đa 2 chữ số. Phải chấp
+// nhận cả các trạng thái gõ dở như "1." (đã gõ dấu chấm nhưng chưa gõ chữ
+// số sau), "" (đang xóa), "0", "0.01".
+const QUANTITY_INPUT_PATTERN = /^\d*(?:\.\d{0,2})?$/;
+
+/**
+ * Ô nhập SỐ LƯỢNG cho phép gõ số thập phân mượt (tối đa 2 chữ số thập phân).
+ * Giữ raw string trong lúc focus để không bị mất dấu "." khi đang gõ "1." —
+ * đây là lý do input controlled thuần (value=number) không gõ được "1.5":
+ * onChange "1." → parse ra 1 → re-render "1" → xóa mất dấu chấm.
+ * Khi blur mới normalize hiển thị qua formatQuantity.
+ */
+function QuantityInput({
+  value,
+  onValueChange,
+  disabled,
+  className,
+}: {
+  value: number;
+  onValueChange: (next: number) => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [raw, setRaw] = useState("");
+
+  const display = focused ? raw : formatQuantity(value);
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={display}
+      disabled={disabled}
+      className={className}
+      onFocus={(e) => {
+        setFocused(true);
+        setRaw(value ? String(value) : "");
+        e.target.select();
+      }}
+      onChange={(e) => {
+        const cleaned = e.target.value.replace(/,/g, "");
+        if (cleaned === "" || QUANTITY_INPUT_PATTERN.test(cleaned)) {
+          setRaw(cleaned);
+          onValueChange(
+            cleaned === "" ? 0 : roundTo(parseFloat(cleaned) || 0, 2)
+          );
+        }
+      }}
+      onBlur={() => setFocused(false)}
+    />
+  );
+}
 
 interface TransferFormProps {
   transfer?: Transfer | null;
@@ -191,23 +257,18 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
     branchIds: [fromBranchId, toBranchId].filter((id) => id > 0),
   });
 
-  const handleChangeReceivedQuantity = (index: number, value: string) => {
-    // Cho phép input rỗng (đang gõ) — coi như 0
-    const sanitized = value.replace(/[^\d.]/g, "");
-    const quantity = sanitized === "" ? 0 : parseFloat(sanitized) || 0;
-
+  const handleChangeReceivedQuantity = (index: number, quantity: number) => {
     if (quantity < 0) return;
 
-    if (quantity > products[index].sendQuantity) {
-      toast.error(
-        `Số lượng nhận không được lớn hơn số lượng chuyển (${products[index].sendQuantity})`
-      );
-      return;
-    }
+    // Cho phép nhận dư (received > send) — thực tế nhân viên có thể để
+    // dư hàng lúc chuyển đi. Mirror pattern nhập hàng / ghép xe: SL thực
+    // nhận không bị cap theo SL chuyển. Backend cộng đúng receivedQuantity
+    // vào kho nhận; chỉ hoàn shortage khi send > received.
+    const rounded = roundTo(quantity, 2);
 
     setProducts((prev) => {
       const updated = [...prev];
-      updated[index].receivedQuantity = quantity;
+      updated[index].receivedQuantity = rounded;
       return updated;
     });
   };
@@ -417,10 +478,12 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
     const currentProduct = products[index];
     if (!currentProduct) return;
 
-    const newQuantity = currentProduct.sendQuantity + delta;
+    const newQuantity = roundTo(currentProduct.sendQuantity + delta, 2);
 
-    if (newQuantity < 1) {
-      toast.error("Số lượng chuyển không được nhỏ hơn 1");
+    // Cho phép xuống 0 khi bấm − (validate > 0 lúc submit). Thập phân
+    // (vd 0.5) được gõ tay qua QuantityInput.
+    if (newQuantity < 0) {
+      toast.error("Số lượng chuyển không được nhỏ hơn 0");
       return;
     }
 
@@ -440,19 +503,15 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
     const currentProduct = products[index];
     if (!currentProduct) return;
 
-    const newQuantity = currentProduct.receivedQuantity + delta;
+    const newQuantity = roundTo(currentProduct.receivedQuantity + delta, 2);
 
     if (newQuantity < 0) {
       toast.error("Số lượng nhận không được nhỏ hơn 0");
       return;
     }
 
-    if (newQuantity > currentProduct.sendQuantity) {
-      toast.error(
-        `Số lượng nhận không được lớn hơn số lượng chuyển (${currentProduct.sendQuantity})`
-      );
-      return;
-    }
+    // Không cap theo sendQuantity — cho phép nhận dư (xem comment
+    // handleChangeReceivedQuantity).
 
     const updatedProducts = [...products];
     updatedProducts[index] = {
@@ -463,9 +522,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
     setProducts(updatedProducts);
   };
 
-  const handleChangeQuantity = (index: number, value: string) => {
-    const quantity = parseFloat(value) || 0;
-
+  const handleChangeQuantity = (index: number, quantity: number) => {
     if (quantity < 0) return;
 
     // Cho phép số lượng chuyển vượt quá tồn kho hiện có — tồn kho chi nhánh
@@ -473,7 +530,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
 
     setProducts((prev) => {
       const updated = [...prev];
-      updated[index].sendQuantity = quantity;
+      updated[index].sendQuantity = roundTo(quantity, 2);
       return updated;
     });
   };
@@ -849,17 +906,10 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                   className="w-7 h-7 border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center">
                                   <Minus className="w-3 h-3" />
                                 </button>
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  value={
-                                    item.sendQuantity === 0
-                                      ? ""
-                                      : item.sendQuantity
-                                  }
-                                  placeholder="0"
-                                  onChange={(e) =>
-                                    handleChangeQuantity(index, e.target.value)
+                                <QuantityInput
+                                  value={item.sendQuantity}
+                                  onValueChange={(next) =>
+                                    handleChangeQuantity(index, next)
                                   }
                                   disabled={isReadOnly || isReceived}
                                   className="w-16 border rounded-lg px-2 py-1 text-center text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -877,7 +927,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                               </div>
                             ) : (
                               <div className="text-center text-sm text-gray-900 font-medium">
-                                {Number(item.sendQuantity ?? 0).toLocaleString()}
+                                {formatQuantity(Number(item.sendQuantity ?? 0))}
                               </div>
                             )}
                           </td>
@@ -900,18 +950,11 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                     className="w-7 h-7 border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center">
                                     <Minus className="w-3 h-3" />
                                   </button>
-                                  <input
-                                    type="text"
-                                    inputMode="numeric"
+                                  <QuantityInput
                                     value={item.receivedQuantity}
-                                    placeholder="0"
-                                    onChange={(e) =>
-                                      handleChangeReceivedQuantity(
-                                        index,
-                                        e.target.value
-                                      )
+                                    onValueChange={(next) =>
+                                      handleChangeReceivedQuantity(index, next)
                                     }
-                                    onFocus={(e) => e.target.select()}
                                     disabled={isReadOnly}
                                     className="w-16 border rounded-lg px-2 py-1 text-center text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                                   />
@@ -928,7 +971,9 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                 </div>
                               ) : (
                                 <div className="text-center text-sm text-gray-900 font-medium">
-                                  {Number(item.receivedQuantity ?? 0).toLocaleString()}
+                                  {formatQuantity(
+                                    Number(item.receivedQuantity ?? 0)
+                                  )}
                                 </div>
                               )}
                             </td>
