@@ -21,6 +21,8 @@ export const stockAuditsApi = {
     if (params?.toDate) query.append("toDate", params.toDate);
     if (params?.creatorId)
       query.append("creatorId", params.creatorId.toString());
+    if (params?.productId)
+      query.append("productId", params.productId.toString());
     return apiClient.get(`/stock-audits?${query.toString()}`);
   },
 

@@ -146,15 +146,24 @@ export function InvoiceItemsList({
   //  - thêm/xóa SP trong giỏ
   // Fallback `getItemOnHand(item)` (snapshot từ product.inventories) khi hook
   // chưa load xong → tránh flash "0" lúc mới mount.
-  const { inventoryMap } = useInventoryByBranch(
-    cartProductIds,
-    selectedBranch?.id
-  );
+   const { inventoryMap, promoInventoryMap } = useInventoryByBranch(
+     cartProductIds,
+     selectedBranch?.id
+   );
 
   const getOnHandRealtime = (item: CartItem): number => {
     const live = inventoryMap.get(item.product.id);
     if (live !== undefined) return live;
     return getItemOnHand(item) ?? 0;
+  };
+
+  const getPromoInventoryRealtime = (item: CartItem): number => {
+    const live = promoInventoryMap.get(item.product.id);
+    if (live !== undefined) return live;
+    const inventory = item.product.inventories?.find(
+      (inv: any) => inv.branchId === selectedBranch?.id
+    );
+    return Number(inventory?.promoQuantity || 0);
   };
 
   const getCustomerOrdered = (item: CartItem): number =>
@@ -779,12 +788,13 @@ export function InvoiceItemsList({
                   </span>
                 </div>
 
-                {/* Dòng nhỏ in nghiêng: Tồn / KH Đặt / Đặt NCC theo chi nhánh */}
-                {canViewInventory && !item.isPromoGift && (
+                {/* Dòng tồn theo chi nhánh, hiển thị cho cả hàng mua và quà KM */}
+                {canViewInventory && (
                   <div className="text-[11px] italic text-black">
                     Tồn: {getOnHandRealtime(item)} | KH Đặt:{" "}
                     {getCustomerOrdered(item).toLocaleString()} | Đặt NCC:{" "}
-                    {getSupplierOrdered(item).toLocaleString()}
+                    {getSupplierOrdered(item).toLocaleString()} | Tồn KM:{" "}
+                    {getPromoInventoryRealtime(item).toLocaleString()}
                   </div>
                 )}
 
@@ -875,12 +885,13 @@ export function InvoiceItemsList({
                     )}
                   </div>
 
-                  {/* Dòng nhỏ in nghiêng: Tồn / KH Đặt / Đặt NCC theo chi nhánh */}
-                  {canViewInventory && !item.isPromoGift && (
+                  {/* Dòng tồn theo chi nhánh, hiển thị cho cả hàng mua và quà KM */}
+                  {canViewInventory && (
                     <div className="text-xs italic text-black whitespace-nowrap">
                       Tồn: {getOnHandRealtime(item)} | KH Đặt:{" "}
                       {getCustomerOrdered(item).toLocaleString()} | Đặt NCC:{" "}
-                      {getSupplierOrdered(item).toLocaleString()}
+                      {getSupplierOrdered(item).toLocaleString()} | Tồn KM:{" "}
+                      {getPromoInventoryRealtime(item).toLocaleString()}
                     </div>
                   )}
                 </div>

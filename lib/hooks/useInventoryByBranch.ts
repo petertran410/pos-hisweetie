@@ -9,7 +9,7 @@ import {
  * Lấy tồn kho realtime theo (productIds, branchId) từ
  * `GET /api/inventories/by-branch?branchId=X&productIds=...`.
  *
- * Trả về `Map<productId, onHand>` để tra cứu O(1) khi render.
+ * Trả về map tồn kho thường và tồn khuyến mãi để tra cứu O(1) khi render.
  *
  * Cache key đã sort productIds + branchId nên đổi thứ tự id không tạo cache mới.
  * Hook sẽ tự refetch khi:
@@ -22,6 +22,7 @@ export function useInventoryByBranch(
   branchId?: number
 ): {
   inventoryMap: Map<number, number>;
+  promoInventoryMap: Map<number, number>;
   isLoading: boolean;
   data: InventoryByBranchItem[] | undefined;
 } {
@@ -45,5 +46,14 @@ export function useInventoryByBranch(
     return m;
   }, [data]);
 
-  return { inventoryMap, isLoading, data };
+  const promoInventoryMap = useMemo(() => {
+    const m = new Map<number, number>();
+    if (!data) return m;
+    for (const item of data) {
+      m.set(item.productId, Number(item.promoQuantity) || 0);
+    }
+    return m;
+  }, [data]);
+
+  return { inventoryMap, promoInventoryMap, isLoading, data };
 }

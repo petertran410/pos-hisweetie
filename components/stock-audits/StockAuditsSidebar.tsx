@@ -8,6 +8,7 @@ import { ChevronDown, Calendar, X, Check } from "lucide-react";
 import { createPortal } from "react-dom";
 import {
   FilterMultiSelect,
+  FilterProductSearch,
   FilterSearchableSelect,
 } from "@/components/ui/filters";
 
@@ -278,6 +279,7 @@ export function StockAuditsSidebar({
     selectedBranch ? [selectedBranch.id] : []
   );
   const [creatorId, setCreatorId] = useState("");
+  const [productId, setProductId] = useState<number>();
   const [status, setStatus] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -345,29 +347,32 @@ export function StockAuditsSidebar({
     let n = 0;
     if (selectedBranchIds.length > 0) n++;
     if (creatorId) n++;
+    if (productId) n++;
     if (status) n++;
     if (fromDate || toDate) n++;
     return n;
-  }, [selectedBranchIds, creatorId, status, fromDate, toDate]);
+  }, [selectedBranchIds, creatorId, productId, status, fromDate, toDate]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       const f: any = {};
       if (selectedBranchIds.length > 0)
         f.branchIds = selectedBranchIds.join(",");
-      if (creatorId) f.creatorId = parseInt(creatorId);
-      if (status) f.status = parseInt(status);
+       if (creatorId) f.creatorId = parseInt(creatorId);
+       if (productId) f.productId = productId;
+       if (status) f.status = parseInt(status);
       if (fromDate) f.fromDate = fromDate;
       if (toDate) f.toDate = toDate;
       onFiltersChange(f);
     }, 300);
     return () => clearTimeout(timer);
-  }, [selectedBranchIds, creatorId, status, fromDate, toDate]);
+  }, [selectedBranchIds, creatorId, productId, status, fromDate, toDate]);
 
   const clearAll = () => {
     setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
-    setCreatorId("");
-    setStatus("");
+     setCreatorId("");
+     setProductId(undefined);
+     setStatus("");
     setFromDate("");
     setToDate("");
     onFiltersChange({});
@@ -429,6 +434,16 @@ export function StockAuditsSidebar({
             searchPlaceholder="Tìm chi nhánh..."
             multiLabel={(n) => `${n} chi nhánh`}
           />
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* ── Sản phẩm ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Sản phẩm
+          </label>
+          <FilterProductSearch value={productId} onChange={setProductId} />
         </div>
 
         <div className="border-t border-gray-100" />

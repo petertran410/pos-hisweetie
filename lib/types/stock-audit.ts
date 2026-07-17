@@ -51,7 +51,7 @@ export interface StockAuditQueryParams {
   fromDate?: string;
   toDate?: string;
   creatorId?: number;
-  details: StockAuditDetail[];
+  productId?: number;
 }
 
 export interface CreateStockAuditItem {

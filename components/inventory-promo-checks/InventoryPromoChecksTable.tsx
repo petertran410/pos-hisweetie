@@ -72,6 +72,8 @@ export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
       : undefined,
     fromDate: filters?.fromDate,
     toDate: filters?.toDate,
+    creatorId: filters?.creatorId,
+    productId: filters?.productId,
   });
 
   const { data, isLoading } = useInventoryPromoChecks({
@@ -82,6 +84,8 @@ export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
     branchId: !filters?.branchIds ? (filters?.branchId || selectedBranch?.id) : undefined,
     fromDate: filters?.fromDate,
     toDate: filters?.toDate,
+    creatorId: filters?.creatorId,
+    productId: filters?.productId,
   });
 
   const checks = data?.data || [];

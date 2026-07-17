@@ -72,6 +72,8 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
       : undefined,
     fromDate: filters?.fromDate,
     toDate: filters?.toDate,
+    creatorId: filters?.creatorId,
+    productId: filters?.productId,
   });
 
   const { data, isLoading } = useInventoryChecks({
@@ -82,6 +84,8 @@ export function InventoryChecksTable({ filters }: { filters?: any }) {
     branchId: !filters?.branchIds ? (filters?.branchId || selectedBranch?.id) : undefined,
     fromDate: filters?.fromDate,
     toDate: filters?.toDate,
+    creatorId: filters?.creatorId,
+    productId: filters?.productId,
   });
 
   const checks = data?.data || [];

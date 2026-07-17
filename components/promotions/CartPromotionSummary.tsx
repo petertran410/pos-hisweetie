@@ -332,10 +332,10 @@ function GiftAllocationDialog({
                     {o.productCode ? ` · ${o.productCode}` : ""}
                   </div>
                   <div className="text-xs text-gray-500">
-                    Tồn {o.availableStock}
+                    Tồn khuyến mãi {o.availableStock}
                     {o.remaining != null
                       ? ` · Còn được tặng ${o.remaining}`
-                      : ""}
+                      : " · Không giới hạn"}
                   </div>
                 </div>
                 {outOfStock ? (

@@ -228,6 +228,7 @@ export interface PromoGiftLine {
   lineType: "gift";
   isGift: true;
   promotionId: number;
+  // Tồn được phép khuyến mãi (promoQuantity) tại chi nhánh.
   availableStock: number;
   stockEnough: boolean;
 }
@@ -240,6 +241,7 @@ export interface PromoDiscountedBuyLine {
   promoPrice: number;
   lineType: "discounted_buy";
   promotionId: number;
+  // Tồn được phép khuyến mãi (promoQuantity) tại chi nhánh.
   availableStock: number;
 }
 
@@ -254,6 +256,7 @@ export interface RewardOption {
   productId: number;
   productName?: string;
   productCode?: string;
+  // Tồn được phép khuyến mãi (promoQuantity) tại chi nhánh.
   availableStock: number;
   // Số quà còn được tặng (lifetime) cho SP này. null = không giới hạn.
   remaining?: number | null;

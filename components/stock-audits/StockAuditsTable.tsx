@@ -83,6 +83,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
     fromDate: filters?.fromDate,
     toDate: filters?.toDate,
     creatorId: filters?.creatorId,
+    productId: filters?.productId,
   });
 
   const { data, isLoading } = useStockAudits({
@@ -95,7 +96,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
     fromDate: filters?.fromDate,
     toDate: filters?.toDate,
     creatorId: filters?.creatorId,
-    details: [],
+    productId: filters?.productId,
   });
 
   const audits = data?.data || [];

@@ -46,6 +46,8 @@ export interface InventoryPromoCheckQueryParams {
   limit?: number;
   fromDate?: string;
   toDate?: string;
+  creatorId?: number;
+  productId?: number;
 }
 
 export interface CreateInventoryPromoCheckItem {
@@ -73,6 +75,10 @@ export const inventoryPromoChecksApi = {
     if (params?.limit) query.append("limit", params.limit.toString());
     if (params?.fromDate) query.append("fromDate", params.fromDate);
     if (params?.toDate) query.append("toDate", params.toDate);
+    if (params?.creatorId)
+      query.append("creatorId", params.creatorId.toString());
+    if (params?.productId)
+      query.append("productId", params.productId.toString());
     return apiClient.get(`/inventory-promo-checks?${query.toString()}`);
   },
 
