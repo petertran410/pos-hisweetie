@@ -395,25 +395,23 @@ export function PurchaseOrderForm({
   // bảng NM/¥ và logic ghi giá vốn.
   const isCurrencyCNY = currency === "CNY";
 
-  // Nguồn tin cậy cho logic ghi giá vốn NM (factoryPrice/factorySubTotal) +
-  // sync giá VND theo tỉ giá. `isImportSupplier` phụ thuộc selectedSupplier
-  // load qua API (useSupplier/useSuppliers) → có race: form mount trước khi
-  // fetch xong → isImportSupplier=false → payload gửi factoryPrice=null →
-  // BE XÓA dữ liệu NM đã điền ở PDN. `currency` được init đồng bộ ngay từ
-  // orderSupplier/purchaseOrder.currency nên isCurrencyCNY luôn đúng. Gộp
-  // OR để bền vững: chỉ cần 1 trong 2 nguồn xác nhận là luồng nhập khẩu.
-  const isImportFlow = isImportSupplier || isCurrencyCNY;
+  // Tiền tệ đã được snapshot trên từng PDN/PN. Nhóm NCC chỉ dùng để chọn mặc
+  // định khi tạo phiếu mới; không được biến phiếu VND lịch sử thành CNY.
+  const isImportFlow = isCurrencyCNY;
 
   const liveRateQuery = useExchangeRate("CNY", "VND");
   const effectiveRate = useMemo(() => {
     if (purchaseOrder?.currency === "CNY" && purchaseOrder?.exchangeRate) {
       return Number(purchaseOrder.exchangeRate);
     }
+    if (orderSupplier?.currency === "CNY" && orderSupplier?.exchangeRate) {
+      return Number(orderSupplier.exchangeRate);
+    }
     if (isImportSupplier && liveRateQuery.data) {
       return liveRateQuery.data.rate;
     }
     return exchangeRate;
-  }, [purchaseOrder, isImportSupplier, liveRateQuery.data, exchangeRate]);
+  }, [purchaseOrder, orderSupplier, isImportSupplier, liveRateQuery.data, exchangeRate]);
 
   const refreshExchangeRateMutation = useRefreshExchangeRate();
 
@@ -541,6 +539,7 @@ export function PurchaseOrderForm({
       setPreviouslyPaid(0);
       setPaymentAmount(0);
     } else if (orderSupplier?.items) {
+      const sourceRate = Number(orderSupplier.exchangeRate) || 1;
       const receivedQuantities: Record<number, number> = {};
       orderSupplier.purchaseOrders?.forEach((po) => {
         po.items?.forEach((item) => {
@@ -570,8 +569,18 @@ export function PurchaseOrderForm({
             // mặc định là "normal". Nếu muốn nhập 1 phần là loại B, user
             // có thể duplicate dòng sau khi form load và đổi type.
             conditionType: "normal" as const,
-            factoryPrice: Number((item as any).factoryPrice ?? 0),
-            factorySubTotal: Number((item as any).factoryPrice ?? 0) * remaining,
+            factoryPrice:
+              item.factoryPrice != null
+                ? Number(item.factoryPrice)
+                : orderSupplier.currency === "CNY"
+                  ? Number(item.price) / sourceRate
+                  : 0,
+            factorySubTotal:
+              item.factoryPrice != null
+                ? Number(item.factoryPrice) * remaining
+                : orderSupplier.currency === "CNY"
+                  ? (Number(item.price) * remaining) / sourceRate
+                  : 0,
             factorySubTotalManual:
               (item as any).factorySubTotal != null &&
               Number((item as any).factorySubTotal) !== Number((item as any).factoryPrice ?? 0) * Number(item.quantity || 1),
@@ -580,7 +589,7 @@ export function PurchaseOrderForm({
         .filter((item) => item.quantity > 0);
 
       setProducts(loadedProducts);
-      setDiscountType("amount");
+      setDiscountType(orderSupplier.currency === "CNY" ? "ratio" : "amount");
 
       const orderLevelDiscount = Number(orderSupplier.discount || 0);
       const usedDiscount =
@@ -1813,7 +1822,7 @@ export function PurchaseOrderForm({
                     }).format(effectiveRate || 0)}{" "}
                     VND
                   </span>
-                  {!isFormDisabled && (
+                  {!isFormDisabled && !purchaseOrder && !orderSupplier && (
                     <button
                       type="button"
                       onClick={handleRefreshExchangeRate}
@@ -2109,6 +2118,7 @@ export function PurchaseOrderForm({
         onClose={() => setShowPaymentModal(false)}
         totalAmount={calculateTotal()}
         previouslyPaid={previouslyPaid}
+        previouslyPaidForeign={isCurrencyCNY ? previouslyPaidCNY : undefined}
         isImportMode={isCurrencyCNY}
         foreignTotalAmount={isCurrencyCNY ? calculateTotalCNY() : undefined}
         defaultExchangeRate={effectiveRate}

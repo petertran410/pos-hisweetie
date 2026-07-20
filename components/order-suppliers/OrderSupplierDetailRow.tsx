@@ -254,12 +254,16 @@ export function OrderSupplierDetailRow({
 
   const paidAmountCNY = useMemo(() => {
     if (!isImport) return 0;
-    const sumForeign = (payments || []).reduce(
-      (sum: number, p: any) => sum + (Math.abs(Number(p.foreignAmount)) || 0),
-      0
-    );
+    // Ưu tiên Σ foreignAmount (snapshot CNY mỗi lần trả). Bỏ payment đã hủy
+    // (status=2). Fallback legacy: paidAmount(VND) / exchangeRate phiếu.
+    // Mirror OrderSuppliersTable.computeImportAmounts + PurchaseOrdersTable.
+    const sumForeign = (payments || [])
+      .filter((p: any) => p.status !== 2 && p.foreignAmount != null)
+      .reduce(
+        (sum: number, p: any) => sum + (Math.abs(Number(p.foreignAmount)) || 0),
+        0
+      );
     if (sumForeign > 0) return sumForeign;
-    // Fallback for legacy
     const rate = Number(orderSupplier?.exchangeRate) || 1;
     return Math.abs(Number(orderSupplier?.paidAmount || 0)) / rate;
   }, [payments, orderSupplier, isImport]);

@@ -66,23 +66,34 @@ const formatCNY = (value: number) =>
 
 // Tính các giá trị CNY cho PDN NCC nước ngoài.
 // - totalCNY = Σ items[i].factorySubTotal (đã là CNY, BE lưu CNY gốc)
-// - paidCNY = Σ items[i].factorySubTotal * discountRatio/100 (nếu có)
-//            hoặc discount / exchangeRate (legacy)
-// - paidAmountCNY fallback = paidAmount / exchangeRate (legacy PDN cũ)
+// - paidAmountCNY: ưu tiên Σ payments.foreignAmount (snapshot CNY mỗi lần trả
+//   — đúng kể cả khi tỉ giá TT ≠ tỉ giá phiếu). Fallback legacy:
+//   paidAmount(VND) / exchangeRate phiếu.
+// - discountCNY: ratio nếu có, không thì discount(VND) / rate
+// - supplierDebtCNY = max(0, totalCNY - discountCNY - paidAmountCNY)
 //
 // LƯU Ý: BE lưu `total`/`supplierDebt`/`paidAmount` có thể là số ÂM cho
 // PDN của NCC nước ngoài (do lỗi logic cũ). Để hiển thị CNY đúng, ta lấy
 // giá trị tuyệt đối khi quy đổi sang CNY (vì CNY luôn dương).
+// Mirror PurchaseOrdersTable.computeImportAmounts + OrderSupplierDetailRow.
 function computeImportAmounts(os: OrderSupplier) {
   const rate = Number(os.exchangeRate) || 1;
   const totalCNY = (os.items || []).reduce(
     (sum, it) => sum + (Math.abs(Number(it.factorySubTotal)) || 0),
     0
   );
+  // Ưu tiên tổng foreignAmount (CNY thật đã snapshot mỗi lần trả) — chính xác
+  // kể cả khi tỉ giá thanh toán khác tỉ giá phiếu. Bỏ payment đã hủy (status=2).
+  // Fallback (payment legacy không có foreignAmount) mới chia paidAmount/rate.
+  const paidForeignSum = (os.payments || [])
+    .filter((p) => p.status !== 2 && p.foreignAmount != null)
+    .reduce((s, p) => s + Math.abs(Number(p.foreignAmount)), 0);
   const paidAmountCNY =
-    Math.abs(Number(os.paidAmount || 0)) > 0
-      ? Math.abs(Number(os.paidAmount)) / rate
-      : 0;
+    paidForeignSum > 0
+      ? paidForeignSum
+      : Math.abs(Number(os.paidAmount || 0)) > 0
+        ? Math.abs(Number(os.paidAmount)) / rate
+        : 0;
   const discountCNY =
     Number(os.discountRatio) > 0
       ? (totalCNY * Number(os.discountRatio)) / 100

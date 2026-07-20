@@ -24,13 +24,22 @@ interface SupplierPaymentModalProps {
    */
   foreignTotalAmount?: number;
   /**
+   * Tổng tiền đã trả trước đó bằng ngoại tệ (CNY). Nếu được truyền, modal sẽ
+   * dùng trực tiếp số này để tính "Cần trả" thay vì quy đổi từ previouslyPaid
+   * (VND) qua tỉ giá đang nhập — tránh nợ CNY bị nhảy số khi user sửa tỉ giá.
+   */
+  previouslyPaidForeign?: number;
+  /**
    * Tỉ giá snapshot (chỉ làm placeholder cho ô input — KHÔNG tự dùng để
    * tính). User bắt buộc phải nhập lại tỉ giá thực tế tại thời điểm trả.
+   * Cũng dùng làm fallback quy đổi previouslyPaid (VND) → CNY khi parent
+   * không truyền previouslyPaidForeign (legacy).
    */
   defaultExchangeRate?: number;
   /**
    * Tiền tệ của phiếu — dùng để xác định mode nhập tiền trong modal.
-   * Khi là "CNY": user nhập CNY trực tiếp, modal convert → VND cho onConfirm.
+   * Khi là "CNY": hiện tab chuyển đơn vị nhập (CNY/VND) + ô tỉ giá; onConfirm
+   * luôn trả amount=VND + foreignAmount=CNY + exchangeRate.
    */
   currency?: "VND" | "CNY";
   onConfirm: (
@@ -70,12 +79,17 @@ export function SupplierPaymentModal({
   previouslyPaid = 0,
   isImportMode = false,
   foreignTotalAmount,
+  previouslyPaidForeign,
   defaultExchangeRate,
   currency = "VND",
   onConfirm,
 }: SupplierPaymentModalProps) {
   const needToPay = totalAmount - previouslyPaid;
   const [amount, setAmount] = useState("");
+  // Đơn vị đang nhập trong ô "Thanh toán". Chỉ có ý nghĩa khi phiếu CNY —
+  // cho phép user gõ trực tiếp bằng CNY hoặc VND, dòng snapshot hiển thị
+  // đơn vị "bên kia". Mặc định CNY (giống hành vi cũ).
+  const [inputCurrency, setInputCurrency] = useState<"CNY" | "VND">("CNY");
   const [method, setMethod] = useState<"cash" | "transfer" | "card">("cash");
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
     null
@@ -120,12 +134,16 @@ export function SupplierPaymentModal({
     }
   }, [method]);
 
-  // Reset tỉ giá về default khi mở modal mới
+  // Reset tỉ giá về default + tab nhập về CNY + xoá số tiền khi mở modal mới
   useEffect(() => {
     if (isOpen) {
       setExchangeRate(
         defaultExchangeRate ? formatExchangeRateInput(defaultExchangeRate) : ""
       );
+      setInputCurrency("CNY");
+      setAmount("");
+      setMethod("cash");
+      setSelectedAccountId(null);
     }
   }, [isOpen, defaultExchangeRate]);
 
@@ -135,7 +153,21 @@ export function SupplierPaymentModal({
   // cho onConfirm (CashFlow lưu amount bằng VND).
   const isCNYMode = currency === "CNY";
 
+  // Tab CNY cho phép tối đa 2 chữ số thập phân; tab VND / phiếu VND thuần chỉ
+  // nhận số nguyên (phân tách nghìn) như hành vi cũ.
+  const allowDecimalInput = isCNYMode && inputCurrency === "CNY";
+
   const handleAmountChange = (value: string) => {
+    if (allowDecimalInput) {
+      const normalized = value.replace(/,/g, "");
+      if (normalized === "") {
+        setAmount("");
+        return;
+      }
+      if (!/^\d*(?:\.\d{0,2})?$/.test(normalized)) return;
+      setAmount(formatExchangeRateInput(normalized));
+      return;
+    }
     setAmount(formatNumberInput(value));
   };
 
@@ -149,7 +181,8 @@ export function SupplierPaymentModal({
     setExchangeRate(formatExchangeRateInput(normalized));
   };
 
-  // Tỉ giá đã parse để tính toán.
+  // Tỉ giá đã parse để tính toán. Ưu tiên tỉ giá user nhập; nếu bỏ trống thì
+  // dùng tỉ giá hệ thống đề xuất (defaultExchangeRate).
   const parsedAmount = parseNumberInput(amount);
   const parsedRate = parseExchangeRateInput(exchangeRate);
   const effectiveRate =
@@ -159,37 +192,77 @@ export function SupplierPaymentModal({
       ? defaultExchangeRate
       : 0;
 
-  // Khi CNY mode: amount = CNY → VND = amount × rate.
-  // Khi VND mode: amount = VND (giữ nguyên).
-  const amountVND = isCNYMode && effectiveRate > 0
-    ? parsedAmount * effectiveRate
-    : parsedAmount;
-  const foreignPreview = isCNYMode && effectiveRate > 0
-    ? parsedAmount
-    : 0;
+  // Đổi tab đơn vị nhập: quy đổi số đang có trong ô sang đơn vị mới theo
+  // effectiveRate (giữ nguyên "giá trị thật"). Ô rỗng hoặc rate ≤ 0 → chỉ
+  // đổi tab, không convert.
+  const handleInputCurrencyChange = (next: "CNY" | "VND") => {
+    if (next === inputCurrency) return;
+    if (parsedAmount > 0 && effectiveRate > 0) {
+      if (next === "VND") {
+        // CNY → VND: số nguyên.
+        const converted = Math.round(parsedAmount * effectiveRate);
+        setAmount(formatNumberInput(String(converted)));
+      } else {
+        // VND → CNY: giữ 2 chữ số thập phân.
+        const converted = parsedAmount / effectiveRate;
+        setAmount(formatExchangeRateInput(converted.toFixed(2)));
+      }
+    }
+    setInputCurrency(next);
+  };
 
-  // Khi NCC nước ngoài, phần tổng kết dưới modal hiển thị theo CNY.
-  // CNY mode: foreignTotalAmount đã là CNY (từ calculateTotalCNY).
-  // VND mode: quy đổi tổng VND → CNY qua effectiveRate.
+  // Chuẩn hoá số tiền đang nhập về cả 2 đơn vị — "tiền nào ra tiền đó".
+  // paymentCNY: giá trị ngoại tệ (lưu OrderSupplierPayment.foreignAmount).
+  // paymentVND: giá trị nội tệ (lưu CashFlow.amount).
+  const paymentCNY = !isCNYMode
+    ? 0
+    : inputCurrency === "CNY"
+      ? parsedAmount
+      : effectiveRate > 0
+        ? parsedAmount / effectiveRate
+        : 0;
+  const paymentVND = !isCNYMode
+    ? parsedAmount
+    : inputCurrency === "VND"
+      ? parsedAmount
+      : effectiveRate > 0
+        ? parsedAmount * effectiveRate
+        : 0;
+
+  // Snapshot dòng "Thành tiền" luôn hiển thị đơn vị "bên kia" so với tab.
+  // Tab CNY → hiển thị VND; tab VND → hiển thị CNY.
+  const snapshotValue = inputCurrency === "CNY" ? paymentVND : paymentCNY;
+  const snapshotUnit = inputCurrency === "CNY" ? "VND" : "CNY";
+
+  // Khi NCC nước ngoài, phần tổng kết dưới modal hiển thị theo CNY (tiền tệ
+  // phiếu). foreignTotalAmount đã là CNY (từ calculateTotalCNY).
+  //
+  // "Đã trả CNY" / "Cần trả CNY" KHÔNG phụ thuộc tỉ giá user đang gõ trong
+  // modal (tỉ giá TT chỉ dùng để quy lần trả hiện tại CNY↔VND). Ưu tiên
+  // previouslyPaidForeign (sum foreignAmount từ parent); fallback legacy
+  // chia previouslyPaid (VND) bằng defaultExchangeRate (tỉ giá phiếu),
+  // KHÔNG dùng effectiveRate (tỉ giá đang sửa).
   const foreignTotal =
     isCNYMode && foreignTotalAmount != null
       ? foreignTotalAmount
-      : isImportMode && effectiveRate > 0
-        ? totalAmount / effectiveRate
+      : isImportMode && defaultExchangeRate && defaultExchangeRate > 0
+        ? totalAmount / defaultExchangeRate
         : 0;
   const foreignPreviouslyPaid =
-    isCNYMode && effectiveRate > 0 && foreignTotalAmount != null
-      ? (previouslyPaid / effectiveRate)
-      : isImportMode && effectiveRate > 0
-        ? previouslyPaid / effectiveRate
+    previouslyPaidForeign != null
+      ? previouslyPaidForeign
+      : isCNYMode || isImportMode
+        ? defaultExchangeRate && defaultExchangeRate > 0
+          ? previouslyPaid / defaultExchangeRate
+          : 0
         : 0;
   const foreignNeedToPay = Math.max(0, foreignTotal - foreignPreviouslyPaid);
-  const foreignRemaining = Math.max(0, foreignNeedToPay - parsedAmount);
+  const foreignRemaining = Math.max(0, foreignNeedToPay - paymentCNY);
 
-  // Chỉ hiện preview khi NCC nước ngoài.
+  // Chỉ hiện snapshot khi phiếu CNY và có tỉ giá.
   const showForeignPreview = isCNYMode && effectiveRate > 0;
 
-  const remaining = needToPay - amountVND;
+  const remaining = needToPay - paymentVND;
 
   const handleConfirm = () => {
     if (parsedAmount <= 0) {
@@ -201,26 +274,24 @@ export function SupplierPaymentModal({
       return;
     }
 
-    let rate: number | undefined;
-    let foreign: number | undefined;
     if (isCNYMode) {
-      // CNY mode: user nhập CNY, convert → VND. Tỉ giá bắt buộc nhập.
-      if (parsedRate <= 0) {
+      // Phiếu CNY: tỉ giá bắt buộc (ưu tiên user nhập, fallback tỉ giá hệ
+      // thống). Gửi cả VND (CashFlow) + CNY (OrderSupplierPayment.foreignAmount)
+      // bất kể user đang nhập ở tab nào.
+      if (effectiveRate <= 0) {
         alert("Vui lòng nhập tỉ giá quy đổi");
         return;
       }
-      rate = parsedRate;
-      foreign = parsedAmount; // CNY amount đã nhập
       onConfirm(
-        amountVND,        // VND để lưu vào CashFlow
+        Math.round(paymentVND),   // VND để lưu vào CashFlow
         method,
         selectedAccountId ?? undefined,
-        rate,
-        foreign           // CNY để lưu vào OrderSupplierPayment.foreignAmount
+        effectiveRate,
+        paymentCNY                // CNY để lưu vào OrderSupplierPayment.foreignAmount
       );
     } else {
       onConfirm(
-        amountVND,
+        paymentVND,
         method,
         selectedAccountId ?? undefined,
         undefined,
@@ -244,14 +315,47 @@ export function SupplierPaymentModal({
 
         <div className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Thanh toán{currency === "CNY" ? ` (${currency})` : ""}
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Thanh toán{isCNYMode ? ` (${inputCurrency})` : ""}
+              </label>
+              {/* Tab chuyển đơn vị nhập — chỉ hiện khi phiếu CNY. */}
+              {isCNYMode && (
+                <div className="flex gap-1 bg-gray-100 rounded-full p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleInputCurrencyChange("CNY")}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                      inputCurrency === "CNY"
+                        ? "bg-brand text-white shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}>
+                    CNY
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInputCurrencyChange("VND")}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                      inputCurrency === "VND"
+                        ? "bg-brand text-white shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}>
+                    VND
+                  </button>
+                </div>
+              )}
+            </div>
             <input
               type="text"
               value={amount}
               onChange={(e) => handleAmountChange(e.target.value)}
-              placeholder={isCNYMode ? "0.00" : "Nhập số tiền"}
+              placeholder={
+                isCNYMode
+                  ? inputCurrency === "CNY"
+                    ? "0.00"
+                    : "0"
+                  : "Nhập số tiền"
+              }
               className="w-full text-right text-2xl font-semibold border-2 border-brand rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
@@ -375,13 +479,16 @@ export function SupplierPaymentModal({
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-500">
-                  Thành tiền (snapshot tại thời điểm TT):
+                  Thành tiền (snapshot tại thời điểm TT)
+                  {showForeignPreview ? ` ≈ ${snapshotUnit}:` : ":"}
                 </span>
                 <span className="font-semibold text-brand text-sm">
-                  {showForeignPreview
-                    ? new Intl.NumberFormat("vi-VN", {
-                        maximumFractionDigits: 2,
-                      }).format(foreignPreview) + " CNY"
+                  {showForeignPreview && parsedAmount > 0
+                    ? snapshotUnit === "VND"
+                      ? formatCurrency(Math.round(snapshotValue)) + " VND"
+                      : new Intl.NumberFormat("vi-VN", {
+                          maximumFractionDigits: 2,
+                        }).format(snapshotValue) + " CNY"
                     : "—"}
                 </span>
               </div>

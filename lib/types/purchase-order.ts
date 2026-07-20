@@ -48,6 +48,7 @@ export interface PurchaseOrder {
   };
   items?: PurchaseOrderItem[];
   payments?: PurchaseOrderPayment[];
+  supplierReturns?: PurchaseOrderDebtOffset[];
   surcharges?: PurchaseOrderSurcharge[];
 }
 
@@ -95,6 +96,16 @@ export interface PurchaseOrderPayment {
   statusValue?: string;
   exchangeRate?: number | null;
   foreignAmount?: number | null;
+}
+
+export interface PurchaseOrderDebtOffset {
+  id: number;
+  refundedAmount: number;
+  refundedForeignAmount?: number | null;
+  currency?: string | null;
+  exchangeRate?: number | null;
+  refundType?: string | null;
+  status: number;
 }
 
 export interface PurchaseOrderSurcharge {

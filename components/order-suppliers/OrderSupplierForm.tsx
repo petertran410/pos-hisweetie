@@ -1857,6 +1857,7 @@ export function OrderSupplierForm({
         onClose={() => setShowPaymentModal(false)}
         totalAmount={calculateTotalValue()}
         previouslyPaid={previouslyPaid}
+        previouslyPaidForeign={isCurrencyCNY ? previouslyPaidCNY : undefined}
         isImportMode={isCurrencyCNY}
         foreignTotalAmount={isCurrencyCNY ? calculateTotalCNY() : undefined}
         defaultExchangeRate={effectiveRate}
