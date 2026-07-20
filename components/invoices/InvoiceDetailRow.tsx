@@ -777,14 +777,14 @@ export function InvoiceDetailRow({
               <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
                 <div className="flex gap-2">
                   {/* {canCancel && hasPermCancel && ( */}
-                  {canCancel && (
-                    <button
-                      onClick={handleCancel}
-                      disabled={isSaving}
-                      className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                      {isSaving ? "Đang xử lý..." : "Hủy"}
-                    </button>
-                  )}
+                  {/* {canCancel && ( */}
+                  <button
+                    onClick={handleCancel}
+                    disabled={isSaving}
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isSaving ? "Đang xử lý..." : "Hủy"}
+                  </button>
+                  {/* )} */}
                   <button
                     onClick={handleCopy}
                     title="Sao chép hóa đơn sang tab mới"
@@ -795,14 +795,14 @@ export function InvoiceDetailRow({
                 </div>
                 <div className="flex gap-2">
                   {/* {canProcess && hasPermUpdate && ( */}
-                  {canProcess && (
-                    <button
-                      onClick={handleProcessInvoice}
-                      disabled={isSaving}
-                      className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-dark transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                      Xử lý hóa đơn
-                    </button>
-                  )}
+                  {/* {canProcess && ( */}
+                  <button
+                    onClick={handleProcessInvoice}
+                    disabled={isSaving}
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-dark transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    Xử lý hóa đơn
+                  </button>
+                  {/* )} */}
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
