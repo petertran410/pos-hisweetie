@@ -874,7 +874,7 @@ export function InvoicesTable({
 
   return (
     // <PermissionGate resource="invoices" action="view">
-    <div>
+    <>
       <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
         {/* Toolbar */}
         <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
@@ -1512,6 +1512,6 @@ export function InvoicesTable({
         <InvoiceImportModal onClose={() => setShowImportModal(false)} />
       )}
       {/* </PermissionGate> */}
-    </div>
+    </>
   );
 }
