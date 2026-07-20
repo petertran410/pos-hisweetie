@@ -11,6 +11,7 @@ import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { SupplierPaymentBulkModal } from "./SupplierPaymentBulkModal";
 import { CodeLink } from "../shared/CodeLink";
+import { PermissionGate } from "../permissions/PermissionGate";
 import {
   ExportDebtModal,
   ExportDebtOptions,
@@ -130,11 +131,13 @@ export function SupplierDebtsTab({
             Công nợ
           </button>
 
-          <button
-            onClick={() => setShowPaymentModal(true)}
-            className="px-4 py-2 text-sm font-medium text-white bg-brand rounded-lg hover:bg-brand-dark">
-            💵 Trả tiền NCC
-          </button>
+          <PermissionGate resource="cash_flows" action="create">
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              className="px-4 py-2 text-sm font-medium text-white bg-brand rounded-lg hover:bg-brand-dark">
+              💵 Trả tiền NCC
+            </button>
+          </PermissionGate>
         </div>
       </div>
 

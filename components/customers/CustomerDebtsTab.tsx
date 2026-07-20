@@ -10,6 +10,7 @@ import { CustomerPaymentModal } from "./CustomerPaymentModal";
 import Link from "next/link";
 import { CodeLink } from "../shared/CodeLink";
 import { ExportDebtModal, ExportDebtOptions } from "./ExportDebtModal";
+import { PermissionGate } from "../permissions/PermissionGate";
 
 interface CustomerDebtsTabProps {
   customerId: number;
@@ -148,11 +149,13 @@ export function CustomerDebtsTab({
               </button>
 
               {!hidePaymentButton && (
-                <button
-                  onClick={() => setShowPaymentModal(true)}
-                  className="px-2.5 py-1.5 lg:px-4 lg:py-2 bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
-                  💵 Thanh toán
-                </button>
+                <PermissionGate resource="cash_flows" action="create">
+                  <button
+                    onClick={() => setShowPaymentModal(true)}
+                    className="px-2.5 py-1.5 lg:px-4 lg:py-2 bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
+                    💵 Thanh toán
+                  </button>
+                </PermissionGate>
               )}
             </div>
           )}
