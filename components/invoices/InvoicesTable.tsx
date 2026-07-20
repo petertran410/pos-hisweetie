@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
-import { useExportInvoices, useInvoices, useInvoicesTotals } from "@/lib/hooks/useInvoices";
+import {
+  useExportInvoices,
+  useInvoices,
+  useInvoicesTotals,
+} from "@/lib/hooks/useInvoices";
 import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import type { CustomerSearchResult } from "@/lib/types/customer";
 import { useBranchStore } from "@/lib/store/branch";
@@ -30,7 +34,10 @@ import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
 import { useInvoicePriceBookWarnings } from "@/lib/hooks/useInvoicePriceBookWarnings";
 import { ColumnToggle } from "../shared/ColumnToggle";
-import { useColumnVisibility, type ColumnConfig } from "@/lib/hooks/useColumnVisibility";
+import {
+  useColumnVisibility,
+  type ColumnConfig,
+} from "@/lib/hooks/useColumnVisibility";
 
 interface InvoicesTableProps {
   filters: any;
@@ -74,9 +81,7 @@ const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
     label: "Mã hóa đơn",
     visible: true,
     width: "140px",
-    render: (inv) => (
-      <CodeLink entity="invoice" code={inv.code} />
-    ),
+    render: (inv) => <CodeLink entity="invoice" code={inv.code} />,
   },
   {
     key: "order",
@@ -84,11 +89,7 @@ const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
     visible: true,
     width: "140px",
     render: (inv) =>
-      inv.order?.code ? (
-        <CodeLink entity="order" code={inv.order.code} />
-      ) : (
-        "-"
-      ),
+      inv.order?.code ? <CodeLink entity="order" code={inv.order.code} /> : "-",
   },
   {
     key: "orderCode",
@@ -577,7 +578,13 @@ export function InvoicesTable({
   // Reset page khi filter/search/tab đổi
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, filters, activeStatusTab, advancedSearch, selectedCustomer]);
+  }, [
+    debouncedSearch,
+    filters,
+    activeStatusTab,
+    advancedSearch,
+    selectedCustomer,
+  ]);
 
   // Tab override sidebar status — chỉ khi tab khác "all" VÀ sidebar không gửi multi-status
   const effectiveFilters = useMemo(() => {
@@ -598,8 +605,10 @@ export function InvoicesTable({
     }
   }, [filters.statusIds]);
 
-  const { columns, toggleColumn } =
-    useColumnVisibility<Invoice>("invoiceTableColumns", DEFAULT_COLUMNS);
+  const { columns, toggleColumn } = useColumnVisibility<Invoice>(
+    "invoiceTableColumns",
+    DEFAULT_COLUMNS
+  );
 
   const { data, isLoading } = useInvoices({
     page,
@@ -864,7 +873,8 @@ export function InvoicesTable({
   const hasTotalRow = visibleColumns.some((c) => TOTAL_KEYS.has(c.key));
 
   return (
-    <PermissionGate resource="invoices" action="view">
+    // <PermissionGate resource="invoices" action="view">
+    <div>
       <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
         {/* Toolbar */}
         <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
@@ -962,9 +972,14 @@ export function InvoicesTable({
                             setCustomerQuery(e.target.value);
                             setShowCustomerDrop(true);
                           }}
-                          onFocus={() => customerQuery && setShowCustomerDrop(true)}
+                          onFocus={() =>
+                            customerQuery && setShowCustomerDrop(true)
+                          }
                           onKeyDown={(e) => {
-                            if (!showCustomerDrop || customerResults.length === 0)
+                            if (
+                              !showCustomerDrop ||
+                              customerResults.length === 0
+                            )
                               return;
                             if (e.key === "ArrowDown") {
                               e.preventDefault();
@@ -977,7 +992,9 @@ export function InvoicesTable({
                             } else if (e.key === "Enter") {
                               e.preventDefault();
                               if (customerResults[customerHighlight]) {
-                                selectCustomer(customerResults[customerHighlight]);
+                                selectCustomer(
+                                  customerResults[customerHighlight]
+                                );
                               }
                             } else if (e.key === "Escape") {
                               setShowCustomerDrop(false);
@@ -1009,7 +1026,9 @@ export function InvoicesTable({
                                 </div>
                                 <div className="text-xs text-gray-400 mt-0.5">
                                   {c.code ? `Mã: ${c.code}` : "Chưa có mã"}
-                                  {c.contactNumber ? ` · ${c.contactNumber}` : ""}
+                                  {c.contactNumber
+                                    ? ` · ${c.contactNumber}`
+                                    : ""}
                                 </div>
                               </button>
                             ))}
@@ -1093,14 +1112,14 @@ export function InvoicesTable({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <PermissionGate resource="invoices" action="create">
-              <button
-                onClick={onCreateClick}
-                className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
-                <Plus className="w-4 h-4" />
-                Tạo hóa đơn
-              </button>
-            </PermissionGate>
+            {/* <PermissionGate resource="invoices" action="create"> */}
+            <button
+              onClick={onCreateClick}
+              className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
+              <Plus className="w-4 h-4" />
+              Tạo hóa đơn
+            </button>
+            {/* </PermissionGate> */}
 
             {/* Báo đơn dropdown */}
             <div ref={baoDonRef} className="relative">
@@ -1134,14 +1153,14 @@ export function InvoicesTable({
               )}
             </div>
 
-            <PermissionGate resource="invoices" action="create">
-              <button
-                onClick={() => setShowImportModal(true)}
-                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5">
-                <Upload className="w-4 h-4" />
-                Import
-              </button>
-            </PermissionGate>
+            {/* <PermissionGate resource="invoices" action="create"> */}
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5">
+              <Upload className="w-4 h-4" />
+              Import
+            </button>
+            {/* </PermissionGate> */}
 
             <div ref={exportRef} className="relative">
               <button
@@ -1421,8 +1440,7 @@ export function InvoicesTable({
             {total > 0 ? ` • ${total.toLocaleString()} HĐ` : ""}
           </span>
         </div>
-
-        </div>
+      </div>
 
       {showExportDetailModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -1493,6 +1511,7 @@ export function InvoicesTable({
       {showImportModal && (
         <InvoiceImportModal onClose={() => setShowImportModal(false)} />
       )}
-    </PermissionGate>
+      {/* </PermissionGate> */}
+    </div>
   );
 }

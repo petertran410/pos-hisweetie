@@ -1,4 +1,3 @@
-// components/invoices/InvoiceDetailRow.tsx
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -64,9 +63,9 @@ export function InvoiceDetailRow({
     "info" | "deliveries" | "payments"
   >("info");
 
-  const hasPermCancel = useCan("invoices", "cancel");
-  const hasPermUpdate = useCan("invoices", "update");
-  const hasPermPrint = useCan("invoices", "print");
+  // const hasPermCancel = useCan("invoices", "cancel");
+  // const hasPermUpdate = useCan("invoices", "update");
+  // const hasPermPrint = useCan("invoices", "print");
   // Quyền riêng: chỉ quyết định việc HIỂN THỊ nút "Đã Báo Đơn"
   // (không phải quyền cập nhật hóa đơn).
   const hasPermReportDelivered = useCan("invoices", "report_delivered");
@@ -777,7 +776,8 @@ export function InvoiceDetailRow({
               {/* Action footer */}
               <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
                 <div className="flex gap-2">
-                  {canCancel && hasPermCancel && (
+                  {/* {canCancel && hasPermCancel && ( */}
+                  {canCancel && (
                     <button
                       onClick={handleCancel}
                       disabled={isSaving}
@@ -794,7 +794,8 @@ export function InvoiceDetailRow({
                   </button>
                 </div>
                 <div className="flex gap-2">
-                  {canProcess && hasPermUpdate && (
+                  {/* {canProcess && hasPermUpdate && ( */}
+                  {canProcess && (
                     <button
                       onClick={handleProcessInvoice}
                       disabled={isSaving}
@@ -805,7 +806,7 @@ export function InvoiceDetailRow({
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    hidden={!hasPermUpdate}
+                    // hidden={!hasPermUpdate}
                     className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {isSaving ? "Đang lưu..." : "Lưu"}
                   </button>
@@ -826,7 +827,7 @@ export function InvoiceDetailRow({
                   </button>
                   <button
                     onClick={handlePrint}
-                    hidden={!hasPermPrint}
+                    // hidden={!hasPermPrint}
                     className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50">
                     <Printer className="w-3.5 h-3.5" />
                     In

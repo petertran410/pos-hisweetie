@@ -131,7 +131,8 @@ export default function HoaDonPage() {
   };
 
   return (
-    <PagePermissionGuard resource="invoices" action="view">
+    // <PagePermissionGuard resource="invoices" action="view">
+    <div>
       <div
         className="hidden md:flex h-full border-t"
         style={{ borderColor: "var(--dt-border)" }}>
@@ -187,6 +188,7 @@ export default function HoaDonPage() {
           onCreateClick={handleCreateClick}
         />
       </div>
-    </PagePermissionGuard>
+      {/* </PagePermissionGuard> */}
+    </div>
   );
 }
