@@ -129,21 +129,32 @@ export function useCreateInvoiceFromOrder() {
       additionalPayment,
       items,
       payments,
+      soldById,
       forceComplete,
+      appliedPromotions,
+      appliedPromotionIds,
+      skipPromotions,
     }: {
       orderId: number;
       additionalPayment?: number;
       items?: any[];
       payments?: Array<{ method: string; amount: number }>;
+      soldById?: number;
       forceComplete?: boolean;
+      appliedPromotions?: any[];
+      appliedPromotionIds?: number[];
+      skipPromotions?: boolean;
     }) =>
       invoicesApi.createInvoiceFromOrder(
         orderId,
         additionalPayment,
         items,
         payments,
-        undefined,
-        forceComplete
+        soldById,
+        forceComplete,
+        appliedPromotions,
+        appliedPromotionIds,
+        skipPromotions
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });

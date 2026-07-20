@@ -114,7 +114,10 @@ export const invoicesApi = {
     items?: any[],
     payments?: Array<{ method: string; amount: number }>,
     soldById?: number,
-    forceComplete?: boolean
+    forceComplete?: boolean,
+    appliedPromotions?: any[],
+    appliedPromotionIds?: number[],
+    skipPromotions?: boolean
   ): Promise<Invoice> => {
     return apiClient.post(`/invoices/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
@@ -122,6 +125,9 @@ export const invoicesApi = {
       payments: payments || [],
       forceComplete: forceComplete ?? false,
       ...(soldById ? { soldById } : {}),
+      ...(appliedPromotions ? { appliedPromotions } : {}),
+      ...(appliedPromotionIds ? { appliedPromotionIds } : {}),
+      ...(skipPromotions != null ? { skipPromotions } : {}),
     });
   },
   getInvoicesForReturnOrder: (params: {

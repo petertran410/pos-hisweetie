@@ -2187,6 +2187,16 @@ export default function BanHangPage() {
           additionalPayment: actualPayment,
           payments: payments,
           forceComplete,
+          soldById: activeTab.soldById ?? undefined,
+          // Gửi lựa chọn KM để BE re-validate + sinh lại dòng quà (xử lý cả
+          // KM cộng dồn rewardSelections). Đặc biệt quan trọng khi đơn gốc
+          // tạo trước tính năng KM và user áp KM lúc xuất HĐ.
+          skipPromotions: false,
+          appliedPromotions: buildAppliedPromotions(
+            activeTab.cartItems,
+            activeTab.cumulativeGiftSelections,
+            activeTab.enabledCumulativePromoIds
+          ),
           items: activeTab.cartItems.map((item) => {
             const isGift = item.isPromoGift && item.promoLineType === "gift";
             const isDiscountedBuy =
@@ -2843,6 +2853,15 @@ export default function BanHangPage() {
         paidAmount: actualPayment,
         discountAmount: Number(activeTab.discount) || 0,
         discountRatio: Number(activeTab.discountRatio) || 0,
+        // Gửi lựa chọn KM để BE re-validate + sinh lại dòng quà khi sửa HĐ
+        // (xử lý cả reissue .xx lẫn in-place). Trước đây 2 luồng invoice
+        // (tạo từ đơn + sửa) bị thiếu appliedPromotions nên dòng quà bị drop.
+        skipPromotions: false,
+        appliedPromotions: buildAppliedPromotions(
+          activeTab.cartItems,
+          activeTab.cumulativeGiftSelections,
+          activeTab.enabledCumulativePromoIds
+        ),
         items: activeTab.cartItems.map((item) => {
           const isGift = item.isPromoGift && item.promoLineType === "gift";
           const isDiscountedBuy =
