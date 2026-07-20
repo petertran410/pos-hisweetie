@@ -263,10 +263,10 @@ const DEFAULT_COLUMNS: ColumnConfig<PurchaseOrder>[] = [
     key: "status",
     label: "Trạng thái",
     visible: true,
-    width: "160px",
+    width: "170px",
     render: (po) => (
       <span
-        className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOR[po.status] ?? "bg-gray-100 text-gray-700"}`}>
+        className={`inline-block whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOR[po.status] ?? "bg-gray-100 text-gray-700"}`}>
         {getStatusLabel(po.status)}
       </span>
     ),
@@ -545,7 +545,7 @@ export function PurchaseOrdersTable({
                             key={col.key}
                             className={`px-4 py-2.5 ${
                               isMoneyColumn
-                                ? "align-top text-right"
+                                ? "align-middle text-right"
                                 : "align-middle"
                             } ${expandedId === po.id ? "border-t-2 border-brand" : ""}`}
                             style={{

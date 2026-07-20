@@ -197,7 +197,7 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplier>[] = [
     key: "orderDate",
     label: "Ngày dự kiến nhập hàng",
     visible: true,
-    width: "150px",
+    width: "210px",
     render: (os) => formatDateTime(os.orderDate),
   },
   {
@@ -316,10 +316,10 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplier>[] = [
     key: "status",
     label: "Trạng thái",
     visible: true,
-    width: "130px",
+    width: "160px",
     render: (os) => (
       <span
-        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+        className={`inline-block whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium ${
           STATUS_COLOR[os.status] ?? "bg-gray-100 text-gray-700"
         }`}>
         {getStatusLabel(os.status)}
@@ -615,7 +615,7 @@ export function OrderSuppliersTable({
                             key={col.key}
                             className={`px-4 py-2.5 ${
                               isMoneyColumn
-                                ? "align-top text-right"
+                                ? "align-middle text-right"
                                 : "align-middle"
                             } ${
                               expandedId === os.id

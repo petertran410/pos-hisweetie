@@ -540,8 +540,15 @@ export function PurchaseOrderForm({
       setPaymentAmount(0);
     } else if (orderSupplier?.items) {
       const sourceRate = Number(orderSupplier.exchangeRate) || 1;
+      // Đối xứng BE (purchase-orders.service.ts createOneFromOrderSupplierTx):
+      // chỉ cộng số đã nhập từ các PN active (không phải nháp, không bị hủy).
+      // Trước đây FE cộng tất cả PN (kể cả isDraft / status=2 đã hủy) → các dòng
+      // PDN có PN con đã hủy bị tính "đã nhập đủ" và bị ẩn khỏi form nhập hàng.
+      const activePOs = (orderSupplier.purchaseOrders || []).filter(
+        (po) => !po.isDraft && (po.status as any) !== 2,
+      );
       const receivedQuantities: Record<number, number> = {};
-      orderSupplier.purchaseOrders?.forEach((po) => {
+      activePOs.forEach((po) => {
         po.items?.forEach((item) => {
           receivedQuantities[item.productId] =
             (receivedQuantities[item.productId] || 0) + Number(item.quantity);
@@ -551,7 +558,10 @@ export function PurchaseOrderForm({
       const loadedProducts: ProductItem[] = orderSupplier.items
         .map((item) => {
           const received = receivedQuantities[item.productId] || 0;
-          const remaining = Number(item.quantity) - received;
+          // Math.max(…, 0) để tránh remaining âm khi có PN hủy/nháp đã cộng dồn
+          // trong các version cũ (hoặc trùng dòng loại B). Dòng âm sẽ bị ẩn bởi
+          // .filter(item => item.quantity > 0) phía dưới một cách tường minh.
+          const remaining = Math.max(Number(item.quantity) - received, 0);
           const price = roundTo(Number(item.price), 3);
           const discount = Number(item.discount);
           return {
