@@ -535,7 +535,12 @@ export default function BanHangPage() {
 
         // Thông tin CT cộng dồn (perTime = SL quà mỗi suất) để tái dựng lựa chọn
         // khi mở lại đơn/HĐ (dòng quà từ DB không mang cờ cumulative).
-        const cumulativePromoInfo = new Map<number, { perTime: number }>();
+        // unitMode="carton": perTime tính theo thùng; dòng quà từ DB lưu theo GÓI
+        // → khi suy ngược số suất phải chia thêm conversionValue của SP quà.
+        const cumulativePromoInfo = new Map<
+          number,
+          { perTime: number; unitMode?: string }
+        >();
         for (const p of [...discoveryGiftPromos, ...giftPromos]) {
           if (!p.cumulative) continue;
           const rt = Number(p.rewardTimes || 0);
@@ -544,7 +549,10 @@ export default function BanHangPage() {
               ? Number(p.rewardQuantity || 0) / rt
               : Number(p.rewardQuantity || 0);
           if (perTime > 0 && !cumulativePromoInfo.has(p.promotionId)) {
-            cumulativePromoInfo.set(p.promotionId, { perTime });
+            cumulativePromoInfo.set(p.promotionId, {
+              perTime,
+              unitMode: p.unitMode,
+            });
           }
         }
         const cumulativePromoIds = new Set(cumulativePromoInfo.keys());
@@ -558,6 +566,7 @@ export default function BanHangPage() {
             // Tái dựng phân bổ quà cộng dồn khi mở lại đơn/HĐ: dòng quà từ DB
             // không mang cờ cumulative & tab chưa có cumulativeGiftSelections.
             // Suy ngược số suất = SL quà / perTime cho từng SP quà.
+            // carton: SL quà (gói) / perTime (thùng) / conversionValue (gói/thùng).
             const reconstructedSel: Record<number, CumulativeGiftSelection[]> = {
               ...(t.cumulativeGiftSelections || {}),
             };
@@ -569,9 +578,25 @@ export default function BanHangPage() {
                 (g) => g.promotionId === promoId && Number(g.product?.id) > 0
               );
               if (dbGifts.length === 0) continue;
+              // Lấy conversionValue của từng SP quà từ rewardOptions của CT (carton).
+              const promoInfo = [...discoveryGiftPromos, ...giftPromos].find(
+                (pp) => pp.promotionId === promoId
+              );
+              const convOf = (pid: number) => {
+                const opt = promoInfo?.rewardOptions?.find(
+                  (o) => o.productId === pid
+                );
+                return Number(opt?.conversionValue || 1) || 1;
+              };
+              const isCarton = info.unitMode === "carton";
               const sels: CumulativeGiftSelection[] = [];
               for (const g of dbGifts) {
-                const times = Math.round(Number(g.quantity) / info.perTime);
+                const goi = Number(g.quantity);
+                const times = isCarton
+                  ? Math.round(
+                      goi / info.perTime / convOf(Number(g.product.id))
+                    )
+                  : Math.round(goi / info.perTime);
                 if (times <= 0) continue;
                 sels.push({
                   productId: Number(g.product.id),
@@ -693,11 +718,17 @@ export default function BanHangPage() {
                       (o) => o.productId === sel.productId
                     );
                     if (!opt) continue;
-                    let qty = times * perTime;
+                    let qty = times * perTime; // đơn vị CT (gói hoặc thùng)
                     if (opt.remaining != null) {
                       qty = Math.min(qty, Number(opt.remaining));
                     }
-                    if (qty <= 0) continue;
+                    // carton: quy số quà (thùng) → gói theo conversionValue
+                    // của SP quà được chọn.
+                    const isCarton = promo.unitMode === "carton";
+                    const qtyGoi = isCarton
+                      ? Math.round(qty * Number(opt.conversionValue || 1))
+                      : qty;
+                    if (qtyGoi <= 0) continue;
                     newGifts.push({
                       rowId: `promo_${promo.promotionId}_gift_${sel.productId}`,
                       product: {
@@ -706,7 +737,7 @@ export default function BanHangPage() {
                         code: opt.productCode || "",
                         basePrice: 0,
                       },
-                      quantity: qty,
+                      quantity: qtyGoi,
                       price: isBuyY ? Number(promo.promoPrice || 0) : 0,
                       discount: 0,
                       conditionType: "normal",

@@ -30,6 +30,7 @@ interface RewardOpt {
   productName?: string;
   availableStock: number;
   remaining?: number | null;
+  conversionValue?: number;
 }
 
 /**
@@ -97,6 +98,8 @@ export function CartPromotionSummary({
         );
         const needAllocate =
           enabled && qualified && requiresChoice && allocatedTimes !== p.completedTimes;
+        // Nhãn đơn vị theo chế độ tính của CT.
+        const u = p.unitMode === "carton" ? "thùng" : "gói";
 
         return (
           <div
@@ -139,7 +142,7 @@ export function CartPromotionSummary({
             {!enabled && (
               <p className="mt-1 text-xs text-gray-500">
                 Cộng dồn {p.matchedProductIds.length} sản phẩm trong chương
-                trình. Đã mua {p.currentQuantity}/{p.requiredQuantity}.
+                trình. Đã mua {p.currentQuantity}/{p.requiredQuantity} {u}.
               </p>
             )}
 
@@ -148,11 +151,11 @@ export function CartPromotionSummary({
               <div className="mt-1.5">
                 <div className="flex justify-between text-xs text-gray-600">
                   <span>
-                    Đã mua {p.currentQuantity} / {p.requiredQuantity}
+                    Đã mua {p.currentQuantity} / {p.requiredQuantity} {u}
                   </span>
                   <span>
-                    Còn {p.remainingToNextReward} để nhận{" "}
-                    {p.rewardQuantityPerTime} quà
+                    Còn {p.remainingToNextReward} {u} để nhận{" "}
+                    {p.rewardQuantityPerTime} {u}
                   </span>
                 </div>
                 <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-200">
@@ -168,9 +171,9 @@ export function CartPromotionSummary({
             {enabled && qualified && (
               <div className="mt-1.5 space-y-1.5">
                 <div className="text-xs text-gray-700">
-                  {p.currentQuantity} sản phẩm hợp lệ · Đạt{" "}
+                  {p.currentQuantity} {u} hợp lệ · Đạt{" "}
                   <strong>{p.completedTimes} suất</strong> · Tổng{" "}
-                  <strong>{p.earnedRewardQuantity} quà</strong>
+                  <strong>{p.earnedRewardQuantity} {u}</strong>
                 </div>
 
                 {requiresChoice ? (
@@ -179,19 +182,36 @@ export function CartPromotionSummary({
                       <div className="space-y-0.5">
                         {selections
                           .filter((s) => s.rewardTimes > 0)
-                          .map((s) => (
-                            <div
-                              key={s.productId}
-                              className="flex justify-between text-xs text-gray-700">
-                              <span>
-                                {s.productName || `SP#${s.productId}`}
-                              </span>
-                              <span>
-                                {s.rewardTimes} suất ·{" "}
-                                {s.rewardTimes * p.rewardQuantityPerTime} quà
-                              </span>
-                            </div>
-                          ))}
+                          .map((s) => {
+                            const opt = options.find(
+                              (o) => o.productId === s.productId
+                            );
+                            // carton: số gói thực tế = suất × perTime × conversionValue.
+                            const perProd =
+                              s.rewardTimes * p.rewardQuantityPerTime;
+                            const goi =
+                              p.unitMode === "carton"
+                                ? Math.round(
+                                    perProd *
+                                      Number(opt?.conversionValue || 1)
+                                  )
+                                : perProd;
+                            return (
+                              <div
+                                key={s.productId}
+                                className="flex justify-between text-xs text-gray-700">
+                                <span>
+                                  {s.productName || `SP#${s.productId}`}
+                                </span>
+                                <span>
+                                  {s.rewardTimes} suất ·{" "}
+                                  {p.unitMode === "carton"
+                                    ? `${perProd} thùng (${goi} gói)`
+                                    : `${perProd} quà`}
+                                </span>
+                              </div>
+                            );
+                          })}
                       </div>
                     )}
                     {needAllocate && (
@@ -254,6 +274,8 @@ function GiftAllocationDialog({
 }) {
   const totalTimes = promo.completedTimes;
   const perTime = promo.rewardQuantityPerTime;
+  const isCarton = promo.unitMode === "carton";
+  const u = isCarton ? "thùng" : "quà";
 
   // Map productId -> số suất đang chọn.
   const [draft, setDraft] = useState<Record<number, number>>(() => {
@@ -314,8 +336,13 @@ function GiftAllocationDialog({
 
         <div className="px-4 py-2 text-sm text-gray-600">
           Đạt <strong>{totalTimes} suất</strong> · Mỗi suất nhận{" "}
-          <strong>{perTime}</strong> sản phẩm · Tổng{" "}
-          <strong>{totalTimes * perTime}</strong> quà
+          <strong>{perTime} {u}</strong> · Tổng{" "}
+          <strong>{totalTimes * perTime} {u}</strong>
+          {isCarton && (
+            <span className="block text-xs text-gray-400">
+              Số gói thực tế = số thùng × định lượng đóng gói của từng SP quà.
+            </span>
+          )}
         </div>
 
         <div className="max-h-[50vh] space-y-1 overflow-auto px-4 py-2">
@@ -334,8 +361,11 @@ function GiftAllocationDialog({
                   <div className="text-xs text-gray-500">
                     Tồn khuyến mãi {o.availableStock}
                     {o.remaining != null
-                      ? ` · Còn được tặng ${o.remaining}`
+                      ? ` · Còn được tặng ${o.remaining} ${u}`
                       : " · Không giới hạn"}
+                    {isCarton &&
+                      Number(o.conversionValue || 0) > 0 &&
+                      ` · ${o.conversionValue} gói/thùng`}
                   </div>
                 </div>
                 {outOfStock ? (
@@ -370,7 +400,26 @@ function GiftAllocationDialog({
               allocated === totalTimes ? "text-green-600" : "text-amber-600"
             }>
             Đã phân bổ {allocated} / {totalTimes} suất · {allocated * perTime} /{" "}
-            {totalTimes * perTime} quà
+            {totalTimes * perTime} {u}
+            {isCarton && allocated > 0 && (
+              <span className="text-gray-400">
+                {" "}
+                ·{" "}
+                {options
+                  .filter((o) => (draft[o.productId] || 0) > 0)
+                  .reduce(
+                    (s, o) =>
+                      s +
+                      Math.round(
+                        (draft[o.productId] || 0) *
+                          perTime *
+                          Number(o.conversionValue || 1)
+                      ),
+                    0
+                  )}{" "}
+                gói
+              </span>
+            )}
           </span>
         </div>
 

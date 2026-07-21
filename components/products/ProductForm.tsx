@@ -160,6 +160,7 @@ export function ProductForm({
       shippingWeightUnit: product?.shippingWeightUnit || "g",
       vat: product?.vat ?? 8,
       unit: product?.unit || "",
+      conversionValue: product?.conversionValue ?? 1,
       isDirectSale: product?.isDirectSale || false,
       isPieceUnit: product?.isPieceUnit ?? false,
       isActive: product?.isActive ?? true,
@@ -350,9 +351,10 @@ export function ProductForm({
             ? Number(data.vat)
             : 8,
         unit: data.unit || undefined,
-        conversionValue: data.conversionValue
-          ? Number(data.conversionValue)
-          : undefined,
+        conversionValue: Math.max(
+          1,
+          Math.floor(Number(data.conversionValue) || 1)
+        ),
         attributesText:
           attributes.length > 0
             ? attributes.map((a) => `${a.name}:${a.value}`).join("|")
@@ -786,7 +788,7 @@ export function ProductForm({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="grid grid-cols-3 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Đơn vị tính
@@ -796,6 +798,22 @@ export function ProductForm({
                     className="w-full border rounded px-3 py-2 bg-white"
                     placeholder="cái, hộp, thùng..."
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Định lượng đóng gói
+                  </label>
+                  <input
+                    {...register("conversionValue", { valueAsNumber: true })}
+                    type="number"
+                    min={1}
+                    step={1}
+                    className="w-full border rounded px-3 py-2 bg-white"
+                    placeholder="1"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Ví dụ: 12 nghĩa là 1 thùng gồm 12 đơn vị sản phẩm.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">

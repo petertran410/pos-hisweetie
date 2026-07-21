@@ -3,6 +3,7 @@
 import { InternalUseForm } from "@/components/internal-uses/InternalUseForm";
 import { useInternalUse } from "@/lib/hooks/useInternalUses";
 import { useParams } from "next/navigation";
+import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function EditInternalUsePage() {
   const params = useParams();
@@ -17,5 +18,9 @@ export default function EditInternalUsePage() {
     );
   }
 
-  return <InternalUseForm internalUse={internalUse || null} />;
+  return (
+    <PagePermissionGuard resource="internal-use" action="update">
+      <InternalUseForm internalUse={internalUse || null} />
+    </PagePermissionGuard>
+  );
 }

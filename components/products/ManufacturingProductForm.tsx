@@ -213,6 +213,7 @@ export function ManufacturingProductForm({
       shippingWeightUnit: product?.shippingWeightUnit || "g",
       vat: product?.vat ?? 8,
       unit: product?.unit || "",
+      conversionValue: product?.conversionValue ?? 1,
       isDirectSale: product?.isDirectSale || false,
       isActive: product?.isActive ?? true,
       allowsSale: product?.allowsSale ?? true,
@@ -577,6 +578,10 @@ export function ManufacturingProductForm({
             ? Number(data.vat)
             : 8,
         unit: data.unit || undefined,
+        conversionValue: Math.max(
+          1,
+          Math.floor(Number(data.conversionValue) || 1)
+        ),
         components: components.map((comp) => ({
           componentProductId: comp.componentProductId,
           quantity: comp.quantity,
@@ -1198,6 +1203,23 @@ export function ManufacturingProductForm({
                   className="w-full border rounded px-3 py-2"
                   placeholder="cái, chiếc, hộp..."
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Định lượng đóng gói
+                </label>
+                <input
+                  {...register("conversionValue", { valueAsNumber: true })}
+                  type="number"
+                  min={1}
+                  step={1}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="1"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Ví dụ: 12 nghĩa là 1 thùng gồm 12 đơn vị sản phẩm.
+                </p>
               </div>
 
               <div>

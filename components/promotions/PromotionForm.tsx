@@ -46,6 +46,12 @@ const NEEDS_BUY_QTY: PromotionType[] = [
   "BUY_N_GET_M_SAME",
   "BUY_X_BUY_Y_PRICE",
 ];
+// Loại hỗ trợ chọn tính theo gói/thùng (carton mode)
+const UNIT_MODE_TYPES: PromotionType[] = [
+  "BUY_X_GET_Y",
+  "BUY_N_GET_M_SAME",
+  "BUY_X_BUY_Y_PRICE",
+];
 
 export function PromotionForm({ promotion, onClose }: Props) {
   const isEdit = !!promotion;
@@ -77,6 +83,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
     minOrderValue: 0,
     minQuantity: 0,
     applyWeekdays: [],
+    unitMode: "unit",
     branchIds: [],
     customerIds: [],
     customerGroupIds: [],
@@ -125,6 +132,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
       forAllUser: promotion.forAllUser,
       minOrderValue: Number(promotion.minOrderValue),
       minQuantity: Number(promotion.minQuantity),
+      unitMode: promotion.unitMode || "unit",
       maxDiscountAmount: promotion.maxDiscountAmount
         ? Number(promotion.maxDiscountAmount)
         : undefined,
@@ -185,9 +193,12 @@ export function PromotionForm({ promotion, onClose }: Props) {
     if (type === "BUY_X_GET_Y" || type === "BUY_N_GET_M_SAME" || type === "GIFT_BY_INVOICE")
       rewardType = "gift";
     else if (type === "BUY_X_BUY_Y_PRICE") rewardType = "discounted_buy";
+    const supportsUnit = UNIT_MODE_TYPES.includes(type);
     setForm((f) => ({
       ...f,
       type,
+      // Reset về "unit" nếu loại mới không hỗ trợ carton.
+      unitMode: supportsUnit ? f.unitMode || "unit" : "unit",
       rewards: [
         {
           ...f.rewards[0],
@@ -244,6 +255,9 @@ export function PromotionForm({ promotion, onClose }: Props) {
     form.type === "INVOICE_DISCOUNT" ||
     form.type === "PRODUCT_DISCOUNT" ||
     form.type === "CATEGORY_DISCOUNT";
+  const supportsUnitMode = UNIT_MODE_TYPES.includes(form.type);
+  const isCarton = form.unitMode === "carton";
+  const unitLabel = isCarton ? "thùng" : "gói";
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/40 p-4">
@@ -449,10 +463,51 @@ export function PromotionForm({ promotion, onClose }: Props) {
                   </div>
                 )}
 
+                {supportsUnitMode && (
+                  <div className="rounded-md bg-blue-50 p-3">
+                    <label className="text-xs font-medium text-blue-800">
+                      Tính số lượng theo
+                    </label>
+                    <div className="mt-1.5 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm({ ...form, unitMode: "unit" })
+                        }
+                        className={`rounded px-3 py-1.5 text-sm ${
+                          !isCarton
+                            ? "bg-brand text-white"
+                            : "bg-white text-gray-700 border border-gray-300"
+                        }`}>
+                        Theo gói (đơn lẻ)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm({ ...form, unitMode: "carton" })
+                        }
+                        className={`rounded px-3 py-1.5 text-sm ${
+                          isCarton
+                            ? "bg-brand text-white"
+                            : "bg-white text-gray-700 border border-gray-300"
+                        }`}>
+                        Theo thùng (quy đổi)
+                      </button>
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-blue-700">
+                      {isCarton
+                        ? "Ngưỡng và quà tính theo thùng. Khi lên đơn, hệ thống tự quy đổi số gói trong giỏ sang thùng theo định lượng đóng gói (conversionValue) của từng SP — cho phép gộp nhiều SP khác định lượng."
+                        : "Ngưỡng và quà tính theo gói/đơn lẻ (hành vi mặc định)."}
+                    </p>
+                  </div>
+                )}
+
                 {NEEDS_BUY_QTY.includes(form.type) && (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-gray-500">Số lượng mua (X / N)</label>
+                      <label className="text-xs text-gray-500">
+                        Số lượng mua (X / N) {supportsUnitMode && `· ${unitLabel}`}
+                      </label>
                       <input
                         type="number"
                         className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
@@ -464,7 +519,8 @@ export function PromotionForm({ promotion, onClose }: Props) {
                     </div>
                     <div>
                       <label className="text-xs text-gray-500">
-                        Số lượng tặng / mua kèm (Y / M)
+                        Số lượng tặng / mua kèm (Y / M){" "}
+                        {supportsUnitMode && `· ${unitLabel}`}
                       </label>
                       <input
                         type="number"

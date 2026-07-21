@@ -85,6 +85,8 @@ export interface Promotion {
   usageLimit?: number | null;
   usageCount: number;
   autoApply: boolean;
+  // Chế độ tính số lượng: "unit" (gói) | "carton" (thùng).
+  unitMode?: string;
   rewards: PromotionReward[];
   branches?: { branchId: number }[];
   customers?: { customerId: number; customer?: { id: number; name: string; phone?: string } }[];
@@ -201,6 +203,8 @@ export interface CreatePromotionPayload {
   maxRewardQuantity?: number | null;
   usageLimit?: number | null;
   autoApply?: boolean;
+  // Chế độ tính số lượng: "unit" (gói) | "carton" (thùng). Mặc định "unit".
+  unitMode?: string;
   branchIds?: number[];
   customerIds?: number[];
   customerGroupIds?: number[];
@@ -260,6 +264,9 @@ export interface RewardOption {
   availableStock: number;
   // Số quà còn được tặng (lifetime) cho SP này. null = không giới hạn.
   remaining?: number | null;
+  // Số gói/thùng (Product.conversionValue) — FE quy đổi quà (thùng) → gói
+  // khi phân bổ ở carton mode.
+  conversionValue?: number;
 }
 
 export interface EligiblePromotion {
@@ -286,6 +293,8 @@ export interface EligiblePromotion {
   cumulative?: boolean;
   // Số suất (số lần đạt ngưỡng) — dùng để phân bổ quà theo suất.
   rewardTimes?: number;
+  // Chế độ tính: "unit" (gói) | "carton" (thùng).
+  unitMode?: string;
 }
 
 // Tiến độ tích lũy KM sinh quà (kể cả chưa đạt ngưỡng) — FE hiển thị thanh tiến độ.
@@ -302,6 +311,8 @@ export interface PromotionProgress {
   remainingToNextReward: number;
   rewardQuantityPerTime: number;
   earnedRewardQuantity: number;
+  // Chế độ tính: "unit" (gói) | "carton" (thùng) — để FE gắn nhãn đơn vị.
+  unitMode?: string;
 }
 
 export interface EvaluateResult {

@@ -1,8 +1,8 @@
 "use client";
 
 import { Fragment } from "react";
-import { useState } from "react";
-import type { InternalUse } from "@/lib/api/internalUses";
+import { useState, useEffect, useRef } from "react";
+import type { InternalUse, InternalUseQueryParams } from "@/lib/api/internalUses";
 import { formatCurrency } from "../../lib/utils";
 import {
   Plus,
@@ -11,11 +11,14 @@ import {
   ChevronRight,
   ChevronDown,
   Download,
+  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { InternalUseDetailRow } from "./InternalUseDetailRow";
 import { CodeLink } from "@/components/shared/CodeLink";
 import { ColumnToggle } from "../shared/ColumnToggle";
+import { PermissionGate } from "../permissions/PermissionGate";
+import { useExportInternalUses } from "@/lib/hooks/useInternalUses";
 import {
   useColumnVisibility,
   type ColumnConfig,
@@ -33,6 +36,8 @@ interface InternalUsesTableProps {
   onLimitChange: (limit: number) => void;
   searchValue: string;
   onSearchChange: (value: string) => void;
+  // Bộ lọc hiện tại (đã gộp sidebar filters + search) để xuất file khớp danh sách.
+  exportParams: InternalUseQueryParams;
 }
 
 const getStatusText = (status: number) => {
@@ -148,6 +153,7 @@ export function InternalUsesTable({
   onLimitChange,
   searchValue,
   onSearchChange,
+  exportParams,
 }: InternalUsesTableProps) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -166,6 +172,25 @@ export function InternalUsesTable({
     "internalUseTableColumns",
     columnDefs
   );
+
+  const { exportToFile, exportDetailToFile, isExporting } =
+    useExportInternalUses();
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showExportMenu]);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === internalUses.length) {
@@ -216,14 +241,42 @@ export function InternalUsesTable({
             Xuất dùng nội bộ
           </button>
 
-          <button
-            type="button"
-            disabled
-            title="Tính năng đang phát triển"
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-500 text-sm rounded-lg disabled:opacity-60 disabled:cursor-not-allowed">
-            <Download className="w-4 h-4" />
-            Xuất file
-          </button>
+          <PermissionGate resource="internal-use" action="export">
+            <div ref={exportMenuRef} className="relative">
+              <button
+                onClick={() => setShowExportMenu((o) => !o)}
+                disabled={isExporting}
+                className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {isExporting ? "Đang xuất..." : "Xuất file"}
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              {showExportMenu && (
+                <div className="absolute right-0 top-full mt-1 z-30 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                  <button
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      exportToFile(exportParams);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors">
+                    Xuất tổng quan
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      exportDetailToFile(exportParams);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors border-t border-gray-100">
+                    Xuất chi tiết
+                  </button>
+                </div>
+              )}
+            </div>
+          </PermissionGate>
 
           <ColumnToggle columns={columns} onToggle={toggleColumn} />
         </div>

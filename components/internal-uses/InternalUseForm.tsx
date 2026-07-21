@@ -66,6 +66,9 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
 
   const canManagePurpose = usePermission("internal-use-purpose", "manage");
   const canViewCost = usePermission("internal-use", "view_cost_price");
+  // Chỉ người duyệt (có internal-use:complete) mới được "Hoàn thành" (duyệt +
+  // xuất kho). Người tạo thường chỉ được "Lưu tạm".
+  const canComplete = usePermission("internal-use", "complete");
 
   const { data: searchResults } = useProducts({
     search: searchQuery,
@@ -700,13 +703,15 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                 <span>Lưu tạm</span>
               </button>
 
-              <button
-                onClick={() => handleSubmit(false)}
-                disabled={isPending}
-                className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                <span>✓</span>
-                <span>Hoàn thành</span>
-              </button>
+              {canComplete && (
+                <button
+                  onClick={() => handleSubmit(false)}
+                  disabled={isPending}
+                  className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  <span>✓</span>
+                  <span>Hoàn thành</span>
+                </button>
+              )}
             </div>
           )}
         </div>

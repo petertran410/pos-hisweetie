@@ -17,6 +17,7 @@ const TABS: Array<{ key: string; label: string }> = [
   { key: "order_supplier", label: "Đặt hàng nhập" },
   { key: "purchase_order", label: "Nhập hàng" },
   { key: "transfer", label: "Chuyển hàng" },
+  { key: "internal_use", label: "Xuất dùng nội bộ" },
   { key: "cash_flow_receipt", label: "Phiếu thu" },
   { key: "cash_flow_payment", label: "Phiếu chi" },
   { key: "consignment", label: "Ký gửi" },

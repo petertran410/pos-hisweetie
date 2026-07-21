@@ -4,6 +4,10 @@ import {
   type InternalUseQueryParams,
 } from "../api/internalUses";
 import { toast } from "sonner";
+import { useState } from "react";
+import { API_URL } from "@/lib/config/api";
+import { useAuthStore } from "../store/auth";
+import { useBranchStore } from "../store/branch";
 
 export function useInternalUses(params?: InternalUseQueryParams) {
   return useQuery({
@@ -143,4 +147,100 @@ export function useCancelInternalUse() {
       toast.error(error.message || "Hủy phiếu xuất dùng nội bộ thất bại");
     },
   });
+}
+
+async function downloadExcelFromUrl(url: URL, filename: string) {
+  const token = useAuthStore.getState().token;
+  const selectedBranch = useBranchStore.getState().selectedBranch;
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(selectedBranch?.id
+        ? { "X-Branch-Id": String(selectedBranch.id) }
+        : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || "Lỗi khi xuất dữ liệu");
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename=([^;]+)/);
+  const finalName = match ? match[1].trim() : filename;
+
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = finalName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(objectUrl);
+}
+
+function buildInternalUseExportUrl(
+  path: string,
+  filters: InternalUseQueryParams
+): URL {
+  const { pageSize: _ps, currentItem: _ci, ...exportFilters } = filters;
+  const url = new URL(`${API_URL}${path}`);
+  Object.entries(exportFilters).forEach(([k, v]) => {
+    if (v === undefined || v === null) return;
+    if (Array.isArray(v)) {
+      if (v.length > 0) url.searchParams.append(k, v.join(","));
+    } else {
+      url.searchParams.append(k, String(v));
+    }
+  });
+  return url;
+}
+
+/**
+ * Xuất danh sách phiếu xuất dùng nội bộ (theo bộ lọc hiện tại) ra file Excel.
+ * - exportToFile: xuất tổng quan (mỗi phiếu 1 dòng)
+ * - exportDetailToFile: xuất chi tiết (mỗi sản phẩm 1 dòng)
+ */
+export function useExportInternalUses() {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportToFile = async (filters: InternalUseQueryParams) => {
+    setIsExporting(true);
+    try {
+      const url = buildInternalUseExportUrl(
+        "/internal-use/export",
+        filters
+      );
+      await downloadExcelFromUrl(url, `XuatDungNoiBo_${Date.now()}.xlsx`);
+      toast.success("Xuất file thành công");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const exportDetailToFile = async (filters: InternalUseQueryParams) => {
+    setIsExporting(true);
+    try {
+      const url = buildInternalUseExportUrl(
+        "/internal-use/export-detail",
+        filters
+      );
+      await downloadExcelFromUrl(
+        url,
+        `XuatDungNoiBo_ChiTiet_${Date.now()}.xlsx`
+      );
+      toast.success("Xuất file thành công");
+    } catch (e: any) {
+      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return { exportToFile, exportDetailToFile, isExporting };
 }

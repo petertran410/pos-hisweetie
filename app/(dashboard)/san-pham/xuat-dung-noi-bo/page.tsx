@@ -61,6 +61,10 @@ export default function InternalUsesPage() {
           onLimitChange={setLimit}
           searchValue={search}
           onSearchChange={setSearch}
+          exportParams={{
+            ...filters,
+            search: debouncedSearch || undefined,
+          }}
         />
       </div>
 
