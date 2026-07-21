@@ -8,6 +8,18 @@ import type {
 } from "@/app/(dashboard)/ban-hang/page";
 import type { PromotionProgress } from "@/lib/types/promotion";
 
+/**
+ * Làm tròn tối đa 2 chữ số thập phân cho hiển thị số lượng (thùng/gói).
+ * VD: 4.25 thùng giữ 4.25; 5.7→5.7; 15→15. Dùng cho tiến độ KM — tránh hiện
+ * 4.250000000001 do phép chia số gói / conversionValue.
+ */
+function fmt(n: number | undefined | null): string {
+  if (n == null || isNaN(Number(n))) return "0";
+  const r = Math.round(Number(n) * 100) / 100;
+  return r.toString();
+}
+
+
 interface Props {
   progress: PromotionProgress[];
   cartItems: CartItem[];
@@ -142,7 +154,7 @@ export function CartPromotionSummary({
             {!enabled && (
               <p className="mt-1 text-xs text-gray-500">
                 Cộng dồn {p.matchedProductIds.length} sản phẩm trong chương
-                trình. Đã mua {p.currentQuantity}/{p.requiredQuantity} {u}.
+                trình. Đã mua {fmt(p.currentQuantity)}/{fmt(p.requiredQuantity)} {u}.
               </p>
             )}
 
@@ -151,11 +163,11 @@ export function CartPromotionSummary({
               <div className="mt-1.5">
                 <div className="flex justify-between text-xs text-gray-600">
                   <span>
-                    Đã mua {p.currentQuantity} / {p.requiredQuantity} {u}
+                    Đã mua {fmt(p.currentQuantity)} / {fmt(p.requiredQuantity)} {u}
                   </span>
                   <span>
-                    Còn {p.remainingToNextReward} {u} để nhận{" "}
-                    {p.rewardQuantityPerTime} {u}
+                    Còn {fmt(p.remainingToNextReward)} {u} để nhận{" "}
+                    {fmt(p.rewardQuantityPerTime)} {u}
                   </span>
                 </div>
                 <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-200">
@@ -171,9 +183,9 @@ export function CartPromotionSummary({
             {enabled && qualified && (
               <div className="mt-1.5 space-y-1.5">
                 <div className="text-xs text-gray-700">
-                  {p.currentQuantity} {u} hợp lệ · Đạt{" "}
+                  {fmt(p.currentQuantity)} {u} hợp lệ · Đạt{" "}
                   <strong>{p.completedTimes} suất</strong> · Tổng{" "}
-                  <strong>{p.earnedRewardQuantity} {u}</strong>
+                  <strong>{fmt(p.earnedRewardQuantity)} {u}</strong>
                 </div>
 
                 {requiresChoice ? (
@@ -206,8 +218,8 @@ export function CartPromotionSummary({
                                 <span>
                                   {s.rewardTimes} suất ·{" "}
                                   {p.unitMode === "carton"
-                                    ? `${perProd} thùng (${goi} gói)`
-                                    : `${perProd} quà`}
+                                    ? `${fmt(perProd)} thùng (${goi} gói)`
+                                    : `${fmt(perProd)} quà`}
                                 </span>
                               </div>
                             );
@@ -336,8 +348,8 @@ function GiftAllocationDialog({
 
         <div className="px-4 py-2 text-sm text-gray-600">
           Đạt <strong>{totalTimes} suất</strong> · Mỗi suất nhận{" "}
-          <strong>{perTime} {u}</strong> · Tổng{" "}
-          <strong>{totalTimes * perTime} {u}</strong>
+          <strong>{fmt(perTime)} {u}</strong> · Tổng{" "}
+          <strong>{fmt(totalTimes * perTime)} {u}</strong>
           {isCarton && (
             <span className="block text-xs text-gray-400">
               Số gói thực tế = số thùng × định lượng đóng gói của từng SP quà.
@@ -361,7 +373,7 @@ function GiftAllocationDialog({
                   <div className="text-xs text-gray-500">
                     Tồn khuyến mãi {o.availableStock}
                     {o.remaining != null
-                      ? ` · Còn được tặng ${o.remaining} ${u}`
+                      ? ` · Còn được tặng ${fmt(o.remaining)} ${u}`
                       : " · Không giới hạn"}
                     {isCarton &&
                       Number(o.conversionValue || 0) > 0 &&
@@ -399,8 +411,8 @@ function GiftAllocationDialog({
             className={
               allocated === totalTimes ? "text-green-600" : "text-amber-600"
             }>
-            Đã phân bổ {allocated} / {totalTimes} suất · {allocated * perTime} /{" "}
-            {totalTimes * perTime} {u}
+            Đã phân bổ {allocated} / {totalTimes} suất · {fmt(allocated * perTime)} /{" "}
+            {fmt(totalTimes * perTime)} {u}
             {isCarton && allocated > 0 && (
               <span className="text-gray-400">
                 {" "}
