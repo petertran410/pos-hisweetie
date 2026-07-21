@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { X, Search, ChevronDown, Minus, Plus, Calendar, Copy, RefreshCw, Trash2 } from "lucide-react";
 import { MiniCalendar } from "@/components/ui/MiniCalendar";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { useSuppliers, useSupplier } from "@/lib/hooks/useSuppliers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
@@ -41,16 +42,6 @@ function formatQuantity(value: number): string {
   return fixed.replace(/\.?0+$/, "");
 }
 
-// Định dạng số có ngăn cách hàng nghìn, tối đa `maxFractionDigits` số thập
-// phân (mặc định 3 cho đơn giá). Không ép số thập phân tối thiểu nên 1000 vẫn
-// hiển thị "1,000", còn 1001.667 hiển thị "1,001.667".
-function formatNumber(value: number, maxFractionDigits = 3): string {
-  if (!isFinite(value)) return "0";
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: maxFractionDigits,
-  }).format(value);
-}
-
 // Làm tròn về `digits` số thập phân, tránh sai số dấu phẩy động (vd 0.1+0.2).
 function roundTo(value: number, digits = 3): number {
   const f = Math.pow(10, digits);
@@ -64,65 +55,6 @@ function roundTo(value: number, digits = 3): number {
 // rỗng (zero digits), regex cũ "/^\d*\.?\d{0,2}$/" sai ở chỗ bắt buộc có
 // phần thập phân — dẫn đến user gõ "1." bị reject → mất focus.
 const QUANTITY_INPUT_PATTERN = /^\d*(?:\.\d{0,2})?$/;
-
-/**
- * Ô nhập số tiền cho phép gõ số thập phân mượt (giữ nguyên dấu "." và số 0 ở
- * cuối trong lúc gõ). Khi blur sẽ format lại theo locale.
- * - `maxFractionDigits`: số chữ số thập phân tối đa được phép gõ.
- * - `onValueChange`: trả về number đã parse.
- */
-function NumericInput({
-  value,
-  onValueChange,
-  maxFractionDigits = 3,
-  disabled,
-  className,
-}: {
-  value: number;
-  onValueChange: (next: number) => void;
-  maxFractionDigits?: number;
-  disabled?: boolean;
-  className?: string;
-}) {
-  const [focused, setFocused] = useState(false);
-  const [raw, setRaw] = useState("");
-
-  // Khi không focus, hiển thị giá trị đã format từ prop (nguồn sự thật).
-  const display = focused ? raw : formatNumber(value, maxFractionDigits);
-
-  const decimalPattern = useMemo(
-    () =>
-      maxFractionDigits > 0
-        ? new RegExp(`^\\d*(?:\\.\\d{0,${maxFractionDigits}})?$`)
-        : /^\d*$/,
-    [maxFractionDigits]
-  );
-
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      value={display}
-      disabled={disabled}
-      className={className}
-      onFocus={(e) => {
-        setFocused(true);
-        // Bắt đầu gõ từ giá trị số thuần (bỏ dấu phẩy ngăn cách).
-        setRaw(value ? String(value) : "");
-        e.target.select();
-      }}
-      onChange={(e) => {
-        // Bỏ dấu phẩy ngăn cách, chỉ nhận số + tối đa N chữ số thập phân.
-        const cleaned = e.target.value.replace(/,/g, "");
-        if (cleaned === "" || decimalPattern.test(cleaned)) {
-          setRaw(cleaned);
-          onValueChange(cleaned === "" ? 0 : parseFloat(cleaned) || 0);
-        }
-      }}
-      onBlur={() => setFocused(false)}
-    />
-  );
-}
 
 /**
  * Ô nhập SỐ LƯỢNG cho phép gõ số thập phân mượt (tối đa 2 chữ số thập phân).
@@ -428,6 +360,25 @@ export function PurchaseOrderForm({
     }
   }, [isImportSupplier, purchaseOrder, orderSupplier, copyFrom, liveRateQuery.data]);
 
+  // Effect: đảm bảo discountType hợp lệ với currency (tương tự OrderSupplierForm).
+  // Form mới chọn NCC nước ngoài → currency=CNY nhưng discountType vẫn "amount"
+  // (default init) → dropdown hiển thị "CNY" (option đầu) nhưng state là
+  // "amount" → calculateTotalCNY chạy nhánh VND (chia tỷ giá) cho ra kết quả
+  // sai. Chỉ sửa khi mismatch để không wipe discount khi đang nhập hợp lệ.
+  useEffect(() => {
+    if (purchaseOrder || orderSupplier || copyFrom) return;
+    if (isCurrencyCNY && discountType === "amount") {
+      setDiscountType("cny");
+      setDiscount(0);
+      setDiscountRatio(0);
+    } else if (!isCurrencyCNY && discountType === "cny") {
+      setDiscountType("amount");
+      setDiscount(0);
+      setDiscountRatio(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCurrencyCNY, discountType, purchaseOrder, orderSupplier, copyFrom]);
+
   useEffect(() => {
     if (
       !purchaseOrder &&
@@ -445,11 +396,17 @@ export function PurchaseOrderForm({
     if (!orderSupplier) return null;
     const orderLevelDiscount = Number(orderSupplier.discount || 0);
     if (orderLevelDiscount === 0) return null;
+    // Đối xứng BE (purchase-orders.service.ts:492-497): chỉ cộng discount đã
+    // dùng từ các PN active (không nháp, không hủy). Trước đây FE cộng cả PN
+    // draft/cancelled → availableDiscount bị underestimate, chặn user nhập
+    // discount hợp lệ mà BE sẵn sàng nhận.
     const usedDiscount =
-      orderSupplier.purchaseOrders?.reduce((sum, po) => {
-        if (purchaseOrder && po.id === purchaseOrder.id) return sum;
-        return sum + Number(po.discount || 0);
-      }, 0) ?? 0;
+      (orderSupplier.purchaseOrders || [])
+        .filter((po) => !po.isDraft && po.status !== 2)
+        .reduce((sum, po) => {
+          if (purchaseOrder && po.id === purchaseOrder.id) return sum;
+          return sum + Number(po.discount || 0);
+        }, 0);
     return orderLevelDiscount - usedDiscount;
   }, [orderSupplier, purchaseOrder]);
 
@@ -459,7 +416,7 @@ export function PurchaseOrderForm({
         const price = roundTo(Number(item.price), 3);
         const discount = Number(item.discount);
         const quantity = Number(item.quantity);
-        const subTotal = Math.round(Number(item.totalPrice));
+        const subTotal = roundTo(Number(item.totalPrice), 2);
         return {
           productId: item.productId,
           productCode: item.productCode,
@@ -471,7 +428,7 @@ export function PurchaseOrderForm({
           // Giữ đúng thành tiền đã lưu: nếu khác công thức (do đơn giá lẻ thập
           // phân) thì coi như thành tiền là nguồn chính.
           manualSubTotal:
-            subTotal !== Math.round((price - discount) * quantity),
+            subTotal !== roundTo((price - discount) * quantity, 2),
           inventory: 0,
           vatRate: Number((item.product as any)?.vat ?? 8),
           note: item.description,
@@ -510,7 +467,7 @@ export function PurchaseOrderForm({
         const price = roundTo(Number(item.price), 3);
         const discount = Number(item.discount);
         const quantity = Number(item.quantity);
-        const subTotal = Math.round(Number(item.totalPrice));
+        const subTotal = roundTo(Number(item.totalPrice), 2);
         return {
           productId: item.productId,
           productCode: item.productCode,
@@ -520,7 +477,7 @@ export function PurchaseOrderForm({
           discount,
           subTotal,
           manualSubTotal:
-            subTotal !== Math.round((price - discount) * quantity),
+            subTotal !== roundTo((price - discount) * quantity, 2),
           inventory: 0,
           vatRate: Number((item.product as any)?.vat ?? 8),
           note: item.description,
@@ -571,7 +528,7 @@ export function PurchaseOrderForm({
             quantity: remaining,
             price,
             discount,
-            subTotal: Math.round((price - discount) * remaining),
+            subTotal: roundTo((price - discount) * remaining, 2),
             inventory: 0,
             vatRate: Number((item as any).product?.vat ?? 8),
             note: item.description,
@@ -602,10 +559,13 @@ export function PurchaseOrderForm({
       setDiscountType(orderSupplier.currency === "CNY" ? "ratio" : "amount");
 
       const orderLevelDiscount = Number(orderSupplier.discount || 0);
+      // Đối xứng BE (purchase-orders.service.ts:492-497): chỉ cộng discount từ
+      // PN active (không nháp, không hủy). Trước đây FE cộng cả PN draft/
+      // cancelled → default discount bị underestimate khi PDN có PN hủy/nháp.
       const usedDiscount =
-        orderSupplier.purchaseOrders?.reduce((sum, po) => {
-          return sum + Number(po.discount || 0);
-        }, 0) ?? 0;
+        (orderSupplier.purchaseOrders || [])
+          .filter((po) => !po.isDraft && po.status !== 2)
+          .reduce((sum, po) => sum + Number(po.discount || 0), 0);
       const remainingDiscount = orderLevelDiscount - usedDiscount;
       setDiscount(remainingDiscount > 0 ? remainingDiscount : 0);
 
@@ -680,7 +640,7 @@ export function PurchaseOrderForm({
 
     const cost = inventory ? Number(inventory.cost) : 0;
     const qty = quantity > 0 ? quantity : 1;
-    const price = roundTo(cost, 3);
+    const price = roundTo(cost, 2);
 
     const newProduct: ProductItem = {
       productId: product.id,
@@ -689,7 +649,7 @@ export function PurchaseOrderForm({
       quantity: qty,
       price,
       discount: 0,
-      subTotal: Math.round(price * qty),
+      subTotal: roundTo(price * qty, 2),
       inventory: Number(inventory?.onHand || 0),
       vatRate: Number(product.vat ?? 8),
       // Mặc định "normal" khi thêm mới. User có thể đổi sang "damaged"
@@ -779,11 +739,11 @@ export function PurchaseOrderForm({
         // suy lại đơn giá = thành tiền / SL + giảm giá (tối đa 3 số thập phân).
         item.price =
           quantity > 0
-            ? roundTo(item.subTotal / quantity + item.discount, 3)
+            ? roundTo(item.subTotal / quantity + item.discount, 2)
             : 0;
       } else {
-        // Đơn giá là nguồn chính → thành tiền tự tính, làm tròn về số nguyên.
-        item.subTotal = Math.round((item.price - item.discount) * quantity);
+        // Đơn giá là nguồn chính → thành tiền tự tính, làm tròn về 2 số thập phân.
+        item.subTotal = roundTo((item.price - item.discount) * quantity, 2);
       }
 
       // Recompute factorySubTotal for import suppliers
@@ -806,11 +766,11 @@ export function PurchaseOrderForm({
 
     setProducts((prev) => {
       const updated = [...prev];
-      const item = { ...updated[index], price: roundTo(price, 3) };
+      const item = { ...updated[index], price: roundTo(price, 2) };
       // User chỉnh đơn giá → đơn giá thành nguồn chính, thành tiền tự tính
-      // (số nguyên).
+      // (2 số thập phân).
       item.manualSubTotal = false;
-      item.subTotal = Math.round((item.price - item.discount) * item.quantity);
+        item.subTotal = roundTo((item.price - item.discount) * item.quantity, 2);
       updated[index] = item;
       return updated;
     });
@@ -832,10 +792,10 @@ export function PurchaseOrderForm({
         // Giữ thành tiền, suy lại đơn giá theo giảm giá mới.
         item.price =
           item.quantity > 0
-            ? roundTo(item.subTotal / item.quantity + discount, 3)
+            ? roundTo(item.subTotal / item.quantity + discount, 2)
             : 0;
       } else {
-        item.subTotal = Math.round((item.price - discount) * item.quantity);
+        item.subTotal = roundTo((item.price - discount) * item.quantity, 2);
       }
 
       updated[index] = item;
@@ -843,8 +803,8 @@ export function PurchaseOrderForm({
     });
   };
 
-  // User nhập trực tiếp ô Thành tiền: chốt thành tiền là số nguyên, suy ra
-  // đơn giá = thành tiền / SL + giảm giá (tối đa 3 số thập phân). Đặt cờ
+  // User nhập trực tiếp ô Thành tiền: chốt thành tiền (2 số thập phân), suy ra
+  // đơn giá = thành tiền / SL + giảm giá (tối đa 2 số thập phân). Đặt cờ
   // manualSubTotal để các thay đổi SL/giảm giá sau đó vẫn giữ thành tiền.
   const handleSubTotalChange = (index: number, subTotal: number) => {
     if (isFormDisabled) return;
@@ -856,7 +816,7 @@ export function PurchaseOrderForm({
 
     setProducts((prev) => {
       const updated = [...prev];
-      const roundedSubTotal = Math.round(subTotal);
+      const roundedSubTotal = roundTo(subTotal, 2);
       const item = {
         ...updated[index],
         subTotal: roundedSubTotal,
@@ -864,7 +824,7 @@ export function PurchaseOrderForm({
       };
       item.price =
         item.quantity > 0
-          ? roundTo(roundedSubTotal / item.quantity + item.discount, 3)
+          ? roundTo(roundedSubTotal / item.quantity + item.discount, 2)
           : 0;
       updated[index] = item;
       return updated;
@@ -873,7 +833,7 @@ export function PurchaseOrderForm({
 
   const handleFactoryPriceChange = (index: number, value: string) => {
     if (isFormDisabled) return;
-    const factoryPrice = parseFloat(value) || 0;
+    const factoryPrice = roundTo(parseFloat(value) || 0, 2);
 
     if (factoryPrice < 0) {
       toast.error("Đơn giá nhà máy không được nhỏ hơn 0");
@@ -885,12 +845,12 @@ export function PurchaseOrderForm({
       const item = { ...updated[index] };
       item.factoryPrice = factoryPrice;
       item.factorySubTotalManual = false;
-      item.factorySubTotal = factoryPrice * item.quantity;
-      
+      item.factorySubTotal = roundTo(factoryPrice * item.quantity, 2);
+
       // Auto-compute VND price & subTotal
-      item.price = roundTo(factoryPrice * (effectiveRate || 1), 3);
+      item.price = roundTo(factoryPrice * (effectiveRate || 1), 2);
       item.manualSubTotal = false;
-      item.subTotal = Math.round((item.price - item.discount) * item.quantity);
+        item.subTotal = roundTo((item.price - item.discount) * item.quantity, 2);
 
       updated[index] = item;
       return updated;
@@ -899,7 +859,7 @@ export function PurchaseOrderForm({
 
   const handleFactorySubTotalChange = (index: number, value: string) => {
     if (isFormDisabled) return;
-    const factorySubTotal = parseFloat(value) || 0;
+    const factorySubTotal = roundTo(parseFloat(value) || 0, 2);
 
     if (factorySubTotal < 0) {
       toast.error("Thành tiền nhà máy không được nhỏ hơn 0");
@@ -912,13 +872,13 @@ export function PurchaseOrderForm({
       item.factorySubTotal = factorySubTotal;
       item.factorySubTotalManual = true;
       if (item.quantity > 0) {
-        item.factoryPrice = factorySubTotal / item.quantity;
+        item.factoryPrice = roundTo(factorySubTotal / item.quantity, 2);
       }
 
       // Auto-compute VND price & subTotal
-      item.price = roundTo(item.factoryPrice * (effectiveRate || 1), 3);
+      item.price = roundTo(item.factoryPrice * (effectiveRate || 1), 2);
       item.manualSubTotal = false;
-      item.subTotal = Math.round((item.price - item.discount) * item.quantity);
+        item.subTotal = roundTo((item.price - item.discount) * item.quantity, 2);
 
       updated[index] = item;
       return updated;
@@ -936,7 +896,7 @@ export function PurchaseOrderForm({
               if (p.factorySubTotalManual) return p;
               return {
                 ...p,
-                factorySubTotal: (p.factoryPrice || 0) * (p.quantity || 0),
+                factorySubTotal: roundTo((p.factoryPrice || 0) * (p.quantity || 0), 2),
               };
             })
           );
@@ -951,13 +911,13 @@ export function PurchaseOrderForm({
     setProducts((prev) => {
       let changed = false;
       const next = prev.map((p) => {
-        const expectedPrice = roundTo(p.factoryPrice * effectiveRate, 3);
+        const expectedPrice = roundTo(p.factoryPrice * effectiveRate, 2);
         if (p.price === expectedPrice) return p;
         changed = true;
         return {
           ...p,
           price: expectedPrice,
-          subTotal: Math.round((expectedPrice - p.discount) * p.quantity),
+          subTotal: roundTo((expectedPrice - p.discount) * p.quantity, 2),
         };
       });
       return changed ? next : prev;
@@ -994,7 +954,7 @@ export function PurchaseOrderForm({
       discountType === "ratio"
         ? (factorySubTotalSum * discountRatio) / 100
         : discountType === "cny"
-          ? discount / (effectiveRate || 1)
+          ? discount
           : discount / (effectiveRate || 1);
     return factorySubTotalSum - discountAmountCNY;
   };
@@ -1098,8 +1058,8 @@ export function PurchaseOrderForm({
           price: Number(p.price),
           discount: Number(p.discount) || 0,
           discountRatio: 0,
-          // Gửi thành tiền (số nguyên) đã chốt trên form làm nguồn sự thật.
-          totalPrice: Math.round(Number(p.subTotal)),
+          // Gửi thành tiền (2 số thập phân) đã chốt trên form làm nguồn sự thật.
+          totalPrice: roundTo(Number(p.subTotal), 2),
           description: p.note,
           // Số thứ tự dòng (index+1) — đảm bảo cùng 1 SP có thể lặp lại
           // nhiều dòng với lineNumber khác nhau. BE generate nếu thiếu, nhưng
@@ -1153,9 +1113,9 @@ export function PurchaseOrderForm({
         quantity: Number(p.quantity),
         price: Number(p.price),
         discount: Number(p.discount) || 0,
-        // Gửi thành tiền (số nguyên) đã chốt trên form. BE lưu thẳng giá trị
-        // này thay vì recompute từ đơn giá (tránh lệch do đơn giá 3 số thập phân).
-        totalPrice: Math.round(Number(p.subTotal)),
+        // Gửi thành tiền (2 số thập phân) đã chốt trên form. BE lưu thẳng giá trị
+        // này thay vì recompute từ đơn giá (tránh lệch do đơn giá 2 số thập phân).
+        totalPrice: roundTo(Number(p.subTotal), 2),
         description: p.note,
         // Số thứ tự dòng. Khi tạo mới (không có purchaseOrder), luôn dùng
         // index+1 — đảm bảo unique key (purchaseOrderId, lineNumber) không
@@ -1459,7 +1419,7 @@ export function PurchaseOrderForm({
                             <NumericInput
                               value={item.price}
                               onValueChange={(v) => handlePriceChange(index, v)}
-                              maxFractionDigits={3}
+                              maxFractionDigits={2}
                               disabled={isFormDisabled ? true : false}
                               className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                             />
@@ -1483,7 +1443,7 @@ export function PurchaseOrderForm({
                             <NumericInput
                               value={item.subTotal}
                               onValueChange={(v) => handleSubTotalChange(index, v)}
-                              maxFractionDigits={0}
+                              maxFractionDigits={2}
                               disabled={isFormDisabled ? true : false}
                               className="w-full text-right border rounded px-2 py-1 text-sm font-medium disabled:bg-gray-100"
                             />
@@ -1495,7 +1455,7 @@ export function PurchaseOrderForm({
                             <NumericInput
                               value={item.factoryPrice}
                               onValueChange={(v) => handleFactoryPriceChange(index, String(v))}
-                              maxFractionDigits={3}
+                              maxFractionDigits={2}
                               disabled={isFormDisabled ? true : false}
                               className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                             />
@@ -1504,7 +1464,7 @@ export function PurchaseOrderForm({
                             <NumericInput
                               value={item.factorySubTotal}
                               onValueChange={(v) => handleFactorySubTotalChange(index, String(v))}
-                              maxFractionDigits={3}
+                              maxFractionDigits={2}
                               disabled={isFormDisabled ? true : false}
                               className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                             />

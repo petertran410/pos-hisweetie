@@ -60,7 +60,7 @@ const formatDateTime = (date?: string) =>
 
 // Format số CNY (làm tròn 2 chữ số thập phân, dùng dấu phẩy phân cách hàng nghìn)
 const formatCNY = (value: number) =>
-  new Intl.NumberFormat("vi-VN", {
+  new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 2,
   }).format(value) + " CNY";
 
@@ -553,7 +553,11 @@ export function OrderSuppliersTable({
                       className={`px-4 py-2.5 ${
                         isMoneyColumn ? "text-right" : "text-left"
                       } font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide`}
-                      style={{ width: col.width, minWidth: col.width, maxWidth: col.width }}>
+                      style={{
+                        width: col.width,
+                        minWidth: col.width,
+                        maxWidth: col.width,
+                      }}>
                       {col.label}
                     </th>
                   );
@@ -716,7 +720,7 @@ export function OrderSuppliersTable({
 
           <span className="text-xs text-gray-400">
             Trang {page}/{totalPages}
-            {total > 0 ? ` · ${total.toLocaleString("vi-VN")} phiếu` : ""}
+            {total > 0 ? ` · ${total.toLocaleString("en-US")} phiếu` : ""}
           </span>
         </div>
       </div>

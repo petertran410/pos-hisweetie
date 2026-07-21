@@ -325,22 +325,15 @@ export function OrderSupplierDetailRow({
 
   const canCancel = orderSupplier.status === 0 || orderSupplier.status === 1;
 
-  const receivedQuantities: Record<number, number> = {};
-  orderSupplier.purchaseOrders?.forEach((po: any) => {
-    po.items?.forEach((item: any) => {
-      receivedQuantities[item.productId] =
-        (receivedQuantities[item.productId] || 0) + Number(item.quantity);
-    });
-  });
+  // NOTE: Trước đây FE tự tính fallback receivedQuantities/shippedQuantities bằng
+  // cách cộng dồn qua tất cả purchaseOrders/vehicleShipmentItems (KHÔNG lọc
+  // isDraft/status hủy) → sai khi có PN/xe hủy hoặc nháp. Ngoài ra fallback
+  // `remaining` cũng thiếu trừ `reserved` (ghép xe). Vì BE `findOne` luôn enrich
+  // `receivedQty`/`shippedQty`/`remainingQty`/`reservedQty` cho mỗi item (xem
+  // order-suppliers.service.ts:978-1032), các fallback này là dead code qua `??`
+  // và sai khi kích hoạt. Đã xóa để tin contract BE; nếu BE thiếu field, mặc định
+  // 0 (an toàn hơn là hiển thị "đã nhập đủ" nhầm).
 
-  // SL đã ghép xe (các xe chưa hủy) theo từng sản phẩm.
-  const shippedQuantities: Record<number, number> = {};
-  orderSupplier.vehicleShipmentItems?.forEach((vi: any) => {
-    shippedQuantities[vi.productId] =
-      (shippedQuantities[vi.productId] || 0) + Number(vi.quantity);
-  });
-
-  // PDN "Nhập một phần" mới cho phép chốt hoàn thành thủ công.
   const canForceComplete = orderSupplier.status === 2;
 
   const handleComplete = async () => {
@@ -611,15 +604,9 @@ export function OrderSupplierDetailRow({
                           <tbody className="bg-white divide-y divide-gray-100">
                             {filteredItems?.length ? (
                               filteredItems.map((item: any, idx: number) => {
-                                const received =
-                                  item.receivedQty ??
-                                  receivedQuantities[item.productId] ??
-                                  0;
+                                const received = item.receivedQty ?? 0;
                                 const ordered = Number(item.quantity);
-                                const shipped =
-                                  item.shippedQty ??
-                                  shippedQuantities[item.productId] ??
-                                  0;
+                                const shipped = item.shippedQty ?? 0;
                                 const remaining =
                                   item.remainingQty ??
                                   Math.max(ordered - received, 0);
