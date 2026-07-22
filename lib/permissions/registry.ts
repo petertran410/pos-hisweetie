@@ -39,6 +39,10 @@ export const ROUTE_PERMISSIONS: Record<
     resource: "inventory_promo_checks",
     action: "view",
   },
+  "/san-pham/chuyen-loai-ton": {
+    resource: "stock_condition_transfers",
+    action: "view",
+  },
   "/san-pham/san-xuat": { resource: "productions", action: "view" },
   "/san-pham/xuat-huy": { resource: "destructions", action: "view" },
   "/san-pham/xuat-dung-noi-bo": { resource: "internal-use", action: "view" },

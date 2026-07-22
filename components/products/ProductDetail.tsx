@@ -2,16 +2,14 @@
 
 import { useState } from "react";
 import type { Product } from "@/lib/api/products";
-import {
-  useUpdateProduct,
-  useUpdateProductCondition,
-} from "@/lib/hooks/useProducts";
+import { useUpdateProduct } from "@/lib/hooks/useProducts";
 import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
 import { useBranchStore } from "@/lib/store/branch";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { ActionGuard } from "../permissions/ActionGuard";
 import { ProductInventoryLogTab } from "./ProductInventoryLogTab";
+import { ProductConditionTab } from "./ProductConditionTab";
 import { CodeLink } from "../shared/CodeLink";
 
 interface ProductDetailProps {
@@ -28,12 +26,6 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
 
   const updateProduct = useUpdateProduct();
   const { selectedBranch } = useBranchStore();
-  const updateCondition = useUpdateProductCondition();
-  const [editingCondition, setEditingCondition] = useState<number | null>(null);
-  const [conditionInputs, setConditionInputs] = useState<{
-    damaged: string;
-    nearExpiry: string;
-  }>({ damaged: "", nearExpiry: "" });
 
   if (!product) {
     throw new Error("Error");
@@ -47,30 +39,6 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
           setShowToggleConfirm(false);
           onClose();
         },
-      }
-    );
-  };
-
-  const handleStartEditCondition = (inv: any) => {
-    setEditingCondition(inv.branchId);
-    setConditionInputs({
-      damaged: String(Number(inv.damagedQuantity || 0)),
-      nearExpiry: String(Number(inv.nearExpiryQuantity || 0)),
-    });
-  };
-
-  const handleSaveCondition = (inv: any) => {
-    const damaged = parseInt(conditionInputs.damaged) || 0;
-    const nearExpiry = parseInt(conditionInputs.nearExpiry) || 0;
-
-    updateCondition.mutate(
-      {
-        productId: product.id,
-        branchId: inv.branchId,
-        data: { damagedQuantity: damaged, nearExpiryQuantity: nearExpiry },
-      },
-      {
-        onSuccess: () => setEditingCondition(null),
       }
     );
   };
@@ -277,6 +245,16 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
             }`}>
             Thẻ kho
           </button>
+
+          <button
+            onClick={() => setActiveTab("the-kho-loai-ton")}
+            className={`px-4 py-3 border-b-2 ${
+              activeTab === "the-kho-loai-ton"
+                ? "border-brand text-brand"
+                : "border-transparent"
+            }`}>
+            Thẻ kho loại tồn
+          </button>
         </div>
 
         <div className="overflow-y-auto p-6">
@@ -475,9 +453,14 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                   (inv) => inv.branch?.isActive !== false
                 ).length > 0 && (
                   <div className="border-t pt-6">
-                    <h4 className="font-semibold mb-3">
+                    <h4 className="font-semibold mb-1">
                       Tồn kho theo chi nhánh
                     </h4>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Chỉnh sửa loại tồn (bục rách / cận date / khuyến mãi)
+                      thực hiện qua phiếu “Chuyển loại tồn” (CLT) tại menu Sản
+                      phẩm → Chuyển loại tồn.
+                    </p>
                     <div className="border rounded overflow-hidden">
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50">
@@ -497,7 +480,6 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                             <th className="p-3 text-right">
                               Định mức tồn nhiều nhất
                             </th>
-                            <th className="p-3 text-center w-[80px]"></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -515,8 +497,6 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                                 damaged -
                                 nearExpiry -
                                 Math.max(promoQty, 0);
-                              const isEditing =
-                                editingCondition === inv.branchId;
 
                               return (
                                 <tr key={inv.id} className="border-t">
@@ -533,59 +513,24 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                                     {onHand.toLocaleString()}
                                   </td>
                                   <td className="p-3 text-right">
-                                    {isEditing ? (
-                                      <input
-                                        type="text"
-                                        value={conditionInputs.damaged}
-                                        onChange={(e) =>
-                                          setConditionInputs((prev) => ({
-                                            ...prev,
-                                            damaged: e.target.value.replace(
-                                              /[^\d]/g,
-                                              ""
-                                            ),
-                                          }))
-                                        }
-                                        className="w-20 border rounded px-2 py-1 text-right text-sm"
-                                        autoFocus
-                                      />
-                                    ) : (
-                                      <span
-                                        className={
-                                          damaged > 0
-                                            ? "text-red-600 font-medium"
-                                            : ""
-                                        }>
-                                        {damaged.toLocaleString()}
-                                      </span>
-                                    )}
+                                    <span
+                                      className={
+                                        damaged > 0
+                                          ? "text-red-600 font-medium"
+                                          : ""
+                                      }>
+                                      {damaged.toLocaleString()}
+                                    </span>
                                   </td>
                                   <td className="p-3 text-right">
-                                    {isEditing ? (
-                                      <input
-                                        type="text"
-                                        value={conditionInputs.nearExpiry}
-                                        onChange={(e) =>
-                                          setConditionInputs((prev) => ({
-                                            ...prev,
-                                            nearExpiry: e.target.value.replace(
-                                              /[^\d]/g,
-                                              ""
-                                            ),
-                                          }))
-                                        }
-                                        className="w-20 border rounded px-2 py-1 text-right text-sm"
-                                      />
-                                    ) : (
-                                      <span
-                                        className={
-                                          nearExpiry > 0
-                                            ? "text-orange-600 font-medium"
-                                            : ""
-                                        }>
-                                        {nearExpiry.toLocaleString()}
-                                      </span>
-                                    )}
+                                    <span
+                                      className={
+                                        nearExpiry > 0
+                                          ? "text-orange-600 font-medium"
+                                          : ""
+                                      }>
+                                      {nearExpiry.toLocaleString()}
+                                    </span>
                                   </td>
                                   <td className="p-3 text-right">
                                     <span
@@ -615,35 +560,6 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
                                   </td>
                                   <td className="p-3 text-right">
                                     {Number(inv.maxQuality).toLocaleString()}
-                                  </td>
-                                  <td className="p-3 text-center">
-                                    {isEditing ? (
-                                      <div className="flex gap-1 justify-center">
-                                        <button
-                                          onClick={() =>
-                                            handleSaveCondition(inv)
-                                          }
-                                          disabled={updateCondition.isPending}
-                                          className="text-green-600 hover:text-green-800 text-xs font-medium">
-                                          Lưu
-                                        </button>
-                                        <button
-                                          onClick={() =>
-                                            setEditingCondition(null)
-                                          }
-                                          className="text-gray-500 hover:text-gray-700 text-xs">
-                                          Hủy
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <button
-                                        onClick={() =>
-                                          handleStartEditCondition(inv)
-                                        }
-                                        className="text-brand hover:text-brand-dark text-xs">
-                                        Sửa
-                                      </button>
-                                    )}
                                   </td>
                                 </tr>
                               );
@@ -933,6 +849,13 @@ export function ProductDetail({ product, onClose }: ProductDetailProps) {
 
           {activeTab === "the-kho" && (
             <ProductInventoryLogTab
+              productId={product.id}
+              branchId={selectedBranch?.id}
+            />
+          )}
+
+          {activeTab === "the-kho-loai-ton" && (
+            <ProductConditionTab
               productId={product.id}
               branchId={selectedBranch?.id}
             />

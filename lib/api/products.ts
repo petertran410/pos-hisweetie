@@ -230,7 +230,82 @@ export const productsApi = {
       data
     );
   },
+
+  // Thẻ kho loại tồn (bucket): DAMAGED | NEAR_EXPIRY | PROMO — có tonCuoi.
+  getConditionLogs: async (
+    productId: number,
+    bucket: string,
+    branchId?: number,
+    page = 1,
+    limit = 15
+  ): Promise<{ data: StockConditionLog[]; total: number }> => {
+    const params = new URLSearchParams();
+    params.append("bucket", bucket);
+    if (branchId) params.append("branchId", branchId.toString());
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
+    return apiClient.get(
+      `/products/${productId}/condition-logs?${params.toString()}`
+    );
+  },
+
+  // Tồn cận date theo từng lô (expiryDate).
+  getNearExpiryLots: async (
+    productId: number,
+    branchId: number
+  ): Promise<{ data: NearExpiryLot[] }> => {
+    return apiClient.get(
+      `/products/${productId}/near-expiry-lots?branchId=${branchId}`
+    );
+  },
+
+  // Tồn tổng hợp: good + damaged + nearExpiry + promo = onHand.
+  getConditionSummary: async (
+    productId: number,
+    branchId: number
+  ): Promise<ConditionSummary> => {
+    return apiClient.get(
+      `/products/${productId}/condition-summary?branchId=${branchId}`
+    );
+  },
 };
+
+export interface StockConditionLog {
+  id: number;
+  productId: number;
+  productCode: string;
+  productName: string;
+  branchId: number;
+  branchName: string;
+  bucket: string;
+  transactionType: string;
+  refCode: string;
+  refType: string;
+  refId: number;
+  quantity: number;
+  expiryDate?: string | null;
+  costPrice: number;
+  note?: string | null;
+  transactionDate?: string;
+  createdAt: string;
+  createdByName?: string | null;
+  tonCuoi?: number;
+}
+
+export interface NearExpiryLot {
+  expiryDate: string | null;
+  quantity: number;
+}
+
+export interface ConditionSummary {
+  productId: number;
+  branchId: number;
+  onHand: number;
+  good: number;
+  damaged: number;
+  nearExpiry: number;
+  promo: number;
+}
 
 export interface InventoryLog {
   id: number;

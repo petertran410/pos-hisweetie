@@ -107,6 +107,47 @@ export function useProductInventoryLogs(
   });
 }
 
+export function useProductConditionLogs(
+  productId: number,
+  bucket: string,
+  branchId?: number,
+  page = 1,
+  limit = 15
+) {
+  return useQuery({
+    queryKey: [
+      "product-condition-logs",
+      productId,
+      bucket,
+      branchId,
+      page,
+      limit,
+    ],
+    queryFn: () =>
+      productsApi.getConditionLogs(productId, bucket, branchId, page, limit),
+    enabled: !!productId && !!bucket,
+  });
+}
+
+export function useProductConditionSummary(
+  productId: number,
+  branchId?: number
+) {
+  return useQuery({
+    queryKey: ["product-condition-summary", productId, branchId],
+    queryFn: () => productsApi.getConditionSummary(productId, branchId!),
+    enabled: !!productId && !!branchId,
+  });
+}
+
+export function useNearExpiryLots(productId: number, branchId?: number) {
+  return useQuery({
+    queryKey: ["near-expiry-lots", productId, branchId],
+    queryFn: () => productsApi.getNearExpiryLots(productId, branchId!),
+    enabled: !!productId && !!branchId,
+  });
+}
+
 export function useUpdateProductCondition() {
   const queryClient = useQueryClient();
 

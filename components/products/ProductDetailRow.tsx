@@ -5,7 +5,6 @@ import { useLayoutEffect, useRef, useState } from "react";
 import {
   useProduct,
   useUpdateProduct,
-  useUpdateProductCondition,
 } from "@/lib/hooks/useProducts";
 import { useBranchStore } from "@/lib/store/branch";
 import { Loader2 } from "lucide-react";
@@ -14,6 +13,7 @@ import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { ProductInventoryLogTab } from "./ProductInventoryLogTab";
+import { ProductConditionTab } from "./ProductConditionTab";
 import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
 import { ProductCustomerOrdersModal } from "./ProductCustomerOrdersModal";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
@@ -126,7 +126,6 @@ export function ProductDetailRow({
   const { data: product, isLoading } = useProduct(productId);
   const updateProduct = useUpdateProduct();
   const { selectedBranch } = useBranchStore();
-  const updateCondition = useUpdateProductCondition();
 
   const itemsPerPage = 10;
 
@@ -136,16 +135,10 @@ export function ProductDetailRow({
   const canViewSalePrice = usePermission("products", "view_sale_price");
 
   const [activeTab, setActiveTab] = useState<
-    "info" | "description" | "inventoryLog" | "inventory"
+    "info" | "description" | "inventoryLog" | "conditionLog" | "inventory"
   >("info");
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [editingCondition, setEditingCondition] = useState<number | null>(null);
-  const [conditionInputs, setConditionInputs] = useState<{
-    damaged: string;
-    nearExpiry: string;
-  }>({ damaged: "", nearExpiry: "" });
-
   const [supplierOrdersBranch, setSupplierOrdersBranch] = useState<{
     id: number;
     name: string;
@@ -318,6 +311,7 @@ export function ProductDetailRow({
     { key: "info", label: "Thông tin" },
     { key: "description", label: "Mô tả, ghi chú" },
     { key: "inventoryLog", label: "Thẻ kho" },
+    { key: "conditionLog", label: "Thẻ kho loại tồn" },
     { key: "inventory", label: "Tồn kho" },
   ];
 
@@ -666,6 +660,13 @@ export function ProductDetailRow({
               />
             )}
 
+            {activeTab === "conditionLog" && (
+              <ProductConditionTab
+                productId={product.id}
+                branchId={selectedBranch?.id}
+              />
+            )}
+
             {/* ═══════════════════════════════════════════
                 TAB 4: TỒN KHO — giống hình 4
                ═══════════════════════════════════════════ */}
@@ -722,7 +723,6 @@ export function ProductDetailRow({
                           // Hàng tốt = tồn - bục rách - cận date - hàng KM phân bổ
                           const goodStock =
                             onHand - damaged - nearExpiry - Math.max(promoQty, 0);
-                          const isEditing = editingCondition === inv.branchId;
 
                           return (
                             <tr key={inv.id}>
@@ -735,60 +735,25 @@ export function ProductDetailRow({
                               </td>
 
                               <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
-                                {isEditing ? (
-                                  <input
-                                    type="text"
-                                    value={conditionInputs.damaged}
-                                    onChange={(e) =>
-                                      setConditionInputs((prev) => ({
-                                        ...prev,
-                                        damaged: e.target.value.replace(
-                                          /[^\d]/g,
-                                          ""
-                                        ),
-                                      }))
-                                    }
-                                    className="w-14 border border-gray-300 rounded-md px-2 py-1 text-right text-xs focus:outline-none focus:ring-2 focus:ring-red-200"
-                                    autoFocus
-                                  />
-                                ) : (
-                                  <span
-                                    className={
-                                      damaged > 0
-                                        ? "text-red-600 font-medium"
-                                        : ""
-                                    }>
-                                    {damaged.toLocaleString()}
-                                  </span>
-                                )}
+                                <span
+                                  className={
+                                    damaged > 0
+                                      ? "text-red-600 font-medium"
+                                      : ""
+                                  }>
+                                  {damaged.toLocaleString()}
+                                </span>
                               </td>
 
                               <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
-                                {isEditing ? (
-                                  <input
-                                    type="text"
-                                    value={conditionInputs.nearExpiry}
-                                    onChange={(e) =>
-                                      setConditionInputs((prev) => ({
-                                        ...prev,
-                                        nearExpiry: e.target.value.replace(
-                                          /[^\d]/g,
-                                          ""
-                                        ),
-                                      }))
-                                    }
-                                    className="w-14 border border-gray-300 rounded-md px-2 py-1 text-right text-xs focus:outline-none focus:ring-2 focus:ring-orange-200"
-                                  />
-                                ) : (
-                                  <span
-                                    className={
-                                      nearExpiry > 0
-                                        ? "text-orange-600 font-medium"
-                                        : ""
-                                    }>
-                                    {nearExpiry.toLocaleString()}
-                                  </span>
-                                )}
+                                <span
+                                  className={
+                                    nearExpiry > 0
+                                      ? "text-orange-600 font-medium"
+                                      : ""
+                                  }>
+                                  {nearExpiry.toLocaleString()}
+                                </span>
                               </td>
 
                               <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
