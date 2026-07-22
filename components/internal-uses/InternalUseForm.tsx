@@ -18,6 +18,7 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { PurposeForm } from "./PurposeForm";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 interface InternalUseFormProps {
   internalUse?: InternalUse | null;
@@ -634,36 +635,35 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                 </button>
               )}
             </div>
-            <select
+            <SearchableSelect
               value={purposeId}
-              onChange={(e) => setPurposeId(Number(e.target.value))}
+              onChange={setPurposeId}
               disabled={isFormDisabled}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100">
-              <option value={0}>Chọn mục đích sử dụng</option>
-              {purposes?.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              placeholder="Chọn mục đích sử dụng"
+              searchPlaceholder="Tìm mục đích sử dụng..."
+              options={(purposes ?? []).map((p) => ({
+                value: p.id,
+                label: p.name,
+              }))}
+            />
           </div>
 
           <div>
             <label className="block text-sm text-gray-600 mb-1">
               Người sử dụng
             </label>
-            <select
+            <SearchableSelect
               value={userId}
-              onChange={(e) => setUserId(Number(e.target.value))}
+              onChange={setUserId}
               disabled={isFormDisabled}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100">
-              <option value={0}>Chọn người sử dụng</option>
-              {users?.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+              placeholder="Chọn người sử dụng"
+              emptyLabel="Chọn người sử dụng"
+              searchPlaceholder="Tìm người sử dụng..."
+              options={(users ?? []).map((u) => ({
+                value: u.id,
+                label: u.name,
+              }))}
+            />
           </div>
 
           {canViewCost && (
