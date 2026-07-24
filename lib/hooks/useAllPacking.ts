@@ -18,6 +18,8 @@ export function useAllPacking(params?: any) {
         queryParams.append("invoiceSearch", params.invoiceSearch);
       if (params?.customerSearch)
         queryParams.append("customerSearch", params.customerSearch);
+      if (params?.paymentMethod)
+        queryParams.append("paymentMethod", params.paymentMethod);
       if (params?.pageSize) queryParams.append("pageSize", params.pageSize);
       if (params?.currentItem)
         queryParams.append("currentItem", params.currentItem);

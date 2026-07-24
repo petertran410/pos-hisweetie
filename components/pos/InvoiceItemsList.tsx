@@ -60,6 +60,7 @@ interface InvoiceItemsListProps {
     import("@/app/(dashboard)/ban-hang/page").CumulativeGiftSelection[]
   >;
   enabledCumulativePromoIds?: number[];
+  disabledCumulativePromoIds?: number[];
   onTogglePromotion?: (
     promotionId: number,
     enabled: boolean,
@@ -91,6 +92,7 @@ export function InvoiceItemsList({
   promoProgress,
   cumulativeGiftSelections,
   enabledCumulativePromoIds,
+  disabledCumulativePromoIds,
   onTogglePromotion,
   onSetGiftSelection,
 }: InvoiceItemsListProps) {
@@ -509,6 +511,7 @@ export function InvoiceItemsList({
             cartItems={cartItems}
             cumulativeGiftSelections={cumulativeGiftSelections}
             enabledPromotionIds={enabledCumulativePromoIds}
+            disabledPromotionIds={disabledCumulativePromoIds}
             onTogglePromotion={onTogglePromotion}
             onSetGiftSelection={onSetGiftSelection}
           />

@@ -143,6 +143,10 @@ export interface Tab {
   cumulativeGiftSelections?: Record<number, CumulativeGiftSelection[]>;
   // Opt-in KM cộng dồn ở cấp tab (áp cho MỌI dòng X thuộc CT, kể cả thêm sau).
   enabledCumulativePromoIds?: number[];
+  // Tombstone cho CT cộng dồn user đã chủ động "Bỏ áp dụng". Tách riêng với
+  // enabled=[] để vẫn hydrate đúng dữ liệu quà của HĐ/đơn cũ, nhưng không bật lại
+  // CT mà user vừa tắt trong cùng tab.
+  disabledCumulativePromoIds?: number[];
 }
 
 const STORAGE_KEY = "pos-tabs";
@@ -433,8 +437,9 @@ export default function BanHangPage() {
         })),
       // phân bổ quà KM cộng dồn (đổi → sinh lại dòng quà)
       cumSel: activeTab.cumulativeGiftSelections || {},
-      // opt-in KM cộng dồn cấp tab (đổi → áp/gỡ toàn CT)
+      // opt-in / opt-out KM cộng dồn cấp tab (đổi → áp/gỡ toàn CT)
       enabledCum: activeTab.enabledCumulativePromoIds || [],
+      disabledCum: activeTab.disabledCumulativePromoIds || [],
     });
 
     if (!branchId || normalItems.length === 0) {
@@ -454,6 +459,7 @@ export default function BanHangPage() {
 
     if (signature === promoSyncRef.current) return;
 
+    let cancelled = false;
     const timer = setTimeout(async () => {
       promoSyncRef.current = signature;
       try {
@@ -476,25 +482,27 @@ export default function BanHangPage() {
           p.type === "BUY_X_BUY_Y_PRICE";
 
         // Opt-in KM cộng dồn ở cấp tab → suy ra matchedProductIds để áp cho MỌI dòng.
+        // Luôn hydrate từ dòng quà cũ để mở được đơn/HĐ historical; tombstone
+        // disabledCumulativePromoIds chặn duy nhất trường hợp user đã chủ động bỏ.
         const enabledCumIds = new Set(
           activeTab.enabledCumulativePromoIds || []
         );
-        // Seed khi mở sửa đơn/HĐ: dòng quà cộng dồn từ DB (isPromoGift + promotionId
-        // là CT cumulative) → coi như đã bật, tránh mất quà + mất trạng thái áp dụng.
-        {
-          const cumIdSet = new Set(
-            discoveryRes.eligiblePromotions
-              .filter((p) => isGiftType(p) && p.cumulative)
-              .map((p) => p.promotionId)
-          );
-          for (const it of activeTab.cartItems || []) {
-            if (
-              it.isPromoGift &&
-              it.promotionId != null &&
-              cumIdSet.has(it.promotionId)
-            ) {
-              enabledCumIds.add(it.promotionId);
-            }
+        const disabledCumIds = new Set(
+          activeTab.disabledCumulativePromoIds || []
+        );
+        const cumIdSet = new Set(
+          discoveryRes.eligiblePromotions
+            .filter((p) => isGiftType(p) && p.cumulative)
+            .map((p) => p.promotionId)
+        );
+        for (const it of activeTab.cartItems || []) {
+          if (
+            it.isPromoGift &&
+            it.promotionId != null &&
+            cumIdSet.has(it.promotionId) &&
+            !disabledCumIds.has(it.promotionId)
+          ) {
+            enabledCumIds.add(it.promotionId);
           }
         }
         const cumMatchByProduct = new Map<number, number[]>(); // productId -> [promoId]
@@ -557,20 +565,26 @@ export default function BanHangPage() {
         }
         const cumulativePromoIds = new Set(cumulativePromoInfo.keys());
 
+        // Bỏ qua response evaluate của state cũ (ví dụ user vừa bấm "Bỏ áp dụng"
+        // trong lúc request trước đó còn đang chờ) để không ghi đè opt-in mới.
+        if (cancelled) return;
+
         setTabs((prev) =>
           prev.map((t) => {
             if (t.id !== tabId) return t;
             const normals = t.cartItems.filter((it) => !it.isPromoGift);
             const oldGifts = t.cartItems.filter((it) => it.isPromoGift);
 
-            // Tái dựng phân bổ quà cộng dồn khi mở lại đơn/HĐ: dòng quà từ DB
-            // không mang cờ cumulative & tab chưa có cumulativeGiftSelections.
-            // Suy ngược số suất = SL quà / perTime cho từng SP quà.
-            // carton: SL quà (gói) / perTime (thùng) / conversionValue (gói/thùng).
+            // Tái dựng phân bổ quà cộng dồn từ dòng quà DB/historical. Chỉ bỏ qua
+            // CT người dùng đã chủ động tắt trong tab này.
             const reconstructedSel: Record<number, CumulativeGiftSelection[]> = {
               ...(t.cumulativeGiftSelections || {}),
             };
+            const disabledForTab = new Set(
+              t.disabledCumulativePromoIds || []
+            );
             for (const promoId of cumulativePromoIds) {
+              if (disabledForTab.has(promoId)) continue;
               if (reconstructedSel[promoId]?.length) continue;
               const info = cumulativePromoInfo.get(promoId);
               if (!info || info.perTime <= 0) continue;
@@ -608,13 +622,17 @@ export default function BanHangPage() {
               if (sels.length) reconstructedSel[promoId] = sels;
             }
 
-            // Tái dựng opt-in CT cộng dồn cấp tab khi mở lại đơn/HĐ:
-            // CT nào có dòng quà cộng dồn (từ DB) hoặc đã có selection → coi như đã bật.
+            // Opt-in cấp tab: hydrate CT từ quà historical, trừ CT user đã tắt.
             const reconstructedEnabledCum = new Set([
               ...(t.enabledCumulativePromoIds || []),
               ...enabledCumIds,
             ]);
+            for (const promoId of disabledForTab) {
+              reconstructedEnabledCum.delete(promoId);
+              delete reconstructedSel[promoId];
+            }
             for (const promoId of cumulativePromoIds) {
+              if (disabledForTab.has(promoId)) continue;
               const hasDbGift = oldGifts.some(
                 (g) => g.promotionId === promoId && Number(g.product?.id) > 0
               );
@@ -963,7 +981,10 @@ export default function BanHangPage() {
       }
     }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     activeTab?.id,
@@ -1950,14 +1971,23 @@ export default function BanHangPage() {
       prevTabs.map((tab) => {
         if (tab.id !== activeTabId) return tab;
         const cur = new Set(tab.enabledCumulativePromoIds || []);
-        if (enabled) cur.add(promotionId);
-        else cur.delete(promotionId);
+        const disabled = new Set(tab.disabledCumulativePromoIds || []);
+        if (enabled) {
+          cur.add(promotionId);
+          // Người dùng bấm Áp dụng lại → bỏ tombstone để effect được phép sinh quà.
+          disabled.delete(promotionId);
+        } else {
+          cur.delete(promotionId);
+          // Đánh dấu explicit opt-out, tránh hydrate từ dòng quà cũ bật lại CT.
+          disabled.add(promotionId);
+        }
         // Tắt CT → xoá luôn phân bổ quà cộng dồn của CT đó.
         const nextSel = { ...(tab.cumulativeGiftSelections || {}) };
         if (!enabled) delete nextSel[promotionId];
         return {
           ...tab,
           enabledCumulativePromoIds: [...cur],
+          disabledCumulativePromoIds: [...disabled],
           cumulativeGiftSelections: nextSel,
         };
       })
@@ -3435,6 +3465,9 @@ export default function BanHangPage() {
                 promoProgress={promoProgressByTab[activeTab.id]}
                 cumulativeGiftSelections={activeTab.cumulativeGiftSelections}
                 enabledCumulativePromoIds={activeTab.enabledCumulativePromoIds}
+                disabledCumulativePromoIds={
+                  activeTab.disabledCumulativePromoIds
+                }
                 onTogglePromotion={togglePromotionCumulative}
                 onSetGiftSelection={setCumulativeGiftSelection}
                 className="w-full flex-1 bg-white flex flex-col min-h-0"
@@ -3550,6 +3583,8 @@ export default function BanHangPage() {
                 priceWarnings={priceWarnings}
                 promoProgress={promoProgressByTab[activeTab.id]}
                 cumulativeGiftSelections={activeTab.cumulativeGiftSelections}
+                enabledCumulativePromoIds={activeTab.enabledCumulativePromoIds}
+                disabledCumulativePromoIds={activeTab.disabledCumulativePromoIds}
                 onTogglePromotion={togglePromotionCumulative}
                 onSetGiftSelection={setCumulativeGiftSelection}
                 className="w-full flex-1 bg-white flex flex-col min-h-0"

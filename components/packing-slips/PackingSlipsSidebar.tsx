@@ -20,6 +20,13 @@ const TYPE_OPTIONS = [
   { value: "giao-hang", label: "Giao hàng" },
 ];
 
+// Chỉ PackingSlip (giao hàng) có paymentMethod.
+// Khi chọn filter này → đóng hàng & loading bị loại bỏ hoàn toàn.
+const PAYMENT_METHOD_OPTIONS = [
+  { value: "cash", label: "Tiền mặt" },
+  { value: "transfer", label: "Chuyển khoản" },
+];
+
 export function PackingSlipsSidebar({
   onFiltersChange,
 }: PackingSlipsSidebarProps) {
@@ -37,6 +44,7 @@ export function PackingSlipsSidebar({
     selectedBranch ? [selectedBranch.id] : []
   );
   const [type, setType] = useState("all");
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [search, setSearch] = useState("");
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
@@ -65,17 +73,19 @@ export function PackingSlipsSidebar({
       const filters: any = {};
       if (selectedBranchIds.length > 0) filters.branchIds = selectedBranchIds;
       if (type && type !== "all") filters.type = type;
+      if (paymentMethod) filters.paymentMethod = paymentMethod;
       if (search) filters.search = search;
       if (invoiceSearch) filters.invoiceSearch = invoiceSearch;
       if (customerSearch) filters.customerSearch = customerSearch;
       onFiltersChange(filters);
     }, 300);
     return () => clearTimeout(timer);
-  }, [selectedBranchIds, type, search, invoiceSearch, customerSearch]);
+  }, [selectedBranchIds, type, paymentMethod, search, invoiceSearch, customerSearch]);
 
   const clearAllFilters = () => {
     setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setType("all");
+    setPaymentMethod("");
     setSearch("");
     setInvoiceSearch("");
     setCustomerSearch("");
@@ -86,11 +96,12 @@ export function PackingSlipsSidebar({
     let n = 0;
     if (selectedBranchIds.length > 0) n++;
     if (type !== "all") n++;
+    if (paymentMethod) n++;
     if (search) n++;
     if (invoiceSearch) n++;
     if (customerSearch) n++;
     return n;
-  }, [selectedBranchIds, type, search, invoiceSearch, customerSearch]);
+  }, [selectedBranchIds, type, paymentMethod, search, invoiceSearch, customerSearch]);
 
   return (
     <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
@@ -195,6 +206,25 @@ export function PackingSlipsSidebar({
             searchable={false}
             showClearOption={false}
             onChange={(v) => setType(v || "all")}
+          />
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* ── Thanh toán ── */}
+        {/* Chỉ áp dụng cho giao hàng (PackingSlip). Khi chọn → đóng hàng &
+            loading bị loại bỏ hoàn toàn vì không có paymentMethod. */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Thanh toán
+          </label>
+          <FilterSearchableSelect
+            options={PAYMENT_METHOD_OPTIONS}
+            value={paymentMethod}
+            placeholder="Tất cả"
+            searchable={false}
+            showClearOption={false}
+            onChange={(v) => setPaymentMethod(v || "")}
           />
         </div>
 

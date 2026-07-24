@@ -25,6 +25,9 @@ interface Props {
   cartItems: CartItem[];
   cumulativeGiftSelections?: Record<number, CumulativeGiftSelection[]>;
   enabledPromotionIds?: number[];
+  // Tombstone cấp tab: CT user đã chủ động "Bỏ áp dụng". Dùng để chặn fallback
+  // suy từ promoEnabledIds (tránh UI bật lại CT vừa tắt khi effect chưa kịp gỡ).
+  disabledPromotionIds?: number[];
   onTogglePromotion: (
     promotionId: number,
     enabled: boolean,
@@ -56,6 +59,7 @@ export function CartPromotionSummary({
   cartItems,
   cumulativeGiftSelections,
   enabledPromotionIds,
+  disabledPromotionIds,
   onTogglePromotion,
   onSetGiftSelection,
 }: Props) {
@@ -73,12 +77,20 @@ export function CartPromotionSummary({
   if (cumulativeProgress.length === 0) return null;
 
   const enabledSet = new Set(enabledPromotionIds || []);
+  const disabledSet = new Set(disabledPromotionIds || []);
+  // enabledCumulativePromoIds là nguồn sự thật cấp tab. Nhưng khi mở sửa/xử lý
+  // đơn/HĐ, tab chưa kịp seed enabled (chỉ effect debounce mới điền) trong khi
+  // dòng thường từ DB đã mang promoEnabledIds → fallback suy từ đó để card hiện
+  // "đã áp dụng" ngay. Chặn fallback nếu user đã chủ động "Bỏ áp dụng"
+  // (disabledPromotionIds) để không bật lại CT vừa tắt.
   const isEnabled = (p: PromotionProgress) =>
     enabledSet.has(p.promotionId) ||
-    cartItems.some(
-      (it) =>
-        !it.isPromoGift && (it.promoEnabledIds || []).includes(p.promotionId)
-    );
+    (!disabledSet.has(p.promotionId) &&
+      cartItems.some(
+        (it) =>
+          !it.isPromoGift &&
+          (it.promoEnabledIds || []).includes(p.promotionId)
+      ));
 
   const rewardOptionsOf = (promotionId: number): RewardOpt[] => {
     const giftItem = cartItems.find(
