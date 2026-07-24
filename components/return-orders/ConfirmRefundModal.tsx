@@ -58,7 +58,8 @@ export function ConfirmRefundModal({
   const isActionable = returnOrder?.status === 2;
 
   // Nút Hủy: phiếu đã hoàn thành (status 4) chỉ Admin/Super Admin mới được hủy;
-  // các trạng thái còn lại (1/2/6/7) cho hủy bình thường. Phiếu đã hủy (5) thì ẩn.
+  // các trạng thái còn lại đi vào modal này (2/3) cho hủy bình thường.
+  // Phiếu đã hủy (5) thì ẩn. (Status 1/6/7 có nút hủy ở modal tương ứng.)
   const status = returnOrder?.status;
   const canShowCancel =
     canCancel &&

@@ -8,6 +8,11 @@ import {
   FilterMultiSelect,
   FilterSearchableSelect,
 } from "@/components/ui/filters";
+import {
+  TimeRangeFilter,
+  rangeToIso,
+  type TimeRangeState,
+} from "@/components/shared/TimeRangeFilter";
 
 interface PackingSlipsSidebarProps {
   onFiltersChange: (filters: any) => void;
@@ -48,6 +53,13 @@ export function PackingSlipsSidebar({
   const [search, setSearch] = useState("");
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
+  // Thời gian tạo (createdAt) — áp cho cả 3 loại báo đơn.
+  const [createdRange, setCreatedRange] = useState<TimeRangeState>({
+    dateMode: "preset",
+    selectedPreset: "all_time",
+    fromDate: "",
+    toDate: "",
+  });
 
   // Sync branch khi user đổi chi nhánh ở header — skip lần mount đầu
   const isFirstRenderRef = useRef(true);
@@ -77,10 +89,23 @@ export function PackingSlipsSidebar({
       if (search) filters.search = search;
       if (invoiceSearch) filters.invoiceSearch = invoiceSearch;
       if (customerSearch) filters.customerSearch = customerSearch;
+      const createdIso = rangeToIso(createdRange);
+      if (createdIso) {
+        filters.fromCreatedDate = createdIso.from;
+        filters.toCreatedDate = createdIso.to;
+      }
       onFiltersChange(filters);
     }, 300);
     return () => clearTimeout(timer);
-  }, [selectedBranchIds, type, paymentMethod, search, invoiceSearch, customerSearch]);
+  }, [
+    selectedBranchIds,
+    type,
+    paymentMethod,
+    search,
+    invoiceSearch,
+    customerSearch,
+    createdRange,
+  ]);
 
   const clearAllFilters = () => {
     setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
@@ -89,6 +114,12 @@ export function PackingSlipsSidebar({
     setSearch("");
     setInvoiceSearch("");
     setCustomerSearch("");
+    setCreatedRange({
+      dateMode: "preset",
+      selectedPreset: "all_time",
+      fromDate: "",
+      toDate: "",
+    });
     onFiltersChange({});
   };
 
@@ -100,8 +131,21 @@ export function PackingSlipsSidebar({
     if (search) n++;
     if (invoiceSearch) n++;
     if (customerSearch) n++;
+    if (
+      createdRange.selectedPreset !== "all_time" ||
+      createdRange.dateMode === "custom"
+    )
+      n++;
     return n;
-  }, [selectedBranchIds, type, paymentMethod, search, invoiceSearch, customerSearch]);
+  }, [
+    selectedBranchIds,
+    type,
+    paymentMethod,
+    search,
+    invoiceSearch,
+    customerSearch,
+    createdRange,
+  ]);
 
   return (
     <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
@@ -120,6 +164,15 @@ export function PackingSlipsSidebar({
       </div>
 
       <div className="p-4 space-y-3">
+        {/* ── Thời gian tạo ── */}
+        <TimeRangeFilter
+          label="Thời gian tạo"
+          value={createdRange}
+          onChange={setCreatedRange}
+        />
+
+        <div className="border-t border-gray-100" />
+
         {/* ── Tìm kiếm chung ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { X, Camera, ChevronDown, ChevronUp, Printer } from "lucide-react";
-import { useReturnOrder } from "@/lib/hooks/useReturnOrders";
+import {
+  useReturnOrder,
+  useCancelReturnOrder,
+} from "@/lib/hooks/useReturnOrders";
 import { formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store/auth";
 import { API_URL } from "@/lib/config/api";
-import { useCan } from "@/lib/hooks/useCan";
+import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
 import { printEntity } from "@/lib/utils/print";
 import Swal from "sweetalert2";
 
@@ -43,6 +46,9 @@ export function EditStep1Modal({
 
   const canViewReturnPrice = useCan("return_orders_price", "view");
   const canPrint = useCan("print_templates", "view");
+  const cancelReturnOrder = useCancelReturnOrder();
+  const canCancel = useCan("return_orders", "cancel");
+  const isAdmin = useIsAdmin();
   const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
@@ -195,6 +201,26 @@ export function EditStep1Modal({
     onSubmit(data);
   };
 
+  const handleCancel = async () => {
+    const res = await Swal.fire({
+      title: "Hủy phiếu trả hàng?",
+      text: "Phiếu trả hàng sẽ chuyển sang trạng thái Đã hủy và hoàn tác các tác động liên quan.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Hủy phiếu",
+      cancelButtonText: "Đóng",
+      confirmButtonColor: "#dc2626",
+    });
+    if (res.isConfirmed) {
+      try {
+        await cancelReturnOrder.mutateAsync(returnOrderId);
+        onClose();
+      } catch {
+        // error handled by hook
+      }
+    }
+  };
+
   const handlePrint = async () => {
     if (!returnOrder) return;
     setIsPrinting(true);
@@ -216,6 +242,15 @@ export function EditStep1Modal({
   }
 
   const isDraft = returnOrder?.status === 7;
+
+  // Nút Hủy: ẩn với phiếu đã hủy (5); phiếu hoàn thành (4) chỉ Admin mới hủy.
+  // Modal này chỉ mở cho status 7 nên thực tế luôn cho hủy khi đủ quyền.
+  const status = returnOrder?.status;
+  const canShowCancel =
+    canCancel &&
+    status !== undefined &&
+    status !== 5 &&
+    (status === 4 ? isAdmin : true);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -453,16 +488,26 @@ export function EditStep1Modal({
 
         {/* Footer */}
         <div className="flex items-center justify-between p-4 border-t bg-gray-50 shrink-0 rounded-b-xl">
-          <div className="text-sm">
-            {canViewReturnPrice ? (
-              <>
-                <span className="text-gray-500">Tổng tiền trả: </span>
-                <span className="text-lg font-bold text-red-600">
-                  {formatCurrency(totalRefund)}
-                </span>
-              </>
-            ) : (
-              <span className="text-gray-400 text-sm">—</span>
+          <div className="flex items-center gap-4">
+            <div className="text-sm">
+              {canViewReturnPrice ? (
+                <>
+                  <span className="text-gray-500">Tổng tiền trả: </span>
+                  <span className="text-lg font-bold text-red-600">
+                    {formatCurrency(totalRefund)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-gray-400 text-sm">—</span>
+              )}
+            </div>
+            {canShowCancel && (
+              <button
+                onClick={handleCancel}
+                disabled={cancelReturnOrder.isPending}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-50">
+                {cancelReturnOrder.isPending ? "Đang hủy..." : "Hủy phiếu"}
+              </button>
             )}
           </div>
           <div className="flex gap-2">
@@ -479,7 +524,7 @@ export function EditStep1Modal({
             <button
               onClick={onClose}
               className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">
-              Hủy
+              Đóng
             </button>
             <button
               onClick={handleSaveDraft}
