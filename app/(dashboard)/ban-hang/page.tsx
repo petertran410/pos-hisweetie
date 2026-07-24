@@ -215,6 +215,163 @@ const buildAppliedPromotions = (
 };
 
 /**
+ * Chuẩn hóa loại dòng về "gift" | "discounted_buy" | "normal".
+ * Dùng chung cho dòng đơn/HĐ (API) và dòng giỏ (CartItem).
+ */
+const normalizeLineType = (raw: {
+  lineType?: string | null;
+  isGift?: boolean | null;
+  isPromoGift?: boolean | null;
+  promoLineType?: string | null;
+}): "gift" | "discounted_buy" | "normal" => {
+  if (raw.lineType === "discounted_buy" || raw.promoLineType === "discounted_buy")
+    return "discounted_buy";
+  if (
+    raw.lineType === "gift" ||
+    raw.promoLineType === "gift" ||
+    raw.isGift ||
+    raw.isPromoGift
+  )
+    return "gift";
+  return "normal";
+};
+
+/**
+ * Sinh key nhận diện dòng, dùng CHUNG cho dòng đơn gốc và dòng giỏ:
+ * - Dòng thường: `productId|normal|conditionType`. KHÔNG đưa promotionId vào key
+ *   vì đơn gốc lưu promotionId ở dòng X điều kiện, còn giỏ chỉ dùng
+ *   promoEnabledIds → nếu so promotionId sẽ lệch, báo thiếu nhầm.
+ * - Dòng quà/mua kèm CÓ promotionId: so theo `lineType|promo:promotionId`
+ *   (bỏ productId). KM cộng dồn có thể sinh lại dòng quà với sản phẩm khác so
+ *   với lúc lưu đơn → chỉ cần KM đó còn quà trong giỏ là không thiếu.
+ * - Dòng quà thủ công (không promotionId): so theo productId như dòng thường.
+ */
+const buildLineKey = (
+  productId: number,
+  lineType: "gift" | "discounted_buy" | "normal",
+  promotionId: number | null,
+  conditionType: string
+): string => {
+  if (lineType !== "normal" && promotionId != null) {
+    return `${lineType}|promo:${promotionId}`;
+  }
+  return `${productId}|${lineType}|${conditionType}`;
+};
+
+const getOrderLineKey = (item: any): string =>
+  buildLineKey(
+    Number(item.product?.id ?? item.productId) || 0,
+    normalizeLineType(item),
+    item.promotionId != null ? Number(item.promotionId) : null,
+    item.conditionType || "normal"
+  );
+
+const getCartLineKey = (item: CartItem): string =>
+  buildLineKey(
+    Number(item.product?.id) || 0,
+    normalizeLineType(item),
+    item.promotionId != null ? Number(item.promotionId) : null,
+    item.conditionType || "normal"
+  );
+
+export interface MissingOrderLine {
+  productId: number;
+  productName: string;
+  lineType: "gift" | "discounted_buy" | "normal";
+  promotionName?: string;
+}
+
+/**
+ * Tìm các dòng của ĐƠN HÀNG bị thiếu HẲN (tổng đã xuất = 0) so với:
+ * - tất cả HĐ đã tạo của đơn (bỏ HĐ hủy status=2 và HĐ đang sửa nếu có), CỘNG
+ * - giỏ hiện tại (cartItems) đang chuẩn bị lưu/tạo.
+ *
+ * Đối chiếu theo buildLineKey: dòng thường so theo sản phẩm + conditionType;
+ * dòng quà/mua kèm có promotionId so theo (loại dòng + promotionId) để KM cộng
+ * dồn sinh lại quà khác sản phẩm vẫn không bị báo thiếu nhầm.
+ *
+ * @param excludeInvoiceId  bỏ HĐ này khỏi phần "đã xuất" (dùng khi đang sửa
+ *   chính HĐ đó — phần đóng góp của nó được thay bằng cartItems).
+ */
+const findMissingOrderLines = (
+  sourceOrder: any,
+  cartItems: CartItem[],
+  excludeInvoiceId?: number
+): MissingOrderLine[] => {
+  if (!sourceOrder) return [];
+
+  // (1) Gom dòng đơn gốc theo key.
+  const orderLines = new Map<string, MissingOrderLine>();
+  (sourceOrder.items || []).forEach((item: any) => {
+    const pid = Number(item.product?.id ?? item.productId) || 0;
+    if (!pid) return;
+    const key = getOrderLineKey(item);
+    if (!orderLines.has(key)) {
+      orderLines.set(key, {
+        productId: pid,
+        productName: item.product?.name || item.productName || "",
+        lineType: normalizeLineType(item),
+        promotionName: item.promotion?.name || item.promotionName || undefined,
+      });
+    }
+  });
+
+  if (orderLines.size === 0) return [];
+
+  // (2) Cộng dồn số lượng đã xuất theo key: từ HĐ hiện có + giỏ hiện tại.
+  const issuedQtyByKey: Record<string, number> = {};
+  (sourceOrder.invoices || []).forEach((inv: any) => {
+    // Bỏ HĐ không tính vào số đã xuất (khớp logic hasShortfall sẵn có: status 2 và 5)
+    // và HĐ đang sửa (excludeInvoiceId — phần đóng góp của nó thay bằng cartItems).
+    if (inv.status === 2 || inv.status === 5) return;
+    if (excludeInvoiceId != null && Number(inv.id) === Number(excludeInvoiceId))
+      return;
+    (inv.details || []).forEach((d: any) => {
+      const key = getOrderLineKey(d);
+      issuedQtyByKey[key] =
+        (issuedQtyByKey[key] || 0) + Number(d.quantity || 0);
+    });
+  });
+
+  cartItems.forEach((item) => {
+    const key = getCartLineKey(item);
+    issuedQtyByKey[key] =
+      (issuedQtyByKey[key] || 0) + Number(item.quantity || 0);
+  });
+
+  // (3) Dòng đơn nào có tổng đã xuất = 0 → thiếu hẳn.
+  const missing: MissingOrderLine[] = [];
+  for (const [key, info] of orderLines) {
+    if ((issuedQtyByKey[key] || 0) <= 0) {
+      missing.push(info);
+    }
+  }
+  return missing;
+};
+
+const LINE_TYPE_BADGE: Record<MissingOrderLine["lineType"], string> = {
+  gift: "Quà KM",
+  discounted_buy: "Mua kèm KM",
+  normal: "",
+};
+
+/** Dựng HTML danh sách dòng thiếu hẳn cho Swal. */
+const buildMissingLinesHtml = (missing: MissingOrderLine[]): string => {
+  const rows = missing
+    .map((m) => {
+      const badgeText =
+        LINE_TYPE_BADGE[m.lineType] ||
+        (m.promotionName ? `KM: ${m.promotionName}` : "");
+      const badge = badgeText
+        ? ` <span style="display:inline-block;background:#fee2e2;color:#b91c1c;font-size:11px;padding:1px 6px;border-radius:8px;margin-left:4px">${badgeText}</span>`
+        : "";
+      return `<li style="margin-bottom:2px">${m.productName || "(Không tên)"}${badge}</li>`;
+    })
+    .join("");
+  return `<ul style="text-align:left;margin-top:8px;padding-left:18px;font-size:14px">${rows}</ul>`;
+};
+
+/**
  * Map dòng đơn/HĐ (API) → CartItem, khôi phục cờ KM:
  * - gift / discounted_buy → isPromoGift
  * - dòng thường: promoEnabledIds CHỈ từ promotionId của chính dòng đó
@@ -2208,13 +2365,29 @@ export default function BanHangPage() {
         );
       }
 
+      // Dòng bị thiếu HẲN so với đơn hàng (theo phương án chặt: phân biệt dòng
+      // thường / quà / mua kèm + promotionId + conditionType).
+      const missingLines = findMissingOrderLines(
+        sourceOrder,
+        activeTab.cartItems
+      );
+
       let forceComplete = false;
       if (hasShortfall) {
+        // A1: vừa thiếu SL vừa (có thể) thiếu dòng hẳn → gộp danh sách dòng
+        // thiếu vào chính modal chọn kết thúc / giữ 1 phần (không bung 2 popup).
+        const missingBlock =
+          missingLines.length > 0
+            ? `<p style="margin-top:8px;color:#b91c1c;font-weight:600">Các dòng bị thiếu hẳn so với đơn hàng:</p>${buildMissingLinesHtml(
+                missingLines
+              )}`
+            : "";
         const choice = await Swal.fire({
           icon: "question",
           title: "Đơn hàng chưa xuất đủ số lượng",
           html: `
             <p>Có ít nhất một sản phẩm xuất thiếu so với số lượng đặt.</p>
+            ${missingBlock}
             <p style="margin-top:8px">Bạn có muốn <strong>kết thúc đơn hàng</strong> (hoàn thành) hay giữ trạng thái <strong>Ra 1 phần HĐ</strong>?</p>
           `,
           showDenyButton: true,
@@ -2231,6 +2404,24 @@ export default function BanHangPage() {
         if (!choice.isConfirmed && !choice.isDenied) return;
 
         forceComplete = choice.isConfirmed;
+      } else if (missingLines.length > 0) {
+        // A3: SL các mã đều đủ nhưng vẫn rớt hẳn một dòng (ví dụ dòng quà cùng
+        // sản phẩm với dòng thường). Chỉ cảnh báo dòng thiếu, không chặn.
+        const choice = await Swal.fire({
+          icon: "warning",
+          title: "Hóa đơn thiếu dòng so với đơn hàng",
+          html: `
+            <p>Hóa đơn đang tạo bị thiếu các dòng sau so với đơn hàng:</p>
+            ${buildMissingLinesHtml(missingLines)}
+            <p style="margin-top:8px">Bạn vẫn muốn tạo hóa đơn này chứ?</p>
+          `,
+          showCancelButton: true,
+          confirmButtonText: "Vẫn tạo hóa đơn",
+          cancelButtonText: "Ở lại điều chỉnh",
+          confirmButtonColor: "#2563eb",
+          cancelButtonColor: "#6b7280",
+        });
+        if (!choice.isConfirmed) return;
       }
 
       const actualPayment = activeTab.paymentAmount || 0;
@@ -2901,6 +3092,44 @@ export default function BanHangPage() {
     try {
       const proceed = await confirmPriceMismatch("hóa đơn");
       if (!proceed) return;
+
+      // Cảnh báo dòng thiếu hẳn so với ĐƠN HÀNG gốc (nếu HĐ thuộc một đơn).
+      // HĐ bán lẻ (orderId null) → không có mốc đơn để so → bỏ qua.
+      if (existingInvoice.orderId) {
+        try {
+          const sourceOrder = await ordersApi.getOrder(
+            Number(existingInvoice.orderId)
+          );
+          // Loại chính HĐ đang sửa khỏi phần "đã xuất": phần đóng góp của nó
+          // được thay bằng giỏ hiện tại (activeTab.cartItems) để phát hiện dòng
+          // vừa bị xóa khi tạo HĐ ".xx".
+          const missingLines = findMissingOrderLines(
+            sourceOrder,
+            activeTab.cartItems,
+            activeTab.documentId
+          );
+          if (missingLines.length > 0) {
+            const choice = await Swal.fire({
+              icon: "warning",
+              title: "Hóa đơn thiếu dòng so với đơn hàng",
+              html: `
+                <p>Hóa đơn này đang thiếu hẳn các dòng sau so với đơn hàng gốc:</p>
+                ${buildMissingLinesHtml(missingLines)}
+                <p style="margin-top:8px">Bạn vẫn muốn tạo hóa đơn này chứ?</p>
+              `,
+              showCancelButton: true,
+              confirmButtonText: "Vẫn tạo hóa đơn",
+              cancelButtonText: "Ở lại điều chỉnh",
+              confirmButtonColor: "#2563eb",
+              cancelButtonColor: "#6b7280",
+            });
+            if (!choice.isConfirmed) return;
+          }
+        } catch (error) {
+          // Lỗi fetch đơn gốc không nên chặn lưu HĐ.
+          console.error("handleSaveInvoice missing-lines check error:", error);
+        }
+      }
 
       const actualPayment = activeTab.paymentAmount || 0;
 
