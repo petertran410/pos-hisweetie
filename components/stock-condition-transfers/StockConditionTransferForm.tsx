@@ -5,17 +5,27 @@ import { X, Search, Trash2, Loader2 } from "lucide-react";
 import { useBranchStore } from "@/lib/store/branch";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useCreateStockConditionTransfer } from "@/lib/hooks/useStockConditionTransfers";
-import { productsApi } from "@/lib/api/products";
-import type { ConditionBucket } from "@/lib/api/stock-condition-transfers";
+import { productsApi, type NearExpiryLot } from "@/lib/api/products";
+import { DatePickerInput } from "@/components/ui/DatePickerInput";
+import type {
+  ConditionBucket,
+  TransferDirection,
+} from "@/lib/api/stock-condition-transfers";
 
 interface TransferItem {
   productId: number;
   productCode: string;
   productName: string;
   unit?: string;
-  // "Hàng tốt khả dụng" lấy TRỰC TIẾP từ sổ cái (condition-summary) để luôn khớp
-  // với tab Thẻ kho loại tồn, tránh lệ thuộc cột cache có thể bị stale.
-  goodAvailable: number;
+  // Tồn từng loại lấy TRỰC TIẾP từ sổ cái (condition-summary) để luôn khớp tab
+  // Thẻ kho loại tồn, tránh lệ thuộc cột cache có thể bị stale.
+  good: number;
+  damaged: number;
+  nearExpiry: number;
+  promo: number;
+  // Các lô cận date hiện có (dùng khi điều chỉnh giảm cận date).
+  nearExpiryLots: NearExpiryLot[];
+  direction: TransferDirection; // IN = hàng tốt→loại; OUT = loại→hàng tốt
   toBucket: ConditionBucket;
   quantity: string;
   expiryDate: string;
@@ -24,6 +34,19 @@ interface TransferItem {
 
 interface Props {
   onClose: () => void;
+}
+
+// Số lượng tối đa cho phép của một dòng, tùy chiều + loại.
+function maxAllowed(i: TransferItem): number {
+  if (i.direction === "IN") return i.good;
+  // OUT: giới hạn theo tồn hiện có của loại.
+  if (i.toBucket === "DAMAGED") return i.damaged;
+  if (i.toBucket === "PROMO") return i.promo;
+  // NEAR_EXPIRY OUT: theo tồn của đúng lô đã chọn.
+  const lot = i.nearExpiryLots.find(
+    (l) => (l.expiryDate || "") === (i.expiryDate || "")
+  );
+  return lot ? lot.quantity : 0;
 }
 
 export function StockConditionTransferForm({ onClose }: Props) {
@@ -77,25 +100,32 @@ export function StockConditionTransferForm({ onClose }: Props) {
     setSearch("");
     setShowDropdown(false);
 
-    // Lấy "Hàng tốt khả dụng" từ sổ cái (nguồn chân lý), khớp tab Thẻ kho loại tồn.
-    let goodAvailable = 0;
+    // Lấy tồn từng loại + lô cận date từ sổ cái (nguồn chân lý), khớp tab Thẻ kho loại tồn.
+    let good = 0;
+    let damaged = 0;
+    let nearExpiry = 0;
+    let promo = 0;
+    let nearExpiryLots: NearExpiryLot[] = [];
     try {
-      const summary = await productsApi.getConditionSummary(
-        product.id,
-        selectedBranch.id
-      );
-      goodAvailable = Number(summary.good) || 0;
+      const [summary, lotsResp] = await Promise.all([
+        productsApi.getConditionSummary(product.id, selectedBranch.id),
+        productsApi.getNearExpiryLots(product.id, selectedBranch.id),
+      ]);
+      good = Number(summary.good) || 0;
+      damaged = Number(summary.damaged) || 0;
+      nearExpiry = Number(summary.nearExpiry) || 0;
+      promo = Number(summary.promo) || 0;
+      nearExpiryLots = lotsResp.data || [];
     } catch {
-      // Fallback: suy từ cột cache trên inventory nếu API lỗi.
       const inv = product.inventories?.find(
         (i: any) => i.branchId === selectedBranch?.id
       );
-      goodAvailable = inv
-        ? Number(inv.onHand) -
-          Number(inv.damagedQuantity || 0) -
-          Number(inv.nearExpiryQuantity || 0) -
-          Number(inv.promoQuantity || 0)
-        : 0;
+      if (inv) {
+        damaged = Number(inv.damagedQuantity || 0);
+        nearExpiry = Number(inv.nearExpiryQuantity || 0);
+        promo = Number(inv.promoQuantity || 0);
+        good = Number(inv.onHand) - damaged - nearExpiry - promo;
+      }
     }
 
     setItems((prev) => [
@@ -104,7 +134,12 @@ export function StockConditionTransferForm({ onClose }: Props) {
         productCode: product.code,
         productName: product.name,
         unit: product.unit,
-        goodAvailable,
+        good,
+        damaged,
+        nearExpiry,
+        promo,
+        nearExpiryLots,
+        direction: "IN",
         toBucket: "DAMAGED",
         quantity: "",
         expiryDate: "",
@@ -138,17 +173,22 @@ export function StockConditionTransferForm({ onClose }: Props) {
     for (const item of items) {
       const qty = parseInt(item.quantity) || 0;
       if (qty <= 0) {
-        alert(`${item.productName}: Số lượng chuyển phải lớn hơn 0`);
-        return;
-      }
-      if (qty > item.goodAvailable) {
-        alert(
-          `${item.productName}: Số lượng chuyển (${qty}) vượt quá hàng tốt khả dụng (${item.goodAvailable})`
-        );
+        alert(`${item.productName}: Số lượng phải lớn hơn 0`);
         return;
       }
       if (item.toBucket === "NEAR_EXPIRY" && !item.expiryDate) {
-        alert(`${item.productName}: Hàng cận date phải chọn hạn dùng`);
+        alert(
+          `${item.productName}: Cận date phải chọn ${item.direction === "OUT" ? "đúng lô (ngày sản xuất)" : "ngày sản xuất"}`
+        );
+        return;
+      }
+      const max = maxAllowed(item);
+      if (qty > max) {
+        const what =
+          item.direction === "IN"
+            ? `hàng tốt khả dụng (${max})`
+            : `tồn loại này hiện có (${max})`;
+        alert(`${item.productName}: Số lượng (${qty}) vượt quá ${what}`);
         return;
       }
     }
@@ -160,6 +200,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
         items: items.map((i) => ({
           productId: i.productId,
           toBucket: i.toBucket,
+          direction: i.direction,
           quantity: parseInt(i.quantity) || 0,
           expiryDate:
             i.toBucket === "NEAR_EXPIRY" && i.expiryDate
@@ -257,10 +298,11 @@ export function StockConditionTransferForm({ onClose }: Props) {
                   <tr>
                     <th className="px-3 py-2 text-left">Mã hàng</th>
                     <th className="px-3 py-2 text-left">Tên hàng</th>
-                    <th className="px-3 py-2 text-right">Hàng tốt khả dụng</th>
-                    <th className="px-3 py-2 text-center">Loại đích</th>
+                    <th className="px-3 py-2 text-center">Chiều</th>
+                    <th className="px-3 py-2 text-center">Loại tồn</th>
+                    <th className="px-3 py-2 text-right">Khả dụng</th>
                     <th className="px-3 py-2 text-center">Số lượng</th>
-                    <th className="px-3 py-2 text-center">Hạn dùng</th>
+                    <th className="px-3 py-2 text-center">Ngày sản xuất (NSX)</th>
                     <th className="px-3 py-2 text-left">Ghi chú</th>
                     <th className="px-3 py-2 w-10"></th>
                   </tr>
@@ -268,25 +310,56 @@ export function StockConditionTransferForm({ onClose }: Props) {
                 <tbody>
                   {items.map((item) => {
                     const qty = parseInt(item.quantity) || 0;
-                    const isOverflow = qty > item.goodAvailable;
+                    const max = maxAllowed(item);
+                    const isOverflow = qty > max;
                     const needExpiry = item.toBucket === "NEAR_EXPIRY";
+                    const isOut = item.direction === "OUT";
                     return (
                       <tr key={item.productId} className="border-t">
                         <td className="px-3 py-2 text-xs">
                           {item.productCode}
                         </td>
                         <td className="px-3 py-2">{item.productName}</td>
-                        <td className="px-3 py-2 text-right font-medium text-green-600">
-                          {item.goodAvailable.toLocaleString()}
+                        <td className="px-3 py-2 text-center">
+                          <select
+                            value={item.direction}
+                            onChange={(e) =>
+                              // Đổi chiều → reset lô/số lượng để tránh lệch giới hạn.
+                              setItems((prev) =>
+                                prev.map((x) =>
+                                  x.productId === item.productId
+                                    ? {
+                                        ...x,
+                                        direction: e.target
+                                          .value as TransferDirection,
+                                        expiryDate: "",
+                                        quantity: "",
+                                      }
+                                    : x
+                                )
+                              )
+                            }
+                            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
+                            <option value="IN">Chuyển vào</option>
+                            <option value="OUT">Điều chỉnh giảm</option>
+                          </select>
                         </td>
                         <td className="px-3 py-2 text-center">
                           <select
                             value={item.toBucket}
                             onChange={(e) =>
-                              updateItem(
-                                item.productId,
-                                "toBucket",
-                                e.target.value
+                              setItems((prev) =>
+                                prev.map((x) =>
+                                  x.productId === item.productId
+                                    ? {
+                                        ...x,
+                                        toBucket: e.target
+                                          .value as ConditionBucket,
+                                        expiryDate: "",
+                                        quantity: "",
+                                      }
+                                    : x
+                                )
                               )
                             }
                             className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
@@ -294,6 +367,10 @@ export function StockConditionTransferForm({ onClose }: Props) {
                             <option value="NEAR_EXPIRY">Cận date</option>
                             <option value="PROMO">Khuyến mãi</option>
                           </select>
+                        </td>
+                        <td
+                          className={`px-3 py-2 text-right font-medium ${isOut ? "text-amber-600" : "text-green-600"}`}>
+                          {max.toLocaleString()}
                         </td>
                         <td className="px-3 py-2 text-center">
                           <input
@@ -320,9 +397,11 @@ export function StockConditionTransferForm({ onClose }: Props) {
                           )}
                         </td>
                         <td className="px-3 py-2 text-center">
-                          {needExpiry ? (
-                            <input
-                              type="date"
+                          {!needExpiry ? (
+                            <span className="text-gray-300 text-xs">—</span>
+                          ) : isOut ? (
+                            // OUT cận date: chọn ĐÚNG lô đang có tồn.
+                            <select
                               value={item.expiryDate}
                               onChange={(e) =>
                                 updateItem(
@@ -331,10 +410,28 @@ export function StockConditionTransferForm({ onClose }: Props) {
                                   e.target.value
                                 )
                               }
-                              className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand"
-                            />
+                              className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
+                              <option value="">-- Chọn lô --</option>
+                              {item.nearExpiryLots.map((l) => (
+                                <option
+                                  key={l.expiryDate || "null"}
+                                  value={l.expiryDate || ""}>
+                                  {l.expiryDate
+                                    ? new Date(l.expiryDate).toLocaleDateString(
+                                        "vi-VN"
+                                      )
+                                    : "Chưa xác định"}{" "}
+                                  ({l.quantity})
+                                </option>
+                              ))}
+                            </select>
                           ) : (
-                            <span className="text-gray-300 text-xs">—</span>
+                            <DatePickerInput
+                              value={item.expiryDate}
+                              onChange={(v) =>
+                                updateItem(item.productId, "expiryDate", v)
+                              }
+                            />
                           )}
                         </td>
                         <td className="px-3 py-2">

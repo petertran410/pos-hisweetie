@@ -24,7 +24,8 @@ const BUCKETS = [
 const TX_LABELS: Record<string, string> = {
   OPENING: "Mở sổ",
   CLT_IN: "Chuyển vào",
-  CLT_CANCEL: "Hủy chuyển",
+  CLT_OUT: "Điều chỉnh giảm",
+  CLT_CANCEL: "Hủy phiếu CLT",
   SALE_OUT: "Bán ra",
   SALE_CANCEL: "Hủy bán",
 };
@@ -136,7 +137,7 @@ export function ProductConditionTab({ productId, branchId }: Props) {
                 </th>
                 {isNearExpiry && (
                   <th className="px-4 py-3 text-left font-medium text-gray-700">
-                    Hạn dùng
+                    Ngày sản xuất
                   </th>
                 )}
                 <th className="px-4 py-3 text-right font-medium text-gray-700">

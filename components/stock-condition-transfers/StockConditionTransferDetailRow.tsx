@@ -167,9 +167,10 @@ export function StockConditionTransferDetailRow({ transferId, colSpan }: Props) 
                   <tr>
                     <th className="px-3 py-2 text-left">Mã hàng</th>
                     <th className="px-3 py-2 text-left">Tên hàng</th>
-                    <th className="px-3 py-2 text-center">Loại đích</th>
+                    <th className="px-3 py-2 text-center">Chiều</th>
+                    <th className="px-3 py-2 text-center">Loại tồn</th>
                     <th className="px-3 py-2 text-right">Số lượng</th>
-                    <th className="px-3 py-2 text-center">Hạn dùng</th>
+                    <th className="px-3 py-2 text-center">Ngày sản xuất</th>
                     <th className="px-3 py-2 text-right">Tồn lúc tạo</th>
                     <th className="px-3 py-2 text-left">Ghi chú</th>
                   </tr>
@@ -189,11 +190,22 @@ export function StockConditionTransferDetailRow({ transferId, colSpan }: Props) 
                       </td>
                       <td className="px-3 py-2">{d.productName}</td>
                       <td className="px-3 py-2 text-center">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs ${
+                            d.direction === "OUT"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-blue-100 text-blue-700"
+                          }`}>
+                          {d.direction === "OUT" ? "Giảm" : "Vào"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center">
                         <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
                           {BUCKET_LABELS[d.toBucket] || d.toBucket}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right font-medium">
+                        {d.direction === "OUT" ? "−" : "+"}
                         {Number(d.quantity).toLocaleString()}
                       </td>
                       <td className="px-3 py-2 text-center">

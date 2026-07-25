@@ -1,11 +1,17 @@
 import { apiClient } from "@/lib/config/api";
 
 export type ConditionBucket = "DAMAGED" | "NEAR_EXPIRY" | "PROMO";
+export type TransferDirection = "IN" | "OUT";
 
 export const BUCKET_LABELS: Record<ConditionBucket, string> = {
   DAMAGED: "Bục rách (loại B)",
   NEAR_EXPIRY: "Cận date",
   PROMO: "Khuyến mãi",
+};
+
+export const DIRECTION_LABELS: Record<TransferDirection, string> = {
+  IN: "Chuyển vào (hàng tốt → loại)",
+  OUT: "Điều chỉnh giảm (loại → hàng tốt)",
 };
 
 // 1=Chờ duyệt, 2=Đã duyệt, 3=Đã hủy
@@ -23,6 +29,7 @@ export interface StockConditionTransferDetail {
   productName: string;
   unit?: string;
   toBucket: ConditionBucket;
+  direction: TransferDirection;
   quantity: number;
   expiryDate?: string | null;
   currentOnHand: number;
@@ -75,6 +82,7 @@ export interface StockConditionTransferQueryParams {
 export interface CreateStockConditionTransferItem {
   productId: number;
   toBucket: ConditionBucket;
+  direction?: TransferDirection;
   quantity: number;
   expiryDate?: string;
   note?: string;
