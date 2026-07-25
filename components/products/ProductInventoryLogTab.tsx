@@ -136,9 +136,6 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
               Giá GD
             </th>
             <th className="px-4 py-3 text-right font-medium text-gray-700">
-              Giá vốn
-            </th>
-            <th className="px-4 py-3 text-right font-medium text-gray-700">
               Số lượng
             </th>
             <th className="px-4 py-3 text-right font-medium text-gray-700">
@@ -175,9 +172,6 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
                 {log.transactionPrice != null
                   ? formatMoney(log.transactionPrice)
                   : "-"}
-              </td>
-              <td className="px-4 py-3 text-right">
-                {formatMoney(log.costPrice)}
               </td>
               <td className="px-4 py-3 text-right font-medium">
                 {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
