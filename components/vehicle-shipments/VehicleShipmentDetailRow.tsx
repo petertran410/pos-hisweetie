@@ -296,8 +296,8 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
             {isReceived && diffItems.length > 0 && (
               <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                 Có {diffItems.length} sản phẩm nhập lệch so với ghép xe. Với sản
-                phẩm thiếu, chọn "Chuyển về còn lại" để trả phần thiếu về đơn đặt
-                hàng, hoặc "Giữ" để bỏ qua. Có thể đổi lại quyết định bất cứ lúc
+                phẩm thiếu, chọn &quot;Chuyển về còn lại&quot; để trả phần thiếu về đơn đặt
+                hàng, hoặc &quot;Giữ&quot; để bỏ qua. Có thể đổi lại quyết định bất cứ lúc
                 nào.
               </div>
             )}
@@ -308,22 +308,26 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                   <span className="text-gray-400">·</span>
                   <span className="text-gray-600 truncate">{sec.supplierName}</span>
                 </div>
-                <table className="w-full table-fixed">
-                  <colgroup>
-                    <col style={{ width: "180px" }} />
-                    <col />
-                    <col style={{ width: "180px" }} />
-                    <col style={{ width: "140px" }} />
-                    <col style={{ width: "180px" }} />
-                    {isReceived && (
-                      <>
-                        <col style={{ width: "130px" }} />
-                        <col style={{ width: "130px" }} />
-                        <col style={{ width: "280px" }} />
-                      </>
-                    )}
-                  </colgroup>
-                  <thead>
+                <div className="overflow-x-auto">
+                  <table
+                    className={`w-full table-fixed ${
+                      isReceived ? "min-w-[1180px]" : "min-w-[850px]"
+                    }`}>
+                    <colgroup>
+                      <col style={{ width: "140px" }} />
+                      <col style={{ width: "320px" }} />
+                      <col style={{ width: "120px" }} />
+                      <col style={{ width: "90px" }} />
+                      <col style={{ width: "140px" }} />
+                      {isReceived && (
+                        <>
+                          <col style={{ width: "90px" }} />
+                          <col style={{ width: "100px" }} />
+                          <col style={{ width: "250px" }} />
+                        </>
+                      )}
+                    </colgroup>
+                    <thead>
                     <tr className="bg-gray-100 border-b border-gray-200">
                       <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider">
                         Mã hàng
@@ -348,7 +352,7 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                           <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
                             Chênh lệch
                           </th>
-                          <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
+                          <th className="sticky right-0 z-[1] border-l border-gray-200 bg-gray-100 px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.35)]">
                             Xử lý
                           </th>
                         </>
@@ -366,7 +370,7 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                           ? Number(it.unitWeight ?? 0)
                           : Number(it.unitWeight ?? 0) * 1000;
                       return (
-                        <tr key={it.id} className="hover:bg-gray-50 transition-colors">
+                        <tr key={it.id} className="group hover:bg-gray-50 transition-colors">
                           <td className="px-[10px] py-2">
                             <span className="text-sm font-medium text-gray-900">
                               {it.productCode}
@@ -424,7 +428,7 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                                   </span>
                                 )}
                               </td>
-                              <td className="px-[10px] py-2 text-center">
+                              <td className="sticky right-0 z-[1] border-l border-gray-200 bg-white px-[10px] py-2 text-center shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.35)] group-hover:bg-gray-50">
                                 {isShort ? (
                                   <div className="flex items-center justify-center gap-1.5">
                                     <button
@@ -481,8 +485,9 @@ export function VehicleShipmentDetailRow({ vehicleShipmentId, colSpan }: Props) 
                         </tr>
                       );
                     })}
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ))}
           </div>

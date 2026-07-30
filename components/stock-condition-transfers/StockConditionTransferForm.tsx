@@ -6,7 +6,10 @@ import { useBranchStore } from "@/lib/store/branch";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useCreateStockConditionTransfer } from "@/lib/hooks/useStockConditionTransfers";
 import { productsApi, type NearExpiryLot } from "@/lib/api/products";
-import { DatePickerInput } from "@/components/ui/DatePickerInput";
+import {
+  DatePickerInput,
+  formatMonthYear,
+} from "@/components/ui/DatePickerInput";
 import type {
   ConditionBucket,
   TransferDirection,
@@ -176,10 +179,15 @@ export function StockConditionTransferForm({ onClose }: Props) {
         alert(`${item.productName}: Số lượng phải lớn hơn 0`);
         return;
       }
-      if (item.toBucket === "NEAR_EXPIRY" && !item.expiryDate) {
-        alert(
-          `${item.productName}: Cận date phải chọn ${item.direction === "OUT" ? "đúng lô (ngày sản xuất)" : "ngày sản xuất"}`
-        );
+      // NSX chỉ BẮT BUỘC với chiều OUT (phải trừ vào đúng lô đang có tồn).
+      // Chiều IN để trống được → vào "lô chưa xác định NSX", sau đó dùng chức
+      // năng sửa phiếu để điền NSX khi biết. Khớp ràng buộc phía backend.
+      if (
+        item.toBucket === "NEAR_EXPIRY" &&
+        item.direction === "OUT" &&
+        !item.expiryDate
+      ) {
+        alert(`${item.productName}: Điều chỉnh giảm cận date phải chọn đúng lô`);
         return;
       }
       const max = maxAllowed(item);
@@ -302,7 +310,9 @@ export function StockConditionTransferForm({ onClose }: Props) {
                     <th className="px-3 py-2 text-center">Loại tồn</th>
                     <th className="px-3 py-2 text-right">Khả dụng</th>
                     <th className="px-3 py-2 text-center">Số lượng</th>
-                    <th className="px-3 py-2 text-center">Ngày sản xuất (NSX)</th>
+                    <th className="px-3 py-2 text-center">
+                      NSX (tháng/năm)
+                    </th>
                     <th className="px-3 py-2 text-left">Ghi chú</th>
                     <th className="px-3 py-2 w-10"></th>
                   </tr>
@@ -417,9 +427,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                                   key={l.expiryDate || "null"}
                                   value={l.expiryDate || ""}>
                                   {l.expiryDate
-                                    ? new Date(l.expiryDate).toLocaleDateString(
-                                        "vi-VN"
-                                      )
+                                    ? formatMonthYear(l.expiryDate)
                                     : "Chưa xác định"}{" "}
                                   ({l.quantity})
                                 </option>
@@ -427,6 +435,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                             </select>
                           ) : (
                             <DatePickerInput
+                              monthOnly
                               value={item.expiryDate}
                               onChange={(v) =>
                                 updateItem(item.productId, "expiryDate", v)

@@ -7,6 +7,7 @@ import {
 } from "@/lib/hooks/useProducts";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { CodeLink } from "../shared/CodeLink";
+import { formatMonthYear } from "@/components/ui/DatePickerInput";
 
 interface Props {
   productId: number;
@@ -42,8 +43,9 @@ const formatDateTime = (s: string) =>
     minute: "2-digit",
   });
 
-const formatDate = (s?: string | null) =>
-  s ? new Date(s).toLocaleDateString("vi-VN") : "-";
+// NSX chỉ có nghĩa tới tháng/năm nên hiển thị mm/yyyy, đọc trực tiếp từ chuỗi
+// để không bị lệch một tháng do quy đổi múi giờ.
+const formatNsx = (s?: string | null) => formatMonthYear(s) || "-";
 
 export function ProductConditionTab({ productId, branchId }: Props) {
   const [bucket, setBucket] = useState<string>("DAMAGED");
@@ -176,7 +178,7 @@ export function ProductConditionTab({ productId, branchId }: Props) {
                   </td>
                   {isNearExpiry && (
                     <td className="px-4 py-3 text-gray-600">
-                      {formatDate(log.expiryDate)}
+                      {formatNsx(log.expiryDate)}
                     </td>
                   )}
                   <td className="px-4 py-3 text-right">

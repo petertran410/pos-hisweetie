@@ -23,6 +23,8 @@ export function useInventoryByBranch(
 ): {
   inventoryMap: Map<number, number>;
   promoInventoryMap: Map<number, number>;
+  damagedMap: Map<number, number>;
+  nearExpiryMap: Map<number, number>;
   isLoading: boolean;
   data: InventoryByBranchItem[] | undefined;
 } {
@@ -55,5 +57,33 @@ export function useInventoryByBranch(
     return m;
   }, [data]);
 
-  return { inventoryMap, promoInventoryMap, isLoading, data };
+  // Tồn bục rách / cận date. Backend đã ghi đè 3 cột này trong response bằng số
+  // tính từ SỔ CÁI StockConditionLog (xem inventories.service.getInventoryByBranch),
+  // nên số ở đây luôn khớp tab "Thẻ kho loại tồn".
+  const damagedMap = useMemo(() => {
+    const m = new Map<number, number>();
+    if (!data) return m;
+    for (const item of data) {
+      m.set(item.productId, Number(item.damagedQuantity) || 0);
+    }
+    return m;
+  }, [data]);
+
+  const nearExpiryMap = useMemo(() => {
+    const m = new Map<number, number>();
+    if (!data) return m;
+    for (const item of data) {
+      m.set(item.productId, Number(item.nearExpiryQuantity) || 0);
+    }
+    return m;
+  }, [data]);
+
+  return {
+    inventoryMap,
+    promoInventoryMap,
+    damagedMap,
+    nearExpiryMap,
+    isLoading,
+    data,
+  };
 }

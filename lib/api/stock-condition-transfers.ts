@@ -95,6 +95,48 @@ export interface CreateStockConditionTransferDto {
   items: CreateStockConditionTransferItem[];
 }
 
+// ── Sửa phiếu (kể cả phiếu đã duyệt) ───────────────────────────────────────
+// Chỉ cho sửa NSX, số lượng, ghi chú. Không đổi sản phẩm / loại tồn / chiều.
+export interface UpdateStockConditionTransferItem {
+  detailId: number;
+  quantity?: number;
+  /** null = xóa NSX (đưa về lô "chưa xác định NSX"). */
+  expiryDate?: string | null;
+  note?: string | null;
+}
+
+export interface UpdateStockConditionTransferDto {
+  note?: string;
+  items?: UpdateStockConditionTransferItem[];
+  /**
+   * true = đồng ý cập nhật cả soldExpiryDate của các hóa đơn đã bán từ lô cũ.
+   * Bỏ trống → backend CHẶN nếu lô đang sửa đã phát sinh bán.
+   */
+  cascadeInvoices?: boolean;
+}
+
+export interface EditImpactInvoice {
+  invoiceId: number;
+  invoiceCode: string;
+  purchaseDate?: string | null;
+  quantity: number;
+}
+
+export interface EditImpactDetail {
+  detailId: number;
+  productCode: string;
+  productName: string;
+  currentExpiryDate?: string | null;
+  soldQuantity: number;
+  invoices: EditImpactInvoice[];
+}
+
+export interface EditImpactResponse {
+  transferId: number;
+  code: string;
+  details: EditImpactDetail[];
+}
+
 export const stockConditionTransfersApi = {
   getAll: (
     params?: StockConditionTransferQueryParams
@@ -125,6 +167,17 @@ export const stockConditionTransfersApi = {
     data: CreateStockConditionTransferDto
   ): Promise<StockConditionTransfer> => {
     return apiClient.post("/stock-condition-transfers", data);
+  },
+
+  update: (
+    id: number,
+    data: UpdateStockConditionTransferDto
+  ): Promise<StockConditionTransfer> => {
+    return apiClient.put(`/stock-condition-transfers/${id}`, data);
+  },
+
+  getEditImpact: (id: number): Promise<EditImpactResponse> => {
+    return apiClient.get(`/stock-condition-transfers/${id}/edit-impact`);
   },
 
   approve: (id: number): Promise<StockConditionTransfer> => {

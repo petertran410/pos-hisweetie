@@ -268,6 +268,25 @@ export const productsApi = {
       `/products/${productId}/condition-summary?branchId=${branchId}`
     );
   },
+
+  /**
+   * Tồn 3 bucket cho NHIỀU sản phẩm trong 1 chi nhánh, đọc TỪ SỔ CÁI
+   * (StockConditionLog) chứ không đọc cache Inventory.
+   * Dùng cho dropdown bán hàng: cache có thể trôi khỏi sổ cái vì một số module
+   * cũ (trả hàng, trả NCC, trả ký gửi, kiểm KLB/KKM, sửa tình trạng thủ công)
+   * còn ghi trực tiếp vào cột cache mà không ghi sổ.
+   */
+  getConditionSummaryBatch: async (
+    productIds: number[],
+    branchId: number
+  ): Promise<Record<number, BucketTotals>> => {
+    if (!productIds.length) return {};
+    return apiClient.get(
+      `/products/condition-summary-batch?productIds=${productIds.join(
+        ","
+      )}&branchId=${branchId}`
+    );
+  },
 };
 
 export interface StockConditionLog {
@@ -295,6 +314,12 @@ export interface StockConditionLog {
 export interface NearExpiryLot {
   expiryDate: string | null;
   quantity: number;
+}
+
+export interface BucketTotals {
+  damaged: number;
+  nearExpiry: number;
+  promo: number;
 }
 
 export interface ConditionSummary {

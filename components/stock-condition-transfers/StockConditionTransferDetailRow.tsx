@@ -1,15 +1,17 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   useStockConditionTransfer,
   useApproveStockConditionTransfer,
   useCancelStockConditionTransfer,
 } from "@/lib/hooks/useStockConditionTransfers";
 import { BUCKET_LABELS } from "@/lib/api/stock-condition-transfers";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import Link from "next/link";
+import { StockConditionTransferEditForm } from "./StockConditionTransferEditForm";
+import { formatMonthYear } from "@/components/ui/DatePickerInput";
 
 interface Props {
   transferId: number;
@@ -18,17 +20,20 @@ interface Props {
 
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
-const formatDate = (d?: string | null) =>
-  d ? new Date(d).toLocaleDateString("vi-VN") : "-";
+// NSX chỉ có nghĩa tới tháng/năm nên hiển thị mm/yyyy.
+const formatNsx = (d?: string | null) => formatMonthYear(d) || "Chưa xác định";
 
-export function StockConditionTransferDetailRow({ transferId, colSpan }: Props) {
-  const { data: transfer, isLoading } =
-    useStockConditionTransfer(transferId);
+export function StockConditionTransferDetailRow({
+  transferId,
+  colSpan,
+}: Props) {
+  const { data: transfer, isLoading } = useStockConditionTransfer(transferId);
   const approveTransfer = useApproveStockConditionTransfer();
   const cancelTransfer = useCancelStockConditionTransfer();
   const canApprove = usePermission("stock_condition_transfers", "approve");
   const canUpdate = usePermission("stock_condition_transfers", "update");
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const [showEdit, setShowEdit] = useState(false);
 
   useLayoutEffect(() => {
     const el = wrapperRef.current;
@@ -171,7 +176,7 @@ export function StockConditionTransferDetailRow({ transferId, colSpan }: Props) 
                     <th className="px-3 py-2 text-center">Loại tồn</th>
                     <th className="px-3 py-2 text-right">Số lượng</th>
                     <th className="px-3 py-2 text-center">Ngày sản xuất</th>
-                    <th className="px-3 py-2 text-right">Tồn lúc tạo</th>
+                    <th className="px-3 py-2 text-right">Tồn kho tổng</th>
                     <th className="px-3 py-2 text-left">Ghi chú</th>
                   </tr>
                 </thead>
@@ -199,8 +204,8 @@ export function StockConditionTransferDetailRow({ transferId, colSpan }: Props) 
                           {d.direction === "OUT" ? "Giảm" : "Vào"}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-center">
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
+                      <td className="px-3 py-2 text-center whitespace-nowrap">
+                        <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 whitespace-nowrap">
                           {BUCKET_LABELS[d.toBucket] || d.toBucket}
                         </span>
                       </td>
@@ -210,7 +215,7 @@ export function StockConditionTransferDetailRow({ transferId, colSpan }: Props) 
                       </td>
                       <td className="px-3 py-2 text-center">
                         {d.toBucket === "NEAR_EXPIRY"
-                          ? formatDate(d.expiryDate)
+                          ? formatNsx(d.expiryDate)
                           : "—"}
                       </td>
                       <td className="px-3 py-2 text-right text-gray-400">
@@ -233,7 +238,19 @@ export function StockConditionTransferDetailRow({ transferId, colSpan }: Props) 
                     onClick={handleApprove}
                     disabled={approveTransfer.isPending}
                     className="px-4 py-2 text-sm font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors disabled:opacity-50">
-                    {approveTransfer.isPending ? "Đang duyệt..." : "Duyệt phiếu"}
+                    {approveTransfer.isPending
+                      ? "Đang duyệt..."
+                      : "Duyệt phiếu"}
+                  </button>
+                )}
+                {/* Sửa được cả khi phiếu ĐÃ DUYỆT — chỉ NSX, số lượng, ghi chú.
+                    Phiếu đã hủy thì không sửa. */}
+                {canUpdate && !isCancelled && (
+                  <button
+                    onClick={() => setShowEdit(true)}
+                    className="px-4 py-2 text-sm font-medium text-brand bg-white border border-brand rounded hover:bg-brand-soft transition-colors flex items-center gap-1.5">
+                    <Pencil className="w-3.5 h-3.5" />
+                    Sửa phiếu
                   </button>
                 )}
                 {canUpdate && !isCancelled && (
@@ -249,6 +266,13 @@ export function StockConditionTransferDetailRow({ transferId, colSpan }: Props) 
             </div>
           </div>
         </div>
+
+        {showEdit && (
+          <StockConditionTransferEditForm
+            transfer={transfer}
+            onClose={() => setShowEdit(false)}
+          />
+        )}
       </td>
     </tr>
   );

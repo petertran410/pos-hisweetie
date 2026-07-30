@@ -12,6 +12,21 @@ interface Props {
   /** Không cho chọn trước ngày này (YYYY-MM-DD). */
   minDate?: string;
   className?: string;
+  /**
+   * Chỉ chọn THÁNG/NĂM (dùng cho NSX — ngày sản xuất chỉ có nghĩa tới tháng).
+   * Giá trị trả về vẫn là YYYY-MM-DD nhưng luôn neo vào ngày 01 để hai lần nhập
+   * cùng tháng không tạo ra 2 lô khác nhau. Hiển thị dạng mm/yyyy.
+   */
+  monthOnly?: boolean;
+}
+
+/** Hiển thị mm/yyyy từ chuỗi YYYY-MM-DD (không qua Date để tránh lệch múi giờ). */
+export function formatMonthYear(v?: string | null): string {
+  if (!v) return "";
+  const s = String(v).slice(0, 10);
+  const [y, m] = s.split("-");
+  if (!y || !m) return "";
+  return `${m}/${y}`;
 }
 
 // Lịch nhỏ — tái dùng phong cách MiniCalendar ở sidebar bộ lọc.
@@ -20,22 +35,30 @@ function CalendarBody({
   onChange,
   onClose,
   minDate,
+  monthOnly,
 }: {
   value: string;
   onChange: (v: string) => void;
   onClose: () => void;
   minDate?: string;
+  monthOnly?: boolean;
 }) {
   const todayObj = new Date();
+  // Đọc tháng/năm TRỰC TIẾP từ chuỗi YYYY-MM-DD, không qua new Date() để tránh
+  // lệch một tháng do quy đổi múi giờ (ví dụ 2025-05-01 ở GMT+7 lùi về 30/04).
+  const parsed = value ? String(value).slice(0, 10).split("-") : null;
   const [viewMonth, setViewMonth] = useState(
-    value ? new Date(value).getMonth() : todayObj.getMonth()
+    parsed ? Number(parsed[1]) - 1 : todayObj.getMonth()
   );
   const [viewYear, setViewYear] = useState(
-    value ? new Date(value).getFullYear() : todayObj.getFullYear()
+    parsed ? Number(parsed[0]) : todayObj.getFullYear()
   );
 
   // Chế độ hiển thị: chọn ngày | chọn tháng | chọn năm.
-  const [mode, setMode] = useState<"days" | "months" | "years">("days");
+  // monthOnly → mở thẳng lưới tháng, không bao giờ vào lưới ngày.
+  const [mode, setMode] = useState<"days" | "months" | "years">(
+    monthOnly ? "months" : "days"
+  );
   // Thập kỷ đang xem ở lưới năm (12 năm: yearBase-1 .. yearBase+10).
   const [yearBase, setYearBase] = useState(viewYear - (viewYear % 10));
 
@@ -82,7 +105,18 @@ function CalendarBody({
     else if (mode === "months") {
       setYearBase(viewYear - (viewYear % 10));
       setMode("years");
-    } else setMode("days");
+    } else setMode(monthOnly ? "months" : "days");
+  };
+
+  // Chọn tháng: ở chế độ monthOnly thì chốt luôn ngày 01 của tháng đó và đóng.
+  const pickMonth = (m: number) => {
+    setViewMonth(m);
+    if (!monthOnly) {
+      setMode("days");
+      return;
+    }
+    onChange(`${viewYear}-${String(m + 1).padStart(2, "0")}-01`);
+    onClose();
   };
 
   return (
@@ -170,10 +204,7 @@ function CalendarBody({
                 key={m}
                 type="button"
                 onMouseDown={(e) => e.stopPropagation()}
-                onClick={() => {
-                  setViewMonth(m);
-                  setMode("days");
-                }}
+                onClick={() => pickMonth(m)}
                 className={[
                   "py-2 text-xs rounded-lg transition-colors",
                   isSel
@@ -229,11 +260,12 @@ function CalendarBody({
           type="button"
           onMouseDown={(e) => e.stopPropagation()}
           onClick={() => {
-            onChange(todayStr);
+            // monthOnly: chốt THÁNG hiện tại (ngày 01), không phải ngày hôm nay.
+            onChange(monthOnly ? todayStr.slice(0, 8) + "01" : todayStr);
             onClose();
           }}
           className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft">
-          Hôm nay
+          {monthOnly ? "Tháng này" : "Hôm nay"}
         </button>
       </div>
     </div>
@@ -243,9 +275,10 @@ function CalendarBody({
 export function DatePickerInput({
   value,
   onChange,
-  placeholder = "dd/mm/yyyy",
+  placeholder,
   minDate,
   className,
+  monthOnly,
 }: Props) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -281,9 +314,13 @@ export function DatePickerInput({
     setOpen(true);
   };
 
+  // monthOnly: hiển thị mm/yyyy, đọc trực tiếp từ chuỗi để không lệch múi giờ.
+  const emptyLabel = placeholder ?? (monthOnly ? "mm/yyyy" : "dd/mm/yyyy");
   const display = value
-    ? new Date(value).toLocaleDateString("vi-VN")
-    : placeholder;
+    ? monthOnly
+      ? formatMonthYear(value)
+      : new Date(value).toLocaleDateString("vi-VN")
+    : emptyLabel;
 
   return (
     <>
@@ -320,6 +357,7 @@ export function DatePickerInput({
               onChange={onChange}
               onClose={() => setOpen(false)}
               minDate={minDate}
+              monthOnly={monthOnly}
             />
           </div>,
           document.body

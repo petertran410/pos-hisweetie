@@ -3,6 +3,7 @@ import {
   stockConditionTransfersApi,
   StockConditionTransferQueryParams,
   CreateStockConditionTransferDto,
+  UpdateStockConditionTransferDto,
 } from "@/lib/api/stock-condition-transfers";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -34,7 +35,13 @@ function invalidateAll(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: ["product"] });
   queryClient.invalidateQueries({ queryKey: ["product-condition-logs"] });
   queryClient.invalidateQueries({ queryKey: ["product-condition-summary"] });
+  queryClient.invalidateQueries({ queryKey: ["condition-summary-batch"] });
   queryClient.invalidateQueries({ queryKey: ["near-expiry-lots"] });
+  queryClient.invalidateQueries({
+    queryKey: ["stock-condition-transfer-edit-impact"],
+  });
+  // Tồn theo chi nhánh ở màn bán hàng đọc 3 cột bucket → phải làm mới theo.
+  queryClient.invalidateQueries({ queryKey: ["inventory-by-branch"] });
 }
 
 export function useCreateStockConditionTransfer() {
@@ -48,6 +55,47 @@ export function useCreateStockConditionTransfer() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Tạo phiếu thất bại");
+    },
+  });
+}
+
+/**
+ * Xem trước ảnh hưởng khi sửa phiếu: hóa đơn nào đã bán từ lô cận date hiện tại.
+ * Chỉ gọi khi form sửa đang mở (enabled) để không tốn request vô ích.
+ */
+export function useStockConditionTransferEditImpact(
+  id: number,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ["stock-condition-transfer-edit-impact", id],
+    queryFn: () => stockConditionTransfersApi.getEditImpact(id),
+    enabled: !!id && enabled,
+  });
+}
+
+export function useUpdateStockConditionTransfer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: UpdateStockConditionTransferDto;
+    }) => stockConditionTransfersApi.update(id, data),
+    onSuccess: (updated, variables) => {
+      // Cập nhật ngay cache chi tiết đang mở, tránh form/list còn hiển thị số
+      // cũ trong khoảng thời gian chờ invalidate refetch.
+      queryClient.setQueryData(
+        ["stock-condition-transfer", variables.id],
+        updated
+      );
+      invalidateAll(queryClient);
+      toast.success("Cập nhật phiếu thành công");
+    },
+    onError: (error: any) => {
+      console.error("update phiếu CLT thất bại:", error);
     },
   });
 }

@@ -14,6 +14,7 @@ import {
 import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useInventoryByBranch } from "@/lib/hooks/useInventoryByBranch";
+import { ItemConditionSelector } from "./ItemConditionSelector";
 import { NoteDropdown } from "./NoteDropdown";
 import { NoteTemplateModal } from "./NoteTemplateModal";
 import { ItemDiscountModal } from "./ItemDiscountModal";
@@ -146,7 +147,7 @@ export function InvoiceItemsList({
   //  - thêm/xóa SP trong giỏ
   // Fallback `getItemOnHand(item)` (snapshot từ product.inventories) khi hook
   // chưa load xong → tránh flash "0" lúc mới mount.
-   const { inventoryMap, promoInventoryMap } = useInventoryByBranch(
+   const { inventoryMap, promoInventoryMap, damagedMap, nearExpiryMap } = useInventoryByBranch(
      cartProductIds,
      selectedBranch?.id
    );
@@ -536,10 +537,18 @@ export function InvoiceItemsList({
                     {(() => {
                       const label = getConditionLabel(item.conditionType);
                       if (!label) return null;
+                      const lotSuffix =
+                        item.conditionType === "near_expiry" &&
+                        item.soldExpiryDate
+                          ? ` (NSX ${new Date(
+                              item.soldExpiryDate
+                            ).toLocaleDateString("vi-VN")})`
+                          : "";
                       return (
                         <span
                           className={`px-1.5 py-0.5 text-xs rounded-full border ${label.className}`}>
                           {label.text}
+                          {lotSuffix}
                         </span>
                       );
                     })()}
@@ -650,6 +659,17 @@ export function InvoiceItemsList({
                   {/* Dòng quà KM: không có action sửa */}
                   {item.isPromoGift ? null : (
                     <>
+                      {/* Chọn loại tồn để bán: [dropdown NSX] [Cận date] [Bục rách].
+                          Đặt bên trái icon "!" cho đồng bộ với nút Khuyến Mãi. */}
+                      <ItemConditionSelector
+                        item={item}
+                        damagedAvailable={damagedMap.get(item.product.id) ?? 0}
+                        nearExpiryAvailable={
+                          nearExpiryMap.get(item.product.id) ?? 0
+                        }
+                        branchId={selectedBranch?.id}
+                        onUpdateItem={onUpdateItem}
+                      />
                       {canViewInventory && (
                         <button
                           onClick={() => setSelectedItemForInventory(item)}
