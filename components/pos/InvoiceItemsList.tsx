@@ -975,90 +975,19 @@ export function InvoiceItemsList({
 
       <div className="m-2 lg:m-3 border p-2 lg:p-3 flex-shrink-0 space-y-2 lg:space-y-2.5 rounded-xl shadow-xl">
         <div>
-          <label className="block text-sm lg:text-md text-gray-600 mb-0.5 lg:mb-1">
-            Ghi chú hóa đơn
-          </label>
-          <textarea
-            value={orderNote}
-            onChange={(e) => onOrderNoteChange(e.target.value.slice(0, 1000))}
-            maxLength={1000}
-            placeholder="Nhập ghi chú cho hóa đơn..."
-            className="w-full border rounded-xl px-3 py-1.5 lg:py-2 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-brand resize-none"
-            rows={2}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-gray-600 text-sm lg:text-md">
-            Tổng tiền hàng
-          </span>
-          <span className="font-semibold text-sm lg:text-md">
-            {calculateSubtotal().toLocaleString()}
-          </span>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600 text-sm lg:text-md">Giảm giá</span>
-            <span className="text-sm lg:text-md font-medium text-red-600 min-w-[100px] text-right">
-              - {calculateDiscountAmount().toLocaleString()}
-              {(() => {
-                const subtotal = calculateSubtotal();
-                const amount = calculateDiscountAmount();
-                if (amount <= 0 || subtotal <= 0) return null;
-                const pct = roundRatio((amount / subtotal) * 100);
-                return ` (${pct}%)`;
-              })()}
-            </span>
-          </div>
-          {canEditDiscount ? (
-            <div className="flex items-center gap-2 w-full">
-              <input
-                type="text"
-                inputMode="decimal"
-                value={displayValue}
-                onChange={handleInputChange}
-                onBlur={handleInputBlur}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.currentTarget.blur();
-                }}
-                placeholder={
-                  discountType === "amount" ? "Nhập số tiền" : "Nhập %"
-                }
-                className="flex-1 min-w-0 text-center border rounded-xl px-2 lg:px-3 py-1 lg:py-1.5 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-brand"
-              />
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={() => handleDiscountTypeChange("amount")}
-                  className={`px-2 lg:px-3 py-0.5 lg:py-1 text-sm lg:text-md rounded transition-colors ${
-                    discountType === "amount"
-                      ? "bg-brand text-white"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}>
-                  Số tiền
-                </button>
-                <button
-                  onClick={() => handleDiscountTypeChange("ratio")}
-                  className={`px-2 lg:px-3 py-0.5 lg:py-1 text-sm lg:text-md rounded transition-colors ${
-                    discountType === "ratio"
-                      ? "bg-brand text-white"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}>
-                  %
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="flex items-center justify-between font-semibold text-base lg:text-lg pt-1 border-t">
-          <span>Khách cần trả</span>
-          <span className="text-brand text-base lg:text-lg">
-            {calculateTotal().toLocaleString()}
-          </span>
-        </div>
-      </div>
-      <NoteTemplateModal
+<label className="block text-sm lg:text-md text-gray-600 mb-0.5 lg:mb-1">
+Ghi chú hóa đơn
+</label>
+<textarea
+value={orderNote}
+onChange={(e) => onOrderNoteChange(e.target.value.slice(0, 1000))}
+maxLength={1000}
+placeholder="Nhập ghi chú..."
+className="w-full border rounded-xl px-3 py-1.5 lg:py-2 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-brand resize-none"
+rows={2}
+/>
+</div>
+<NoteTemplateModal
         isOpen={showNoteModal}
         onClose={() => setShowNoteModal(false)}
         onSave={handleSaveTemplate}

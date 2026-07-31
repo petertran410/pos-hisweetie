@@ -15,7 +15,7 @@ import {
   XIcon,
   Search,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MultiPaymentModal } from "./MultiPaymentModal";
 import { DeliveryAddressDropdown } from "./DeliveryAddressDropdown";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
@@ -301,6 +301,16 @@ export function InvoiceCart({
     );
   };
 
+  const subtotal = useMemo(() => {
+    return cartItems.reduce(
+      (sum: number, item: any) => sum + (item.price - item.discount) * item.quantity,
+      0
+    );
+  }, [cartItems]);
+
+  const effectiveDiscount = discount > 0 ? discount : (subtotal * discountRatio) / 100;
+  const totalAmount = subtotal - effectiveDiscount;
+
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
     // Giảm giá hiệu dụng: ưu tiên số tiền (discount), fallback sang % cho data cũ.
@@ -530,7 +540,35 @@ export function InvoiceCart({
           </div>
         )}
       </div>
-      <div className="p-2.5 lg:p-3 space-y-2 lg:space-y-2.5 flex-shrink-0 border mr-2 lg:mr-3 ml-2 lg:ml-3 mb-2 lg:mb-3 rounded-xl shadow-sm">
+      
+      {/* Summary card - moved from left panel */}
+      <div className="pl-2 lg:pl-3 pr-2 lg:pr-3 py-2 lg:py-3 space-y-1.5 lg:space-y-2">
+        <div className="border rounded-xl shadow-sm p-2 lg:p-3 space-y-2 lg:space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 text-sm lg:text-md">Tổng tiền hàng</span>
+            <span className="font-semibold text-sm lg:text-md">
+              {subtotal.toLocaleString("vi-VN")}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 text-sm lg:text-md">Giảm giá</span>
+            <span className="text-sm lg:text-md font-medium text-red-600">
+              - {effectiveDiscount.toLocaleString("vi-VN")}
+              {discount > 0 && discountRatio > 0 && subtotal > 0
+                ? " (" + Math.round((discount / subtotal) * 100) + "%)"
+                : discountRatio > 0 && discount <= 0
+                  ? " (" + discountRatio + "%)"
+                  : ""}
+            </span>
+          </div>
+          <div className="flex items-center justify-between font-semibold text-base lg:text-lg pt-1 border-t">
+            <span>Khách cần trả</span>
+            <span className="text-brand text-base lg:text-lg">
+              {totalAmount.toLocaleString("vi-VN")}
+            </span>
+          </div>
+        </div>
+      </div><div className="p-2.5 lg:p-3 space-y-2 lg:space-y-2.5 flex-shrink-0 border mr-2 lg:mr-3 ml-2 lg:ml-3 mb-2 lg:mb-3 rounded-xl shadow-sm">
         {/* <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-md">Thu hộ tiền (COD)</span>
