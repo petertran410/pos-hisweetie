@@ -3759,6 +3759,10 @@ export default function BanHangPage() {
                 onCreateInvoice={handleConvertToInvoice}
                 discount={activeTab.discount}
                 discountRatio={activeTab.discountRatio}
+                onDiscountChange={(discount) => updateActiveTab({ discount })}
+                onDiscountRatioChange={(discountRatio) =>
+                  updateActiveTab({ discountRatio })
+                }
                 onDeliveryInfoChange={(deliveryInfo) =>
                   updateActiveTab({ deliveryInfo })
                 }
@@ -3874,6 +3878,12 @@ export default function BanHangPage() {
                 onPayment={handlePayment}
                 discount={activeTab.discount}
                 discountRatio={activeTab.discountRatio}
+                onDiscountChange={(discount) =>
+                  updateActiveTab({ discount })
+                }
+                onDiscountRatioChange={(discountRatio) =>
+                  updateActiveTab({ discountRatio })
+                }
                 onDeliveryInfoChange={(deliveryInfo) =>
                   updateActiveTab({ deliveryInfo })
                 }

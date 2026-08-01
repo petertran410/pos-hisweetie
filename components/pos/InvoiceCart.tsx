@@ -44,6 +44,8 @@ interface InvoiceCartProps {
   onPayment?: () => void;
   discount: number;
   discountRatio: number;
+  onDiscountChange?: (discount: number) => void;
+  onDiscountRatioChange?: (discountRatio: number) => void;
   deliveryInfo: DeliveryInfo;
   onDeliveryInfoChange: (info: DeliveryInfo) => void;
   isEditMode?: boolean;
@@ -218,6 +220,8 @@ export function InvoiceCart({
   onPayment,
   discount,
   discountRatio,
+  onDiscountChange,
+  onDiscountRatioChange,
   deliveryInfo,
   onDeliveryInfoChange,
   isEditMode = false,
@@ -245,12 +249,22 @@ export function InvoiceCart({
       amount: number;
     }>
   >([]);
+  const [discountMode, setDiscountMode] = useState<"amount" | "percent">("amount");
+  const [discountInputValue, setDiscountInputValue] = useState("");
 
   useEffect(() => {
     if (isEditMode && existingOrder && paymentAmount > 0) {
       setPaymentDisplayValue(formatNumber(paymentAmount));
     }
   }, [isEditMode, existingOrder, paymentAmount]);
+
+  useEffect(() => {
+    if (discountMode === "amount") {
+      setDiscountInputValue(discount > 0 ? formatNumber(discount) : "");
+    } else {
+      setDiscountInputValue(discountRatio > 0 ? String(discountRatio) : "");
+    }
+  }, [discount, discountRatio, discountMode]);
 
   const formatNumber = (value: number): string => {
     if (!value) return "";
@@ -266,7 +280,7 @@ export function InvoiceCart({
     const total = payments.reduce((sum, p) => sum + p.amount, 0);
     setPaymentMethods(payments);
     onPaymentAmountChange(total);
-    setPaymentDisplayValue(total.toLocaleString());
+    setPaymentDisplayValue(total.toLocaleString("en-US"));
 
     if (onPaymentMethodsChange) {
       onPaymentMethodsChange(payments);
@@ -291,6 +305,65 @@ export function InvoiceCart({
   const handlePaymentInputBlur = () => {
     if (paymentAmount === 0) {
       setPaymentDisplayValue("");
+    }
+  };
+
+  const handleDiscountInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const onlyNumbers = inputValue.replace(/[^\d]/g, "");
+
+    if (onlyNumbers === "") {
+      setDiscountInputValue("");
+      if (discountMode === "amount") {
+        onDiscountChange?.(0);
+      } else {
+        onDiscountRatioChange?.(0);
+      }
+      return;
+    }
+
+    const numericValue = parseInt(onlyNumbers, 10);
+
+    if (discountMode === "amount") {
+      setDiscountInputValue(formatNumber(numericValue));
+      onDiscountChange?.(numericValue);
+      onDiscountRatioChange?.(0);
+    } else {
+      const clampedPercent = Math.min(numericValue, 100);
+      setDiscountInputValue(clampedPercent.toString());
+      onDiscountRatioChange?.(clampedPercent);
+      onDiscountChange?.(0);
+    }
+  };
+
+  const handleDiscountModeToggle = () => {
+    const newMode = discountMode === "amount" ? "percent" : "amount";
+    setDiscountMode(newMode);
+
+    // Auto-convert between amount and percent
+    if (newMode === "percent") {
+      // Converting from amount to percent
+      if (discount > 0 && subtotal > 0) {
+        const percent = Math.round((discount / subtotal) * 100);
+        const clampedPercent = Math.min(percent, 100);
+        setDiscountInputValue(clampedPercent.toString());
+        onDiscountRatioChange?.(clampedPercent);
+        onDiscountChange?.(0);
+      } else {
+        setDiscountInputValue("");
+        onDiscountRatioChange?.(0);
+      }
+    } else {
+      // Converting from percent to amount
+      if (discountRatio > 0 && subtotal > 0) {
+        const amount = Math.round((subtotal * discountRatio) / 100);
+        setDiscountInputValue(formatNumber(amount));
+        onDiscountChange?.(amount);
+        onDiscountRatioChange?.(0);
+      } else {
+        setDiscountInputValue("");
+        onDiscountChange?.(0);
+      }
     }
   };
 
@@ -541,56 +614,38 @@ export function InvoiceCart({
         )}
       </div>
       
-      {/* Summary card - moved from left panel */}
-      <div className="pl-2 lg:pl-3 pr-2 lg:pr-3 py-2 lg:py-3 space-y-1.5 lg:space-y-2">
-        <div className="border rounded-xl shadow-sm p-2 lg:p-3 space-y-2 lg:space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600 text-sm lg:text-md">Tổng tiền hàng</span>
-            <span className="font-semibold text-sm lg:text-md">
-              {subtotal.toLocaleString("vi-VN")}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600 text-sm lg:text-md">Giảm giá</span>
-            <span className="text-sm lg:text-md font-medium text-red-600">
-              - {effectiveDiscount.toLocaleString("vi-VN")}
-              {discount > 0 && discountRatio > 0 && subtotal > 0
-                ? " (" + Math.round((discount / subtotal) * 100) + "%)"
-                : discountRatio > 0 && discount <= 0
-                  ? " (" + discountRatio + "%)"
-                  : ""}
-            </span>
-          </div>
-          <div className="flex items-center justify-between font-semibold text-base lg:text-lg pt-1 border-t">
-            <span>Khách cần trả</span>
-            <span className="text-brand text-base lg:text-lg">
-              {totalAmount.toLocaleString("vi-VN")}
-            </span>
+      {/* Unified payment and summary card */}
+      <div className="p-2.5 lg:p-3 space-y-2 lg:space-y-2.5 flex-shrink-0 border mr-2 lg:mr-3 ml-2 lg:ml-3 mb-2 lg:mb-3 rounded-xl shadow-sm">
+        {/* Summary section */}
+        <div className="flex items-center justify-between text-sm lg:text-md">
+          <span className="text-gray-600">Tổng tiền hàng</span>
+          <span className="font-semibold">
+            {subtotal.toLocaleString("en-US")}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-sm lg:text-md">
+          <span className="text-gray-600">Giảm giá</span>
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              value={discountInputValue}
+              onChange={handleDiscountInputChange}
+              placeholder="0"
+              className="w-32 lg:w-36 px-3 py-1 text-right border rounded focus:outline-none focus:ring-1 focus:ring-brand text-sm"
+            />
+            <button
+              type="button"
+              onClick={handleDiscountModeToggle}
+              className="px-2 py-1 text-xs border rounded hover:bg-gray-50 transition-colors min-w-[40px]"
+            >
+              {discountMode === "amount" ? "₫" : "%"}
+            </button>
           </div>
         </div>
-      </div><div className="p-2.5 lg:p-3 space-y-2 lg:space-y-2.5 flex-shrink-0 border mr-2 lg:mr-3 ml-2 lg:ml-3 mb-2 lg:mb-3 rounded-xl shadow-sm">
-        {/* <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-md">Thu hộ tiền (COD)</span>
-            <label className="relative inline-flex items-center cursor-not-allowed opacity-60">
-              <input
-                type="checkbox"
-                checked={true}
-                disabled={true}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-brand peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
-            </label>
-          </div>
-          <span className="font-semibold text-md">
-            {calculateTotal().toLocaleString()}
-          </span>
-        </div> */}
-
-        <div className="flex items-center justify-between text-sm lg:text-md">
+        <div className="flex items-center justify-between font-semibold text-base lg:text-lg pt-2 border-t">
           <span>Khách cần trả</span>
-          <span className="font-semibold">
-            {calculateTotal().toLocaleString()}
+          <span className="text-brand">
+            {calculateTotal().toLocaleString("en-US")}
           </span>
         </div>
 
@@ -619,7 +674,7 @@ export function InvoiceCart({
               ) : null}
             </div>
             <span className="font-semibold">
-              {paymentAmount.toLocaleString()}
+              {paymentAmount.toLocaleString("en-US")}
             </span>
           </div>
         )}
@@ -639,7 +694,7 @@ export function InvoiceCart({
                   <span className="font-semibold">
                     {(
                       Number(existingOrder.paidAmount || 0) + paymentAmount
-                    ).toLocaleString()}
+                    ).toLocaleString("en-US")}
                   </span>
                 </div>
               )
@@ -648,7 +703,9 @@ export function InvoiceCart({
 
         <div className="flex items-center justify-between text-sm lg:text-md">
           <span>Công nợ</span>
-          <span className="font-semibold">{displayDebt.toLocaleString()}</span>
+          <span className="font-semibold">
+            {displayDebt.toLocaleString("en-US")}
+          </span>
         </div>
 
         {isCreatingFromOrder ? (
