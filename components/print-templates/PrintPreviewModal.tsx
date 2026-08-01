@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { printTemplatesApi } from "@/lib/api/print-templates";
 import { invoicesApi } from "@/lib/api/invoices";
 import { X, Printer } from "lucide-react";
+import { buildPrintDocumentHtml } from "@/lib/utils/print";
 
 export function PrintPreviewModal({ template, onClose }: any) {
   const [invoiceId, setInvoiceId] = useState("");
@@ -27,19 +28,9 @@ export function PrintPreviewModal({ template, onClose }: any) {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Print</title>
-          <style>
-            @page { size: A4; margin: 0; }
-            body { margin: 20mm; font-family: Arial; }
-          </style>
-        </head>
-        <body>${preview?.content || ""}</body>
-      </html>
-    `);
+    printWindow.document.write(
+      buildPrintDocumentHtml(preview?.content || "")
+    );
     printWindow.document.close();
     printWindow.print();
   };

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Printer, Loader2 } from "lucide-react";
 import { printTemplatesApi } from "@/lib/api/print-templates";
+import { buildPrintDocumentHtml } from "@/lib/utils/print";
 
 interface MobilePrintPreviewModalProps {
   templateFor: string;
@@ -59,24 +60,8 @@ export function MobilePrintPreviewModal({
         if (!preview?.content) throw new Error("Không render được nội dung in");
 
         if (!cancelled) {
-          const paperSize = template.paperSize || "A5";
           // Build full HTML string → gán vào srcDoc, browser tự load
-          setSrcDoc(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    @page { size: ${paperSize}; margin: 0; }
-    html, body { margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 0 5mm; }
-    table { width: 100%; border-collapse: collapse; }
-    td, th { padding: 4px 8px; }
-    h1, h2, h3 { margin: 8px 0; }
-    * { box-sizing: border-box; }
-  </style>
-</head>
-<body>${preview.content}</body>
-</html>`);
+          setSrcDoc(buildPrintDocumentHtml(preview.content));
         }
       } catch (e: any) {
         if (!cancelled) setError(e?.message || "Không thể tải mẫu in");

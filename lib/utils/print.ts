@@ -1,5 +1,48 @@
 import { printTemplatesApi } from "@/lib/api/print-templates";
 
+export function buildPrintDocumentHtml(content: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title></title>
+  <style>
+    @page { margin: 0; }
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      color: #000;
+      padding: 0 5mm;
+      overflow-wrap: anywhere;
+    }
+    .print-content {
+      width: 100%;
+      max-width: 100%;
+    }
+    table {
+      width: 100% !important;
+      max-width: 100% !important;
+      border-collapse: collapse;
+    }
+    td, th { padding: 4px 8px; }
+    h1, h2, h3 { margin: 8px 0; }
+    img, svg, canvas {
+      max-width: 100% !important;
+      height: auto;
+    }
+    * { box-sizing: border-box; }
+  </style>
+</head>
+<body><div class="print-content">${content}</div></body>
+</html>`;
+}
+
 export async function printEntity(
   templateFor: string,
   entityId: number,
@@ -26,8 +69,6 @@ export async function printEntity(
     throw new Error("Không render được nội dung in");
   }
 
-  const paperSize = template.paperSize || "A5";
-
   // Tạo iframe ẩn trong trang hiện tại
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
@@ -45,28 +86,7 @@ export async function printEntity(
   }
 
   doc.open();
-  doc.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title></title>
-  <style>
-    @page { size: ${paperSize}; margin: 0; }
-    html, body { margin: 0; padding: 0; }
-    body {
-      font-family: Arial, sans-serif;
-      font-size: 13px;
-      color: #000;
-      padding: 0 5mm;
-    }
-    table { width: 100%; border-collapse: collapse; }
-    td, th { padding: 4px 8px; }
-    h1, h2, h3 { margin: 8px 0; }
-    * { box-sizing: border-box; }
-  </style>
-</head>
-<body>${preview.content}</body>
-</html>`);
+  doc.write(buildPrintDocumentHtml(preview.content));
   doc.close();
 
   // Đợi render xong rồi in, resolve sau khi print dialog đóng
@@ -163,7 +183,6 @@ export async function printDeliverySlip(
     throw new Error("Không render được nội dung in");
   }
 
-  const paperSize = template.paperSize || "A5";
   const iframe = document.createElement("iframe");
   iframe.style.cssText =
     "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
@@ -176,21 +195,7 @@ export async function printDeliverySlip(
   }
 
   doc.open();
-  doc.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    @page { size: ${paperSize}; margin: 0; }
-    html, body { margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 0 5mm; }
-    table { width: 100%; border-collapse: collapse; }
-    td, th { padding: 4px 8px; }
-    * { box-sizing: border-box; }
-  </style>
-</head>
-<body>${preview.content}</body>
-</html>`);
+  doc.write(buildPrintDocumentHtml(preview.content));
   doc.close();
 
   const cleanup = () =>
@@ -227,7 +232,6 @@ export async function printConsignmentReturn(returnId: number): Promise<void> {
     throw new Error("Không render được nội dung in");
   }
 
-  const paperSize = template.paperSize || "A5";
   const iframe = document.createElement("iframe");
   iframe.style.cssText =
     "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
@@ -240,21 +244,7 @@ export async function printConsignmentReturn(returnId: number): Promise<void> {
   }
 
   doc.open();
-  doc.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    @page { size: ${paperSize}; margin: 0; }
-    html, body { margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 0 5mm; }
-    table { width: 100%; border-collapse: collapse; }
-    td, th { padding: 4px 8px; }
-    * { box-sizing: border-box; }
-  </style>
-</head>
-<body>${preview.content}</body>
-</html>`);
+  doc.write(buildPrintDocumentHtml(preview.content));
   doc.close();
 
   const cleanup = () =>
