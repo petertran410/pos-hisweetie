@@ -7,7 +7,7 @@ export function buildPrintDocumentHtml(content: string): string {
   <meta charset="utf-8" />
   <title></title>
   <style>
-    @page { margin: 0; }
+    @page { margin: 8mm; }
     html, body {
       width: 100%;
       max-width: 100%;
@@ -18,7 +18,6 @@ export function buildPrintDocumentHtml(content: string): string {
       font-family: Arial, sans-serif;
       font-size: 13px;
       color: #000;
-      padding: 0 5mm;
       overflow-wrap: anywhere;
     }
     .print-content {
