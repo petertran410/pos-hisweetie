@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { X, ChevronDown, Printer } from "lucide-react";
 import { useSupplierReturn } from "@/lib/hooks/useSupplierReturns";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
+import { useCan } from "@/lib/hooks/useCan";
+import { printEntity } from "@/lib/utils/print";
 import { PermissionGate } from "../permissions/PermissionGate";
+import Swal from "sweetalert2";
 
 interface Props {
   supplierReturnId: number;
@@ -27,6 +30,8 @@ export function ConfirmRefundModal({
   const { data: supplierReturn, isLoading } =
     useSupplierReturn(supplierReturnId);
   const { data: bankAccounts } = useBankAccountsForPayment();
+  const canPrint = useCan("print_templates", "view");
+  const [printing, setPrinting] = useState(false);
 
   const [refundType, setRefundType] = useState<"cash_refund" | "debt_offset">(
     "debt_offset"
@@ -57,6 +62,22 @@ export function ConfirmRefundModal({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  const handlePrint = async () => {
+    if (!supplierReturn) return;
+    setPrinting(true);
+    try {
+      await printEntity("supplier_return", supplierReturn.id);
+    } catch (e: any) {
+      await Swal.fire({
+        title: "In thất bại",
+        text: e?.message || "Không in được phiếu trả hàng nhập",
+        icon: "error",
+      });
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   const handleSubmit = () => {
     onSubmit({
@@ -274,6 +295,16 @@ export function ConfirmRefundModal({
               </button>
             </PermissionGate>
             <div className="flex gap-2">
+              {canPrint && (
+                <button
+                  onClick={handlePrint}
+                  disabled={printing}
+                  title="In phiếu trả hàng nhập"
+                  className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100 disabled:opacity-50 flex items-center gap-1.5">
+                  <Printer className="w-4 h-4" />
+                  {printing ? "Đang in..." : "In"}
+                </button>
+              )}
               <button
                 onClick={onClose}
                 className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
