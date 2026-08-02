@@ -30,7 +30,7 @@ export default function SoQuyPage() {
   return (
     <PagePermissionGuard resource="cash_flows" action="view">
       <div
-        className="flex h-full border-t w-screen"
+        className="flex h-full border-t"
         style={{ borderColor: "var(--dt-border)" }}>
         <CashFlowsSidebar
           filters={filters}

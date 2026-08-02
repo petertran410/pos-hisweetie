@@ -115,20 +115,6 @@ const DEFAULT_COLUMNS: ColumnConfig<Production>[] = [
     render: (prod) => prod.createdByName,
   },
   {
-    key: "status",
-    label: "Trạng thái",
-    visible: true,
-    width: "130px",
-    render: (prod) => (
-      <span
-        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-          STATUS_COLOR[prod.status] ?? "bg-gray-100 text-gray-700"
-        }`}>
-        {STATUS_TEXT[prod.status] ?? "-"}
-      </span>
-    ),
-  },
-  {
     key: "note",
     label: "Ghi chú",
     visible: false,
@@ -141,6 +127,20 @@ const DEFAULT_COLUMNS: ColumnConfig<Production>[] = [
     visible: false,
     width: "160px",
     render: (prod) => formatDateTime(prod.createdAt),
+  },
+  {
+    key: "status",
+    label: "Trạng thái",
+    visible: true,
+    width: "130px",
+    render: (prod) => (
+      <span
+        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+          STATUS_COLOR[prod.status] ?? "bg-gray-100 text-gray-700"
+        }`}>
+        {STATUS_TEXT[prod.status] ?? "-"}
+      </span>
+    ),
   },
 ];
 

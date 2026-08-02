@@ -45,7 +45,7 @@ export default function DatHangPage() {
     <PagePermissionGuard resource="orders" action="view">
       {/* ── Desktop (md+) — giữ nguyên 100% ── */}
       <div
-        className="hidden md:flex h-full border-t w-screen"
+        className="hidden md:flex h-full border-t"
         style={{ borderColor: "var(--dt-border)" }}>
         <OrdersSidebar
           filters={filters}

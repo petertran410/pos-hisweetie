@@ -156,7 +156,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
       });
 
     (returnsData?.data || [])
-      .filter((ro: any) => ro.status !== 5) // loại bỏ phiếu trả hàng đã hủy
+      .filter((ro: any) => ro.status !== 5 && !ro.code?.startsWith("CTN")) // loại bỏ phiếu trả hàng đã hủy + phiếu cấn trừ nợ
       .forEach((ro: any) => {
         const refundAmount = Number(
           ro.refundAmount || ro.totalReturnAmount || 0

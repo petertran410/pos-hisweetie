@@ -32,7 +32,7 @@ function processFile(filename, isInvoice) {
 
   // Replacement: just the note textarea div (no totals/discount card)
   const replacement = `<div>
-<label className="block text-sm lg:text-md text-gray-600 mb-0.5 lg:mb-1">
+<label className="block text-sm lg:text-sm text-gray-600 mb-0.5 lg:mb-1">
 ${label}
 </label>
 <textarea
@@ -40,7 +40,7 @@ value={orderNote}
 onChange={(e) => onOrderNoteChange(e.target.value.slice(0, 1000))}
 maxLength={1000}
 placeholder="Nhập ghi chú..."
-className="w-full border rounded-xl px-3 py-1.5 lg:py-2 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-brand resize-none"
+className="w-full border rounded-xl px-3 py-1.5 lg:py-2 text-sm lg:text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none"
 rows={2}
 />
 </div>`;

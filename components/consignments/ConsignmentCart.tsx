@@ -324,7 +324,7 @@ export function ConsignmentCart({
                     handleDeliveryChange("weight", Number(e.target.value))
                   }
                   placeholder="500"
-                  className="w-14 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-14 text-sm lg:text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
                 <UnitPicker
                   value={deliveryInfo.weightUnit || "g"}
@@ -339,7 +339,7 @@ export function ConsignmentCart({
                     handleDeliveryChange("length", Number(e.target.value))
                   }
                   placeholder="10"
-                  className="w-12 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-12 text-sm lg:text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
                 <span className="text-gray-400 text-xs">×</span>
                 <input
@@ -350,7 +350,7 @@ export function ConsignmentCart({
                     handleDeliveryChange("width", Number(e.target.value))
                   }
                   placeholder="10"
-                  className="w-12 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-12 text-sm lg:text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
                 <span className="text-gray-400 text-xs">×</span>
                 <input
@@ -361,11 +361,11 @@ export function ConsignmentCart({
                     handleDeliveryChange("height", Number(e.target.value))
                   }
                   placeholder="10"
-                  className="w-12 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-12 text-sm lg:text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
               </div>
               <div className="flex items-center gap-1.5 py-1 lg:py-2">
-                <span className="text-sm lg:text-md text-gray-700">
+                <span className="text-sm lg:text-sm text-gray-700">
                   Ghi chú cho bưu tá
                 </span>
               </div>
@@ -380,7 +380,7 @@ export function ConsignmentCart({
                 }
                 maxLength={1000}
                 placeholder="Nhập ghi chú..."
-                className="w-full text-sm lg:text-md border rounded-xl p-2 outline-none focus:border-brand resize-none"
+                className="w-full text-sm lg:text-sm border rounded-xl p-2 outline-none focus:border-brand resize-none"
                 rows={3}
               />
             </div>
@@ -389,7 +389,7 @@ export function ConsignmentCart({
       </div>
 
       <div className="p-2.5 lg:p-3 space-y-2 lg:space-y-2.5 flex-shrink-0 border mr-2 lg:mr-3 ml-2 lg:ml-3 mb-2 lg:mb-3 rounded-xl shadow-sm">
-        <div className="flex items-center justify-between text-sm lg:text-md">
+        <div className="flex items-center justify-between text-sm lg:text-sm">
           <span className="text-gray-600">Trạng thái</span>
           <select
             value={consignStatus}
@@ -404,14 +404,14 @@ export function ConsignmentCart({
           </select>
         </div>
 
-        <div className="flex items-center justify-between text-sm lg:text-md">
+        <div className="flex items-center justify-between text-sm lg:text-sm">
           <span>Tổng tiền hàng</span>
           <span className="font-semibold">
             {calculateSubtotal().toLocaleString()}
           </span>
         </div>
 
-        <div className="flex items-center justify-between text-sm lg:text-md gap-2">
+        <div className="flex items-center justify-between text-sm lg:text-sm gap-2">
           <span>Giảm giá</span>
           <input
             type="text"
@@ -426,7 +426,7 @@ export function ConsignmentCart({
           />
         </div>
 
-        <div className="flex items-center justify-between text-sm lg:text-md border-t pt-2">
+        <div className="flex items-center justify-between text-sm lg:text-sm border-t pt-2">
           <span className="font-semibold">Tổng cộng</span>
           <span className="font-bold text-brand text-base">
             {calculateTotal().toLocaleString()}

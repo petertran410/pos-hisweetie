@@ -116,7 +116,7 @@ export function CustomerDebtsTab({
     <>
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 lg:mb-4">
-          <div className="text-sm lg:text-md text-gray-600">
+          <div className="text-sm lg:text-sm text-gray-600">
             Nợ hiện tại:{" "}
             <span className="font-semibold text-red-600">
               {formatCurrency(customerDebt)}
@@ -165,25 +165,25 @@ export function CustomerDebtsTab({
           <table className="w-full">
             <thead>
               <tr className="border-b bg-gray-50">
-                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-md font-medium">
+                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
                   Mã phiếu
                 </th>
-                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-md font-medium">
+                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
                   Thời gian
                 </th>
-                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-md font-medium">
+                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
                   Loại
                 </th>
-                <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-md font-medium">
+                <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
                   Khách hàng
                 </th>
-                <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-md font-medium">
+                <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
                   Chi nhánh
                 </th>
-                <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-md font-medium">
+                <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-sm font-medium">
                   Giá trị
                 </th>
-                <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-md font-medium">
+                <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-sm font-medium">
                   Dư nợ
                 </th>
               </tr>
@@ -215,7 +215,7 @@ export function CustomerDebtsTab({
                             href={`/don-hang/hoa-don?Code=${item.code}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs lg:text-md font-medium text-brand hover:underline"
+                            className="text-xs lg:text-sm font-medium text-brand hover:underline"
                             onClick={(e) => e.stopPropagation()}>
                             {item.code}
                           </Link>
@@ -224,7 +224,7 @@ export function CustomerDebtsTab({
                             href={`/tai-chinh/so-quy?Code=${item.code}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs lg:text-md font-medium text-brand hover:underline"
+                            className="text-xs lg:text-sm font-medium text-brand hover:underline"
                             onClick={(e) => e.stopPropagation()}>
                             {item.code}
                           </Link>
@@ -232,21 +232,21 @@ export function CustomerDebtsTab({
                           <CodeLink
                             entity="debt-offset"
                             code={item.code}
-                            className="text-xs lg:text-md font-medium text-brand hover:underline"
+                            className="text-xs lg:text-sm font-medium text-brand hover:underline"
                           />
                         ) : item.type === "return_order" ? (
                           <CodeLink
                             entity="return-order"
                             code={item.code}
-                            className="text-xs lg:text-md font-medium text-brand hover:underline"
+                            className="text-xs lg:text-sm font-medium text-brand hover:underline"
                           />
                         ) : (
-                          <span className="text-xs lg:text-md font-medium text-brand hover:underline cursor-pointer">
+                          <span className="text-xs lg:text-sm font-medium text-brand hover:underline cursor-pointer">
                             {item.code}
                           </span>
                         )}
                       </td>
-                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md">
+                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                         {(() => {
                           const d = new Date(item.date);
                           return (
@@ -259,7 +259,7 @@ export function CustomerDebtsTab({
                           );
                         })()}
                       </td>
-                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md font-medium">
+                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm font-medium">
                         {isInvoice
                           ? "Bán hàng"
                           : isDebtOffset
@@ -270,7 +270,7 @@ export function CustomerDebtsTab({
                                 ? "Thanh toán"
                                 : getPaymentType(item.code)}
                       </td>
-                      <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md">
+                      <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                         {item.customerName ? (
                           <div>
                             <div className="font-medium">
@@ -281,10 +281,10 @@ export function CustomerDebtsTab({
                           "-"
                         )}
                       </td>
-                      <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md">
+                      <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
                         {item.branch?.name || "-"}
                       </td>
-                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md text-right whitespace-nowrap">
+                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm text-right whitespace-nowrap">
                         {isInvoice && (
                           <span className="text-green-600 font-medium">
                             {formatCurrency(item.amount)}
@@ -311,7 +311,7 @@ export function CustomerDebtsTab({
                           </span>
                         )}
                       </td>
-                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-md text-right font-medium whitespace-nowrap">
+                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm text-right font-medium whitespace-nowrap">
                         <span className="text-red-600">
                           {formatCurrency(item.debtSnapshot)}
                         </span>

@@ -13,7 +13,7 @@ export default function DashboardLayout({
   return (
     <ProtectedRoute>
       <RouteGuard>
-        <div className="flex flex-col h-screen">
+        <div className="flex flex-col" style={{ height: "calc(100vh / 0.85)" }}>
           <DashboardHeader />
           <main className="flex-1 overflow-hidden">{children}</main>
         </div>

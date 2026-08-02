@@ -37,6 +37,12 @@ interface Props {
     promotionId: number,
     selections: CumulativeGiftSelection[]
   ) => void;
+  /** Bật chế độ slide-up sheet — bọc nội dung trong overlay */
+  asSheet?: boolean;
+  /** Trạng thái hiển thị sheet (chỉ dùng khi asSheet=true) */
+  isOpen?: boolean;
+  /** Callback đóng sheet (chỉ dùng khi asSheet=true) */
+  onClose?: () => void;
 }
 
 interface RewardOpt {
@@ -62,6 +68,9 @@ export function CartPromotionSummary({
   disabledPromotionIds,
   onTogglePromotion,
   onSetGiftSelection,
+  asSheet = false,
+  isOpen = true,
+  onClose,
 }: Props) {
   const [pickerPromoId, setPickerPromoId] = useState<number | null>(null);
 
@@ -75,6 +84,7 @@ export function CartPromotionSummary({
   );
 
   if (cumulativeProgress.length === 0) return null;
+  if (asSheet && !isOpen) return null;
 
   const enabledSet = new Set(enabledPromotionIds || []);
   const disabledSet = new Set(disabledPromotionIds || []);
@@ -103,8 +113,9 @@ export function CartPromotionSummary({
     (p) => p.promotionId === pickerPromoId
   );
 
-  return (
-    <div className="mb-2 space-y-2">
+  // ── Nội dung danh sách KM ──
+  const listContent = (
+    <div className="space-y-2">
       {cumulativeProgress.map((p) => {
         const enabled = isEnabled(p);
         const qualified = p.completedTimes > 0;
@@ -275,6 +286,43 @@ export function CartPromotionSummary({
           }}
         />
       )}
+    </div>
+  );
+
+  // ── Chế độ inline (cũ) ──
+  if (!asSheet) {
+    return <div className="mb-2 space-y-2">{listContent}</div>;
+  }
+
+  // ── Chế độ centered modal ──
+  return (
+    <div 
+      className="fixed inset-0 z-[55] flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}>
+      <div
+        className="w-full max-w-2xl rounded-2xl bg-white shadow-xl"
+        style={{ maxHeight: "80vh", display: "flex", flexDirection: "column" }}
+        onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex flex-shrink-0 items-center justify-between border-b px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Gift className="h-5 w-5 text-pink-600" />
+            <h3 className="text-base font-semibold">Khuyến mãi của đơn hàng</h3>
+            <span className="rounded-full bg-pink-100 px-2 py-0.5 text-xs font-medium text-pink-700">
+              {cumulativeProgress.length} chương trình
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {listContent}
+        </div>
+      </div>
     </div>
   );
 }

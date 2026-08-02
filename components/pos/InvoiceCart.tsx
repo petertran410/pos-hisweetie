@@ -548,7 +548,7 @@ export function InvoiceCart({
                     handleDeliveryChange("weight", Number(e.target.value))
                   }
                   placeholder="500"
-                  className="w-16 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-16 text-sm lg:text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
                 <UnitPicker
                   value={deliveryInfo.weightUnit || "g"}
@@ -565,7 +565,7 @@ export function InvoiceCart({
                     handleDeliveryChange("length", Number(e.target.value))
                   }
                   placeholder="10"
-                  className="w-12 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-12 text-sm lg:text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
                 <span className="text-gray-400 text-xs">×</span>
                 <input
@@ -575,7 +575,7 @@ export function InvoiceCart({
                     handleDeliveryChange("width", Number(e.target.value))
                   }
                   placeholder="10"
-                  className="w-12 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-12 text-sm lg:text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
                 <span className="text-gray-400 text-xs">×</span>
                 <input
@@ -585,14 +585,14 @@ export function InvoiceCart({
                     handleDeliveryChange("height", Number(e.target.value))
                   }
                   placeholder="10"
-                  className="w-12 text-sm lg:text-md text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
+                  className="w-12 text-sm lg:text-sm text-center bg-transparent border-b border-gray-200 py-0.5 outline-none"
                 />
-                <select className="text-sm hidden lg:block lg:text-md bg-transparent outline-none">
+                <select className="text-sm hidden lg:block lg:text-sm bg-transparent outline-none">
                   <option>cm</option>
                 </select>
               </div>
               <div className="flex items-center gap-1.5 py-1 lg:py-2">
-                <span className="text-sm lg:text-md text-gray-700">
+                <span className="text-sm lg:text-sm text-gray-700">
                   Ghi chú cho bưu tá
                 </span>
               </div>
@@ -606,7 +606,7 @@ export function InvoiceCart({
                 }
                 maxLength={1000}
                 placeholder="Nhập ghi chú..."
-                className="w-full text-sm lg:text-md border rounded-xl p-2 outline-none focus:border-brand resize-none"
+                className="w-full text-sm lg:text-sm border rounded-xl p-2 outline-none focus:border-brand resize-none"
                 rows={3}
               />
             </div>
@@ -617,13 +617,13 @@ export function InvoiceCart({
       {/* Unified payment and summary card */}
       <div className="p-2.5 lg:p-3 space-y-2 lg:space-y-2.5 flex-shrink-0 border mr-2 lg:mr-3 ml-2 lg:ml-3 mb-2 lg:mb-3 rounded-xl shadow-sm">
         {/* Summary section */}
-        <div className="flex items-center justify-between text-sm lg:text-md">
+        <div className="flex items-center justify-between text-sm lg:text-sm">
           <span className="text-gray-600">Tổng tiền hàng</span>
           <span className="font-semibold">
             {subtotal.toLocaleString("en-US")}
           </span>
         </div>
-        <div className="flex items-center justify-between text-sm lg:text-md">
+        <div className="flex items-center justify-between text-sm lg:text-sm">
           <span className="text-gray-600">Giảm giá</span>
           <div className="flex items-center gap-1">
             <input
@@ -650,7 +650,7 @@ export function InvoiceCart({
         </div>
 
         {canViewPayment && (
-          <div className="flex items-center justify-between text-sm lg:text-md">
+          <div className="flex items-center justify-between text-sm lg:text-sm">
             <div className="flex items-center gap-1.5 lg:gap-2">
               <span>Khách thanh toán</span>
               {canEditPayment && (
@@ -689,7 +689,7 @@ export function InvoiceCart({
 
             return (
               isFirstInvoice && (
-                <div className="flex items-center justify-between text-sm lg:text-md">
+                <div className="flex items-center justify-between text-sm lg:text-sm">
                   <span>Tổng đã thanh toán</span>
                   <span className="font-semibold">
                     {(
@@ -701,7 +701,7 @@ export function InvoiceCart({
             );
           })()}
 
-        <div className="flex items-center justify-between text-sm lg:text-md">
+        <div className="flex items-center justify-between text-sm lg:text-sm">
           <span>Công nợ</span>
           <span className="font-semibold">
             {displayDebt.toLocaleString("en-US")}

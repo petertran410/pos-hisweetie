@@ -24,7 +24,7 @@ export default function FactoriesPage() {
   return (
     <PagePermissionGuard resource="factories" action="view">
       <div
-        className="flex h-full border-t w-screen"
+        className="flex h-full border-t"
         style={{ borderColor: "var(--dt-border)" }}>
         <FactoriesSidebar
           filters={filters}

@@ -7,7 +7,7 @@ export default function ContractsPage() {
   return (
     <PagePermissionGuard resource="contracts" action="view">
       <div
-        className="flex h-full border-t w-screen"
+        className="flex h-full border-t"
         style={{ borderColor: "var(--dt-border)" }}>
         <ContractsTable />
       </div>

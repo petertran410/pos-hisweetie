@@ -40,7 +40,7 @@ export default function CustomersPage() {
     <PagePermissionGuard resource="customers" action="view">
       {/* Desktop (md+) */}
       <div
-        className="hidden md:flex h-full border-t w-screen"
+        className="hidden md:flex h-full border-t"
         style={{ borderColor: "var(--dt-border)" }}>
         <CustomersSidebar
           filters={filters}

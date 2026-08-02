@@ -544,9 +544,9 @@ export function CashFlowDetailRow({
                         Ghi chú:
                       </label>
                       <div
-                        className="w-full px-3 py-2 text-md border rounded min-h-[60px]"
+                        className="w-full px-3 py-2 lg:text-sm border rounded min-h-[60px]"
                         style={{ background: "var(--dt-bg-soft)", borderColor: "var(--dt-border)" }}>
-                        <p className="text-md" style={{ color: "var(--dt-text)" }}>
+                        <p className="lg:text-sm" style={{ color: "var(--dt-text)" }}>
                           {cashFlow.description || "Chưa có ghi chú"}
                         </p>
                       </div>
@@ -567,25 +567,25 @@ export function CashFlowDetailRow({
                             <table className="w-full">
                               <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                 <tr>
-                                  <th className="px-4 py-3 text-left text-md font-semibold dt-th w-[120px]">
+                                  <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th w-[120px]">
                                     Hóa đơn
                                   </th>
-                                  <th className="px-4 py-3 text-left text-md font-semibold dt-th w-[160px]">
+                                  <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th w-[160px]">
                                     Thời gian
                                   </th>
-                                  <th className="px-4 py-3 text-right text-md font-semibold dt-th w-[120px]">
+                                  <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th w-[120px]">
                                     Giá trị HĐ
                                   </th>
-                                  <th className="px-4 py-3 text-right text-md font-semibold dt-th w-[120px]">
+                                  <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th w-[120px]">
                                     Đã thu trước
                                   </th>
-                                  <th className="px-4 py-3 text-right text-md font-semibold dt-th w-[120px]">
+                                  <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th w-[120px]">
                                     Giá trị
                                   </th>
-                                  <th className="px-4 py-3 text-right text-md font-semibold dt-th w-[120px]">
+                                  <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th w-[120px]">
                                     Còn cần thu
                                   </th>
-                                  <th className="px-4 py-3 text-center text-md font-semibold dt-th w-[100px]">
+                                  <th className="px-4 py-3 text-center lg:text-sm font-semibold dt-th w-[100px]">
                                     Trạng thái
                                   </th>
                                 </tr>
@@ -622,7 +622,7 @@ export function CashFlowDetailRow({
                                       {/* Hóa đơn */}
                                       <td className="px-4 py-3">
                                         <Link
-                                          className="text-md hover:underline" style={{ color: "var(--dt-primary)" }}
+                                          className="lg:text-sm hover:underline" style={{ color: "var(--dt-primary)" }}
                                           href={`/don-hang/hoa-don?Code=${row.invoiceCode}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
@@ -632,17 +632,17 @@ export function CashFlowDetailRow({
                                       </td>
 
                                       {/* Thời gian */}
-                                      <td className="px-4 py-3 text-md" style={{ color: "var(--dt-text)" }}>
+                                      <td className="px-4 py-3 lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                         {formatDateTime(row.latestDate)}
                                       </td>
 
                                       {/* Giá trị HĐ */}
-                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(row.grandTotal)}
                                       </td>
 
                                       {/* Đã thu trước — nếu có CTN thì hover/click hiện mã CTN */}
-                                      <td className="px-4 py-3 text-right text-md">
+                                      <td className="px-4 py-3 text-right lg:text-sm">
                                         {hasOffsets ? (
                                           <div className="relative inline-block">
                                             <span
@@ -675,7 +675,7 @@ export function CashFlowDetailRow({
                                       </td>
 
                                       {/* Giá trị — nếu có TTHD thì hover/click hiện mã TTHD */}
-                                      <td className="px-4 py-3 text-right text-md">
+                                      <td className="px-4 py-3 text-right lg:text-sm">
                                         {hasPayments ? (
                                           <div className="relative inline-block">
                                             <span
@@ -708,7 +708,7 @@ export function CashFlowDetailRow({
                                       </td>
 
                                       {/* Còn cần thu */}
-                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(row.debtAmount)}
                                       </td>
 
@@ -743,25 +743,25 @@ export function CashFlowDetailRow({
                               <table className="w-full">
                                 <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                   <tr>
-                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th">
                                       Mã đơn hàng
                                     </th>
-                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th">
                                       Thời gian
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Giá trị ĐH
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Đã thu trước
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Giá trị thu
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Còn cần thu
                                     </th>
-                                    <th className="px-4 py-3 text-center text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-center lg:text-sm font-semibold dt-th">
                                       Trạng thái
                                     </th>
                                   </tr>
@@ -773,7 +773,7 @@ export function CashFlowDetailRow({
                                       className="dt-row">
                                       <td className="px-4 py-3">
                                         <Link
-                                          className="text-md font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
+                                          className="lg:text-sm font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
                                           href={`/don-hang/dat-hang?Code=${payment.order?.code}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
@@ -781,25 +781,25 @@ export function CashFlowDetailRow({
                                           {payment.order?.code}
                                         </Link>
                                       </td>
-                                      <td className="px-4 py-3 text-md" style={{ color: "var(--dt-text)" }}>
+                                      <td className="px-4 py-3 lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                         {formatDateTime(payment.paymentDate)}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(payment.order?.grandTotal || 0)
                                         )}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.order?.paidAmount || 0
                                           ) - Number(payment.amount)
                                         )}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md font-medium text-green-600">
+                                      <td className="px-4 py-3 text-right lg:text-sm font-medium text-green-600">
                                         {formatCurrency(Number(payment.amount))}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(payment.order?.debtAmount || 0)
                                         )}
@@ -843,25 +843,25 @@ export function CashFlowDetailRow({
                               <table className="w-full">
                                 <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                   <tr>
-                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th">
                                       Mã phiếu nhập
                                     </th>
-                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th">
                                       Thời gian
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Giá trị PN
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Đã trả trước
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Giá trị chi
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Còn cần trả
                                     </th>
-                                    <th className="px-4 py-3 text-center text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-center lg:text-sm font-semibold dt-th">
                                       Trạng thái
                                     </th>
                                   </tr>
@@ -897,7 +897,7 @@ export function CashFlowDetailRow({
                                         className="dt-row">
                                         <td className="px-4 py-3">
                                           <Link
-                                            className="text-md font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
+                                            className="lg:text-sm font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
                                             href={`/san-pham/nhap-hang?Code=${payment.purchaseOrder?.code}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
@@ -905,10 +905,10 @@ export function CashFlowDetailRow({
                                             {payment.purchaseOrder?.code}
                                           </Link>
                                         </td>
-                                        <td className="px-4 py-3 text-md" style={{ color: "var(--dt-text)" }}>
+                                        <td className="px-4 py-3 lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                           {formatDateTime(payment.paymentDate)}
                                         </td>
-                                        <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                        <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                           {formatAmount(
                                             Number(
                                               payment.purchaseOrder?.subTotal ||
@@ -917,7 +917,7 @@ export function CashFlowDetailRow({
                                             )
                                           )}
                                         </td>
-                                        <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                        <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                           {formatAmount(
                                             Number(
                                               payment.purchaseOrder?.paidAmount ||
@@ -925,7 +925,7 @@ export function CashFlowDetailRow({
                                             ) - Number(payment.amount)
                                           )}
                                         </td>
-                                        <td className="px-4 py-3 text-right text-md font-medium text-red-600">
+                                        <td className="px-4 py-3 text-right lg:text-sm font-medium text-red-600">
                                           <div className="flex flex-col items-end">
                                             {isForeignPO && payment.foreignAmount != null ? (
                                               <>
@@ -944,7 +944,7 @@ export function CashFlowDetailRow({
                                             )}
                                           </div>
                                         </td>
-                                        <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                        <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                           {formatAmount(
                                             Number(
                                               payment.purchaseOrder?.debtAmount ||
@@ -991,25 +991,25 @@ export function CashFlowDetailRow({
                               <table className="w-full">
                                 <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
                                   <tr>
-                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th">
                                       Mã PDN
                                     </th>
-                                    <th className="px-4 py-3 text-left text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th">
                                       Thời gian
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Giá trị PDN
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Đã trả trước
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Giá trị chi
                                     </th>
-                                    <th className="px-4 py-3 text-right text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-right lg:text-sm font-semibold dt-th">
                                       Còn cần trả
                                     </th>
-                                    <th className="px-4 py-3 text-center text-md font-semibold dt-th">
+                                    <th className="px-4 py-3 text-center lg:text-sm font-semibold dt-th">
                                       Trạng thái
                                     </th>
                                   </tr>
@@ -1021,7 +1021,7 @@ export function CashFlowDetailRow({
                                       className="dt-row">
                                       <td className="px-4 py-3">
                                         <Link
-                                          className="text-md font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
+                                          className="lg:text-sm font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
                                           href={`/san-pham/dat-hang-nhap?Code=${payment.orderSupplier?.code}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
@@ -1029,10 +1029,10 @@ export function CashFlowDetailRow({
                                           {payment.orderSupplier?.code}
                                         </Link>
                                       </td>
-                                      <td className="px-4 py-3 text-md" style={{ color: "var(--dt-text)" }}>
+                                      <td className="px-4 py-3 lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                         {formatDateTime(payment.paymentDate)}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.orderSupplier?.subTotal ||
@@ -1041,7 +1041,7 @@ export function CashFlowDetailRow({
                                           )
                                         )}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.orderSupplier?.paidAmount ||
@@ -1049,10 +1049,10 @@ export function CashFlowDetailRow({
                                           ) - Number(payment.amount)
                                         )}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md font-medium text-red-600">
+                                      <td className="px-4 py-3 text-right lg:text-sm font-medium text-red-600">
                                         {formatCurrency(Number(payment.amount))}
                                       </td>
-                                      <td className="px-4 py-3 text-right text-md" style={{ color: "var(--dt-text)" }}>
+                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.orderSupplier
@@ -1095,7 +1095,7 @@ export function CashFlowDetailRow({
                       <button
                         onClick={handleCancel}
                         disabled={cancelCashFlow.isPending}
-                        className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        className="px-4 py-2 lg:text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         {cancelCashFlow.isPending ? "Đang xử lý..." : "Hủy"}
                       </button>
                     )}
@@ -1105,7 +1105,7 @@ export function CashFlowDetailRow({
                     {!isCancelled && canUpdateCashFlow && (
                       <button
                         onClick={() => setShowEditModal(true)}
-                        className="dt-btn-ghost px-4 py-2 text-md font-medium rounded flex items-center gap-2">
+                        className="dt-btn-ghost px-4 py-2 lg:text-sm font-medium rounded flex items-center gap-2">
                         <Pencil className="w-4 h-4" />
                         Chỉnh sửa
                       </button>
@@ -1114,7 +1114,7 @@ export function CashFlowDetailRow({
                       <button
                         onClick={handlePrint}
                         disabled={isPrinting || isCancelled}
-                        className="dt-btn-ghost px-4 py-2 text-md font-medium rounded flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        className="dt-btn-ghost px-4 py-2 lg:text-sm font-medium rounded flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                         <Printer className="w-4 h-4" />
                         {isPrinting ? "Đang in..." : "In"}
                       </button>

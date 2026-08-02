@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { AlertCircle, Copy, Gift, Minus, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, AlertTriangle, Check, Copy, Gift, Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 import { NoteTemplate } from "@/lib/api/note-templates";
 import {
@@ -116,6 +116,7 @@ export function InvoiceItemsList({
   const [selectedItemForInventory, setSelectedItemForInventory] =
     useState<CartItem | null>(null);
   const { selectedBranch } = useBranchStore();
+  const [showPromoSheet, setShowPromoSheet] = useState(false);
 
   const isMobile = useIsMobile();
 
@@ -505,17 +506,6 @@ export function InvoiceItemsList({
   return (
     <div className={className ?? "w-[60%] bg-white flex flex-col"}>
       <div className="flex-1 p-3 overflow-y-auto">
-        {onTogglePromotion && onSetGiftSelection && (
-          <CartPromotionSummary
-            progress={promoProgress || []}
-            cartItems={cartItems}
-            cumulativeGiftSelections={cumulativeGiftSelections}
-            enabledPromotionIds={enabledCumulativePromoIds}
-            disabledPromotionIds={disabledCumulativePromoIds}
-            onTogglePromotion={onTogglePromotion}
-            onSetGiftSelection={onSetGiftSelection}
-          />
-        )}
         <div>
           {cartItems.map((item, index) => (
             <div
@@ -533,7 +523,7 @@ export function InvoiceItemsList({
                     <span className="hidden lg:inline text-sm lg:text-base font-medium text-gray-600">
                       {item.product.code}
                     </span>
-                    <span className="text-sm lg:text-md font-semibold text-gray-900">
+                    <span className="text-sm lg:text-sm font-semibold text-gray-900">
                       {item.product.name}
                     </span>
                     {(() => {
@@ -909,7 +899,7 @@ export function InvoiceItemsList({
                     </button>
                   </div>
                   <div className="flex flex-col items-end min-w-[60px]">
-                    <span className="text-xs lg:text-md text-gray-400 mb-0.5">
+                    <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
                       Chiết khấu
                     </span>
                     <span
@@ -925,7 +915,7 @@ export function InvoiceItemsList({
                     </span>
                   </div>
                   <div className="flex flex-col items-end min-w-[60px]">
-                    <span className="text-xs lg:text-md text-gray-400 mb-0.5">
+                    <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
                       Đơn giá
                     </span>
                     {canEditPrice ? (
@@ -949,7 +939,7 @@ export function InvoiceItemsList({
                     )}
                   </div>
                   <div className="flex flex-col items-end min-w-[60px]">
-                    <span className="text-xs lg:text-md text-gray-400 mb-0.5">
+                    <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
                       Thành tiền
                     </span>
                     <span className="text-md font-medium">
@@ -974,12 +964,81 @@ export function InvoiceItemsList({
       </div>
 
       <div className="m-2 lg:m-3 border p-2 lg:p-3 flex-shrink-0 rounded-xl shadow-xl">
+        {/* ── Icon khuyến mãi (chỉ hiện khi có KM cộng dồn) ── */}
+        {onTogglePromotion && onSetGiftSelection && (() => {
+          const cumProgress = (promoProgress || []).filter(
+            (p) => p.stackable && (p.matchedProductIds || []).length > 0
+          );
+          if (cumProgress.length === 0) return null;
+
+          const enabledSet = new Set(enabledCumulativePromoIds || []);
+          const disabledSet = new Set(disabledCumulativePromoIds || []);
+          const isEnabled = (p: import("@/lib/types/promotion").PromotionProgress) =>
+            enabledSet.has(p.promotionId) ||
+            (!disabledSet.has(p.promotionId) &&
+              cartItems.some(
+                (it) =>
+                  !it.isPromoGift &&
+                  (it.promoEnabledIds || []).includes(p.promotionId)
+              ));
+
+          const needActionCount = cumProgress.filter((p) => {
+            if (!isEnabled(p) || p.completedTimes <= 0) return false;
+            const sels = (cumulativeGiftSelections?.[p.promotionId] || []);
+            const opts = cartItems.find(
+              (it) => it.isPromoGift && it.cumulative && it.promotionId === p.promotionId
+            )?.rewardOptions || [];
+            const requiresChoice = (opts as any[]).length > 1;
+            if (!requiresChoice) return false;
+            const allocated = sels.reduce((s, sel) => s + Number(sel.rewardTimes || 0), 0);
+            return allocated !== p.completedTimes;
+          }).length;
+
+          const enabledCount = cumProgress.filter(isEnabled).length;
+          const qualifiedEnabled = cumProgress.filter((p) => isEnabled(p) && p.completedTimes > 0).length;
+
+          let badgeColor = "bg-gray-100 text-gray-500";
+          let badgeText = `${enabledCount}/${cumProgress.length} áp dụng`;
+          let BadgeIcon = Gift;
+
+          if (needActionCount > 0) {
+            badgeColor = "bg-amber-100 text-amber-700";
+            badgeText = "Cần chọn quà";
+            BadgeIcon = AlertTriangle;
+          } else if (qualifiedEnabled > 0) {
+            badgeColor = "bg-green-100 text-green-700";
+            badgeText = `${qualifiedEnabled} đủ điều kiện`;
+            BadgeIcon = Check;
+          } else if (enabledCount === cumProgress.length) {
+            badgeColor = "bg-blue-100 text-blue-700";
+            badgeText = "Đã áp dụng";
+            BadgeIcon = Check;
+          } else if (enabledCount < cumProgress.length) {
+            badgeColor = "bg-amber-100 text-amber-700";
+            badgeText = `${cumProgress.length - enabledCount} chưa áp dụng`;
+            BadgeIcon = Gift;
+          }
+
+          return (
+            <button
+              type="button"
+              onClick={() => setShowPromoSheet(true)}
+              className="mb-2 flex w-full items-center gap-2 rounded-lg border border-pink-200 bg-pink-50 px-3 py-1.5 text-left text-sm hover:bg-pink-100 transition-colors">
+              <Gift className="h-4 w-4 flex-shrink-0 text-pink-600" />
+              <span className="font-medium text-pink-700">Khuyến mãi</span>
+              <span className={`ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${badgeColor}`}>
+                <BadgeIcon className="h-3 w-3" />
+                {badgeText}
+              </span>
+            </button>
+          );
+        })()}
         <textarea
           value={orderNote}
           onChange={(e) => onOrderNoteChange(e.target.value.slice(0, 1000))}
           maxLength={1000}
           placeholder="Nhập ghi chú..."
-          className="w-full min-h-[120px] lg:min-h-[180px] border rounded-xl px-3 py-2 text-sm lg:text-md focus:outline-none focus:ring-2 focus:ring-brand resize-none"
+          className="w-full min-h-[120px] lg:min-h-[180px] border rounded-xl px-3 py-2 text-sm lg:text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none"
           rows={5}
         />
       </div>
@@ -1016,6 +1075,20 @@ export function InvoiceItemsList({
             onClose={() => setSelectedItemForInventory(null)}
           />
         ))}
+      {showPromoSheet && onTogglePromotion && onSetGiftSelection && (
+        <CartPromotionSummary
+          asSheet
+          isOpen={showPromoSheet}
+          onClose={() => setShowPromoSheet(false)}
+          progress={promoProgress || []}
+          cartItems={cartItems}
+          cumulativeGiftSelections={cumulativeGiftSelections}
+          enabledPromotionIds={enabledCumulativePromoIds}
+          disabledPromotionIds={disabledCumulativePromoIds}
+          onTogglePromotion={onTogglePromotion}
+          onSetGiftSelection={onSetGiftSelection}
+        />
+      )}
     </div>
   );
 }

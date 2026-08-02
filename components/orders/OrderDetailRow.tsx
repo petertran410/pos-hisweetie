@@ -282,7 +282,11 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
       // Dòng tổng kết: label ở cột áp chót (index 7), giá trị ở cột cuối (index 8).
       const blank = ["", "", "", "", "", "", ""];
       const summaryRows = [
-        [...blank, `Tổng tiền hàng (${order.items?.length ?? 0})`, Number(order.totalAmount) || 0],
+        [
+          ...blank,
+          `Tổng tiền hàng (${order.items?.length ?? 0})`,
+          Number(order.totalAmount) || 0,
+        ],
         [...blank, "Giảm giá đơn hàng", Number(order.discount) || 0],
         [...blank, "Phí ship", 0],
         [...blank, "Tổng cộng", Number(order.grandTotal) || 0],
@@ -756,7 +760,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                       {item.quantity}
                                       {invoicedQuantities[item.productId] >
                                         0 && (
-                                         <span className="text-brand">
+                                        <span className="text-brand">
                                           {" "}
                                           | {invoicedQuantities[item.productId]}
                                         </span>
@@ -808,7 +812,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           }
                           maxLength={1000}
                           className="w-full px-3 py-2 text-md border rounded bg-white resize-none"
-                          rows={4}
+                          rows={5}
                           placeholder="Nhập ghi chú..."
                         />
                       </div>
