@@ -2704,9 +2704,18 @@ export default function BanHangPage() {
     }
 
     const totalWeight = activeTab.cartItems.reduce((sum, item) => {
-      const productWeight = Number(item.product.weight) || 0;
-      const weightInGrams =
-        item.product.weightUnit === "kg" ? productWeight * 1000 : productWeight;
+      // Ưu tiên trọng lượng vận chuyển (shippingWeight); nếu SP chưa khai báo thì
+      // fallback về khối lượng tịnh (weight).
+      const hasShipping =
+        item.product.shippingWeight != null &&
+        Number(item.product.shippingWeight) > 0;
+      const rawWeight = hasShipping
+        ? Number(item.product.shippingWeight)
+        : Number(item.product.weight) || 0;
+      const unit = hasShipping
+        ? item.product.shippingWeightUnit
+        : item.product.weightUnit;
+      const weightInGrams = unit === "kg" ? rawWeight * 1000 : rawWeight;
       return sum + weightInGrams * item.quantity;
     }, 0);
 

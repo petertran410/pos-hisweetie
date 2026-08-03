@@ -143,9 +143,6 @@ export function ProductConditionTab({ productId, branchId }: Props) {
                   </th>
                 )}
                 <th className="px-4 py-3 text-right font-medium text-gray-700">
-                  Giá vốn
-                </th>
-                <th className="px-4 py-3 text-right font-medium text-gray-700">
                   Số lượng
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-gray-700">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { CartItem, DeliveryInfo } from "@/app/(dashboard)/ban-hang/page";
@@ -124,6 +124,34 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
       });
     }
   }, [consignment]);
+
+  // Auto-tính trọng lượng vận chuyển (gram) từ giỏ hàng, giống trang bán hàng.
+  // Ưu tiên shippingWeight của SP; nếu chưa khai báo thì fallback khối lượng tịnh.
+  // Bỏ qua lần load đầu khi edit để giữ nguyên weight đã lưu trong DB.
+  const isInitialCartLoad = useRef(false);
+  useEffect(() => {
+    if (consignment && !isInitialCartLoad.current) {
+      isInitialCartLoad.current = true;
+      return;
+    }
+
+    const totalWeight = cartItems.reduce((sum, item) => {
+      const hasShipping =
+        item.product.shippingWeight != null &&
+        Number(item.product.shippingWeight) > 0;
+      const rawWeight = hasShipping
+        ? Number(item.product.shippingWeight)
+        : Number(item.product.weight) || 0;
+      const unit = hasShipping
+        ? item.product.shippingWeightUnit
+        : item.product.weightUnit;
+      const weightInGrams = unit === "kg" ? rawWeight * 1000 : rawWeight;
+      return sum + weightInGrams * item.quantity;
+    }, 0);
+
+    setDeliveryInfo((prev) => ({ ...prev, weight: totalWeight }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartItems]);
 
   const updateCartItem = (rowId: string, updates: Partial<CartItem>) => {
     setCartItems((prev) =>
