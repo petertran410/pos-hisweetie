@@ -70,6 +70,7 @@ export interface Promotion {
   status: PromotionStatus;
   priority: number;
   stackable: boolean;
+  deductPromoStock?: boolean;
   startDate?: string | null;
   endDate?: string | null;
   applyTimeFrom?: string | null;
@@ -189,6 +190,7 @@ export interface CreatePromotionPayload {
   isActive?: boolean;
   priority?: number;
   stackable?: boolean;
+  deductPromoStock?: boolean;
   startDate?: string | null;
   endDate?: string | null;
   applyTimeFrom?: string | null;
@@ -279,6 +281,7 @@ export interface EligiblePromotion {
   scope: string;
   priority: number;
   stackable: boolean;
+  deductPromoStock?: boolean;
   discountAmount: number;
   giftLines: PromoGiftLine[];
   discountedBuyLines: PromoDiscountedBuyLine[];

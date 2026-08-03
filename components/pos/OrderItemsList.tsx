@@ -45,6 +45,7 @@ import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { ProductInventoryMobileSheet } from "./ProductInventoryMobileSheet";
 import {
   getItemOnHand as getItemOnHandHelper,
+  getPromoStockWarning,
   getStockWarning as getStockWarningHelper,
 } from "@/lib/utils/inventory";
 
@@ -180,9 +181,6 @@ export function OrderItemsList({
   const getItemOnHand = (item: CartItem): number | null =>
     getItemOnHandHelper(item, selectedBranch?.id);
 
-  const getStockWarning = (item: CartItem): string | null =>
-    getStockWarningHelper(item, selectedBranch?.id);
-
   const getOnHandRealtime = (item: CartItem): number => {
     const live = inventoryMap.get(item.product.id);
     if (live !== undefined) return live;
@@ -196,6 +194,30 @@ export function OrderItemsList({
       (inv: any) => inv.branchId === selectedBranch?.id
     );
     return Number(inventory?.promoQuantity || 0);
+  };
+
+  const promoDemandByProduct = useMemo(() => {
+    const demand = new Map<number, number>();
+    for (const item of cartItems) {
+      if (!item.deductPromoStock) continue;
+      const productId = Number(item.product?.id);
+      if (!productId) continue;
+      demand.set(
+        productId,
+        (demand.get(productId) || 0) + Number(item.quantity || 0)
+      );
+    }
+    return demand;
+  }, [cartItems]);
+
+  const getStockWarning = (item: CartItem): string | null => {
+    if (item.deductPromoStock) {
+      return getPromoStockWarning(
+        promoDemandByProduct.get(Number(item.product?.id)) || 0,
+        getPromoInventoryRealtime(item)
+      );
+    }
+    return getStockWarningHelper(item, selectedBranch?.id);
   };
 
   const getCustomerOrdered = (item: CartItem): number =>

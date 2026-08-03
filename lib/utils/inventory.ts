@@ -42,6 +42,17 @@ export function getStockWarning(
   return null;
 }
 
+export function getPromoStockWarning(
+  totalQuantity: number,
+  promoQuantity: number
+): string | null {
+  if (promoQuantity < 0) return `Tồn KM âm (${promoQuantity})`;
+  if (totalQuantity > promoQuantity) {
+    return `Vượt tồn KM (cần: ${totalQuantity}, tồn: ${promoQuantity})`;
+  }
+  return null;
+}
+
 /**
  * Quét toàn bộ giỏ hàng và trả về danh sách item đang vượt tồn / tồn âm.
  * Phục vụ hiển thị dialog tổng khi mở edit đơn hàng/hóa đơn,

@@ -66,6 +66,8 @@ export interface CartItem {
   promotionName?: string;
   promotionCode?: string;
   promoLineType?: "gift" | "discounted_buy";
+  // Dòng thực tế trừ bucket PROMO: quà Y luôn true; hàng X phụ thuộc cấu hình CT.
+  deductPromoStock?: boolean;
   triggerRowId?: string; // rowId dòng SP X kích hoạt CT (để chèn dưới + gỡ cùng)
   triggerProductId?: number; // productId X kích hoạt — dùng khi lưu/re-validate BE
   rewardOptions?: {
@@ -88,6 +90,7 @@ export interface CartItem {
     code: string;
     cumulative?: boolean;
     matchedProductIds?: number[];
+    deductPromoStock?: boolean;
   }[];
 }
 
@@ -406,13 +409,18 @@ const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[
         promotionId: item.promotionId != null ? Number(item.promotionId) : undefined,
         promotionName: item.promotion?.name || item.promotionName || undefined,
         promotionCode: item.promotion?.code || item.promotionCode || undefined,
+        deductPromoStock: promoLineType === "gift",
       };
     }
+    const ownConditionType = item.conditionType || "normal";
     const ownPromoId =
       item.promotionId != null ? Number(item.promotionId) : null;
     // Chỉ opt-in KM cho đúng dòng có promotionId của chính nó (dòng X điều kiện).
     // Không suy từ dòng quà sibling → tránh gán nhầm KM cho dòng thường khác.
-    const promoEnabledIds = ownPromoId != null ? [ownPromoId] : [];
+    // Chỉ hàng loại tồn 'normal' mới được KM — bỏ mọi stamp promotionId dính sai
+    // trên dòng bục rách (damaged) / cận date (near_expiry) khi khôi phục đơn cũ.
+    const promoEnabledIds =
+      ownPromoId != null && ownConditionType === "normal" ? [ownPromoId] : [];
     return {
       rowId,
       product: item.product,
@@ -425,6 +433,9 @@ const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[
         ? String(item.soldExpiryDate).slice(0, 10)
         : undefined,
       promoEnabledIds,
+      deductPromoStock:
+        ownConditionType === "normal" &&
+        item.promotion?.deductPromoStock === true,
     };
   });
 
@@ -572,8 +583,10 @@ export default function BanHangPage() {
     if (!activeTab) return;
     const branchId = selectedBranch?.id;
     const tabId = activeTab.id;
+    // Chỉ hàng loại tồn 'normal' mới tham gia KM. Hàng bục rách (damaged) / cận date
+    // (near_expiry) KHÔNG tính vào ngưỡng, không sinh quà, không hiện badge KM.
     const normalItems = (activeTab.cartItems || []).filter(
-      (it) => !it.isPromoGift
+      (it) => !it.isPromoGift && (it.conditionType || "normal") === "normal"
     );
 
     // Chữ ký đầu vào để tránh chạy lặp vô hạn (effect tự sửa cartItems)
@@ -736,7 +749,14 @@ export default function BanHangPage() {
         setTabs((prev) =>
           prev.map((t) => {
             if (t.id !== tabId) return t;
+            // normals: MỌI dòng không phải quà (kể cả bục rách/cận date) — dùng để
+            // ghép lại giỏ ở cuối, tránh làm mất dòng bục rách/cận date.
             const normals = t.cartItems.filter((it) => !it.isPromoGift);
+            // promoNormals: chỉ hàng loại tồn 'normal' — dùng cho mọi tính toán KM
+            // (badge, tìm trigger/anchor, giữ quà). Bục rách/cận date KHÔNG hưởng KM.
+            const promoNormals = normals.filter(
+              (it) => (it.conditionType || "normal") === "normal"
+            );
             const oldGifts = t.cartItems.filter((it) => it.isPromoGift);
 
             // Tái dựng phân bổ quà cộng dồn từ dòng quà DB/historical. Chỉ bỏ qua
@@ -815,9 +835,11 @@ export default function BanHangPage() {
                 name: string;
                 code: string;
                 cumulative?: boolean;
+                matchedProductIds?: number[];
+                deductPromoStock?: boolean;
               }[]
             > = {};
-            for (const n of normals) {
+            for (const n of promoNormals) {
               const pid = Number(n.product?.id);
               const matched = discoveryGiftPromos.filter((p) =>
                 p.cumulative
@@ -831,6 +853,10 @@ export default function BanHangPage() {
                   code: p.code,
                   cumulative: p.cumulative,
                   matchedProductIds: p.matchedProductIds,
+                  deductPromoStock:
+                    p.deductPromoStock === true &&
+                    (p.type === "BUY_X_GET_Y" ||
+                      p.type === "BUY_N_GET_M_SAME"),
                 }));
               }
             }
@@ -842,7 +868,7 @@ export default function BanHangPage() {
               if (promo.cumulative) {
                 // Opt-in cấp tab → neo dòng quà dưới dòng X đầu tiên thuộc CT.
                 if (!enabledCumIds.has(promo.promotionId)) continue;
-                const anchor = normals.find((n) =>
+                const anchor = promoNormals.find((n) =>
                   (promo.matchedProductIds || []).includes(
                     Number(n.product?.id)
                   )
@@ -889,6 +915,7 @@ export default function BanHangPage() {
                       triggerRowId: anchor.rowId,
                       rewardOptions: promo.rewardOptions,
                       requiresChoice: true,
+                      deductPromoStock: !isBuyY,
                     });
                     continue;
                   }
@@ -932,6 +959,7 @@ export default function BanHangPage() {
                       triggerRowId: anchor.rowId,
                       rewardOptions: promo.rewardOptions,
                       requiresChoice: false,
+                      deductPromoStock: !isBuyY,
                     });
                   }
                   continue;
@@ -965,12 +993,13 @@ export default function BanHangPage() {
                   triggerRowId: anchor.rowId,
                   rewardOptions: promo.rewardOptions,
                   requiresChoice: false,
+                  deductPromoStock: !isBuyY,
                 });
                 continue;
               }
 
               // ── KM THƯỜNG: từng mã X tự đạt ngưỡng ──
-              const trigger = normals.find(
+              const trigger = promoNormals.find(
                 (n) =>
                   Number(n.product?.id) === promo.triggerProductId &&
                   (n.promoEnabledIds || []).includes(promo.promotionId)
@@ -1047,6 +1076,7 @@ export default function BanHangPage() {
                 triggerProductId: promo.triggerProductId,
                 rewardOptions: promo.rewardOptions,
                 requiresChoice,
+                deductPromoStock: !isBuyY,
               });
             }
 
@@ -1073,17 +1103,17 @@ export default function BanHangPage() {
               ) {
                 return false;
               }
-              if (normals.length === 0) return false;
+              if (promoNormals.length === 0) return false;
               // Gift engine: chỉ giữ khi CT vẫn được opt-in trên dòng thường
               const trigger = g.triggerRowId
-                ? normals.find(
+                ? promoNormals.find(
                     (n) =>
                       n.rowId === g.triggerRowId &&
                       (g.promotionId == null ||
                         (n.promoEnabledIds || []).includes(g.promotionId))
                   )
                 : g.promotionId != null && g.triggerProductId != null
-                  ? normals.find(
+                  ? promoNormals.find(
                       (n) =>
                         Number(n.product?.id) === g.triggerProductId &&
                         (n.promoEnabledIds || []).includes(g.promotionId!)
@@ -1101,6 +1131,18 @@ export default function BanHangPage() {
             const merged: CartItem[] = [];
             const allGifts = [...newGifts, ...preservedGifts];
             for (const n of normals) {
+              // Dòng bục rách/cận date không hưởng KM: chỉ ẩn trạng thái hiển thị,
+              // nhưng giữ promoEnabledIds để khi quay về hàng thường có thể áp lại
+              // đúng CT trước đó. Dòng này đã bị loại khỏi promoNormals nên không
+              // được gửi evaluate, không tính ngưỡng và không sinh quà khi còn là
+              // damaged/near_expiry.
+              if ((n.conditionType || "normal") !== "normal") {
+                merged.push({
+                  ...n,
+                  eligiblePromos: undefined,
+                });
+                continue;
+              }
               const pid = Number(n.product?.id);
               const cumIds = cumMatchByProduct.get(pid) || [];
               const enabledSet = new Set(n.promoEnabledIds || []);
@@ -1115,6 +1157,11 @@ export default function BanHangPage() {
                 ...n,
                 promoEnabledIds: [...enabledSet],
                 eligiblePromos: eligibleByRow[n.rowId],
+                deductPromoStock: (eligibleByRow[n.rowId] || []).some(
+                  (promotion) =>
+                    promotion.deductPromoStock === true &&
+                    enabledSet.has(promotion.promotionId)
+                ),
               });
               allGifts
                 .filter((g) => g.triggerRowId === n.rowId)
@@ -1163,6 +1210,7 @@ export default function BanHangPage() {
         q: it.quantity,
         pr: it.price,
         d: it.discount,
+        c: it.conditionType || "normal",
         g: it.isPromoGift ? it.product?.id : undefined,
         dis: it.promoEnabledIds,
       }))

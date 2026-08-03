@@ -52,6 +52,10 @@ const UNIT_MODE_TYPES: PromotionType[] = [
   "BUY_N_GET_M_SAME",
   "BUY_X_BUY_Y_PRICE",
 ];
+const PROMO_STOCK_TYPES: PromotionType[] = [
+  "BUY_X_GET_Y",
+  "BUY_N_GET_M_SAME",
+];
 
 export function PromotionForm({ promotion, onClose }: Props) {
   const isEdit = !!promotion;
@@ -77,6 +81,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
     priority: 0,
     autoApply: false,
     stackable: false,
+    deductPromoStock: true,
     forAllBranch: true,
     forAllCustomer: true,
     forAllUser: true,
@@ -122,6 +127,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
       priority: promotion.priority,
       autoApply: promotion.autoApply,
       stackable: promotion.stackable,
+      deductPromoStock: promotion.deductPromoStock ?? true,
       startDate: promotion.startDate ? promotion.startDate.slice(0, 16) : undefined,
       endDate: promotion.endDate ? promotion.endDate.slice(0, 16) : undefined,
       applyTimeFrom: promotion.applyTimeFrom || undefined,
@@ -256,6 +262,7 @@ export function PromotionForm({ promotion, onClose }: Props) {
     form.type === "PRODUCT_DISCOUNT" ||
     form.type === "CATEGORY_DISCOUNT";
   const supportsUnitMode = UNIT_MODE_TYPES.includes(form.type);
+  const supportsPromoStock = PROMO_STOCK_TYPES.includes(form.type);
   const isCarton = form.unitMode === "carton";
   const unitLabel = isCarton ? "thùng" : "gói";
 
@@ -371,6 +378,31 @@ export function PromotionForm({ promotion, onClose }: Props) {
                     Cho phép cộng dồn
                   </label>
                 </div>
+                {supportsPromoStock && (
+                  <label className="flex items-start gap-2 rounded-md border border-pink-200 bg-pink-50 px-3 py-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={form.deductPromoStock ?? true}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          deductPromoStock: e.target.checked,
+                        })
+                      }
+                    />
+                    <span>
+                      <span className="block font-medium">
+                        Trừ toàn bộ vào tồn kho khuyến mãi
+                      </span>
+                      <span className="block text-xs text-gray-500">
+                        Khi bật, cả hàng điều kiện (X) và hàng tặng (Y) đều trừ
+                        tồn khuyến mãi. Hàng bục rách và cận date vẫn giữ cách
+                        trừ hiện tại.
+                      </span>
+                    </span>
+                  </label>
+                )}
               </section>
 
               {/* Phần thưởng */}

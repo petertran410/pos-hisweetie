@@ -34,6 +34,7 @@ import { CodeLink } from "../shared/CodeLink";
 import { CartPromotionSummary } from "../promotions/CartPromotionSummary";
 import {
   getItemOnHand as getItemOnHandHelper,
+  getPromoStockWarning,
   getStockWarning as getStockWarningHelper,
 } from "@/lib/utils/inventory";
 
@@ -124,9 +125,6 @@ export function InvoiceItemsList({
   const getItemOnHand = (item: CartItem): number | null =>
     getItemOnHandHelper(item, selectedBranch?.id);
 
-  const getStockWarning = (item: CartItem): string | null =>
-    getStockWarningHelper(item, selectedBranch?.id);
-
   // Gom id sản phẩm trong giỏ để lấy "KH Đặt" / "Đặt NCC" realtime theo chi nhánh
   // (cùng logic với ProductSearchDropdown).
   const cartProductIds = useMemo(
@@ -168,6 +166,30 @@ export function InvoiceItemsList({
       (inv: any) => inv.branchId === selectedBranch?.id
     );
     return Number(inventory?.promoQuantity || 0);
+  };
+
+  const promoDemandByProduct = useMemo(() => {
+    const demand = new Map<number, number>();
+    for (const item of cartItems) {
+      if (!item.deductPromoStock) continue;
+      const productId = Number(item.product?.id);
+      if (!productId) continue;
+      demand.set(
+        productId,
+        (demand.get(productId) || 0) + Number(item.quantity || 0)
+      );
+    }
+    return demand;
+  }, [cartItems]);
+
+  const getStockWarning = (item: CartItem): string | null => {
+    if (item.deductPromoStock) {
+      return getPromoStockWarning(
+        promoDemandByProduct.get(Number(item.product?.id)) || 0,
+        getPromoInventoryRealtime(item)
+      );
+    }
+    return getStockWarningHelper(item, selectedBranch?.id);
   };
 
   const getCustomerOrdered = (item: CartItem): number =>
