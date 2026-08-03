@@ -26,6 +26,7 @@ import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useInventoryByBranch } from "@/lib/hooks/useInventoryByBranch";
 import { NoteDropdown } from "./NoteDropdown";
+import { ItemConditionSelector } from "./ItemConditionSelector";
 import { NoteTemplateModal } from "./NoteTemplateModal";
 import { ItemDiscountModal } from "./ItemDiscountModal";
 import { ProductPriceHistory } from "./ProductPriceHistory";
@@ -171,10 +172,8 @@ export function OrderItemsList({
   //  - thêm/xóa SP trong giỏ
   // Fallback `getItemOnHand(item)` (snapshot từ product.inventories) khi hook
   // chưa load xong → tránh flash "0" lúc mới mount.
-  const { inventoryMap, promoInventoryMap } = useInventoryByBranch(
-    cartProductIds,
-    selectedBranch?.id
-  );
+  const { inventoryMap, promoInventoryMap, damagedMap, nearExpiryMap } =
+    useInventoryByBranch(cartProductIds, selectedBranch?.id);
 
   const isMobile = useIsMobile();
 
@@ -560,10 +559,18 @@ export function OrderItemsList({
                     {(() => {
                       const label = getConditionLabel(item.conditionType);
                       if (!label) return null;
+                      const lotSuffix =
+                        item.conditionType === "near_expiry" &&
+                        item.soldExpiryDate
+                          ? ` (NSX ${new Date(
+                              item.soldExpiryDate
+                            ).toLocaleDateString("vi-VN")})`
+                          : "";
                       return (
                         <span
                           className={`px-1.5 py-0.5 text-xs rounded-full border ${label.className}`}>
                           {label.text}
+                          {lotSuffix}
                         </span>
                       );
                     })()}
@@ -727,6 +734,17 @@ export function OrderItemsList({
                 <div className="flex-shrink-0 flex items-center gap-1">
                   {item.isPromoGift ? null : (
                     <>
+                      {/* Chọn loại tồn để bán: [dropdown NSX] [Cận date] [Bục rách].
+                          Đặt bên TRÁI icon "!" cho đồng bộ với nút Khuyến Mãi. */}
+                      <ItemConditionSelector
+                        item={item}
+                        damagedAvailable={damagedMap.get(item.product.id) ?? 0}
+                        nearExpiryAvailable={
+                          nearExpiryMap.get(item.product.id) ?? 0
+                        }
+                        branchId={selectedBranch?.id}
+                        onUpdateItem={onUpdateItem}
+                      />
                       {canViewInventory && (
                         <button
                           onClick={() => setSelectedItemForInventory(item)}
@@ -1050,74 +1068,88 @@ export function OrderItemsList({
 
       <div className="m-2 lg:m-3 border p-2 lg:p-3 flex-shrink-0 rounded-xl shadow-xl">
         {/* ── Icon khuyến mãi (chỉ hiện khi có KM cộng dồn) ── */}
-        {onTogglePromotion && onSetGiftSelection && (() => {
-          const cumProgress = (promoProgress || []).filter(
-            (p) => p.stackable && (p.matchedProductIds || []).length > 0
-          );
-          if (cumProgress.length === 0) return null;
+        {onTogglePromotion &&
+          onSetGiftSelection &&
+          (() => {
+            const cumProgress = (promoProgress || []).filter(
+              (p) => p.stackable && (p.matchedProductIds || []).length > 0
+            );
+            if (cumProgress.length === 0) return null;
 
-          const enabledSet = new Set(enabledCumulativePromoIds || []);
-          const disabledSet = new Set(disabledCumulativePromoIds || []);
-          const isEnabled = (p: import("@/lib/types/promotion").PromotionProgress) =>
-            enabledSet.has(p.promotionId) ||
-            (!disabledSet.has(p.promotionId) &&
-              cartItems.some(
-                (it) =>
-                  !it.isPromoGift &&
-                  (it.promoEnabledIds || []).includes(p.promotionId)
-              ));
+            const enabledSet = new Set(enabledCumulativePromoIds || []);
+            const disabledSet = new Set(disabledCumulativePromoIds || []);
+            const isEnabled = (
+              p: import("@/lib/types/promotion").PromotionProgress
+            ) =>
+              enabledSet.has(p.promotionId) ||
+              (!disabledSet.has(p.promotionId) &&
+                cartItems.some(
+                  (it) =>
+                    !it.isPromoGift &&
+                    (it.promoEnabledIds || []).includes(p.promotionId)
+                ));
 
-          const needActionCount = cumProgress.filter((p) => {
-            if (!isEnabled(p) || p.completedTimes <= 0) return false;
-            const sels = (cumulativeGiftSelections?.[p.promotionId] || []);
-            const opts = cartItems.find(
-              (it) => it.isPromoGift && it.cumulative && it.promotionId === p.promotionId
-            )?.rewardOptions || [];
-            const requiresChoice = (opts as any[]).length > 1;
-            if (!requiresChoice) return false;
-            const allocated = sels.reduce((s, sel) => s + Number(sel.rewardTimes || 0), 0);
-            return allocated !== p.completedTimes;
-          }).length;
+            const needActionCount = cumProgress.filter((p) => {
+              if (!isEnabled(p) || p.completedTimes <= 0) return false;
+              const sels = cumulativeGiftSelections?.[p.promotionId] || [];
+              const opts =
+                cartItems.find(
+                  (it) =>
+                    it.isPromoGift &&
+                    it.cumulative &&
+                    it.promotionId === p.promotionId
+                )?.rewardOptions || [];
+              const requiresChoice = (opts as any[]).length > 1;
+              if (!requiresChoice) return false;
+              const allocated = sels.reduce(
+                (s, sel) => s + Number(sel.rewardTimes || 0),
+                0
+              );
+              return allocated !== p.completedTimes;
+            }).length;
 
-          const enabledCount = cumProgress.filter(isEnabled).length;
-          const qualifiedEnabled = cumProgress.filter((p) => isEnabled(p) && p.completedTimes > 0).length;
+            const enabledCount = cumProgress.filter(isEnabled).length;
+            const qualifiedEnabled = cumProgress.filter(
+              (p) => isEnabled(p) && p.completedTimes > 0
+            ).length;
 
-          let badgeColor = "bg-gray-100 text-gray-500";
-          let badgeText = `${enabledCount}/${cumProgress.length} áp dụng`;
-          let BadgeIcon = Gift;
+            let badgeColor = "bg-gray-100 text-gray-500";
+            let badgeText = `${enabledCount}/${cumProgress.length} áp dụng`;
+            let BadgeIcon = Gift;
 
-          if (needActionCount > 0) {
-            badgeColor = "bg-amber-100 text-amber-700";
-            badgeText = "Cần chọn quà";
-            BadgeIcon = AlertTriangle;
-          } else if (qualifiedEnabled > 0) {
-            badgeColor = "bg-green-100 text-green-700";
-            badgeText = `${qualifiedEnabled} đủ điều kiện`;
-            BadgeIcon = Check;
-          } else if (enabledCount === cumProgress.length) {
-            badgeColor = "bg-blue-100 text-blue-700";
-            badgeText = "Đã áp dụng";
-            BadgeIcon = Check;
-          } else if (enabledCount < cumProgress.length) {
-            badgeColor = "bg-amber-100 text-amber-700";
-            badgeText = `${cumProgress.length - enabledCount} chưa áp dụng`;
-            BadgeIcon = Gift;
-          }
+            if (needActionCount > 0) {
+              badgeColor = "bg-amber-100 text-amber-700";
+              badgeText = "Cần chọn quà";
+              BadgeIcon = AlertTriangle;
+            } else if (qualifiedEnabled > 0) {
+              badgeColor = "bg-green-100 text-green-700";
+              badgeText = `${qualifiedEnabled} đủ điều kiện`;
+              BadgeIcon = Check;
+            } else if (enabledCount === cumProgress.length) {
+              badgeColor = "bg-blue-100 text-blue-700";
+              badgeText = "Đã áp dụng";
+              BadgeIcon = Check;
+            } else if (enabledCount < cumProgress.length) {
+              badgeColor = "bg-amber-100 text-amber-700";
+              badgeText = `${cumProgress.length - enabledCount} chưa áp dụng`;
+              BadgeIcon = Gift;
+            }
 
-          return (
-            <button
-              type="button"
-              onClick={() => setShowPromoSheet(true)}
-              className="mb-2 flex w-full items-center gap-2 rounded-lg border border-pink-200 bg-pink-50 px-3 py-1.5 text-left text-sm hover:bg-pink-100 transition-colors">
-              <Gift className="h-4 w-4 flex-shrink-0 text-pink-600" />
-              <span className="font-medium text-pink-700">Khuyến mãi</span>
-              <span className={`ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${badgeColor}`}>
-                <BadgeIcon className="h-3 w-3" />
-                {badgeText}
-              </span>
-            </button>
-          );
-        })()}
+            return (
+              <button
+                type="button"
+                onClick={() => setShowPromoSheet(true)}
+                className="mb-2 flex w-full items-center gap-2 rounded-lg border border-pink-200 bg-pink-50 px-3 py-1.5 text-left text-sm hover:bg-pink-100 transition-colors">
+                <Gift className="h-4 w-4 flex-shrink-0 text-pink-600" />
+                <span className="font-medium text-pink-700">Khuyến mãi</span>
+                <span
+                  className={`ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${badgeColor}`}>
+                  <BadgeIcon className="h-3 w-3" />
+                  {badgeText}
+                </span>
+              </button>
+            );
+          })()}
         <textarea
           value={orderNote}
           onChange={(e) => onOrderNoteChange(e.target.value.slice(0, 1000))}

@@ -79,12 +79,27 @@ export function useInvoice(id: number) {
   });
 }
 
+/**
+ * Bán hàng ghi sổ cái StockConditionLog (SALE_OUT) → tồn 3 bucket đổi.
+ * Phải invalidate các query đọc bucket từ sổ cái, nếu không dropdown bán hàng
+ * và tab "Thẻ kho loại tồn" sẽ hiển thị số cũ (staleTime 30s).
+ */
+function invalidateConditionQueries(
+  queryClient: ReturnType<typeof useQueryClient>
+) {
+  queryClient.invalidateQueries({ queryKey: ["condition-summary-batch"] });
+  queryClient.invalidateQueries({ queryKey: ["product-condition-summary"] });
+  queryClient.invalidateQueries({ queryKey: ["product-condition-logs"] });
+  queryClient.invalidateQueries({ queryKey: ["near-expiry-lots"] });
+}
+
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: invoicesApi.createInvoice,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      invalidateConditionQueries(queryClient);
       toast.success("Tạo hóa đơn thành công");
     },
     onError: (error: any) => {
@@ -100,6 +115,7 @@ export function useUpdateInvoice() {
       invoicesApi.updateInvoice(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      invalidateConditionQueries(queryClient);
     },
     onError: (error: any) => {
       toast.error(error.message || "Cập nhật hóa đơn thất bại");
@@ -113,6 +129,7 @@ export function useDeleteInvoice() {
     mutationFn: invoicesApi.deleteInvoice,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      invalidateConditionQueries(queryClient);
       toast.success("Xóa hóa đơn thành công");
     },
     onError: (error: any) => {
@@ -159,6 +176,7 @@ export function useCreateInvoiceFromOrder() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      invalidateConditionQueries(queryClient);
     },
     onError: (error: any) => {
       toast.error(error.message || "Tạo hóa đơn từ đơn hàng thất bại");

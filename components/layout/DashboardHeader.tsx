@@ -64,8 +64,7 @@ export function DashboardHeader() {
         title: "Kiểm kho",
         items: [
           { label: "Kiểm kho", href: "/san-pham/kiem-kho" },
-          { label: "Kiểm hàng loại B", href: "/san-pham/kiem-hang-loai-b" },
-          { label: "Kiểm hàng khuyến mãi", href: "/san-pham/kiem-hang-khuyen-mai" },
+          { label: "Chuyển loại tồn", href: "/san-pham/chuyen-loai-ton" },
         ],
       },
       {

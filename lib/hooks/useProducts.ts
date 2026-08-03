@@ -107,6 +107,68 @@ export function useProductInventoryLogs(
   });
 }
 
+export function useProductConditionLogs(
+  productId: number,
+  bucket: string,
+  branchId?: number,
+  page = 1,
+  limit = 15
+) {
+  return useQuery({
+    queryKey: [
+      "product-condition-logs",
+      productId,
+      bucket,
+      branchId,
+      page,
+      limit,
+    ],
+    queryFn: () =>
+      productsApi.getConditionLogs(productId, bucket, branchId, page, limit),
+    enabled: !!productId && !!bucket,
+  });
+}
+
+export function useProductConditionSummary(
+  productId: number,
+  branchId?: number
+) {
+  return useQuery({
+    queryKey: ["product-condition-summary", productId, branchId],
+    queryFn: () => productsApi.getConditionSummary(productId, branchId!),
+    enabled: !!productId && !!branchId,
+  });
+}
+
+/**
+ * Tồn 3 bucket (bục rách / cận date / KM) cho NHIỀU sản phẩm cùng lúc, đọc
+ * TỪ SỔ CÁI StockConditionLog (nguồn chân lý) — không đọc cache
+ * Inventory.damagedQuantity/... vốn có thể trôi khỏi sổ cái do các module cũ
+ * (trả hàng, trả NCC, trả ký gửi, KLB/KKM, sửa tình trạng thủ công) còn ghi
+ * trực tiếp vào cột cache mà không ghi sổ.
+ * Dùng cho dropdown bán hàng để số hiển thị luôn khớp tab "Thẻ kho loại tồn".
+ */
+export function useConditionSummaryBatch(
+  productIds: number[],
+  branchId?: number
+) {
+  const sortedKey = [...productIds].sort((a, b) => a - b).join(",");
+  return useQuery({
+    queryKey: ["condition-summary-batch", sortedKey, branchId ?? null],
+    queryFn: () => productsApi.getConditionSummaryBatch(productIds, branchId!),
+    enabled: productIds.length > 0 && !!branchId,
+    staleTime: 30_000,
+  });
+}
+
+export function useNearExpiryLots(productId: number, branchId?: number) {
+  return useQuery({
+    queryKey: ["near-expiry-lots", productId, branchId],
+    queryFn: () => productsApi.getNearExpiryLots(productId, branchId!),
+    enabled: !!productId && !!branchId,
+  });
+}
+
 export function useUpdateProductCondition() {
   const queryClient = useQueryClient();
 

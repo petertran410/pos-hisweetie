@@ -57,6 +57,7 @@ export interface CartItem {
   discount: number;
   note?: string;
   conditionType?: string; // "normal" | "damaged" | "near_expiry"
+  soldExpiryDate?: string; // lô cận date (YYYY-MM-DD) khi conditionType = near_expiry
   manufactureDate?: string; // Ngày sản xuất (YYYY-MM-DD) — dùng cho ký gửi
   // ── Khuyến mãi tự động (inline, KiotViet-style) ──
   // Dòng quà/mua kèm do KM sinh ra
@@ -397,6 +398,9 @@ const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[
         discount: Number(item.discount) || 0,
         note: item.note || "",
         conditionType: item.conditionType || "normal",
+        soldExpiryDate: item.soldExpiryDate
+          ? String(item.soldExpiryDate).slice(0, 10)
+          : undefined,
         isPromoGift: true,
         promoLineType,
         promotionId: item.promotionId != null ? Number(item.promotionId) : undefined,
@@ -417,6 +421,9 @@ const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[
       discount: Number(item.discount) || 0,
       note: item.note || "",
       conditionType: item.conditionType || "normal",
+      soldExpiryDate: item.soldExpiryDate
+        ? String(item.soldExpiryDate).slice(0, 10)
+        : undefined,
       promoEnabledIds,
     };
   });
@@ -1987,6 +1994,9 @@ export default function BanHangPage() {
         discount: Number(item.discount) || 0,
         note: item.note || "",
         conditionType: item.conditionType || "normal",
+        soldExpiryDate: item.soldExpiryDate
+          ? String(item.soldExpiryDate).slice(0, 10)
+          : undefined,
       })
     );
 
@@ -2049,6 +2059,9 @@ export default function BanHangPage() {
         discount: Number(item.discount) || 0,
         note: item.note || "",
         conditionType: item.conditionType || "normal",
+        soldExpiryDate: item.soldExpiryDate
+          ? String(item.soldExpiryDate).slice(0, 10)
+          : undefined,
       })
     );
 
@@ -2471,6 +2484,7 @@ export default function BanHangPage() {
               totalPrice: (price - discount) * quantity,
               note: item.note || "",
               conditionType: item.conditionType || "normal",
+              soldExpiryDate: item.soldExpiryDate || null,
               ...(isGift
                 ? {
                     lineType: "gift",
@@ -2769,7 +2783,8 @@ export default function BanHangPage() {
   const addToCart = async (
     product: any,
     conditionType: string = "normal",
-    quantity: number = 1
+    quantity: number = 1,
+    soldExpiryDate?: string
   ) => {
     const selectedPriceBookId = activeTab.selectedPriceBookId;
 
@@ -2806,12 +2821,13 @@ export default function BanHangPage() {
               ...tab,
               cartItems: [
                 {
-                  rowId: `${product.id}_${conditionType}_${Date.now()}`,
+                  rowId: `${product.id}_${conditionType}_${soldExpiryDate || ""}_${Date.now()}`,
                   product,
                   quantity,
                   price: productPrice,
                   discount: 0,
                   conditionType,
+                  soldExpiryDate,
                 },
                 ...tab.cartItems,
               ],
@@ -2847,6 +2863,7 @@ export default function BanHangPage() {
       price: item.price,
       discount: item.discount,
       conditionType: item.conditionType,
+      soldExpiryDate: item.soldExpiryDate,
       note: "",
     };
     const newCartItems = [...activeTab.cartItems];
@@ -2944,6 +2961,7 @@ export default function BanHangPage() {
               discountRatio: 0,
               note: item.note || "",
               conditionType: item.conditionType || "normal",
+              soldExpiryDate: item.soldExpiryDate || null,
               ...(isGift
                 ? {
                     lineType: "gift",
@@ -3170,6 +3188,7 @@ export default function BanHangPage() {
             totalPrice: (price - discount) * quantity,
             note: item.note || "",
             conditionType: item.conditionType || "normal",
+            soldExpiryDate: item.soldExpiryDate || null,
             ...(isGift
               ? {
                   lineType: "gift",
@@ -3330,6 +3349,7 @@ export default function BanHangPage() {
           discountRatio: 0,
           note: item.note || "",
           conditionType: item.conditionType || "normal",
+          soldExpiryDate: item.soldExpiryDate || null,
           ...(isGift
             ? {
                 lineType: "gift",
@@ -3388,6 +3408,7 @@ export default function BanHangPage() {
         discount: Number(item.discount) || 0,
         note: item.note || "",
         conditionType: item.conditionType || "normal",
+        soldExpiryDate: item.soldExpiryDate || null,
         manufactureDate: item.manufactureDate || null,
       }));
       documentData.delivery = {
@@ -3435,6 +3456,7 @@ export default function BanHangPage() {
           totalPrice: (price - discount) * quantity,
           note: item.note || "",
           conditionType: item.conditionType || "normal",
+          soldExpiryDate: item.soldExpiryDate || null,
           ...(isGift
             ? {
                 lineType: "gift",

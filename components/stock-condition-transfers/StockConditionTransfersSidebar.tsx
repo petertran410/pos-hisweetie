@@ -12,7 +12,7 @@ import {
   FilterSearchableSelect,
 } from "@/components/ui/filters";
 
-interface InventoryChecksSidebarProps {
+interface SidebarProps {
   filters: any;
   onFiltersChange: (filters: any) => void;
 }
@@ -144,9 +144,9 @@ function MiniCalendar({
 }
 
 // ─── Main ────────────────────────────────────────────────────────
-export function InventoryChecksSidebar({
+export function StockConditionTransfersSidebar({
   onFiltersChange,
-}: InventoryChecksSidebarProps) {
+}: SidebarProps) {
   const { data: branches } = useBranches();
   const { data: users } = useUsersForFilter();
   const { selectedBranch } = useBranchStore();
@@ -156,6 +156,8 @@ export function InventoryChecksSidebar({
   );
   const [creatorId, setCreatorId] = useState("");
   const [productId, setProductId] = useState<number>();
+  const [toBucket, setToBucket] = useState("");
+  const [status, setStatus] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
@@ -168,7 +170,6 @@ export function InventoryChecksSidebar({
     width: number;
   } | null>(null);
 
-  // Close calendar on outside click — exclude calendar portal
   useEffect(() => {
     if (!openCal) return;
     const h = (e: MouseEvent) => {
@@ -182,10 +183,6 @@ export function InventoryChecksSidebar({
     return () => document.removeEventListener("mousedown", h);
   }, [openCal]);
 
-  // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh ở header
-  // thì tick lại chi nhánh đó. Skip lần mount đầu. Chỉ ghi đè khi đang ở chế độ
-  // "bám theo header" (đúng 1 chi nhánh); giữ nguyên nếu user lọc nhiều chi
-  // nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng).
   const isFirstBranchSyncRef = useRef(true);
   const lastSyncedBranchIdRef = useRef<number | null>(
     selectedBranch?.id ?? null
@@ -223,29 +220,35 @@ export function InventoryChecksSidebar({
     if (selectedBranchIds.length > 0) n++;
     if (creatorId) n++;
     if (productId) n++;
+    if (toBucket) n++;
+    if (status) n++;
     if (fromDate || toDate) n++;
     return n;
-  }, [selectedBranchIds, creatorId, productId, fromDate, toDate]);
+  }, [selectedBranchIds, creatorId, productId, toBucket, status, fromDate, toDate]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       const f: any = {};
       if (selectedBranchIds.length > 0)
         f.branchIds = selectedBranchIds.join(",");
-       if (creatorId) f.creatorId = parseInt(creatorId);
-       if (productId) f.productId = productId;
-       if (fromDate) f.fromDate = fromDate;
+      if (creatorId) f.creatorId = parseInt(creatorId);
+      if (productId) f.productId = productId;
+      if (toBucket) f.toBucket = toBucket;
+      if (status) f.status = parseInt(status);
+      if (fromDate) f.fromDate = fromDate;
       if (toDate) f.toDate = toDate;
       onFiltersChange(f);
     }, 300);
     return () => clearTimeout(timer);
-  }, [selectedBranchIds, creatorId, productId, fromDate, toDate]);
+  }, [selectedBranchIds, creatorId, productId, toBucket, status, fromDate, toDate]);
 
   const clearAll = () => {
     setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
-     setCreatorId("");
-     setProductId(undefined);
-     setFromDate("");
+    setCreatorId("");
+    setProductId(undefined);
+    setToBucket("");
+    setStatus("");
+    setFromDate("");
     setToDate("");
     onFiltersChange({});
   };
@@ -265,7 +268,6 @@ export function InventoryChecksSidebar({
 
   return (
     <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col relative z-20">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-xl">
         <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
         {activeFilterCount > 0 && (
@@ -278,7 +280,7 @@ export function InventoryChecksSidebar({
       </div>
 
       <div className="p-4 space-y-4 overflow-y-auto h-full">
-        {/* ── Chi nhánh (multi-select dropdown) ── */}
+        {/* Chi nhánh */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Chi nhánh
@@ -295,7 +297,43 @@ export function InventoryChecksSidebar({
 
         <div className="border-t border-gray-100" />
 
-        {/* ── Sản phẩm ── */}
+        {/* Loại tồn */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Loại tồn
+          </label>
+          <select
+            value={toBucket}
+            onChange={(e) => setToBucket(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand bg-white">
+            <option value="">Tất cả</option>
+            <option value="DAMAGED">Bục rách (loại B)</option>
+            <option value="NEAR_EXPIRY">Cận date</option>
+            <option value="PROMO">Khuyến mãi</option>
+          </select>
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* Trạng thái */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Trạng thái
+          </label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand bg-white">
+            <option value="">Tất cả</option>
+            <option value="1">Chờ duyệt</option>
+            <option value="2">Đã duyệt</option>
+            <option value="3">Đã hủy</option>
+          </select>
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* Sản phẩm */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Sản phẩm
@@ -305,23 +343,23 @@ export function InventoryChecksSidebar({
 
         <div className="border-t border-gray-100" />
 
-        {/* ── Người kiểm (searchable dropdown) ── */}
+        {/* Người tạo */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Người kiểm
+            Người tạo
           </label>
           <FilterSearchableSelect
             options={creatorOptions}
             value={creatorId}
             placeholder="Tất cả"
-            searchPlaceholder="Tìm người kiểm..."
+            searchPlaceholder="Tìm người tạo..."
             onChange={setCreatorId}
           />
         </div>
 
         <div className="border-t border-gray-100" />
 
-        {/* ── Thời gian ── */}
+        {/* Thời gian */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Thời gian
@@ -367,7 +405,6 @@ export function InventoryChecksSidebar({
         </div>
       </div>
 
-      {/* Calendar portal */}
       {openCal &&
         calPos &&
         typeof document !== "undefined" &&

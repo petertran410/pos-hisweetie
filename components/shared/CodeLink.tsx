@@ -24,6 +24,7 @@ export type CodeEntity =
   | "stock-audit"
   | "inventory-check"
   | "inventory-promo-check"
+  | "stock-condition-transfer"
   | "destruction"
   | "internal-use"
   | "production"
@@ -48,6 +49,7 @@ const ROUTES: Record<CodeEntity, string> = {
   "stock-audit": "/san-pham/kiem-kho",
   "inventory-check": "/san-pham/kiem-hang-loai-b",
   "inventory-promo-check": "/san-pham/kiem-hang-khuyen-mai",
+  "stock-condition-transfer": "/san-pham/chuyen-loai-ton",
   destruction: "/san-pham/xuat-huy",
   "internal-use": "/san-pham/xuat-dung-noi-bo",
   production: "/san-pham/san-xuat",

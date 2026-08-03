@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useProducts } from "@/lib/hooks/useProducts";
+import { useProducts, useConditionSummaryBatch } from "@/lib/hooks/useProducts";
 import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useBranchStore } from "@/lib/store/branch";
@@ -13,12 +13,11 @@ interface ProductSearchDropdownProps {
   onAddProduct: (
     product: any,
     conditionType?: string,
-    quantity?: number
+    quantity?: number,
+    soldExpiryDate?: string
   ) => void;
   selectedPriceBookId?: number | null;
 }
-
-type ConditionType = string | undefined;
 
 export function ProductSearchDropdown({
   onAddProduct,
@@ -31,7 +30,6 @@ export function ProductSearchDropdown({
 
   // Keyboard navigation
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [subOptionIndex, setSubOptionIndex] = useState(0);
 
   // Quantity mode (toggled by barcode icon)
   const [showQuantityInput, setShowQuantityInput] = useState(false);
@@ -90,6 +88,14 @@ export function ProductSearchDropdown({
   );
   const supplierMap = supplierSummary || {};
 
+  // Tồn 3 bucket (bục rách / cận date / KM) lấy TỪ SỔ CÁI cho toàn bộ sản phẩm
+  // đang hiển thị — 1 request batch, tránh N+1 và tránh lệch với thẻ kho.
+  const { data: conditionSummary } = useConditionSummaryBatch(
+    productIds,
+    selectedBranch?.id
+  );
+  const conditionMap = conditionSummary || {};
+
   const isProductInPriceBook = (productId: number) => {
     if (!activePriceBook?.priceBookDetails) return true;
     return activePriceBook.priceBookDetails.some(
@@ -135,7 +141,6 @@ export function ProductSearchDropdown({
   // Reset highlight when search results change
   useEffect(() => {
     setHighlightedIndex(-1);
-    setSubOptionIndex(0);
   }, [searchDebounced, products.length]);
 
   // Auto scroll highlighted item into view
@@ -153,49 +158,35 @@ export function ProductSearchDropdown({
     return inventory ? Number(inventory.onHand) : 0;
   };
 
+  // Tồn 3 bucket đọc TỪ SỔ CÁI (StockConditionLog) — nguồn chân lý, khớp với
+  // tab "Thẻ kho loại tồn". KHÔNG đọc cache Inventory.damagedQuantity/... vì
+  // cache có thể trôi khỏi sổ cái (các module trả hàng/trả NCC/trả ký gửi/
+  // KLB/KKM/sửa tình trạng thủ công còn ghi trực tiếp vào cột cache).
   const getInventoryCondition = (product: any) => {
-    if (!selectedBranch) return { damaged: 0, nearExpiry: 0, promo: 0 };
-    const inventory = product.inventories?.find(
-      (inv: any) => inv.branchId === selectedBranch.id
-    );
+    const totals = conditionMap[product.id];
+    if (!totals) return { damaged: 0, nearExpiry: 0, promo: 0 };
     return {
-      damaged: inventory ? Number(inventory.damagedQuantity || 0) : 0,
-      nearExpiry: inventory ? Number(inventory.nearExpiryQuantity || 0) : 0,
+      damaged: Number(totals.damaged || 0),
+      nearExpiry: Number(totals.nearExpiry || 0),
       // Tồn phân bổ KM (có thể âm khi xuất vượt). Chỉ hiển thị, không chọn được.
-      promo: inventory ? Number(inventory.promoQuantity || 0) : 0,
+      promo: Number(totals.promo || 0),
     };
   };
-
-  // List of available sub-options for a product (normal + damaged? + near_expiry?)
-  const getAvailableSubOptions = (product: any): ConditionType[] => {
-    const condition = getInventoryCondition(product);
-    const options: ConditionType[] = [undefined];
-    if (condition.damaged > 0) options.push("damaged");
-    if (condition.nearExpiry > 0) options.push("near_expiry");
-    return options;
-  };
-
-  const currentHighlightedCondition: ConditionType =
-    highlightedIndex >= 0 && products[highlightedIndex]
-      ? getAvailableSubOptions(products[highlightedIndex])[subOptionIndex]
-      : undefined;
 
   const resetAll = () => {
     setSearch("");
     setSearchDebounced("");
     setShowDropdown(false);
     setHighlightedIndex(-1);
-    setSubOptionIndex(0);
     setSelectedProduct(null);
     setQuantityDisplay("1");
     setTimeout(() => searchInputRef.current?.focus(), 0);
   };
 
-  const safeAdd = (
-    product: any,
-    conditionType?: string,
-    quantity: number = 1
-  ): boolean => {
+  // Thêm sản phẩm vào giỏ. LUÔN thêm dưới dạng hàng thường (conditionType
+  // không truyền) — việc chọn Bục rách / Cận date được làm TRÊN CARD trong giỏ
+  // hàng (giống nút khuyến mãi), không chọn ở dropdown tìm kiếm nữa.
+  const safeAdd = (product: any, quantity: number = 1): boolean => {
     if (isStrictPriceBook && !isProductInPriceBook(product.id)) {
       toast.error(
         `Sản phẩm "${product.name}" không có trong bảng giá đang chọn`
@@ -207,16 +198,15 @@ export function ProductSearchDropdown({
         `Sản phẩm "${product.name}" không có trong bảng giá đang chọn`
       );
     }
-    onAddProduct(product, conditionType, quantity);
+    onAddProduct(product, undefined, quantity, undefined);
     return true;
   };
 
-  const handleClickAdd = (product: any, conditionType?: string) => {
-    if (!safeAdd(product, conditionType, 1)) return;
+  const handleClickAdd = (product: any) => {
+    if (!safeAdd(product, 1)) return;
     setSearch("");
     setShowDropdown(false);
     setHighlightedIndex(-1);
-    setSubOptionIndex(0);
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -228,12 +218,11 @@ export function ProductSearchDropdown({
       } else {
         setShowDropdown(false);
         setHighlightedIndex(-1);
-        setSubOptionIndex(0);
       }
       return;
     }
 
-    // Arrow/Enter/Tab only work when dropdown is open with items
+    // Arrow/Enter only work when dropdown is open with items
     if (!showDropdown || products.length === 0) return;
 
     if (e.key === "ArrowDown") {
@@ -241,28 +230,17 @@ export function ProductSearchDropdown({
       setHighlightedIndex((prev) =>
         prev + 1 >= products.length ? products.length - 1 : prev + 1
       );
-      setSubOptionIndex(0);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlightedIndex((prev) => (prev - 1 < 0 ? 0 : prev - 1));
-      setSubOptionIndex(0);
-    } else if (e.key === "Tab") {
-      if (highlightedIndex < 0) return;
-      const product = products[highlightedIndex];
-      const subOptions = getAvailableSubOptions(product);
-      if (subOptions.length <= 1) return; // let Tab behave normally
-      e.preventDefault();
-      setSubOptionIndex((prev) => (prev + 1) % subOptions.length);
     } else if (e.key === "Enter") {
       if (highlightedIndex < 0) return;
       e.preventDefault();
       const product = products[highlightedIndex];
-      const subOptions = getAvailableSubOptions(product);
-      const conditionType = subOptions[subOptionIndex];
 
       if (showQuantityInput) {
         // Enter quantity-entry flow
-        setSelectedProduct({ product, conditionType });
+        setSelectedProduct({ product });
         setSearch(`${product.code} ${product.name}`);
         setShowDropdown(false);
         setQuantityDisplay("1");
@@ -271,7 +249,7 @@ export function ProductSearchDropdown({
           quantityInputRef.current?.select();
         }, 0);
       } else {
-        if (!safeAdd(product, conditionType, 1)) return;
+        if (!safeAdd(product, 1)) return;
         resetAll();
       }
     }
@@ -283,8 +261,7 @@ export function ProductSearchDropdown({
       if (!selectedProduct) return;
       const qty = parseInt(quantityDisplay, 10);
       if (!qty || qty < 1) return;
-      if (!safeAdd(selectedProduct.product, selectedProduct.conditionType, qty))
-        return;
+      if (!safeAdd(selectedProduct.product, qty)) return;
       resetAll();
     } else if (e.key === "Escape") {
       e.preventDefault();
@@ -332,16 +309,9 @@ export function ProductSearchDropdown({
               const hasPromo = condition.promo !== 0;
               const isHighlighted = idx === highlightedIndex;
 
-              let rowRing = "";
-              if (isHighlighted) {
-                if (currentHighlightedCondition === "damaged") {
-                  rowRing = "ring-2 ring-inset ring-red-500";
-                } else if (currentHighlightedCondition === "near_expiry") {
-                  rowRing = "ring-2 ring-inset ring-amber-500";
-                } else {
-                  rowRing = "ring-2 ring-inset ring-brand";
-                }
-              }
+              const rowRing = isHighlighted
+                ? "ring-2 ring-inset ring-brand"
+                : "";
 
               return (
                 <div
@@ -390,37 +360,24 @@ export function ProductSearchDropdown({
                     </div>
                   </div>
 
+                  {/* 3 badge loại tồn CHỈ ĐỂ HIỂN THỊ (không bấm được). Việc chọn
+                      bán hàng bục rách / cận date được làm trên card sản phẩm
+                      trong giỏ hàng, giống cách bật khuyến mãi. */}
                   {(hasDamaged || hasNearExpiry || hasPromo) && (
                     <div className="flex gap-2 mt-2 pl-[60px] flex-wrap">
                       {hasDamaged && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleClickAdd(product, "damaged");
-                          }}
-                          className={`px-2 py-0.5 text-xs rounded-full bg-red-50 text-red-600 border transition-colors ${
-                            isHighlighted &&
-                            currentHighlightedCondition === "damaged"
-                              ? "border-red-500 ring-2 ring-red-300"
-                              : "border-red-200 hover:bg-red-100"
-                          }`}>
+                        <span
+                          title="Chỉ hiển thị — chọn hàng bục rách ở card sản phẩm trong giỏ"
+                          className="px-2 py-0.5 text-xs rounded-full bg-red-50 text-red-600 border border-red-200 select-none cursor-default">
                           Bục rách: {condition.damaged}
-                        </button>
+                        </span>
                       )}
                       {hasNearExpiry && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleClickAdd(product, "near_expiry");
-                          }}
-                          className={`px-2 py-0.5 text-xs rounded-full bg-amber-50 text-amber-600 border transition-colors ${
-                            isHighlighted &&
-                            currentHighlightedCondition === "near_expiry"
-                              ? "border-amber-500 ring-2 ring-amber-300"
-                              : "border-amber-200 hover:bg-amber-100"
-                          }`}>
+                        <span
+                          title="Chỉ hiển thị — chọn hàng cận date ở card sản phẩm trong giỏ"
+                          className="px-2 py-0.5 text-xs rounded-full bg-amber-50 text-amber-600 border border-amber-200 select-none cursor-default">
                           Cận date: {condition.nearExpiry}
-                        </button>
+                        </span>
                       )}
                       {hasPromo && (
                         <span

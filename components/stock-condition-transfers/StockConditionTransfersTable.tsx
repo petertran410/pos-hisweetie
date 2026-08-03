@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, Fragment, useMemo, useRef } from "react";
+import { useState, useEffect, Fragment, useRef } from "react";
 import {
-  useInventoryPromoChecks,
-  useExportInventoryPromoChecks,
-} from "@/lib/hooks/useInventoryPromoChecks";
+  useStockConditionTransfers,
+  useExportStockConditionTransfers,
+} from "@/lib/hooks/useStockConditionTransfers";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -15,15 +15,31 @@ import {
   Download,
   Loader2,
 } from "lucide-react";
-import { InventoryPromoCheckDetailRow } from "./InventoryPromoCheckDetailRow";
-import { InventoryPromoCheckForm } from "./InventoryPromoCheckForm";
+import { StockConditionTransferDetailRow } from "./StockConditionTransferDetailRow";
+import { StockConditionTransferForm } from "./StockConditionTransferForm";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "@/components/shared/CodeLink";
+import { BUCKET_LABELS } from "@/lib/api/stock-condition-transfers";
 
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
 
-export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
+function StatusBadge({ status }: { status: number }) {
+  const cfg =
+    status === 3
+      ? { cls: "bg-red-100 text-red-700", label: "Đã hủy" }
+      : status === 2
+        ? { cls: "bg-green-100 text-green-700", label: "Đã duyệt" }
+        : { cls: "bg-amber-100 text-amber-700", label: "Chờ duyệt" };
+  return (
+    <span
+      className={`px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>
+      {cfg.label}
+    </span>
+  );
+}
+
+export function StockConditionTransfersTable({ filters }: { filters?: any }) {
   const { selectedBranch } = useBranchStore();
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -32,11 +48,10 @@ export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
 
-  const canCreate = usePermission("inventory_promo_checks", "create");
-  const canExport = usePermission("inventory_promo_checks", "export");
+  const canCreate = usePermission("stock_condition_transfers", "create");
+  const canExport = usePermission("stock_condition_transfers", "export");
 
-  const { exportToFile, exportDetailToFile, isExporting } =
-    useExportInventoryPromoChecks();
+  const { exportToFile, isExporting } = useExportStockConditionTransfers();
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
@@ -63,61 +78,54 @@ export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [showExportMenu]);
 
-  // Bộ lọc xuất file khớp với danh sách đang hiển thị (bỏ phân trang).
-  const buildExportFilters = () => ({
+  const commonFilters = {
     search: filters?.search || debouncedSearch || undefined,
     branchIds: filters?.branchIds || undefined,
     branchId: !filters?.branchIds
       ? filters?.branchId || selectedBranch?.id
       : undefined,
+    status: filters?.status,
+    toBucket: filters?.toBucket,
     fromDate: filters?.fromDate,
     toDate: filters?.toDate,
     creatorId: filters?.creatorId,
     productId: filters?.productId,
-  });
+  };
 
-  const { data, isLoading } = useInventoryPromoChecks({
+  const { data, isLoading } = useStockConditionTransfers({
     page,
     limit,
-    search: filters?.search || debouncedSearch,
-    branchIds: filters?.branchIds || undefined,
-    branchId: !filters?.branchIds ? (filters?.branchId || selectedBranch?.id) : undefined,
-    fromDate: filters?.fromDate,
-    toDate: filters?.toDate,
-    creatorId: filters?.creatorId,
-    productId: filters?.productId,
+    ...commonFilters,
   });
 
-  const checks = data?.data || [];
+  const transfers = data?.data || [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
 
   const toggleExpand = (id: number) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
-  const colSpan = 7;
+  const colSpan = 8;
 
   if (showCreateForm) {
-    return <InventoryPromoCheckForm onClose={() => setShowCreateForm(false)} />;
+    return (
+      <StockConditionTransferForm onClose={() => setShowCreateForm(false)} />
+    );
   }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
-      {/* Modal form */}
-      {showCreateForm && (
-        <InventoryPromoCheckForm onClose={() => setShowCreateForm(false)} />
-      )}
       {/* Toolbar */}
       <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
-            Kiểm hàng khuyến mãi
+            Chuyển loại tồn
           </h2>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Tìm mã phiếu, người kiểm..."
+              placeholder="Tìm mã phiếu, người tạo..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 pr-3 py-1.5 border rounded text-sm w-64 focus:outline-none focus:ring-1 focus:ring-brand"
@@ -128,7 +136,7 @@ export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
           {canExport && (
             <div ref={exportMenuRef} className="relative">
               <button
-                onClick={() => setShowExportMenu((o) => !o)}
+                onClick={() => exportToFile(commonFilters)}
                 disabled={isExporting}
                 className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600 disabled:opacity-50">
                 {isExporting ? (
@@ -137,28 +145,7 @@ export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
                   <Download className="w-4 h-4" />
                 )}
                 {isExporting ? "Đang xuất..." : "Xuất file"}
-                <ChevronDown className="w-4 h-4" />
               </button>
-              {showExportMenu && (
-                <div className="absolute right-0 top-full mt-1 z-30 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                  <button
-                    onClick={() => {
-                      setShowExportMenu(false);
-                      exportToFile(buildExportFilters());
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors">
-                    Xuất tổng quan
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowExportMenu(false);
-                      exportDetailToFile(buildExportFilters());
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors border-t border-gray-100">
-                    Xuất chi tiết
-                  </button>
-                </div>
-              )}
             </div>
           )}
           {canCreate && (
@@ -166,7 +153,7 @@ export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
               onClick={() => setShowCreateForm(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white rounded text-sm hover:bg-brand-dark">
               <Plus className="w-4 h-4" />
-              Tạo phiếu kiểm
+              Tạo phiếu
             </button>
           )}
         </div>
@@ -184,10 +171,10 @@ export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
                 Chi nhánh
               </th>
               <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
-                Người kiểm
+                Người tạo
               </th>
               <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
-                Ngày kiểm
+                Ngày
               </th>
               <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500">
                 Số SP
@@ -198,7 +185,7 @@ export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
               <th className="px-4 py-2.5 text-center text-xs font-medium text-gray-500">
                 Trạng thái
               </th>
-              {/* <th className="px-4 py-2.5 w-8"></th> */}
+              <th className="px-4 py-2.5 w-8"></th>
             </tr>
           </thead>
           <tbody>
@@ -211,99 +198,65 @@ export function InventoryPromoChecksTable({ filters }: { filters?: any }) {
                   </div>
                 </td>
               </tr>
-            ) : checks.length === 0 ? (
+            ) : transfers.length === 0 ? (
               <tr>
                 <td
                   colSpan={colSpan}
                   className="py-20 text-center text-gray-400">
-                  <div className="text-sm">Chưa có phiếu kiểm nào</div>
+                  <div className="text-sm">Chưa có phiếu nào</div>
                 </td>
               </tr>
             ) : (
-              checks.map((check) => (
-                <Fragment key={check.id}>
+              transfers.map((t) => (
+                <Fragment key={t.id}>
                   <tr
                     className={`cursor-pointer transition-colors ${
-                      expandedId === check.id
+                      expandedId === t.id
                         ? "bg-brand-soft"
                         : "border-b hover:bg-gray-50"
                     }`}
-                    onClick={() => toggleExpand(check.id)}>
+                    onClick={() => toggleExpand(t.id)}>
                     <td
-                      className={`px-4 py-2.5 text-sm ${
-                        expandedId === check.id
-                          ? "border-t-2 border-l-2 border-brand"
-                          : ""
-                      }`}>
-                      <CodeLink entity="inventory-promo-check" code={check.code} />
-                    </td>
-                    <td
-                      className={`px-4 py-2.5 text-sm ${
-                        expandedId === check.id
-                          ? "border-t-2 border-brand"
-                          : ""
-                      }`}>
-                      {check.branchName}
-                    </td>
-                    <td
-                      className={`px-4 py-2.5 text-sm ${
-                        expandedId === check.id
-                          ? "border-t-2 border-brand"
-                          : ""
-                      }`}>
-                      {check.createdByName}
-                    </td>
-                    <td
-                      className={`px-4 py-2.5 text-sm ${
-                        expandedId === check.id
-                          ? "border-t-2 border-brand"
-                          : ""
-                      }`}>
-                      {formatDateTime(check.checkDate)}
-                    </td>
-                    <td
-                      className={`px-4 py-2.5 text-sm text-right ${
-                        expandedId === check.id
-                          ? "border-t-2 border-brand"
-                          : ""
-                      }`}>
-                      {check.details?.length || 0}
-                    </td>
-                    <td
-                      className={`px-4 py-2.5 text-sm text-gray-500 truncate max-w-[200px] ${
-                        expandedId === check.id
-                          ? "border-t-2 border-brand"
-                          : ""
-                      }`}>
-                      {check.note || "-"}
-                    </td>
-                    <td
-                      className={`px-4 py-2.5 text-sm text-center ${expandedId === check.id ? "border-t-2 border-brand" : ""}`}>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          check.status === 2
-                            ? "bg-red-100 text-red-700"
-                            : "bg-green-100 text-green-700"
-                        }`}>
-                        {check.status === 2 ? "Đã hủy" : "Hoàn thành"}
-                      </span>
-                    </td>
-                    {/* <td
-                      className={`px-4 py-2.5 ${
-                        expandedId === check.id
-                          ? "border-t-2 border-r-2 border-brand"
-                          : ""
-                      }`}>
-                      <ChevronDown
-                        className={`w-4 h-4 text-gray-400 transition-transform ${
-                          expandedId === check.id ? "rotate-180" : ""
-                        }`}
+                      className={`px-4 py-2.5 text-sm ${expandedId === t.id ? "border-t-2 border-l-2 border-brand" : ""}`}>
+                      <CodeLink
+                        entity="stock-condition-transfer"
+                        code={t.code}
                       />
-                    </td> */}
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm ${expandedId === t.id ? "border-t-2 border-brand" : ""}`}>
+                      {t.branchName}
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm ${expandedId === t.id ? "border-t-2 border-brand" : ""}`}>
+                      {t.createdByName}
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm ${expandedId === t.id ? "border-t-2 border-brand" : ""}`}>
+                      {formatDateTime(t.transferDate)}
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm text-right ${expandedId === t.id ? "border-t-2 border-brand" : ""}`}>
+                      {t.details?.length || 0}
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm text-gray-500 truncate max-w-[200px] ${expandedId === t.id ? "border-t-2 border-brand" : ""}`}>
+                      {t.note || "-"}
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 text-sm text-center ${expandedId === t.id ? "border-t-2 border-brand" : ""}`}>
+                      <StatusBadge status={t.status} />
+                    </td>
+                    <td
+                      className={`px-4 py-2.5 ${expandedId === t.id ? "border-t-2 border-r-2 border-brand" : ""}`}>
+                      <ChevronDown
+                        className={`w-4 h-4 text-gray-400 transition-transform ${expandedId === t.id ? "rotate-180" : ""}`}
+                      />
+                    </td>
                   </tr>
-                  {expandedId === check.id && (
-                    <InventoryPromoCheckDetailRow
-                      checkId={check.id}
+                  {expandedId === t.id && (
+                    <StockConditionTransferDetailRow
+                      transferId={t.id}
                       colSpan={colSpan}
                     />
                   )}

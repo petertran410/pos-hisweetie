@@ -230,7 +230,107 @@ export const productsApi = {
       data
     );
   },
+
+  // Thẻ kho loại tồn (bucket): DAMAGED | NEAR_EXPIRY | PROMO — có tonCuoi.
+  getConditionLogs: async (
+    productId: number,
+    bucket: string,
+    branchId?: number,
+    page = 1,
+    limit = 15
+  ): Promise<{ data: StockConditionLog[]; total: number }> => {
+    const params = new URLSearchParams();
+    params.append("bucket", bucket);
+    if (branchId) params.append("branchId", branchId.toString());
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
+    return apiClient.get(
+      `/products/${productId}/condition-logs?${params.toString()}`
+    );
+  },
+
+  // Tồn cận date theo từng lô (expiryDate).
+  getNearExpiryLots: async (
+    productId: number,
+    branchId: number
+  ): Promise<{ data: NearExpiryLot[] }> => {
+    return apiClient.get(
+      `/products/${productId}/near-expiry-lots?branchId=${branchId}`
+    );
+  },
+
+  // Tồn tổng hợp: good + damaged + nearExpiry + promo = onHand.
+  getConditionSummary: async (
+    productId: number,
+    branchId: number
+  ): Promise<ConditionSummary> => {
+    return apiClient.get(
+      `/products/${productId}/condition-summary?branchId=${branchId}`
+    );
+  },
+
+  /**
+   * Tồn 3 bucket cho NHIỀU sản phẩm trong 1 chi nhánh, đọc TỪ SỔ CÁI
+   * (StockConditionLog) chứ không đọc cache Inventory.
+   * Dùng cho dropdown bán hàng: cache có thể trôi khỏi sổ cái vì một số module
+   * cũ (trả hàng, trả NCC, trả ký gửi, kiểm KLB/KKM, sửa tình trạng thủ công)
+   * còn ghi trực tiếp vào cột cache mà không ghi sổ.
+   */
+  getConditionSummaryBatch: async (
+    productIds: number[],
+    branchId: number
+  ): Promise<Record<number, BucketTotals>> => {
+    if (!productIds.length) return {};
+    return apiClient.get(
+      `/products/condition-summary-batch?productIds=${productIds.join(
+        ","
+      )}&branchId=${branchId}`
+    );
+  },
 };
+
+export interface StockConditionLog {
+  id: number;
+  productId: number;
+  productCode: string;
+  productName: string;
+  branchId: number;
+  branchName: string;
+  bucket: string;
+  transactionType: string;
+  refCode: string;
+  refType: string;
+  refId: number;
+  quantity: number;
+  expiryDate?: string | null;
+  costPrice: number;
+  note?: string | null;
+  transactionDate?: string;
+  createdAt: string;
+  createdByName?: string | null;
+  tonCuoi?: number;
+}
+
+export interface NearExpiryLot {
+  expiryDate: string | null;
+  quantity: number;
+}
+
+export interface BucketTotals {
+  damaged: number;
+  nearExpiry: number;
+  promo: number;
+}
+
+export interface ConditionSummary {
+  productId: number;
+  branchId: number;
+  onHand: number;
+  good: number;
+  damaged: number;
+  nearExpiry: number;
+  promo: number;
+}
 
 export interface InventoryLog {
   id: number;
