@@ -304,14 +304,15 @@ function ProductsMobileFilterSheet({
     setLocalDirectSale("");
   };
 
-  const activeCount = [
-    localParentName,
-    localMiddleName,
-    localChildName,
-    localStockStatus,
-    localTradeMarkId,
-    localDirectSale,
-  ].filter(Boolean).length + (localTypes.length > 0 ? 1 : 0);
+  const activeCount =
+    [
+      localParentName,
+      localMiddleName,
+      localChildName,
+      localStockStatus,
+      localTradeMarkId,
+      localDirectSale,
+    ].filter(Boolean).length + (localTypes.length > 0 ? 1 : 0);
 
   return (
     <div
@@ -592,7 +593,9 @@ export function ProductsMobileView({
   const [activeTab, setActiveTab] = useState<string>("active");
   const [page, setPage] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(
+    null
+  );
   const limit = 20;
 
   // Debounce search 300ms
@@ -627,14 +630,15 @@ export function ProductsMobileView({
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
 
-  const activeFilterCount = [
-    filters.parentName,
-    filters.middleName,
-    filters.childName,
-    filters.stockStatus,
-    filters.tradeMarkId,
-    filters.isDirectSale !== undefined ? "yes" : "",
-  ].filter(Boolean).length +
+  const activeFilterCount =
+    [
+      filters.parentName,
+      filters.middleName,
+      filters.childName,
+      filters.stockStatus,
+      filters.tradeMarkId,
+      filters.isDirectSale !== undefined ? "yes" : "",
+    ].filter(Boolean).length +
     (Array.isArray(filters.types) && filters.types.length > 0 ? 1 : 0);
 
   return (

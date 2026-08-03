@@ -29,6 +29,7 @@ const TX_LABELS: Record<string, string> = {
   CLT_CANCEL: "Hủy phiếu CLT",
   SALE_OUT: "Bán ra",
   SALE_CANCEL: "Hủy bán",
+  PURCHASE_IN: "Nhập hàng",
 };
 
 const formatMoney = (v: number | null | undefined) =>
@@ -178,9 +179,6 @@ export function ProductConditionTab({ productId, branchId }: Props) {
                       {formatNsx(log.expiryDate)}
                     </td>
                   )}
-                  <td className="px-4 py-3 text-right">
-                    {formatMoney(log.costPrice)}
-                  </td>
                   <td className="px-4 py-3 text-right font-medium">
                     {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
                   </td>

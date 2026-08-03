@@ -11,23 +11,6 @@ import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 import { useNearExpiryLots } from "@/lib/hooks/useProducts";
 import { formatMonthYear } from "@/components/ui/DatePickerInput";
 
-/**
- * Chọn TÌNH TRẠNG HÀNG cho 1 dòng trong giỏ — đặt trong HÀNG ACTION của card
- * (bên trái icon "!"), style đồng bộ với nút "Khuyến Mãi".
- *
- * Thứ tự hiển thị (trái → phải): [dropdown NSX] [Cận date] [Bục rách].
- *
- * Quy ước màu (giống nút Khuyến Mãi):
- *  - Chưa chọn : nền xám nhạt, chữ/icon xám → hover đổi sang màu của loại đó.
- *  - Đang chọn : nền màu của loại đó, chữ/icon màu đậm → hover xám (gợi ý bỏ chọn).
- *  - Bị khóa   : nền xám rất nhạt, chữ mờ, không bấm được (do loại kia đang chọn).
- *
- * Hai nút LOẠI TRỪ nhau. Bấm lại nút đang chọn để bỏ về hàng thường.
- * Chọn "Cận date" → hiện dropdown chọn lô theo cột mốc NSX ở bên trái.
- *
- * Số tồn truyền vào đã được backend tính TỪ SỔ CÁI StockConditionLog nên luôn
- * khớp tab "Thẻ kho loại tồn".
- */
 export function ItemConditionSelector({
   item,
   damagedAvailable,
@@ -167,11 +150,7 @@ function ConditionButton({
       ? t.activeBg
       : t.idleBg;
 
-  const textCls = locked
-    ? "text-gray-300"
-    : active
-      ? t.activeText
-      : t.idleText;
+  const textCls = locked ? "text-gray-300" : active ? t.activeText : t.idleText;
 
   return (
     <button
@@ -218,13 +197,6 @@ const formatAge = (days: number | null): string => {
   return restMonths > 0 ? `${years} năm ${restMonths} tháng` : `${years} năm`;
 };
 
-/**
- * Dropdown chọn LÔ cận date theo cột mốc NSX. Lô đã được backend sắp xếp theo
- * NSX tăng dần (lô cũ nhất lên đầu) và chỉ trả lô còn tồn > 0.
- *
- * Chưa chọn lô → viền hổ phách đậm để nhắc, vì backend validate theo từng lô:
- * bán quá tồn của "lô chưa xác định NSX" sẽ bị chặn.
- */
 function NearExpiryLotSelect({
   productId,
   branchId,
