@@ -65,6 +65,11 @@ export function BranchPermissionEditor({
   const groupedPermissions = useMemo(() => {
     if (!allPermissions) return {};
     return allPermissions.reduce((acc: any, perm: any) => {
+      if (
+        perm.resource === "inventory_checks" ||
+        perm.resource === "inventory_promo_checks"
+      )
+        return acc;
       const category = perm.category || "Khác";
       if (!acc[category]) acc[category] = {};
       if (!acc[category][perm.resource]) acc[category][perm.resource] = [];

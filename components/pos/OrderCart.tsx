@@ -573,106 +573,107 @@ export function OrderCart({
         )}
       </div>
       
-      {/* Unified payment and summary card */}
-      <div className="p-2.5 lg:p-3 space-y-2 lg:space-y-2.5 flex-shrink-0 border mr-2 lg:mr-3 ml-2 lg:ml-3 mb-2 lg:mb-3 rounded-xl shadow-sm">
-        {/* Summary section */}
-        <div className="flex items-center justify-between text-sm lg:text-sm">
-          <span className="text-gray-600">Tổng tiền hàng</span>
-          <span className="font-semibold">
-            {subtotal.toLocaleString("en-US")}
-          </span>
-        </div>
+       {/* Unified payment and summary card */}
+       <div className="p-2.5 lg:p-3 space-y-2 lg:space-y-2.5 flex-shrink-0 border mr-2 lg:mr-3 ml-2 lg:ml-3 mb-2 lg:mb-3 rounded-xl shadow-sm">
+         {/* Summary section */}
+             <div className="flex items-center justify-between text-sm lg:text-sm">
+               <span className="text-gray-600">Tổng tiền hàng</span>
+               <span className="font-semibold">
+                 {subtotal.toLocaleString("en-US")}
+               </span>
+             </div>
 
-        {/* Discount input row */}
-        <div className="flex items-center justify-between text-sm lg:text-sm gap-2">
-          <span className="text-gray-600">Giảm giá</span>
-          <div className="flex items-center gap-1">
-            <input
-              type="text"
-              value={discountInputValue}
-              onChange={handleDiscountInputChange}
-              placeholder="0"
-              className="w-32 lg:w-36 border rounded-lg px-3 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-brand"
-            />
-            <button
-              type="button"
-              onClick={handleDiscountModeToggle}
-              className="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-medium min-w-[40px]">
-              {discountMode === "amount" ? "₫" : "%"}
-            </button>
-          </div>
-        </div>
+             {/* Discount input row */}
+             <div className="flex items-center justify-between text-sm lg:text-sm gap-2">
+               <span className="text-gray-600">Giảm giá</span>
+               <div className="flex items-center gap-1">
+                 <input
+                   type="text"
+                   value={discountInputValue}
+                   onChange={handleDiscountInputChange}
+                   placeholder="0"
+                   className="w-32 lg:w-36 border rounded-lg px-3 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+                 />
+                 <button
+                   type="button"
+                   onClick={handleDiscountModeToggle}
+                   className="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-medium min-w-[40px]">
+                   {discountMode === "amount" ? "₫" : "%"}
+                 </button>
+               </div>
+             </div>
 
-        <div className="flex items-center justify-between font-semibold text-base lg:text-lg pt-2 border-t">
-          <span>{documentType === "consignment" ? "Tổng tiền" : "Khách cần trả"}</span>
-          <span className="text-brand">
-            {calculateTotal().toLocaleString("en-US")}
-          </span>
-        </div>
-        {documentType === "consignment" && (
-          <div className="flex items-center justify-between text-sm lg:text-sm">
-            <span>Trạng thái</span>
-            <select
-              value={consignStatus ?? "pending"}
-              onChange={(e) => onConsignStatusChange?.(e.target.value)}
-              className="border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
-              <option value="pending">Phiếu tạm</option>
-              <option value="confirmed">Đã xác nhận</option>
-            </select>
-          </div>
-        )}
+             <div className="flex items-center justify-between font-semibold text-base lg:text-lg pt-2 border-t">
+               <span>{documentType === "consignment" ? "Tổng tiền" : "Khách cần trả"}</span>
+               <span className="text-brand">
+                 {calculateTotal().toLocaleString("en-US")}
+               </span>
+             </div>
+             {documentType === "consignment" && (
+               <div className="flex items-center justify-between text-sm lg:text-sm">
+                 <span>Trạng thái</span>
+                 <select
+                   value={consignStatus ?? "pending"}
+                   onChange={(e) => onConsignStatusChange?.(e.target.value)}
+                   className="border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+                   <option value="pending">Phiếu tạm</option>
+                   <option value="confirmed">Đã xác nhận</option>
+                 </select>
+               </div>
+             )}
 
-        {documentType !== "consignment" && canViewPayment && (
-          <div className="flex items-center justify-between text-sm lg:text-sm">
-            <div className="flex items-center gap-1.5 lg:gap-2">
-              <span>Khách thanh toán</span>
-              {canEditPayment && (
-                <button
-                  onClick={() => setShowMultiPaymentModal(true)}
-                  className="p-1 lg:p-2 hover:bg-gray-100 rounded-lg">
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-              )}
-              {canEditPayment ? (
-                <div className="flex items-center gap-1">
-                  <input
-                    type="text"
-                    value={paymentDisplayValue}
-                    onChange={handlePaymentInputChange}
-                    onBlur={handlePaymentInputBlur}
-                    placeholder="Nhập số tiền"
-                    className="border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand w-24 lg:w-32"
-                  />
+         {documentType !== "consignment" && canViewPayment && (
+           <div className="flex items-center justify-between text-sm lg:text-sm">
+             <div className="flex items-center gap-1.5 lg:gap-2">
+               <span>Khách thanh toán</span>
+                   {canEditPayment && (
+                     <button
+                       onClick={() => setShowMultiPaymentModal(true)}
+                       className="p-1 lg:p-2 hover:bg-gray-100 rounded-lg">
+                       <MoreVertical className="w-4 h-4" />
+                     </button>
+                   )}
+                   {canEditPayment ? (
+                     <div className="flex items-center gap-1">
+                       <input
+                         type="text"
+                         value={paymentDisplayValue}
+                         onChange={handlePaymentInputChange}
+                         onBlur={handlePaymentInputBlur}
+                         placeholder="Nhập số tiền"
+                         className="border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand w-24 lg:w-32"
+                       />
+                     </div>
+                   ) : null}
+                 </div>
+                 <span className="font-semibold">
+                   {paymentAmount.toLocaleString("en-US")}
+                 </span>
+               </div>
+             )}
+
+              {documentType !== "consignment" && isEditMode && existingOrder && (
+                <div className="flex items-center justify-between text-sm lg:text-sm">
+                  <span>Tổng đã thanh toán:</span>
+                  <span className="font-semibold">
+                    {(
+                      Number(existingOrder.paidAmount || 0) + paymentAmount
+                    ).toLocaleString("en-US")}
+                  </span>
                 </div>
-              ) : null}
-            </div>
-            <span className="font-semibold">
-              {paymentAmount.toLocaleString("en-US")}
-            </span>
-          </div>
-        )}
+              )}
 
-        {documentType !== "consignment" && isEditMode && existingOrder && (
-          <div className="flex items-center justify-between text-sm lg:text-sm">
-            <span>Tổng đã thanh toán:</span>
-            <span className="font-semibold">
-              {(
-                Number(existingOrder.paidAmount || 0) + paymentAmount
-              ).toLocaleString("en-US")}
-            </span>
-          </div>
-        )}
+              {documentType !== "consignment" && (
+                <div className="flex items-center justify-between text-sm lg:text-sm">
+                  <span>Công nợ</span>
+                  <span className="font-semibold">
+                    {displayDebt.toLocaleString("en-US")}
+                  </span>
+                </div>
+              )}
+ 
+          {isEditMode ? (
 
-        {documentType !== "consignment" && (
-          <div className="flex items-center justify-between text-sm lg:text-sm">
-            <span>Công nợ</span>
-            <span className="font-semibold">
-              {displayDebt.toLocaleString("en-US")}
-            </span>
-          </div>
-        )}
-
-        {isEditMode ? (
           <div className="flex gap-4">
             {canCreateInvoice && (
               <button

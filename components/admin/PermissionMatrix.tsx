@@ -63,6 +63,11 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
   const groupedPermissions = useMemo(() => {
     if (!permissions) return {};
     return permissions.reduce((acc: any, perm: any) => {
+      if (
+        perm.resource === "inventory_checks" ||
+        perm.resource === "inventory_promo_checks"
+      )
+        return acc;
       const category = perm.category || "Khác";
       // Quy về groupKey: report tách thành nhóm con; legacy report → ẩn.
       const groupKey = getPermGroupKey(perm.resource, perm.action);

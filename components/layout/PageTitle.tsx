@@ -26,8 +26,6 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/san-pham/danh-sach", title: "Danh sách hàng hóa" },
   { prefix: "/san-pham/thiet-lap-gia", title: "Thiết lập giá" },
   { prefix: "/san-pham/kiem-kho", title: "Kiểm kho" },
-  { prefix: "/san-pham/kiem-hang-loai-b", title: "Kiểm hàng loại B" },
-  { prefix: "/san-pham/kiem-hang-khuyen-mai", title: "Kiểm hàng khuyến mãi" },
   { prefix: "/san-pham/chuyen-loai-ton", title: "Chuyển loại tồn" },
   { prefix: "/san-pham/chuyen-hang", title: "Chuyển hàng" },
   { prefix: "/san-pham/san-xuat", title: "Sản xuất" },

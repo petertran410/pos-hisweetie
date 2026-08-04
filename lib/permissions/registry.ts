@@ -32,11 +32,11 @@ export const ROUTE_PERMISSIONS: Record<
   "/san-pham/thiet-lap-gia": { resource: "price_books", action: "view" },
   "/san-pham/chuyen-hang": { resource: "transfers", action: "view" },
   "/san-pham/kiem-hang-loai-b": {
-    resource: "inventory_checks",
+    resource: "stock_condition_transfers",
     action: "view",
   },
   "/san-pham/kiem-hang-khuyen-mai": {
-    resource: "inventory_promo_checks",
+    resource: "stock_condition_transfers",
     action: "view",
   },
   "/san-pham/chuyen-loai-ton": {

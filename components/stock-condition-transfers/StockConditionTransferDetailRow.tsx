@@ -32,6 +32,7 @@ export function StockConditionTransferDetailRow({
   const cancelTransfer = useCancelStockConditionTransfer();
   const canApprove = usePermission("stock_condition_transfers", "approve");
   const canUpdate = usePermission("stock_condition_transfers", "update");
+  const canCancel = usePermission("stock_condition_transfers", "cancel");
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [showEdit, setShowEdit] = useState(false);
 
@@ -253,7 +254,7 @@ export function StockConditionTransferDetailRow({
                     Sửa phiếu
                   </button>
                 )}
-                {canUpdate && !isCancelled && (
+                {canCancel && !isCancelled && (
                   <button
                     onClick={handleCancel}
                     disabled={cancelTransfer.isPending}

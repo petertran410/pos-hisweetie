@@ -239,6 +239,11 @@ export function UserPermissionModal({
   const groupedPermissions = useMemo(() => {
     if (!allPermissions) return {};
     return allPermissions.reduce((acc: any, perm: any) => {
+      if (
+        perm.resource === "inventory_checks" ||
+        perm.resource === "inventory_promo_checks"
+      )
+        return acc;
       const category = perm.category || "Khác";
       const groupKey = getPermGroupKey(perm.resource, perm.action);
       if (groupKey === null) return acc;

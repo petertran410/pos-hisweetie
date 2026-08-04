@@ -4,9 +4,14 @@ import { useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { StockConditionTransfersTable } from "@/components/stock-condition-transfers/StockConditionTransfersTable";
 import { StockConditionTransfersSidebar } from "@/components/stock-condition-transfers/StockConditionTransfersSidebar";
-import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 export default function StockConditionTransferPage() {
+  const canViewPage = usePermission(
+    "stock_condition_transfers",
+    "view"
+  );
+
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("Code");
 
@@ -23,7 +28,7 @@ export default function StockConditionTransferPage() {
   );
 
   return (
-    <PermissionGate resource="stock_condition_transfers" action="view">
+    canViewPage ? (
       <div
         className="flex h-full border-t"
         style={{ borderColor: "var(--dt-border)" }}>
@@ -33,6 +38,6 @@ export default function StockConditionTransferPage() {
         />
         <StockConditionTransfersTable filters={filters} />
       </div>
-    </PermissionGate>
+    ) : null
   );
 }

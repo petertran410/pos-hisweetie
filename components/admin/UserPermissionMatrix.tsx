@@ -35,6 +35,11 @@ export function UserPermissionMatrix({
   const groupedPermissions = useMemo(() => {
     if (!permissions) return {};
     return permissions.reduce((acc: any, perm: any) => {
+      if (
+        perm.resource === "inventory_checks" ||
+        perm.resource === "inventory_promo_checks"
+      )
+        return acc;
       const category = perm.category || "Khác";
       if (!acc[category]) acc[category] = {};
       if (!acc[category][perm.resource]) acc[category][perm.resource] = [];
