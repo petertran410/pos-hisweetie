@@ -103,32 +103,45 @@ export function StockConditionTransferForm({ onClose }: Props) {
     setSearch("");
     setShowDropdown(false);
 
-    // Lấy tồn từng loại + lô cận date từ sổ cái (nguồn chân lý), khớp tab Thẻ kho loại tồn.
+    // Lấy tồn từng loại + lô cận date từ các API độc lập. Không để lỗi API lô
+    // cận date làm mất dữ liệu condition-summary (đặc biệt promo).
     let good = 0;
     let damaged = 0;
     let nearExpiry = 0;
     let promo = 0;
     let nearExpiryLots: NearExpiryLot[] = [];
+    const inv = product.inventories?.find(
+      (i: any) => i.branchId === selectedBranch?.id
+    );
+
     try {
-      const [summary, lotsResp] = await Promise.all([
-        productsApi.getConditionSummary(product.id, selectedBranch.id),
-        productsApi.getNearExpiryLots(product.id, selectedBranch.id),
-      ]);
+      const summary = await productsApi.getConditionSummary(
+        product.id,
+        selectedBranch.id
+      );
       good = Number(summary.good) || 0;
       damaged = Number(summary.damaged) || 0;
       nearExpiry = Number(summary.nearExpiry) || 0;
       promo = Number(summary.promo) || 0;
-      nearExpiryLots = lotsResp.data || [];
     } catch {
-      const inv = product.inventories?.find(
-        (i: any) => i.branchId === selectedBranch?.id
-      );
+      // Chỉ fallback khi chính condition-summary lỗi; không để lỗi API lô
+      // cận date ghi đè promo lấy được từ sổ cái.
       if (inv) {
         damaged = Number(inv.damagedQuantity || 0);
         nearExpiry = Number(inv.nearExpiryQuantity || 0);
         promo = Number(inv.promoQuantity || 0);
         good = Number(inv.onHand) - damaged - nearExpiry - promo;
       }
+    }
+
+    try {
+      const lotsResp = await productsApi.getNearExpiryLots(
+        product.id,
+        selectedBranch.id
+      );
+      nearExpiryLots = lotsResp.data || [];
+    } catch {
+      // Lô cận date chỉ cần cho OUT + NEAR_EXPIRY, không ảnh hưởng các bucket khác.
     }
 
     setItems((prev) => [
