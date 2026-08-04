@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Search, Trash2, Loader2 } from "lucide-react";
+import { X, Search, Trash2, Loader2, Upload } from "lucide-react";
 import { useBranchStore } from "@/lib/store/branch";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useCreateStockConditionTransfer } from "@/lib/hooks/useStockConditionTransfers";
@@ -14,6 +14,10 @@ import type {
   ConditionBucket,
   TransferDirection,
 } from "@/lib/api/stock-condition-transfers";
+import {
+  StockConditionTransferImportModal,
+  type ImportedTransferItem,
+} from "./StockConditionTransferImportModal";
 
 interface TransferItem {
   productId: number;
@@ -39,6 +43,15 @@ interface Props {
   onClose: () => void;
 }
 
+// ISO → giá trị cho <input type="datetime-local"> theo giờ local.
+function toDatetimeLocal(iso?: string): string {
+  const d = iso ? new Date(iso) : new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+    d.getDate()
+  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 // Số lượng tối đa cho phép của một dòng, tùy chiều + loại.
 function maxAllowed(i: TransferItem): number {
   if (i.direction === "IN") return i.good;
@@ -58,9 +71,14 @@ export function StockConditionTransferForm({ onClose }: Props) {
 
   const [items, setItems] = useState<TransferItem[]>([]);
   const [note, setNote] = useState("");
+  // Thời điểm điều chỉnh — cho phép lùi ngày (backdated) giống phiếu kiểm kho.
+  const [transferDate, setTransferDate] = useState<string>(() =>
+    toDatetimeLocal()
+  );
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: productsData } = useProducts({
@@ -92,7 +110,19 @@ export function StockConditionTransferForm({ onClose }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const addProduct = async (product: any) => {
+  const addProduct = async (product: {
+    id: number;
+    code: string;
+    name: string;
+    unit?: string;
+    inventories?: Array<{
+      branchId: number;
+      onHand?: number;
+      damagedQuantity?: number;
+      nearExpiryQuantity?: number;
+      promoQuantity?: number;
+    }>;
+  }) => {
     if (items.some((i) => i.productId === product.id)) {
       setSearch("");
       setShowDropdown(false);
@@ -111,7 +141,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
     let promo = 0;
     let nearExpiryLots: NearExpiryLot[] = [];
     const inv = product.inventories?.find(
-      (i: any) => i.branchId === selectedBranch?.id
+      (i: { branchId: number }) => i.branchId === selectedBranch?.id
     );
 
     try {
@@ -169,6 +199,52 @@ export function StockConditionTransferForm({ onClose }: Props) {
     setItems((prev) => prev.filter((i) => i.productId !== productId));
   };
 
+  const handleImported = async (imported: ImportedTransferItem[]) => {
+    const enriched = await Promise.all(
+      imported.map(async (item) => {
+        try {
+          const [summary, lots] = await Promise.all([
+            productsApi.getConditionSummary(item.productId, selectedBranch!.id),
+            productsApi.getNearExpiryLots(item.productId, selectedBranch!.id),
+          ]);
+          return {
+            ...item,
+            good: Number(summary.good) || 0,
+            damaged: Number(summary.damaged) || 0,
+            nearExpiry: Number(summary.nearExpiry) || 0,
+            promo: Number(summary.promo) || 0,
+            nearExpiryLots: lots.data || [],
+          };
+        } catch {
+          return { ...item, good: 0, damaged: 0, nearExpiry: 0, promo: 0, nearExpiryLots: [] };
+        }
+      })
+    );
+    setItems((prev) => {
+      const map = new Map<number, TransferItem>();
+      for (const item of prev) map.set(item.productId, item);
+      for (const item of enriched) {
+        const existing = map.get(item.productId);
+        map.set(item.productId, {
+          ...item,
+          good: item.good,
+          damaged: item.damaged,
+          nearExpiry: item.nearExpiry,
+          promo: item.promo,
+          nearExpiryLots: item.nearExpiryLots,
+          unit: item.unit,
+          direction: item.direction,
+          toBucket: item.toBucket,
+          quantity: item.quantity,
+          expiryDate: item.expiryDate,
+          note: item.note,
+          ...(existing ? {} : {}),
+        });
+      }
+      return Array.from(map.values());
+    });
+  };
+
   const updateItem = (
     productId: number,
     field: keyof TransferItem,
@@ -217,6 +293,9 @@ export function StockConditionTransferForm({ onClose }: Props) {
     createTransfer.mutate(
       {
         branchId: selectedBranch.id,
+        transferDate: transferDate
+          ? new Date(transferDate).toISOString()
+          : undefined,
         note: note || undefined,
         items: items.map((i) => ({
           productId: i.productId,
@@ -239,9 +318,14 @@ export function StockConditionTransferForm({ onClose }: Props) {
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h2 className="text-base font-semibold">
-            Tạo phiếu chuyển loại tồn
-          </h2>
+          <div>
+            <h2 className="text-base font-semibold">
+              Tạo phiếu chuyển loại tồn
+            </h2>
+            <span className="text-sm text-gray-500">
+              Chi nhánh: <span className="font-medium text-gray-700">{selectedBranch?.name}</span>
+            </span>
+          </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600">
@@ -249,40 +333,53 @@ export function StockConditionTransferForm({ onClose }: Props) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-auto p-4">
-          {/* Branch */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Chi nhánh
-              </label>
-              <input
-                type="text"
-                value={selectedBranch?.name || ""}
-                disabled
-                className="w-full border rounded px-3 py-2 text-sm bg-gray-50"
-              />
-            </div>
-          </div>
+        {/* Thời điểm điều chỉnh — cho phép lùi ngày */}
+        <div className="px-6 py-3 border-b flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+            Thời điểm điều chỉnh
+          </label>
+          <input
+            type="datetime-local"
+            value={transferDate}
+            onChange={(e) => setTransferDate(e.target.value)}
+            className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+          <span className="text-xs text-gray-400">
+            Phiếu sẽ ghi nhận theo đúng thời điểm này
+          </span>
+        </div>
 
-          {/* Product search */}
-          <div className="relative mb-4" ref={dropdownRef}>
-            <div className="relative">
+        {/* Search + import */}
+        <div className="px-6 py-3 border-b" ref={dropdownRef}>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => search && setShowDropdown(true)}
                 placeholder="Tìm sản phẩm theo mã hoặc tên..."
-                className="w-full border rounded px-3 py-2 pl-9 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+                className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setShowImport(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 whitespace-nowrap">
+              <Upload className="w-4 h-4" />
+              Import Excel
+            </button>
+          </div>
             {showDropdown && products.length > 0 && (
               <div className="absolute top-full left-0 right-0 bg-white border rounded-b shadow-lg z-10 max-h-60 overflow-auto">
                 {products.map((p) => {
                   const already = items.some((i) => i.productId === p.id);
                   const inv = p.inventories?.find(
-                    (i: any) => i.branchId === selectedBranch?.id
+                    (i: { branchId: number }) => i.branchId === selectedBranch?.id
                   );
                   return (
                     <button
@@ -311,8 +408,9 @@ export function StockConditionTransferForm({ onClose }: Props) {
             )}
           </div>
 
-          {/* Items table */}
-          {items.length > 0 && (
+          <div className="flex-1 overflow-auto p-4">
+            {/* Items table */}
+            {items.length > 0 && (
             <div className="border rounded overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
@@ -524,6 +622,13 @@ export function StockConditionTransferForm({ onClose }: Props) {
           </div>
         </div>
       </div>
+      {showImport && (
+        <StockConditionTransferImportModal
+          branchId={selectedBranch?.id}
+          onClose={() => setShowImport(false)}
+          onConfirm={handleImported}
+        />
+      )}
     </div>
   );
 }
