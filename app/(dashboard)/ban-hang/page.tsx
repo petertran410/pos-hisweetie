@@ -29,6 +29,7 @@ import { ordersApi } from "@/lib/api/orders";
 import { INVOICE_STATUS } from "@/lib/types/invoice";
 import { ORDER_STATUS } from "@/lib/types/order";
 import { promotionsApi } from "@/lib/api/promotions";
+import { paymentNotesApi } from "@/lib/api/paymentNotes";
 import type { AppliedPromotion } from "@/lib/types/promotion";
 import {
   getDefaultAddress,
@@ -133,6 +134,8 @@ export interface Tab {
   useCOD: boolean;
   paymentAmount: number;
   paymentMethods: Array<{ method: string; amount: number; accountId?: number }>;
+  paymentNoteType: "cash" | "transfer" | null;
+  paymentNoteAmount: number;
   deliveryInfo: DeliveryInfo;
   documentId?: number;
   sourceOrderId?: number;
@@ -462,6 +465,17 @@ const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[
   return mapped;
 };
 
+const getLatestPaymentNote = (notes: any[] | undefined) => {
+  const latest = Array.isArray(notes) && notes.length > 0 ? notes[0] : null;
+  if (!latest || (latest.paymentType !== "cash" && latest.paymentType !== "transfer")) {
+    return { type: null as "cash" | "transfer" | null, amount: 0 };
+  }
+  return {
+    type: latest.paymentType as "cash" | "transfer",
+    amount: Number(latest.amount) || 0,
+  };
+};
+
 const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   id: forceId || `tab-${Date.now()}`,
   type,
@@ -481,6 +495,8 @@ const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   useCOD: false,
   paymentAmount: 0,
   paymentMethods: [],
+  paymentNoteType: null,
+  paymentNoteAmount: 0,
   selectedAddressId: null,
   soldById: null,
   consignStatus: "pending",
@@ -1327,9 +1343,11 @@ export default function BanHangPage() {
       orderNote: string;
       discount: number;
       discountRatio: number;
-      paymentAmount: number;
-      deliveryInfo: DeliveryInfo;
-      selectedAddressId: number | null;
+       paymentAmount: number;
+       paymentNoteType: "cash" | "transfer" | null;
+       paymentNoteAmount: number;
+       deliveryInfo: DeliveryInfo;
+       selectedAddressId: number | null;
     };
   }>({});
 
@@ -1350,7 +1368,9 @@ export default function BanHangPage() {
       tab.orderNote !== initialData.orderNote ||
       tab.discount !== initialData.discount ||
       tab.discountRatio !== initialData.discountRatio ||
-      tab.paymentAmount !== initialData.paymentAmount ||
+        tab.paymentAmount !== initialData.paymentAmount ||
+       tab.paymentNoteType !== initialData.paymentNoteType ||
+       tab.paymentNoteAmount !== initialData.paymentNoteAmount ||
       tab.selectedPriceBookId !== initialData.selectedPriceBookId ||
       tab.selectedPriceBookName !== initialData.selectedPriceBookName ||
       tab.selectedAddressId !== initialData.selectedAddressId ||
@@ -1367,8 +1387,10 @@ export default function BanHangPage() {
         orderNote: tab.orderNote,
         discount: tab.discount,
         discountRatio: tab.discountRatio,
-        paymentAmount: tab.paymentAmount,
-        selectedPriceBookId: tab.selectedPriceBookId,
+       paymentAmount: tab.paymentAmount,
+         paymentNoteType: tab.paymentNoteType,
+         paymentNoteAmount: tab.paymentNoteAmount,
+         selectedPriceBookId: tab.selectedPriceBookId,
         selectedPriceBookName: tab.selectedPriceBookName,
         selectedAddressId: tab.selectedAddressId ?? null,
         deliveryInfo: tab.deliveryInfo,
@@ -1412,6 +1434,8 @@ export default function BanHangPage() {
               useCOD: editState.useCOD || false,
               paymentAmount: editState.paymentAmount || 0,
               paymentMethods: [],
+              paymentNoteType: editState.paymentNoteType ?? null,
+              paymentNoteAmount: Number(editState.paymentNoteAmount) || 0,
               soldById: editState.soldById ?? null,
               deliveryInfo: editState.deliveryInfo || {
                 receiver: "",
@@ -1440,8 +1464,10 @@ export default function BanHangPage() {
               orderNote: editTab.orderNote,
               discount: editTab.discount,
               discountRatio: editTab.discountRatio,
-              paymentAmount: editTab.paymentAmount,
-              deliveryInfo: editTab.deliveryInfo,
+               paymentAmount: editTab.paymentAmount,
+               paymentNoteType: editTab.paymentNoteType,
+               paymentNoteAmount: editTab.paymentNoteAmount,
+               deliveryInfo: editTab.deliveryInfo,
               selectedAddressId: editTab.selectedAddressId ?? null,
             };
 
@@ -1742,8 +1768,10 @@ export default function BanHangPage() {
         discountRatio: 0,
         useCOD: false,
         paymentAmount: 0,
-        paymentMethods: [],
-        soldById: existingOrder.soldById ?? null,
+         paymentMethods: [],
+         paymentNoteType: getLatestPaymentNote(existingOrder.paymentNotes).type,
+         paymentNoteAmount: getLatestPaymentNote(existingOrder.paymentNotes).amount,
+         soldById: existingOrder.soldById ?? null,
         deliveryInfo: {
           receiver: existingOrder.delivery?.receiver || "",
           contactNumber: existingOrder.delivery?.contactNumber || "",
@@ -1807,8 +1835,14 @@ export default function BanHangPage() {
         : Number(existingOrder.discountRatio) || 0,
       useCOD: restoredState ? restoredState.useCOD : false,
       paymentAmount: restoredState ? restoredState.paymentAmount : 0,
-      paymentMethods: [],
-      soldById: existingOrder.soldById ?? null,
+       paymentMethods: [],
+       paymentNoteType: restoredState
+         ? restoredState.paymentNoteType
+         : getLatestPaymentNote(existingOrder.paymentNotes).type,
+       paymentNoteAmount: restoredState
+         ? restoredState.paymentNoteAmount
+         : getLatestPaymentNote(existingOrder.paymentNotes).amount,
+       soldById: existingOrder.soldById ?? null,
       deliveryInfo: restoredState
         ? restoredState.deliveryInfo
         : {
@@ -1844,8 +1878,10 @@ export default function BanHangPage() {
       orderNote: editTab.orderNote,
       discount: editTab.discount,
       discountRatio: editTab.discountRatio,
-      paymentAmount: editTab.paymentAmount,
-      deliveryInfo: editTab.deliveryInfo,
+       paymentAmount: editTab.paymentAmount,
+       paymentNoteType: editTab.paymentNoteType,
+       paymentNoteAmount: editTab.paymentNoteAmount,
+       deliveryInfo: editTab.deliveryInfo,
       selectedAddressId: editTab.selectedAddressId ?? null,
     };
 
@@ -1950,8 +1986,14 @@ export default function BanHangPage() {
         ? restoredState.useCOD
         : existingInvoice.usingCod || false,
       paymentAmount: restoredState ? restoredState.paymentAmount : 0,
-      paymentMethods: [],
-      soldById: existingInvoice.soldById ?? null,
+       paymentMethods: [],
+       paymentNoteType: restoredState
+         ? restoredState.paymentNoteType
+         : getLatestPaymentNote(existingInvoice.paymentNotes).type,
+       paymentNoteAmount: restoredState
+         ? restoredState.paymentNoteAmount
+         : getLatestPaymentNote(existingInvoice.paymentNotes).amount,
+       soldById: existingInvoice.soldById ?? null,
       deliveryInfo: restoredState
         ? restoredState.deliveryInfo
         : existingInvoice.delivery
@@ -2000,8 +2042,10 @@ export default function BanHangPage() {
       orderNote: editTab.orderNote,
       discount: editTab.discount,
       discountRatio: editTab.discountRatio,
-      paymentAmount: editTab.paymentAmount,
-      deliveryInfo: editTab.deliveryInfo,
+       paymentAmount: editTab.paymentAmount,
+       paymentNoteType: editTab.paymentNoteType,
+       paymentNoteAmount: editTab.paymentNoteAmount,
+       deliveryInfo: editTab.deliveryInfo,
       selectedAddressId: editTab.selectedAddressId ?? null,
     };
 
@@ -2064,6 +2108,8 @@ export default function BanHangPage() {
       useCOD: false,
       paymentAmount: 0,
       paymentMethods: [],
+         paymentNoteType: null,
+         paymentNoteAmount: 0,
       soldById: copySourceOrder.soldById ?? null,
       deliveryInfo: {
         receiver: copySourceOrder.delivery?.receiver || "",
@@ -2129,6 +2175,8 @@ export default function BanHangPage() {
       useCOD: copySourceInvoice.usingCod || false,
       paymentAmount: 0,
       paymentMethods: [],
+         paymentNoteType: null,
+         paymentNoteAmount: 0,
       soldById: copySourceInvoice.soldById ?? null,
       deliveryInfo: copySourceInvoice.delivery
         ? {
@@ -2345,6 +2393,8 @@ export default function BanHangPage() {
   };
 
   const handlePayment = async () => {
+    if (activeTab.type !== "consignment" && !validatePaymentNoteSelection()) return;
+
     if (isSubmittingRef.current) return;
 
     if (!activeTab.sourceOrderId) {
@@ -2562,8 +2612,12 @@ export default function BanHangPage() {
 
         handleCloseTab(activeTabId);
         toast.success("Tạo hóa đơn thành công");
-        if (result?.id) {
-          handlePostCreate("invoice", result.id, "/don-hang/dat-hang", {
+         if (result?.id) {
+            await paymentNotesApi.createInvoice(result.id, {
+              paymentType: activeTab.paymentNoteType!,
+              ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount || 0 } : {}),
+            });
+            handlePostCreate("invoice", result.id, "/don-hang/dat-hang", {
             shouldRedirect: true,
           });
         }
@@ -2931,6 +2985,8 @@ export default function BanHangPage() {
   const handleSaveOrder = async () => {
     if (isSubmittingRef.current) return;
 
+    if (!validatePaymentNoteSelection()) return;
+
     if (!selectedBranch) {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi lưu ${
@@ -2992,6 +3048,18 @@ export default function BanHangPage() {
         // Chặn race: nếu đơn đã ra hóa đơn (kho xử lý trong lúc sale đang sửa),
         // không cho lưu để tránh kéo ngược trạng thái đơn từ cache cũ.
         if (!(await assertOrderNotInvoiced(activeTab.documentId))) return;
+
+        // Ghi log phương thức thanh toán (append-only) sau khi lưu đơn thành công.
+        const savePaymentNote = async (kind: "order" | "invoice", id: number) => {
+          const payload = {
+            paymentType: activeTab.paymentNoteType!,
+            ...(activeTab.paymentNoteType === "cash"
+              ? { amount: activeTab.paymentNoteAmount || 0 }
+              : {}),
+          } as { paymentType: "cash" | "transfer"; amount?: number };
+          if (kind === "order") await paymentNotesApi.createOrder(id, payload);
+          else await paymentNotesApi.createInvoice(id, payload);
+        };
 
         const actualPayment = activeTab.paymentAmount || 0;
 
@@ -3077,12 +3145,13 @@ export default function BanHangPage() {
             }
           }
 
-          await updateOrder.mutateAsync({
-            id: activeTab.documentId,
-            data: orderData,
-          });
+        await updateOrder.mutateAsync({
+          id: activeTab.documentId,
+          data: orderData,
+        });
+        await savePaymentNote("order", activeTab.documentId);
 
-          const key = getEditStorageKey(activeTab.documentId, "order");
+        const key = getEditStorageKey(activeTab.documentId, "order");
           localStorage.removeItem(key);
 
           setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
@@ -3108,7 +3177,20 @@ export default function BanHangPage() {
     }
   };
 
+  const validatePaymentNoteSelection = (): boolean => {
+    if (!activeTab.paymentNoteType) {
+      toast.error("Vui lòng chọn phương thức ghi nhận: chuyển khoản hoặc tiền mặt");
+      return false;
+    }
+    if (activeTab.paymentNoteType === "cash" && activeTab.paymentNoteAmount < 0) {
+      toast.error("Số tiền tiền mặt không hợp lệ");
+      return false;
+    }
+    return true;
+  };
   const handleSaveInvoice = async () => {
+    if (!validatePaymentNoteSelection()) return;
+
     if (isSubmittingRef.current) return;
 
     if (!selectedBranch) {
@@ -3298,12 +3380,18 @@ export default function BanHangPage() {
           }
         }
 
-        const updatedInvoice = await updateInvoice.mutateAsync({
-          id: activeTab.documentId,
-          data: invoiceData,
-        });
+         const updatedInvoice = await updateInvoice.mutateAsync({
+           id: activeTab.documentId,
+           data: invoiceData,
+         });
+         await paymentNotesApi.createInvoice(activeTab.documentId, {
+           paymentType: activeTab.paymentNoteType!,
+           ...(activeTab.paymentNoteType === "cash"
+             ? { amount: activeTab.paymentNoteAmount || 0 }
+             : {}),
+         });
 
-        const key = getEditStorageKey(activeTab.documentId, "invoice");
+         const key = getEditStorageKey(activeTab.documentId, "invoice");
         localStorage.removeItem(key);
 
         setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
@@ -3326,6 +3414,8 @@ export default function BanHangPage() {
   };
 
   const handleCreateDocument = async () => {
+    if (activeTab.type !== "consignment" && !validatePaymentNoteSelection()) return;
+
     if (isSubmittingRef.current) return;
 
     if (!selectedBranch) {
@@ -3585,14 +3675,22 @@ export default function BanHangPage() {
             }
           }
 
-          docId = result?.order?.id;
+           docId = result?.order?.id;
+           if (docId) await paymentNotesApi.createOrder(docId, {
+             paymentType: activeTab.paymentNoteType!,
+             ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount || 0 } : {}),
+           });
         } else if (activeTab.type === "consignment") {
           const result = await createConsignment.mutateAsync(documentData);
           docId = (result as any)?.id;
         } else {
           const result = await createInvoice.mutateAsync(documentData);
 
-          docId = result?.id;
+           docId = result?.id;
+           if (docId) await paymentNotesApi.createInvoice(docId, {
+             paymentType: activeTab.paymentNoteType!,
+             ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount || 0 } : {}),
+           });
         }
 
         handleCloseTab(activeTabId);
@@ -3827,13 +3925,17 @@ export default function BanHangPage() {
                 useCOD={activeTab.useCOD}
                 onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
                 paymentAmount={activeTab.paymentAmount}
-                onPaymentAmountChange={(paymentAmount) =>
-                  updateActiveTab({ paymentAmount })
-                }
-                onPaymentMethodsChange={(paymentMethods) =>
-                  updateActiveTab({ paymentMethods })
-                }
-                onCreateOrder={handleCreateDocument}
+                 onPaymentAmountChange={(paymentAmount) =>
+                   updateActiveTab({ paymentAmount })
+                 }
+                 paymentNoteType={activeTab.paymentNoteType}
+                 onPaymentNoteTypeChange={(paymentNoteType) => updateActiveTab({ paymentNoteType })}
+                 paymentNoteAmount={activeTab.paymentNoteAmount || 0}
+                 onPaymentNoteAmountChange={(paymentNoteAmount) => updateActiveTab({ paymentNoteAmount })}
+                 onPaymentMethodsChange={(paymentMethods) =>
+                   updateActiveTab({ paymentMethods })
+                 }
+                 onCreateOrder={handleCreateDocument}
                 onSaveOrder={handleSaveOrder}
                 onCreateInvoice={handleConvertToInvoice}
                 discount={activeTab.discount}
@@ -3946,13 +4048,17 @@ export default function BanHangPage() {
                 onSelectPriceBook={handlePriceBookSelect}
                 onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
                 paymentAmount={activeTab.paymentAmount}
-                onPaymentAmountChange={(paymentAmount) =>
-                  updateActiveTab({ paymentAmount })
-                }
-                onPaymentMethodsChange={(paymentMethods) =>
-                  updateActiveTab({ paymentMethods })
-                }
-                onCreateOrder={handleCreateDocument}
+                 onPaymentAmountChange={(paymentAmount) =>
+                   updateActiveTab({ paymentAmount })
+                 }
+                 paymentNoteType={activeTab.paymentNoteType}
+                 onPaymentNoteTypeChange={(paymentNoteType) => updateActiveTab({ paymentNoteType })}
+                 paymentNoteAmount={activeTab.paymentNoteAmount || 0}
+                 onPaymentNoteAmountChange={(paymentNoteAmount) => updateActiveTab({ paymentNoteAmount })}
+                 onPaymentMethodsChange={(paymentMethods) =>
+                   updateActiveTab({ paymentMethods })
+                 }
+                 onCreateOrder={handleCreateDocument}
                 onSaveOrder={handleSaveInvoice}
                 onPayment={handlePayment}
                 discount={activeTab.discount}

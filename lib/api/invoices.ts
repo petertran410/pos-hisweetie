@@ -32,6 +32,16 @@ export interface Invoice {
   details?: any[];
   payments?: any[];
   delivery?: any;
+  // Ghi chú phương thức thanh toán (log, không ảnh hưởng công nợ/phiếu thu).
+  // Sắp desc theo createdAt → phần tử đầu là lựa chọn mới nhất.
+  paymentNotes?: Array<{
+    id: number;
+    paymentType: "cash" | "transfer";
+    amount?: number | null;
+    createdBy: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
 }
 
 export interface InvoicesResponse {

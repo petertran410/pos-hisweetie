@@ -1,4 +1,5 @@
 import { CustomerAddress } from "./customer";
+import { PaymentNote } from "./invoice";
 
 export const ORDER_STATUS = {
   PENDING: 1,
@@ -80,6 +81,14 @@ export interface Order {
   };
   items?: any[];
   payments?: any[];
+  paymentNotes?: Array<{
+    id: number;
+    paymentType: "cash" | "transfer";
+    amount?: number | null;
+    createdBy: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
   delivery?: {
     id: number;
     deliveryCode?: string;

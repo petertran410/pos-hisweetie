@@ -36,6 +36,10 @@ interface InvoiceCartProps {
   onUseCODChange: (useCOD: boolean) => void;
   paymentAmount: number;
   onPaymentAmountChange: (amount: number) => void;
+  paymentNoteType: "cash" | "transfer" | null;
+  onPaymentNoteTypeChange: (type: "cash" | "transfer") => void;
+  paymentNoteAmount: number;
+  onPaymentNoteAmountChange: (amount: number) => void;
   onPaymentMethodsChange?: (
     methods: Array<{ method: string; amount: number }>
   ) => void;
@@ -119,9 +123,7 @@ function SellerDropdown({
         onClick={() => setOpen((prev) => !prev)}
         onKeyDown={(e) => e.key === "Enter" && setOpen((prev) => !prev)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
+          open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"
         } bg-white`}>
         <div className="flex items-center gap-2 min-w-0">
           <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
@@ -214,6 +216,10 @@ export function InvoiceCart({
   onUseCODChange,
   paymentAmount,
   onPaymentAmountChange,
+  paymentNoteType,
+  onPaymentNoteTypeChange,
+  paymentNoteAmount,
+  onPaymentNoteAmountChange,
   onPaymentMethodsChange,
   onCreateOrder,
   onSaveOrder,
@@ -249,7 +255,9 @@ export function InvoiceCart({
       amount: number;
     }>
   >([]);
-  const [discountMode, setDiscountMode] = useState<"amount" | "percent">("amount");
+  const [discountMode, setDiscountMode] = useState<"amount" | "percent">(
+    "amount"
+  );
   const [discountInputValue, setDiscountInputValue] = useState("");
 
   useEffect(() => {
@@ -308,7 +316,9 @@ export function InvoiceCart({
     }
   };
 
-  const handleDiscountInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDiscountInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const inputValue = e.target.value;
     const onlyNumbers = inputValue.replace(/[^\d]/g, "");
 
@@ -376,12 +386,14 @@ export function InvoiceCart({
 
   const subtotal = useMemo(() => {
     return cartItems.reduce(
-      (sum: number, item: any) => sum + (item.price - item.discount) * item.quantity,
+      (sum: number, item: any) =>
+        sum + (item.price - item.discount) * item.quantity,
       0
     );
   }, [cartItems]);
 
-  const effectiveDiscount = discount > 0 ? discount : (subtotal * discountRatio) / 100;
+  const effectiveDiscount =
+    discount > 0 ? discount : (subtotal * discountRatio) / 100;
   const totalAmount = subtotal - effectiveDiscount;
 
   const calculateTotal = () => {
@@ -613,17 +625,17 @@ export function InvoiceCart({
           </div>
         )}
       </div>
-      
+
       {/* Unified payment and summary card */}
       <div className="p-2.5 lg:p-3 space-y-2 lg:space-y-2.5 flex-shrink-0 border mr-2 lg:mr-3 ml-2 lg:ml-3 mb-2 lg:mb-3 rounded-xl shadow-sm">
         {/* Summary section */}
-        <div className="flex items-center justify-between text-sm lg:text-sm">
+        <div className="flex items-center justify-between text-sm lg:text-md">
           <span className="text-gray-600">Tổng tiền hàng</span>
           <span className="font-semibold">
             {subtotal.toLocaleString("en-US")}
           </span>
         </div>
-        <div className="flex items-center justify-between text-sm lg:text-sm">
+        <div className="flex items-center justify-between text-sm lg:text-md gap-2">
           <span className="text-gray-600">Giảm giá</span>
           <div className="flex items-center gap-1">
             <input
@@ -631,26 +643,67 @@ export function InvoiceCart({
               value={discountInputValue}
               onChange={handleDiscountInputChange}
               placeholder="0"
-              className="w-32 lg:w-36 px-3 py-1 text-right border rounded focus:outline-none focus:ring-1 focus:ring-brand text-sm"
+              className="w-32 lg:w-36 border rounded-lg px-3 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-brand"
             />
             <button
               type="button"
               onClick={handleDiscountModeToggle}
-              className="px-2 py-1 text-xs border rounded hover:bg-gray-50 transition-colors min-w-[40px]"
-            >
+              className="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-medium min-w-[40px]">
               {discountMode === "amount" ? "₫" : "%"}
             </button>
           </div>
         </div>
-        <div className="flex items-center justify-between font-semibold text-base lg:text-lg pt-2 border-t">
+        <div className="flex items-center justify-between font-semibold text-base lg:text-md pt-2 border-t">
           <span>Khách cần trả</span>
           <span className="text-brand">
             {calculateTotal().toLocaleString("en-US")}
           </span>
         </div>
 
+        <div className="flex flex-col gap-2 pt-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm lg:text-md font-medium">Thanh toán</span>
+            <div className="flex rounded-lg border overflow-hidden">
+              {(
+                [
+                  ["transfer", "CK"],
+                  ["cash", "TM"],
+                ] as const
+              ).map(([type, label]) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => onPaymentNoteTypeChange(type)}
+                  className={`px-3 py-1 text-xs ${paymentNoteType === type ? "bg-brand text-white font-medium" : "bg-white hover:bg-gray-50"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {paymentNoteType === "cash" && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">Ghi chú tiền mặt</span>
+              <input
+                type="text"
+                value={
+                  paymentNoteAmount
+                    ? paymentNoteAmount.toLocaleString("en-US")
+                    : ""
+                }
+                onChange={(e) =>
+                  onPaymentNoteAmountChange(
+                    Number(e.target.value.replace(/[^\d]/g, "")) || 0
+                  )
+                }
+                placeholder="0"
+                className="border rounded-lg px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-brand w-28"
+              />
+            </div>
+          )}
+        </div>
+
         {canViewPayment && (
-          <div className="flex items-center justify-between text-sm lg:text-sm">
+          <div className="flex items-center justify-between text-sm lg:text-md">
             <div className="flex items-center gap-1.5 lg:gap-2">
               <span>Khách thanh toán</span>
               {canEditPayment && (
@@ -689,7 +742,7 @@ export function InvoiceCart({
 
             return (
               isFirstInvoice && (
-                <div className="flex items-center justify-between text-sm lg:text-sm">
+                <div className="flex items-center justify-between text-sm lg:text-md">
                   <span>Tổng đã thanh toán</span>
                   <span className="font-semibold">
                     {(
@@ -701,7 +754,7 @@ export function InvoiceCart({
             );
           })()}
 
-        <div className="flex items-center justify-between text-sm lg:text-sm">
+        <div className="flex items-center justify-between text-sm lg:text-md">
           <span>Công nợ</span>
           <span className="font-semibold">
             {displayDebt.toLocaleString("en-US")}

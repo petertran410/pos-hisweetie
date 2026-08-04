@@ -31,6 +31,16 @@ export interface Invoice {
   details?: InvoiceDetail[];
   payments?: any[];
   delivery?: any;
+  paymentNotes?: PaymentNote[];
+}
+
+export interface PaymentNote {
+  id: number;
+  paymentType: "cash" | "transfer";
+  amount?: number | null;
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface InvoiceDetail {

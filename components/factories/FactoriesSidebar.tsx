@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, Factory as FactoryIcon, RotateCcw } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { FactoryQueryParams } from "@/lib/api/factories";
 import { suppliersApi } from "@/lib/api/suppliers";
 import { Supplier } from "@/lib/types/supplier";
@@ -20,145 +19,135 @@ const COUNTRIES = [
   { code: "KH", name: "Campuchia" },
 ];
 
+const STATUS_OPTIONS = [
+  { label: "Chỉ hoạt động", value: false },
+  { label: "Bao gồm đã ẩn", value: true },
+];
+
 export function FactoriesSidebar({ filters, onFiltersChange }: FactoriesSidebarProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [search, setSearch] = useState(filters.search ?? "");
 
-  // Load danh sách NCC cho dropdown
+  // Load danh sách NCC cho dropdown lọc.
   useEffect(() => {
     suppliersApi
-      .getSuppliers({ pageSize: 200, isActive: true } as any)
+      .getSuppliers({ pageSize: 200, isActive: true })
       .then((res) => setSuppliers(res.data || []))
       .catch(() => setSuppliers([]));
   }, []);
 
-  // Debounce search
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if (search !== (filters.search ?? "")) {
-        onFiltersChange({ ...filters, search: search || undefined, page: 1 });
-      }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [search]);
+  const updateFilters = (next: Partial<FactoryQueryParams>) => {
+    onFiltersChange({ ...filters, ...next, page: 1 });
+  };
 
-  const handleReset = () => {
-    setSearch("");
-    onFiltersChange({ page: 1, limit: 15 });
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.supplierId) count += 1;
+    if (filters.country) count += 1;
+    if (filters.includeInactive) count += 1;
+    return count;
+  }, [filters.supplierId, filters.country, filters.includeInactive]);
+
+  const resetFilters = () => {
+    onFiltersChange({
+      page: 1,
+      limit: filters.limit ?? 15,
+      orderBy: "name",
+      orderDirection: "asc",
+    });
   };
 
   return (
-    <div
-      className="w-72 border-r flex flex-col"
-      style={{ borderColor: "var(--dt-border)" }}>
-      <div className="px-4 py-4 border-b" style={{ borderColor: "var(--dt-border)" }}>
-        <div className="flex items-center gap-2 mb-1">
-          <FactoryIcon className="w-5 h-5 text-brand" />
-          <h2 className="font-semibold">Bộ lọc nhà máy</h2>
-        </div>
+    <aside className="w-72 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b sticky top-0 bg-white z-10 rounded-t-xl">
+        <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
+        {activeFilterCount > 0 && (
+          <button
+            onClick={resetFilters}
+            className="text-sm text-brand hover:text-brand-dark font-medium">
+            Xóa tất cả
+          </button>
+        )}
       </div>
 
-      <div className="flex-1 overflow-auto p-4 space-y-4">
-        {/* Search */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1.5">
-            Tìm kiếm (mã hoặc tên)
-          </label>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nhập để tìm..."
-              className="w-full pl-8 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-              style={{ borderColor: "var(--dt-border)" }}
-            />
-          </div>
-        </div>
-
+      <div className="p-4 space-y-4 overflow-y-auto flex-1">
         {/* Nhà cung cấp */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Nhà cung cấp
           </label>
           <select
             value={filters.supplierId ?? ""}
-            onChange={(e) =>
-              onFiltersChange({
-                ...filters,
-                supplierId: e.target.value ? Number(e.target.value) : undefined,
-                page: 1,
+            onChange={(event) =>
+              updateFilters({
+                supplierId: event.target.value
+                  ? Number(event.target.value)
+                  : undefined,
               })
             }
-            className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"
             style={{ borderColor: "var(--dt-border)" }}>
-            <option value="">Tất cả NCC</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
+            <option value="">Tất cả nhà cung cấp</option>
+            {suppliers.map((supplier) => (
+              <option key={supplier.id} value={supplier.id}>
+                {supplier.name}
               </option>
             ))}
           </select>
         </div>
 
+        <div className="border-t border-gray-100" />
+
         {/* Quốc gia */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Quốc gia
           </label>
           <select
             value={filters.country ?? ""}
-            onChange={(e) =>
-              onFiltersChange({
-                ...filters,
-                country: e.target.value || undefined,
-                page: 1,
-              })
+            onChange={(event) =>
+              updateFilters({ country: event.target.value || undefined })
             }
-            className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"
             style={{ borderColor: "var(--dt-border)" }}>
-            <option value="">Tất cả</option>
-            {COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.name}
+            <option value="">Tất cả quốc gia</option>
+            {COUNTRIES.map((country) => (
+              <option key={country.code} value={country.code}>
+                {country.name}
               </option>
             ))}
           </select>
         </div>
 
+        <div className="border-t border-gray-100" />
+
         {/* Trạng thái */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Trạng thái
           </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filters.includeInactive ?? false}
-              onChange={(e) =>
-                onFiltersChange({
-                  ...filters,
-                  includeInactive: e.target.checked,
-                  page: 1,
-                })
-              }
-              className="rounded"
-            />
-            <span className="text-sm">Bao gồm đã ẩn</span>
-          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {STATUS_OPTIONS.map((option) => {
+              const active = Boolean(filters.includeInactive) === option.value;
+              return (
+                <button
+                  key={String(option.value)}
+                  type="button"
+                  onClick={() =>
+                    updateFilters({ includeInactive: option.value || undefined })
+                  }
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    active
+                      ? "bg-brand text-white border-brand shadow-sm"
+                      : "border-gray-200 text-gray-700 hover:border-brand hover:bg-brand-soft"
+                  }`}>
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-
-      <div className="p-4 border-t" style={{ borderColor: "var(--dt-border)" }}>
-        <button
-          onClick={handleReset}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
-          style={{ borderColor: "var(--dt-border)" }}>
-          <RotateCcw className="w-4 h-4" />
-          Đặt lại bộ lọc
-        </button>
-      </div>
-    </div>
+    </aside>
   );
 }
