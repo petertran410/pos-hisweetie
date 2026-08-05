@@ -23,6 +23,7 @@ import {
   useDeleteNoteTemplate,
 } from "@/lib/hooks/useNoteTemplates";
 import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
+import { useCan } from "@/lib/hooks/useCan";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useInventoryByBranch } from "@/lib/hooks/useInventoryByBranch";
 import { NoteDropdown } from "./NoteDropdown";
@@ -122,6 +123,9 @@ export function OrderItemsList({
   const [discountValue, setDiscountValue] = useState(0);
   const [displayValue, setDisplayValue] = useState("");
   const { data: noteTemplates = [] } = useNoteTemplates();
+  // Quyền này CHỈ dùng để ẩn/hiện nút tạo + icon sửa mẫu ghi chú.
+  // Người không có quyền vẫn xem / tìm / chọn ghi chú bình thường.
+  const canManageNoteTemplates = useCan("note_templates", "manage");
   const createNoteTemplate = useCreateNoteTemplate();
   const updateNoteTemplate = useUpdateNoteTemplate();
   const deleteNoteTemplate = useDeleteNoteTemplate();
@@ -320,18 +324,21 @@ export function OrderItemsList({
   );
 
   const handleCreateTemplate = () => {
+    if (!canManageNoteTemplates) return;
     setNoteModalMode("create");
     setEditingTemplate(null);
     setShowNoteModal(true);
   };
 
   const handleEditTemplate = (template: NoteTemplate) => {
+    if (!canManageNoteTemplates) return;
     setNoteModalMode("edit");
     setEditingTemplate(template);
     setShowNoteModal(true);
   };
 
   const handleSaveTemplate = (content: string) => {
+    if (!canManageNoteTemplates) return;
     if (noteModalMode === "create") {
       createNoteTemplate.mutate({ content });
     } else if (editingTemplate) {
@@ -340,6 +347,7 @@ export function OrderItemsList({
   };
 
   const handleDeleteTemplate = () => {
+    if (!canManageNoteTemplates) return;
     if (editingTemplate) {
       deleteNoteTemplate.mutate(editingTemplate.id);
     }
@@ -702,6 +710,7 @@ export function OrderItemsList({
                     templates={noteTemplates}
                     onCreateTemplate={handleCreateTemplate}
                     onEditTemplate={handleEditTemplate}
+                    canManageTemplates={canManageNoteTemplates}
                   />
 
                   {documentType === "consignment" && (
@@ -1183,7 +1192,7 @@ export function OrderItemsList({
       </div>
 
       <NoteTemplateModal
-        isOpen={showNoteModal}
+        isOpen={canManageNoteTemplates && showNoteModal}
         onClose={() => setShowNoteModal(false)}
         onSave={handleSaveTemplate}
         onDelete={noteModalMode === "edit" ? handleDeleteTemplate : undefined}
