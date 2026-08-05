@@ -374,43 +374,43 @@ export function StockConditionTransferForm({ onClose }: Props) {
               Import Excel
             </button>
           </div>
-            {showDropdown && products.length > 0 && (
-              <div className="absolute top-full left-0 right-0 bg-white border rounded-b shadow-lg z-10 max-h-60 overflow-auto">
-                {products.map((p) => {
-                  const already = items.some((i) => i.productId === p.id);
-                  const inv = p.inventories?.find(
-                    (i: { branchId: number }) => i.branchId === selectedBranch?.id
-                  );
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => addProduct(p)}
-                      disabled={already}
-                      className={`w-full text-left px-3 py-2 border-b last:border-b-0 flex items-center justify-between ${
-                        already
-                          ? "opacity-50 cursor-not-allowed bg-gray-50"
-                          : "hover:bg-gray-50"
-                      }`}>
-                      <div>
-                        <span className="font-medium">{p.name}</span>
-                        <span className="text-xs text-gray-400 ml-2">
-                          {p.code}
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-500">
-                        Tồn: {inv ? Number(inv.onHand).toLocaleString() : 0}
+          {showDropdown && products.length > 0 && (
+            <div className="border rounded-lg mt-1 max-h-80 overflow-y-auto bg-white shadow-lg">
+              {products.map((p) => {
+                const already = items.some((i) => i.productId === p.id);
+                const inv = p.inventories?.find(
+                  (i: { branchId: number }) => i.branchId === selectedBranch?.id
+                );
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => addProduct(p)}
+                    disabled={already}
+                    className={`w-full text-left px-3 py-2 border-t first:border-t-0 flex items-center justify-between ${
+                      already
+                        ? "opacity-50 cursor-not-allowed bg-gray-50"
+                        : "hover:bg-gray-50"
+                    }`}>
+                    <div>
+                      <span className="font-medium">{p.name}</span>
+                      <span className="text-xs text-gray-400 ml-2">
+                        {p.code}
                       </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      Tồn: {inv ? Number(inv.onHand).toLocaleString() : 0}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-          <div className="flex-1 overflow-auto p-4">
-            {/* Items table */}
-            {items.length > 0 && (
+        <div className="flex-1 overflow-auto p-4">
+          {/* Items table */}
+          {items.length > 0 && (
             <div className="border rounded overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
