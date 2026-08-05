@@ -1,22 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Factory as FactoryIcon } from "lucide-react";
+import { ArrowLeft, Factory as FactoryIcon, Loader2, Save, X } from "lucide-react";
 import {
   useCreateFactory,
-  useUpdateFactory,
   useFactory,
+  useUpdateFactory,
 } from "@/lib/hooks/useFactories";
 import { FactoryPayload } from "@/lib/api/factories";
 import { toast } from "sonner";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 interface FactoryFormProps {
   mode: "create" | "edit";
   factoryId?: number;
+  onClose?: () => void;
 }
+
+const INPUT_CLASS =
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand transition-all";
 
 const COUNTRIES = [
   { code: "VN", name: "Việt Nam" },
@@ -29,7 +35,7 @@ const COUNTRIES = [
 
 const CURRENCIES = ["VND", "CNY", "USD", "THB"];
 
-export function FactoryForm({ mode, factoryId }: FactoryFormProps) {
+export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
   const router = useRouter();
   const { data: existing, isLoading: loadingFactory } = useFactory(
     mode === "edit" ? factoryId : undefined
@@ -40,7 +46,7 @@ export function FactoryForm({ mode, factoryId }: FactoryFormProps) {
   });
   const createFactory = useCreateFactory();
   const updateFactory = useUpdateFactory();
-
+  const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState<FactoryPayload>({
     name: "",
     code: "",
@@ -53,9 +59,14 @@ export function FactoryForm({ mode, factoryId }: FactoryFormProps) {
     isActive: true,
   });
 
-  // Load data khi edit
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (mode === "edit" && existing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         code: existing.code ?? "",
         name: existing.name,
@@ -70,12 +81,21 @@ export function FactoryForm({ mode, factoryId }: FactoryFormProps) {
     }
   }, [mode, existing]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const closeForm = () => {
+    if (onClose) {
+      onClose();
+      return;
+    }
+    router.push("/san-pham/nha-may");
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!form.name.trim()) {
       toast.error("Tên nhà máy không được để trống");
       return;
     }
+
     const payload: FactoryPayload = {
       ...form,
       code: form.code?.trim() || null,
@@ -87,215 +107,141 @@ export function FactoryForm({ mode, factoryId }: FactoryFormProps) {
       address: form.address?.trim() || null,
       supplierId: form.supplierId || null,
     };
+
     try {
       if (mode === "create") {
         await createFactory.mutateAsync(payload);
-        router.push("/san-pham/nha-may");
       } else {
         await updateFactory.mutateAsync({ id: factoryId!, data: payload });
-        router.push("/san-pham/nha-may");
       }
-    } catch (e: any) {
-      // toast đã được hook xử lý
+      closeForm();
+    } catch {
+      // Hook hiển thị thông báo lỗi.
     }
   };
 
-  if (mode === "edit" && loadingFactory) {
+  const isSubmitting = createFactory.isPending || updateFactory.isPending;
+  const formContent = (
+    <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-5">
+        {mode === "edit" && loadingFactory ? (
+          <div className="flex items-center justify-center py-16 text-sm text-gray-500">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-brand" />
+            Đang tải thông tin nhà máy...
+          </div>
+        ) : (
+          <>
+            <section>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Thông tin cơ bản</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tên nhà máy <span className="text-red-500">*</span></label>
+                  <input type="text" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Nhập tên nhà máy" required className={INPUT_CLASS} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Mã nhà máy</label>
+                  <input type="text" value={form.code ?? ""} onChange={(event) => setForm({ ...form, code: event.target.value })} placeholder="Tự động hoặc VD: NM-CN-001" className={INPUT_CLASS} />
+                  <p className="text-xs text-gray-400 mt-1">Để trống để hệ thống tự tạo mã.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Nhà cung cấp quản lý</label>
+                  <SearchableSelect
+                    value={form.supplierId ?? 0}
+                    onChange={(supplierId) =>
+                      setForm({
+                        ...form,
+                        supplierId: supplierId || undefined,
+                      })
+                    }
+                    options={
+                      suppliersData?.data?.map((supplier) => ({
+                        value: supplier.id,
+                        label: supplier.name,
+                        sublabel: supplier.code || undefined,
+                      })) ?? []
+                    }
+                    placeholder="Chọn nhà cung cấp"
+                    emptyLabel="— Chưa gắn —"
+                    searchPlaceholder="Tìm tên hoặc mã nhà cung cấp..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Số điện thoại</label>
+                  <input type="text" value={form.contactNumber ?? ""} onChange={(event) => setForm({ ...form, contactNumber: event.target.value })} placeholder="Nhập số điện thoại" className={INPUT_CLASS} />
+                </div>
+              </div>
+            </section>
+
+            <section className="border-t border-gray-100 pt-5">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Địa chỉ & giao dịch</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Quốc gia</label>
+                  <select value={form.country ?? "VN"} onChange={(event) => setForm({ ...form, country: event.target.value })} className={INPUT_CLASS}>
+                    {COUNTRIES.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tiền tệ</label>
+                  <select value={form.currency ?? "VND"} onChange={(event) => setForm({ ...form, currency: event.target.value })} className={INPUT_CLASS}>
+                    {CURRENCIES.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Địa chỉ</label>
+                  <input type="text" value={form.address ?? ""} onChange={(event) => setForm({ ...form, address: event.target.value })} placeholder="Nhập địa chỉ nhà máy" className={INPUT_CLASS} />
+                </div>
+              </div>
+            </section>
+
+            <section className="border-t border-gray-100 pt-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mô tả</label>
+                <textarea value={form.description ?? ""} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={3} placeholder="Nhập mô tả" className={`${INPUT_CLASS} resize-none`} />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={form.isActive ?? true} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} className="rounded border-gray-300 text-brand focus:ring-brand" />
+                Đang hoạt động
+              </label>
+            </section>
+          </>
+        )}
+      </div>
+
+      <div className="sticky bottom-0 bg-white border-t px-4 py-3 sm:px-6 sm:py-4 flex justify-end gap-2 flex-shrink-0">
+        <button type="button" onClick={closeForm} className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Bỏ qua</button>
+        <button type="submit" disabled={isSubmitting || loadingFactory} className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5 transition-colors">
+          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {isSubmitting ? "Đang lưu..." : mode === "create" ? "Tạo nhà máy" : "Lưu thay đổi"}
+        </button>
+      </div>
+    </form>
+  );
+
+  if (!onClose) {
     return (
-      <div className="flex items-center justify-center h-screen text-gray-500">
-        Đang tải...
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Link href="/san-pham/nha-may" className="p-2 rounded-lg hover:bg-gray-100"><ArrowLeft className="w-5 h-5" /></Link>
+          <div><h1 className="text-2xl font-semibold flex items-center gap-2"><FactoryIcon className="w-6 h-6 text-brand" />{mode === "create" ? "Thêm nhà máy" : "Sửa nhà máy"}</h1><p className="text-sm text-gray-500 mt-0.5">Quản lý thông tin nhà máy sản xuất</p></div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 min-h-[500px] flex flex-col">{formContent}</div>
       </div>
     );
   }
 
-  return (
-    <div className="max-w-3xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/san-pham/nha-may"
-            className="p-2 rounded-lg hover:bg-gray-100">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold flex items-center gap-2">
-              <FactoryIcon className="w-6 h-6 text-brand" />
-              {mode === "create" ? "Thêm nhà máy" : "Sửa nhà máy"}
-            </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Quản lý thông tin nhà máy sản xuất
-            </p>
-          </div>
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl h-[92dvh] sm:h-auto sm:max-h-[90vh] sm:m-4 flex flex-col overflow-hidden shadow-2xl">
+        <div className="sticky top-0 bg-white border-b px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between z-10 flex-shrink-0">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900">{mode === "create" ? "Tạo nhà máy" : "Chỉnh sửa nhà máy"}</h2>
+          <button onClick={closeForm} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" type="button"><X className="w-5 h-5 text-gray-500" /></button>
         </div>
+        {formContent}
       </div>
-
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white rounded-xl border p-6 space-y-5"
-        style={{ borderColor: "var(--dt-border)" }}>
-        {/* Mã + Tên */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Mã nhà máy <span className="text-gray-400">(tùy chọn)</span>
-            </label>
-            <input
-              type="text"
-              value={form.code ?? ""}
-              onChange={(e) => setForm({ ...form, code: e.target.value })}
-              placeholder="VD: NM-CN-001"
-              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-              style={{ borderColor: "var(--dt-border)" }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Tên nhà máy <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-              style={{ borderColor: "var(--dt-border)" }}
-            />
-          </div>
-        </div>
-
-        {/* NCC + Country */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Nhà cung cấp quản lý
-            </label>
-            <select
-              value={form.supplierId ?? ""}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  supplierId: e.target.value ? Number(e.target.value) : undefined,
-                })
-              }
-              className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"
-              style={{ borderColor: "var(--dt-border)" }}>
-              <option value="">— Chưa gắn —</option>
-              {suppliersData?.data?.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Quốc gia
-            </label>
-            <select
-              value={form.country ?? "VN"}
-              onChange={(e) => setForm({ ...form, country: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"
-              style={{ borderColor: "var(--dt-border)" }}>
-              {COUNTRIES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Currency + Contact */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Tiền tệ
-            </label>
-            <select
-              value={form.currency ?? "VND"}
-              onChange={(e) => setForm({ ...form, currency: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"
-              style={{ borderColor: "var(--dt-border)" }}>
-              {CURRENCIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Số điện thoại
-            </label>
-            <input
-              type="text"
-              value={form.contactNumber ?? ""}
-              onChange={(e) => setForm({ ...form, contactNumber: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-              style={{ borderColor: "var(--dt-border)" }}
-            />
-          </div>
-        </div>
-
-        {/* Địa chỉ */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Địa chỉ
-          </label>
-          <input
-            type="text"
-            value={form.address ?? ""}
-            onChange={(e) => setForm({ ...form, address: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-            style={{ borderColor: "var(--dt-border)" }}
-          />
-        </div>
-
-        {/* Mô tả */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Mô tả
-          </label>
-          <textarea
-            value={form.description ?? ""}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            rows={3}
-            className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-            style={{ borderColor: "var(--dt-border)" }}
-          />
-        </div>
-
-        {/* Trạng thái */}
-        <div className="flex items-center gap-2">
-          <input
-            id="isActive"
-            type="checkbox"
-            checked={form.isActive ?? true}
-            onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-            className="rounded"
-          />
-          <label htmlFor="isActive" className="text-sm cursor-pointer">
-            Đang hoạt động
-          </label>
-        </div>
-
-        {/* Submit */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: "var(--dt-border)" }}>
-          <Link
-            href="/san-pham/nha-may"
-            className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
-            style={{ borderColor: "var(--dt-border)" }}>
-            Hủy
-          </Link>
-          <button
-            type="submit"
-            disabled={createFactory.isPending || updateFactory.isPending}
-            className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-1.5">
-            <Save className="w-4 h-4" />
-            {mode === "create" ? "Tạo nhà máy" : "Lưu thay đổi"}
-          </button>
-        </div>
-      </form>
-    </div>
+    </div>,
+    document.body
   );
 }

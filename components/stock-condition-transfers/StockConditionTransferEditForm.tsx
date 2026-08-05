@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { X, Loader2, AlertTriangle } from "lucide-react";
 import { DatePickerInput } from "@/components/ui/DatePickerInput";
 import {
@@ -12,6 +12,7 @@ import {
   type StockConditionTransfer,
   type UpdateStockConditionTransferItem,
 } from "@/lib/api/stock-condition-transfers";
+import { stockConditionTransfersApi } from "@/lib/api/stock-condition-transfers";
 import { toast } from "sonner";
 
 interface Props {
@@ -49,6 +50,7 @@ export function StockConditionTransferEditForm({ transfer, onClose }: Props) {
   const { data: impact } = useStockConditionTransferEditImpact(transfer.id);
 
   const [note, setNote] = useState(transfer.note || "");
+  const [balanceAtTime, setBalanceAtTime] = useState<Record<string, number>>({});
   const [rows, setRows] = useState<RowState[]>(() =>
     transfer.details.map((d) => ({
       detailId: d.id,
@@ -64,6 +66,35 @@ export function StockConditionTransferEditForm({ transfer, onClose }: Props) {
     () => new Map(transfer.details.map((d) => [d.id, d])),
     [transfer.details]
   );
+
+  const balanceKey = (detailId: number, expiryDate: string) => {
+    const detail = detailMap.get(detailId);
+    return `${detail?.productId}|${detail?.toBucket}|${expiryDate || ""}`;
+  };
+
+  useEffect(() => {
+    if (!transfer.transferDate || transfer.details.length === 0) return;
+    let cancelled = false;
+    stockConditionTransfersApi
+      .previewBalances({
+        branchId: transfer.branchId,
+        transferDate: transfer.transferDate,
+        items: transfer.details.map((detail) => ({
+          productId: detail.productId,
+          toBucket: detail.toBucket,
+          expiryDate: detail.expiryDate || null,
+        })),
+      })
+      .then((result) => {
+        if (!cancelled) setBalanceAtTime(result);
+      })
+      .catch(() => {
+        if (!cancelled) setBalanceAtTime({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [transfer.branchId, transfer.details, transfer.transferDate]);
 
   // Tra số đã bán theo từng dòng để cảnh báo trước khi sửa NSX.
   const impactMap = useMemo(() => {
@@ -159,8 +190,9 @@ export function StockConditionTransferEditForm({ transfer, onClose }: Props) {
           setPendingConfirm(null);
           onClose();
         },
-        onError: (error: any) => {
-          const msg = error?.message || "Cập nhật phiếu thất bại";
+        onError: (error: unknown) => {
+          const msg =
+            error instanceof Error ? error.message : "Cập nhật phiếu thất bại";
           // Backend chặn lần đầu khi lô đã bán → hỏi xác nhận cascade.
           if (msg.includes("Xác nhận cập nhật cả hóa đơn")) {
             setPendingConfirm(msg);
@@ -174,7 +206,7 @@ export function StockConditionTransferEditForm({ transfer, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-[96vw] max-w-[1280px] max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <div>
             <h2 className="text-base font-semibold">
@@ -198,13 +230,29 @@ export function StockConditionTransferEditForm({ transfer, onClose }: Props) {
             sửa lại giao dịch tại đúng ngày của phiếu và tính lại tồn cuối của
             các giao dịch về sau. Nhập 0 nếu toàn bộ dòng đã ghi dư.
           </div>
-          <div className="border rounded overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="border rounded overflow-x-auto">
+            <table className="w-full min-w-[1040px] table-fixed text-sm">
+              <colgroup>
+                <col className="w-[10%]" />
+                <col className="w-[21%]" />
+                <col className="w-[13%]" />
+                <col className="w-[14%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[13%]" />
+                <col className="w-[9%]" />
+              </colgroup>
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-3 py-2 text-left">Mã hàng</th>
                   <th className="px-3 py-2 text-left">Tên hàng</th>
                   <th className="px-3 py-2 text-center">Loại tồn</th>
+                  <th className="px-3 py-2 text-center leading-tight">
+                    <span className="block">Tồn cuối</span>
+                    <span className="block text-[11px] font-medium text-gray-500">
+                      trước thời điểm
+                    </span>
+                  </th>
                   <th className="px-3 py-2 text-center whitespace-nowrap">
                     Số đã ghi
                   </th>
@@ -223,6 +271,7 @@ export function StockConditionTransferEditForm({ transfer, onClose }: Props) {
                   const sold = impactMap.get(r.detailId);
                   const currentQty = Number(d.quantity);
                   const parsedCorrectedQty = parseInt(r.reduceQuantity);
+                  const balance = balanceAtTime[balanceKey(r.detailId, r.expiryDate)];
                   const invalidReduction =
                     r.reduceQuantity !== "" &&
                     (Number.isNaN(parsedCorrectedQty) ||
@@ -233,7 +282,7 @@ export function StockConditionTransferEditForm({ transfer, onClose }: Props) {
                   return (
                     <tr key={r.detailId} className="border-t align-top">
                       <td className="px-3 py-2 text-xs">{d.productCode}</td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 leading-snug">
                         {d.productName}
                         {d.direction === "OUT" && (
                           <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
@@ -244,6 +293,11 @@ export function StockConditionTransferEditForm({ transfer, onClose }: Props) {
                       <td className="px-3 py-2 text-center whitespace-nowrap">
                         <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 whitespace-nowrap">
                           {BUCKET_LABELS[d.toBucket] || d.toBucket}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center whitespace-nowrap">
+                        <span className="font-medium tabular-nums">
+                          {balance == null ? "—" : balance.toLocaleString()}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center">
@@ -266,7 +320,7 @@ export function StockConditionTransferEditForm({ transfer, onClose }: Props) {
                               e.target.value.replace(/[^\d]/g, "")
                             )
                           }
-                          className={`w-20 border rounded px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 ${
+                          className={`w-full max-w-24 border rounded px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 ${
                             invalidReduction
                               ? "border-red-400 focus:ring-red-300"
                               : "focus:ring-brand"

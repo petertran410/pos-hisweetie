@@ -18,6 +18,7 @@ import {
   StockConditionTransferImportModal,
   type ImportedTransferItem,
 } from "./StockConditionTransferImportModal";
+import { stockConditionTransfersApi } from "@/lib/api/stock-condition-transfers";
 
 interface TransferItem {
   productId: number;
@@ -70,6 +71,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
   const createTransfer = useCreateStockConditionTransfer();
 
   const [items, setItems] = useState<TransferItem[]>([]);
+  const [balanceAtTime, setBalanceAtTime] = useState<Record<string, number>>({});
   const [note, setNote] = useState("");
   // Thời điểm điều chỉnh — cho phép lùi ngày (backdated) giống phiếu kiểm kho.
   const [transferDate, setTransferDate] = useState<string>(() =>
@@ -88,6 +90,39 @@ export function StockConditionTransferForm({ onClose }: Props) {
   });
 
   const products = productsData?.data || [];
+
+  const balanceKey = (item: {
+    productId: number;
+    toBucket: ConditionBucket;
+    expiryDate?: string | null;
+  }) => `${item.productId}|${item.toBucket}|${item.expiryDate || ""}`;
+
+  useEffect(() => {
+    if (!selectedBranch?.id || !transferDate || items.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const result = await stockConditionTransfersApi.previewBalances({
+          branchId: selectedBranch.id,
+          transferDate: new Date(transferDate).toISOString(),
+          items: items.map((item) => ({
+            productId: item.productId,
+            toBucket: item.toBucket,
+            expiryDate: item.expiryDate || null,
+          })),
+        });
+        if (!cancelled) setBalanceAtTime(result);
+      } catch {
+        if (!cancelled) setBalanceAtTime({});
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [items, selectedBranch?.id, transferDate]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -315,7 +350,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-[96vw] max-w-[1400px] h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <div>
@@ -411,14 +446,32 @@ export function StockConditionTransferForm({ onClose }: Props) {
         <div className="flex-1 overflow-auto p-4">
           {/* Items table */}
           {items.length > 0 && (
-            <div className="border rounded overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="border rounded overflow-x-auto">
+              <table className="w-full min-w-[1180px] table-fixed text-sm">
+                <colgroup>
+                  <col className="w-[8%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[3%]" />
+                </colgroup>
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-3 py-2 text-left">Mã hàng</th>
                     <th className="px-3 py-2 text-left">Tên hàng</th>
                     <th className="px-3 py-2 text-center">Chiều</th>
                     <th className="px-3 py-2 text-center">Loại tồn</th>
+                    <th className="px-3 py-2 text-right leading-tight">
+                      <span className="block">Tồn cuối</span>
+                      <span className="block text-[11px] font-medium text-gray-500">
+                        trước thời điểm
+                      </span>
+                    </th>
                     <th className="px-3 py-2 text-right">Khả dụng</th>
                     <th className="px-3 py-2 text-center">Số lượng</th>
                     <th className="px-3 py-2 text-center">
@@ -435,12 +488,15 @@ export function StockConditionTransferForm({ onClose }: Props) {
                     const isOverflow = qty > max;
                     const needExpiry = item.toBucket === "NEAR_EXPIRY";
                     const isOut = item.direction === "OUT";
+                    const balance = balanceAtTime[balanceKey(item)];
                     return (
                       <tr key={item.productId} className="border-t">
                         <td className="px-3 py-2 text-xs">
                           {item.productCode}
                         </td>
-                        <td className="px-3 py-2">{item.productName}</td>
+                        <td className="px-3 py-2 leading-snug">
+                          {item.productName}
+                        </td>
                         <td className="px-3 py-2 text-center">
                           <select
                             value={item.direction}
@@ -460,7 +516,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                                 )
                               )
                             }
-                            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
+                            className="w-full min-w-0 border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
                             <option value="IN">Chuyển vào</option>
                             <option value="OUT">Điều chỉnh giảm</option>
                           </select>
@@ -483,11 +539,14 @@ export function StockConditionTransferForm({ onClose }: Props) {
                                 )
                               )
                             }
-                            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
+                            className="w-full min-w-0 border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
                             <option value="DAMAGED">Bục rách</option>
                             <option value="NEAR_EXPIRY">Cận date</option>
                             <option value="PROMO">Khuyến mãi</option>
                           </select>
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium text-slate-700">
+                          {balance == null ? "—" : balance.toLocaleString()}
                         </td>
                         <td
                           className={`px-3 py-2 text-right font-medium ${isOut ? "text-amber-600" : "text-green-600"}`}>
@@ -505,7 +564,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                               )
                             }
                             placeholder="0"
-                            className={`w-20 border rounded px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 ${
+                            className={`w-full max-w-24 border rounded px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 ${
                               isOverflow
                                 ? "border-red-400 focus:ring-red-300"
                                 : "focus:ring-brand"
@@ -531,7 +590,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                                   e.target.value
                                 )
                               }
-                              className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
+                              className="w-full min-w-0 border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
                               <option value="">-- Chọn lô --</option>
                               {item.nearExpiryLots.map((l) => (
                                 <option

@@ -163,6 +163,19 @@ export const stockConditionTransfersApi = {
     return apiClient.get(`/stock-condition-transfers/${id}`);
   },
 
+  previewBalances: (
+    data: {
+      branchId: number;
+      transferDate: string;
+      items: Array<{
+        productId: number;
+        toBucket: ConditionBucket;
+        expiryDate?: string | null;
+      }>;
+    }
+  ): Promise<Record<string, number>> =>
+    apiClient.post("/stock-condition-transfers/preview-balances", data),
+
   create: (
     data: CreateStockConditionTransferDto
   ): Promise<StockConditionTransfer> => {

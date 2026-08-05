@@ -18,6 +18,7 @@ import { useFactories, useDeleteFactory } from "@/lib/hooks/useFactories";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { FactoryQueryParams, Factory } from "@/lib/api/factories";
 import { FactoryDetailRow } from "./FactoryDetailRow";
+import { FactoryForm } from "./FactoryForm";
 
 interface FactoriesTableProps {
   filters: FactoryQueryParams & { page: number; limit: number };
@@ -37,6 +38,8 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
   const [limit, setLimit] = useState(filters.limit ?? 15);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingFactory, setEditingFactory] = useState<Factory | null>(null);
   const deleteFactory = useDeleteFactory();
   const canCreate = usePermission("factories", "create");
   const canUpdate = usePermission("factories", "update");
@@ -111,9 +114,9 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {canCreate && (
-            <Link href="/san-pham/nha-may/new" className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
+            <button type="button" onClick={() => setShowCreateModal(true)} className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
               <Plus className="w-4 h-4" /> Tạo nhà máy
-            </Link>
+            </button>
           )}
         </div>
       </div>
@@ -170,13 +173,13 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
                     <td className={`px-4 py-2.5 ${expanded ? "border-t-2 border-r-2 border-brand" : ""}`} onClick={(event) => event.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <Link href={`/san-pham/nha-may/${factory.id}/san-pham`} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Xem sản phẩm"><Eye className="w-4 h-4" /></Link>
-                        {canUpdate && <Link href={`/san-pham/nha-may/${factory.id}`} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Sửa"><Pencil className="w-4 h-4" /></Link>}
+                        {canUpdate && <button type="button" onClick={() => setEditingFactory(factory)} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Sửa"><Pencil className="w-4 h-4" /></button>}
                         {canDelete && <button type="button" onClick={() => handleDelete(factory)} className="p-1.5 rounded hover:bg-red-50 text-red-600" title="Xóa"><Trash2 className="w-4 h-4" /></button>}
                         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
                       </div>
                     </td>
                   </tr>
-                  {expanded && <FactoryDetailRow factory={factory} colSpan={9} onEdit={() => window.location.assign(`/san-pham/nha-may/${factory.id}`)} />}
+                  {expanded && <FactoryDetailRow factory={factory} colSpan={9} onEdit={() => setEditingFactory(factory)} />}
                 </Fragment>
               );
             })}
@@ -189,6 +192,9 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
         <div className="flex items-center gap-1"><button type="button" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1} className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button><span className="px-2 text-xs text-gray-500">Trang {page}/{totalPages}</span><button type="button" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button></div>
         <span className="text-xs text-gray-400">{total} nhà máy</span>
       </div>
+
+      {showCreateModal && <FactoryForm mode="create" onClose={() => setShowCreateModal(false)} />}
+      {editingFactory && <FactoryForm mode="edit" factoryId={editingFactory.id} onClose={() => setEditingFactory(null)} />}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { factoriesApi, FactoryQueryParams, Factory } from "../api/factories";
+import { factoriesApi, FactoryPayload, FactoryQueryParams, Factory } from "../api/factories";
 import { toast } from "sonner";
 
 /**
@@ -87,7 +87,7 @@ export function useCreateFactory() {
 export function useUpdateFactory() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Factory> }) =>
+    mutationFn: ({ id, data }: { id: number; data: Partial<FactoryPayload> }) =>
       factoriesApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["factories"] });
