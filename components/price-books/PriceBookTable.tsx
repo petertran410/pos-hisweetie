@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   useAddProductsToPriceBook,
+  useExportPriceBooks,
   useProductsWithPrices,
   useUpdateProductPrice,
 } from "@/lib/hooks/usePriceBooks";
@@ -14,7 +15,6 @@ import type { PriceBook } from "@/lib/api/price-books";
 import type { Product } from "@/lib/api/products";
 import { toast } from "sonner";
 import { useBranchStore } from "@/lib/store/branch";
-import { PermissionGate } from "../permissions/PermissionGate";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import {
   ChevronLeft,
@@ -72,6 +72,7 @@ export function PriceBookTable({
   const [limit, setLimit] = useState(15);
 
   const canCreate = usePermission("price_books", "create");
+  const canExport = usePermission("price_books", "export");
   const canUpdate = usePermission("price_books", "update");
   const canDelete = usePermission("price_books", "delete");
   const canCreateProduct = usePermission("products", "create");
@@ -81,6 +82,7 @@ export function PriceBookTable({
   const updateRetailPrice = useUpdateProductRetailPrice();
   const updateProductPrice = useUpdateProductPrice();
   const addProductsToPriceBook = useAddProductsToPriceBook();
+  const { exportToFile, isExporting } = useExportPriceBooks();
 
   // Debounce search
   useEffect(() => {
@@ -261,6 +263,19 @@ export function PriceBookTable({
     }
   };
 
+  const handleExportFile = () => {
+    exportToFile({
+      priceBookIds: selectedPriceBooks.map((priceBook) => priceBook.id),
+      search: debouncedSearch || undefined,
+      categoryIds,
+      branchId,
+      parentName: filters.parentName,
+      middleName: filters.middleName,
+      childName: filters.childName,
+      stockStatus: filters.stockStatus,
+    });
+  };
+
   if (selectedPriceBooks.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -296,28 +311,34 @@ export function PriceBookTable({
             />
           </div>
         </div>
-        <PermissionGate resource="price_books" action="create">
-          <div className="flex items-center gap-2 shrink-0">
-            {canCreate && (
-              <button
-                onClick={onCreateNew}
-                className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5 transition-colors">
-                <Plus className="w-4 h-4" />
-                Bảng giá
-              </button>
-            )}
+        <div className="flex items-center gap-2 shrink-0">
+          {canCreate && (
+            <button
+              onClick={onCreateNew}
+              className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5 transition-colors">
+              <Plus className="w-4 h-4" />
+              Bảng giá
+            </button>
+          )}
+          {canCreate && (
             <button
               onClick={onImportClick}
               className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600 transition-colors">
               <Upload className="w-4 h-4" />
               Import
             </button>
-            <button className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1.5 text-gray-600 transition-colors">
+          )}
+          {canExport && (
+            <button
+              type="button"
+              onClick={handleExportFile}
+              disabled={isExporting}
+              className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-1.5 text-gray-600 transition-colors">
               <Download className="w-4 h-4" />
-              Xuất file
+              {isExporting ? "Đang xuất..." : "Xuất file"}
             </button>
-          </div>
-        </PermissionGate>
+          )}
+        </div>
       </div>
 
       {/* ── Selected bar ── */}

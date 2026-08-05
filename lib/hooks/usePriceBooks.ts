@@ -1,7 +1,74 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { priceBooksApi } from "@/lib/api/price-books";
+import { API_URL } from "@/lib/config/api";
+import { useAuthStore } from "@/lib/store/auth";
+import { useBranchStore } from "@/lib/store/branch";
 import { toast } from "react-hot-toast";
 
+export function useExportPriceBooks() {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportToFile = async (filters: {
+    priceBookIds: number[];
+    search?: string;
+    categoryIds?: string;
+    branchId?: number;
+    parentName?: string;
+    middleName?: string;
+    childName?: string;
+    stockStatus?: string;
+  }) => {
+    setIsExporting(true);
+    try {
+      const url = new URL(`${API_URL}/price-books/export`);
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === "") return;
+        if (Array.isArray(value)) {
+          if (value.length > 0) url.searchParams.append(key, value.join(","));
+          return;
+        }
+        url.searchParams.append(key, String(value));
+      });
+
+      const token = useAuthStore.getState().token;
+      const selectedBranch = useBranchStore.getState().selectedBranch;
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(selectedBranch?.id
+            ? { "X-Branch-Id": String(selectedBranch.id) }
+            : {}),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error((await response.text()) || "Lỗi khi xuất dữ liệu");
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get("Content-Disposition") ?? "";
+      const filename =
+        disposition.match(/filename=([^;]+)/)?.[1].trim() ??
+        `BangGia_${Date.now()}.xlsx`;
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+      toast.success("Xuất file thành công");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return { exportToFile, isExporting };
+}
 export function usePriceBooks(params?: {
   page?: number;
   limit?: number;
