@@ -766,16 +766,22 @@ export function OrderItemsList({
                   {item.isPromoGift ? null : (
                     <>
                       {/* Chọn loại tồn để bán: [dropdown NSX] [Cận date] [Bục rách].
-                          Đặt bên TRÁI icon "!" cho đồng bộ với nút Khuyến Mãi. */}
-                      <ItemConditionSelector
-                        item={item}
-                        damagedAvailable={damagedMap.get(item.product.id) ?? 0}
-                        nearExpiryAvailable={
-                          nearExpiryMap.get(item.product.id) ?? 0
-                        }
-                        branchId={selectedBranch?.id}
-                        onUpdateItem={onUpdateItem}
-                      />
+                          Đặt bên TRÁI icon "!" cho đồng bộ với nút Khuyến Mãi.
+                          Ẩn với phiếu ký gửi: nghiệp vụ ký gửi không quản lý
+                          loại tồn (BE không lưu conditionType/soldExpiryDate). */}
+                      {documentType !== "consignment" && (
+                        <ItemConditionSelector
+                          item={item}
+                          damagedAvailable={
+                            damagedMap.get(item.product.id) ?? 0
+                          }
+                          nearExpiryAvailable={
+                            nearExpiryMap.get(item.product.id) ?? 0
+                          }
+                          branchId={selectedBranch?.id}
+                          onUpdateItem={onUpdateItem}
+                        />
+                      )}
                       {canViewInventory && (
                         <button
                           onClick={() => setSelectedItemForInventory(item)}

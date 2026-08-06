@@ -96,6 +96,9 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
         discount: Number(item.discount),
         note: item.note || undefined,
         conditionType: "normal",
+        manufactureDate: item.manufactureDate
+          ? String(item.manufactureDate).slice(0, 10)
+          : undefined,
       }))
     );
     setSelectedCustomer(consignment.customer || null);
@@ -294,13 +297,15 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
       description: orderNote,
       discountAmount: Number(discount) || 0,
       discountRatio: Number(discountRatio) || 0,
+      // Ký gửi không quản lý loại tồn → không gửi conditionType (BE nhận ở DTO
+      // nhưng service không lưu, model ConsignmentItem không có cột này).
       items: cartItems.map((it) => ({
         productId: Number(it.product.id),
         quantity: Number(it.quantity),
         unitPrice: Number(it.price),
         discount: Number(it.discount) || 0,
         note: it.note || "",
-        conditionType: it.conditionType || "normal",
+        manufactureDate: it.manufactureDate || null,
       })),
       delivery: {
         receiver: deliveryInfo.receiver,
@@ -372,6 +377,7 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
             canEditPrice={canEditPrice}
             canEditDiscount={canEditDiscount}
             canViewInventory={canViewInventory}
+            documentType="consignment"
             className="w-full flex-1 bg-white flex flex-col min-h-0"
           />
         </div>

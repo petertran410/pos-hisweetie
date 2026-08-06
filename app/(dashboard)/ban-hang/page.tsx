@@ -3548,14 +3548,17 @@ export default function BanHangPage() {
       documentData.consignDate = new Date().toISOString();
       documentData.consignStatus = activeTab.consignStatus || "pending";
       documentData.description = activeTab.orderNote;
+      // Ký gửi không quản lý loại tồn (bục rách / cận date) → không gửi
+      // conditionType & soldExpiryDate. BE ConsignmentItemDto không có
+      // soldExpiryDate (ValidationPipe forbidNonWhitelisted sẽ reject), còn
+      // conditionType tuy được DTO nhận nhưng service không lưu (model
+      // ConsignmentItem không có cột này). Chỉ NSX là dữ liệu thật.
       documentData.items = activeTab.cartItems.map((item) => ({
         productId: Number(item.product.id),
         quantity: Number(item.quantity),
         unitPrice: Number(item.price),
         discount: Number(item.discount) || 0,
         note: item.note || "",
-        conditionType: item.conditionType || "normal",
-        soldExpiryDate: item.soldExpiryDate || null,
         manufactureDate: item.manufactureDate || null,
       }));
       documentData.delivery = {
