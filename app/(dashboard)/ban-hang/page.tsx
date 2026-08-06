@@ -134,7 +134,8 @@ export interface Tab {
   paymentAmount: number;
   paymentMethods: Array<{ method: string; amount: number; accountId?: number }>;
   paymentNoteType: "cash" | "transfer" | null;
-  paymentNoteAmount: number;
+  // null = ô trống (chưa nhập). Bắt buộc có giá trị khi paymentNoteType = "cash".
+  paymentNoteAmount: number | null;
   deliveryInfo: DeliveryInfo;
   documentId?: number;
   sourceOrderId?: number;
@@ -467,11 +468,11 @@ const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[
 const getLatestPaymentNote = (notes: any[] | undefined) => {
   const latest = Array.isArray(notes) && notes.length > 0 ? notes[0] : null;
   if (!latest || (latest.paymentType !== "cash" && latest.paymentType !== "transfer")) {
-    return { type: null as "cash" | "transfer" | null, amount: 0 };
+    return { type: null as "cash" | "transfer" | null, amount: null as number | null };
   }
   return {
     type: latest.paymentType as "cash" | "transfer",
-    amount: Number(latest.amount) || 0,
+    amount: latest.amount == null ? null : Number(latest.amount),
   };
 };
 
@@ -495,7 +496,7 @@ const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   paymentAmount: 0,
   paymentMethods: [],
   paymentNoteType: null,
-  paymentNoteAmount: 0,
+  paymentNoteAmount: null,
   selectedAddressId: null,
   soldById: null,
   consignStatus: "pending",
@@ -1343,8 +1344,8 @@ export default function BanHangPage() {
       discount: number;
       discountRatio: number;
        paymentAmount: number;
-       paymentNoteType: "cash" | "transfer" | null;
-       paymentNoteAmount: number;
+      paymentNoteType: "cash" | "transfer" | null;
+      paymentNoteAmount: number | null;
        deliveryInfo: DeliveryInfo;
        selectedAddressId: number | null;
     };
@@ -1433,8 +1434,11 @@ export default function BanHangPage() {
               useCOD: editState.useCOD || false,
               paymentAmount: editState.paymentAmount || 0,
               paymentMethods: [],
-              paymentNoteType: editState.paymentNoteType ?? null,
-              paymentNoteAmount: Number(editState.paymentNoteAmount) || 0,
+             paymentNoteType: editState.paymentNoteType ?? null,
+             paymentNoteAmount:
+               editState.paymentNoteAmount == null
+                 ? null
+                 : Number(editState.paymentNoteAmount),
               soldById: editState.soldById ?? null,
               deliveryInfo: editState.deliveryInfo || {
                 receiver: "",
@@ -2107,8 +2111,8 @@ export default function BanHangPage() {
       useCOD: false,
       paymentAmount: 0,
       paymentMethods: [],
-         paymentNoteType: null,
-         paymentNoteAmount: 0,
+      paymentNoteType: null,
+      paymentNoteAmount: null,
       soldById: copySourceOrder.soldById ?? null,
       deliveryInfo: {
         receiver: copySourceOrder.delivery?.receiver || "",
@@ -2174,8 +2178,8 @@ export default function BanHangPage() {
       useCOD: copySourceInvoice.usingCod || false,
       paymentAmount: 0,
       paymentMethods: [],
-         paymentNoteType: null,
-         paymentNoteAmount: 0,
+      paymentNoteType: null,
+      paymentNoteAmount: null,
       soldById: copySourceInvoice.soldById ?? null,
       deliveryInfo: copySourceInvoice.delivery
         ? {
@@ -2614,7 +2618,7 @@ export default function BanHangPage() {
          if (result?.id) {
             await paymentNotesApi.createInvoice(result.id, {
               paymentType: activeTab.paymentNoteType!,
-              ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount || 0 } : {}),
+              ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount ?? 0 } : {}),
             });
             handlePostCreate("invoice", result.id, "/don-hang/dat-hang", {
             shouldRedirect: true,
@@ -3053,7 +3057,7 @@ export default function BanHangPage() {
           const payload = {
             paymentType: activeTab.paymentNoteType!,
             ...(activeTab.paymentNoteType === "cash"
-              ? { amount: activeTab.paymentNoteAmount || 0 }
+              ? { amount: activeTab.paymentNoteAmount ?? 0 }
               : {}),
           } as { paymentType: "cash" | "transfer"; amount?: number };
           if (kind === "order") await paymentNotesApi.createOrder(id, payload);
@@ -3178,15 +3182,22 @@ export default function BanHangPage() {
 
   const validatePaymentNoteSelection = (): boolean => {
     if (!activeTab.paymentNoteType) {
-      toast.error("Vui lòng chọn phương thức ghi nhận: chuyển khoản hoặc tiền mặt");
+      toast.error("Vui lòng chọn phương thức thanh toán: chuyển khoản hoặc tiền mặt");
       return false;
     }
-    if (activeTab.paymentNoteType === "cash" && activeTab.paymentNoteAmount < 0) {
-      toast.error("Số tiền tiền mặt không hợp lệ");
-      return false;
+    if (activeTab.paymentNoteType === "cash") {
+      if (activeTab.paymentNoteAmount == null) {
+        toast.error("Vui lòng nhập số tiền mặt");
+        return false;
+      }
+      if (activeTab.paymentNoteAmount < 0) {
+        toast.error("Số tiền mặt không hợp lệ");
+        return false;
+      }
     }
     return true;
   };
+
   const handleSaveInvoice = async () => {
     if (!validatePaymentNoteSelection()) return;
 
@@ -3386,7 +3397,7 @@ export default function BanHangPage() {
          await paymentNotesApi.createInvoice(activeTab.documentId, {
            paymentType: activeTab.paymentNoteType!,
            ...(activeTab.paymentNoteType === "cash"
-             ? { amount: activeTab.paymentNoteAmount || 0 }
+             ? { amount: activeTab.paymentNoteAmount ?? 0 }
              : {}),
          });
 
@@ -3679,7 +3690,7 @@ export default function BanHangPage() {
            docId = result?.order?.id;
            if (docId) await paymentNotesApi.createOrder(docId, {
              paymentType: activeTab.paymentNoteType!,
-             ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount || 0 } : {}),
+             ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount ?? 0 } : {}),
            });
         } else if (activeTab.type === "consignment") {
           const result = await createConsignment.mutateAsync(documentData);
@@ -3690,7 +3701,7 @@ export default function BanHangPage() {
            docId = result?.id;
            if (docId) await paymentNotesApi.createInvoice(docId, {
              paymentType: activeTab.paymentNoteType!,
-             ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount || 0 } : {}),
+             ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount ?? 0 } : {}),
            });
         }
 
@@ -3931,7 +3942,7 @@ export default function BanHangPage() {
                  }
                  paymentNoteType={activeTab.paymentNoteType}
                  onPaymentNoteTypeChange={(paymentNoteType) => updateActiveTab({ paymentNoteType })}
-                 paymentNoteAmount={activeTab.paymentNoteAmount || 0}
+                 paymentNoteAmount={activeTab.paymentNoteAmount}
                  onPaymentNoteAmountChange={(paymentNoteAmount) => updateActiveTab({ paymentNoteAmount })}
                  onPaymentMethodsChange={(paymentMethods) =>
                    updateActiveTab({ paymentMethods })
@@ -4054,7 +4065,7 @@ export default function BanHangPage() {
                  }
                  paymentNoteType={activeTab.paymentNoteType}
                  onPaymentNoteTypeChange={(paymentNoteType) => updateActiveTab({ paymentNoteType })}
-                 paymentNoteAmount={activeTab.paymentNoteAmount || 0}
+                 paymentNoteAmount={activeTab.paymentNoteAmount}
                  onPaymentNoteAmountChange={(paymentNoteAmount) => updateActiveTab({ paymentNoteAmount })}
                  onPaymentMethodsChange={(paymentMethods) =>
                    updateActiveTab({ paymentMethods })

@@ -38,8 +38,8 @@ interface InvoiceCartProps {
   onPaymentAmountChange: (amount: number) => void;
   paymentNoteType: "cash" | "transfer" | null;
   onPaymentNoteTypeChange: (type: "cash" | "transfer") => void;
-  paymentNoteAmount: number;
-  onPaymentNoteAmountChange: (amount: number) => void;
+  paymentNoteAmount: number | null;
+  onPaymentNoteAmountChange: (amount: number | null) => void;
   onPaymentMethodsChange?: (
     methods: Array<{ method: string; amount: number }>
   ) => void;
@@ -457,6 +457,18 @@ export function InvoiceCart({
     return calculateTotal() - paymentAmount;
   })();
 
+  /**
+   * Chọn phương thức thanh toán (ghi log).
+   * Khi chuyển sang "tiền mặt" mà ô số tiền còn trống → tự điền "Khách cần trả".
+   * Người dùng vẫn sửa được sang số khác.
+   */
+  const handlePaymentNoteTypeSelect = (type: "cash" | "transfer") => {
+    onPaymentNoteTypeChange(type);
+    if (type === "cash" && paymentNoteAmount == null) {
+      onPaymentNoteAmountChange(calculateTotal());
+    }
+  };
+
   const formatDate = () => {
     const now = new Date();
     return `${now.getDate()}/${
@@ -662,7 +674,9 @@ export function InvoiceCart({
 
         <div className="flex flex-col gap-2 pt-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm lg:text-md font-medium">Thanh toán</span>
+            <span className="text-sm lg:text-md font-medium">
+              Phương thức thanh toán
+            </span>
             <div className="flex rounded-lg border overflow-hidden">
               {(
                 [
@@ -673,7 +687,7 @@ export function InvoiceCart({
                 <button
                   key={type}
                   type="button"
-                  onClick={() => onPaymentNoteTypeChange(type)}
+                  onClick={() => handlePaymentNoteTypeSelect(type)}
                   className={`px-3 py-1 text-xs ${paymentNoteType === type ? "bg-brand text-white font-medium" : "bg-white hover:bg-gray-50"}`}>
                   {label}
                 </button>
@@ -682,23 +696,33 @@ export function InvoiceCart({
           </div>
           {paymentNoteType === "cash" && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500">Ghi chú tiền mặt</span>
+              <span className="text-gray-500">Số tiền mặt</span>
               <input
                 type="text"
                 value={
-                  paymentNoteAmount
-                    ? paymentNoteAmount.toLocaleString("en-US")
-                    : ""
+                  paymentNoteAmount == null
+                    ? ""
+                    : paymentNoteAmount.toLocaleString("en-US")
                 }
-                onChange={(e) =>
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/[^\d]/g, "");
                   onPaymentNoteAmountChange(
-                    Number(e.target.value.replace(/[^\d]/g, "")) || 0
-                  )
-                }
-                placeholder="0"
-                className="border rounded-lg px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-brand w-28"
+                    digits === "" ? null : Number(digits)
+                  );
+                }}
+                placeholder="Nhập số tiền"
+                className={`border rounded-lg px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 w-28 ${
+                  paymentNoteAmount == null
+                    ? "border-red-400 focus:ring-red-400"
+                    : "focus:ring-brand"
+                }`}
               />
             </div>
+          )}
+          {paymentNoteType === "cash" && paymentNoteAmount == null && (
+            <p className="text-xs text-red-500 text-right">
+              Vui lòng nhập số tiền mặt
+            </p>
           )}
         </div>
 
