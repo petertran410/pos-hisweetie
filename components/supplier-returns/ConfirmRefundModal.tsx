@@ -51,6 +51,7 @@ export function ConfirmRefundModal({
   const currency = supplierReturn?.currency || "VND";
   const refundAmount = Number(currency === "VND" ? supplierReturn?.refundAmount : supplierReturn?.refundForeignAmount || 0);
   const formatMoney = (value: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency, minimumFractionDigits: currency === "VND" ? 0 : 2, maximumFractionDigits: currency === "VND" ? 0 : 2 }).format(value);
+  const isActionable = supplierReturn?.status === 2;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -106,7 +107,9 @@ export function ConfirmRefundModal({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b">
           <div>
-            <h2 className="text-lg font-semibold">Xử lý công nợ NCC</h2>
+            <h2 className="text-lg font-semibold">
+              {isActionable ? "Xử lý công nợ NCC" : "Chi tiết phiếu trả hàng nhập"}
+            </h2>
             <p className="text-sm text-gray-500">{supplierReturn?.code}</p>
           </div>
           <button
@@ -128,63 +131,132 @@ export function ConfirmRefundModal({
             <div className="flex justify-between">
               <span className="text-gray-500">Số tiền xử lý</span>
               <span className="font-semibold text-brand">
-                 {formatMoney(refundAmount)}
+                {formatMoney(refundAmount)}
               </span>
             </div>
           </div>
 
-          {/* Hình thức xử lý */}
+          {/* Chi tiết sản phẩm */}
           <div>
-            <label className="block text-sm font-medium mb-2">
-              NCC xử lý khoản này như thế nào?
-            </label>
-            <div className="space-y-2">
-              <label className="flex items-center gap-3 cursor-pointer p-3 border rounded-lg hover:bg-gray-50">
-                <div
-                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${refundType === "debt_offset" ? "border-brand" : "border-gray-300"}`}>
-                  {refundType === "debt_offset" && (
-                    <div className="w-2 h-2 bg-brand rounded-full" />
-                  )}
-                </div>
-                <div>
-                  <div className="text-sm font-medium">Giảm nợ</div>
-                  <div className="text-xs text-gray-400">
-                    NCC trừ vào khoản nợ hiện tại
-                  </div>
-                </div>
-                <input
-                  type="radio"
-                  className="hidden"
-                  checked={refundType === "debt_offset"}
-                  onChange={() => setRefundType("debt_offset")}
-                />
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer p-3 border rounded-lg hover:bg-gray-50">
-                <div
-                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${refundType === "cash_refund" ? "border-brand" : "border-gray-300"}`}>
-                  {refundType === "cash_refund" && (
-                    <div className="w-2 h-2 bg-brand rounded-full" />
-                  )}
-                </div>
-                <div>
-                  <div className="text-sm font-medium">Trả tiền</div>
-                  <div className="text-xs text-gray-400">
-                    NCC hoàn tiền trực tiếp
-                  </div>
-                </div>
-                <input
-                  type="radio"
-                  className="hidden"
-                  checked={refundType === "cash_refund"}
-                  onChange={() => setRefundType("cash_refund")}
-                />
-              </label>
+            <h3 className="text-sm font-medium mb-2">Sản phẩm trả</h3>
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Sản phẩm</th>
+                    <th className="px-3 py-2 text-right">SL trả</th>
+                    <th className="px-3 py-2 text-right">Đơn giá</th>
+                    <th className="px-3 py-2 text-right">Thành tiền</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(supplierReturn?.details || []).map((detail) => (
+                    <tr key={detail.id} className="border-t">
+                      <td className="px-3 py-2">
+                        <div className="font-medium">{detail.productName}</div>
+                        <div className="text-xs text-gray-500">
+                          {detail.productCode}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {Number(detail.confirmedQuantity || detail.requestQuantity)}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {formatMoney(Number(currency === "VND" ? detail.returnPrice : detail.foreignReturnPrice ?? detail.returnPrice))}
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium">
+                        {formatMoney(Number(currency === "VND" ? detail.totalAmount : detail.foreignReturnAmount ?? detail.totalAmount))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* Phương thức thanh toán — chỉ hiện khi cash_refund */}
-          {refundType === "cash_refund" && (
+          {/* Hình thức xử lý */}
+          {isActionable ? (
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                NCC xử lý khoản này như thế nào?
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 cursor-pointer p-3 border rounded-lg hover:bg-gray-50">
+                  <div
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${refundType === "debt_offset" ? "border-brand" : "border-gray-300"}`}>
+                    {refundType === "debt_offset" && (
+                      <div className="w-2 h-2 bg-brand rounded-full" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">Giảm nợ</div>
+                    <div className="text-xs text-gray-400">
+                      NCC trừ vào khoản nợ hiện tại
+                    </div>
+                  </div>
+                  <input
+                    type="radio"
+                    className="hidden"
+                    checked={refundType === "debt_offset"}
+                    onChange={() => setRefundType("debt_offset")}
+                  />
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer p-3 border rounded-lg hover:bg-gray-50">
+                  <div
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${refundType === "cash_refund" ? "border-brand" : "border-gray-300"}`}>
+                    {refundType === "cash_refund" && (
+                      <div className="w-2 h-2 bg-brand rounded-full" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">Trả tiền</div>
+                    <div className="text-xs text-gray-400">
+                      NCC hoàn tiền trực tiếp
+                    </div>
+                  </div>
+                  <input
+                    type="radio"
+                    className="hidden"
+                    checked={refundType === "cash_refund"}
+                    onChange={() => setRefundType("cash_refund")}
+                  />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Hình thức xử lý</span>
+                <span className="font-medium">
+                  {supplierReturn?.refundType === "cash_refund"
+                    ? "Trả tiền"
+                    : supplierReturn?.refundType === "debt_offset"
+                      ? "Cấn trừ công nợ"
+                      : "-"}
+                </span>
+              </div>
+              {supplierReturn?.refundConfirmedByName && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Người xác nhận</span>
+                  <span className="font-medium">
+                    {supplierReturn.refundConfirmedByName}
+                  </span>
+                </div>
+              )}
+              {supplierReturn?.refundConfirmedAt && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Thời gian xác nhận</span>
+                  <span className="font-medium">
+                    {new Date(supplierReturn.refundConfirmedAt).toLocaleString("vi-VN")}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Phương thức thanh toán — chỉ hiện khi cash_refund và đang chờ xác nhận */}
+          {isActionable && refundType === "cash_refund" && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -253,20 +325,26 @@ export function ConfirmRefundModal({
           {/* Ghi chú */}
           <div>
             <label className="block text-sm font-medium mb-1">Ghi chú</label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={2}
-              placeholder="Ghi chú..."
-              className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
-            />
+            {isActionable ? (
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={2}
+                placeholder="Ghi chú..."
+                className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
+              />
+            ) : (
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                {supplierReturn?.note || "-"}
+              </p>
+            )}
           </div>
         </div>
 
         {/* Footer */}
         <div className="px-5 pb-5 space-y-3">
           {/* Inline cancel confirm */}
-          {showCancelConfirm && (
+          {isActionable && showCancelConfirm && (
             <div className="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm">
               <span className="text-red-700 font-medium">
                 Xác nhận hủy phiếu này?
@@ -287,13 +365,15 @@ export function ConfirmRefundModal({
           )}
 
           <div className="flex justify-between">
-            <PermissionGate resource="supplier_returns" action="cancel">
-              <button
-                onClick={() => setShowCancelConfirm(true)}
-                className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50">
-                Hủy phiếu
-              </button>
-            </PermissionGate>
+            {isActionable && (
+              <PermissionGate resource="supplier_returns" action="cancel">
+                <button
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50">
+                  Hủy phiếu
+                </button>
+              </PermissionGate>
+            )}
             <div className="flex gap-2">
               {canPrint && (
                 <button
@@ -310,15 +390,17 @@ export function ConfirmRefundModal({
                 className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
                 Đóng
               </button>
-              <PermissionGate
-                resource="supplier_returns"
-                action="confirm_refund">
-                <button
-                  onClick={handleSubmit}
-                  className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark">
-                  Xác nhận
-                </button>
-              </PermissionGate>
+              {isActionable && (
+                <PermissionGate
+                  resource="supplier_returns"
+                  action="confirm_refund">
+                  <button
+                    onClick={handleSubmit}
+                    className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark">
+                    Xác nhận
+                  </button>
+                </PermissionGate>
+              )}
             </div>
           </div>
         </div>

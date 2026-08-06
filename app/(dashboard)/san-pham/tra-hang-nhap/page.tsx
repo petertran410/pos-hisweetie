@@ -55,8 +55,8 @@ export default function TraHangNhapPage() {
       setModalType("edit-step1"); // DRAFT → mở modal bước 1 để sửa
     } else if (item.status === 1 || item.status === 6) {
       setModalType("confirm-export"); // REQUEST hoặc STOCK_EXPORT_DRAFT → bước 2
-    } else if (item.status === 2) {
-      setModalType("confirm-refund"); // STOCK_EXPORTED → bước 3
+    } else if (item.status === 2 || item.status === 3) {
+      setModalType("confirm-refund"); // STOCK_EXPORTED → bước 3, COMPLETED → chỉ xem chi tiết
     }
   };
 
