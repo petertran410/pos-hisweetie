@@ -210,7 +210,7 @@ function NearExpiryLotSelect({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const { data, isLoading } = useNearExpiryLots(productId, branchId);
+  const { data, isLoading } = useNearExpiryLots(productId, branchId, true);
   const lots = useMemo(() => data?.data || [], [data]);
 
   useEffect(() => {

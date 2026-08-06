@@ -375,7 +375,6 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
       {
         Ma_Hang: "SP002",
         Ten_Hang_Hoa: "TRÀ PHƯỢNG HOÀNG - Olong Nhài 500gr",
-        NSX: "10/06/2026",
         Ghi_Chu_Hang_Hoa: "Hàng dễ vỡ",
         So_Luong: 20,
         Don_Gia: "160,000",

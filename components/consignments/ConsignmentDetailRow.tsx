@@ -39,10 +39,6 @@ interface ConsignmentDetailRowProps {
 const formatDateTime = (dateString?: string) =>
   dateString ? new Date(dateString).toLocaleString("vi-VN") : "-";
 
-// NSX nhập dạng YYYY-MM-DD → chỉ hiển thị ngày, không kèm giờ.
-const formatDate = (dateString?: string | null) =>
-  dateString ? new Date(dateString).toLocaleDateString("vi-VN") : "-";
-
 export function ConsignmentDetailRow({
   consignmentId,
   colSpan,
@@ -325,9 +321,6 @@ export function ConsignmentDetailRow({
                     Tên hàng
                   </th>
                   <th className="px-3 py-2 text-center font-medium text-gray-600">
-                    NSX
-                  </th>
-                  <th className="px-3 py-2 text-center font-medium text-gray-600">
                     SL ký gửi
                   </th>
                   <th className="px-3 py-2 text-center font-medium text-gray-600">
@@ -359,9 +352,6 @@ export function ConsignmentDetailRow({
                         <CodeLink entity="product" code={item.productCode} />
                       </td>
                       <td className="px-3 py-2">{item.productName}</td>
-                      <td className="px-3 py-2 text-center">
-                        {formatDate(item.manufactureDate)}
-                      </td>
                       <td className="px-3 py-2 text-center">
                         {Number(item.quantity)}
                       </td>

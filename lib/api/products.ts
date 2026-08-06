@@ -252,11 +252,13 @@ export const productsApi = {
   // Tồn cận date theo từng lô (expiryDate).
   getNearExpiryLots: async (
     productId: number,
-    branchId: number
+    branchId: number,
+    posOnly = false
   ): Promise<{ data: NearExpiryLot[] }> => {
-    return apiClient.get(
-      `/products/${productId}/near-expiry-lots?branchId=${branchId}`
-    );
+    const endpoint = posOnly
+      ? `/products/pos-near-expiry-lots/${productId}`
+      : `/products/${productId}/near-expiry-lots`;
+    return apiClient.get(`${endpoint}?branchId=${branchId}`);
   },
 
   // Tồn tổng hợp: good + damaged + nearExpiry + promo = onHand.
@@ -278,13 +280,15 @@ export const productsApi = {
    */
   getConditionSummaryBatch: async (
     productIds: number[],
-    branchId: number
+    branchId: number,
+    posOnly = false
   ): Promise<Record<number, BucketTotals>> => {
     if (!productIds.length) return {};
+    const endpoint = posOnly
+      ? "/products/pos-condition-summary-batch"
+      : "/products/condition-summary-batch";
     return apiClient.get(
-      `/products/condition-summary-batch?productIds=${productIds.join(
-        ","
-      )}&branchId=${branchId}`
+      `${endpoint}?productIds=${productIds.join(",")}&branchId=${branchId}`
     );
   },
 };

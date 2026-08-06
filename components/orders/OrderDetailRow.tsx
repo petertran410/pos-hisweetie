@@ -35,6 +35,7 @@ import { CodeLink } from "../shared/CodeLink";
 import { LineTypeBadge, PromotionLineName } from "../shared/LineTypeBadge";
 import Swal from "sweetalert2";
 import { findAddressFromDelivery } from "@/lib/utils/customer-address";
+import { formatMonthYear } from "@/components/ui/DatePickerInput";
 
 const getOrderStatusBadgeColor = (status: number) => {
   switch (status) {
@@ -726,10 +727,21 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                             item.conditionType
                                           );
                                           if (!label) return null;
+                                          const expiryMonth =
+                                            item.conditionType ===
+                                              "near_expiry" &&
+                                            item.soldExpiryDate
+                                              ? formatMonthYear(
+                                                  item.soldExpiryDate
+                                                )
+                                              : "";
                                           return (
                                             <span
                                               className={`px-1.5 ml-1 py-0.5 text-xs rounded-full border ${label.className}`}>
                                               {label.text}
+                                              {expiryMonth
+                                                ? ` ${expiryMonth}`
+                                                : ""}
                                             </span>
                                           );
                                         })()}

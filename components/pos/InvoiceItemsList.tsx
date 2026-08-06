@@ -12,6 +12,7 @@ import {
   useDeleteNoteTemplate,
 } from "@/lib/hooks/useNoteTemplates";
 import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
+import { useConditionSummaryBatch } from "@/lib/hooks/useProducts";
 import { useCan } from "@/lib/hooks/useCan";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useInventoryByBranch } from "@/lib/hooks/useInventoryByBranch";
@@ -152,10 +153,29 @@ export function InvoiceItemsList({
   //  - thêm/xóa SP trong giỏ
   // Fallback `getItemOnHand(item)` (snapshot từ product.inventories) khi hook
   // chưa load xong → tránh flash "0" lúc mới mount.
-   const { inventoryMap, promoInventoryMap, damagedMap, nearExpiryMap } = useInventoryByBranch(
+   const { inventoryMap, promoInventoryMap } = useInventoryByBranch(
      cartProductIds,
      selectedBranch?.id
    );
+   const { data: conditionSummary = {} } = useConditionSummaryBatch(
+     cartProductIds,
+     selectedBranch?.id,
+     true
+   );
+   const damagedMap = useMemo(() => {
+     const map = new Map<number, number>();
+     for (const [productId, totals] of Object.entries(conditionSummary)) {
+       map.set(Number(productId), Number(totals.damaged) || 0);
+     }
+     return map;
+   }, [conditionSummary]);
+   const nearExpiryMap = useMemo(() => {
+     const map = new Map<number, number>();
+     for (const [productId, totals] of Object.entries(conditionSummary)) {
+       map.set(Number(productId), Number(totals.nearExpiry) || 0);
+     }
+     return map;
+   }, [conditionSummary]);
 
   const getOnHandRealtime = (item: CartItem): number => {
     const live = inventoryMap.get(item.product.id);

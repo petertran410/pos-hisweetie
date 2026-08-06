@@ -58,6 +58,7 @@ export interface InvoiceDetail {
   serialNumbers?: string;
   product?: any;
   conditionType?: string;
+  soldExpiryDate?: string | null;
   // Khuyến mãi
   lineType?: string;
   isGift?: boolean;

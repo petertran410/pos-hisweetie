@@ -150,21 +150,27 @@ export function useProductConditionSummary(
  */
 export function useConditionSummaryBatch(
   productIds: number[],
-  branchId?: number
+  branchId?: number,
+  posOnly = false
 ) {
   const sortedKey = [...productIds].sort((a, b) => a - b).join(",");
   return useQuery({
-    queryKey: ["condition-summary-batch", sortedKey, branchId ?? null],
-    queryFn: () => productsApi.getConditionSummaryBatch(productIds, branchId!),
+    queryKey: ["condition-summary-batch", sortedKey, branchId ?? null, posOnly],
+    queryFn: () =>
+      productsApi.getConditionSummaryBatch(productIds, branchId!, posOnly),
     enabled: productIds.length > 0 && !!branchId,
     staleTime: 30_000,
   });
 }
 
-export function useNearExpiryLots(productId: number, branchId?: number) {
+export function useNearExpiryLots(
+  productId: number,
+  branchId?: number,
+  posOnly = false
+) {
   return useQuery({
-    queryKey: ["near-expiry-lots", productId, branchId],
-    queryFn: () => productsApi.getNearExpiryLots(productId, branchId!),
+    queryKey: ["near-expiry-lots", productId, branchId, posOnly],
+    queryFn: () => productsApi.getNearExpiryLots(productId, branchId!, posOnly),
     enabled: !!productId && !!branchId,
   });
 }

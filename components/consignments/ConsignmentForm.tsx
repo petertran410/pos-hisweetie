@@ -96,9 +96,6 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
         discount: Number(item.discount),
         note: item.note || undefined,
         conditionType: "normal",
-        manufactureDate: item.manufactureDate
-          ? String(item.manufactureDate).slice(0, 10)
-          : undefined,
       }))
     );
     setSelectedCustomer(consignment.customer || null);
@@ -305,7 +302,6 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
         unitPrice: Number(it.price),
         discount: Number(it.discount) || 0,
         note: it.note || "",
-        manufactureDate: it.manufactureDate || null,
       })),
       delivery: {
         receiver: deliveryInfo.receiver,

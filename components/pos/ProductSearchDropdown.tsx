@@ -92,7 +92,8 @@ export function ProductSearchDropdown({
   // đang hiển thị — 1 request batch, tránh N+1 và tránh lệch với thẻ kho.
   const { data: conditionSummary } = useConditionSummaryBatch(
     productIds,
-    selectedBranch?.id
+    selectedBranch?.id,
+    true
   );
   const conditionMap = conditionSummary || {};
 

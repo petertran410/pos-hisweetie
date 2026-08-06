@@ -59,7 +59,6 @@ export interface CartItem {
   note?: string;
   conditionType?: string; // "normal" | "damaged" | "near_expiry"
   soldExpiryDate?: string; // lô cận date (YYYY-MM-DD) khi conditionType = near_expiry
-  manufactureDate?: string; // Ngày sản xuất (YYYY-MM-DD) — dùng cho ký gửi
   // ── Khuyến mãi tự động (inline, KiotViet-style) ──
   // Dòng quà/mua kèm do KM sinh ra
   isPromoGift?: boolean;
@@ -3552,14 +3551,13 @@ export default function BanHangPage() {
       // conditionType & soldExpiryDate. BE ConsignmentItemDto không có
       // soldExpiryDate (ValidationPipe forbidNonWhitelisted sẽ reject), còn
       // conditionType tuy được DTO nhận nhưng service không lưu (model
-      // ConsignmentItem không có cột này). Chỉ NSX là dữ liệu thật.
+      // ConsignmentItem không có cột này).
       documentData.items = activeTab.cartItems.map((item) => ({
         productId: Number(item.product.id),
         quantity: Number(item.quantity),
         unitPrice: Number(item.price),
         discount: Number(item.discount) || 0,
         note: item.note || "",
-        manufactureDate: item.manufactureDate || null,
       }));
       documentData.delivery = {
         receiver: activeTab.deliveryInfo.receiver,

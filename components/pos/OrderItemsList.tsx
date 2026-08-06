@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import {
   AlertCircle,
   AlertTriangle,
-  Calendar,
   Check,
   Copy,
   Gift,
@@ -13,7 +12,6 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { MiniCalendar } from "@/components/ui/MiniCalendar";
 import { CartItem } from "@/app/(dashboard)/ban-hang/page";
 import { NoteTemplate } from "@/lib/api/note-templates";
 import {
@@ -23,6 +21,7 @@ import {
   useDeleteNoteTemplate,
 } from "@/lib/hooks/useNoteTemplates";
 import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
+import { useConditionSummaryBatch } from "@/lib/hooks/useProducts";
 import { useCan } from "@/lib/hooks/useCan";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useInventoryByBranch } from "@/lib/hooks/useInventoryByBranch";
@@ -137,23 +136,6 @@ export function OrderItemsList({
   const { selectedBranch } = useBranchStore();
   const [showPromoSheet, setShowPromoSheet] = useState(false);
 
-  const [openNsxRowId, setOpenNsxRowId] = useState<string | null>(null);
-  const nsxPickerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!openNsxRowId) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        nsxPickerRef.current &&
-        !nsxPickerRef.current.contains(e.target as Node)
-      ) {
-        setOpenNsxRowId(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [openNsxRowId]);
-
   // Gom id sản phẩm trong giỏ để lấy "KH Đặt" / "Đặt NCC" realtime theo chi nhánh
   // (cùng logic với ProductSearchDropdown).
   const cartProductIds = useMemo(
@@ -177,8 +159,29 @@ export function OrderItemsList({
   //  - thêm/xóa SP trong giỏ
   // Fallback `getItemOnHand(item)` (snapshot từ product.inventories) khi hook
   // chưa load xong → tránh flash "0" lúc mới mount.
-  const { inventoryMap, promoInventoryMap, damagedMap, nearExpiryMap } =
-    useInventoryByBranch(cartProductIds, selectedBranch?.id);
+  const { inventoryMap, promoInventoryMap } = useInventoryByBranch(
+    cartProductIds,
+    selectedBranch?.id
+  );
+  const { data: conditionSummary = {} } = useConditionSummaryBatch(
+    cartProductIds,
+    selectedBranch?.id,
+    true
+  );
+  const damagedMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const [productId, totals] of Object.entries(conditionSummary)) {
+      map.set(Number(productId), Number(totals.damaged) || 0);
+    }
+    return map;
+  }, [conditionSummary]);
+  const nearExpiryMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const [productId, totals] of Object.entries(conditionSummary)) {
+      map.set(Number(productId), Number(totals.nearExpiry) || 0);
+    }
+    return map;
+  }, [conditionSummary]);
 
   const isMobile = useIsMobile();
 
@@ -713,53 +716,6 @@ export function OrderItemsList({
                     canManageTemplates={canManageNoteTemplates}
                   />
 
-                  {documentType === "consignment" && (
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span className="text-xs text-gray-500">NSX</span>
-                      <div
-                        className="relative"
-                        ref={
-                          openNsxRowId === item.rowId ? nsxPickerRef : undefined
-                        }>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setOpenNsxRowId((prev) =>
-                              prev === item.rowId ? null : item.rowId
-                            )
-                          }
-                          className="border rounded-lg px-2 py-1 text-xs flex items-center gap-1.5 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand">
-                          <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                          <span
-                            className={
-                              item.manufactureDate
-                                ? "text-gray-900"
-                                : "text-gray-400"
-                            }>
-                            {item.manufactureDate
-                              ? item.manufactureDate
-                                  .split("-")
-                                  .reverse()
-                                  .join("/")
-                              : "Chọn ngày"}
-                          </span>
-                        </button>
-                        {openNsxRowId === item.rowId && (
-                          <div className="absolute z-50 left-0 top-full w-72">
-                            <MiniCalendar
-                              value={item.manufactureDate || ""}
-                              onChange={(d) =>
-                                onUpdateItem(item.rowId, {
-                                  manufactureDate: d || undefined,
-                                })
-                              }
-                              onClose={() => setOpenNsxRowId(null)}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="flex-shrink-0 flex items-center gap-1">

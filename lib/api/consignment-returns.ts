@@ -10,7 +10,6 @@ export interface ConsignmentReturnDetail {
   goodQuantity: number;
   damagedQuantity: number;
   nearExpiryQuantity: number;
-  manufactureDate?: string | null;
   note?: string | null;
 }
 

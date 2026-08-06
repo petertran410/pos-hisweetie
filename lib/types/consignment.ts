@@ -10,7 +10,6 @@ export interface ConsignmentItem {
   discountRatio: number;
   totalPrice: number;
   note?: string | null;
-  manufactureDate?: string | null;
   product?: {
     id: number;
     code: string;
