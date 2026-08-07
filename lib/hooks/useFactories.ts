@@ -58,19 +58,6 @@ export function useFactoriesBySupplier(supplierId?: number) {
   });
 }
 
-/**
- * Hook lấy danh sách Product gắn với 1 nhà máy (chia primary/backup).
- * Dùng cho trang /san-pham/nha-may/[id]/san-pham (read-only).
- */
-export function useFactoryProducts(factoryId?: number) {
-  return useQuery({
-    queryKey: ["factories", factoryId, "products"],
-    queryFn: () => factoriesApi.getProducts(factoryId!),
-    enabled: !!factoryId,
-    staleTime: 60_000,
-  });
-}
-
 export function useCreateFactory() {
   const queryClient = useQueryClient();
   return useMutation({

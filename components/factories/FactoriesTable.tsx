@@ -1,12 +1,10 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Eye,
   Factory as FactoryIcon,
   Pencil,
   Plus,
@@ -167,19 +165,18 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
                     <td className={`px-4 py-2.5 font-medium ${expanded ? "border-t-2 border-brand" : ""}`}>{factory.name}</td>
                     <td className={`px-4 py-2.5 text-gray-700 ${expanded ? "border-t-2 border-brand" : ""}`}>{factory.supplier?.name || "-"}</td>
                     <td className={`px-4 py-2.5 text-gray-700 ${expanded ? "border-t-2 border-brand" : ""}`}>{factory.country || "-"}</td>
-                    <td className={`px-4 py-2.5 text-center ${expanded ? "border-t-2 border-brand" : ""}`}><span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">{factory._count?.primaryForProducts ?? 0}</span></td>
-                    <td className={`px-4 py-2.5 text-center ${expanded ? "border-t-2 border-brand" : ""}`}><span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 text-xs">{factory._count?.backupForProducts ?? 0}</span></td>
+                    <td className={`px-4 py-2.5 text-center ${expanded ? "border-t-2 border-brand" : ""}`}><span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">{factory.mappingCounts?.primary ?? 0}</span></td>
+                    <td className={`px-4 py-2.5 text-center ${expanded ? "border-t-2 border-brand" : ""}`}><span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 text-xs">{factory.mappingCounts?.backup ?? 0}</span></td>
                     <td className={`px-4 py-2.5 ${expanded ? "border-t-2 border-brand" : ""}`}>{renderStatus(factory)}</td>
                     <td className={`px-4 py-2.5 ${expanded ? "border-t-2 border-r-2 border-brand" : ""}`} onClick={(event) => event.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <Link href={`/san-pham/nha-may/${factory.id}/san-pham`} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Xem sản phẩm"><Eye className="w-4 h-4" /></Link>
                         {canUpdate && <button type="button" onClick={() => setEditingFactory(factory)} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Sửa"><Pencil className="w-4 h-4" /></button>}
                         {canDelete && <button type="button" onClick={() => handleDelete(factory)} className="p-1.5 rounded hover:bg-red-50 text-red-600" title="Xóa"><Trash2 className="w-4 h-4" /></button>}
                         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
                       </div>
                     </td>
                   </tr>
-                  {expanded && <FactoryDetailRow factory={factory} colSpan={9} onEdit={() => setEditingFactory(factory)} />}
+                  {expanded && <FactoryDetailRow factory={factory} colSpan={9} />}
                 </Fragment>
               );
             })}

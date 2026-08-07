@@ -29,6 +29,8 @@ import { ProductPickerDropdown } from "@/components/products/ProductPickerDropdo
 import { NumericInput } from "@/components/ui/NumericInput";
 import { useCan } from "@/lib/hooks/useCan";
 import { useLatestSupplierPrices } from "@/lib/hooks/useLatestSupplierPrices";
+import { useReferencePrices } from "@/lib/hooks/useFactoryProducts";
+import type { ReferencePriceInfo } from "@/lib/api/factory-products";
 import {
   useExchangeRate,
   useRefreshExchangeRate,
@@ -38,6 +40,53 @@ import {
 function roundTo(value: number, digits = 3): number {
   const f = Math.pow(10, digits);
   return Math.round((value + Number.EPSILON) * f) / f;
+}
+
+/**
+ * Ô hiển thị chênh lệch giữa đơn giá thực tế của dòng hàng và giá tham chiếu
+ * đã thiết lập ở Product Mapping của nhà máy.
+ *
+ * CHỈ HIỂN THỊ — không tác động tới đơn giá, thành tiền hay dữ liệu lưu phiếu.
+ * So sánh được quy về VND để tránh sai lệch khi nhà máy niêm yết CNY.
+ */
+function PriceDiffCell({
+  actualPrice,
+  reference,
+}: {
+  actualPrice: number;
+  reference: ReferencePriceInfo | null | undefined;
+}) {
+  const base = reference?.referencePriceVnd;
+  if (base == null || !base) {
+    return (
+      <span className="text-xs text-gray-400" title="Chưa thiết lập giá tham chiếu cho sản phẩm này">
+        —
+      </span>
+    );
+  }
+
+  const diff = actualPrice - base;
+  const percent = (diff / base) * 100;
+
+  if (Math.abs(diff) < 0.5) {
+    return <span className="text-xs text-gray-500">Bằng giá</span>;
+  }
+
+  const isUp = diff > 0;
+  return (
+    <span
+      className={`text-xs font-medium ${isUp ? "text-red-600" : "text-green-600"}`}
+      title={`Giá tham chiếu: ${formatCurrency(base)} (${reference?.factoryName ?? ""})`}
+    >
+      {isUp ? "+" : ""}
+      {formatCurrency(roundTo(diff, 0))}
+      <span className="text-gray-400 font-normal">
+        {" "}
+        ({isUp ? "+" : ""}
+        {percent.toFixed(1)}%)
+      </span>
+    </span>
+  );
 }
 
 // Định dạng số lượng: tối đa 2 chữ số thập phân, bỏ trailing zeros.
@@ -642,6 +691,12 @@ export function OrderSupplierForm({
     productIds,
     branchId || undefined
   );
+  // Giá tham chiếu từ Product Mapping (nhà máy × sản phẩm). Đây là mốc do
+  // người dùng thiết lập, độc lập với `supplierPrices` là giá nhập gần nhất.
+  // Chỉ dùng để hiển thị chênh lệch, tuyệt đối không tự ghi đè đơn giá phiếu.
+  const { referenceByProduct } = useReferencePrices(productIds, {
+    supplierId: supplierId || undefined,
+  });
   // NCC trước đó — init = NCC của phiếu đang sửa để mount KHÔNG ghi đè giá đã lưu.
   const prevSupplierRef = useRef<number>(orderSupplier?.supplierId || 0);
   // Tập productId cần áp giá NCC (thêm SP mới khi đã có NCC, hoặc đổi NCC).
@@ -1151,6 +1206,9 @@ export function OrderSupplierForm({
                       <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
                         Thành tiền
                       </th>
+                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[150px]">
+                        Lệch giá tham chiếu
+                      </th>
                     </>
                   )}
                   {canViewFactoryPrice && isImportSupplier && (
@@ -1249,6 +1307,12 @@ export function OrderSupplierForm({
                         </td>
                         <td className="px-[10px] py-2 align-middle text-sm text-right font-medium text-gray-900 whitespace-nowrap">
                           {formatCurrency(item.subTotal)}
+                        </td>
+                        <td className="px-[10px] py-2 align-middle text-right whitespace-nowrap">
+                          <PriceDiffCell
+                            actualPrice={item.price}
+                            reference={referenceByProduct[item.productId]}
+                          />
                         </td>
                       </>
                     )}
