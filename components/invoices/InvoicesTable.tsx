@@ -392,6 +392,9 @@ const EXPORT_DETAIL_COLUMNS = [
   { key: "totalPrice", label: "Thành tiền" },
 ];
 
+// Ghi nhớ các cột user đã tick ở modal "Xuất file chi tiết" giữa các phiên.
+const EXPORT_DETAIL_COLS_KEY = "invoices-export-detail-cols";
+
 export function InvoicesTable({
   filters,
   onCreateClick,
@@ -415,9 +418,38 @@ export function InvoicesTable({
   const baoDonRef = useRef<HTMLDivElement>(null);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showExportDetailModal, setShowExportDetailModal] = useState(false);
-  const [exportDetailCols, setExportDetailCols] = useState<string[]>(
-    EXPORT_DETAIL_COLUMNS.map((c) => c.key)
-  );
+  const [exportDetailCols, setExportDetailCols] = useState<string[]>(() => {
+    // Khôi phục cột đã tick lần trước từ localStorage. Lọc theo catalog hiện
+    // tại để bỏ key cũ đã gỡ và tự áp dụng cột mới thêm vào sau này.
+    if (typeof window === "undefined")
+      return EXPORT_DETAIL_COLUMNS.map((c) => c.key);
+    try {
+      const raw = localStorage.getItem(EXPORT_DETAIL_COLS_KEY);
+      if (!raw) return EXPORT_DETAIL_COLUMNS.map((c) => c.key);
+      const saved = JSON.parse(raw);
+      if (!Array.isArray(saved)) return EXPORT_DETAIL_COLUMNS.map((c) => c.key);
+      const valid = EXPORT_DETAIL_COLUMNS.map((c) => c.key).filter((k) =>
+        saved.includes(k)
+      );
+      // Nếu state cũ không còn cột hợp lệ nào → quay về mặc định (chọn tất cả)
+      // để tránh modal mở ra trống và nút xuất bị disable.
+      return valid.length > 0 ? valid : EXPORT_DETAIL_COLUMNS.map((c) => c.key);
+    } catch {
+      return EXPORT_DETAIL_COLUMNS.map((c) => c.key);
+    }
+  });
+
+  // Lưu lại mỗi khi user tick/bỏ tick cột
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        EXPORT_DETAIL_COLS_KEY,
+        JSON.stringify(exportDetailCols)
+      );
+    } catch {
+      // localStorage đầy hoặc bị chặn → bỏ qua, không ảnh hưởng chức năng xuất
+    }
+  }, [exportDetailCols]);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const {
