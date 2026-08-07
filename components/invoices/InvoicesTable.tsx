@@ -352,6 +352,7 @@ const EXPORT_DETAIL_COLUMNS = [
   { key: "orderCode", label: "Mã đặt hàng" },
   { key: "customerCode", label: "Mã khách hàng" },
   { key: "customerName", label: "Tên khách hàng" },
+  { key: "customerGroupName", label: "Nhóm khách hàng" },
   { key: "customerPhone", label: "Điện thoại" },
   { key: "customerAddress", label: "Địa chỉ KH" },
   { key: "customerLocationName", label: "Khu vực KH" },

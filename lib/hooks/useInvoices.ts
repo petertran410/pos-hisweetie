@@ -271,7 +271,11 @@ export function useExportInvoices() {
     const url = new URL(`${API_URL}/invoices/export`);
     Object.entries(exportFilters).forEach(([k, v]) => {
       if (k.startsWith("_")) return; // param meta client-only (vd "_preset")
-      if (v !== undefined && v !== null && v !== "") {
+      if (v === undefined || v === null || v === "") return;
+      // Array → append nhiều lần để backend parse đúng
+      if (Array.isArray(v)) {
+        v.forEach((item) => url.searchParams.append(k, String(item)));
+      } else {
         url.searchParams.append(k, String(v));
       }
     });
@@ -286,7 +290,11 @@ export function useExportInvoices() {
     const url = new URL(`${API_URL}/invoices/export-detail`);
     Object.entries(exportFilters).forEach(([k, v]) => {
       if (k.startsWith("_")) return; // param meta client-only (vd "_preset")
-      if (v !== undefined && v !== null && v !== "") {
+      if (v === undefined || v === null || v === "") return;
+      // Array → append nhiều lần để backend parse đúng
+      if (Array.isArray(v)) {
+        v.forEach((item) => url.searchParams.append(k, String(item)));
+      } else {
         url.searchParams.append(k, String(v));
       }
     });

@@ -14,10 +14,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import {
-  FilterMultiSelect,
-  FilterSearchableSelect,
-} from "@/components/ui/filters";
+import { FilterMultiSelect } from "@/components/ui/filters";
 
 interface ReturnOrdersSidebarProps {
   onFiltersChange: (filters: any) => void;
@@ -475,7 +472,8 @@ export function ReturnOrdersSidebar({
 
   const [branchIds, setBranchIds] = useState<number[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
-  const [creatorId, setCreatorId] = useState<string>("");
+  const [creatorIds, setCreatorIds] = useState<string[]>([]);
+  const [soldByIds, setSoldByIds] = useState<string[]>([]);
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
   const [selectedPreset, setSelectedPreset] = useState<string>("all_time");
   const [fromDate, setFromDate] = useState<string>("");
@@ -526,7 +524,8 @@ export function ReturnOrdersSidebar({
       const f: any = {};
       if (branchIds.length > 0) f.branchIds = branchIds;
       if (selectedStatus) f.status = parseInt(selectedStatus);
-      if (creatorId) f.createdBy = parseInt(creatorId);
+      if (creatorIds.length > 0) f.createdByIds = creatorIds.map(Number);
+      if (soldByIds.length > 0) f.soldByIds = soldByIds.map(Number);
 
       // Chỉ gửi date khi không phải all_time, hoặc khi đang ở custom mode
       if (selectedPreset !== "all_time" || dateMode === "custom") {
@@ -549,7 +548,8 @@ export function ReturnOrdersSidebar({
   }, [
     branchIds,
     selectedStatus,
-    creatorId,
+    creatorIds,
+    soldByIds,
     dateMode,
     selectedPreset,
     fromDate,
@@ -560,14 +560,16 @@ export function ReturnOrdersSidebar({
     let n = 0;
     if (branchIds.length > 0) n++;
     if (selectedStatus) n++;
-    if (creatorId) n++;
+    if (creatorIds.length > 0) n++;
+    if (soldByIds.length > 0) n++;
     return n;
-  }, [branchIds, selectedStatus, creatorId]);
+  }, [branchIds, selectedStatus, creatorIds, soldByIds]);
 
   const clearAll = () => {
     setBranchIds([]);
     setSelectedStatus("");
-    setCreatorId("");
+    setCreatorIds([]);
+    setSoldByIds([]);
     setDateMode("preset");
     setSelectedPreset("all_time");
     setFromDate("");
@@ -766,17 +768,36 @@ export function ReturnOrdersSidebar({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Người tạo
           </label>
-          <FilterSearchableSelect
+          <FilterMultiSelect
             options={
               users?.map((u: any) => ({
                 value: String(u.id),
                 label: u.name,
               })) ?? []
             }
-            value={creatorId}
+            values={creatorIds}
             placeholder="Tất cả"
-            searchPlaceholder="Tìm người tạo..."
-            onChange={setCreatorId}
+            searchPlaceholder="Tìm theo tên người tạo..."
+            onChange={setCreatorIds}
+          />
+        </div>
+
+        {/* ── Người bán ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Người bán
+          </label>
+          <FilterMultiSelect
+            options={
+              users?.map((u: any) => ({
+                value: String(u.id),
+                label: u.name,
+              })) ?? []
+            }
+            values={soldByIds}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm theo tên người bán..."
+            onChange={setSoldByIds}
           />
         </div>
       </div>
