@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Camera, Upload, ChevronDown, FileText, QrCode } from "lucide-react";
+import {
+  X,
+  Camera,
+  Upload,
+  ChevronDown,
+  FileText,
+  QrCode,
+  Loader2,
+} from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useInvoicesForPacking } from "@/lib/hooks/useInvoices";
 import { useConsignmentsForPacking } from "@/lib/hooks/useConsignments";
@@ -11,6 +19,7 @@ import {
   type UploadedExpenseFile,
 } from "@/lib/hooks/usePackingSlips";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { useImageUploader } from "@/lib/hooks/useImageUploader";
 import { QrUploadModal } from "@/components/shared/QrUploadModal";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
@@ -179,10 +188,24 @@ export function PackingSlipForm({
     return parseFloat(value.replace(/,/g, "")) || 0;
   };
 
-  const [images, setImages] = useState<string[]>(
+  // Nén ảnh ở client + hiện preview local ngay khi chụp (xem useImageUploader).
+  const {
+    images,
+    setImages,
+    pendingImages,
+    isUploading,
+    hasPendingImages,
+    handleFileSelect,
+    removeImage,
+  } = useImageUploader(
+    // Ảnh ký gửi lưu sang folder ky-gui riêng, không lẫn với báo đơn hóa đơn.
+    (files) =>
+      uploadPackingSlipImages(
+        files,
+        docType === "consignment" ? "ky-gui" : "bao-don"
+      ),
     packingSlip?.images?.map((img) => img.imageUrl) || []
   );
-  const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
 
@@ -275,38 +298,6 @@ export function PackingSlipForm({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const fileList = Array.from(files);
-    // Reset input ngay để user có thể chọn lại cùng file nếu cần
-    e.target.value = "";
-    setIsUploading(true);
-    try {
-      const { urls, errors } = await uploadPackingSlipImages(fileList);
-      if (urls.length > 0) {
-        setImages((prev) => [...prev, ...urls]);
-      }
-      if (errors.length === 0) {
-        toast.success(`Upload ${urls.length} hình thành công`);
-      } else if (urls.length > 0) {
-        toast.success(
-          `Upload ${urls.length}/${fileList.length} hình thành công`
-        );
-      } else {
-        toast.error("Upload hình thất bại");
-      }
-    } catch {
-      toast.error("Upload hình thất bại");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
-  };
-
   const handleExpenseFileSelect = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -368,6 +359,12 @@ export function PackingSlipForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Còn ảnh đang upload → chặn để không lưu phiếu thiếu ảnh.
+    if (hasPendingImages) {
+      toast.error("Đang tải ảnh, vui lòng đợi");
+      return;
+    }
 
     if (!branchId) {
       toast.error("Vui lòng chọn chi nhánh");
@@ -627,6 +624,20 @@ export function PackingSlipForm({
                   </div>
                 ))}
 
+                {/* Ảnh đang upload: hiện ngay từ blob local, mờ + spinner. */}
+                {pendingImages.map((p) => (
+                  <div key={p.id} className="relative w-24 h-24">
+                    <img
+                      src={p.previewUrl}
+                      alt=""
+                      className="w-full h-full object-cover rounded border opacity-60"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 text-brand animate-spin" />
+                    </div>
+                  </div>
+                ))}
+
                 <label className="w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50">
                   <input
                     type="file"
@@ -634,21 +645,18 @@ export function PackingSlipForm({
                     multiple
                     onChange={handleFileSelect}
                     className="hidden"
-                    disabled={isUploading}
                   />
                   <Upload className="w-6 h-6 text-gray-400" />
                   <span className="text-xs text-gray-400 mt-1">Upload</span>
                 </label>
 
-                <label
-                  className={`w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 ${isUploading ? "opacity-50 pointer-events-none" : ""}`}>
+                <label className="w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50">
                   <input
                     type="file"
                     accept="image/*"
                     capture="environment"
                     onChange={handleFileSelect}
                     className="hidden"
-                    disabled={isUploading}
                   />
                   <Camera className="w-6 h-6 text-gray-400" />
                   <span className="text-xs text-gray-400 mt-1">Chụp</span>
@@ -1036,7 +1044,7 @@ export function PackingSlipForm({
 
       {showQrModal && (
         <QrUploadModal
-          subfolder="bao-don"
+          subfolder={docType === "consignment" ? "ky-gui" : "bao-don"}
           onUploaded={handleQrUploaded}
           onClose={() => setShowQrModal(false)}
         />

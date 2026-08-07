@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Camera, Upload, ChevronDown, QrCode } from "lucide-react";
+import { X, Camera, Upload, ChevronDown, QrCode, Loader2 } from "lucide-react";
+import { useImageUploader } from "@/lib/hooks/useImageUploader";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useInvoicesForPacking } from "@/lib/hooks/useInvoices";
 import { useConsignmentsForPacking } from "@/lib/hooks/useConsignments";
@@ -82,10 +83,24 @@ export function PackingLoadingForm({
     return parseFloat(value.replace(/,/g, "")) || 0;
   };
 
-  const [images, setImages] = useState<string[]>(
+  // Nén ảnh ở client + hiện preview local ngay khi chụp (xem useImageUploader).
+  const {
+    images,
+    setImages,
+    pendingImages,
+    isUploading,
+    hasPendingImages,
+    handleFileSelect,
+    removeImage,
+  } = useImageUploader(
+    // Ảnh ký gửi lưu sang folder ky-gui riêng, không lẫn với báo đơn hóa đơn.
+    (files) =>
+      uploadPackingLoadingImages(
+        files,
+        docType === "consignment" ? "ky-gui" : "loading"
+      ),
     packingLoading?.images?.map((img) => img.imageUrl) || []
   );
-  const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
 
@@ -166,37 +181,6 @@ export function PackingLoadingForm({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const fileList = Array.from(files);
-    e.target.value = "";
-    setIsUploading(true);
-    try {
-      const { urls, errors } = await uploadPackingLoadingImages(fileList);
-      if (urls.length > 0) {
-        setImages((prev) => [...prev, ...urls]);
-      }
-      if (errors.length === 0) {
-        toast.success(`Upload ${urls.length} hình thành công`);
-      } else if (urls.length > 0) {
-        toast.success(
-          `Upload ${urls.length}/${fileList.length} hình thành công`
-        );
-      } else {
-        toast.error("Upload hình thất bại");
-      }
-    } catch {
-      toast.error("Upload hình thất bại");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
-  };
-
   const toggleInvoice = (invoiceId: number) => {
     if (selectedInvoiceIds.includes(invoiceId)) {
       setSelectedInvoiceIds(
@@ -241,6 +225,12 @@ export function PackingLoadingForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Còn ảnh đang upload → chặn lưu để phiếu không bị thiếu ảnh.
+    if (hasPendingImages) {
+      toast.error("Đang tải ảnh lên, vui lòng đợi");
+      return;
+    }
 
     if (!loadingById) {
       toast.error("Vui lòng chọn người loading");
@@ -586,7 +576,6 @@ export function PackingLoadingForm({
                       capture="environment"
                       onChange={handleFileSelect}
                       className="hidden"
-                      disabled={isUploading}
                     />
                     <Camera className="w-6 h-6 mx-auto mb-2 text-gray-400" />
                     <span className="text-sm text-gray-600">Chụp hình</span>
@@ -606,8 +595,20 @@ export function PackingLoadingForm({
                   </div>
                 )}
 
-                {images.length > 0 && (
+                {(images.length > 0 || pendingImages.length > 0) && (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {pendingImages.map((p) => (
+                      <div key={p.id} className="relative">
+                        <img
+                          src={p.previewUrl}
+                          alt=""
+                          className="w-full h-24 object-cover rounded border opacity-60"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Loader2 className="w-6 h-6 text-brand animate-spin" />
+                        </div>
+                      </div>
+                    ))}
                     {images.map((url, index) => (
                       <div key={index} className="relative group">
                         <img
@@ -667,7 +668,7 @@ export function PackingLoadingForm({
 
       {showQrModal && (
         <QrUploadModal
-          subfolder="loading"
+          subfolder={docType === "consignment" ? "ky-gui" : "loading"}
           onUploaded={handleQrUploaded}
           onClose={() => setShowQrModal(false)}
         />

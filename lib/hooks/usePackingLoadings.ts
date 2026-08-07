@@ -142,16 +142,21 @@ export async function uploadPackingLoadingImage(file: File): Promise<string> {
 }
 
 export async function uploadPackingLoadingImages(
-  files: File[]
+  files: File[],
+  // Ảnh ký gửi lưu riêng sang folder ky-gui để không lẫn với báo đơn hóa đơn.
+  subfolder: string = "loading"
 ): Promise<{ urls: string[]; errors: { originalname: string; reason: string }[] }> {
   const token = useAuthStore.getState().token;
   const formData = new FormData();
   files.forEach((f) => formData.append("files", f));
-  const res = await fetch(`${API_URL}/upload/images?subfolder=loading`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
-  });
+  const res = await fetch(
+    `${API_URL}/upload/images?subfolder=${encodeURIComponent(subfolder)}`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    }
+  );
   if (!res.ok) throw new Error("Upload failed");
   const result = await res.json();
   return {
