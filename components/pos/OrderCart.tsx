@@ -635,7 +635,7 @@ export function OrderCart({
             {calculateTotal().toLocaleString("en-US")}
           </span>
         </div>
-        {documentType === "consignment" && (
+        {documentType === "consignment" && !isEditMode && (
           <div className="flex items-center justify-between text-sm lg:text-md">
             <span>Trạng thái</span>
             <select
@@ -756,7 +756,7 @@ export function OrderCart({
 
         {isEditMode ? (
           <div className="flex gap-4">
-            {canCreateInvoice && (
+            {canCreateInvoice && documentType !== "consignment" && (
               <button
                 onClick={onCreateInvoice}
                 disabled={cartItems.length === 0}

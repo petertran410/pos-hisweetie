@@ -480,7 +480,7 @@ export function ConsignmentDetailRow({
         <div className="flex items-center gap-2 flex-wrap">
           {canEdit && canUpdate && (
             <button
-              onClick={() => router.push(`/don-hang/ky-gui/${consignment.id}`)}
+              onClick={() => router.push(`/ban-hang?consignmentId=${consignment.id}`)}
               className="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1.5">
               <Pencil className="w-4 h-4" /> Sửa
             </button>

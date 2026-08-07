@@ -23,7 +23,11 @@ import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
 import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
 import { InvoiceItemsList } from "@/components/pos/InvoiceItemsList";
-import { useCreateConsignment } from "@/lib/hooks/useConsignments";
+import {
+  useCreateConsignment,
+  useUpdateConsignment,
+  useConsignment,
+} from "@/lib/hooks/useConsignments";
 import { priceBooksApi } from "@/lib/api";
 import { ordersApi } from "@/lib/api/orders";
 import { INVOICE_STATUS } from "@/lib/types/invoice";
@@ -519,6 +523,7 @@ export default function BanHangPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const invoiceId = searchParams.get("invoiceId");
+  const consignmentId = searchParams.get("consignmentId");
   const copyOrderId = searchParams.get("copyOrderId");
   const copyInvoiceId = searchParams.get("copyInvoiceId");
   const tabType = searchParams.get("type") as TabType | null;
@@ -542,8 +547,9 @@ export default function BanHangPage() {
   const updateInvoice = useUpdateInvoice();
   const createOrderPayment = useCreateOrderPayment();
   const createInvoicePayment = useCreateInvoicePayment();
-  const createInvoiceFromOrder = useCreateInvoiceFromOrder();
   const createConsignment = useCreateConsignment();
+  const updateConsignment = useUpdateConsignment();
+  const createInvoiceFromOrder = useCreateInvoiceFromOrder();
 
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState("tab-1");
@@ -1348,6 +1354,7 @@ export default function BanHangPage() {
       paymentNoteAmount: number | null;
        deliveryInfo: DeliveryInfo;
        selectedAddressId: number | null;
+      consignStatus?: string;
     };
   }>({});
 
@@ -1548,6 +1555,9 @@ export default function BanHangPage() {
     invoiceId ? Number(invoiceId) : 0
   );
 
+  const { data: existingConsignment, isLoading: isLoadingConsignment } =
+    useConsignment(consignmentId ? Number(consignmentId) : 0);
+
   // Copy: fetch nguồn để copy nội dung sang tab mới
   const { data: copySourceOrder } = useOrder(
     copyOrderId ? Number(copyOrderId) : 0
@@ -1620,7 +1630,7 @@ export default function BanHangPage() {
   }, [isInitialized, user?.id]);
 
   useEffect(() => {
-    if (!isInitialized || orderId || invoiceId) return;
+    if (!isInitialized || orderId || invoiceId || consignmentId) return;
 
     if (tabType) {
       const savedTabsStr = localStorage.getItem(STORAGE_KEY);
@@ -2069,6 +2079,171 @@ export default function BanHangPage() {
 
     setActiveTabId(editTabId);
   }, [existingInvoice?.id, invoiceId, selectedBranch?.id]);
+
+  // ── EDIT: mở phiếu ký gửi để sửa (từ URL param ?consignmentId=X) ──
+  useEffect(() => {
+    if (!existingConsignment || !consignmentId) return;
+
+    // Guard: chặn mở ký gửi nếu chi nhánh đang chọn lệch với chi nhánh phiếu ký gửi
+    if (
+      selectedBranch &&
+      existingConsignment.branchId &&
+      existingConsignment.branchId !== selectedBranch.id
+    ) {
+      toast.error(
+        `Vui lòng đổi chi nhánh sang ${
+          existingConsignment.branch?.name || "chi nhánh của phiếu ký gửi"
+        } để xem/sửa phiếu ký gửi này`
+      );
+      router.replace("/don-hang/ky-gui");
+      return;
+    }
+
+    const editTabId = `edit-consignment-${consignmentId}`;
+    const existingTab = tabs.find((t) => t.id === editTabId);
+
+    if (existingTab) {
+      if (existingTab.cartItems.length > 0) {
+        setActiveTabId(editTabId);
+        return;
+      }
+    }
+
+    const key = getEditStorageKey(Number(consignmentId), "consignment");
+    const savedEditState = localStorage.getItem(key);
+
+    let restoredState = null;
+    if (savedEditState) {
+      try {
+        restoredState = JSON.parse(savedEditState);
+        const lastModified = new Date(restoredState.lastModified);
+        const consignmentUpdated = new Date(existingConsignment.updatedAt);
+
+        if (lastModified > consignmentUpdated) {
+          toast.info("Đã khôi phục thay đổi chưa lưu của bạn");
+        } else {
+          restoredState = null;
+        }
+      } catch (error) {
+        console.error("Error loading edit state:", error);
+        restoredState = null;
+      }
+    }
+
+    const cartItems: CartItem[] = restoredState
+      ? restoredState.cartItems.map((item: CartItem) => ({
+          ...item,
+          rowId:
+            item.rowId ??
+            `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
+        }))
+      : mapDocumentLinesToCartItems(existingConsignment.items);
+
+    const editTab: Tab = {
+      id: editTabId,
+      type: "consignment",
+      label: `Sửa KG #${existingConsignment.code}`,
+      code: existingConsignment.code,
+      cartItems,
+      selectedCustomer: restoredState
+        ? restoredState.selectedCustomer
+        : existingConsignment.customer || null,
+      selectedPriceBookId: restoredState
+        ? restoredState.selectedPriceBookId
+        : existingConsignment.priceBookId || null,
+      selectedPriceBookName: restoredState
+        ? restoredState.selectedPriceBookName
+        : existingConsignment.priceBookName || null,
+      orderNote: restoredState
+        ? restoredState.orderNote
+        : existingConsignment.description || "",
+      discount: restoredState
+        ? restoredState.discount
+        : Number(existingConsignment.discount) || 0,
+      discountRatio: restoredState
+        ? restoredState.discountRatio
+        : Number(existingConsignment.discountRatio) || 0,
+      useCOD: false,
+      paymentAmount: 0,
+      paymentMethods: [],
+      paymentNoteType: null,
+      paymentNoteAmount: null,
+      soldById: existingConsignment.soldById ?? null,
+      deliveryInfo: restoredState
+        ? restoredState.deliveryInfo
+        : existingConsignment.delivery
+          ? {
+              receiver: existingConsignment.delivery.receiver || "",
+              contactNumber: existingConsignment.delivery.contactNumber || "",
+              detailAddress: existingConsignment.delivery.address || "",
+              locationName: existingConsignment.delivery.locationName || "",
+              wardName: existingConsignment.delivery.wardName || "",
+              weight: Number(existingConsignment.delivery.weight) || 0,
+              weightUnit: existingConsignment.delivery?.weightUnit || "g",
+              length: Number(existingConsignment.delivery.length) || 10,
+              width: Number(existingConsignment.delivery.width) || 10,
+              height: Number(existingConsignment.delivery.height) || 10,
+              noteForDriver: existingConsignment.delivery.noteForDriver || "",
+            }
+          : {
+              receiver: "",
+              contactNumber: "",
+              detailAddress: "",
+              locationName: "",
+              wardName: "",
+              weight: 0,
+              weightUnit: "g",
+              length: 10,
+              width: 10,
+              height: 10,
+              noteForDriver: "",
+            },
+      documentId: existingConsignment.id,
+      selectedAddressId:
+        restoredState?.selectedAddressId != null
+          ? restoredState.selectedAddressId
+          : findAddressFromDelivery(
+              (existingConsignment.customer as any)?.addresses,
+              existingConsignment.delivery
+            )?.id ?? null,
+      isEditMode: true,
+      consignStatus: existingConsignment.consignStatus || "pending",
+    };
+
+    const editKey = getEditStorageKey(existingConsignment.id, "consignment");
+    initialEditDataRef.current[editKey] = {
+      cartItems: editTab.cartItems,
+      selectedCustomer: editTab.selectedCustomer,
+      selectedPriceBookId: editTab.selectedPriceBookId,
+      selectedPriceBookName: editTab.selectedPriceBookName,
+      orderNote: editTab.orderNote,
+      discount: editTab.discount,
+      discountRatio: editTab.discountRatio,
+      paymentAmount: editTab.paymentAmount,
+      paymentNoteType: editTab.paymentNoteType,
+      paymentNoteAmount: editTab.paymentNoteAmount,
+      deliveryInfo: editTab.deliveryInfo,
+      selectedAddressId: editTab.selectedAddressId ?? null,
+      consignStatus: editTab.consignStatus,
+    };
+
+    setTabs((prevTabs) => {
+      const existingEditIndex = prevTabs.findIndex((t) => t.id === editTabId);
+
+      if (existingEditIndex >= 0) {
+        const updatedTabs = [...prevTabs];
+        updatedTabs[existingEditIndex] = editTab;
+        return updatedTabs;
+      } else {
+        const nonEditTabs = prevTabs.filter(
+          (t) => !t.isEditMode || t.id !== editTabId
+        );
+        return [...nonEditTabs, editTab];
+      }
+    });
+
+    setActiveTabId(editTabId);
+  }, [existingConsignment?.id, consignmentId, selectedBranch?.id]);
 
   // ── COPY: copy đơn hàng → tab mới Copy_<code>, type=order, fromPage="dat-hang" ──
   useEffect(() => {
@@ -3423,6 +3598,89 @@ export default function BanHangPage() {
     }
   };
 
+  const handleSaveConsignment = async () => {
+    if (isSubmittingRef.current) return;
+
+    if (!selectedBranch) {
+      toast.error("Vui lòng chọn chi nhánh trước khi lưu phiếu ký gửi");
+      return;
+    }
+
+    if (!activeTab.selectedCustomer) {
+      toast.error("Vui lòng chọn khách hàng trước khi lưu phiếu ký gửi");
+      return;
+    }
+
+    if (activeTab.cartItems.length === 0) {
+      toast.error("Vui lòng chọn ít nhất một sản phẩm");
+      return;
+    }
+
+    if (!activeTab.documentId) {
+      toast.error("Không tìm thấy ID phiếu ký gửi");
+      return;
+    }
+
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+
+    try {
+      const consignmentData: any = {
+        customerId: activeTab.selectedCustomer.id,
+        branchId: selectedBranch?.id,
+        soldById: activeTab.soldById ?? user?.id,
+        discountAmount: Number(activeTab.discount) || 0,
+        discountRatio: Number(activeTab.discountRatio) || 0,
+        priceBookId: activeTab.selectedPriceBookId,
+        priceBookName: activeTab.selectedPriceBookName,
+        consignStatus: activeTab.consignStatus || "pending",
+        description: activeTab.orderNote,
+        items: activeTab.cartItems
+          .filter((item) => !item.isPromoGift)
+          .map((item) => ({
+            productId: item.product?.id,
+            quantity: Number(item.quantity),
+            price: Number(item.price),
+            discount: Number(item.discount) || 0,
+            note: item.note,
+          })),
+        delivery: {
+          receiver: activeTab.deliveryInfo.receiver,
+          contactNumber: activeTab.deliveryInfo.contactNumber,
+          address: activeTab.deliveryInfo.detailAddress,
+          locationName: activeTab.deliveryInfo.locationName,
+          wardName: activeTab.deliveryInfo.wardName,
+          weight: Number(activeTab.deliveryInfo.weight) || 0,
+          weightUnit: activeTab.deliveryInfo.weightUnit || "g",
+          length: Number(activeTab.deliveryInfo.length) || 10,
+          width: Number(activeTab.deliveryInfo.width) || 10,
+          height: Number(activeTab.deliveryInfo.height) || 10,
+          noteForDriver: activeTab.deliveryInfo.noteForDriver,
+        },
+      };
+
+      await updateConsignment.mutateAsync({
+        id: activeTab.documentId,
+        data: consignmentData,
+      });
+
+      const key = getEditStorageKey(activeTab.documentId, "consignment");
+      localStorage.removeItem(key);
+
+      setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
+
+      toast.success("Lưu phiếu ký gửi thành công");
+
+      router.replace("/don-hang/ky-gui", { scroll: false });
+    } catch (error: any) {
+      console.error("Update consignment error:", error);
+      toast.error(error.message || "Không thể lưu phiếu ký gửi");
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
+  };
+
   const handleCreateDocument = async () => {
     if (activeTab.type !== "consignment" && !validatePaymentNoteSelection()) return;
 
@@ -3947,9 +4205,13 @@ export default function BanHangPage() {
                  onPaymentMethodsChange={(paymentMethods) =>
                    updateActiveTab({ paymentMethods })
                  }
-                 onCreateOrder={handleCreateDocument}
-                onSaveOrder={handleSaveOrder}
-                onCreateInvoice={handleConvertToInvoice}
+                  onCreateOrder={handleCreateDocument}
+                  onSaveOrder={
+                    activeTab.type === "consignment"
+                      ? handleSaveConsignment
+                      : handleSaveOrder
+                  }
+                  onCreateInvoice={handleConvertToInvoice}
                 discount={activeTab.discount}
                 discountRatio={activeTab.discountRatio}
                 onDiscountChange={(discount) => updateActiveTab({ discount })}
