@@ -103,7 +103,7 @@ export interface Product {
   unit?: string;
   conversionValue?: number;
   masterProductId?: number;
-  attributesText?: string;
+  attributes?: { id?: number; name: string; value: string }[];
   isActive: boolean;
   isDirectSale: boolean;
   isPieceUnit?: boolean;

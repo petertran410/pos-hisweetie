@@ -56,11 +56,11 @@ export function ProductForm({
   const [attributes, setAttributes] = useState<
     { name: string; value: string }[]
   >(
-    product?.attributesText
-      ? product.attributesText.split("|").map((attr) => {
-          const [name, value] = attr.split(":");
-          return { name: name || "", value: value || "" };
-        })
+    product?.attributes
+      ? product.attributes.map((attr) => ({
+          name: attr.name || "",
+          value: attr.value || "",
+        }))
       : []
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -355,10 +355,9 @@ export function ProductForm({
           1,
           Math.floor(Number(data.conversionValue) || 1)
         ),
-        attributesText:
-          attributes.length > 0
-            ? attributes.map((a) => `${a.name}:${a.value}`).join("|")
-            : undefined,
+        attributes: attributes
+          .map((a) => ({ name: a.name.trim(), value: a.value.trim() }))
+          .filter((a) => a.name && a.value),
       });
 
       if (canViewCostPrice && hasCostChanged(purchasePrice.value)) {
