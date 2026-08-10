@@ -54,6 +54,24 @@ body {
   font-family: "fg-sf-pro-display-medium-otf", Arial, Helvetica, sans-serif;
 }
 
+.public-shell { min-height: 100vh; background: #fff; color: var(--dt-color-primary-dark); font-family: var(--font-be-vietnam), sans-serif; }
+.public-wrap { width: min(1200px, calc(100% - 40px)); margin: auto; }
+.public-topline { border-bottom: 1px solid var(--dt-color-border); background: var(--dt-color-cyan-bg); color: #5a8a92; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.public-topline .public-wrap { min-height: 34px; display: flex; align-items: center; justify-content: space-between; }
+.public-header { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--dt-color-border); background: rgb(255 255 255 / 95%); backdrop-filter: blur(10px); }
+.public-nav { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.public-wordmark { color: var(--dt-color-primary-dark); font: 700 21px var(--font-montserrat), sans-serif; letter-spacing: -.08em; }
+.public-nav nav { display: flex; align-items: center; gap: 24px; font-size: 14px; font-weight: 600; }
+.public-nav input { width: min(280px, 30vw); min-height: 44px; padding: 0 14px; border: 1px solid var(--dt-color-border); border-radius: var(--dt-radius-control); background: #f5fafb; color: var(--dt-color-primary-dark); font: 400 14px var(--font-be-vietnam), sans-serif; }
+.public-shell :is(a, button, input, select, video):focus-visible { outline: 3px solid rgb(0 183 204 / 45%); outline-offset: 3px; }
+.public-nav a:hover { color: var(--dt-color-primary); }
+.public-footer { padding: 40px 0; background: var(--dt-color-primary-dark); color: #fff; }
+.public-footer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+.public-footer p { max-width: 420px; margin: 10px 0 0; color: var(--dt-color-cyan-bg); font-size: 14px; line-height: 1.6; }
+.public-footer a { text-decoration: underline; text-underline-offset: 3px; }
+.public-wordmark-light { color: #fff; }
+@media (max-width: 640px) { .public-wrap { width: calc(100% - 28px); }.public-topline .public-wrap span:last-child { display: none; }.public-nav { min-height: 68px; }.public-nav nav { gap: 14px; }.public-nav nav > a { display: none; }.public-nav input { width: 44vw; }.public-footer-grid { display: block; }.public-footer-grid > div + div { margin-top: 24px; } }
+
 /* body {
   background: var(--background);
   color: var(--foreground);

@@ -63,6 +63,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   view_factory: "Xem nhà máy",
   assign_factory: "Gắn nhà máy",
   link_misa: "Liên kết Misa",
+  purchasing_planning: "Dự kiến đặt hàng",
 };
 
 export const ACTION_LABELS: Record<string, string> = {
@@ -131,6 +132,7 @@ export const ACTION_LABELS: Record<string, string> = {
   view_factory: "Xem nhà máy",
   assign_factory: "Gắn nhà máy",
   link_misa: "Liên kết Misa",
+  config: "Cấu hình",
 };
 
 export const CATEGORY_ICONS: Record<string, string> = {

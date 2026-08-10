@@ -25,6 +25,7 @@ import {
   ArrowDown,
   ArrowUpDown,
   AlertTriangle,
+  PackageCheck,
 } from "lucide-react";
 import type { Invoice } from "@/lib/types/invoice";
 import { InvoiceDetailRow } from "./InvoiceDetailRow";
@@ -34,6 +35,7 @@ import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
 import { useInvoicePriceBookWarnings } from "@/lib/hooks/useInvoicePriceBookWarnings";
 import { ColumnToggle } from "../shared/ColumnToggle";
+import { InvoicePickupSummaryModal } from "./InvoicePickupSummaryModal";
 import {
   useColumnVisibility,
   type ColumnConfig,
@@ -400,7 +402,9 @@ export function InvoicesTable({
   autoExpandCode,
 }: InvoicesTableProps) {
   const { selectedBranch } = useBranchStore();
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedInvoicesMap, setSelectedInvoicesMap] = useState<Map<number, Invoice>>(
+    () => new Map()
+  );
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
     null
   );
@@ -445,6 +449,7 @@ export function InvoicesTable({
     productNoteSearch: "",
   });
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showPickupSummary, setShowPickupSummary] = useState(false);
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
 
@@ -693,6 +698,32 @@ export function InvoicesTable({
   }, []);
 
   const invoices = data?.data || [];
+  useEffect(() => {
+    if (invoices.length === 0) return;
+    setSelectedInvoicesMap((previous) => {
+      let changed = false;
+      const next = new Map(previous);
+      for (const invoice of invoices) {
+        if (previous.has(invoice.id) && previous.get(invoice.id) !== invoice) {
+          next.set(invoice.id, invoice);
+          changed = true;
+        }
+      }
+      return changed ? next : previous;
+    });
+  }, [invoices]);
+
+  const selectedInvoices = useMemo(
+    () => Array.from(selectedInvoicesMap.values()),
+    [selectedInvoicesMap]
+  );
+  const selectedIds = useMemo(
+    () => Array.from(selectedInvoicesMap.keys()),
+    [selectedInvoicesMap]
+  );
+  const selectedCurrentPageCount = invoices.filter((invoice) =>
+    selectedInvoicesMap.has(invoice.id)
+  ).length;
   const total = (data as any)?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
 
@@ -715,14 +746,28 @@ export function InvoicesTable({
   );
 
   const toggleSelectAll = () =>
-    setSelectedIds(
-      selectedIds.length === invoices.length ? [] : invoices.map((i) => i.id)
-    );
+    setSelectedInvoicesMap((previous) => {
+      const next = new Map(previous);
+      const isPageFullySelected =
+        invoices.length > 0 && selectedCurrentPageCount === invoices.length;
+      if (isPageFullySelected) {
+        invoices.forEach((invoice) => next.delete(invoice.id));
+      } else {
+        invoices.forEach((invoice) => next.set(invoice.id, invoice));
+      }
+      return next;
+    });
 
   const toggleSelect = (id: number) =>
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+    setSelectedInvoicesMap((previous) => {
+      const next = new Map(previous);
+      if (next.has(id)) next.delete(id);
+      else {
+        const invoice = invoices.find((item) => item.id === id);
+        if (invoice) next.set(id, invoice);
+      }
+      return next;
+    });
 
   const toggleExpand = (id: number) =>
     setExpandedInvoiceId((prev) => (prev === id ? null : id));
@@ -1121,6 +1166,24 @@ export function InvoicesTable({
             {/* </PermissionGate> */}
 
             {/* Báo đơn dropdown */}
+            <button
+              onClick={() => setShowPickupSummary(true)}
+              disabled={selectedInvoices.length === 0}
+              title={selectedInvoices.length === 0 ? "Chọn ít nhất một hóa đơn" : "Tổng hợp hàng đã chọn"}
+              className="px-3 py-1.5 border border-brand text-brand rounded-lg hover:bg-brand-soft text-sm font-medium flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50">
+              <PackageCheck className="w-4 h-4" />
+              Pick-up ({selectedInvoices.length})
+            </button>
+            {selectedInvoices.length > 0 && (
+              <button
+                onClick={() => setSelectedInvoicesMap(new Map())}
+                className="px-2 py-1.5 text-xs text-gray-500 hover:text-red-600"
+                title="Bỏ chọn tất cả hóa đơn">
+                Bỏ chọn ({selectedInvoices.length})
+              </button>
+            )}
+
+            {/* Báo đơn dropdown */}
             <div ref={baoDonRef} className="relative">
               <button
                 onClick={() => setShowBaoDonDropdown((p) => !p)}
@@ -1211,7 +1274,7 @@ export function InvoicesTable({
                   <input
                     type="checkbox"
                     checked={
-                      selectedIds.length === invoices.length &&
+                      selectedCurrentPageCount === invoices.length &&
                       invoices.length > 0
                     }
                     onChange={toggleSelectAll}
@@ -1305,7 +1368,7 @@ export function InvoicesTable({
                         onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
-                          checked={selectedIds.includes(invoice.id)}
+                           checked={selectedInvoicesMap.has(invoice.id)}
                           onChange={() => toggleSelect(invoice.id)}
                           className="cursor-pointer"
                         />
@@ -1441,7 +1504,7 @@ export function InvoicesTable({
         </div>
       </div>
 
-      {showExportDetailModal && (
+        {showExportDetailModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-xl shadow-2xl w-[540px] max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
@@ -1509,6 +1572,13 @@ export function InvoicesTable({
 
       {showImportModal && (
         <InvoiceImportModal onClose={() => setShowImportModal(false)} />
+      )}
+
+      {showPickupSummary && (
+        <InvoicePickupSummaryModal
+          invoices={selectedInvoices}
+          onClose={() => setShowPickupSummary(false)}
+        />
       )}
     </PermissionGate>
   );

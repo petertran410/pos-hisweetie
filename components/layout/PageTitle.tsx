@@ -73,7 +73,10 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/login", title: "Đăng nhập" },
 ];
 
-function resolveTitle(pathname: string): string {
+function resolveTitle(pathname: string): string | null {
+  if (pathname === "/cong-thuc" || pathname.startsWith("/cong-thuc/")) {
+    return null;
+  }
   const match = TITLE_MAP.find(
     (entry) =>
       pathname === entry.prefix || pathname.startsWith(`${entry.prefix}/`)
@@ -95,7 +98,8 @@ export function PageTitle() {
 
   // Cập nhật tiêu đề mong muốn + set ngay khi đổi route.
   useEffect(() => {
-    desiredRef.current = resolveTitle(pathname);
+    desiredRef.current = resolveTitle(pathname) || "";
+    if (!desiredRef.current) return;
     if (document.title !== desiredRef.current) {
       document.title = desiredRef.current;
     }
