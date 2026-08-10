@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
@@ -11,14 +12,16 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ProtectedRoute>
-      <RouteGuard>
-        <div className="flex flex-col" style={{ height: "calc(100vh / 0.85)" }}>
-          <DashboardHeader />
-          <main className="flex-1 overflow-hidden">{children}</main>
-        </div>
-        <SepayPendingNotifier />
-      </RouteGuard>
-    </ProtectedRoute>
+    <Suspense fallback={null}>
+      <ProtectedRoute>
+        <RouteGuard>
+          <div className="flex flex-col" style={{ height: "calc(100vh / 0.85)" }}>
+            <DashboardHeader />
+            <main className="flex-1 overflow-hidden">{children}</main>
+          </div>
+          <SepayPendingNotifier />
+        </RouteGuard>
+      </ProtectedRoute>
+    </Suspense>
   );
 }

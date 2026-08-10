@@ -22,7 +22,8 @@ export interface DropdownPosition {
 export function useDropdownPosition(
   open: boolean,
   triggerRef: React.RefObject<HTMLElement | null>,
-  panelMaxH: number
+  panelMaxH: number,
+  preferredWidth?: number
 ): DropdownPosition | null {
   const [pos, setPos] = useState<DropdownPosition | null>(null);
 
@@ -38,14 +39,22 @@ export function useDropdownPosition(
       panelMaxH,
       Math.max(140, dropUp ? spaceAbove : spaceBelow)
     );
+    const width = Math.min(
+      Math.max(rect.width, preferredWidth || rect.width),
+      window.innerWidth - GAP * 2,
+    );
+    const left = Math.min(
+      Math.max(GAP, rect.left),
+      window.innerWidth - width - GAP,
+    );
     setPos({
-      left: rect.left,
-      width: rect.width,
+      left,
+      width,
       maxHeight,
       dropUp,
       top: dropUp ? rect.top - GAP : rect.bottom + GAP,
     });
-  }, [triggerRef, panelMaxH]);
+  }, [triggerRef, panelMaxH, preferredWidth]);
 
   useLayoutEffect(() => {
     if (!open) return;

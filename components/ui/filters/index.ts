@@ -4,3 +4,4 @@ export { FilterMultiSelect } from "./FilterMultiSelect";
 export type { FilterOption } from "./FilterMultiSelect";
 export { FilterSearchableSelect } from "./FilterSearchableSelect";
 export { FilterProductSearch } from "./FilterProductSearch";
+export { FilterNumberRange } from "./FilterNumberRange";

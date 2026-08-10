@@ -7,7 +7,6 @@ import {
 } from "@tanstack/react-query";
 import { Toaster, toast } from "sonner";
 import { useEffect, useState } from "react";
-import { useAuthStore } from "@/lib/store/auth";
 import { initBranchCrossTabSync } from "@/lib/store/branch";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -16,7 +15,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         queryCache: new QueryCache({
           // Xử lý lỗi tập trung cho tất cả useQuery (fires 1 lần sau khi hết retry)
-          onError: (error: any) => {
+          onError: (error: { status?: number; message?: string }) => {
             const status = error?.status;
 
             // 401: đã tự clear auth + redirect sang /login → không cần toast.
@@ -35,8 +34,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
             staleTime: 60 * 1000,
             refetchOnWindowFocus: false,
             // Không retry trên 4xx — tránh gọi lại server vô ích
-            retry: (failureCount, error: any) => {
-              if (error?.status >= 400 && error?.status < 500) return false;
+            retry: (failureCount, error: Error) => {
+              const status = (error as Error & { status?: number }).status;
+              if (status && status >= 400 && status < 500) return false;
               return failureCount < 2;
             },
           },
@@ -46,8 +46,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       })
   );
-
-  const { _hasHydrated } = useAuthStore();
 
   // Đồng bộ chi nhánh giữa các tab: khi 1 tab đổi chi nhánh, các tab còn lại
   // cập nhật selectedBranch (qua sự kiện `storage`) rồi invalidate toàn bộ
@@ -59,14 +57,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     });
     return cleanup;
   }, [queryClient]);
-
-  if (!_hasHydrated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
-      </div>
-    );
-  }
 
   return (
     <QueryClientProvider client={queryClient}>

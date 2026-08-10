@@ -8,6 +8,7 @@ import { useDropdownPosition } from "./useDropdownPosition";
 export interface FilterOption {
   value: string;
   label: string;
+  group?: string;
 }
 
 interface FilterMultiSelectProps {
@@ -20,6 +21,8 @@ interface FilterMultiSelectProps {
   searchPlaceholder?: string;
   /** Nhãn khi chọn nhiều: (n) => string. Mặc định "Đã chọn n". */
   multiLabel?: (count: number) => string;
+  /** Chiều rộng mong muốn của panel, tự co lại theo viewport. */
+  panelWidth?: number;
 }
 
 /**
@@ -34,6 +37,7 @@ export function FilterMultiSelect({
   searchable = true,
   searchPlaceholder = "Tìm kiếm...",
   multiLabel = (n) => `Đã chọn ${n}`,
+  panelWidth,
 }: FilterMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -43,7 +47,7 @@ export function FilterMultiSelect({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const PANEL_MAX_H = 280;
-  const pos = useDropdownPosition(open, triggerRef, PANEL_MAX_H);
+  const pos = useDropdownPosition(open, triggerRef, PANEL_MAX_H, panelWidth);
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -164,30 +168,38 @@ export function FilterMultiSelect({
               ) : (
                 filtered.map((opt, idx) => {
                   const checked = values.includes(opt.value);
+                  const showGroup = opt.group && opt.group !== filtered[idx - 1]?.group;
                   return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => toggle(opt.value)}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
-                        checked ? "bg-brand-soft" : "hover:bg-gray-50"
-                      } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {}}
-                        className="w-3.5 h-3.5 accent-brand flex-shrink-0"
-                      />
-                      <span
-                        className={`flex-1 truncate ${
-                          checked ? "text-brand-dark font-medium" : "text-gray-700"
-                        }`}>
-                        {opt.label}
-                      </span>
-                      {checked && (
-                        <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
+                    <div key={opt.value}>
+                      {showGroup && (
+                        <div className="border-t border-gray-100 bg-gray-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 first:border-t-0">
+                          {opt.group}
+                        </div>
                       )}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => toggle(opt.value)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
+                          checked ? "bg-brand-soft" : "hover:bg-gray-50"
+                        } ${idx > 0 && !showGroup ? "border-t border-gray-50" : ""}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {}}
+                          className="w-3.5 h-3.5 accent-brand flex-shrink-0"
+                        />
+                        <span
+                          title={opt.label}
+                          className={`flex-1 truncate ${
+                            checked ? "text-brand-dark font-medium" : "text-gray-700"
+                          }`}>
+                          {opt.label}
+                        </span>
+                        {checked && (
+                          <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
+                        )}
+                      </button>
+                    </div>
                   );
                 })
               )}
