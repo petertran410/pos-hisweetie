@@ -129,7 +129,9 @@ export function useCustomerProducts(filters: CustomerReportFilters) {
     queryKey: ["reports", "customer-products", filters],
     queryFn: () => customerReportApi.getProducts(filters),
     enabled:
-      hasHydrated && isAuthenticated && filters.customerKeyword != null,
+      hasHydrated &&
+      isAuthenticated &&
+      (filters.customerKeyword != null || filters.customerId != null),
   });
 }
 

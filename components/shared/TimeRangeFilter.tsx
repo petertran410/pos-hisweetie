@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 
 export const PRESET_GROUPS = [
   {
@@ -181,8 +182,9 @@ function PresetPanel({
 
   if (!anchorRect || typeof window === "undefined") return null;
 
-  const left = anchorRect.right + 8;
-  const top = anchorRect.top;
+  const r = normalizeRectForFixed(anchorRect);
+  const left = r.right + 8;
+  const top = r.top;
 
   return createPortal(
     <div

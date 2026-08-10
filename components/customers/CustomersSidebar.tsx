@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { CustomerGroupForm } from "./CustomerGroupForm";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 
 interface CustomersSidebarProps {
   filters: CustomerFilters;
@@ -587,8 +588,9 @@ function PresetPanel({
 
   if (!anchorRect || typeof window === "undefined") return null;
 
-  const left = anchorRect.right + 8;
-  const top = anchorRect.top;
+  const r = normalizeRectForFixed(anchorRect);
+  const left = r.right + 8;
+  const top = r.top;
 
   return createPortal(
     <div

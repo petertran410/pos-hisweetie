@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Clock } from "lucide-react";
 import { useProductPriceHistory } from "@/lib/hooks/useOrders";
+import { getFixedRect, getFixedViewport } from "@/lib/utils/zoom";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -58,12 +59,13 @@ export function ProductPriceHistory({
     if (!buttonRef.current) return;
 
     if (!showHistory) {
-      const rect = buttonRef.current.getBoundingClientRect();
+      const rect = getFixedRect(buttonRef.current);
+      const vp = getFixedViewport(rect.zoom);
       // Luôn align sát phải: right edge của popup = right edge của button
       setPopupStyle({
         position: "fixed",
         top: rect.bottom + 4,
-        right: window.innerWidth - rect.right,
+        right: vp.width - rect.right,
         width: POPUP_WIDTH,
         zIndex: 9999,
       });

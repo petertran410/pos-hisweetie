@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed, getFixedViewport } from "@/lib/utils/zoom";
 import { useCategories } from "@/lib/hooks/useCategories";
 import {
   ChevronDown,
@@ -205,17 +206,19 @@ function PriceBookPanel({
   if (!anchorRect || typeof window === "undefined") return null;
 
   // Đặt panel sát mép phải sidebar + 8px gap, top căn theo trigger
+  const r = normalizeRectForFixed(anchorRect);
+  const vp = getFixedViewport(r.zoom);
   const PANEL_WIDTH = 320;
   const GAP = 8;
-  const left = anchorRect.right + GAP;
+  const left = r.right + GAP;
   // Nếu tràn màn hình thì flip về bên trái sidebar
-  const flipLeft = left + PANEL_WIDTH > window.innerWidth - 8;
+  const flipLeft = left + PANEL_WIDTH > vp.width - 8;
   const finalLeft = flipLeft
-    ? Math.max(8, anchorRect.left - PANEL_WIDTH - GAP)
+    ? Math.max(8, r.left - PANEL_WIDTH - GAP)
     : left;
   const top = Math.min(
-    anchorRect.top,
-    window.innerHeight - 480 // chừa chỗ cho panel cao tối đa
+    r.top,
+    vp.height - 480 // chừa chỗ cho panel cao tối đa
   );
 
   return createPortal(

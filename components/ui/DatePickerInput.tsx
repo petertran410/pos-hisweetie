@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Calendar } from "lucide-react";
+import { getFixedRect, getFixedViewport } from "@/lib/utils/zoom";
 
 interface Props {
   /** Giá trị dạng YYYY-MM-DD (rỗng = chưa chọn). */
@@ -303,12 +304,13 @@ export function DatePickerInput({
       return;
     }
     if (btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect();
+      const r = getFixedRect(btnRef.current);
+      const vp = getFixedViewport(r.zoom);
       // Ưu tiên hiện phía dưới; nếu sát đáy màn hình thì hiện phía trên.
-      const openUp = r.bottom + 340 > window.innerHeight;
+      const openUp = r.bottom + 340 > vp.height;
       setPos({
         top: openUp ? r.top - 340 : r.bottom + 4,
-        left: Math.min(r.left, window.innerWidth - 270),
+        left: Math.min(r.left, vp.width - 270),
       });
     }
     setOpen(true);

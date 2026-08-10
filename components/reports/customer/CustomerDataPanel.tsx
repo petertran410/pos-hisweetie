@@ -56,9 +56,11 @@ function CustomerSummaryPanel({
 }) {
   const { data, isLoading, isError, refetch } = useCustomerPreview(filters);
   const { canExport } = useReportAccess();
-  const [drill, setDrill] = useState<{ title: string; code: string } | null>(
-    null,
-  );
+  const [drill, setDrill] = useState<{
+    title: string;
+    code: string;
+    customerId?: number | null;
+  } | null>(null);
 
   const rows = useMemo(() => data?.data || [], [data]);
   const summary = data?.summary;
@@ -89,6 +91,7 @@ function CustomerSummaryPanel({
         viewType={viewType}
         title={drill.title}
         code={drill.code}
+        customerId={drill.customerId}
         onBack={() => setDrill(null)}
       />
     );
@@ -204,7 +207,11 @@ function CustomerSummaryPanel({
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() =>
                     row.extra1 &&
-                    setDrill({ title: row.subject, code: row.extra1 })
+                    setDrill({
+                      title: row.subject,
+                      code: row.extra1,
+                      customerId: row.customerId,
+                    })
                   }>
                   <td className="px-3 py-2 font-medium text-brand-dark">
                     {row.extra1 || ""}
@@ -247,9 +254,11 @@ function CustomerProductPanel({
 }) {
   const { data, isLoading, isError, refetch } = useCustomerPreview(filters);
   const { canExport } = useReportAccess();
-  const [customer, setCustomer] = useState<{ code: string; name: string } | null>(
-    null,
-  );
+  const [customer, setCustomer] = useState<{
+    code: string;
+    name: string;
+    customerId?: number | null;
+  } | null>(null);
   const [product, setProduct] = useState<{ code: string; name: string } | null>(
     null,
   );
@@ -274,6 +283,7 @@ function CustomerProductPanel({
         viewType="CustomerByProduct"
         title={`${customer.name} · ${product.name}`}
         code={customer.code}
+        customerId={customer.customerId}
         productCode={product.code}
         onBack={() => setProduct(null)}
       />
@@ -375,7 +385,11 @@ function CustomerProductPanel({
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() =>
                     row.extra1 &&
-                    setCustomer({ code: row.extra1, name: row.subject })
+                    setCustomer({
+                      code: row.extra1,
+                      name: row.subject,
+                      customerId: row.customerId,
+                    })
                   }>
                   <td className="px-3 py-2 font-medium text-brand-dark">
                     {row.extra1 || ""}
@@ -402,16 +416,20 @@ function CustomerProductListPanel({
   onSelectProduct,
 }: {
   filters: CustomerReportFilters;
-  customer: { code: string; name: string };
+  customer: { code: string; name: string; customerId?: number | null };
   onBack: () => void;
   onSelectProduct: (p: { code: string; name: string }) => void;
 }) {
   const [page, setPage] = useState(1);
   const limit = filters.limit ?? 500;
 
+  // Ưu tiên lọc theo customerId (exact) để tránh ILIKE nhầm KH có mã lồng nhau
+  // (vd KH003961 vs KH003961.1). Fallback keyword cho KH lẻ (không có id).
   const { data, isLoading, isError, refetch } = useCustomerProducts({
     ...filters,
-    customerKeyword: customer.code,
+    ...(customer.customerId != null
+      ? { customerId: customer.customerId }
+      : { customerKeyword: customer.code }),
     page,
     limit,
   });
@@ -552,6 +570,7 @@ function CustomerInvoiceDrilldown({
   viewType,
   title,
   code,
+  customerId,
   productCode,
   onBack,
 }: {
@@ -559,6 +578,7 @@ function CustomerInvoiceDrilldown({
   viewType: CustomerViewType;
   title: string;
   code: string;
+  customerId?: number | null;
   productCode?: string;
   onBack: () => void;
 }) {
@@ -566,9 +586,13 @@ function CustomerInvoiceDrilldown({
   const limit = filters.limit ?? 500;
   const isProfit = viewType === "CustomerByProfit";
 
+  // Ưu tiên lọc theo customerId (exact) để tránh ILIKE nhầm KH có mã lồng nhau
+  // (vd KH003961 vs KH003961.1). Fallback keyword cho KH lẻ (không có id).
   const { data, isLoading, isError, refetch } = useCustomerInvoices({
     ...filters,
-    customerKeyword: code,
+    ...(customerId != null
+      ? { customerId }
+      : { customerKeyword: code }),
     productKeyword: productCode,
     page,
     limit,

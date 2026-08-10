@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import { useCategories } from "@/lib/hooks/useCategories";
 import { Category } from "@/lib/api/categories";
 import { useTrademarks } from "@/lib/hooks/useTrademarks";
@@ -156,8 +157,9 @@ function PresetPanel({
 
   if (!anchorRect || typeof window === "undefined") return null;
 
-  const left = anchorRect.right + 8;
-  const top = anchorRect.top;
+  const r = normalizeRectForFixed(anchorRect);
+  const left = r.right + 8;
+  const top = r.top;
 
   return createPortal(
     <div

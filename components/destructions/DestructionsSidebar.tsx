@@ -13,6 +13,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import {
   FilterMultiSelect,
   FilterSearchableSelect,
@@ -157,8 +158,9 @@ function PresetPanel({
   }, [onClose, triggerRef]);
 
   if (!anchorRect) return null;
-  const top = anchorRect.bottom + 6;
-  const left = Math.max(8, anchorRect.right - 320);
+  const r = normalizeRectForFixed(anchorRect);
+  const top = r.bottom + 6;
+  const left = Math.max(8, r.right - 320);
 
   return createPortal(
     <div

@@ -14,6 +14,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import { FilterMultiSelect } from "@/components/ui/filters";
 
 interface CashFlowsSidebarProps {
@@ -277,14 +278,15 @@ function PresetPanel({
 
   if (!anchorRect) return null;
 
+  const r = normalizeRectForFixed(anchorRect);
   return createPortal(
     <div
       ref={panelRef}
       style={{
         position: "fixed",
-        top: anchorRect.bottom + 4,
-        left: anchorRect.left,
-        width: anchorRect.width,
+        top: r.bottom + 4,
+        left: r.left,
+        width: r.width,
         zIndex: 50,
         borderColor: "var(--dt-border)",
       }}

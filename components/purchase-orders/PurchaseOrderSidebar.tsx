@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import type { PurchaseOrderFilters } from "@/lib/types/purchase-order";
 import {
   FilterMultiSelect,
@@ -315,8 +316,9 @@ function PresetPanel({
   }, [onClose, triggerRef]);
 
   if (!anchorRect || typeof window === "undefined") return null;
-  const left = anchorRect.right + 8;
-  const top = anchorRect.top;
+  const r = normalizeRectForFixed(anchorRect);
+  const left = r.right + 8;
+  const top = r.top;
 
   return createPortal(
     <div

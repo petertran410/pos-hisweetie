@@ -8,6 +8,7 @@ import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 import { ChevronDown, X, Check, ChevronRight, Calendar } from "lucide-react";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { useBranchStore } from "@/lib/store/branch";
 import { FilterMultiSelect } from "@/components/ui/filters";
@@ -522,8 +523,9 @@ function PresetPanel({
   if (!anchorRect || typeof window === "undefined") return null;
 
   // Cạnh phải sidebar + 8px gap; nếu tràn màn hình thì flip trái
-  const left = anchorRect.right + 8;
-  const top = anchorRect.top;
+  const r = normalizeRectForFixed(anchorRect);
+  const left = r.right + 8;
+  const top = r.top;
 
   return createPortal(
     <div

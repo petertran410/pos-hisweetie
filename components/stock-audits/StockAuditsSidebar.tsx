@@ -6,6 +6,7 @@ import { useBranchStore } from "@/lib/store/branch";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { ChevronDown, Calendar, X, Check } from "lucide-react";
 import { createPortal } from "react-dom";
+import { getFixedRect } from "@/lib/utils/zoom";
 import {
   FilterMultiSelect,
   FilterProductSearch,
@@ -337,7 +338,7 @@ export function StockAuditsSidebar({
     }
     const ref = type === "from" ? fromBtnRef : toBtnRef;
     if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
+      const rect = getFixedRect(ref.current);
       setCalPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
     }
     setOpenCal(type);

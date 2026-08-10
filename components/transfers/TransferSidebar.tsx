@@ -11,6 +11,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import { FilterMultiSelect } from "@/components/ui/filters";
 
 interface TransferSidebarProps {
@@ -201,13 +202,14 @@ function PresetPanel({
   }, [onClose, triggerRef]);
 
   if (!anchorRect || typeof window === "undefined") return null;
+  const r = normalizeRectForFixed(anchorRect);
   return createPortal(
     <div
       ref={ref}
       style={{
         position: "fixed",
-        top: anchorRect.top,
-        left: anchorRect.right + 8,
+        top: r.top,
+        left: r.right + 8,
         zIndex: 9999,
       }}
       className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 flex gap-5 animate-in fade-in zoom-in-95 duration-150">

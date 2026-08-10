@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useLayoutEffect } from "react";
+import { getFixedRect, getFixedViewport } from "@/lib/utils/zoom";
 
 export interface DropdownPosition {
   left: number;
@@ -30,9 +31,11 @@ export function useDropdownPosition(
   const compute = useCallback(() => {
     const el = triggerRef.current;
     if (!el) return;
-    const rect = el.getBoundingClientRect();
+    // Toạ độ đã bù `zoom` toàn cục → dùng trực tiếp cho panel position:fixed.
+    const rect = getFixedRect(el);
+    const { width: vw, height: vh } = getFixedViewport(rect.zoom);
     const GAP = 4;
-    const spaceBelow = window.innerHeight - rect.bottom - GAP;
+    const spaceBelow = vh - rect.bottom - GAP;
     const spaceAbove = rect.top - GAP;
     const dropUp = spaceBelow < panelMaxH && spaceAbove > spaceBelow;
     const maxHeight = Math.min(
@@ -41,11 +44,11 @@ export function useDropdownPosition(
     );
     const width = Math.min(
       Math.max(rect.width, preferredWidth || rect.width),
-      window.innerWidth - GAP * 2,
+      vw - GAP * 2,
     );
     const left = Math.min(
       Math.max(GAP, rect.left),
-      window.innerWidth - width - GAP,
+      vw - width - GAP,
     );
     setPos({
       left,

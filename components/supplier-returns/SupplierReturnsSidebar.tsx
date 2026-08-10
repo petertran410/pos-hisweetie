@@ -10,6 +10,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import { useBranchStore } from "@/lib/store/branch";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
@@ -233,14 +234,15 @@ function PresetPanel({
 
   if (!anchorRect) return null;
 
+  const r = normalizeRectForFixed(anchorRect);
   return createPortal(
     <div
       ref={panelRef}
       style={{
         position: "fixed",
-        top: anchorRect.bottom + 4,
-        left: anchorRect.left,
-        width: anchorRect.width,
+        top: r.bottom + 4,
+        left: r.left,
+        width: r.width,
         zIndex: 9999,
       }}
       className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden">

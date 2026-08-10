@@ -21,6 +21,8 @@ export interface CustomerChartRow {
   value: number;
   total: number;
   extra1?: string | null;
+  // ID khách hàng (PK) — dùng cho drilldown exact match, tránh ILIKE nhầm KH
+  customerId?: number | null;
   revenue?: number;
   totalCost?: number;
   profit?: number;

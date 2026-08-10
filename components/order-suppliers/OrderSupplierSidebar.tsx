@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import type { OrderSupplierFilters } from "@/lib/types/order-supplier";
 import {
   ORDER_SUPPLIER_STATUS,
@@ -340,8 +341,9 @@ function PresetPanel({
 
   if (!anchorRect) return null;
 
-  const left = anchorRect.right + 8;
-  const top = anchorRect.top;
+  const r = normalizeRectForFixed(anchorRect);
+  const left = r.right + 8;
+  const top = r.top;
 
   return createPortal(
     <div

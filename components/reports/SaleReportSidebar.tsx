@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import { ChevronRight, Calendar, BarChart2, Table2 } from "lucide-react";
 import { MiniCalendar } from "@/components/shared/MiniCalendar";
 import { useBranches } from "@/lib/hooks/useBranches";
@@ -162,14 +163,15 @@ function PresetPanel({
   }, [onClose, triggerRef]);
 
   if (!anchorRect) return null;
+  const r = normalizeRectForFixed(anchorRect);
   return createPortal(
     <div
       ref={panelRef}
       style={{
         position: "fixed",
-        top: anchorRect.bottom + 4,
-        left: anchorRect.left,
-        width: anchorRect.width,
+        top: r.bottom + 4,
+        left: r.left,
+        width: r.width,
         zIndex: 50,
       }}
       className="bg-white border border-gray-200 rounded-xl shadow-lg p-2 space-y-2">

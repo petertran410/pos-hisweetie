@@ -14,6 +14,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import { FilterMultiSelect } from "@/components/ui/filters";
 
 interface ReturnOrdersSidebarProps {
@@ -329,8 +330,9 @@ function PresetPanel({
   }, [onClose, triggerRef]);
 
   if (!anchorRect || typeof window === "undefined") return null;
-  const left = anchorRect.right + 8;
-  const top = anchorRect.top;
+  const r = normalizeRectForFixed(anchorRect);
+  const left = r.right + 8;
+  const top = r.top;
 
   return createPortal(
     <div
