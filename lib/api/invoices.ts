@@ -120,17 +120,32 @@ export const invoicesApi = {
   deleteInvoice: (id: number): Promise<void> => {
     return apiClient.delete(`/invoices/${id}`);
   },
-  createInvoiceFromOrder: (
-    orderId: number,
-    additionalPayment?: number,
-    items?: any[],
-    payments?: Array<{ method: string; amount: number }>,
-    soldById?: number,
-    forceComplete?: boolean,
-    appliedPromotions?: any[],
-    appliedPromotionIds?: number[],
-    skipPromotions?: boolean
-  ): Promise<Invoice> => {
+  createInvoiceFromOrder: (params: {
+    orderId: number;
+    additionalPayment?: number;
+    items?: any[];
+    payments?: Array<{ method: string; amount: number }>;
+    soldById?: number;
+    forceComplete?: boolean;
+    appliedPromotions?: any[];
+    appliedPromotionIds?: number[];
+    skipPromotions?: boolean;
+    discountAmount?: number;
+    discountRatio?: number;
+  }): Promise<Invoice> => {
+    const {
+      orderId,
+      additionalPayment,
+      items,
+      payments,
+      soldById,
+      forceComplete,
+      appliedPromotions,
+      appliedPromotionIds,
+      skipPromotions,
+      discountAmount,
+      discountRatio,
+    } = params;
     return apiClient.post(`/invoices/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
       items: items || [],
@@ -140,6 +155,8 @@ export const invoicesApi = {
       ...(appliedPromotions ? { appliedPromotions } : {}),
       ...(appliedPromotionIds ? { appliedPromotionIds } : {}),
       ...(skipPromotions != null ? { skipPromotions } : {}),
+      ...(discountAmount != null ? { discountAmount } : {}),
+      ...(discountRatio != null ? { discountRatio } : {}),
     });
   },
   getInvoicesForReturnOrder: (params: {

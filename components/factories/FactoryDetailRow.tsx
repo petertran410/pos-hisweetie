@@ -224,29 +224,13 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                 value={factory.contactNumber || factory.email || "-"}
               />
               <InfoCard
-                label="Giao dịch"
+                label="Leadtime & thanh toán"
                 value={
                   [
                     factory.paymentTerm,
                     factory.leadtimeDays != null
                       ? `${factory.leadtimeDays} ngày`
                       : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ") || "-"
-                }
-              />
-              <InfoCard
-                label="Logistics"
-                value={
-                  [
-                    factory.port,
-                    factory.incoterm,
-                    factory.cargoType === "REEFER"
-                      ? "Hàng lạnh"
-                      : factory.cargoType === "DRY"
-                        ? "Hàng khô"
-                        : null,
                   ]
                     .filter(Boolean)
                     .join(" · ") || "-"
@@ -492,8 +476,11 @@ function PriceHistoryModal({
         onMouseDown={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div>
-            <h3 className="font-semibold text-gray-900">Lịch sử giá tham chiếu</h3>
-            <p className="text-sm text-gray-500 mt-0.5">
+              <h3 className="font-semibold text-gray-900">Price Tracking</h3>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Giá thực tế từ PĐN được lưu riêng và không làm thay đổi giá tham chiếu.
+              </p>
+              <p className="text-sm text-gray-500 mt-0.5">
               {mapping.product?.code} · {mapping.product?.name}
             </p>
           </div>
@@ -519,9 +506,10 @@ function PriceHistoryModal({
               <thead className="sticky top-0 bg-gray-50 text-xs text-gray-500">
                 <tr>
                   <th className="px-5 py-2 text-left">Thời điểm</th>
-                  <th className="px-3 py-2 text-right">Giá cũ</th>
-                  <th className="px-3 py-2 text-right">Giá mới</th>
-                  <th className="px-3 py-2 text-left">Người thay đổi</th>
+                  <th className="px-3 py-2 text-right">Giá trước</th>
+                  <th className="px-3 py-2 text-right">Giá PĐN</th>
+                  <th className="px-3 py-2 text-right">Chênh lệch</th>
+                  <th className="px-3 py-2 text-left">Người ghi</th>
                   <th className="px-5 py-2 text-left">Ghi chú</th>
                 </tr>
               </thead>
@@ -536,6 +524,11 @@ function PriceHistoryModal({
                     </td>
                     <td className="px-3 py-3 text-right font-medium">
                       {formatNumber(item.newPrice)} {item.currency}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-600">
+                      {item.oldPrice == null || item.newPrice == null
+                        ? "—"
+                        : `${item.newPrice >= item.oldPrice ? "+" : ""}${formatNumber(Number(item.newPrice) - Number(item.oldPrice))}`}
                     </td>
                     <td className="px-3 py-3">
                       {item.changedByName || item.changer?.name || "—"}

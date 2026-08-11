@@ -27,17 +27,17 @@ interface Props {
 const TOP_N = 20;
 
 const VIEW_TITLE: Record<CustomerViewType, string> = {
-  CustomerBySale: "Top 20 khách hàng mua nhiều nhất (đã trừ trả hàng)",
-  CustomerByProfit: "Top 20 khách hàng lợi nhuận cao nhất (đã trừ trả hàng)",
+  CustomerBySale: "Top 20 khách hàng theo doanh thu thuần (đã trừ hàng trả)",
+  CustomerByProfit: "Top 20 khách hàng lợi nhuận cao nhất",
   CustomerDebt: "Top 20 khách hàng nợ nhiều nhất",
-  CustomerByProduct: "Top 20 khách hàng theo hàng bán",
+  CustomerByProduct: "Top 20 khách hàng theo tiền hàng",
 };
 
 const KPI_LABEL: Record<CustomerViewType, string> = {
-  CustomerBySale: "Tổng doanh thu",
+  CustomerBySale: "Tổng doanh thu thuần",
   CustomerByProfit: "Tổng lợi nhuận",
   CustomerDebt: "Tổng nợ cuối kỳ",
-  CustomerByProduct: "Tổng doanh thu",
+  CustomerByProduct: "Tổng tiền hàng",
 };
 
 export function CustomerChartPanel({ filters, viewType }: Props) {

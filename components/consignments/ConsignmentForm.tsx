@@ -363,10 +363,6 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
             onUpdateItem={updateCartItem}
             onRemoveItem={removeFromCart}
             onDuplicateItem={duplicateCartItem}
-            discount={discount}
-            onDiscountChange={setDiscount}
-            discountRatio={discountRatio}
-            onDiscountRatioChange={setDiscountRatio}
             orderNote={orderNote}
             onOrderNoteChange={setOrderNote}
             selectedCustomerId={selectedCustomer?.id}
@@ -389,6 +385,7 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
           discount={discount}
           discountRatio={discountRatio}
           onDiscountChange={setDiscount}
+          onDiscountRatioChange={setDiscountRatio}
           deliveryInfo={deliveryInfo}
           onDeliveryInfoChange={setDeliveryInfo}
           onSelectAddress={handleSelectAddress}

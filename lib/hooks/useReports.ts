@@ -121,6 +121,21 @@ export function useCustomerInvoices(filters: CustomerReportFilters) {
   });
 }
 
+/**
+ * Drilldown view "Bán hàng theo khách": dòng chính là HÓA ĐƠN.
+ * Cột doanh thu thuần cộng dồn khớp đúng số ở bảng tổng hợp.
+ */
+export function useCustomerSaleInvoices(filters: CustomerReportFilters) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
+
+  return useQuery({
+    queryKey: ["reports", "customer-sale-invoices", filters],
+    queryFn: () => customerReportApi.getSaleInvoices(filters),
+    enabled: hasHydrated && isAuthenticated,
+  });
+}
+
 export function useCustomerProducts(filters: CustomerReportFilters) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasHydrated = useAuthStore((s) => s._hasHydrated);

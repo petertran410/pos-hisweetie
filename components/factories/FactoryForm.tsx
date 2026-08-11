@@ -34,24 +34,12 @@ const COUNTRIES = [
 ];
 
 const CURRENCIES = ["VND", "CNY", "USD", "THB"];
-const INCOTERMS = ["EXW", "FCA", "FOB", "CFR", "CIF", "DAP", "DDP"];
 
 const STRATEGIC_LEVELS = [
   { value: "STRATEGIC", label: "Chiến lược" },
   { value: "PREFERRED", label: "Ưu tiên" },
   { value: "BACKUP", label: "Dự phòng" },
   { value: "TRIAL", label: "Thử nghiệm" },
-];
-
-const CUSTOMS_RISKS = [
-  { value: "LOW", label: "Thấp" },
-  { value: "MEDIUM", label: "Trung bình" },
-  { value: "HIGH", label: "Cao" },
-];
-
-const CARGO_TYPES = [
-  { value: "DRY", label: "Hàng khô" },
-  { value: "REEFER", label: "Hàng lạnh" },
 ];
 
 export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
@@ -82,13 +70,6 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
     moq: undefined,
     leadtimeDays: undefined,
     paymentTerm: "",
-    port: "",
-    incoterm: "",
-    productionLeadtime: undefined,
-    shippingLeadtime: undefined,
-    customsRisk: "",
-    cargoType: "",
-    notes: "",
   });
 
   useEffect(() => {
@@ -115,13 +96,6 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
         moq: existing.moq != null ? Number(existing.moq) : undefined,
         leadtimeDays: existing.leadtimeDays ?? undefined,
         paymentTerm: existing.paymentTerm ?? "",
-        port: existing.port ?? "",
-        incoterm: existing.incoterm ?? "",
-        productionLeadtime: existing.productionLeadtime ?? undefined,
-        shippingLeadtime: existing.shippingLeadtime ?? undefined,
-        customsRisk: existing.customsRisk ?? "",
-        cargoType: existing.cargoType ?? "",
-        notes: existing.notes ?? "",
       });
     }
   }, [mode, existing]);
@@ -158,13 +132,6 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
       moq: form.moq ?? null,
       leadtimeDays: form.leadtimeDays ?? null,
       paymentTerm: form.paymentTerm?.trim() || null,
-      port: form.port?.trim() || null,
-      incoterm: form.incoterm?.trim() || null,
-      productionLeadtime: form.productionLeadtime ?? null,
-      shippingLeadtime: form.shippingLeadtime ?? null,
-      customsRisk: form.customsRisk?.trim() || null,
-      cargoType: form.cargoType?.trim() || null,
-      notes: form.notes?.trim() || null,
     };
 
     try {
@@ -283,49 +250,6 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Leadtime (ngày)</label>
                   <input type="number" min={0} value={form.leadtimeDays ?? ""} onChange={(event) => setForm({ ...form, leadtimeDays: event.target.value === "" ? undefined : Number(event.target.value) })} placeholder="Số ngày" className={INPUT_CLASS} />
-                </div>
-              </div>
-            </section>
-
-            <section className="border-t border-gray-100 pt-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Logistics</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Cảng đi</label>
-                  <input type="text" value={form.port ?? ""} onChange={(event) => setForm({ ...form, port: event.target.value })} placeholder="VD: Thượng Hải" className={INPUT_CLASS} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Incoterm</label>
-                  <select value={form.incoterm ?? ""} onChange={(event) => setForm({ ...form, incoterm: event.target.value })} className={INPUT_CLASS}>
-                    <option value="">— Chưa chọn —</option>
-                    {INCOTERMS.map((term) => <option key={term} value={term}>{term}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Thời gian sản xuất (ngày)</label>
-                  <input type="number" min={0} value={form.productionLeadtime ?? ""} onChange={(event) => setForm({ ...form, productionLeadtime: event.target.value === "" ? undefined : Number(event.target.value) })} placeholder="Số ngày" className={INPUT_CLASS} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Thời gian vận chuyển (ngày)</label>
-                  <input type="number" min={0} value={form.shippingLeadtime ?? ""} onChange={(event) => setForm({ ...form, shippingLeadtime: event.target.value === "" ? undefined : Number(event.target.value) })} placeholder="Số ngày" className={INPUT_CLASS} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Rủi ro hải quan</label>
-                  <select value={form.customsRisk ?? ""} onChange={(event) => setForm({ ...form, customsRisk: event.target.value })} className={INPUT_CLASS}>
-                    <option value="">— Chưa đánh giá —</option>
-                    {CUSTOMS_RISKS.map((risk) => <option key={risk.value} value={risk.value}>{risk.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Loại hàng vận chuyển</label>
-                  <select value={form.cargoType ?? ""} onChange={(event) => setForm({ ...form, cargoType: event.target.value })} className={INPUT_CLASS}>
-                    <option value="">— Chưa chọn —</option>
-                    {CARGO_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Ghi chú logistics</label>
-                  <textarea value={form.notes ?? ""} onChange={(event) => setForm({ ...form, notes: event.target.value })} rows={2} placeholder="Nhập ghi chú vận chuyển, thủ tục..." className={`${INPUT_CLASS} resize-none`} />
                 </div>
               </div>
             </section>

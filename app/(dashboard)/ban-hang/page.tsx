@@ -179,7 +179,7 @@ const findUnchosenGift = (cartItems: CartItem[]): CartItem | undefined =>
   cartItems.find(
     (it) =>
       it.isPromoGift &&
-      (it.requiresChoice || (it.cumulative && !Number(it.product?.id)))
+      (it.requiresChoice || (it.cumulative && !Number(it.product?.id))),
   );
 
 /**
@@ -192,7 +192,7 @@ const findUnchosenGift = (cartItems: CartItem[]): CartItem | undefined =>
 const buildAppliedPromotions = (
   cartItems: CartItem[],
   cumulativeGiftSelections?: Record<number, CumulativeGiftSelection[]>,
-  enabledCumulativePromoIds?: number[]
+  enabledCumulativePromoIds?: number[],
 ): AppliedPromotion[] => {
   const applied: AppliedPromotion[] = [];
 
@@ -235,7 +235,10 @@ const normalizeLineType = (raw: {
   isPromoGift?: boolean | null;
   promoLineType?: string | null;
 }): "gift" | "discounted_buy" | "normal" => {
-  if (raw.lineType === "discounted_buy" || raw.promoLineType === "discounted_buy")
+  if (
+    raw.lineType === "discounted_buy" ||
+    raw.promoLineType === "discounted_buy"
+  )
     return "discounted_buy";
   if (
     raw.lineType === "gift" ||
@@ -261,7 +264,7 @@ const buildLineKey = (
   productId: number,
   lineType: "gift" | "discounted_buy" | "normal",
   promotionId: number | null,
-  conditionType: string
+  conditionType: string,
 ): string => {
   if (lineType !== "normal" && promotionId != null) {
     return `${lineType}|promo:${promotionId}`;
@@ -274,7 +277,7 @@ const getOrderLineKey = (item: any): string =>
     Number(item.product?.id ?? item.productId) || 0,
     normalizeLineType(item),
     item.promotionId != null ? Number(item.promotionId) : null,
-    item.conditionType || "normal"
+    item.conditionType || "normal",
   );
 
 const getCartLineKey = (item: CartItem): string =>
@@ -282,7 +285,7 @@ const getCartLineKey = (item: CartItem): string =>
     Number(item.product?.id) || 0,
     normalizeLineType(item),
     item.promotionId != null ? Number(item.promotionId) : null,
-    item.conditionType || "normal"
+    item.conditionType || "normal",
   );
 
 export interface MissingOrderLine {
@@ -307,7 +310,7 @@ export interface MissingOrderLine {
 const findMissingOrderLines = (
   sourceOrder: any,
   cartItems: CartItem[],
-  excludeInvoiceId?: number
+  excludeInvoiceId?: number,
 ): MissingOrderLine[] => {
   if (!sourceOrder) return [];
 
@@ -388,7 +391,9 @@ const buildMissingLinesHtml = (missing: MissingOrderLine[]): string => {
  * - dòng thường: promoEnabledIds CHỈ từ promotionId của chính dòng đó
  * - gắn triggerRowId / promotionName cho dòng quà
  */
-const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[] => {
+const mapDocumentLinesToCartItems = (
+  lines: any[] | undefined | null,
+): CartItem[] => {
   if (!lines?.length) return [];
 
   const mapped: CartItem[] = lines.map((item: any) => {
@@ -413,7 +418,8 @@ const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[
           : undefined,
         isPromoGift: true,
         promoLineType,
-        promotionId: item.promotionId != null ? Number(item.promotionId) : undefined,
+        promotionId:
+          item.promotionId != null ? Number(item.promotionId) : undefined,
         promotionName: item.promotion?.name || item.promotionName || undefined,
         promotionCode: item.promotion?.code || item.promotionCode || undefined,
         deductPromoStock: promoLineType === "gift",
@@ -458,7 +464,7 @@ const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[
         (item) =>
           !item.isPromoGift &&
           gift.promotionId != null &&
-          (item.promoEnabledIds || []).includes(gift.promotionId)
+          (item.promoEnabledIds || []).includes(gift.promotionId),
       );
     if (trigger) {
       gift.triggerRowId = trigger.rowId;
@@ -471,8 +477,14 @@ const mapDocumentLinesToCartItems = (lines: any[] | undefined | null): CartItem[
 
 const getLatestPaymentNote = (notes: any[] | undefined) => {
   const latest = Array.isArray(notes) && notes.length > 0 ? notes[0] : null;
-  if (!latest || (latest.paymentType !== "cash" && latest.paymentType !== "transfer")) {
-    return { type: null as "cash" | "transfer" | null, amount: null as number | null };
+  if (
+    !latest ||
+    (latest.paymentType !== "cash" && latest.paymentType !== "transfer")
+  ) {
+    return {
+      type: null as "cash" | "transfer" | null,
+      amount: null as number | null,
+    };
   }
   return {
     type: latest.paymentType as "cash" | "transfer",
@@ -567,7 +579,7 @@ export default function BanHangPage() {
   // ── Cảnh báo lệch giá: so đơn giá hiện tại với giá bán gần nhất (hóa đơn) ──
   const activeProductIds = useMemo(
     () => (activeTab?.cartItems || []).map((item) => Number(item.product?.id)),
-    [activeTab?.cartItems]
+    [activeTab?.cartItems],
   );
 
   const { pricesByProduct, isLoading: isLoadingLatestPrices } =
@@ -575,7 +587,7 @@ export default function BanHangPage() {
       activeTab?.selectedCustomer?.id,
       activeProductIds,
       "invoice",
-      selectedBranch?.id
+      selectedBranch?.id,
     );
 
   // Map rowId → cảnh báo lệch giá (null nếu không lệch). Tự cập nhật khi đổi
@@ -608,7 +620,7 @@ export default function BanHangPage() {
     // Chỉ hàng loại tồn 'normal' mới tham gia KM. Hàng bục rách (damaged) / cận date
     // (near_expiry) KHÔNG tính vào ngưỡng, không sinh quà, không hiện badge KM.
     const normalItems = (activeTab.cartItems || []).filter(
-      (it) => !it.isPromoGift && (it.conditionType || "normal") === "normal"
+      (it) => !it.isPromoGift && (it.conditionType || "normal") === "normal",
     );
 
     // Chữ ký đầu vào để tránh chạy lặp vô hạn (effect tự sửa cartItems)
@@ -648,8 +660,8 @@ export default function BanHangPage() {
           prev.map((t) =>
             t.id === tabId
               ? { ...t, cartItems: t.cartItems.filter((it) => !it.isPromoGift) }
-              : t
-          )
+              : t,
+          ),
         );
       }
       promoSyncRef.current = signature;
@@ -684,15 +696,15 @@ export default function BanHangPage() {
         // Luôn hydrate từ dòng quà cũ để mở được đơn/HĐ historical; tombstone
         // disabledCumulativePromoIds chặn duy nhất trường hợp user đã chủ động bỏ.
         const enabledCumIds = new Set(
-          activeTab.enabledCumulativePromoIds || []
+          activeTab.enabledCumulativePromoIds || [],
         );
         const disabledCumIds = new Set(
-          activeTab.disabledCumulativePromoIds || []
+          activeTab.disabledCumulativePromoIds || [],
         );
         const cumIdSet = new Set(
           discoveryRes.eligiblePromotions
             .filter((p) => isGiftType(p) && p.cumulative)
-            .map((p) => p.promotionId)
+            .map((p) => p.promotionId),
         );
         for (const it of activeTab.cartItems || []) {
           if (
@@ -777,34 +789,33 @@ export default function BanHangPage() {
             // promoNormals: chỉ hàng loại tồn 'normal' — dùng cho mọi tính toán KM
             // (badge, tìm trigger/anchor, giữ quà). Bục rách/cận date KHÔNG hưởng KM.
             const promoNormals = normals.filter(
-              (it) => (it.conditionType || "normal") === "normal"
+              (it) => (it.conditionType || "normal") === "normal",
             );
             const oldGifts = t.cartItems.filter((it) => it.isPromoGift);
 
             // Tái dựng phân bổ quà cộng dồn từ dòng quà DB/historical. Chỉ bỏ qua
             // CT người dùng đã chủ động tắt trong tab này.
-            const reconstructedSel: Record<number, CumulativeGiftSelection[]> = {
-              ...(t.cumulativeGiftSelections || {}),
-            };
-            const disabledForTab = new Set(
-              t.disabledCumulativePromoIds || []
-            );
+            const reconstructedSel: Record<number, CumulativeGiftSelection[]> =
+              {
+                ...(t.cumulativeGiftSelections || {}),
+              };
+            const disabledForTab = new Set(t.disabledCumulativePromoIds || []);
             for (const promoId of cumulativePromoIds) {
               if (disabledForTab.has(promoId)) continue;
               if (reconstructedSel[promoId]?.length) continue;
               const info = cumulativePromoInfo.get(promoId);
               if (!info || info.perTime <= 0) continue;
               const dbGifts = oldGifts.filter(
-                (g) => g.promotionId === promoId && Number(g.product?.id) > 0
+                (g) => g.promotionId === promoId && Number(g.product?.id) > 0,
               );
               if (dbGifts.length === 0) continue;
               // Lấy conversionValue của từng SP quà từ rewardOptions của CT (carton).
               const promoInfo = [...discoveryGiftPromos, ...giftPromos].find(
-                (pp) => pp.promotionId === promoId
+                (pp) => pp.promotionId === promoId,
               );
               const convOf = (pid: number) => {
                 const opt = promoInfo?.rewardOptions?.find(
-                  (o) => o.productId === pid
+                  (o) => o.productId === pid,
                 );
                 return Number(opt?.conversionValue || 1) || 1;
               };
@@ -814,7 +825,7 @@ export default function BanHangPage() {
                 const goi = Number(g.quantity);
                 const times = isCarton
                   ? Math.round(
-                      goi / info.perTime / convOf(Number(g.product.id))
+                      goi / info.perTime / convOf(Number(g.product.id)),
                     )
                   : Math.round(goi / info.perTime);
                 if (times <= 0) continue;
@@ -840,7 +851,7 @@ export default function BanHangPage() {
             for (const promoId of cumulativePromoIds) {
               if (disabledForTab.has(promoId)) continue;
               const hasDbGift = oldGifts.some(
-                (g) => g.promotionId === promoId && Number(g.product?.id) > 0
+                (g) => g.promotionId === promoId && Number(g.product?.id) > 0,
               );
               if (hasDbGift || reconstructedSel[promoId]?.length) {
                 reconstructedEnabledCum.add(promoId);
@@ -866,7 +877,7 @@ export default function BanHangPage() {
               const matched = discoveryGiftPromos.filter((p) =>
                 p.cumulative
                   ? (p.matchedProductIds || []).includes(pid)
-                  : p.triggerProductId === pid
+                  : p.triggerProductId === pid,
               );
               if (matched.length > 0) {
                 eligibleByRow[n.rowId] = matched.map((p) => ({
@@ -877,8 +888,7 @@ export default function BanHangPage() {
                   matchedProductIds: p.matchedProductIds,
                   deductPromoStock:
                     p.deductPromoStock === true &&
-                    (p.type === "BUY_X_GET_Y" ||
-                      p.type === "BUY_N_GET_M_SAME"),
+                    (p.type === "BUY_X_GET_Y" || p.type === "BUY_N_GET_M_SAME"),
                 }));
               }
             }
@@ -892,8 +902,8 @@ export default function BanHangPage() {
                 if (!enabledCumIds.has(promo.promotionId)) continue;
                 const anchor = promoNormals.find((n) =>
                   (promo.matchedProductIds || []).includes(
-                    Number(n.product?.id)
-                  )
+                    Number(n.product?.id),
+                  ),
                 );
                 if (!anchor) continue;
 
@@ -909,7 +919,7 @@ export default function BanHangPage() {
                     t.cumulativeGiftSelections?.[promo.promotionId] || [];
                   const totalSelectedTimes = selections.reduce(
                     (s, sel) => s + Number(sel.rewardTimes || 0),
-                    0
+                    0,
                   );
                   // Chưa phân bổ đủ suất → 1 dòng quà placeholder cần chọn.
                   if (
@@ -946,7 +956,7 @@ export default function BanHangPage() {
                     const times = Number(sel.rewardTimes || 0);
                     if (times <= 0) continue;
                     const opt = promo.rewardOptions?.find(
-                      (o) => o.productId === sel.productId
+                      (o) => o.productId === sel.productId,
                     );
                     if (!opt) continue;
                     let qty = times * perTime; // đơn vị CT (gói hoặc thùng)
@@ -1024,14 +1034,14 @@ export default function BanHangPage() {
               const trigger = promoNormals.find(
                 (n) =>
                   Number(n.product?.id) === promo.triggerProductId &&
-                  (n.promoEnabledIds || []).includes(promo.promotionId)
+                  (n.promoEnabledIds || []).includes(promo.promotionId),
               );
               if (!trigger) continue;
 
               const prevGift = oldGifts.find(
                 (g) =>
                   g.promotionId === promo.promotionId &&
-                  g.triggerRowId === trigger.rowId
+                  g.triggerRowId === trigger.rowId,
               );
 
               const isBuyY = promo.type === "BUY_X_BUY_Y_PRICE";
@@ -1045,7 +1055,7 @@ export default function BanHangPage() {
                   prevGift?.product?.id || promo.rewardOptions?.[0]?.productId;
                 requiresChoice = !prevGift?.product?.id;
                 const opt = promo.rewardOptions?.find(
-                  (o) => o.productId === chosenId
+                  (o) => o.productId === chosenId,
                 );
                 if (opt) {
                   optRemaining = opt.remaining;
@@ -1107,16 +1117,17 @@ export default function BanHangPage() {
             // Tránh mất KM khi mở xử lý HĐ; vẫn gỡ khi user tắt opt-in.
             const appliedGiftKeys = new Set(
               newGifts
-                .filter(
-                  (g) => g.promotionId != null && g.triggerRowId != null
-                )
-                .map((g) => `${g.promotionId}:${g.triggerRowId}`)
+                .filter((g) => g.promotionId != null && g.triggerRowId != null)
+                .map((g) => `${g.promotionId}:${g.triggerRowId}`),
             );
             const preservedGifts: CartItem[] = oldGifts.filter((g) => {
               // Dòng quà cộng dồn luôn được sinh lại từ selections → không giữ bản cũ.
               // (Dòng quà từ DB không mang cờ cumulative → nhận diện thêm qua promotionId.)
               if (g.cumulative) return false;
-              if (g.promotionId != null && cumulativePromoIds.has(g.promotionId))
+              if (
+                g.promotionId != null &&
+                cumulativePromoIds.has(g.promotionId)
+              )
                 return false;
               if (
                 g.promotionId != null &&
@@ -1132,13 +1143,13 @@ export default function BanHangPage() {
                     (n) =>
                       n.rowId === g.triggerRowId &&
                       (g.promotionId == null ||
-                        (n.promoEnabledIds || []).includes(g.promotionId))
+                        (n.promoEnabledIds || []).includes(g.promotionId)),
                   )
                 : g.promotionId != null && g.triggerProductId != null
                   ? promoNormals.find(
                       (n) =>
                         Number(n.product?.id) === g.triggerProductId &&
-                        (n.promoEnabledIds || []).includes(g.promotionId!)
+                        (n.promoEnabledIds || []).includes(g.promotionId!),
                     )
                   : undefined;
               if (!trigger) return false;
@@ -1182,7 +1193,7 @@ export default function BanHangPage() {
                 deductPromoStock: (eligibleByRow[n.rowId] || []).some(
                   (promotion) =>
                     promotion.deductPromoStock === true &&
-                    enabledSet.has(promotion.promotionId)
+                    enabledSet.has(promotion.promotionId),
                 ),
               });
               allGifts
@@ -1199,7 +1210,7 @@ export default function BanHangPage() {
               cumulativeGiftSelections: reconstructedSel,
               enabledCumulativePromoIds: [...reconstructedEnabledCum],
             };
-          })
+          }),
         );
 
         // Lưu tiến độ tích lũy (từ discovery — không phụ thuộc opt-in) để render
@@ -1235,7 +1246,7 @@ export default function BanHangPage() {
         c: it.conditionType || "normal",
         g: it.isPromoGift ? it.product?.id : undefined,
         dis: it.promoEnabledIds,
-      }))
+      })),
     ),
     // phân bổ quà cộng dồn + opt-in cấp tab (đổi → sinh lại dòng quà / áp CT)
     JSON.stringify(activeTab?.cumulativeGiftSelections || {}),
@@ -1248,7 +1259,7 @@ export default function BanHangPage() {
    * "Vẫn tạo"). Không chặn người dùng khi chưa lấy được giá gần nhất.
    */
   const confirmPriceMismatch = async (
-    documentLabel: "đơn hàng" | "hóa đơn"
+    documentLabel: "đơn hàng" | "hóa đơn",
   ): Promise<boolean> => {
     // Chưa lấy được giá gần nhất → không chặn người dùng.
     if (isLoadingLatestPrices) return true;
@@ -1257,7 +1268,7 @@ export default function BanHangPage() {
       .map((item) => ({ item, warning: priceWarnings[item.rowId] }))
       .filter(
         (entry): entry is { item: CartItem; warning: PriceWarning } =>
-          !!entry.warning
+          !!entry.warning,
       );
 
     if (mismatched.length === 0) return true;
@@ -1278,8 +1289,8 @@ export default function BanHangPage() {
       .map(
         (m) =>
           `<li style="margin-bottom:2px">${m.item.product?.name ?? ""}: giá gần nhất <strong>${formatCurrency(
-            m.warning.latestPrice
-          )} VNĐ</strong></li>`
+            m.warning.latestPrice,
+          )} VNĐ</strong></li>`,
       )
       .join("");
 
@@ -1312,7 +1323,7 @@ export default function BanHangPage() {
     templateFor: string,
     entityId: number,
     targetUrl: string,
-    options?: { shouldRedirect?: boolean }
+    options?: { shouldRedirect?: boolean },
   ) => {
     const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
     // Nếu là hóa đơn, sau khi in hóa đơn sẽ tự động in phiếu giao hàng
@@ -1349,11 +1360,11 @@ export default function BanHangPage() {
       orderNote: string;
       discount: number;
       discountRatio: number;
-       paymentAmount: number;
+      paymentAmount: number;
       paymentNoteType: "cash" | "transfer" | null;
       paymentNoteAmount: number | null;
-       deliveryInfo: DeliveryInfo;
-       selectedAddressId: number | null;
+      deliveryInfo: DeliveryInfo;
+      selectedAddressId: number | null;
       consignStatus?: string;
     };
   }>({});
@@ -1375,9 +1386,9 @@ export default function BanHangPage() {
       tab.orderNote !== initialData.orderNote ||
       tab.discount !== initialData.discount ||
       tab.discountRatio !== initialData.discountRatio ||
-        tab.paymentAmount !== initialData.paymentAmount ||
-       tab.paymentNoteType !== initialData.paymentNoteType ||
-       tab.paymentNoteAmount !== initialData.paymentNoteAmount ||
+      tab.paymentAmount !== initialData.paymentAmount ||
+      tab.paymentNoteType !== initialData.paymentNoteType ||
+      tab.paymentNoteAmount !== initialData.paymentNoteAmount ||
       tab.selectedPriceBookId !== initialData.selectedPriceBookId ||
       tab.selectedPriceBookName !== initialData.selectedPriceBookName ||
       tab.selectedAddressId !== initialData.selectedAddressId ||
@@ -1394,10 +1405,10 @@ export default function BanHangPage() {
         orderNote: tab.orderNote,
         discount: tab.discount,
         discountRatio: tab.discountRatio,
-       paymentAmount: tab.paymentAmount,
-         paymentNoteType: tab.paymentNoteType,
-         paymentNoteAmount: tab.paymentNoteAmount,
-         selectedPriceBookId: tab.selectedPriceBookId,
+        paymentAmount: tab.paymentAmount,
+        paymentNoteType: tab.paymentNoteType,
+        paymentNoteAmount: tab.paymentNoteAmount,
+        selectedPriceBookId: tab.selectedPriceBookId,
         selectedPriceBookName: tab.selectedPriceBookName,
         selectedAddressId: tab.selectedAddressId ?? null,
         deliveryInfo: tab.deliveryInfo,
@@ -1441,11 +1452,11 @@ export default function BanHangPage() {
               useCOD: editState.useCOD || false,
               paymentAmount: editState.paymentAmount || 0,
               paymentMethods: [],
-             paymentNoteType: editState.paymentNoteType ?? null,
-             paymentNoteAmount:
-               editState.paymentNoteAmount == null
-                 ? null
-                 : Number(editState.paymentNoteAmount),
+              paymentNoteType: editState.paymentNoteType ?? null,
+              paymentNoteAmount:
+                editState.paymentNoteAmount == null
+                  ? null
+                  : Number(editState.paymentNoteAmount),
               soldById: editState.soldById ?? null,
               deliveryInfo: editState.deliveryInfo || {
                 receiver: "",
@@ -1474,10 +1485,10 @@ export default function BanHangPage() {
               orderNote: editTab.orderNote,
               discount: editTab.discount,
               discountRatio: editTab.discountRatio,
-               paymentAmount: editTab.paymentAmount,
-               paymentNoteType: editTab.paymentNoteType,
-               paymentNoteAmount: editTab.paymentNoteAmount,
-               deliveryInfo: editTab.deliveryInfo,
+              paymentAmount: editTab.paymentAmount,
+              paymentNoteType: editTab.paymentNoteType,
+              paymentNoteAmount: editTab.paymentNoteAmount,
+              deliveryInfo: editTab.deliveryInfo,
               selectedAddressId: editTab.selectedAddressId ?? null,
             };
 
@@ -1494,7 +1505,7 @@ export default function BanHangPage() {
 
   const handlePriceBookSelect = async (
     priceBookId: number | null,
-    priceBookName: string | null
+    priceBookName: string | null,
   ) => {
     const storageKey = getPriceBookStorageKey(user?.id);
     if (priceBookId !== null) {
@@ -1537,7 +1548,7 @@ export default function BanHangPage() {
           ...item,
           price: newPrice,
         };
-      })
+      }),
     );
 
     updateActiveTab({
@@ -1548,11 +1559,11 @@ export default function BanHangPage() {
   };
 
   const { data: existingOrder, isLoading: isLoadingOrder } = useOrder(
-    orderId ? Number(orderId) : 0
+    orderId ? Number(orderId) : 0,
   );
 
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(
-    invoiceId ? Number(invoiceId) : 0
+    invoiceId ? Number(invoiceId) : 0,
   );
 
   const { data: existingConsignment, isLoading: isLoadingConsignment } =
@@ -1560,10 +1571,10 @@ export default function BanHangPage() {
 
   // Copy: fetch nguồn để copy nội dung sang tab mới
   const { data: copySourceOrder } = useOrder(
-    copyOrderId ? Number(copyOrderId) : 0
+    copyOrderId ? Number(copyOrderId) : 0,
   );
   const { data: copySourceInvoice } = useInvoice(
-    copyInvoiceId ? Number(copyInvoiceId) : 0
+    copyInvoiceId ? Number(copyInvoiceId) : 0,
   );
 
   const [mobilePosView, setMobilePosView] = useState<"items" | "cart">("items");
@@ -1589,7 +1600,7 @@ export default function BanHangPage() {
     allTabs.push(...editTabs);
 
     const uniqueTabs = allTabs.filter(
-      (tab, index, self) => self.findIndex((t) => t.id === tab.id) === index
+      (tab, index, self) => self.findIndex((t) => t.id === tab.id) === index,
     );
 
     if (uniqueTabs.length > 0) {
@@ -1622,8 +1633,8 @@ export default function BanHangPage() {
             tab.cartItems.length === 0 &&
             !tab.selectedCustomer
               ? { ...tab, selectedPriceBookId: priceBookId }
-              : tab
-          )
+              : tab,
+          ),
         );
       }
     }
@@ -1644,8 +1655,8 @@ export default function BanHangPage() {
               ...parsed.filter(
                 (t: Tab) =>
                   !t.documentId &&
-                  (t.cartItems.length > 0 || t.selectedCustomer)
-              )
+                  (t.cartItems.length > 0 || t.selectedCustomer),
+              ),
             );
           }
         } catch (error) {
@@ -1706,7 +1717,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng đổi chi nhánh sang ${
           existingOrder.branch?.name || "chi nhánh của đơn"
-        } để xem/sửa đơn này`
+        } để xem/sửa đơn này`,
       );
       router.replace("/don-hang/dat-hang");
       return;
@@ -1736,7 +1747,7 @@ export default function BanHangPage() {
     }
 
     const hasActiveInvoices = (existingOrder.invoices || []).some(
-      (inv: any) => inv.status !== 2 && inv.status !== 5
+      (inv: any) => inv.status !== 2 && inv.status !== 5,
     );
 
     if (hasActiveInvoices && !restoredState) {
@@ -1753,7 +1764,7 @@ export default function BanHangPage() {
       });
 
       const remainingCartItems: CartItem[] = mapDocumentLinesToCartItems(
-        existingOrder.items || []
+        existingOrder.items || [],
       )
         .map((item) => {
           const invoiced = invoicedQuantities[item.product?.id] || 0;
@@ -1781,10 +1792,11 @@ export default function BanHangPage() {
         discountRatio: 0,
         useCOD: false,
         paymentAmount: 0,
-         paymentMethods: [],
-         paymentNoteType: getLatestPaymentNote(existingOrder.paymentNotes).type,
-         paymentNoteAmount: getLatestPaymentNote(existingOrder.paymentNotes).amount,
-         soldById: existingOrder.soldById ?? null,
+        paymentMethods: [],
+        paymentNoteType: getLatestPaymentNote(existingOrder.paymentNotes).type,
+        paymentNoteAmount: getLatestPaymentNote(existingOrder.paymentNotes)
+          .amount,
+        soldById: existingOrder.soldById ?? null,
         deliveryInfo: {
           receiver: existingOrder.delivery?.receiver || "",
           contactNumber: existingOrder.delivery?.contactNumber || "",
@@ -1848,14 +1860,14 @@ export default function BanHangPage() {
         : Number(existingOrder.discountRatio) || 0,
       useCOD: restoredState ? restoredState.useCOD : false,
       paymentAmount: restoredState ? restoredState.paymentAmount : 0,
-       paymentMethods: [],
-       paymentNoteType: restoredState
-         ? restoredState.paymentNoteType
-         : getLatestPaymentNote(existingOrder.paymentNotes).type,
-       paymentNoteAmount: restoredState
-         ? restoredState.paymentNoteAmount
-         : getLatestPaymentNote(existingOrder.paymentNotes).amount,
-       soldById: existingOrder.soldById ?? null,
+      paymentMethods: [],
+      paymentNoteType: restoredState
+        ? restoredState.paymentNoteType
+        : getLatestPaymentNote(existingOrder.paymentNotes).type,
+      paymentNoteAmount: restoredState
+        ? restoredState.paymentNoteAmount
+        : getLatestPaymentNote(existingOrder.paymentNotes).amount,
+      soldById: existingOrder.soldById ?? null,
       deliveryInfo: restoredState
         ? restoredState.deliveryInfo
         : {
@@ -1874,10 +1886,10 @@ export default function BanHangPage() {
       selectedAddressId:
         restoredState?.selectedAddressId != null
           ? restoredState.selectedAddressId
-          : findAddressFromDelivery(
+          : (findAddressFromDelivery(
               existingOrder.customer?.addresses,
-              existingOrder.delivery
-            )?.id ?? null,
+              existingOrder.delivery,
+            )?.id ?? null),
       documentId: existingOrder.id,
       isEditMode: true,
     };
@@ -1891,10 +1903,10 @@ export default function BanHangPage() {
       orderNote: editTab.orderNote,
       discount: editTab.discount,
       discountRatio: editTab.discountRatio,
-       paymentAmount: editTab.paymentAmount,
-       paymentNoteType: editTab.paymentNoteType,
-       paymentNoteAmount: editTab.paymentNoteAmount,
-       deliveryInfo: editTab.deliveryInfo,
+      paymentAmount: editTab.paymentAmount,
+      paymentNoteType: editTab.paymentNoteType,
+      paymentNoteAmount: editTab.paymentNoteAmount,
+      deliveryInfo: editTab.deliveryInfo,
       selectedAddressId: editTab.selectedAddressId ?? null,
     };
 
@@ -1925,7 +1937,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng đổi chi nhánh sang ${
           existingInvoice.branch?.name || "chi nhánh của hóa đơn"
-        } để xem/sửa hóa đơn này`
+        } để xem/sửa hóa đơn này`,
       );
       router.replace("/don-hang/dat-hang");
       return;
@@ -1999,14 +2011,14 @@ export default function BanHangPage() {
         ? restoredState.useCOD
         : existingInvoice.usingCod || false,
       paymentAmount: restoredState ? restoredState.paymentAmount : 0,
-       paymentMethods: [],
-       paymentNoteType: restoredState
-         ? restoredState.paymentNoteType
-         : getLatestPaymentNote(existingInvoice.paymentNotes).type,
-       paymentNoteAmount: restoredState
-         ? restoredState.paymentNoteAmount
-         : getLatestPaymentNote(existingInvoice.paymentNotes).amount,
-       soldById: existingInvoice.soldById ?? null,
+      paymentMethods: [],
+      paymentNoteType: restoredState
+        ? restoredState.paymentNoteType
+        : getLatestPaymentNote(existingInvoice.paymentNotes).type,
+      paymentNoteAmount: restoredState
+        ? restoredState.paymentNoteAmount
+        : getLatestPaymentNote(existingInvoice.paymentNotes).amount,
+      soldById: existingInvoice.soldById ?? null,
       deliveryInfo: restoredState
         ? restoredState.deliveryInfo
         : existingInvoice.delivery
@@ -2039,10 +2051,10 @@ export default function BanHangPage() {
       selectedAddressId:
         restoredState?.selectedAddressId != null
           ? restoredState.selectedAddressId
-          : findAddressFromDelivery(
+          : (findAddressFromDelivery(
               existingInvoice.customer?.addresses,
-              existingInvoice.delivery
-            )?.id ?? null,
+              existingInvoice.delivery,
+            )?.id ?? null),
       isEditMode: true,
     };
 
@@ -2055,10 +2067,10 @@ export default function BanHangPage() {
       orderNote: editTab.orderNote,
       discount: editTab.discount,
       discountRatio: editTab.discountRatio,
-       paymentAmount: editTab.paymentAmount,
-       paymentNoteType: editTab.paymentNoteType,
-       paymentNoteAmount: editTab.paymentNoteAmount,
-       deliveryInfo: editTab.deliveryInfo,
+      paymentAmount: editTab.paymentAmount,
+      paymentNoteType: editTab.paymentNoteType,
+      paymentNoteAmount: editTab.paymentNoteAmount,
+      deliveryInfo: editTab.deliveryInfo,
       selectedAddressId: editTab.selectedAddressId ?? null,
     };
 
@@ -2071,7 +2083,7 @@ export default function BanHangPage() {
         return updatedTabs;
       } else {
         const nonEditTabs = prevTabs.filter(
-          (t) => !t.isEditMode || t.id !== editTabId
+          (t) => !t.isEditMode || t.id !== editTabId,
         );
         return [...nonEditTabs, editTab];
       }
@@ -2093,7 +2105,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng đổi chi nhánh sang ${
           existingConsignment.branch?.name || "chi nhánh của phiếu ký gửi"
-        } để xem/sửa phiếu ký gửi này`
+        } để xem/sửa phiếu ký gửi này`,
       );
       router.replace("/don-hang/ky-gui");
       return;
@@ -2202,10 +2214,10 @@ export default function BanHangPage() {
       selectedAddressId:
         restoredState?.selectedAddressId != null
           ? restoredState.selectedAddressId
-          : findAddressFromDelivery(
+          : (findAddressFromDelivery(
               (existingConsignment.customer as any)?.addresses,
-              existingConsignment.delivery
-            )?.id ?? null,
+              existingConsignment.delivery,
+            )?.id ?? null),
       isEditMode: true,
       consignStatus: existingConsignment.consignStatus || "pending",
     };
@@ -2236,7 +2248,7 @@ export default function BanHangPage() {
         return updatedTabs;
       } else {
         const nonEditTabs = prevTabs.filter(
-          (t) => !t.isEditMode || t.id !== editTabId
+          (t) => !t.isEditMode || t.id !== editTabId,
         );
         return [...nonEditTabs, editTab];
       }
@@ -2267,7 +2279,7 @@ export default function BanHangPage() {
         soldExpiryDate: item.soldExpiryDate
           ? String(item.soldExpiryDate).slice(0, 10)
           : undefined,
-      })
+      }),
     );
 
     const newTabId = `tab-copy-order-${copySourceOrder.id}-${Date.now()}`;
@@ -2334,7 +2346,7 @@ export default function BanHangPage() {
         soldExpiryDate: item.soldExpiryDate
           ? String(item.soldExpiryDate).slice(0, 10)
           : undefined,
-      })
+      }),
     );
 
     const newTabId = `tab-copy-invoice-${copySourceInvoice.id}-${Date.now()}`;
@@ -2395,8 +2407,8 @@ export default function BanHangPage() {
   const updateActiveTab = (updates: Partial<Tab>) => {
     setTabs((prevTabs) =>
       prevTabs.map((tab) =>
-        tab.id === activeTabId ? { ...tab, ...updates } : tab
-      )
+        tab.id === activeTabId ? { ...tab, ...updates } : tab,
+      ),
     );
   };
 
@@ -2409,7 +2421,7 @@ export default function BanHangPage() {
   const togglePromotionCumulative = (
     promotionId: number,
     enabled: boolean,
-    _matchedProductIds: number[]
+    _matchedProductIds: number[],
   ) => {
     setTabs((prevTabs) =>
       prevTabs.map((tab) => {
@@ -2434,14 +2446,14 @@ export default function BanHangPage() {
           disabledCumulativePromoIds: [...disabled],
           cumulativeGiftSelections: nextSel,
         };
-      })
+      }),
     );
   };
 
   /** Lưu phân bổ quà cộng dồn cho 1 CT (thay đổi → effect tự sinh lại dòng quà). */
   const setCumulativeGiftSelection = (
     promotionId: number,
-    selections: CumulativeGiftSelection[]
+    selections: CumulativeGiftSelection[],
   ) => {
     setTabs((prevTabs) =>
       prevTabs.map((tab) =>
@@ -2453,8 +2465,8 @@ export default function BanHangPage() {
                 [promotionId]: selections,
               },
             }
-          : tab
-      )
+          : tab,
+      ),
     );
   };
 
@@ -2472,11 +2484,11 @@ export default function BanHangPage() {
     try {
       const fresh = await ordersApi.getOrder(orderId);
       const hasActiveInvoice = (fresh.invoices || []).some(
-        (inv: any) => inv.status !== INVOICE_STATUS.CANCELLED
+        (inv: any) => inv.status !== INVOICE_STATUS.CANCELLED,
       );
       if (hasActiveInvoice) {
         toast.error(
-          "Đơn hàng đã ra hóa đơn, không thể lưu thay đổi. Vui lòng tải lại để xem trạng thái mới nhất."
+          "Đơn hàng đã ra hóa đơn, không thể lưu thay đổi. Vui lòng tải lại để xem trạng thái mới nhất.",
         );
         return false;
       }
@@ -2499,7 +2511,7 @@ export default function BanHangPage() {
       toast.error(
         unchosenGift.cumulative
           ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGift.promotionName}"`
-          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`,
       );
       return;
     }
@@ -2541,7 +2553,26 @@ export default function BanHangPage() {
     const usedDiscount = (order.invoices || [])
       .filter((inv: any) => inv.status !== 2 && inv.status !== 5)
       .reduce((sum: number, inv: any) => sum + Number(inv.discount || 0), 0);
-    const remainingDiscount = Number(order.discount || 0) - usedDiscount;
+    // Ưu tiên giảm giá đang chỉnh trên tab ĐH. `order` là snapshot từ API, có
+    // thể đã cũ khi user sửa giảm giá rồi chuyển thẳng sang tạo HĐ mà chưa Lưu.
+    const sourceDiscount = Number(activeTab.discount) || 0;
+    const sourceDiscountRatio = Number(activeTab.discountRatio) || 0;
+    const remainingDiscount = sourceDiscount - usedDiscount;
+    // Đơn giảm theo %: giữ nguyên % khi chuyển HĐ, còn tiền phải quy đổi theo
+    // tổng dòng hàng còn xuất. Đơn giảm theo tiền: giữ cơ chế giảm giá còn lại.
+    const remainingSubtotal = remainingCartItems.reduce(
+      (sum, item) =>
+        sum +
+        (Number(item.price) - Number(item.discount || 0)) *
+          Number(item.quantity),
+      0,
+    );
+    const invoiceDiscount =
+      sourceDiscountRatio > 0
+        ? (remainingSubtotal * sourceDiscountRatio) / 100
+        : remainingDiscount > 0
+          ? remainingDiscount
+          : 0;
 
     setTabs(
       tabs.map((tab) =>
@@ -2559,19 +2590,20 @@ export default function BanHangPage() {
               selectedPriceBookId: order.priceBookId ?? tab.selectedPriceBookId,
               selectedPriceBookName:
                 order.priceBookName ?? tab.selectedPriceBookName,
-              discount: remainingDiscount > 0 ? remainingDiscount : 0,
-              discountRatio: 0,
+              discount: invoiceDiscount,
+              discountRatio: sourceDiscountRatio,
               paymentAmount: 0,
             }
-          : tab
-      )
+          : tab,
+      ),
     );
 
     toast.success("Chuyển sang giao diện tạo hóa đơn");
   };
 
   const handlePayment = async () => {
-    if (activeTab.type !== "consignment" && !validatePaymentNoteSelection()) return;
+    if (activeTab.type !== "consignment" && !validatePaymentNoteSelection())
+      return;
 
     if (isSubmittingRef.current) return;
 
@@ -2610,7 +2642,7 @@ export default function BanHangPage() {
           fresh.status === ORDER_STATUS.CANCELLED
         ) {
           toast.error(
-            "Đơn hàng đã kết thúc, không thể xuất thêm hóa đơn. Vui lòng tải lại để xem trạng thái mới nhất."
+            "Đơn hàng đã kết thúc, không thể xuất thêm hóa đơn. Vui lòng tải lại để xem trạng thái mới nhất.",
           );
           return;
         }
@@ -2650,7 +2682,7 @@ export default function BanHangPage() {
         });
 
         hasShortfall = Object.keys(orderedQty).some(
-          (pid) => (invoicedQty[Number(pid)] || 0) < orderedQty[Number(pid)]
+          (pid) => (invoicedQty[Number(pid)] || 0) < orderedQty[Number(pid)],
         );
       }
 
@@ -2658,7 +2690,7 @@ export default function BanHangPage() {
       // thường / quà / mua kèm + promotionId + conditionType).
       const missingLines = findMissingOrderLines(
         sourceOrder,
-        activeTab.cartItems
+        activeTab.cartItems,
       );
 
       let forceComplete = false;
@@ -2668,7 +2700,7 @@ export default function BanHangPage() {
         const missingBlock =
           missingLines.length > 0
             ? `<p style="margin-top:8px;color:#b91c1c;font-weight:600">Các dòng bị thiếu hẳn so với đơn hàng:</p>${buildMissingLinesHtml(
-                missingLines
+                missingLines,
               )}`
             : "";
         const choice = await Swal.fire({
@@ -2729,6 +2761,11 @@ export default function BanHangPage() {
           payments: payments,
           forceComplete,
           soldById: activeTab.soldById ?? undefined,
+          // Giảm giá cấp HĐ user đang thấy trên màn tạo hóa đơn. Bắt buộc gửi
+          // (kể cả 0) — nếu không BE sẽ tự kế thừa "giảm giá còn lại" của đơn
+          // gốc và bỏ qua số user vừa chỉnh.
+          discountAmount: Number(activeTab.discount) || 0,
+          discountRatio: Number(activeTab.discountRatio) || 0,
           // Gửi lựa chọn KM để BE re-validate + sinh lại dòng quà (xử lý cả
           // KM cộng dồn rewardSelections). Đặc biệt quan trọng khi đơn gốc
           // tạo trước tính năng KM và user áp KM lúc xuất HĐ.
@@ -2736,7 +2773,7 @@ export default function BanHangPage() {
           appliedPromotions: buildAppliedPromotions(
             activeTab.cartItems,
             activeTab.cumulativeGiftSelections,
-            activeTab.enabledCumulativePromoIds
+            activeTab.enabledCumulativePromoIds,
           ),
           items: activeTab.cartItems.map((item) => {
             const isGift = item.isPromoGift && item.promoLineType === "gift";
@@ -2747,7 +2784,7 @@ export default function BanHangPage() {
             const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
             const normalPromoId =
               !isGift && !isDiscountedBuy
-                ? item.promoEnabledIds?.[0] ?? item.promotionId
+                ? (item.promoEnabledIds?.[0] ?? item.promotionId)
                 : undefined;
             return {
               productId: Number(item.product.id),
@@ -2790,12 +2827,14 @@ export default function BanHangPage() {
 
         handleCloseTab(activeTabId);
         toast.success("Tạo hóa đơn thành công");
-         if (result?.id) {
-            await paymentNotesApi.createInvoice(result.id, {
-              paymentType: activeTab.paymentNoteType!,
-              ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount ?? 0 } : {}),
-            });
-            handlePostCreate("invoice", result.id, "/don-hang/dat-hang", {
+        if (result?.id) {
+          await paymentNotesApi.createInvoice(result.id, {
+            paymentType: activeTab.paymentNoteType!,
+            ...(activeTab.paymentNoteType === "cash"
+              ? { amount: activeTab.paymentNoteAmount ?? 0 }
+              : {}),
+          });
+          handlePostCreate("invoice", result.id, "/don-hang/dat-hang", {
             shouldRedirect: true,
           });
         }
@@ -2909,7 +2948,7 @@ export default function BanHangPage() {
             : `Hóa đơn ${newTabNumber}`,
       });
       toast.success(
-        `Đã chuyển sang ${newType === "order" ? "đơn hàng" : "hóa đơn"}`
+        `Đã chuyển sang ${newType === "order" ? "đơn hàng" : "hóa đơn"}`,
       );
       return;
     }
@@ -2933,7 +2972,7 @@ export default function BanHangPage() {
       toast.success(
         `Đã tạo tab ${
           newType === "order" ? "đơn hàng" : "hóa đơn"
-        } mới. Tab cũ được giữ lại.`
+        } mới. Tab cũ được giữ lại.`,
       );
     } else {
       updateActiveTab({
@@ -2967,7 +3006,7 @@ export default function BanHangPage() {
       });
 
       toast.success(
-        `Đã chuyển sang tab ${newType === "order" ? "đơn hàng" : "hóa đơn"}`
+        `Đã chuyển sang tab ${newType === "order" ? "đơn hàng" : "hóa đơn"}`,
       );
     }
   };
@@ -3009,8 +3048,8 @@ export default function BanHangPage() {
                 weight: totalWeight,
               },
             }
-          : tab
-      )
+          : tab,
+      ),
     );
   }, [activeTab?.cartItems, activeTabId]);
 
@@ -3073,7 +3112,7 @@ export default function BanHangPage() {
     product: any,
     conditionType: string = "normal",
     quantity: number = 1,
-    soldExpiryDate?: string
+    soldExpiryDate?: string,
   ) => {
     const selectedPriceBookId = activeTab.selectedPriceBookId;
 
@@ -3094,7 +3133,7 @@ export default function BanHangPage() {
           // Sản phẩm không có trong bảng giá → fallback basePrice + cảnh báo
           productPrice = Number(product.basePrice);
           toast.warning(
-            `Sản phẩm "${product.name}" không có trong bảng giá đang chọn, dùng giá gốc ${productPrice.toLocaleString()}`
+            `Sản phẩm "${product.name}" không có trong bảng giá đang chọn, dùng giá gốc ${productPrice.toLocaleString()}`,
           );
         }
       } catch (error) {
@@ -3121,8 +3160,8 @@ export default function BanHangPage() {
                 ...tab.cartItems,
               ],
             }
-          : tab
-      )
+          : tab,
+      ),
     );
 
     // Auto-switch to "items" tab on mobile after adding product
@@ -3132,7 +3171,7 @@ export default function BanHangPage() {
   const updateCartItem = (rowId: string, updates: Partial<CartItem>) => {
     updateActiveTab({
       cartItems: activeTab.cartItems.map((item) =>
-        item.rowId === rowId ? { ...item, ...updates } : item
+        item.rowId === rowId ? { ...item, ...updates } : item,
       ),
     });
   };
@@ -3169,7 +3208,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi lưu ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`
+        }`,
       );
       return;
     }
@@ -3178,7 +3217,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn khách hàng trước khi lưu ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`
+        }`,
       );
       return;
     }
@@ -3187,7 +3226,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng thêm sản phẩm vào ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`
+        }`,
       );
       return;
     }
@@ -3197,7 +3236,7 @@ export default function BanHangPage() {
       toast.error(
         unchosenGiftSave.cumulative
           ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGiftSave.promotionName}"`
-          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGiftSave.promotionName}"`
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGiftSave.promotionName}"`,
       );
       return;
     }
@@ -3206,7 +3245,7 @@ export default function BanHangPage() {
       toast.error(
         `Không tìm thấy thông tin ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`
+        }`,
       );
       return;
     }
@@ -3228,7 +3267,10 @@ export default function BanHangPage() {
         if (!(await assertOrderNotInvoiced(activeTab.documentId))) return;
 
         // Ghi log phương thức thanh toán (append-only) sau khi lưu đơn thành công.
-        const savePaymentNote = async (kind: "order" | "invoice", id: number) => {
+        const savePaymentNote = async (
+          kind: "order" | "invoice",
+          id: number,
+        ) => {
           const payload = {
             paymentType: activeTab.paymentNoteType!,
             ...(activeTab.paymentNoteType === "cash"
@@ -3289,7 +3331,7 @@ export default function BanHangPage() {
           appliedPromotions: buildAppliedPromotions(
             activeTab.cartItems,
             activeTab.cumulativeGiftSelections,
-            activeTab.enabledCumulativePromoIds
+            activeTab.enabledCumulativePromoIds,
           ),
           delivery: {
             receiver: activeTab.deliveryInfo.receiver,
@@ -3323,13 +3365,13 @@ export default function BanHangPage() {
             }
           }
 
-        await updateOrder.mutateAsync({
-          id: activeTab.documentId,
-          data: orderData,
-        });
-        await savePaymentNote("order", activeTab.documentId);
+          await updateOrder.mutateAsync({
+            id: activeTab.documentId,
+            data: orderData,
+          });
+          await savePaymentNote("order", activeTab.documentId);
 
-        const key = getEditStorageKey(activeTab.documentId, "order");
+          const key = getEditStorageKey(activeTab.documentId, "order");
           localStorage.removeItem(key);
 
           setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
@@ -3342,7 +3384,7 @@ export default function BanHangPage() {
             "/don-hang/dat-hang",
             {
               shouldRedirect: true,
-            }
+            },
           );
         } catch (error: any) {
           console.error("Save order error:", error);
@@ -3357,7 +3399,9 @@ export default function BanHangPage() {
 
   const validatePaymentNoteSelection = (): boolean => {
     if (!activeTab.paymentNoteType) {
-      toast.error("Vui lòng chọn phương thức thanh toán: chuyển khoản hoặc tiền mặt");
+      toast.error(
+        "Vui lòng chọn phương thức thanh toán: chuyển khoản hoặc tiền mặt",
+      );
       return false;
     }
     if (activeTab.paymentNoteType === "cash") {
@@ -3382,7 +3426,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi lưu ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`
+        }`,
       );
       return;
     }
@@ -3391,7 +3435,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn khách hàng trước khi lưu ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`
+        }`,
       );
       return;
     }
@@ -3400,7 +3444,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng thêm sản phẩm vào ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`
+        }`,
       );
       return;
     }
@@ -3410,7 +3454,7 @@ export default function BanHangPage() {
       toast.error(
         unchosenGiftInv.cumulative
           ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGiftInv.promotionName}"`
-          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGiftInv.promotionName}"`
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGiftInv.promotionName}"`,
       );
       return;
     }
@@ -3419,7 +3463,7 @@ export default function BanHangPage() {
       toast.error(
         `Không tìm thấy thông tin ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`
+        }`,
       );
       return;
     }
@@ -3440,7 +3484,7 @@ export default function BanHangPage() {
       if (existingInvoice.orderId) {
         try {
           const sourceOrder = await ordersApi.getOrder(
-            Number(existingInvoice.orderId)
+            Number(existingInvoice.orderId),
           );
           // Loại chính HĐ đang sửa khỏi phần "đã xuất": phần đóng góp của nó
           // được thay bằng giỏ hiện tại (activeTab.cartItems) để phát hiện dòng
@@ -3448,7 +3492,7 @@ export default function BanHangPage() {
           const missingLines = findMissingOrderLines(
             sourceOrder,
             activeTab.cartItems,
-            activeTab.documentId
+            activeTab.documentId,
           );
           if (missingLines.length > 0) {
             const choice = await Swal.fire({
@@ -3492,7 +3536,7 @@ export default function BanHangPage() {
         appliedPromotions: buildAppliedPromotions(
           activeTab.cartItems,
           activeTab.cumulativeGiftSelections,
-          activeTab.enabledCumulativePromoIds
+          activeTab.enabledCumulativePromoIds,
         ),
         items: activeTab.cartItems.map((item) => {
           const isGift = item.isPromoGift && item.promoLineType === "gift";
@@ -3565,18 +3609,18 @@ export default function BanHangPage() {
           }
         }
 
-         const updatedInvoice = await updateInvoice.mutateAsync({
-           id: activeTab.documentId,
-           data: invoiceData,
-         });
-         await paymentNotesApi.createInvoice(activeTab.documentId, {
-           paymentType: activeTab.paymentNoteType!,
-           ...(activeTab.paymentNoteType === "cash"
-             ? { amount: activeTab.paymentNoteAmount ?? 0 }
-             : {}),
-         });
+        const updatedInvoice = await updateInvoice.mutateAsync({
+          id: activeTab.documentId,
+          data: invoiceData,
+        });
+        await paymentNotesApi.createInvoice(activeTab.documentId, {
+          paymentType: activeTab.paymentNoteType!,
+          ...(activeTab.paymentNoteType === "cash"
+            ? { amount: activeTab.paymentNoteAmount ?? 0 }
+            : {}),
+        });
 
-         const key = getEditStorageKey(activeTab.documentId, "invoice");
+        const key = getEditStorageKey(activeTab.documentId, "invoice");
         localStorage.removeItem(key);
 
         setTabs((prevTabs) => prevTabs.filter((t) => t.id !== activeTabId));
@@ -3586,7 +3630,7 @@ export default function BanHangPage() {
           "invoice",
           updatedInvoice?.id ?? activeTab.documentId,
           "/don-hang/hoa-don",
-          { shouldRedirect: true }
+          { shouldRedirect: true },
         );
       } catch (error: any) {
         console.error("Save invoice error:", error);
@@ -3682,7 +3726,8 @@ export default function BanHangPage() {
   };
 
   const handleCreateDocument = async () => {
-    if (activeTab.type !== "consignment" && !validatePaymentNoteSelection()) return;
+    if (activeTab.type !== "consignment" && !validatePaymentNoteSelection())
+      return;
 
     if (isSubmittingRef.current) return;
 
@@ -3690,7 +3735,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi tạo ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`
+        }`,
       );
       return;
     }
@@ -3699,7 +3744,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn khách hàng trước khi tạo ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`
+        }`,
       );
       return;
     }
@@ -3708,7 +3753,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng thêm sản phẩm vào ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`
+        }`,
       );
       return;
     }
@@ -3719,7 +3764,7 @@ export default function BanHangPage() {
       toast.error(
         unchosenGift.cumulative
           ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGift.promotionName}"`
-          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`,
       );
       return;
     }
@@ -3728,7 +3773,7 @@ export default function BanHangPage() {
     setIsSubmitting(true);
 
     const proceed = await confirmPriceMismatch(
-      activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+      activeTab.type === "order" ? "đơn hàng" : "hóa đơn",
     );
     if (!proceed) {
       isSubmittingRef.current = false;
@@ -3807,7 +3852,7 @@ export default function BanHangPage() {
       const orderAppliedPromotions = buildAppliedPromotions(
         activeTab.cartItems,
         activeTab.cumulativeGiftSelections,
-        activeTab.enabledCumulativePromoIds
+        activeTab.enabledCumulativePromoIds,
       );
       documentData.skipPromotions = false;
       documentData.appliedPromotions = orderAppliedPromotions;
@@ -3916,7 +3961,7 @@ export default function BanHangPage() {
       const appliedPromotions = buildAppliedPromotions(
         activeTab.cartItems,
         activeTab.cumulativeGiftSelections,
-        activeTab.enabledCumulativePromoIds
+        activeTab.enabledCumulativePromoIds,
       );
       documentData.skipPromotions = false;
       documentData.appliedPromotions = appliedPromotions;
@@ -3945,22 +3990,28 @@ export default function BanHangPage() {
             }
           }
 
-           docId = result?.order?.id;
-           if (docId) await paymentNotesApi.createOrder(docId, {
-             paymentType: activeTab.paymentNoteType!,
-             ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount ?? 0 } : {}),
-           });
+          docId = result?.order?.id;
+          if (docId)
+            await paymentNotesApi.createOrder(docId, {
+              paymentType: activeTab.paymentNoteType!,
+              ...(activeTab.paymentNoteType === "cash"
+                ? { amount: activeTab.paymentNoteAmount ?? 0 }
+                : {}),
+            });
         } else if (activeTab.type === "consignment") {
           const result = await createConsignment.mutateAsync(documentData);
           docId = (result as any)?.id;
         } else {
           const result = await createInvoice.mutateAsync(documentData);
 
-           docId = result?.id;
-           if (docId) await paymentNotesApi.createInvoice(docId, {
-             paymentType: activeTab.paymentNoteType!,
-             ...(activeTab.paymentNoteType === "cash" ? { amount: activeTab.paymentNoteAmount ?? 0 } : {}),
-           });
+          docId = result?.id;
+          if (docId)
+            await paymentNotesApi.createInvoice(docId, {
+              paymentType: activeTab.paymentNoteType!,
+              ...(activeTab.paymentNoteType === "cash"
+                ? { amount: activeTab.paymentNoteAmount ?? 0 }
+                : {}),
+            });
         }
 
         handleCloseTab(activeTabId);
@@ -3992,21 +4043,21 @@ export default function BanHangPage() {
                 : "invoice",
             docId,
             targetUrl,
-            { shouldRedirect: !!tabFromPage }
+            { shouldRedirect: !!tabFromPage },
           );
         }
       } catch (error: any) {
         console.error("Create document error:", error);
         toast.error(
           error.message ||
-            `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`
+            `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`,
         );
       }
     } catch (error: any) {
       console.error("Create document error:", error);
       toast.error(
         error.message ||
-          `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`
+          `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`,
       );
     } finally {
       isSubmittingRef.current = false;
@@ -4053,27 +4104,31 @@ export default function BanHangPage() {
           onClick={() => setActiveTabId(tab.id)}
           className={`flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 py-1 lg:py-2 rounded cursor-pointer flex-shrink-0 ${
             tab.id === activeTabId ? "bg-white/30" : "hover:bg-white/20"
-          }`}>
+          }`}
+        >
           <span className="text-white font-medium text-sm">{tab.label}</span>
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleCloseTab(tab.id);
             }}
-            className="hover:bg-white/20 p-1 rounded">
+            className="hover:bg-white/20 p-1 rounded"
+          >
             <X className="w-4 h-4 text-white" />
           </button>
         </div>
       ))}
       <button
         onClick={handleAddTab}
-        className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
+        className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0"
+      >
         <Plus className="w-5 h-5" />
       </button>
       {canCreateOrder && canCreateInvoice && (
         <button
           onClick={handleToggleType}
-          className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
+          className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0"
+        >
           <ArrowLeftRight className="w-5 h-5" />
         </button>
       )}
@@ -4116,18 +4171,13 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "items" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[60%] min-h-0 flex-1 lg:flex-none`}>
+              } lg:flex flex-col w-full lg:w-[60%] min-h-0 flex-1 lg:flex-none`}
+            >
               <OrderItemsList
                 cartItems={activeTab.cartItems}
                 onUpdateItem={updateCartItem}
                 onRemoveItem={removeFromCart}
                 onDuplicateItem={duplicateCartItem}
-                discount={activeTab.discount}
-                onDiscountChange={(discount) => updateActiveTab({ discount })}
-                discountRatio={activeTab.discountRatio}
-                onDiscountRatioChange={(discountRatio) =>
-                  updateActiveTab({ discountRatio })
-                }
                 orderNote={activeTab.orderNote}
                 onOrderNoteChange={(orderNote) =>
                   updateActiveTab({ orderNote })
@@ -4156,7 +4206,8 @@ export default function BanHangPage() {
                       <LoadingButton
                         onClick={handleConvertToInvoice}
                         disabled={activeTab.cartItems.length === 0}
-                        className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                        className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
+                      >
                         TẠO HÓA ĐƠN
                       </LoadingButton>
                     )}
@@ -4164,7 +4215,8 @@ export default function BanHangPage() {
                       onClick={() => handleSaveOrder()}
                       loading={isSubmitting}
                       disabled={activeTab.cartItems.length === 0}
-                      className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                      className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
+                    >
                       LƯU
                     </LoadingButton>
                   </div>
@@ -4173,7 +4225,8 @@ export default function BanHangPage() {
                     onClick={() => handleCreateDocument()}
                     loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
-                    className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                    className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
+                  >
                     Tạo đơn hàng
                   </LoadingButton>
                 )}
@@ -4184,8 +4237,10 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "cart" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l flex-1 lg:flex-none`}>
+              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l flex-1 lg:flex-none`}
+            >
               <OrderCart
+                key={activeTab.id}
                 cartItems={activeTab.cartItems}
                 selectedCustomer={activeTab.selectedCustomer}
                 onSelectCustomer={handleCustomerSelect}
@@ -4195,23 +4250,27 @@ export default function BanHangPage() {
                 useCOD={activeTab.useCOD}
                 onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
                 paymentAmount={activeTab.paymentAmount}
-                 onPaymentAmountChange={(paymentAmount) =>
-                   updateActiveTab({ paymentAmount })
-                 }
-                 paymentNoteType={activeTab.paymentNoteType}
-                 onPaymentNoteTypeChange={(paymentNoteType) => updateActiveTab({ paymentNoteType })}
-                 paymentNoteAmount={activeTab.paymentNoteAmount}
-                 onPaymentNoteAmountChange={(paymentNoteAmount) => updateActiveTab({ paymentNoteAmount })}
-                 onPaymentMethodsChange={(paymentMethods) =>
-                   updateActiveTab({ paymentMethods })
-                 }
-                  onCreateOrder={handleCreateDocument}
-                  onSaveOrder={
-                    activeTab.type === "consignment"
-                      ? handleSaveConsignment
-                      : handleSaveOrder
-                  }
-                  onCreateInvoice={handleConvertToInvoice}
+                onPaymentAmountChange={(paymentAmount) =>
+                  updateActiveTab({ paymentAmount })
+                }
+                paymentNoteType={activeTab.paymentNoteType}
+                onPaymentNoteTypeChange={(paymentNoteType) =>
+                  updateActiveTab({ paymentNoteType })
+                }
+                paymentNoteAmount={activeTab.paymentNoteAmount}
+                onPaymentNoteAmountChange={(paymentNoteAmount) =>
+                  updateActiveTab({ paymentNoteAmount })
+                }
+                onPaymentMethodsChange={(paymentMethods) =>
+                  updateActiveTab({ paymentMethods })
+                }
+                onCreateOrder={handleCreateDocument}
+                onSaveOrder={
+                  activeTab.type === "consignment"
+                    ? handleSaveConsignment
+                    : handleSaveOrder
+                }
+                onCreateInvoice={handleConvertToInvoice}
                 discount={activeTab.discount}
                 discountRatio={activeTab.discountRatio}
                 onDiscountChange={(discount) => updateActiveTab({ discount })}
@@ -4248,18 +4307,13 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "items" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[60%] min-h-0 flex-1 lg:flex-none`}>
+              } lg:flex flex-col w-full lg:w-[60%] min-h-0 flex-1 lg:flex-none`}
+            >
               <InvoiceItemsList
                 cartItems={activeTab.cartItems}
                 onUpdateItem={updateCartItem}
                 onRemoveItem={removeFromCart}
                 onDuplicateItem={duplicateCartItem}
-                discount={activeTab.discount}
-                onDiscountChange={(discount) => updateActiveTab({ discount })}
-                discountRatio={activeTab.discountRatio}
-                onDiscountRatioChange={(discountRatio) =>
-                  updateActiveTab({ discountRatio })
-                }
                 orderNote={activeTab.orderNote}
                 onOrderNoteChange={(orderNote) =>
                   updateActiveTab({ orderNote })
@@ -4272,7 +4326,9 @@ export default function BanHangPage() {
                 promoProgress={promoProgressByTab[activeTab.id]}
                 cumulativeGiftSelections={activeTab.cumulativeGiftSelections}
                 enabledCumulativePromoIds={activeTab.enabledCumulativePromoIds}
-                disabledCumulativePromoIds={activeTab.disabledCumulativePromoIds}
+                disabledCumulativePromoIds={
+                  activeTab.disabledCumulativePromoIds
+                }
                 onTogglePromotion={togglePromotionCumulative}
                 onSetGiftSelection={setCumulativeGiftSelection}
                 className="w-full flex-1 bg-white flex flex-col min-h-0"
@@ -4284,7 +4340,8 @@ export default function BanHangPage() {
                     onClick={handlePayment}
                     loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
-                    className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                    className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
+                  >
                     THANH TOÁN
                   </LoadingButton>
                 ) : activeTab.documentId ? (
@@ -4292,7 +4349,8 @@ export default function BanHangPage() {
                     onClick={() => handleSaveInvoice()}
                     loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
-                    className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                    className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
+                  >
                     LƯU
                   </LoadingButton>
                 ) : (
@@ -4300,7 +4358,8 @@ export default function BanHangPage() {
                     onClick={() => handleCreateDocument()}
                     loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
-                    className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
+                    className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
+                  >
                     Tạo hóa đơn
                   </LoadingButton>
                 )}
@@ -4311,8 +4370,10 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "cart" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l flex-1 lg:flex-none`}>
+              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l flex-1 lg:flex-none`}
+            >
               <InvoiceCart
+                key={activeTab.id}
                 cartItems={activeTab.cartItems}
                 selectedCustomer={activeTab.selectedCustomer}
                 onSelectCustomer={handleCustomerSelect}
@@ -4322,24 +4383,26 @@ export default function BanHangPage() {
                 onSelectPriceBook={handlePriceBookSelect}
                 onUseCODChange={(useCOD) => updateActiveTab({ useCOD })}
                 paymentAmount={activeTab.paymentAmount}
-                 onPaymentAmountChange={(paymentAmount) =>
-                   updateActiveTab({ paymentAmount })
-                 }
-                 paymentNoteType={activeTab.paymentNoteType}
-                 onPaymentNoteTypeChange={(paymentNoteType) => updateActiveTab({ paymentNoteType })}
-                 paymentNoteAmount={activeTab.paymentNoteAmount}
-                 onPaymentNoteAmountChange={(paymentNoteAmount) => updateActiveTab({ paymentNoteAmount })}
-                 onPaymentMethodsChange={(paymentMethods) =>
-                   updateActiveTab({ paymentMethods })
-                 }
-                 onCreateOrder={handleCreateDocument}
+                onPaymentAmountChange={(paymentAmount) =>
+                  updateActiveTab({ paymentAmount })
+                }
+                paymentNoteType={activeTab.paymentNoteType}
+                onPaymentNoteTypeChange={(paymentNoteType) =>
+                  updateActiveTab({ paymentNoteType })
+                }
+                paymentNoteAmount={activeTab.paymentNoteAmount}
+                onPaymentNoteAmountChange={(paymentNoteAmount) =>
+                  updateActiveTab({ paymentNoteAmount })
+                }
+                onPaymentMethodsChange={(paymentMethods) =>
+                  updateActiveTab({ paymentMethods })
+                }
+                onCreateOrder={handleCreateDocument}
                 onSaveOrder={handleSaveInvoice}
                 onPayment={handlePayment}
                 discount={activeTab.discount}
                 discountRatio={activeTab.discountRatio}
-                onDiscountChange={(discount) =>
-                  updateActiveTab({ discount })
-                }
+                onDiscountChange={(discount) => updateActiveTab({ discount })}
                 onDiscountRatioChange={(discountRatio) =>
                   updateActiveTab({ discountRatio })
                 }
@@ -4377,7 +4440,8 @@ export default function BanHangPage() {
             mobilePosView === "items"
               ? "text-brand border-t-2 border-brand"
               : "text-gray-500"
-          }`}>
+          }`}
+        >
           <List className="w-5 h-5" />
           <span className="text-xs font-medium">Hàng hóa</span>
         </button>
@@ -4388,7 +4452,8 @@ export default function BanHangPage() {
             mobilePosView === "cart"
               ? "text-brand border-t-2 border-brand"
               : "text-gray-500"
-          }`}>
+          }`}
+        >
           <div className="relative">
             <ShoppingCart className="w-5 h-5" />
             {activeTab.cartItems.length > 0 && (

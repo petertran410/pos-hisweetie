@@ -151,6 +151,8 @@ export function useCreateInvoiceFromOrder() {
       appliedPromotions,
       appliedPromotionIds,
       skipPromotions,
+      discountAmount,
+      discountRatio,
     }: {
       orderId: number;
       additionalPayment?: number;
@@ -161,8 +163,10 @@ export function useCreateInvoiceFromOrder() {
       appliedPromotions?: any[];
       appliedPromotionIds?: number[];
       skipPromotions?: boolean;
+      discountAmount?: number;
+      discountRatio?: number;
     }) =>
-      invoicesApi.createInvoiceFromOrder(
+      invoicesApi.createInvoiceFromOrder({
         orderId,
         additionalPayment,
         items,
@@ -171,8 +175,10 @@ export function useCreateInvoiceFromOrder() {
         forceComplete,
         appliedPromotions,
         appliedPromotionIds,
-        skipPromotions
-      ),
+        skipPromotions,
+        discountAmount,
+        discountRatio,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });

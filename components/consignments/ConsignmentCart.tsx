@@ -27,11 +27,12 @@ interface ConsignmentCartProps {
   selectedPriceBookName?: string | null;
   onSelectPriceBook: (
     priceBookId: number | null,
-    priceBookName: string | null
+    priceBookName: string | null,
   ) => void;
   discount: number;
   discountRatio: number;
   onDiscountChange: (discount: number) => void;
+  onDiscountRatioChange?: (discountRatio: number) => void;
   deliveryInfo: DeliveryInfo;
   onDeliveryInfoChange: (info: DeliveryInfo) => void;
   onSelectAddress?: (address: any) => void;
@@ -93,7 +94,7 @@ function SellerDropdown({
   const isOverridden = soldById !== null && soldById !== currentUserId;
 
   const filteredUsers = users.filter((u) =>
-    u.name.toLowerCase().includes(search.toLowerCase())
+    u.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -104,16 +105,16 @@ function SellerDropdown({
         onClick={() => setOpen((prev) => !prev)}
         onKeyDown={(e) => e.key === "Enter" && setOpen((prev) => !prev)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
-        } bg-white`}>
+          open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"
+        } bg-white`}
+      >
         <div className="flex items-center gap-2 min-w-0">
           <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
           <span
             className={`truncate ${
               isOverridden ? "text-brand font-medium" : "text-gray-700"
-            }`}>
+            }`}
+          >
             {displayName}
           </span>
         </div>
@@ -125,7 +126,8 @@ function SellerDropdown({
                 e.stopPropagation();
                 onChange(null);
               }}
-              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded"
+            >
               <XIcon className="w-3 h-3" />
             </button>
           )}
@@ -159,13 +161,14 @@ function SellerDropdown({
                   type="button"
                   onClick={() => {
                     onChange(
-                      u.id === currentUserId && soldById === null ? null : u.id
+                      u.id === currentUserId && soldById === null ? null : u.id,
                     );
                     setOpen(false);
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
                     u.id === effectiveId ? "bg-brand-soft" : "hover:bg-gray-50"
-                  } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                  } ${idx > 0 ? "border-t border-gray-50" : ""}`}
+                >
                   <span className="flex-1 truncate">{u.name}</span>
                   {u.id === effectiveId && (
                     <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
@@ -194,6 +197,7 @@ export function ConsignmentCart({
   discount,
   discountRatio,
   onDiscountChange,
+  onDiscountRatioChange,
   deliveryInfo,
   onDeliveryInfoChange,
   onSelectAddress,
@@ -218,21 +222,114 @@ export function ConsignmentCart({
     return `${now.getDate()}/${
       now.getMonth() + 1
     }/${now.getFullYear()} ${String(now.getHours()).padStart(2, "0")}:${String(
-      now.getMinutes()
+      now.getMinutes(),
     ).padStart(2, "0")}`;
   };
 
   const calculateSubtotal = () =>
     cartItems.reduce(
       (sum, item) => sum + (item.price - item.discount) * item.quantity,
-      0
+      0,
     );
 
+  const subtotal = calculateSubtotal();
+
   const calculateTotal = () => {
-    const subtotal = calculateSubtotal();
     const effectiveDiscount =
       discount > 0 ? discount : (subtotal * discountRatio) / 100;
     return subtotal - effectiveDiscount;
+  };
+
+  const [discountMode, setDiscountMode] = useState<"amount" | "percent">(
+    discountRatio > 0 ? "percent" : "amount",
+  );
+  const [amountDraft, setAmountDraft] = useState(() =>
+    discount > 0 ? discount.toLocaleString("en-US") : "",
+  );
+  const [percentDraft, setPercentDraft] = useState(() =>
+    discountRatio > 0 ? String(discountRatio) : "",
+  );
+  const lastPushedDiscountRef = useRef<{
+    discount: number;
+    ratio: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const lastPushed = lastPushedDiscountRef.current;
+    if (
+      lastPushed &&
+      Math.abs(lastPushed.discount - discount) < 0.01 &&
+      Math.abs(lastPushed.ratio - discountRatio) < 0.01
+    ) {
+      return;
+    }
+    setAmountDraft(discount > 0 ? discount.toLocaleString("en-US") : "");
+    setPercentDraft(discountRatio > 0 ? String(discountRatio) : "");
+  }, [discount, discountRatio]);
+
+  // Mode %: giữ %, tính lại tiền khi tổng tiền hàng đổi. Mode tiền: giữ nguyên.
+  useEffect(() => {
+    if (discountRatio <= 0) return;
+    const nextAmount = (subtotal * discountRatio) / 100;
+    if (Math.abs(nextAmount - discount) < 0.01) return;
+    onDiscountChange(nextAmount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal, discountRatio]);
+
+  const handleDiscountInputChange = (value: string) => {
+    if (discountMode === "amount") {
+      const onlyNumbers = value.replace(/[^\d]/g, "");
+      setAmountDraft(
+        onlyNumbers ? parseInt(onlyNumbers, 10).toLocaleString("en-US") : "",
+      );
+
+      if (!onlyNumbers) {
+        setPercentDraft("");
+        lastPushedDiscountRef.current = { discount: 0, ratio: 0 };
+        onDiscountChange(0);
+        onDiscountRatioChange?.(0);
+        return;
+      }
+
+      const amount = parseInt(onlyNumbers, 10);
+      setPercentDraft("");
+      lastPushedDiscountRef.current = { discount: amount, ratio: 0 };
+      onDiscountChange(amount);
+      onDiscountRatioChange?.(0);
+      return;
+    }
+
+    let cleaned = value.replace(/[^\d.]/g, "");
+    const firstDot = cleaned.indexOf(".");
+    if (firstDot !== -1) {
+      cleaned =
+        cleaned.slice(0, firstDot + 1) +
+        cleaned.slice(firstDot + 1).replace(/\./g, "");
+      const [integer, decimal = ""] = cleaned.split(".");
+      cleaned = `${integer}.${decimal.slice(0, 2)}`;
+    }
+
+    if (cleaned === "" || cleaned === ".") {
+      setPercentDraft(cleaned);
+      setAmountDraft("");
+      lastPushedDiscountRef.current = { discount: 0, ratio: 0 };
+      onDiscountChange(0);
+      onDiscountRatioChange?.(0);
+      return;
+    }
+
+    const percent = Math.min(parseFloat(cleaned), 100);
+    const displayPercent = percent === 100 ? "100" : cleaned;
+    const amount = (subtotal * percent) / 100;
+    setPercentDraft(displayPercent);
+    setAmountDraft(amount.toLocaleString("en-US"));
+    lastPushedDiscountRef.current = { discount: amount, ratio: percent };
+    onDiscountRatioChange?.(percent);
+    onDiscountChange(amount);
+  };
+
+  const handleDiscountModeToggle = () => {
+    setDiscountMode((mode) => (mode === "amount" ? "percent" : "amount"));
   };
 
   const handleDeliveryChange = (field: keyof DeliveryInfo, value: any) => {
@@ -241,7 +338,8 @@ export function ConsignmentCart({
 
   return (
     <div
-      className={className ?? "w-[40%] h-full bg-white border-l flex flex-col"}>
+      className={className ?? "w-[40%] h-full bg-white border-l flex flex-col"}
+    >
       <div className="flex-1 flex flex-col overflow-y-auto">
         <div className="pl-2 lg:pl-3 pr-2 lg:pr-3 pt-2 lg:pt-3 pb-1 space-y-1.5 lg:space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -375,7 +473,7 @@ export function ConsignmentCart({
                 onChange={(e) =>
                   handleDeliveryChange(
                     "noteForDriver",
-                    e.target.value.slice(0, 1000)
+                    e.target.value.slice(0, 1000),
                   )
                 }
                 maxLength={1000}
@@ -395,7 +493,8 @@ export function ConsignmentCart({
             value={consignStatus}
             disabled={disabled}
             onChange={(e) => onConsignStatusChange(e.target.value)}
-            className="border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100">
+            className="border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100"
+          >
             {STATUS_OPTIONS.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
@@ -406,24 +505,34 @@ export function ConsignmentCart({
 
         <div className="flex items-center justify-between text-sm lg:text-sm">
           <span>Tổng tiền hàng</span>
-          <span className="font-semibold">
-            {calculateSubtotal().toLocaleString()}
-          </span>
+          <span className="font-semibold">{subtotal.toLocaleString()}</span>
         </div>
 
         <div className="flex items-center justify-between text-sm lg:text-sm gap-2">
           <span>Giảm giá</span>
-          <input
-            type="text"
-            value={discount ? discount.toLocaleString("en-US") : ""}
-            disabled={disabled}
-            onChange={(e) => {
-              const onlyNumbers = e.target.value.replace(/[^\d]/g, "");
-              onDiscountChange(onlyNumbers ? parseInt(onlyNumbers, 10) : 0);
-            }}
-            placeholder="0"
-            className="border rounded-xl px-2 lg:px-3 py-1 lg:py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-brand w-28 disabled:bg-gray-100"
-          />
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              value={discountMode === "amount" ? amountDraft : percentDraft}
+              disabled={disabled}
+              onChange={(e) => handleDiscountInputChange(e.target.value)}
+              placeholder="0"
+              className="border rounded-xl px-2 lg:px-3 py-1 lg:py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-brand w-28 disabled:bg-gray-100"
+            />
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={handleDiscountModeToggle}
+              title={
+                discountMode === "amount"
+                  ? "Đang tính theo số tiền — bấm để chuyển sang %"
+                  : "Đang tính theo % — bấm để chuyển sang số tiền"
+              }
+              className="border rounded-lg w-8 h-8 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              {discountMode === "amount" ? "₫" : "%"}
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between text-sm lg:text-sm border-t pt-2">
@@ -436,7 +545,8 @@ export function ConsignmentCart({
         <button
           onClick={onSubmit}
           disabled={cartItems.length === 0 || isSubmitting || disabled}
-          className="w-full bg-brand text-white py-2 lg:py-3 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
+          className="w-full bg-brand text-white py-2 lg:py-3 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base"
+        >
           {isEditMode ? "Cập nhật phiếu ký gửi" : "Tạo phiếu ký gửi"}
         </button>
       </div>

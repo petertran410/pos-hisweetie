@@ -94,7 +94,9 @@ export function SearchableSelect({
     setHighlightedIndex(-1);
   };
 
-  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleSearchKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     if (event.key === "Escape") {
       event.preventDefault();
       setIsOpen(false);
@@ -139,14 +141,34 @@ export function SearchableSelect({
               ? "bg-white border-red-500"
               : "bg-white hover:border-gray-400"
         }`}>
-        <span className={`min-w-0 flex-1 truncate text-left ${selectedOption ? "text-gray-900" : "text-gray-400"}`}>
+        <span
+          className={`min-w-0 flex-1 truncate text-left ${selectedOption ? "text-gray-900" : "text-gray-400"}`}>
           {selectedOption
             ? renderOption
               ? renderOption(selectedOption)
               : selectedOption.label
             : placeholder}
         </span>
-        {clearable && value && !disabled && <span role="button" tabIndex={0} aria-label="Bỏ chọn" onClick={(event) => { event.stopPropagation(); onChange(""); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.stopPropagation(); onChange(""); } }} className="ml-auto rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" /></span>}
+        {clearable && value && !disabled && (
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label="Bỏ chọn"
+            onClick={(event) => {
+              event.stopPropagation();
+              onChange("");
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                event.stopPropagation();
+                onChange("");
+              }
+            }}
+            className="ml-auto rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+            <X className="h-4 w-4" />
+          </span>
+        )}
         <ChevronDown
           className={`${size === "sm" ? "w-4 h-4" : "w-5 h-5"} text-gray-400 transition-transform ${
             isOpen ? "rotate-180" : ""
@@ -154,53 +176,74 @@ export function SearchableSelect({
         />
       </button>
 
-      {isOpen && !disabled && pos && typeof document !== "undefined" && createPortal(
-        <div ref={panelRef} role="listbox" className="fixed z-[1000] flex flex-col overflow-hidden rounded-xl border bg-white shadow-lg" style={{ left: pos.left, width: pos.width, maxHeight: pos.maxHeight, ...(pos.dropUp ? { top: pos.top, transform: "translateY(-100%)" } : { top: pos.top }) }}>
-          <div className="p-2 border-b sticky top-0 bg-white">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                 onChange={(e) => setSearchQuery(e.target.value)}
-                 onKeyDown={handleSearchKeyDown}
-                placeholder={searchPlaceholder}
-                className={`w-full pl-9 pr-3 ${size === "sm" ? "py-1.5 text-xs" : "py-2 text-sm"} border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand`}
-              />
-            </div>
-          </div>
-
-          <div className="overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((option, index) => (
-                <button
-                  key={option.value}
-                  ref={(element) => { optionRefs.current[index] = element; }}
-                  type="button"
-                  role="option"
-                  aria-selected={option.value === value}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                  onClick={() => handleSelect(option.value)}
-                  className={`w-full px-3 py-2.5 text-left hover:bg-gray-50 flex items-center justify-between transition-colors ${
-                    option.value === value || index === highlightedIndex ? "bg-brand-soft" : ""
-                  } `}>
-                  <span className="text-sm">
-                    {renderOption ? renderOption(option) : option.label}
-                  </span>
-                  {option.value === value && (
-                    <Check className="w-4 h-4 text-brand" />
-                  )}
-                </button>
-              ))
-            ) : (
-              <div className="px-3 py-8 text-center text-sm text-gray-500">
-                Không tìm thấy kết quả
+      {isOpen &&
+        !disabled &&
+        pos &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={panelRef}
+            role="listbox"
+            className="fixed z-[10000] flex flex-col overflow-hidden rounded-xl border bg-white shadow-lg"
+            style={{
+              left: pos.left,
+              width: pos.width,
+              maxHeight: pos.maxHeight,
+              ...(pos.dropUp
+                ? { top: pos.top, transform: "translateY(-100%)" }
+                : { top: pos.top }),
+            }}>
+            <div className="p-2 border-b sticky top-0 bg-white">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder={searchPlaceholder}
+                  className={`w-full pl-9 pr-3 ${size === "sm" ? "py-1.5 text-xs" : "py-2 text-sm"} border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand`}
+                />
               </div>
-            )}
-          </div>
-          {footer && <div className="border-t p-2">{footer}</div>}
-        </div>, document.body)}
+            </div>
+
+            <div className="overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map((option, index) => (
+                  <button
+                    key={option.value}
+                    ref={(element) => {
+                      optionRefs.current[index] = element;
+                    }}
+                    type="button"
+                    role="option"
+                    aria-selected={option.value === value}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    onClick={() => handleSelect(option.value)}
+                    className={`w-full px-3 py-2.5 text-left hover:bg-gray-50 flex items-center justify-between transition-colors ${
+                      option.value === value || index === highlightedIndex
+                        ? "bg-brand-soft"
+                        : ""
+                    } `}>
+                    <span className="text-sm">
+                      {renderOption ? renderOption(option) : option.label}
+                    </span>
+                    {option.value === value && (
+                      <Check className="w-4 h-4 text-brand" />
+                    )}
+                  </button>
+                ))
+              ) : (
+                <div className="px-3 py-8 text-center text-sm text-gray-500">
+                  Không tìm thấy kết quả
+                </div>
+              )}
+            </div>
+            {footer && <div className="border-t p-2">{footer}</div>}
+          </div>,
+          document.body
+        )}
 
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
     </div>

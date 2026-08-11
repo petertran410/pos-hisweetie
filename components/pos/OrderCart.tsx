@@ -30,7 +30,7 @@ interface OrderCartProps {
   selectedPriceBookName?: string | null;
   onSelectPriceBook: (
     priceBookId: number | null,
-    priceBookName: string | null
+    priceBookName: string | null,
   ) => void;
   useCOD: boolean;
   onUseCODChange: (useCOD: boolean) => void;
@@ -41,7 +41,7 @@ interface OrderCartProps {
   paymentNoteAmount: number | null;
   onPaymentNoteAmountChange: (amount: number | null) => void;
   onPaymentMethodsChange?: (
-    methods: Array<{ method: string; amount: number }>
+    methods: Array<{ method: string; amount: number }>,
   ) => void;
   onCreateOrder: (payments?: Array<{ method: string; amount: number }>) => void;
   onSaveOrder: (payments?: Array<{ method: string; amount: number }>) => void;
@@ -112,7 +112,7 @@ function SellerDropdown({
 
   // Filter theo search — thêm mới
   const filteredUsers = users.filter((u) =>
-    u.name.toLowerCase().includes(search.toLowerCase())
+    u.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -126,13 +126,15 @@ function SellerDropdown({
         onKeyDown={(e) => e.key === "Enter" && setOpen((prev) => !prev)}
         className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
           open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"
-        } bg-white`}>
+        } bg-white`}
+      >
         <div className="flex items-center gap-2 min-w-0">
           <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
           <span
             className={`truncate ${
               isOverridden ? "text-brand font-medium" : "text-gray-700"
-            }`}>
+            }`}
+          >
             {displayName}
           </span>
         </div>
@@ -144,7 +146,8 @@ function SellerDropdown({
                 e.stopPropagation();
                 onChange(null);
               }}
-              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded"
+            >
               <XIcon className="w-3 h-3" />
             </button>
           )}
@@ -182,13 +185,14 @@ function SellerDropdown({
                   type="button"
                   onClick={() => {
                     onChange(
-                      u.id === currentUserId && soldById === null ? null : u.id
+                      u.id === currentUserId && soldById === null ? null : u.id,
                     );
                     setOpen(false);
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
                     u.id === effectiveId ? "bg-brand-soft" : "hover:bg-gray-50"
-                  } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                  } ${idx > 0 ? "border-t border-gray-50" : ""}`}
+                >
                   <span className="flex-1 truncate">{u.name}</span>
                   {u.id === effectiveId && (
                     <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
@@ -260,23 +264,31 @@ export function OrderCart({
     }>
   >([]);
   const [discountMode, setDiscountMode] = useState<"amount" | "percent">(
-    "amount"
+    discountRatio > 0 ? "percent" : "amount",
   );
-  const [discountInputValue, setDiscountInputValue] = useState("");
+  const [amountDraft, setAmountDraft] = useState(() =>
+    discount > 0 ? discount.toLocaleString("en-US") : "",
+  );
+  const [percentDraft, setPercentDraft] = useState(() =>
+    discountRatio > 0 ? String(discountRatio) : "",
+  );
+  const lastPushedDiscountRef = useRef<{
+    discount: number;
+    ratio: number;
+  } | null>(null);
 
   useEffect(() => {
-    if (isEditMode && existingOrder && paymentAmount > 0) {
-      setPaymentDisplayValue(formatNumber(paymentAmount));
+    const lastPushed = lastPushedDiscountRef.current;
+    if (
+      lastPushed &&
+      Math.abs(lastPushed.discount - discount) < 0.01 &&
+      Math.abs(lastPushed.ratio - discountRatio) < 0.01
+    ) {
+      return;
     }
-  }, [isEditMode, existingOrder, paymentAmount]);
-
-  useEffect(() => {
-    if (discountMode === "amount") {
-      setDiscountInputValue(discount > 0 ? formatNumber(discount) : "");
-    } else {
-      setDiscountInputValue(discountRatio > 0 ? String(discountRatio) : "");
-    }
-  }, [discount, discountRatio, discountMode]);
+    setAmountDraft(discount > 0 ? discount.toLocaleString("en-US") : "");
+    setPercentDraft(discountRatio > 0 ? String(discountRatio) : "");
+  }, [discount, discountRatio]);
 
   const formatNumber = (value: number): string => {
     if (!value) return "";
@@ -287,7 +299,7 @@ export function OrderCart({
     payments: Array<{
       method: string;
       amount: number;
-    }>
+    }>,
   ) => {
     const total = payments.reduce((sum, p) => sum + p.amount, 0);
     setPaymentMethods(payments);
@@ -321,70 +333,73 @@ export function OrderCart({
   };
 
   const handleDiscountInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const inputValue = e.target.value;
-    const onlyNumbers = inputValue.replace(/[^\d]/g, "");
 
-    if (onlyNumbers === "") {
-      setDiscountInputValue("");
-      if (discountMode === "amount") {
+    if (discountMode === "amount") {
+      const onlyNumbers = inputValue.replace(/[^\d]/g, "");
+      setAmountDraft(
+        onlyNumbers ? formatNumber(parseInt(onlyNumbers, 10)) : "",
+      );
+
+      if (!onlyNumbers) {
+        setPercentDraft("");
+        lastPushedDiscountRef.current = { discount: 0, ratio: 0 };
         onDiscountChange?.(0);
-      } else {
         onDiscountRatioChange?.(0);
+        return;
       }
+
+      const amount = parseInt(onlyNumbers, 10);
+      // User đã sửa ô tiền: tiền trở thành nguồn dữ liệu, % cũ mất hiệu lực.
+      setPercentDraft("");
+      lastPushedDiscountRef.current = { discount: amount, ratio: 0 };
+      onDiscountChange?.(amount);
+      onDiscountRatioChange?.(0);
       return;
     }
 
-    const numericValue = parseInt(onlyNumbers, 10);
-
-    if (discountMode === "amount") {
-      setDiscountInputValue(formatNumber(numericValue));
-      onDiscountChange?.(numericValue);
-      onDiscountRatioChange?.(0);
-    } else {
-      const clampedPercent = Math.min(numericValue, 100);
-      setDiscountInputValue(clampedPercent.toString());
-      onDiscountRatioChange?.(clampedPercent);
-      onDiscountChange?.(0);
+    // % cho phép tối đa 2 chữ số thập phân; chỉ chấp nhận một dấu chấm.
+    let cleaned = inputValue.replace(/[^\d.]/g, "");
+    const firstDot = cleaned.indexOf(".");
+    if (firstDot !== -1) {
+      cleaned =
+        cleaned.slice(0, firstDot + 1) +
+        cleaned.slice(firstDot + 1).replace(/\./g, "");
+      const [integer, decimal = ""] = cleaned.split(".");
+      cleaned = `${integer}.${decimal.slice(0, 2)}`;
     }
+
+    if (cleaned === "" || cleaned === ".") {
+      setPercentDraft(cleaned);
+      setAmountDraft("");
+      lastPushedDiscountRef.current = { discount: 0, ratio: 0 };
+      onDiscountChange?.(0);
+      onDiscountRatioChange?.(0);
+      return;
+    }
+
+    const percent = Math.min(parseFloat(cleaned), 100);
+    const displayPercent = percent === 100 ? "100" : cleaned;
+    const amount = (subtotal * percent) / 100;
+    // User đã sửa ô %: % trở thành nguồn dữ liệu và ghi đè số tiền cũ.
+    setPercentDraft(displayPercent);
+    setAmountDraft(formatNumber(amount));
+    lastPushedDiscountRef.current = { discount: amount, ratio: percent };
+    onDiscountRatioChange?.(percent);
+    onDiscountChange?.(amount);
   };
 
   const handleDiscountModeToggle = () => {
-    const newMode = discountMode === "amount" ? "percent" : "amount";
-    setDiscountMode(newMode);
-
-    // Auto-convert between amount and percent
-    if (newMode === "percent") {
-      // Converting from amount to percent
-      if (discount > 0 && subtotal > 0) {
-        const percent = Math.round((discount / subtotal) * 100);
-        const clampedPercent = Math.min(percent, 100);
-        setDiscountInputValue(clampedPercent.toString());
-        onDiscountRatioChange?.(clampedPercent);
-        onDiscountChange?.(0);
-      } else {
-        setDiscountInputValue("");
-        onDiscountRatioChange?.(0);
-      }
-    } else {
-      // Converting from percent to amount
-      if (discountRatio > 0 && subtotal > 0) {
-        const amount = Math.round((subtotal * discountRatio) / 100);
-        setDiscountInputValue(formatNumber(amount));
-        onDiscountChange?.(amount);
-        onDiscountRatioChange?.(0);
-      } else {
-        setDiscountInputValue("");
-        onDiscountChange?.(0);
-      }
-    }
+    // Chỉ đổi ô đang xem. Không reset, không convert, không ghi state parent.
+    setDiscountMode((mode) => (mode === "amount" ? "percent" : "amount"));
   };
 
   const calculateSubtotal = () => {
     return cartItems.reduce(
       (sum, item) => sum + (item.price - item.discount) * item.quantity,
-      0
+      0,
     );
   };
 
@@ -392,9 +407,19 @@ export function OrderCart({
     return cartItems.reduce(
       (sum: number, item: any) =>
         sum + (item.price - item.discount) * item.quantity,
-      0
+      0,
     );
   }, [cartItems]);
+
+  // Mode %: giữ nguyên %, tính lại số tiền khi tổng tiền hàng đổi (thêm/bớt SP).
+  // Mode tiền: không đụng gì — số tiền user nhập giữ nguyên.
+  useEffect(() => {
+    if (discountRatio <= 0) return;
+    const nextAmount = (subtotal * discountRatio) / 100;
+    if (Math.abs(nextAmount - discount) < 0.01) return;
+    onDiscountChange?.(nextAmount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal, discountRatio]);
 
   const effectiveDiscount =
     discount > 0 ? discount : (subtotal * discountRatio) / 100;
@@ -436,7 +461,7 @@ export function OrderCart({
     return `${now.getDate()}/${
       now.getMonth() + 1
     }/${now.getFullYear()} ${String(now.getHours()).padStart(2, "0")}:${String(
-      now.getMinutes()
+      now.getMinutes(),
     ).padStart(2, "0")}`;
   };
 
@@ -449,7 +474,8 @@ export function OrderCart({
 
   return (
     <div
-      className={className ?? "w-[40%] h-full bg-white border-l flex flex-col"}>
+      className={className ?? "w-[40%] h-full bg-white border-l flex flex-col"}
+    >
       <div className="flex-1 flex flex-col overflow-y-auto">
         <div className="pl-2 lg:pl-3 pr-2 lg:pr-3 pt-2 lg:pt-3 pb-1 space-y-1.5 lg:space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -584,7 +610,7 @@ export function OrderCart({
                 onChange={(e) =>
                   handleDeliveryChange(
                     "noteForDriver",
-                    e.target.value.slice(0, 1000)
+                    e.target.value.slice(0, 1000),
                   )
                 }
                 maxLength={1000}
@@ -613,7 +639,7 @@ export function OrderCart({
           <div className="flex items-center gap-1">
             <input
               type="text"
-              value={discountInputValue}
+              value={discountMode === "amount" ? amountDraft : percentDraft}
               onChange={handleDiscountInputChange}
               placeholder="0"
               className="w-32 lg:w-36 border rounded-lg px-3 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-brand"
@@ -621,7 +647,8 @@ export function OrderCart({
             <button
               type="button"
               onClick={handleDiscountModeToggle}
-              className="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-medium min-w-[40px]">
+              className="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-medium min-w-[40px]"
+            >
               {discountMode === "amount" ? "₫" : "%"}
             </button>
           </div>
@@ -641,7 +668,8 @@ export function OrderCart({
             <select
               value={consignStatus ?? "pending"}
               onChange={(e) => onConsignStatusChange?.(e.target.value)}
-              className="border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+              className="border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            >
               <option value="pending">Phiếu tạm</option>
               <option value="confirmed">Đã xác nhận</option>
             </select>
@@ -665,7 +693,8 @@ export function OrderCart({
                     key={type}
                     type="button"
                     onClick={() => handlePaymentNoteTypeSelect(type)}
-                    className={`px-3 py-1 text-xs ${paymentNoteType === type ? "bg-brand text-white font-medium" : "bg-white hover:bg-gray-50"}`}>
+                    className={`px-3 py-1 text-xs ${paymentNoteType === type ? "bg-brand text-white font-medium" : "bg-white hover:bg-gray-50"}`}
+                  >
                     {label}
                   </button>
                 ))}
@@ -684,7 +713,7 @@ export function OrderCart({
                   onChange={(e) => {
                     const digits = e.target.value.replace(/[^\d]/g, "");
                     onPaymentNoteAmountChange(
-                      digits === "" ? null : Number(digits)
+                      digits === "" ? null : Number(digits),
                     );
                   }}
                   placeholder="Nhập số tiền"
@@ -711,7 +740,8 @@ export function OrderCart({
               {canEditPayment && (
                 <button
                   onClick={() => setShowMultiPaymentModal(true)}
-                  className="p-1 lg:p-2 hover:bg-gray-100 rounded-lg">
+                  className="p-1 lg:p-2 hover:bg-gray-100 rounded-lg"
+                >
                   <MoreVertical className="w-4 h-4" />
                 </button>
               )}
@@ -760,19 +790,21 @@ export function OrderCart({
               <button
                 onClick={onCreateInvoice}
                 disabled={cartItems.length === 0}
-                className="w-full bg-brand text-white py-2 lg:py-3 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
+                className="w-full bg-brand text-white py-2 lg:py-3 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base"
+              >
                 TẠO HÓA ĐƠN
               </button>
             )}
             <LoadingButton
               onClick={() =>
                 onSaveOrder(
-                  paymentMethods.length > 0 ? paymentMethods : undefined
+                  paymentMethods.length > 0 ? paymentMethods : undefined,
                 )
               }
               loading={isSubmitting}
               disabled={cartItems.length === 0}
-              className="w-full bg-orange-400 text-white py-2 lg:py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
+              className="w-full bg-orange-400 text-white py-2 lg:py-3 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base"
+            >
               LƯU
             </LoadingButton>
           </div>
@@ -780,19 +812,21 @@ export function OrderCart({
           <button
             onClick={onCreateInvoice}
             disabled={cartItems.length === 0}
-            className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base">
+            className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-base"
+          >
             TẠO HÓA ĐƠN
           </button>
         ) : (
           <LoadingButton
             onClick={() =>
               onCreateOrder(
-                paymentMethods.length > 0 ? paymentMethods : undefined
+                paymentMethods.length > 0 ? paymentMethods : undefined,
               )
             }
             loading={isSubmitting}
             disabled={cartItems.length === 0}
-            className="w-full bg-brand text-white py-2 lg:py-3 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base">
+            className="w-full bg-brand text-white py-2 lg:py-3 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium lg:font-semibold text-xs lg:text-base"
+          >
             {documentType === "consignment"
               ? "Tạo phiếu ký gửi"
               : "Tạo đơn hàng"}

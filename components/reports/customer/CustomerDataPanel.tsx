@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   useCustomerPreview,
   useCustomerInvoices,
+  useCustomerSaleInvoices,
   useCustomerProducts,
   useCustomerDebtCustomers,
   useCustomerDebtDocuments,
@@ -65,6 +66,7 @@ function CustomerSummaryPanel({
   const rows = useMemo(() => data?.data || [], [data]);
   const summary = data?.summary;
   const isProfit = viewType === "CustomerByProfit";
+  const isSale = viewType === "CustomerBySale";
 
   const handleExportOverview = async () => {
     try {
@@ -77,7 +79,13 @@ function CustomerSummaryPanel({
 
   const handleExportDetail = async () => {
     try {
-      await customerReportApi.exportDetail(filters);
+      // View "Bán hàng theo khách" xuất theo hóa đơn (khớp doanh thu thuần);
+      // các view còn lại giữ nguyên xuất theo dòng sản phẩm.
+      if (isSale) {
+        await customerReportApi.exportSaleDetail(filters);
+      } else {
+        await customerReportApi.exportDetail(filters);
+      }
       toast.success("Xuất file thành công");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Xuất file thất bại");
@@ -85,7 +93,15 @@ function CustomerSummaryPanel({
   };
 
   if (drill) {
-    return (
+    return isSale ? (
+      <CustomerSaleInvoiceDrilldown
+        filters={filters}
+        title={drill.title}
+        code={drill.code}
+        customerId={drill.customerId}
+        onBack={() => setDrill(null)}
+      />
+    ) : (
       <CustomerInvoiceDrilldown
         filters={filters}
         viewType={viewType}
@@ -142,6 +158,27 @@ function CustomerSummaryPanel({
                 </span>
               </div>
             </>
+          ) : isSale ? (
+            <>
+              <div>
+                <span className="text-gray-500">Doanh số sau chiết khấu:</span>{" "}
+                <span className="font-semibold text-gray-900">
+                  {formatCurrency(summary.totalGrossRevenue || 0)}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500">Hàng trả:</span>{" "}
+                <span className="font-semibold text-gray-900">
+                  {formatCurrency(summary.totalReturnAmount || 0)}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500">Doanh thu thuần:</span>{" "}
+                <span className="font-semibold text-brand-dark">
+                  {formatCurrency(summary.totalNetRevenue ?? summary.totalValue ?? 0)}
+                </span>
+              </div>
+            </>
           ) : (
             <div>
               <span className="text-gray-500">Tổng doanh thu:</span>{" "}
@@ -193,6 +230,18 @@ function CustomerSummaryPanel({
                       Lợi nhuận
                     </th>
                   </>
+                ) : isSale ? (
+                  <>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                      Doanh số sau CK
+                    </th>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                      Hàng trả
+                    </th>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                      Doanh thu thuần
+                    </th>
+                  </>
                 ) : (
                   <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
                     Doanh thu
@@ -227,6 +276,20 @@ function CustomerSummaryPanel({
                       </td>
                       <td className="px-3 py-2 text-right font-medium text-brand-dark">
                         {(row.profit || 0).toLocaleString("vi-VN")}
+                      </td>
+                    </>
+                  ) : isSale ? (
+                    <>
+                      <td className="px-3 py-2 text-right text-gray-700">
+                        {(row.grossRevenue || 0).toLocaleString("vi-VN")}
+                      </td>
+                      <td className="px-3 py-2 text-right text-gray-700">
+                        {(row.returnAmount || 0).toLocaleString("vi-VN")}
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium text-brand-dark">
+                        {(row.netRevenue ?? row.value ?? 0).toLocaleString(
+                          "vi-VN",
+                        )}
                       </td>
                     </>
                   ) : (
@@ -335,13 +398,17 @@ function CustomerProductPanel({
       </div>
 
       {summary && rows.length > 0 && (
-        <div className="px-4 py-2 bg-gray-50 border-b flex flex-wrap gap-x-8 gap-y-1 text-sm shrink-0">
+        <div className="px-4 py-2 bg-gray-50 border-b flex flex-wrap items-center gap-x-8 gap-y-1 text-sm shrink-0">
           <div>
-            <span className="text-gray-500">Tổng doanh thu:</span>{" "}
+            <span className="text-gray-500">Tổng tiền hàng:</span>{" "}
             <span className="font-semibold text-brand-dark">
               {formatCurrency(summary.totalValue || 0)}
             </span>
           </div>
+          <span className="text-xs text-gray-400">
+            Tiền hàng theo giá bán từng dòng, chưa trừ chiết khấu toàn hóa đơn →
+            có thể cao hơn &quot;Doanh thu thuần&quot; ở báo cáo Bán hàng.
+          </span>
         </div>
       )}
 
@@ -374,7 +441,7 @@ function CustomerProductPanel({
                   Khách hàng
                 </th>
                 <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
-                  Doanh thu
+                  Tiền hàng
                 </th>
               </tr>
             </thead>
@@ -467,7 +534,7 @@ function CustomerProductListPanel({
             </span>
           </div>
           <div>
-            <span className="text-gray-500">Tổng doanh thu:</span>{" "}
+            <span className="text-gray-500">Tổng tiền hàng:</span>{" "}
             <span className="font-semibold text-brand-dark">
               {formatCurrency(summary.totalRevenue)}
             </span>
@@ -507,7 +574,7 @@ function CustomerProductListPanel({
                   SL
                 </th>
                 <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
-                  Doanh thu
+                  Tiền hàng
                 </th>
               </tr>
             </thead>
@@ -531,6 +598,199 @@ function CustomerProductListPanel({
                   </td>
                   <td className="px-3 py-2 text-right font-medium text-brand-dark">
                     {row.revenue.toLocaleString("vi-VN")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="border-t px-4 py-2 flex items-center justify-between shrink-0">
+          <span className="text-sm text-gray-500">
+            Trang {page}/{totalPages}
+          </span>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50">
+              {"\u2039"}
+            </button>
+            <button
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50">
+              {"\u203a"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Drilldown Lv2 (CustomerBySale): HÓA ĐƠN của 1 KH ──
+// Dòng chính là hóa đơn (không phải dòng sản phẩm) để cột "Doanh thu thuần"
+// cộng dồn đúng bằng con số ở bảng tổng hợp Lv1.
+function CustomerSaleInvoiceDrilldown({
+  filters,
+  title,
+  code,
+  customerId,
+  onBack,
+}: {
+  filters: CustomerReportFilters;
+  title: string;
+  code: string;
+  customerId?: number | null;
+  onBack: () => void;
+}) {
+  const [page, setPage] = useState(1);
+  const limit = filters.limit ?? 500;
+  const { canExport } = useReportAccess();
+
+  // Ưu tiên lọc theo customerId (exact) để tránh ILIKE nhầm KH có mã lồng nhau.
+  const drillFilters = {
+    ...filters,
+    ...(customerId != null ? { customerId } : { customerKeyword: code }),
+    page,
+    limit,
+  };
+  const { data, isLoading, isError, refetch } =
+    useCustomerSaleInvoices(drillFilters);
+
+  const rows = data?.data || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / limit) || 1;
+  const summary = data?.summary;
+
+  const handleExport = async () => {
+    try {
+      await customerReportApi.exportSaleDetail(drillFilters);
+      toast.success("Xuất file thành công");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Xuất file thất bại");
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
+      <div className="border-b px-4 py-2.5 flex items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-brand hover:bg-gray-50 rounded-lg transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+            Quay lại
+          </button>
+          <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+            {title}
+          </h2>
+          {summary && (
+            <span className="text-sm text-gray-500">
+              • {summary.totalInvoices} hóa đơn
+            </span>
+          )}
+        </div>
+        {canExport("khach-hang") && (
+          <ExportMenu onExportOverview={handleExport} disabled={!summary} />
+        )}
+      </div>
+
+      {/* Bậc thang doanh thu — kế toán đối chiếu trực tiếp, không cộng tay */}
+      {summary && (
+        <div className="px-4 py-2 bg-gray-50 border-b flex flex-wrap gap-x-8 gap-y-1 text-sm shrink-0">
+          <div>
+            <span className="text-gray-500">Doanh số sau chiết khấu:</span>{" "}
+            <span className="font-semibold text-gray-900">
+              {formatCurrency(summary.grossRevenue)}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-500">(−) Hàng trả:</span>{" "}
+            <span className="font-semibold text-gray-900">
+              {formatCurrency(summary.returnAmount)}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-500">Doanh thu thuần:</span>{" "}
+            <span className="font-semibold text-brand-dark">
+              {formatCurrency(summary.netRevenue)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-40">
+            <Loader2 className="h-6 w-6 animate-spin text-brand" />
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center h-40 gap-2 text-sm text-gray-500">
+            <span>Không tải được dữ liệu</span>
+            <button
+              onClick={() => refetch()}
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50">
+              Thử lại
+            </button>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+            Không có dữ liệu
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-sky-100 sticky top-0 z-10">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  Mã hóa đơn
+                </th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  Thời gian
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Tiền hàng
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Chiết khấu HĐ
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Doanh số sau CK
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Hàng trả
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Doanh thu thuần
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rows.map((row) => (
+                <tr key={row.id} className="hover:bg-gray-50">
+                  <td className="px-3 py-2 font-medium text-brand-dark">
+                    <CodeLink entity="invoice" code={row.invoiceCode} />
+                  </td>
+                  <td className="px-3 py-2 text-gray-600">
+                    {formatDate(row.purchaseDate)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-gray-700">
+                    {formatCurrency(row.totalAmount)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-gray-600">
+                    {row.discount ? formatCurrency(row.discount) : "—"}
+                  </td>
+                  <td className="px-3 py-2 text-right text-gray-700">
+                    {formatCurrency(row.grandTotal)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-gray-600">
+                    {row.returnAmount ? formatCurrency(row.returnAmount) : "—"}
+                  </td>
+                  <td className="px-3 py-2 text-right font-medium text-brand-dark">
+                    {formatCurrency(row.netRevenue)}
                   </td>
                 </tr>
               ))}

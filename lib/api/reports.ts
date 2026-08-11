@@ -23,6 +23,10 @@ export interface CustomerChartRow {
   extra1?: string | null;
   // ID khách hàng (PK) — dùng cho drilldown exact match, tránh ILIKE nhầm KH
   customerId?: number | null;
+  // View CustomerBySale — bậc thang doanh thu
+  grossRevenue?: number;
+  returnAmount?: number;
+  netRevenue?: number;
   revenue?: number;
   totalCost?: number;
   profit?: number;
@@ -754,10 +758,42 @@ export interface CustomerPreviewResponse {
     totalValue: number;
     totalRevenue?: number;
     totalCost?: number;
+    // View CustomerBySale — bậc thang doanh thu
+    totalGrossRevenue?: number;
+    totalReturnAmount?: number;
+    totalNetRevenue?: number;
     totalOpening?: number;
     totalDebit?: number;
     totalCredit?: number;
     totalClosing?: number;
+  };
+}
+
+// Drilldown Lv2 cho view CustomerBySale — dòng chính là HÓA ĐƠN
+export interface CustomerSaleInvoiceRow {
+  id: number;
+  invoiceCode: string;
+  purchaseDate: string;
+  customerName: string;
+  totalAmount: number;
+  discount: number;
+  grandTotal: number;
+  returnAmount: number;
+  netRevenue: number;
+}
+
+export interface CustomerSaleInvoicesResponse {
+  data: CustomerSaleInvoiceRow[];
+  total: number;
+  page: number;
+  limit: number;
+  summary: {
+    totalInvoices: number;
+    totalAmount: number;
+    totalDiscount: number;
+    grossRevenue: number;
+    returnAmount: number;
+    netRevenue: number;
   };
 }
 
@@ -892,6 +928,14 @@ export const customerReportApi = {
   ): Promise<CustomerInvoicesResponse> => {
     return apiClient.get("/reports/customer/invoices", serializeCustomerFilters(params));
   },
+  getSaleInvoices: (
+    params: CustomerReportFilters,
+  ): Promise<CustomerSaleInvoicesResponse> => {
+    return apiClient.get(
+      "/reports/customer/sale-invoices",
+      serializeCustomerFilters(params),
+    );
+  },
   getProducts: (
     params: CustomerReportFilters,
   ): Promise<CustomerProductsResponse> => {
@@ -926,6 +970,19 @@ export const customerReportApi = {
       }
     });
     return downloadReportFile(url, `chi-tiet-khach-hang_${Date.now()}.xlsx`);
+  },
+  exportSaleDetail: (params: CustomerReportFilters) => {
+    const url = new URL(`${API_URL}/reports/customer/sale-invoices/export`);
+    const serialized = serializeCustomerFilters(params);
+    Object.entries(serialized).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+    return downloadReportFile(
+      url,
+      `chi-tiet-ban-hang-theo-khach_${Date.now()}.xlsx`,
+    );
   },
   exportDebtDocuments: (params: CustomerReportFilters) => {
     const url = new URL(`${API_URL}/reports/customer/debt-documents/export`);
